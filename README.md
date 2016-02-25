@@ -34,20 +34,19 @@ So if you do not want to install this, just delete all the '@jit(...)' annotatio
 	tf = TimezoneFinder()
 	
 Basic usage (fast algorithm):
+point = (longitude, latitude)
 
-	point = (longitude, latitude)
 	point = (13.358, 52.5061)
 	print( tf.timezone_at(*point) )
-or
 
-	print(tf.timezone_at(lng=point[0], lat=point[1]))
-	
 to make sure a point is really inside a timezone (slower):
 
 	print( tf.certain_timezone_at(*point) )
 
 to find the closest timezone (slow, still experimental):
+
 only use this when the point is not inside a polygon!
+
 this only checks the polygons in the surrounding shortcuts (not all polygons)
 	
 	point = (12.773955, 55.578595)
