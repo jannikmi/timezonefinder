@@ -4,7 +4,7 @@ This project is derived from and has been successfully tested against [pytzwhere
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
-Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
+It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
 
 #Dependencies:
 
@@ -15,12 +15,12 @@ Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezo
 `numba` and its Requirements 
 
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits!
-So if you do not want to install this, just delete all the '@jit(...)' annotations.
+So if you do not want to install this, just delete all the '@jit(...)' annotations in timezonefinder.py
 
 
 #Installation:
 
-- Install all the required packages (see above)
+- install all the dependencies (see above)
 - download timezonefinder.py and timezone_data.bin 
 - put them in the directory you want to use them from.
 
@@ -55,14 +55,16 @@ Initialisation time and memory usage are significanlty reduced, while my algorit
 In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
 
 
-__Similarities:__
+Similarities:
+----
 
 - results
 
 - data being used 
 
 
-__Differences:__
+Differences:
+-----
 
 - the data is now stored in a memory friendly 35MB .bin and needed data is direclty being read on the fly (instead of reading and converting the 76MB .csv (mostly floats stored as strings!) into memory every time a class is created).
   
@@ -75,7 +77,7 @@ __Differences:__
 - use of Numba to precompile the critical algorithms and thereby speeding it up much further.
 
   
-Excerpt from my *test results*:
+Excerpt from my **test results**:
   
 	  testing 10000 realistic points
 	  MISMATCHES**: 
@@ -108,7 +110,7 @@ Excerpt from my *test results*:
 
 #Contact
 
-if you encounter any bugs, have suggestions, criticism etc. feel free to *open an Issue* on Git or contact me: *python[at]michelfe.it*
+if you encounter any bugs, have suggestions, criticism etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
 
 
 #License
