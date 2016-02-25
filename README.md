@@ -14,6 +14,8 @@ It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django
 
 `numba` and its Requirements 
 
+
+This if for precompiling the time critical algorithms.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits!
 So if you do not want to install this, just delete all the '@jit(...)' annotations in timezonefinder.py
 
@@ -31,19 +33,23 @@ So if you do not want to install this, just delete all the '@jit(...)' annotatio
 	
 	tf = TimezoneFinder()
 	
-	# Basic usage (fast algorithm):
-	# point = (longitude, latitude)
+Basic usage (fast algorithm):
+
+	point = (longitude, latitude)
 	point = (13.358, 52.5061)
 	print( tf.timezone_at(*point) )
-	# or
+or
+
 	print(tf.timezone_at(lng=point[0], lat=point[1]))
 	
-	# to make sure a point is really inside a timezone (slower):
+to make sure a point is really inside a timezone (slower):
+
 	print( tf.certain_timezone_at(*point) )
+
+to find the closest timezone (slow, still experimental):
+only use this when the point is not inside a polygon!
+this only checks the polygons in the surrounding shortcuts (not all polygons)
 	
-	# to find the closest timezone (slow, still experimental):
-	# only use this when the point is not inside a polygon!
-	# this only checks the polygons in the surrounding shortcuts (not all polygons)
 	point = (12.773955, 55.578595)
 	print( tf.closest_timezone_at(*point) )
 
@@ -74,7 +80,7 @@ Differences:
   
 - introduced proximity algorithm (still experimental)
   
-- use of Numba to precompile the critical algorithms and thereby speeding it up much further.
+- use of Numba for speeding things up much further.
 
   
 Excerpt from my **test results**:
