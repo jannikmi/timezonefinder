@@ -13,15 +13,16 @@ Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezo
 `numpy` 
 
 `numba` and its Requirements 
-(if speed is not that important to you, just delete all the '@jit(...)' annotations)
 
+When you only look up a few points once in a while, the compilation time is probably outweighing the benefits!
+So if you do not want to install this, just delete all the '@jit(...)' annotations.
 
 
 #Installation:
 
-- Install all the required packages (see 'Requirements' above)
+- Install all the required packages (see above)
 - download timezonefinder.py and timezone_data.bin 
-- put them in the directory you want them to use them from.
+- put them in the directory you want to use them from.
 
 #Usage:
 
@@ -42,14 +43,15 @@ Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezo
 	
 	# to find the closest timezone (slow, still experimental):
 	# only use this when the point is not inside a polygon!
+	# this only checks the polygons in the surrounding shortcuts (not all polygons)
 	point = (12.773955, 55.578595)
 	print( tf.closest_timezone_at(*point) )
 
 
 # Comparison to tzwhere
 
-In comparison to [tzwhere](https://github.com/mattbornski/tzwhere) I managed to speed up the queries by 100 - 180 times.
-Initialisation time and memory usage are significanlty reduced, while my algorithms yields the same results.
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to speed up the queries by *100 - 180 times*.
+Initialisation time and memory usage are significanlty reduced, while my algorithms yield the same results.
 In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
 
 
@@ -73,7 +75,7 @@ __Differences:__
 - use of Numba to precompile the critical algorithms and thereby speeding it up much further.
 
   
-Excerpt from my test results:
+Excerpt from my *test results*:
   
 	  testing 10000 realistic points
 	  MISMATCHES**: 
@@ -106,10 +108,10 @@ Excerpt from my test results:
 
 #Contact
 
-if you encounter any bugs, have suggestions, criticism etc. feel free to open Issues on Git or contact me: python[at]michelfe.it
+if you encounter any bugs, have suggestions, criticism etc. feel free to *open an Issue* on Git or contact me: *python[at]michelfe.it*
 
 
 #License
 
-timezonefinder is distributed under the terms of the MIT license (see LICENSE.txt).
+*timezonefinder* is distributed under the terms of the MIT license (see LICENSE.txt).
 
