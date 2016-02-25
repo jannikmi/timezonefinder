@@ -2,9 +2,11 @@
 
 This is a fast and lightweight python project to lookup the corresponding timezone for any given lat/lng on earth entirely offline.
 
-This project has been successfully  tested against [tzwhere](https://github.com/mattbornski/tzwhere).
+This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2).
 
-It is a port from [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) by Matt Pegler. The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/)
+The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
+
+Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
 
 #Requirements:
 
@@ -103,6 +105,8 @@ Differences:
 **** random queries: random points on earth
 
 #Contact
+
+if you encounter any bugs, have suggestions, criticism etc. feel free to open Issues on Git or contact me: python[at]michelfe.it
 
 
 #License
