@@ -1,5 +1,3 @@
-#info:
-
 This is a fast and lightweight python project to lookup the corresponding timezone for any given lat/lng on earth entirely offline.
 
 This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2).
@@ -8,12 +6,14 @@ The underlying timezone data is based on work done by [Eric Muller](http://efele
 
 Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
 
-#Requirements:
+#Dependencies:
 
-(python, math, cmath, struct)
+(`python`, `math`, `cmath`, `struct`)
 
 `numpy` 
-`numba` and its Requirements (if speed is not that important to you, just delete all the '@jit(...)' annotations)
+
+`numba` and its Requirements 
+(if speed is not that important to you, just delete all the '@jit(...)' annotations)
 
 
 
@@ -50,17 +50,17 @@ Similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezo
 
 In comparison to [tzwhere](https://github.com/mattbornski/tzwhere) I managed to speed up the queries by 100 - 180 times.
 Initialisation time and memory usage are significanlty reduced, while my algorithms yields the same results.
-In some cases tzwhere does not find anything and timezonefinder does, for example when the point is only close to a timezone.
+In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
 
 
-Similarities:
+__Similarities:__
 
 - results
 
 - data being used 
 
 
-Differences:
+__Differences:__
 
 - the data is now stored in a memory friendly 35MB .bin and needed data is direclty being read on the fly (instead of reading and converting the 76MB .csv (mostly floats stored as strings!) into memory every time a class is created).
   
@@ -73,7 +73,7 @@ Differences:
 - use of Numba to precompile the critical algorithms and thereby speeding it up much further.
 
   
-  Excerpt from my tests (/test/tests.py):
+Excerpt from my test results:
   
 	  testing 10000 realistic points
 	  MISMATCHES**: 
