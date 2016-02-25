@@ -540,6 +540,38 @@ class TimezoneEqualityTest(unittest.TestCase):
         print('\nin', n + self.n, 'tries', mistakes, 'mismatches were made')
         print('fail percentage is:', mistakes * 100 / (n + self.n))
 
+    def test_startup_time(self):
+
+        def test_speed_his_algor(points):
+            start_time = datetime.now()
+
+            tz_where = tzwhere()
+
+            end_time = datetime.now()
+
+            tz_where.tzNameAt(latitude=13.3, longitude=53.2)
+
+            return end_time - start_time
+
+        def test_speed_my_algor(points):
+            start_time = datetime.now()
+
+            timezonefinder = TimezoneFinder()
+
+            end_time = datetime.now()
+
+            timezonefinder.timezone_at(13.3, 53.2)
+
+            return end_time - start_time
+
+        my_time = test_speed_my_algor(realistic_points)
+        his_time = test_speed_his_algor(realistic_points)
+
+        print('Startup times:')
+        print('tzwhere:', his_time)
+        print('timezonefinder:', my_time)
+        print(round(his_time / my_time, 2), 'times faster')
+
     def test_speed(self):
 
         def test_speed_his_algor(points):
@@ -582,11 +614,9 @@ class TimezoneEqualityTest(unittest.TestCase):
         his_time /= runs
 
         print('')
-        print('\n\nTIMES for ' + str(self.n) + 'realistic queries:')
-        print('it took his algorithm:')
-        print(his_time)
-        print('it took my algorithm:')
-        print(my_time)
+        print('\n\nTIMES for', self.n, 'realistic queries:')
+        print('tzwhere:', his_time)
+        print('timezonefinder:', my_time)
 
         print(round(his_time / my_time, 2), 'times faster')
 
@@ -638,17 +668,16 @@ class TimezoneEqualityTest(unittest.TestCase):
         his_time /= runs
 
         print('')
-        print('\n\nTIMES for ', n, ' queries:')
-        print('it took his algorithm:')
-        print(his_time)
-        print('it took my algorithm:')
-        print(my_time)
+        print('\n\nTIMES for ', n, 'random queries:')
+        print('tzwhere:', his_time)
+        print('timezonefinder:', my_time)
 
         print(round(his_time / my_time, 2), 'times faster')
 
         # TODO test start up time
         # Test, store and document the speed of all the Algorithms
 
+    '''
     def test_equality_until_mistake(self):
         # Test the equality if the two algorithms
 
@@ -680,6 +709,7 @@ class TimezoneEqualityTest(unittest.TestCase):
                     # assert my_result == his_result
 
         print('mistake made when testing the ', mistake_after, 'th non empty random point')
+    '''
 
 
 def random_point():
