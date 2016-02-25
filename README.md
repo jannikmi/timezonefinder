@@ -12,12 +12,14 @@ It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django
 
 `numpy` 
 
-`numba` and its Requirements 
 
 
-This if for precompiling the time critical algorithms.
-When you only look up a few points once in a while, the compilation time is probably outweighing the benefits!
-So if you do not want to install this, just delete all the '@jit(...)' annotations in timezonefinder.py
+maybe also `numba` and its Requirements 
+
+
+This is only for precompiling the time critical algorithms.
+When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
+If you want to use this, just uncomment all the '@jit(...)' annotations in timezonefinder.py
 
 
 #Installation:

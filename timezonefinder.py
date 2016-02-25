@@ -2,7 +2,8 @@ from cmath import phase
 from math import radians, cos, sin, asin, sqrt, floor, degrees, ceil
 from struct import unpack
 from numpy import fromfile, empty, array
-from numba import jit
+#from numba import jit
+from os.path import join,dirname
 
 # maps the timezone ids to their name
 time_zone_names = {
@@ -433,7 +434,7 @@ time_zone_names = {
 
 
 # @profile
-@jit('b1(i8,i8,i8[:,:])', nopython=True, cache=True)
+# @jit('b1(i8,i8,i8[:,:])', nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     wn = 0
     i = 0
@@ -478,22 +479,22 @@ def inside_polygon(x, y, coords):
     return wn != 0
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def cartesian_to_radlng(x, y):
     return phase(complex(x, y))
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def cartesian2rad(x, y, z):
     return phase(complex(x, y)), asin(z)
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def cartesian2coords(x, y, z):
     return degrees(phase(complex(x, y))), degrees(asin(z))
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def x_rotation(rad, point):
     # x stays the same
     sin_deg = sin(rad)
@@ -501,7 +502,7 @@ def x_rotation(rad, point):
     return point[0], point[1] * cos_deg + point[2] * sin_deg, -point[1] * sin_deg + point[2] * cos_deg
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def y_rotation(degree, point):
     # y stays the same
     degree = radians(-degree)
@@ -510,7 +511,7 @@ def y_rotation(degree, point):
     return point[0] * cos_deg + -point[2] * sin_deg, point[1], point[0] * sin_deg + point[2] * cos_deg
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def z_rotation(degree, point):
     # z stays the same
     degree = radians(degree)
@@ -519,14 +520,14 @@ def z_rotation(degree, point):
     return point[0] * cos_deg + point[1] * sin_deg, -point[0] * sin_deg + point[1] * cos_deg, point[2]
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def coords2cartesian(lng, lat):
     lng = radians(lng)
     lat = radians(lat)
     return cos(lng) * cos(lat), sin(lng) * cos(lat), sin(lat)
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def distance_to_origin(lng_rad, lat_rad):
     """
     :param lng_rad: the longitude of the point in radians
@@ -536,7 +537,7 @@ def distance_to_origin(lng_rad, lat_rad):
     return 2 * asin(sqrt(sin(lat_rad / 2) ** 2 + cos(lat_rad) * sin(lng_rad / 2) ** 2))
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     """
     :param lng_rad: the longitude of the point in radians
@@ -547,7 +548,7 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     return 2 * asin(sqrt((sin(lat_rad) / 2) ** 2 + cos(lat_rad) * sin((lng_rad - lng_rad_p1) / 2) ** 2))
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def haversine_rad(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     :param lng_p1: the longitude of point 1 in radians
@@ -559,7 +560,7 @@ def haversine_rad(lng_p1, lat_p1, lng_p2, lat_p2):
     return 2 * asin(sqrt(sin((lat_p1 - lat_p2) / 2) ** 2 + cos(lat_p2) * cos(lat_p1) * sin((lng_p1 - lng_p2) / 2) ** 2))
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def compute_min_distance(px_cartesian, p0, pm1_cartesian, p1_cartesian):
     """
     :param px_cartesian: given in (x,y,z)
@@ -613,17 +614,17 @@ def compute_min_distance(px_cartesian, p0, pm1_cartesian, p1_cartesian):
     return min(temp_distance, abs(p_x_retrans_rad[1]))
 
 
-@jit('f8(i8)', nopython=True, cache=True)
+# @jit('f8(i8)', nopython=True, cache=True)
 def long2coord(longlong):
     return float(longlong / 10 ** 15)
 
 
-@jit('i8(f8)', nopython=True, cache=True)
+# @jit('i8(f8)', nopython=True, cache=True)
 def coord2long(double):
     return int(double * 10 ** 15)
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def surrounding_shortcuts(central_x_shortcut=0, central_y_shortcut=0):
     # return the surrounding shortcuts
     shortcuts = []
@@ -643,8 +644,8 @@ def surrounding_shortcuts(central_x_shortcut=0, central_y_shortcut=0):
     return shortcuts
 
 
-# @jit('f8(float64[:], int64, i8[:, :])', nopython=True, cache=True)
-@jit(nopython=True, cache=True)
+# # @jit('f8(float64[:], int64, i8[:, :])', nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def distance_to_polygon(lng, lat, px_cartesian, nr_points, points, trans_points):
     # max possible is pi = 3.14...
     min_distance = 4
@@ -728,9 +729,8 @@ class TimezoneFinder:
 
     def __init__(self):
 
-        path = 'timezone_data.bin'
         # open the file in binary reading mode
-        self.binary_file = open(path, 'rb')
+        self.binary_file = open(join(dirname(__file__), 'timezone_data.bin'), 'rb')
         # read the first 2byte int (= number of polygons stored in the .bin)
         self.nr_of_entries = unpack('!H', self.binary_file.read(2))[0]
 
