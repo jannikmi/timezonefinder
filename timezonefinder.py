@@ -1,9 +1,9 @@
-from cmath import phase
-from math import radians, cos, sin, asin, sqrt, floor, degrees, ceil
+from math import radians, cos, sin, asin, sqrt, floor, degrees, ceil, atan2
 from struct import unpack
 from numpy import fromfile, empty, array
-#from numba import jit
-from os.path import join,dirname
+from os.path import join, dirname
+
+# from numba import jit
 
 # maps the timezone ids to their name
 time_zone_names = {
@@ -433,7 +433,6 @@ time_zone_names = {
 }
 
 
-# @profile
 # @jit('b1(i8,i8,i8[:,:])', nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     wn = 0
@@ -448,6 +447,7 @@ def inside_polygon(x, y, coords):
                 //    Return: >0 for xy left of the line from! p1 to! p2
                 //            =0 for xy on the line
                             <0 for xy  right of the line
+                everything has to be divided by 1000 because otherwise there would be overflow with int8
                 """
                 if ((x2 - x1) / 1000) * ((y - y1) / 1000) - ((x - x1) / 1000) * ((y2 - y1) / 1000) > 0:
                     wn += 1
@@ -480,44 +480,36 @@ def inside_polygon(x, y, coords):
 
 
 # @jit(nopython=True, cache=True)
-def cartesian_to_radlng(x, y):
-    return phase(complex(x, y))
+def cartesian2radlng(x, y):
+    return atan2(y, x)
 
 
 # @jit(nopython=True, cache=True)
 def cartesian2rad(x, y, z):
-    return phase(complex(x, y)), asin(z)
+    return atan2(y, x), asin(z)
 
 
 # @jit(nopython=True, cache=True)
 def cartesian2coords(x, y, z):
-    return degrees(phase(complex(x, y))), degrees(asin(z))
+    return degrees(atan2(y, x)), degrees(asin(z))
 
 
 # @jit(nopython=True, cache=True)
-def x_rotation(rad, point):
+def x_rotate(rad, point):
+    # Attention: this rotation uses radians!
     # x stays the same
-    sin_deg = sin(rad)
-    cos_deg = cos(rad)
-    return point[0], point[1] * cos_deg + point[2] * sin_deg, -point[1] * sin_deg + point[2] * cos_deg
+    sin_rad = sin(rad)
+    cos_rad = cos(rad)
+    return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
 
 
 # @jit(nopython=True, cache=True)
-def y_rotation(degree, point):
+def y_rotate(degree, point):
     # y stays the same
     degree = radians(-degree)
-    sin_deg = sin(degree)
-    cos_deg = cos(degree)
-    return point[0] * cos_deg + -point[2] * sin_deg, point[1], point[0] * sin_deg + point[2] * cos_deg
-
-
-# @jit(nopython=True, cache=True)
-def z_rotation(degree, point):
-    # z stays the same
-    degree = radians(degree)
-    sin_deg = sin(degree)
-    cos_deg = cos(degree)
-    return point[0] * cos_deg + point[1] * sin_deg, -point[0] * sin_deg + point[1] * cos_deg, point[2]
+    sin_rad = sin(degree)
+    cos_rad = cos(degree)
+    return point[0] * cos_rad - point[2] * sin_rad, point[1], point[0] * sin_rad + point[2] * cos_rad
 
 
 # @jit(nopython=True, cache=True)
@@ -525,16 +517,6 @@ def coords2cartesian(lng, lat):
     lng = radians(lng)
     lat = radians(lat)
     return cos(lng) * cos(lat), sin(lng) * cos(lat), sin(lat)
-
-
-# @jit(nopython=True, cache=True)
-def distance_to_origin(lng_rad, lat_rad):
-    """
-    :param lng_rad: the longitude of the point in radians
-    :param lat_rad: the latitude
-    :return: distance between the point and the origin (0,0) in radians
-    """
-    return 2 * asin(sqrt(sin(lat_rad / 2) ** 2 + cos(lat_rad) * sin(lng_rad / 2) ** 2))
 
 
 # @jit(nopython=True, cache=True)
@@ -549,7 +531,7 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
 
 
 # @jit(nopython=True, cache=True)
-def haversine_rad(lng_p1, lat_p1, lng_p2, lat_p2):
+def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     :param lng_p1: the longitude of point 1 in radians
     :param lat_p1: the latitude of point 1 in radians
@@ -561,57 +543,53 @@ def haversine_rad(lng_p1, lat_p1, lng_p2, lat_p2):
 
 
 # @jit(nopython=True, cache=True)
-def compute_min_distance(px_cartesian, p0, pm1_cartesian, p1_cartesian):
+def compute_min_distance(lng, lat, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat):
     """
-    :param px_cartesian: given in (x,y,z)
-    :param p0: point from the polygon between p1 and pm1 given in (lng,lat) degree
-    :param pm1_cartesian: point after p0 given in (x,y,z)
-    :param p1_cartesian: point before p0 given in (x,y,z)
+    :param lng: lng of px in degree
+    :param lat: lat of px in degree
+    :param p0_lng: lng of p0 in degree
+    :param p0_lat: lat of p0 in degree
+    :param pm1_lng: lng of pm1 in degree
+    :param pm1_lat: lat of pm1 in degree
+    :param p1_lng: lng of p1 in degree
+    :param p1_lat: lat of p1 in degree
     :return: shortest distance between pX and the polygon section (pm1---p0---p1) in radians
     """
-    # rotate coordinate system (= all the points) so that point 0 would have lat=lng=0 (=origin)
-    px_cartesian = z_rotation(p0[0], px_cartesian)
-    p1_cartesian = z_rotation(p0[0], p1_cartesian)
-    pm1_cartesian = z_rotation(p0[0], pm1_cartesian)
+    # rotate coordinate system (= all the points) so that p0 would have lat=lng=0 (=origin)
+    # z rotation is simply substracting the lng
+    # convert the points to the cartesian coorinate system
+    px_cartesian = coords2cartesian(lng - p0_lng, lat)
+    p1_cartesian = coords2cartesian(p1_lng - p0_lng, p1_lat)
+    pm1_cartesian = coords2cartesian(pm1_lng - p0_lng, pm1_lat)
 
-    px_cartesian = y_rotation(p0[1], px_cartesian)
-    p1_cartesian = y_rotation(p0[1], p1_cartesian)
-    pm1_cartesian = y_rotation(p0[1], pm1_cartesian)
+    px_cartesian = y_rotate(p0_lat, px_cartesian)
+    p1_cartesian = y_rotate(p0_lat, p1_cartesian)
+    pm1_cartesian = y_rotate(p0_lat, pm1_cartesian)
 
     # for both p1 and pm1 separately do:
 
-    # rotate coordinate system so that this point also has lat=0 (point 0 does not change)
-    rotation_rad = phase(complex(p1_cartesian[1], p1_cartesian[2]))
-    p1_cartesian = x_rotation(rotation_rad, p1_cartesian)
-    lng_p1_rad = cartesian_to_radlng(p1_cartesian[0], p1_cartesian[1])
-    px_cartesian_temp = x_rotation(rotation_rad, px_cartesian)
-    p_x_retrans_rad = cartesian2rad(*px_cartesian_temp)
+    # rotate coordinate system so that this point also has lat=0 (p0 does not change!)
+    rotation_rad = atan2(p1_cartesian[2], p1_cartesian[1])
+    p1_cartesian = x_rotate(rotation_rad, p1_cartesian)
+    lng_p1_rad = cartesian2radlng(p1_cartesian[0], p1_cartesian[1])
+    px_retrans_rad = cartesian2rad(*x_rotate(rotation_rad, px_cartesian))
 
-    # if the point is not between p0 and p1 return the distance to the closest of the two points
-    if p_x_retrans_rad[0] <= 0:
-        # store the distance between p0=(0,0) and px
-        temp_distance = distance_to_origin(p_x_retrans_rad[0], p_x_retrans_rad[1])
-    elif p_x_retrans_rad[0] >= lng_p1_rad:
-        # return the distance between p1=(longitude,0) and px
-        temp_distance = distance_to_point_on_equator(p_x_retrans_rad[0], p_x_retrans_rad[1], lng_p1_rad)
-
-    else:
-        # lng of point X is between 0 (<-point1) and lng of point 2:
-        # the distance between point x and the 'equator' is the shortest
-        temp_distance = abs(p_x_retrans_rad[1])
+    # if lng of px is between 0 (<-point1) and lng of point 2:
+    # the distance between point x and the 'equator' is the shortest
+    # if the point is not between p0 and p1 the distance to the closest of the two points should be used
+    # so clamp/clip the lng of px to the interval of [0; lng p1] and compute the distance with it
+    temp_distance = distance_to_point_on_equator(px_retrans_rad[0], px_retrans_rad[1],
+                                                 max(min(px_retrans_rad[0], lng_p1_rad), 0))
 
     # ATTENTION: vars are being reused. p1 is actually pm1 here!
-    rotation_rad = phase(complex(pm1_cartesian[1], pm1_cartesian[2]))
-    p1_cartesian = x_rotation(rotation_rad, pm1_cartesian)
-    lng_p1_rad = cartesian_to_radlng(p1_cartesian[0], p1_cartesian[1])
-    px_cartesian_temp = x_rotation(rotation_rad, px_cartesian)
-    p_x_retrans_rad = cartesian2rad(*px_cartesian_temp)
+    rotation_rad = atan2(pm1_cartesian[2], pm1_cartesian[1])
+    p1_cartesian = x_rotate(rotation_rad, pm1_cartesian)
+    lng_p1_rad = cartesian2radlng(p1_cartesian[0], p1_cartesian[1])
+    px_retrans_rad = cartesian2rad(*x_rotate(rotation_rad, px_cartesian))
 
-    if p_x_retrans_rad[0] <= 0:
-        return min(temp_distance, distance_to_origin(p_x_retrans_rad[0], p_x_retrans_rad[1]))
-    elif p_x_retrans_rad[0] >= lng_p1_rad:
-        return min(temp_distance, distance_to_point_on_equator(p_x_retrans_rad[0], p_x_retrans_rad[1], lng_p1_rad))
-    return min(temp_distance, abs(p_x_retrans_rad[1]))
+    return min(temp_distance,
+               distance_to_point_on_equator(px_retrans_rad[0], px_retrans_rad[1],
+                                            max(min(px_retrans_rad[0], lng_p1_rad), 0)))
 
 
 # @jit('f8(i8)', nopython=True, cache=True)
@@ -646,75 +624,36 @@ def surrounding_shortcuts(central_x_shortcut=0, central_y_shortcut=0):
 
 # # @jit('f8(float64[:], int64, i8[:, :])', nopython=True, cache=True)
 # @jit(nopython=True, cache=True)
-def distance_to_polygon(lng, lat, px_cartesian, nr_points, points, trans_points):
-    # max possible is pi = 3.14...
-    min_distance = 4
-
+def distance_to_polygon(lng, lat, nr_points, points, trans_points):
     # transform all points (long long) to coords
     for i in range(nr_points):
         trans_points[0][i] = long2coord(points[0][i])
         trans_points[1][i] = long2coord(points[1][i])
 
-    # only check the points which actually face the point (all the others cannot be closer anyway).
-    # therefore find the most extreme points
-    min_phase = 3.2
-    max_phase = -3.2
-    extreme_p1 = 0
-    extreme_p2 = 0
-    for i in range(nr_points):
-        ph = phase(complex(trans_points[0][i] - lng, trans_points[1][i] - lat))
-        if ph > max_phase:
-            max_phase = ph
-            extreme_p1 = i
-        if ph < min_phase:
-            min_phase = ph
-            extreme_p2 = i
+    # check points -2, -1, 0 first
+    pm1_lng = trans_points[0][0]
+    pm1_lat = trans_points[1][0]
 
-    if extreme_p1 > extreme_p2:
-        min_point = extreme_p2
-        max_point = extreme_p1
-    else:
-        min_point = extreme_p1
-        max_point = extreme_p2
+    p1_lng = trans_points[0][-2]
+    p1_lat = trans_points[1][-2]
+    min_distance = compute_min_distance(lng, lat, trans_points[0][-1], trans_points[1][-1], pm1_lng, pm1_lat, p1_lng,
+                                        p1_lat)
 
-    # find out in which direction to go
-    # since polygons don't overlap simply test the two closest points of one extreme point
-    adr1 = (max_point - 1) % nr_points
-    adr2 = (max_point + 1) % nr_points
-    if haversine_rad(lng, lat, trans_points[0][adr1], trans_points[1][adr1]) \
-            < haversine_rad(lng, lat, trans_points[0][adr2], trans_points[1][adr2]):
-        # the point before the maximum point was closer than the one after it.
-        # direction is  [... | min_point| ... |<-- -1 --|max_point | ..]
-        backward = True
-        step = -2
+    index_p0 = 1
+    index_p1 = 2
+    for i in range(int(ceil((nr_points / 2) - 1))):
+        p1_lng = trans_points[0][index_p1]
+        p1_lat = trans_points[1][index_p1]
 
-    else:
-        # direction is  [ -- +1 -->| ...| min_point| ...  |max_point | --> ..]
-        backward = False
-        step = 2
-
-    pm1_cartesian = coords2cartesian(trans_points[0][max_point], trans_points[1][max_point])
-    if backward:
-        index_p1 = (max_point - 2) % nr_points
-        index_p0 = (max_point - 1) % nr_points
-        steps_to_make = int(ceil((max_point - min_point) / 2))
-
-    else:
-        index_p1 = (max_point + 2) % nr_points
-        index_p0 = (max_point + 1) % nr_points
-        steps_to_make = int(ceil((abs(nr_points - max_point + min_point)) / 2))
-
-    for i in range(steps_to_make):
-        p0 = trans_points[0][index_p0], trans_points[1][index_p0]
-        p1_cartesian = coords2cartesian(trans_points[0][index_p1], trans_points[1][index_p1])
-
-        distance = compute_min_distance(px_cartesian, p0, pm1_cartesian, p1_cartesian)
+        distance = compute_min_distance(lng, lat, trans_points[0][index_p0], trans_points[1][index_p0], pm1_lng,
+                                        pm1_lat, p1_lng, p1_lat)
         if distance < min_distance:
             min_distance = distance
 
-        index_p0 = (index_p0 + step) % nr_points
-        index_p1 = (index_p1 + step) % nr_points
-        pm1_cartesian = p1_cartesian
+        index_p0 += 2
+        index_p1 += 2
+        pm1_lng = p1_lng
+        pm1_lat = p1_lat
 
     return min_distance
 
@@ -764,7 +703,6 @@ class TimezoneFinder:
 
         return id_array
 
-    # @profile
     def shortcuts_of(self, lng=0.0, lat=0.0):
         # convert coords into shortcut
         x = int(floor((lng + 180)))
@@ -803,7 +741,6 @@ class TimezoneFinder:
         return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
                       fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])
 
-    # @profile
     def closest_timezone_at(self, lng, lat):
         """
         This function searches for the closest polygon just in the actual and the surrounding shortcuts.
@@ -817,7 +754,6 @@ class TimezoneFinder:
         # the maximum possible distance is pi = 3.14...
         min_distance = 4
         # transform point X into cartesian coordinates
-        px_cartesian = coords2cartesian(lng, lat)
         current_closest_id = None
         central_x_shortcut = int(floor((lng + 180)))
         central_y_shortcut = int(floor((90 - lat) * 2))
@@ -827,6 +763,7 @@ class TimezoneFinder:
         # also select the polygons from the surrounding shortcuts
         for sh in surrounding_shortcuts(central_x_shortcut, central_y_shortcut):
             # TODO make algorithm work when closest polygon is on the 'other end of earth'
+            # this assures that really only shortcuts within the boundaries are used
             if sh[0] <= 360 and sh[1] <= 360:
                 for p in self.polygons_of_shortcut(*sh):
                     if p not in polygon_nrs:
@@ -863,7 +800,7 @@ class TimezoneFinder:
                 coords = self.coords_of(polygon_nrs[pointer])
                 nr_points = len(coords[0])
                 empty_array = empty([nr_points, 2], dtype='f8')
-                distance = distance_to_polygon(lng, lat, px_cartesian, nr_points, coords, empty_array)
+                distance = distance_to_polygon(lng, lat, nr_points, coords, empty_array)
 
                 already_checked[pointer] = True
                 if distance < min_distance:
@@ -876,7 +813,6 @@ class TimezoneFinder:
         # the the whole list has been searched
         return time_zone_names[current_closest_id]
 
-    # @profile
     def timezone_at(self, lng=0.0, lat=0.0):
         """
         this function looks up in which polygons the point could be included
@@ -885,10 +821,13 @@ class TimezoneFinder:
         so certain simplifications are made and even when you get a hit the point might actually
         not be inside the polygon (for example when there is only one timezone nearby)
         if you want to make sure a point is really inside a timezone use 'certain_timezone_at'
+        make sure its called with valid values only!
         :param lng: longitude of the point in degree (-180 to 180)
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of the matching polygon or None
         """
+        #if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < 90.0:
+           # raise ValueError
 
         possible_polygons = self.shortcuts_of(lng, lat)
 
@@ -912,12 +851,14 @@ class TimezoneFinder:
         if ids.count(first_entry) == nr_possible_polygons:
             return time_zone_names[first_entry]
 
+        # otherwise check if the point is included for all the possible polygons
         for i in range(nr_possible_polygons):
             polygon_nr = possible_polygons[i]
 
-            # get boundaries
+            # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
             self.binary_file.seek((self.bound_start_address + 32 * polygon_nr), )
             boundaries = fromfile(self.binary_file, dtype='>i8', count=4)
+            # only run the algorithm if it the point is withing the boundaries
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
                 if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                     return time_zone_names[ids[i]]

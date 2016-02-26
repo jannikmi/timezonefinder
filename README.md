@@ -72,9 +72,9 @@ Similarities:
 Differences:
 -----
 
-- the data is now stored in a memory friendly 35MB .bin and needed data is direclty being read on the fly (instead of reading and converting the 76MB .csv (mostly floats stored as strings!) into memory every time a class is created).
+- the data is now stored in a memory friendly 35MB .bin and needed data is directly being read on the fly (instead of reading and converting the 76MB .csv (mostly floats stored as strings!) into memory every time a class is created).
   
-- precomputed shortcuts being stored in the .bin to quickly look up which polygons have to be checked (instead of creating them on every startup)
+- precomputed shortcuts are stored in the .bin to quickly look up which polygons have to be checked (instead of creating them on every startup)
   
 - optimized algorithms
   
@@ -83,7 +83,7 @@ Differences:
 - use of Numba for speeding things up much further.
 
   
-Excerpt from my **test results**:
+Excerpt from my **test results***:
   
 	  testing 10000 realistic points
 	  MISMATCHES**: 
@@ -109,12 +109,14 @@ Excerpt from my **test results**:
 	  tzwhere: 0:00:09.531322
 	  timezonefinder: 0:00:00.000361
 	  26402.55 times faster
+*with `numba` active
 
 ** mismatch: tzwhere finds something and then timezonefinder finds something else
 
 *** realistic queries: just points within a timezone (= tzwhere yields result)
 
 **** random queries: random points on earth
+
 
 #Contact
 
