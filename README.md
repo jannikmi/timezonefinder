@@ -40,10 +40,13 @@ Basic usage (fast algorithm):
 	#point = (longitude, latitude)
 	point = (13.358, 52.5061)
 	print( tf.timezone_at(*point) )
+	# = Europe/Berlin
+
 
 To make sure a point is really inside a timezone (slower):
 
 	print( tf.certain_timezone_at(*point) )
+	# = Europe/Berlin
 
 To find the closest timezone (slow, still experimental):
 
@@ -52,11 +55,12 @@ To find the closest timezone (slow, still experimental):
 	
 	point = (12.773955, 55.578595)
 	print( tf.closest_timezone_at(*point) )
+	# = Europe/Copenhagen
 
 
 # Comparison to tzwhere
 
-In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to speed up the queries by *100 - 180 times*.
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up the queries by more than 100 times**.
 Initialisation time and memory usage are significanlty reduced, while my algorithms yield the same results.
 In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
 
@@ -72,15 +76,15 @@ Similarities:
 Differences:
 -----
 
-- the data is now stored in a memory friendly 35MB .bin and needed data is directly being read on the fly (instead of reading and converting the 76MB .csv (mostly floats stored as strings!) into memory every time a class is created).
+- the data is now stored in a memory friendly 35MB `.bin` and needed data is directly being read on the fly (instead of reading and converting the 76MB `.csv` (mostly floats stored as strings!) into memory every time a class is created).
   
-- precomputed shortcuts are stored in the .bin to quickly look up which polygons have to be checked (instead of creating them on every startup)
+- precomputed shortcuts are stored in the `.bin` to quickly look up which polygons have to be checked (instead of creating them on every startup)
   
 - optimized algorithms
   
 - introduced proximity algorithm (still experimental)
   
-- use of Numba for speeding things up much further.
+- use of `numba` for speeding things up much further.
 
   
 Excerpt from my **test results***:

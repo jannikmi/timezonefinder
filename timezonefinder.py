@@ -799,7 +799,7 @@ class TimezoneFinder:
                 # this polygon has to be checked
                 coords = self.coords_of(polygon_nrs[pointer])
                 nr_points = len(coords[0])
-                empty_array = empty([nr_points, 2], dtype='f8')
+                empty_array = empty([2,nr_points], dtype='f8')
                 distance = distance_to_polygon(lng, lat, nr_points, coords, empty_array)
 
                 already_checked[pointer] = True
