@@ -8,7 +8,7 @@ It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django
 
 #Dependencies:
 
-(`python`, `math`, `cmath`, `struct`)
+(`python`, `math`, `struct`)
 
 `numpy` 
 
@@ -19,13 +19,13 @@ maybe also `numba` and its Requirements
 
 This is only for precompiling the time critical algorithms.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
-If you want to use this, just uncomment all the '@jit(...)' annotations in timezonefinder.py
+If you want to use this, just uncomment all the `@jit(...)` annotations in `timezonefinder.py`
 
 
 #Installation:
 
 - install all the dependencies (see above)
-- download timezonefinder.py and timezone_data.bin 
+- download `timezonefinder.py` and `timezone_data.bin` 
 - put them in the directory you want to use them from.
 
 #Usage:
