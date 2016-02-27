@@ -1,12 +1,12 @@
 This is a fast and lightweight python project to lookup the corresponding timezone for any given lat/lng on earth entirely offline.
 
-This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) [(github)](https://github.com/pegler/pytzwhere).
+This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) ([github](https://github.com/pegler/pytzwhere)).
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
 It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
 
-#Dependencies:
+#Dependencies
 
 (`python`, `math`, `struct`)
 
@@ -21,22 +21,22 @@ This is only for precompiling the time critical algorithms.
 If you want to use this, just uncomment all the `@jit(...)` annotations in `timezonefinder.py`.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
 When using `certain_timezone_at()` and especially `closest_timeyone_at()` however, I highly recommend using `numba` (see speed comparison below)!
-The amount of shortcuts used in the `.bin` are also only optimized for the use with numba.
+The amount of shortcuts used in the `.bin` are also only optimized for the use with `numba`.
 
 
-#Installation:
+#Installation
 
 - install all the dependencies (see above)
 - download `timezonefinder.py` and `timezone_data.bin` 
 - put them in the directory you want to use them from.
 
-#Usage:
+#Usage
 
 
 	from timezonefinder import TimezoneFinder
 	
 	tf = TimezoneFinder()
-	
+
 Basic usage (fast algorithm):
 
 	#point = (longitude, latitude)
@@ -62,7 +62,7 @@ To find the closest timezone (slow):
 To increase search radius even more (very slow, use `numba`!):
 
 	# this checks all the polygons within +-3 degree lng and lat 
-	# keep in mind that x degrees lat are not the same distance apart than 3 degree lng!
+	# keep in mind that x degrees lat are not the same distance apart than x degree lng!
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
 
@@ -87,7 +87,7 @@ To maximize the chances of getting a result in a `Django` application it might l
 
 # Comparison to tzwhere
 
-In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2)() I managed to **speed up** the queries **by more than 100 times**.
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up** the queries **by more than 100 times**.
 **Initialisation time** and **memory usage** are also **significanlty reduced**, while my algorithm yields the **same results**.
 In some cases `tzwhere` even does not find anything and `timezonefinder` does, for example when the point is only close to a timezone.
 
@@ -116,13 +116,13 @@ Differences:
   
 Excerpt from my **test results***:
   
-	  testing 10000 realistic points
+	  testing 1000 realistic points
 	  MISMATCHES**: 
 	  /
 	  testing 10000 random points
 	  MISMATCHES**:
 	  /
-	  in 20000 tries 0 mismatches were made
+	  in 11000 tries 0 mismatches were made
 	  fail percentage is: 0.0
 	  
 	  
@@ -152,10 +152,8 @@ Excerpt from my **test results***:
 
 # Speed Impact of Numba
 
-Times for testing the same 1000 realistic points:
-(this is not inlcuded in my tests)
-
-
+	TIMES for 1000 realistic queries***:
+	
 	timezone_at():
 	wo/ numa: 0:00:01.017575
 	w/ numa: 0:00:00.289854
@@ -172,6 +170,7 @@ Times for testing the same 1000 realistic points:
 	w/ numa: 0:00:02.688353
 	40.2 times faster
 
+(this is not inlcuded in my tests)
 
 #Contact
 
@@ -180,5 +179,5 @@ if you encounter any bugs, have suggestions, criticism etc. feel free to **open 
 
 #License
 
-*timezonefinder* is distributed under the terms of the MIT license (see LICENSE.txt).
+`timezonefinder` is distributed under the terms of the MIT license (see LICENSE.txt).
 
