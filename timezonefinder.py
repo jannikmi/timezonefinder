@@ -3,7 +3,7 @@ from struct import unpack
 from numpy import fromfile, empty, array
 from os.path import join, dirname
 
-#from numba import jit
+# from numba import jit
 
 # maps the timezone ids to their name
 time_zone_names = {
@@ -480,11 +480,6 @@ def inside_polygon(x, y, coords):
 
 
 # @jit(nopython=True, cache=True)
-def cartesian2radlng(x, y):
-    return atan2(y, x)
-
-
-# @jit(nopython=True, cache=True)
 def cartesian2rad(x, y, z):
     return atan2(y, x), asin(z)
 
@@ -522,9 +517,10 @@ def coords2cartesian(lng, lat):
 # @jit(nopython=True, cache=True)
 def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     """
+    uses the simplified haversine formula for this special case
     :param lng_rad: the longitude of the point in radians
     :param lat_rad: the latitude of the point
-    :param lng_rad_p1: the latitude of the point
+    :param lng_rad_p1: the latitude of the point1 on the equator (lat=0)
     :return: distance between the point and p1 (lng_rad,0) in radians
     """
     return 2 * asin(sqrt((sin(lat_rad) / 2) ** 2 + cos(lat_rad) * sin((lng_rad - lng_rad_p1) / 2) ** 2))
@@ -571,7 +567,7 @@ def compute_min_distance(lng, lat, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_
     # rotate coordinate system so that this point also has lat=0 (p0 does not change!)
     rotation_rad = atan2(p1_cartesian[2], p1_cartesian[1])
     p1_cartesian = x_rotate(rotation_rad, p1_cartesian)
-    lng_p1_rad = cartesian2radlng(p1_cartesian[0], p1_cartesian[1])
+    lng_p1_rad = atan2(p1_cartesian[1], p1_cartesian[0])
     px_retrans_rad = cartesian2rad(*x_rotate(rotation_rad, px_cartesian))
 
     # if lng of px is between 0 (<-point1) and lng of point 2:
@@ -584,7 +580,7 @@ def compute_min_distance(lng, lat, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_
     # ATTENTION: vars are being reused. p1 is actually pm1 here!
     rotation_rad = atan2(pm1_cartesian[2], pm1_cartesian[1])
     p1_cartesian = x_rotate(rotation_rad, pm1_cartesian)
-    lng_p1_rad = cartesian2radlng(p1_cartesian[0], p1_cartesian[1])
+    lng_p1_rad = atan2(p1_cartesian[1], p1_cartesian[0])
     px_retrans_rad = cartesian2rad(*x_rotate(rotation_rad, px_cartesian))
 
     return min(temp_distance,
@@ -642,7 +638,7 @@ class TimezoneFinder:
     This class lets you quickly find the timezone of a point on earth.
     It keeps the binary file with the data open in reading mode to enable fast consequent access.
     In the file currently used there are two shortcuts stored per degree of latitude and one per degree of longitude
-    (tests evaluated this to be the fastest setup)
+    (tests evaluated this to be the fastest setup when being used with numba)
     """
 
     def __init__(self):
@@ -727,7 +723,8 @@ class TimezoneFinder:
         Make sure that the point does not lie within a polygon (for that case the algorithm is simply wrong!)
         Note that the algorithm won't find the closest polygon when it's on the 'other end of earth'
         (it can't search beyond the 180 deg lng border yet)
-        The
+        this checks all the polygons within [delta_degree] degree lng and lat
+        Keep in mind that x degrees lat are not the same distance apart than x degree lng!
         This is feature still experimental.
         :param lng: longitude of the point in degree
         :param lat: latitude in degree

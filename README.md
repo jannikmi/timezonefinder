@@ -18,7 +18,7 @@ maybe also `numba` and its Requirements
 
 
 This is only for precompiling the time critical algorithms.
-If you want to use this, just uncomment all the `@jit(...)` annotations in `timezonefinder.py`.
+If you want to use this, just uncomment all the `@jit(...)` annotations and the `import ...` line in `timezonefinder.py`.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
 When using `certain_timezone_at()` and especially `closest_timeyone_at()` however, I highly recommend using `numba` (see speed comparison below)!
 The amount of shortcuts used in the `.bin` are also only optimized for the use with `numba`.
