@@ -61,6 +61,7 @@ To find the closest timezone (slow):
 
 To increase search radius even more (very slow, use numba!):
 
+	# this checks all the polygons within +-3 degree lng and lat 
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
 
@@ -138,7 +139,7 @@ Excerpt from my **test results***:
 	  tzwhere: 0:00:09.531322
 	  timezonefinder: 0:00:00.000361
 	  26402.55 times faster
-*with `numba` active
+* timezone_at() with `numba` active
 
 ** mismatch: tzwhere finds something and then timezonefinder finds something else
 
