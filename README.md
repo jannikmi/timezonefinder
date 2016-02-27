@@ -1,6 +1,6 @@
 This is a fast and lightweight python project to lookup the corresponding timezone for any given lat/lng on earth entirely offline.
 
-This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2).
+This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) [(github)](https://github.com/pegler/pytzwhere).
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
@@ -59,9 +59,10 @@ To find the closest timezone (slow):
 	print( tf.closest_timezone_at(*point) )
 	# = Europe/Copenhagens
 
-To increase search radius even more (very slow, use numba!):
+To increase search radius even more (very slow, use `numba`!):
 
 	# this checks all the polygons within +-3 degree lng and lat 
+	# keep in mind that x degrees lat are not the same distance apart than 3 degree lng!
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
 
@@ -86,9 +87,9 @@ To maximize the chances of getting a result in a `Django` application it might l
 
 # Comparison to tzwhere
 
-In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up the queries by more than 100 times**.
-**Initialisation time and memory usage are significanlty reduced**, while my algorithm yields the **same results**.
-In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2)() I managed to **speed up** the queries **by more than 100 times**.
+**Initialisation time** and **memory usage** are also **significanlty reduced**, while my algorithm yields the **same results**.
+In some cases `tzwhere` even does not find anything and `timezonefinder` does, for example when the point is only close to a timezone.
 
 
 Similarities:
@@ -139,21 +140,22 @@ Excerpt from my **test results***:
 	  tzwhere: 0:00:09.531322
 	  timezonefinder: 0:00:00.000361
 	  26402.55 times faster
-* timezone_at() with `numba` active
 
-** mismatch: tzwhere finds something and then timezonefinder finds something else
+*timezone_at() with `numba` active
 
-*** realistic queries: just points within a timezone (= tzwhere yields result)
+**mismatch: tzwhere finds something and then timezonefinder finds something else
 
-**** random queries: random points on earth
+***realistic queries: just points within a timezone (= tzwhere yields result)
+
+****random queries: random points on earth
 
 
 # Speed Impact of Numba
 
+Times for testing the same 1000 realistic points:
 (this is not inlcuded in my tests)
 
-Times for testing the same 1000 realistic points:
-	
+
 	timezone_at():
 	wo/ numa: 0:00:01.017575
 	w/ numa: 0:00:00.289854
