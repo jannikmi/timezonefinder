@@ -18,8 +18,10 @@ maybe also `numba` and its Requirements
 
 
 This is only for precompiling the time critical algorithms.
+If you want to use this, just uncomment all the `@jit(...)` annotations in `timezonefinder.py`.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
-If you want to use this, just uncomment all the `@jit(...)` annotations in `timezonefinder.py`
+When using `certain_timezone_at()` and especially `closest_timeyone_at()` however, I highly recommend using `numba` (see speed comparison below)!
+The amount of shortcuts used in the `.bin` are also only optimized for the use with numba.
 
 
 #Installation:
@@ -48,20 +50,43 @@ To make sure a point is really inside a timezone (slower):
 	print( tf.certain_timezone_at(*point) )
 	# = Europe/Berlin
 
-To find the closest timezone (slow, still experimental):
+To find the closest timezone (slow):
 
 	#only use this when the point is not inside a polygon!
 	#this only checks the polygons in the surrounding shortcuts (not all polygons)
 	
 	point = (12.773955, 55.578595)
 	print( tf.closest_timezone_at(*point) )
-	# = Europe/Copenhagen
+	# = Europe/Copenhagens
 
+To increase search radius even more (very slow, use numba!):
+
+	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
+	# = Europe/Copenhagens
+
+
+To maximize the chances of getting a result in a `Django` application it might look like:
+
+	from timezonefinder.timezonefinder import TimezoneFinder
+			
+	tf = TimezoneFinder()
+		
+	def find_timezone(request, lat, lng):
+		
+		lat = float(lat)
+		lng = float(lng)
+		timezone_name = tf.timezone_at(lng, lat)
+		if timezone_name is None:
+			timezone_name = tf.closest_timezone_at(lng, lat)
+		
+		# maybe even increase the search radius when it is still None
+		
+		# ... do something with timezone_name ...
 
 # Comparison to tzwhere
 
 In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up the queries by more than 100 times**.
-Initialisation time and memory usage are significanlty reduced, while my algorithms yield the same results.
+**Initialisation time and memory usage are significanlty reduced**, while my algorithm yields the **same results**.
 In some cases tzwhere even does not find anything and timezonefinder does, for example when the point is only close to a timezone.
 
 
@@ -120,6 +145,29 @@ Excerpt from my **test results***:
 *** realistic queries: just points within a timezone (= tzwhere yields result)
 
 **** random queries: random points on earth
+
+
+# Speed Impact of Numba
+
+(this is not inlcuded in my tests)
+
+Times for testing the same 1000 realistic points:
+	
+	timezone_at():
+	wo/ numa: 0:00:01.017575
+	w/ numa: 0:00:00.289854
+	3.51 times faster
+	
+	certain_timezone_at():
+	wo/ numa: 	0:00:05.445209
+	w/ numa: 0:00:00.290441
+	14.92 times faster
+	
+	closest_timezone_at():
+	(delta_degree=1)
+	wo/ numa: 0:02:32.666238
+	w/ numa: 0:00:02.688353
+	40.2 times faster
 
 
 #Contact

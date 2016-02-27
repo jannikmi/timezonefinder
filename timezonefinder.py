@@ -3,7 +3,7 @@ from struct import unpack
 from numpy import fromfile, empty, array
 from os.path import join, dirname
 
-# from numba import jit
+#from numba import jit
 
 # maps the timezone ids to their name
 time_zone_names = {
@@ -603,27 +603,6 @@ def coord2long(double):
 
 
 # @jit(nopython=True, cache=True)
-def surrounding_shortcuts(central_x_shortcut=0, central_y_shortcut=0):
-    # return the surrounding shortcuts
-    shortcuts = []
-    top = central_y_shortcut - 1
-
-    bottom = central_y_shortcut + 1
-    right = central_x_shortcut + 1
-    left = central_x_shortcut - 1
-    for x in range(left, right + 1, 1):
-        shortcuts.append((x, top))
-        shortcuts.append((x, bottom))
-
-    for y in range(central_y_shortcut, bottom, 1):
-        shortcuts.append((left, y))
-        shortcuts.append((right, y))
-
-    return shortcuts
-
-
-# # @jit('f8(float64[:], int64, i8[:, :])', nopython=True, cache=True)
-# @jit(nopython=True, cache=True)
 def distance_to_polygon(lng, lat, nr_points, points, trans_points):
     # transform all points (long long) to coords
     for i in range(nr_points):
@@ -741,13 +720,18 @@ class TimezoneFinder:
         return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
                       fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])
 
-    def closest_timezone_at(self, lng, lat):
+    # @profile
+    def closest_timezone_at(self, lng, lat, delta_degree=1):
         """
-        This function searches for the closest polygon just in the actual and the surrounding shortcuts.
+        This function searches for the closest polygon in the surrounding shortcuts.
         Make sure that the point does not lie within a polygon (for that case the algorithm is simply wrong!)
+        Note that the algorithm won't find the closest polygon when it's on the 'other end of earth'
+        (it can't search beyond the 180 deg lng border yet)
+        The
         This is feature still experimental.
         :param lng: longitude of the point in degree
         :param lat: latitude in degree
+        :param delta_degree: the 'search radius' in degree
         :return: the timezone name of the closest found polygon or None
         """
 
@@ -758,14 +742,24 @@ class TimezoneFinder:
         central_x_shortcut = int(floor((lng + 180)))
         central_y_shortcut = int(floor((90 - lat) * 2))
 
-        polygon_nrs = list(self.polygons_of_shortcut(central_x_shortcut, central_y_shortcut))
+        polygon_nrs = []
 
-        # also select the polygons from the surrounding shortcuts
-        for sh in surrounding_shortcuts(central_x_shortcut, central_y_shortcut):
-            # TODO make algorithm work when closest polygon is on the 'other end of earth'
-            # this assures that really only shortcuts within the boundaries are used
-            if sh[0] <= 360 and sh[1] <= 360:
-                for p in self.polygons_of_shortcut(*sh):
+        # there are 2 shortcuts per 1 degree lat, so to cover 1 degree two shortcuts (rows) have to be checked
+        # the highest shortcut is 0
+        top = max(central_y_shortcut - 2 * delta_degree, 0)
+        # the lowest shortcut is 360 (= 2 shortcuts per 1 degree lat)
+        bottom = min(central_y_shortcut + 2 * delta_degree, 360)
+
+        # the most left shortcut is 0
+        left = max(central_x_shortcut - delta_degree, 0)
+        # the most right shortcut is 360 (= 1 shortcuts per 1 degree lng)
+        right = min(central_x_shortcut + delta_degree, 360)
+
+        # TODO make algorithm work when closest polygon is on the 'other end of earth'
+        # select all the polygons from the surrounding shortcuts
+        for x in range(left, right + 1, 1):
+            for y in range(top, bottom + 1, 1):
+                for p in self.polygons_of_shortcut(x, y):
                     if p not in polygon_nrs:
                         polygon_nrs.append(p)
 
@@ -799,7 +793,7 @@ class TimezoneFinder:
                 # this polygon has to be checked
                 coords = self.coords_of(polygon_nrs[pointer])
                 nr_points = len(coords[0])
-                empty_array = empty([2,nr_points], dtype='f8')
+                empty_array = empty([2, nr_points], dtype='f8')
                 distance = distance_to_polygon(lng, lat, nr_points, coords, empty_array)
 
                 already_checked[pointer] = True
@@ -826,8 +820,8 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of the matching polygon or None
         """
-        #if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < 90.0:
-           # raise ValueError
+        # if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < 90.0:
+        # raise ValueError
 
         possible_polygons = self.shortcuts_of(lng, lat)
 
