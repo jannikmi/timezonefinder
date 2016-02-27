@@ -85,11 +85,11 @@ To maximize the chances of getting a result in a `Django` application it might l
 		
 		# ... do something with timezone_name ...
 
-# Comparison to tzwhere
+# Comparison to pytzwhere
 
 In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up** the queries **by more than 100 times**.
 **Initialisation time** and **memory usage** are also **significanlty reduced**, while my algorithm yields the **same results**.
-In some cases `tzwhere` even does not find anything and `timezonefinder` does, for example when the point is only close to a timezone.
+In some cases `pytzwhere` even does not find anything and `timezonefinder` does, for example when the point is only close to a timezone.
 
 
 Similarities:
@@ -127,25 +127,25 @@ Excerpt from my **test results***:
 	  
 	  
 	  TIMES for 1000 realistic queries***:
-	  tzwhere:  0:00:18.184299
+	  pytzwhere:  0:00:18.184299
 	  timezonefinder:  0:00:00.126715
 	  143.51 times faster
 	  
 	  TIMES for  10000 random queries****:
-	  tzwhere: 0:01:36.431927
+	  pytzwhere: 0:01:36.431927
 	  timezonefinder: 0:00:00.626145
 	  154.01 times faster
 	  
 	  Startup times:
-	  tzwhere: 0:00:09.531322
+	  pytzwhere: 0:00:09.531322
 	  timezonefinder: 0:00:00.000361
 	  26402.55 times faster
 
 *timezone_at() with `numba` active
 
-**mismatch: tzwhere finds something and then timezonefinder finds something else
+**mismatch: pytzwhere finds something and then timezonefinder finds something else
 
-***realistic queries: just points within a timezone (= tzwhere yields result)
+***realistic queries: just points within a timezone (= pytzwhere yields result)
 
 ****random queries: random points on earth
 
