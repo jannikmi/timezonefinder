@@ -521,7 +521,7 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     :param lng_rad: the longitude of the point in radians
     :param lat_rad: the latitude of the point
     :param lng_rad_p1: the latitude of the point1 on the equator (lat=0)
-    :return: distance between the point and p1 (lng_rad,0) in radians
+    :return: distance between the point and p1 (lng_rad_p1,0) in radians
     """
     return 2 * asin(sqrt((sin(lat_rad) / 2) ** 2 + cos(lat_rad) * sin((lng_rad - lng_rad_p1) / 2) ** 2))
 
@@ -725,7 +725,6 @@ class TimezoneFinder:
         (it can't search beyond the 180 deg lng border yet)
         this checks all the polygons within [delta_degree] degree lng and lat
         Keep in mind that x degrees lat are not the same distance apart than x degree lng!
-        This is feature still experimental.
         :param lng: longitude of the point in degree
         :param lat: latitude in degree
         :param delta_degree: the 'search radius' in degree
