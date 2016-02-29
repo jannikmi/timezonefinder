@@ -636,7 +636,7 @@ def distance_to_polygon(lng, lat, nr_points, points, trans_points):
 class TimezoneFinder:
     """
     This class lets you quickly find the timezone of a point on earth.
-    It keeps the binary file with the data open in reading mode to enable fast consequent access.
+    It keeps the binary file with the timezonefinder open in reading mode to enable fast consequent access.
     In the file currently used there are two shortcuts stored per degree of latitude and one per degree of longitude
     (tests evaluated this to be the fastest setup when being used with numba)
     """
@@ -644,7 +644,7 @@ class TimezoneFinder:
     def __init__(self):
 
         # open the file in binary reading mode
-        self.binary_file = open(join(dirname(__file__), 'timezone_data.bin'), 'rb')
+        self.binary_file = open(join(dirname(__file__),'timezone_data.bin'), 'rb')
         # read the first 2byte int (= number of polygons stored in the .bin)
         self.nr_of_entries = unpack('!H', self.binary_file.read(2))[0]
 
@@ -877,3 +877,4 @@ class TimezoneFinder:
                 if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                     return time_zone_names[self.id_of(polygon_nr)]
         return None
+

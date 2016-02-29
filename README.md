@@ -8,7 +8,7 @@ It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django
 
 #Dependencies
 
-(`python`, `math`, `struct`)
+(`python`, `math`, `struct`, `os`)
 
 `numpy` 
 
@@ -26,14 +26,22 @@ The amount of shortcuts used in the `.bin` are also only optimized for the use w
 
 #Installation
 
-- install all the dependencies (see above)
-- download `timezonefinder.py` and `timezone_data.bin` 
-- put them in the directory you want to use them from.
+install the dependencies (see above):
+
+    #(install python)
+	pip install numpy
+	# (install numba)
+
+then simply:
+
+	pip install timezonefinder
+
+(or just download `timezonefinder.py` and `timezone_data.bin` and put them in the directory you want to use them from.)
 
 #Usage
 
 
-	from timezonefinder import TimezoneFinder
+	from timezonefinder.timezonefinder import TimezoneFinder
 	
 	tf = TimezoneFinder()
 
@@ -69,19 +77,14 @@ To increase search radius even more (very slow, use `numba`!):
 
 To maximize the chances of getting a result in a `Django` application it might look like:
 
-	from timezonefinder.timezonefinder import TimezoneFinder
-			
-	tf = TimezoneFinder()
-		
 	def find_timezone(request, lat, lng):
 		
 		lat = float(lat)
 		lng = float(lng)
 		timezone_name = tf.timezone_at(lng, lat)
 		if timezone_name is None:
-			timezone_name = tf.closest_timezone_at(lng, lat)
-		
-		# maybe even increase the search radius when it is still None
+		    timezone_name = tf.closest_timezone_at(lng, lat)
+		    # maybe even increase the search radius when it is still None
 		
 		# ... do something with timezone_name ...
 
