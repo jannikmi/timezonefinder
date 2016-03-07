@@ -178,7 +178,7 @@ Excerpt from my **test results***:
 
 #Contact
 
-if you found the tz_date is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
+if you found the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
 
 
 #License
