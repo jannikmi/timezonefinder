@@ -70,6 +70,7 @@ To find the closest timezone (slow):
 To increase search radius even more (very slow, use `numba`!):
 
 	# this checks all the polygons within +-3 degree lng and lat 
+	# I recommend only slowly increasing the search radius
 	# keep in mind that x degrees lat are not the same distance apart than x degree lng!
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
@@ -177,7 +178,7 @@ Excerpt from my **test results***:
 
 #Contact
 
-if you encounter any bugs, have suggestions, criticism etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
+if you found the tz_date is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
 
 
 #License
