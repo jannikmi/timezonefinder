@@ -28,15 +28,15 @@ The amount of shortcuts used in the `.bin` are also only optimized for the use w
 
 install the dependencies (see above):
 
-    #(install python)
+    # (install python)
 	pip install numpy
 	# (install numba)
 
-then simply:
+then simply: 
 
 	pip install timezonefinder
 
-(or just download `timezonefinder.py` and `timezone_data.bin` and put them in the directory you want to use them from.)
+(or just download `timezonefinder.py` and `timezone_data.bin` and put them in a 'timezonefinder' folder in the directory you want to use them from.)
 
 #Usage
 
@@ -47,7 +47,7 @@ then simply:
 
 Basic usage (fast algorithm):
 
-	#point = (longitude, latitude)
+	# point = (longitude, latitude)
 	point = (13.358, 52.5061)
 	print( tf.timezone_at(*point) )
 	# = Europe/Berlin
@@ -60,8 +60,8 @@ To make sure a point is really inside a timezone (slower):
 
 To find the closest timezone (slow):
 
-	#only use this when the point is not inside a polygon!
-	#this only checks the polygons in the surrounding shortcuts (not all polygons)
+	# only use this when the point is not inside a polygon!
+	# this only checks the polygons in the surrounding shortcuts (not all polygons)
 	
 	point = (12.773955, 55.578595)
 	print( tf.closest_timezone_at(*point) )
@@ -69,12 +69,11 @@ To find the closest timezone (slow):
 
 To increase search radius even more (very slow, use `numba`!):
 
-	# this checks all the polygons within +-3 degree lng and lat 
-	# I recommend only slowly increasing the search radius
+	# this checks all the polygons within +-3 degree lng and +-3 degree lat 
+	# I recommend only slowly increasing the search radius 
 	# keep in mind that x degrees lat are not the same distance apart than x degree lng!
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
-
 
 To maximize the chances of getting a result in a `Django` application it might look like:
 
@@ -89,11 +88,12 @@ To maximize the chances of getting a result in a `Django` application it might l
 		
 		# ... do something with timezone_name ...
 
+(to make sure you really got the closest timezone increase the search radius until you get a result. then increase the radius once more and take this result.)
 # Comparison to pytzwhere
 
-In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to **speed up** the queries **by more than 100 times**.
-**Initialisation time** and **memory usage** are also **significanlty reduced**, while my algorithm yields the **same results**.
-In some cases `pytzwhere` even does not find anything and `timezonefinder` does, for example when the point is only close to a timezone.
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to *speed up* the queries *by more than 100 times*.
+Initialisation time and memory usage are also significanlty reduced, while my algorithm yields the same results (see test results below).
+In some cases `pytzwhere` even does not find anything and `timezonefinder` does, for example when only one timezone is close to the point.
 
 
 Similarities:
@@ -109,11 +109,11 @@ Differences:
 
 - the data is now stored in a memory friendly 35MB `.bin` and needed data is directly being read on the fly (instead of reading and converting the 76MB `.csv` (mostly floats stored as strings!) into memory every time a class is created).
   
-- precomputed shortcuts are stored in the `.bin` to quickly look up which polygons have to be checked (instead of creating them on every startup)
+- precomputed shortcuts are stored in the `.bin` to quickly look up which polygons have to be checked (instead of creating the shortcuts on every startup)
   
 - optimized algorithms
   
-- introduced proximity algorithm (still experimental)
+- introduced proximity algorithm
   
 - use of `numba` for speeding things up much further.
 
@@ -178,7 +178,9 @@ Excerpt from my **test results***:
 
 #Contact
 
-if you found the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
+If you notice that the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
+
+Also write me if you want the tool I wrote for converting the original `.csv` into the `.bin`.
 
 
 #License
