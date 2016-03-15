@@ -1,6 +1,8 @@
-This is a fast and lightweight python project to lookup the corresponding timezone for any given lat/lng on earth entirely offline.
+This is a fast and lightweight python project to lookup the corresponding timezone for a given lat/lng on earth entirely offline.
 
-This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) ([github](https://github.com/pegler/pytzwhere)).
+This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) ([github](https://github.com/pegler/pytzwhere)), but it aims to provide improved performance and usability.
+
+Timezones at sea are not yet supported (because somewhat special rules apply there).
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
@@ -41,11 +43,14 @@ then simply:
 #Usage
 
 
+Basics:
+----
+
 	from timezonefinder.timezonefinder import TimezoneFinder
 	
 	tf = TimezoneFinder()
 
-Basic usage (fast algorithm):
+fast algorithm:
 
 	# point = (longitude, latitude)
 	point = (13.358, 52.5061)
@@ -75,7 +80,13 @@ To increase search radius even more (very slow, use `numba`!):
 	print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
 	# = Europe/Copenhagens
 
-To maximize the chances of getting a result in a `Django` application it might look like:
+(to make sure you really got the closest timezone increase the search radius until you get a result. then increase the radius once more and take this result.)
+
+
+Further application:
+----
+
+To maximize the chances of getting a result in a `Django` view it might look like:
 
 	def find_timezone(request, lat, lng):
 		
@@ -88,7 +99,33 @@ To maximize the chances of getting a result in a `Django` application it might l
 		
 		# ... do something with timezone_name ...
 
-(to make sure you really got the closest timezone increase the search radius until you get a result. then increase the radius once more and take this result.)
+To get an aware datetime object from the result:
+
+	# first pip install pytz
+	from pytz import timezone, utc
+	from pytz.exceptions import UnknownTimeZoneError
+	
+    # tzinfo has to be None (means naive)
+    naive_datetime = YOUR_NAIVE_DATETIME
+	
+    try:
+        tz = timezone(timezone_name)
+        aware_datetime = naive_datetime.replace(tzinfo=tz)
+        aware_datetime_in_utc = aware_datetime.astimezone(utc)
+        
+        naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
+        
+    except UnknownTimeZoneError:
+        # ... handle the error ...
+
+also see the [pytz Doc](http://pytz.sourceforge.net/).
+
+
+Using the conversion tool:
+----
+
+[coming soon]
+
 # Comparison to pytzwhere
 
 In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to *speed up* the queries *by more than 100 times*.
@@ -178,7 +215,7 @@ Excerpt from my **test results***:
 
 #Contact
 
-If you notice that the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: **python[at]michelfe.it**
+If you notice that the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: *python[at]michelfe.it*
 
 Also write me if you want the tool I wrote for converting the original `.csv` into the `.bin`.
 
