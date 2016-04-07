@@ -1,11 +1,24 @@
+import os
+import re
+
 from distutils.core import setup
+
+
+def get_version(package):
+    """
+    Return package version as listed in `__version__` in `__init__.py`.
+    """
+    init_py = open(os.path.join(package, '__init__.py')).read()
+    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+
+version = get_version('timezonefinder')
 
 with open('README.md') as f:
     readme = f.read()
 
 setup(
     name='timezonefinder',
-    version='1.003',
+    version=version,
     packages=['timezonefinder'],
     package_data={'timezonefinder': ['timezone_data.bin']},
     description='Python library to look up timezone from lat / long offline. Improved version of "pytzwhere".',
