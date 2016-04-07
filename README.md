@@ -46,8 +46,8 @@ then simply:
 Basics:
 ----
 
-	from timezonefinder.timezonefinder import TimezoneFinder
-	
+	from timezonefinder import TimezoneFinder
+
 	tf = TimezoneFinder()
 
 fast algorithm:
