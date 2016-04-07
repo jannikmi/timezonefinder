@@ -1,0 +1,4 @@
+numpy==1.11.0
+py==1.4.31
+pytest==2.9.1
+tzwhere==2.2
