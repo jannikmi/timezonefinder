@@ -1,9 +1,8 @@
 import unittest
 from timezonefinder import TimezoneFinder
-from tzwhere import tzwhere
 import random
 from datetime import datetime
-from realistic_points import realistic_points
+from tzwhere.tzwhere import tzwhere
 
 time_zones = {
     "Europe/Andorra": 1,
@@ -432,7 +431,34 @@ time_zones = {
 }
 
 
-class TimezoneEqualityTest(unittest.TestCase):
+def random_point():
+    # tzwhere does not work for points with more latitude!
+    return random.uniform(-180, 180), random.uniform(-84, 84)
+
+class PackageEqualityTest(unittest.TestCase):
+
+    # do the preparations which have to be made only once
+    timezone_finder = TimezoneFinder()
+    tz_where = tzwhere()
+
+    # number of points to test (in each test, realistic and random ones)
+    n = 1000
+
+    # number of times the n number of random points should be tested in the speedtest
+    runs = 1
+
+    # create an array of n points where tzwhere finds something (realistic queries)
+    print('collecting', n, 'realistic points...')
+    realistic_points = []
+    i = 0
+    while i < n:
+        lng, lat = random_point()
+        if tz_where.tzNameAt(lat, lng) is not None:
+            i += 1
+            realistic_points.append((lng, lat))
+
+    print('Done.')
+
     # Test Points for equality-test of the algorithms:
     equality_test_data = {
 
@@ -465,41 +491,36 @@ class TimezoneEqualityTest(unittest.TestCase):
     }
 
     def setUp(self):
-        # prepare tests
-        self.timezone_finder = TimezoneFinder()
-        self.tz_where = tzwhere()
-
-        self.n = 1000
+        #preparations for every test case
+        pass
 
     def tearDown(self):
         pass
 
     def test_correctness(self):
         # Test correctness
-        for k, v in self.equality_test_data.items():
-            lng = k[0]
-            lat = k[1]
-            print('should be:', v)
-
+        print()
+        print('test correctness:')
+        print('Results: point, target, tzwere is correct, timezonefinder is correct')
+        for point, tz_name in self.equality_test_data.items():
+            lng = point[0]
+            lat = point[1]
             my_result = self.timezone_finder.timezone_at(lng, lat)
             his_result = self.tz_where.tzNameAt(latitude=lat, longitude=lng)
-            print('results: ', my_result, his_result, '\n')
-            assert my_result == v
+            print(point, tz_name, my_result == tz_name, his_result == tz_name)
+            assert my_result == tz_name
 
-            assert his_result == v
+            assert his_result == tz_name
 
     def test_equality(self):
         # Test the equality if the two algorithms
 
-        # test_points = []
-        # for i in range(n):
-        # test_points.append(random_point())
-
         mistakes = 0
+        print()
         print('testing realistic points')
         print('MISMATCHES:')
 
-        for p in realistic_points:
+        for p in self.realistic_points:
 
             his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
 
@@ -508,17 +529,16 @@ class TimezoneEqualityTest(unittest.TestCase):
             if my_result != his_result:
                 mistakes += 1
                 # mistake_point_nrs.append(i)
-                print(p)
-                print(my_result)
-                print('should be equal to')
-                print(his_result)
+                print('mistake at point:', p)
+                print(my_result, 'should be equal to', his_result)
+                # raise AssertionError('There was a mistake')
 
-        n = 1000
-        print('testing', n, 'random points')
+        print()
+        print('testing', self.n, 'random points')
         print('MISMATCHES:')
 
         i = 0
-        while i < n:
+        while i < self.n:
             p = random_point()
 
             his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
@@ -530,19 +550,19 @@ class TimezoneEqualityTest(unittest.TestCase):
                 if my_result != his_result:
                     mistakes += 1
                     # mistake_point_nrs.append(i)
-                    print(p)
-                    print(my_result)
-                    print('should be equal to')
-                    print(his_result)
+                    print('mistake at point:', p)
+                    print(my_result, 'should be equal to', his_result)
+                    # raise AssertionError('There was a mistake')
+
 
                     # assert my_result == his_result
 
-        print('\nin', n + self.n, 'tries', mistakes, 'mismatches were made')
-        print('fail percentage is:', mistakes * 100 / (n + self.n))
+        print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
+        print('fail percentage is:', mistakes * 100 / (2 * self.n))
 
     def test_startup_time(self):
 
-        def test_speed_his_algor(points):
+        def test_speed_his_algor():
             start_time = datetime.now()
 
             tz_where = tzwhere()
@@ -553,7 +573,7 @@ class TimezoneEqualityTest(unittest.TestCase):
 
             return end_time - start_time
 
-        def test_speed_my_algor(points):
+        def test_speed_my_algor():
             start_time = datetime.now()
 
             timezonefinder = TimezoneFinder()
@@ -564,8 +584,8 @@ class TimezoneEqualityTest(unittest.TestCase):
 
             return end_time - start_time
 
-        my_time = test_speed_my_algor(realistic_points)
-        his_time = test_speed_his_algor(realistic_points)
+        my_time = test_speed_my_algor()
+        his_time = test_speed_his_algor()
 
         print('Startup times:')
         print('tzwhere:', his_time)
@@ -604,11 +624,11 @@ class TimezoneEqualityTest(unittest.TestCase):
 
         runs = 1
 
-        my_time = test_speed_my_algor(realistic_points)
-        his_time = test_speed_his_algor(realistic_points)
+        my_time = test_speed_my_algor(self.realistic_points)
+        his_time = test_speed_his_algor(self.realistic_points)
         for i in range(runs - 1):
-            my_time += test_speed_my_algor(realistic_points)
-            his_time += test_speed_his_algor(realistic_points)
+            my_time += test_speed_my_algor(self.realistic_points)
+            his_time += test_speed_his_algor(self.realistic_points)
 
         my_time /= runs
         his_time /= runs
@@ -650,25 +670,22 @@ class TimezoneEqualityTest(unittest.TestCase):
 
             return end_time - start_time
 
-        runs = 1
+        random_points = []
 
-        n = 10000
-        points = []
+        for i in range(self.n):
+            random_points.append(random_point())
 
-        for i in range(n):
-            points.append(random_point())
+        my_time = test_speed_my_algor(random_points)
+        his_time = test_speed_his_algor(random_points)
+        for i in range(self.runs - 1):
+            my_time += test_speed_my_algor(random_points)
+            his_time += test_speed_his_algor(random_points)
 
-        my_time = test_speed_my_algor(points)
-        his_time = test_speed_his_algor(points)
-        for i in range(runs - 1):
-            my_time += test_speed_my_algor(points)
-            his_time += test_speed_his_algor(points)
-
-        my_time /= runs
-        his_time /= runs
+        my_time /= self.runs
+        his_time /= self.runs
 
         print('')
-        print('\n\nTIMES for ', n, 'random queries:')
+        print('\n\nTIMES for ', self.n, 'random queries:')
         print('tzwhere:', his_time)
         print('timezonefinder:', my_time)
 
@@ -712,6 +729,4 @@ class TimezoneEqualityTest(unittest.TestCase):
     '''
 
 
-def random_point():
-    # tzwhere does not work for points with more latitude!
-    return random.uniform(-180, 180), random.uniform(-84, 84)
+

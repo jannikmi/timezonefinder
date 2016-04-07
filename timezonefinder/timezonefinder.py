@@ -731,6 +731,9 @@ class TimezoneFinder:
         :return: the timezone name of the closest found polygon or None
         """
 
+        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+
         # the maximum possible distance is pi = 3.14...
         min_distance = 4
         # transform point X into cartesian coordinates
@@ -751,7 +754,6 @@ class TimezoneFinder:
         # the most right shortcut is 360 (= 1 shortcuts per 1 degree lng)
         right = min(central_x_shortcut + delta_degree, 360)
 
-        # TODO make algorithm work when closest polygon is on the 'other end of earth'
         # select all the polygons from the surrounding shortcuts
         for x in range(left, right + 1, 1):
             for y in range(top, bottom + 1, 1):
@@ -816,8 +818,8 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of the matching polygon or None
         """
-        # if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < 90.0:
-        # raise ValueError
+        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
 
         possible_polygons = self.shortcuts_of(lng, lat)
 
@@ -862,6 +864,9 @@ class TimezoneFinder:
         :param lat: latitude in degree
         :return: the timezone name of the polygon the point is included in or None
         """
+
+        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
 
         possible_polygons = self.shortcuts_of(lng, lat)
 

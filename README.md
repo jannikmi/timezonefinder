@@ -1,12 +1,16 @@
 This is a fast and lightweight python project to lookup the corresponding timezone for a given lat/lng on earth entirely offline.
 
-This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) ([github](https://github.com/pegler/pytzwhere)), but it aims to provide improved performance and usability.
+This project is derived from and has been successfully tested against [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) ([github](https://github.com/pegler/pytzwhere)), but aims to provide improved performance and usability.
 
-Timezones at sea are not yet supported (because somewhat special rules apply there).
+It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
 
 The underlying timezone data is based on work done by [Eric Muller](http://efele.net/maps/tz/world/).
 
-It is also similar to [django-geo-timezones](https://pypi.python.org/pypi/django-geo-timezones/0.1.2)
+
+Timezones at sea and Antarctica are not yet supported (because somewhat special rules apply there).
+
+
+See [github](https://pypi.python.org/pypi/django-geo-timezones/0.1.2) for the correctly displayed readme.
 
 #Dependencies
 
@@ -22,7 +26,7 @@ maybe also `numba` and its Requirements
 This is only for precompiling the time critical algorithms.
 If you want to use this, just uncomment all the `@jit(...)` annotations and the `import ...` line in `timezonefinder.py`.
 When you only look up a few points once in a while, the compilation time is probably outweighing the benefits.
-When using `certain_timezone_at()` and especially `closest_timeyone_at()` however, I highly recommend using `numba` (see speed comparison below)!
+When using `certain_timezone_at()` and especially `closest_timezone_at()` however, I highly recommend using `numba` (see speed comparison below)!
 The amount of shortcuts used in the `.bin` are also only optimized for the use with `numba`.
 
 
@@ -124,12 +128,18 @@ also see the [pytz Doc](http://pytz.sourceforge.net/).
 Using the conversion tool:
 ----
 
-[coming soon]
+Place the `file_converter.py` in one folder with the `tz_world.csv` from tzwhere and run it as a script.
+It converts the .csv in a new .csv and transforms this file into the needed .bin
+
+Place this .bin in your timezonfinder folder to make it being used.
+
+**Please note:** Neither tests nor file_converter.py are optimized or really beautiful. Sorry for that.
+
 
 # Comparison to pytzwhere
 
-In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to *speed up* the queries *by more than 100 times*.
-Initialisation time and memory usage are also significanlty reduced, while my algorithm yields the same results (see test results below).
+In comparison to [pytzwhere](https://pypi.python.org/pypi/tzwhere/2.2) I managed to *speed up* the queries *by more than 100 times* (s. test results below).
+Initialisation time and memory usage are also significanlty reduced, while my algorithm yields the same results.
 In some cases `pytzwhere` even does not find anything and `timezonefinder` does, for example when only one timezone is close to the point.
 
 
@@ -211,13 +221,11 @@ Excerpt from my **test results***:
 	w/ numa: 0:00:02.688353
 	40.2 times faster
 
-(this is not inlcuded in my tests)
+(this is not inlcuded in my tests becaus one cannot automatically enable and disable Numba)
 
 #Contact
 
-If you notice that the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: *python[at]michelfe.it*
-
-Also write me if you want the tool I wrote for converting the original `.csv` into the `.bin`.
+If you notice that the tz data is outdated, encounter any bugs, have suggestions, criticism,  etc. feel free to **open an Issue** on Git or contact me: *python at michelfe dot it*
 
 
 #License
