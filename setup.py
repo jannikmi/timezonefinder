@@ -23,5 +23,8 @@ setup(
         'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Localization',
     ],
-    long_description=readme
+    long_description=readme,
+    install_requires=[
+        'numpy',
+    ],
 )
