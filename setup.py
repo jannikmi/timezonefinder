@@ -26,7 +26,6 @@ setup(
     author_email='python@michelfe.it',
     license='MIT licence',
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
-    download_url='https://github.com/MrMinimal64/timezonefinder/tarball/1.4.0',
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
