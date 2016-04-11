@@ -31,7 +31,6 @@ setup(
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
     keywords='timezone, coordinates, latitude, longitude, pytzwhere, tzwhere,',
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',

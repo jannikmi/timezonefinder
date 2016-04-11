@@ -1,4 +1,5 @@
 include README.rst
+include CHANGELOG.rst
 include LICENSE
 
 recursive-include test *
