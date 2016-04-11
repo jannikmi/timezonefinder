@@ -15,6 +15,8 @@ Muller <http://efele.net/maps/tz/world/>`__.
 Timezones at sea and Antarctica are not yet supported (because somewhat
 special rules apply there).
 
+[Please note: At the moment Tests are not running under Python 2.7 and there are also unresolved issues with overflow in the main algorithms. So please only use it with Python3 for now. Thx and Sry]
+
 Dependencies
 ============
 
