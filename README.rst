@@ -43,10 +43,7 @@ in your terminal simply:
 ::
 
     pip install timezonefinder
-
-(or just download ``timezonefinder.py`` and ``timezone_data.bin`` and
-put them in a 'timezonefinder' folder in the directory you want to use
-them from.)
+	
 
 Usage
 =====
@@ -60,7 +57,7 @@ Basics:
 
     tf = TimezoneFinder()
 
-fast algorithm:
+**fast algorithm:**
 
 ::
 
@@ -69,14 +66,14 @@ fast algorithm:
     print( tf.timezone_at(*point) )
     # = Europe/Berlin
 
-To make sure a point is really inside a timezone (slower):
+**To make sure a point is really inside a timezone (slower):**
 
 ::
 
     print( tf.certain_timezone_at(*point) )
     # = Europe/Berlin
 
-To find the closest timezone (slow):
+**To find the closest timezone (slow):**
 
 ::
 
@@ -87,7 +84,7 @@ To find the closest timezone (slow):
     print( tf.closest_timezone_at(*point) )
     # = Europe/Copenhagens
 
-To increase search radius even more (very slow, use ``numba``!):
+**To increase search radius even more (very slow, use ``numba``!):**
 
 ::
 
@@ -104,14 +101,11 @@ take this result.)
 Further application:
 --------------------
 
-To maximize the chances of getting a result in a ``Django`` view it
-might look like:
+**To maximize the chances of getting a result in a** ``Django`` **view it might look like:**
 
 ::
 
     def find_timezone(request, lat, lng):
-        
-        
         lat = float(lat)
         lng = float(lng)
         
@@ -122,11 +116,12 @@ might look like:
                 # maybe even increase the search radius when it is still None
           
         except ValueError:
-            # handle error
+			# the coordinates were out of bounds
+            # {handle error}
         
         # ... do something with timezone_name ...
 
-To get an aware datetime object from the result:
+**To get an aware datetime object from the timezone name:**
 
 ::
 
@@ -149,16 +144,15 @@ To get an aware datetime object from the result:
 
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
-Using the conversion tool:
---------------------------
+**Using the conversion tool:**
 
 Place the ``file_converter.py`` in one folder with the ``tz_world.csv``
 from tzwhere and run it as a script. It converts the .csv in a new .csv
 and transforms this file into the needed .bin
 
-Place this .bin in your timezonfinder folder to make it being used.
+Place this .bin in your timezonfinder folder (overwriting the old file) to make it being used.
 
-**Please note:** Neither tests nor file\_converter.py are optimized or
+**Please note:** Neither the tests nor the file\_converter.py are optimized or
 really beautiful. Sorry for that.
 
 Comparison to pytzwhere
@@ -172,15 +166,14 @@ while my algorithm yields the same results. In some cases ``pytzwhere``
 even does not find anything and ``timezonefinder`` does, for example
 when only one timezone is close to the point.
 
-Similarities:
--------------
+**Similarities:**
 
 -  results
 
 -  data being used
 
-Differences:
-------------
+
+**Differences:**
 
 -  the data is now stored in a memory friendly 35MB ``.bin`` and needed
    data is directly being read on the fly (instead of reading and
@@ -259,7 +252,7 @@ Speed Impact of Numba
     w/ numa: 0:00:02.688353
     40.2 times faster
 
-(this is not inlcuded in my tests becaus one cannot automatically enable
+(this is not inlcuded in my tests because one cannot automatically enable
 and disable Numba)
 
 Contact

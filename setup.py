@@ -16,6 +16,9 @@ version = get_version('timezonefinder')
 with open('README.rst') as f:
     readme = f.read()
 
+with open('CHANGELOG.rst') as changelog_file:
+    changelog = changelog_file.read()
+
 setup(
     name='timezonefinder',
     version=version,
@@ -26,17 +29,20 @@ setup(
     author_email='python@michelfe.it',
     license='MIT licence',
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
-    download_url='https://github.com/MrMinimal64/timezonefinder/tarball/1.4.0',
+    keywords='timezone, coordinates, latitude, longitude, pytzwhere, tzwhere,',
     classifiers=[
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Software Development :: Localization',
     ],
-    long_description=readme,
+    long_description=readme + '\n\n' + changelog,
     install_requires=[
         'numpy',
     ],
