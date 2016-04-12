@@ -1,5 +1,5 @@
-This is a fast and lightweight python project to lookup the
-corresponding timezone for a given lat/lng on earth entirely offline.
+This is a fast and lightweight python project to lookup the corresponding
+timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from and has been successfully tested against
 `pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__
@@ -15,7 +15,8 @@ Muller <http://efele.net/maps/tz/world/>`__.
 Timezones at sea and Antarctica are not yet supported (because somewhat
 special rules apply there).
 
-[Please note: At the moment Tests are not running under Python 2.7 and there are also unresolved issues with overflow in the main algorithms. So please only use it with Python3 for now. Thx and Sry]
+[**Please note**: At the moment Python 2.x is not supported (Tests are not running and algorithms with ``numpy`` are not
+ compatible). Write me to encourage me to work on this.]
 
 Dependencies
 ============
@@ -26,9 +27,7 @@ Dependencies
 
 maybe also ``numba`` and its Requirements
 
-This is only for precompiling the time critical algorithms. If you want
-to use this, just uncomment all the ``@jit(...)`` annotations and the
-``import ...`` line in ``timezonefinder.py``. When you only look up a
+This is only for precompiling the time critical algorithms. When you only look up a
 few points once in a while, the compilation time is probably outweighing
 the benefits. When using ``certain_timezone_at()`` and especially
 ``closest_timezone_at()`` however, I highly recommend using ``numba``
@@ -46,6 +45,8 @@ in your terminal simply:
 
     pip install timezonefinder
 	
+(you might need to run this command as administrator, because some other dependencies will be installed.)
+
 
 Usage
 =====
@@ -58,6 +59,16 @@ Basics:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
+	
+
+for testing if numba is being used:
+(if the import of the optimized algorithms worked)
+
+::
+
+    print(TimezoneFinder.using_numba())
+    # this is a static method returning True or False
+
 
 **fast algorithm:**
 
@@ -118,7 +129,7 @@ Further application:
                 # maybe even increase the search radius when it is still None
           
         except ValueError:
-			# the coordinates were out of bounds
+            # the coordinates were out of bounds
             # {handle error}
         
         # ... do something with timezone_name ...
@@ -256,6 +267,16 @@ Speed Impact of Numba
 
 (this is not inlcuded in my tests because one cannot automatically enable
 and disable Numba)
+
+Known Issues
+============
+
+All points in Lesotho are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
+I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
+So actually this is a mistake in the data not my algorithms and the consequences are too small for me to fix this issue (those two timezones have the same utc-offset anyway).
+
+Again: write if you want me to work on this.
+
 
 Contact
 =======
