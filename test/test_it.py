@@ -1,5 +1,5 @@
 import unittest
-from timezonefinder import TimezoneFinder
+from timezonefinder.timezonefinder import TimezoneFinder
 import random
 from datetime import datetime
 from tzwhere.tzwhere import tzwhere
@@ -435,10 +435,18 @@ def random_point():
     # tzwhere does not work for points with more latitude!
     return random.uniform(-180, 180), random.uniform(-84, 84)
 
-class PackageEqualityTest(unittest.TestCase):
 
+class PackageEqualityTest(unittest.TestCase):
     # do the preparations which have to be made only once
+
+    if TimezoneFinder.using_numba():
+        print('Numba is being used.')
+    else:
+        print('Numba is NOT being used.')
+
     timezone_finder = TimezoneFinder()
+
+
     tz_where = tzwhere()
 
     # number of points to test (in each test, realistic and random ones)
@@ -450,12 +458,22 @@ class PackageEqualityTest(unittest.TestCase):
     # create an array of n points where tzwhere finds something (realistic queries)
     print('collecting', n, 'realistic points...')
     realistic_points = []
+    realistic_points_results = []
+
     i = 0
     while i < n:
-        lng, lat = random_point()
-        if tz_where.tzNameAt(lat, lng) is not None:
-            i += 1
-            realistic_points.append((lng, lat))
+        point = random_point()
+        # lng, lat = random_point()
+        # result = tz_where.tzNameAt(lat, lng)
+        result = timezone_finder.certain_timezone_at(*point)
+        if result is not None:
+            lng = point[0]
+            lat = point[1]
+            result = tz_where.tzNameAt(lat, lng)
+            if result is not None:
+                i += 1
+                realistic_points.append(point)
+                realistic_points_results.append(result)
 
     print('Done.')
 
@@ -486,12 +504,14 @@ class PackageEqualityTest(unittest.TestCase):
 
         (-106.1706459, 23.7891123): 'America/Mazatlan',
 
+        # (-110.29080, 35.53587): 'America/Phoenix',
+
         (33, -84): 'uninhabited',
 
     }
 
     def setUp(self):
-        #preparations for every test case
+        # preparations for every test case
         pass
 
     def tearDown(self):
@@ -499,8 +519,7 @@ class PackageEqualityTest(unittest.TestCase):
 
     def test_correctness(self):
         # Test correctness
-        print()
-        print('test correctness:')
+        print('\ntest correctness:')
         print('Results: point, target, tzwere is correct, timezonefinder is correct')
         for point, tz_name in self.equality_test_data.items():
             lng = point[0]
@@ -516,13 +535,15 @@ class PackageEqualityTest(unittest.TestCase):
         # Test the equality if the two algorithms
 
         mistakes = 0
-        print()
-        print('testing realistic points')
+        print('\ntesting realistic points')
         print('MISMATCHES:')
 
+        i = 0
         for p in self.realistic_points:
 
-            his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
+            # his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
+            his_result = self.realistic_points_results[i]
+            i += 1
 
             my_result = self.timezone_finder.timezone_at(*p)
 
@@ -533,8 +554,7 @@ class PackageEqualityTest(unittest.TestCase):
                 print(my_result, 'should be equal to', his_result)
                 # raise AssertionError('There was a mistake')
 
-        print()
-        print('testing', self.n, 'random points')
+        print('\ntesting', self.n, 'random points')
         print('MISMATCHES:')
 
         i = 0
@@ -559,6 +579,57 @@ class PackageEqualityTest(unittest.TestCase):
 
         print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
         print('fail percentage is:', mistakes * 100 / (2 * self.n))
+
+        assert mistakes == 0
+
+    def test_equality_certain(self):
+        # Test the equality of the tzwhere with the certain_timezone_at() algorithms
+        # they should both yield exactly the same results
+
+        mistakes = 0
+        print('\ntesting certain_timezone_at():')
+        print('testing realistic points')
+        print('MISMATCHES:')
+
+        i = 0
+        for p in self.realistic_points:
+
+            # his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
+            his_result = self.realistic_points_results[i]
+            i += 1
+
+            my_result = self.timezone_finder.timezone_at(*p)
+
+            if my_result != his_result:
+                mistakes += 1
+                # mistake_point_nrs.append(i)
+                print('mistake at point:', p)
+                print(my_result, 'should be equal to', his_result)
+                # raise AssertionError('There was a mistake')
+
+        print('\ntesting', self.n, 'random points')
+        print('MISMATCHES:')
+
+        i = 0
+        while i < self.n:
+            p = random_point()
+            my_result = self.timezone_finder.certain_timezone_at(*p)
+
+            his_result = self.tz_where.tzNameAt(latitude=p[1], longitude=p[0])
+
+            i += 1
+
+            if my_result != his_result:
+                mistakes += 1
+                # mistake_point_nrs.append(i)
+                print('mistake at point:', p)
+                print(my_result, 'should be equal to', his_result)
+                # raise AssertionError('There was a mistake')
+                # assert my_result == his_result
+
+        print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
+        print('fail percentage is:', mistakes * 100 / (2 * self.n))
+        assert mistakes == 0
 
     def test_startup_time(self):
 
@@ -587,10 +658,12 @@ class PackageEqualityTest(unittest.TestCase):
         my_time = test_speed_my_algor()
         his_time = test_speed_his_algor()
 
-        print('Startup times:')
+        print('\nStartup times:')
         print('tzwhere:', his_time)
         print('timezonefinder:', my_time)
         print(round(his_time / my_time, 2), 'times faster')
+
+        assert his_time > my_time
 
     def test_speed(self):
 
@@ -616,7 +689,7 @@ class PackageEqualityTest(unittest.TestCase):
             start_time = datetime.now()
 
             for point in points:
-                self.timezone_finder.timezone_at(point[0], point[1])
+                self.timezone_finder.timezone_at(*point)
 
             end_time = datetime.now()
 
@@ -639,6 +712,8 @@ class PackageEqualityTest(unittest.TestCase):
         print('timezonefinder:', my_time)
 
         print(round(his_time / my_time, 2), 'times faster')
+
+        assert his_time > my_time
 
     def test_speed_random(self):
 
@@ -664,7 +739,7 @@ class PackageEqualityTest(unittest.TestCase):
             start_time = datetime.now()
 
             for point in points:
-                self.timezone_finder.timezone_at(point[0], point[1])
+                self.timezone_finder.timezone_at(*point)
 
             end_time = datetime.now()
 
@@ -691,42 +766,4 @@ class PackageEqualityTest(unittest.TestCase):
 
         print(round(his_time / my_time, 2), 'times faster')
 
-        # TODO test start up time
-        # Test, store and document the speed of all the Algorithms
-
-    '''
-    def test_equality_until_mistake(self):
-        # Test the equality if the two algorithms
-
-        mistake_after = 0
-        print('Testing until missmatch:')
-        print('valid points checked:')
-        i = 0
-
-        while 1:
-            point = random_point()
-            his_result = self.tz_where.tzNameAt(latitude=point[1], longitude=point[0])
-
-            if his_result is not None:
-                i += 1
-                if i % 1000 == 0:
-                    print(i)
-
-                my_result = self.timezone_finder.timezone_at(point[0], point[1])
-
-                if my_result != his_result:
-                    mistake_after = i
-                    # mistake_point_nrs.append(i)
-                    print(point)
-                    print(my_result)
-                    print('should be equal to')
-                    print(his_result)
-                    break
-
-                    # assert my_result == his_result
-
-        print('mistake made when testing the ', mistake_after, 'th non empty random point')
-    '''
-
-
-
+        assert his_time > my_time

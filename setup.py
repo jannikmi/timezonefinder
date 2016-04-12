@@ -1,7 +1,8 @@
 import os
 import re
 
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup
 
 
 def get_version(package):
