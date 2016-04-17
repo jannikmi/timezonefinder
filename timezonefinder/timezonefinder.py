@@ -5,7 +5,7 @@ from os.path import join, dirname
 
 try:
     # try loading optimized algorithms
-    from .helpers_w_NUMBA import *
+    from .helpers_numba import *
 
     USING_NUMBA = True
 
