@@ -147,7 +147,7 @@ class PackageEqualityTest(unittest.TestCase):
                         print(p, my_result, his_result)
                         # raise AssertionError('There was a mistake')
 
-                    # assert my_result == his_result
+                        # assert my_result == his_result
 
         print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
         fail_percentage = mistakes * 100 / (2 * self.n)
@@ -282,15 +282,15 @@ class PackageEqualityTest(unittest.TestCase):
             my_time += check_speed_my_algor(self.realistic_points)
             his_time += check_speed_his_algor(self.realistic_points)
 
-        my_time /= self.runs
-        his_time /= self.runs
-
-        print('')
-        print('\n\nTIMES for', self.n, 'realistic queries:')
-        print('tzwhere:', his_time)
-        print('timezonefinder:', my_time)
-
         try:
+            my_time /= self.runs
+            his_time /= self.runs
+
+            print('')
+            print('\n\nTIMES for ', self.n, 'realistic queries:')
+            print('tzwhere:', his_time)
+            print('timezonefinder:', my_time)
+
             print(round(his_time / my_time, 2), 'times faster')
         except TypeError:
             pass
@@ -337,15 +337,15 @@ class PackageEqualityTest(unittest.TestCase):
             my_time += check_speed_my_algor(random_points)
             his_time += check_speed_his_algor(random_points)
 
-        my_time /= self.runs
-        his_time /= self.runs
-
-        print('')
-        print('\n\nTIMES for ', self.n, 'random queries:')
-        print('tzwhere:', his_time)
-        print('timezonefinder:', my_time)
-
         try:
+            my_time /= self.runs
+            his_time /= self.runs
+
+            print('')
+            print('\n\nTIMES for ', self.n, 'random queries:')
+            print('tzwhere:', his_time)
+            print('timezonefinder:', my_time)
+
             print(round(his_time / my_time, 2), 'times faster')
         except TypeError:
             pass
