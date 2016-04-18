@@ -1,7 +1,10 @@
-from math import radians, cos, sin, asin, sqrt, floor, degrees, ceil, atan2
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from math import floor
+from os.path import dirname, join
 from struct import unpack
-from numpy import fromfile, empty, array
-from os.path import join, dirname
+
+from numpy import array, empty, fromfile
 
 try:
     import numba
@@ -9,9 +12,9 @@ except ImportError:
     numba = None
 
 if numba is not None:
-    from .helpers_numba import *
+    from .helpers_numba import coord2long, distance_to_polygon, inside_polygon
 else:
-    from .helpers import *
+    from .helpers import coord2long, distance_to_polygon, inside_polygon
 
 
 # maps the timezone ids to their name
