@@ -4,15 +4,15 @@ from numpy import fromfile, empty, array
 from os.path import join, dirname
 
 try:
-    # try loading optimized algorithms
-    from .helpers_w_NUMBA import *
-
-    USING_NUMBA = True
-
+    import numba
 except ImportError:
+    numba = None
+
+if numba is not None:
+    from .helpers_numba import *
+else:
     from .helpers import *
 
-    USING_NUMBA = False
 
 # maps the timezone ids to their name
 time_zone_names = {
@@ -472,7 +472,7 @@ class TimezoneFinder:
 
     @staticmethod
     def using_numba():
-        return USING_NUMBA
+        return (numba is not None)
 
     def id_of(self, line=0):
         # ids start at address 6. per line one unsigned 2byte int is used
