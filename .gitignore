@@ -1,7 +1,7 @@
 MANIFEST
 publish.py
 
-# GITIGNORE DEFAULTS 
+# GITIGNORE DEFAULTS
 
 
 # PYTHON
@@ -106,6 +106,3 @@ target/
 *.ipr
 *.iws
 
-
-
-publish.py

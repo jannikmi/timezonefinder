@@ -49,7 +49,7 @@ in your terminal simply:
 ::
 
     pip install timezonefinder
-	
+
 (you might need to run this command as administrator)
 
 
@@ -207,7 +207,7 @@ when only one timezone is close to the point.
 
 -  use of ``numba`` for speeding things up much further.
 
-**test results**\from the latest version \*:
+**test results**\ from the latest version \*:
 
 ::
 
@@ -229,7 +229,7 @@ when only one timezone is close to the point.
     (14.1315716, 0.2350623) Africa/Brazzaville True True
 
     testing timezone_at():
-    testing realistic points
+    testing 10000 realistic points
     MISMATCHES:
 
     testing 10000 random points
