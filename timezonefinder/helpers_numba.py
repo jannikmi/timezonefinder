@@ -1,4 +1,7 @@
-from math import radians, cos, sin, asin, sqrt, degrees, ceil, atan2
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
+
 from numba import jit
 
 
@@ -119,13 +122,13 @@ def inside_polygon(x, y, coords):
             if y2 >= y:
                 x1 = coords[0][i - 1]
                 x2 = coords[0][i]
-                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),position_to_line(x, y, x1, x2, y1, y2))
+                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),
+                #       position_to_line(x, y, x1, x2, y1, y2))
                 if position_to_line(x, y, x1, x2, y1, y2) == 2:
                     # point is left of line
                     # return true when its on the line?! this is very unlikely to happen!
                     # and would need to be checked every time!
                     wn += 1
-
 
         else:
             if y2 < y:
