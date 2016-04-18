@@ -1,30 +1,138 @@
 from math import radians, cos, sin, asin, sqrt, degrees, ceil, atan2
 from numba import jit
 
+
+@jit('uint8(i8,i8,i8,i8,i8,i8)', nopython=True, cache=True)
+def position_to_line(x, y, x1, x2, y1, y2):
+    """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
+        Return: 2 for pX left of the line from! p1 to! p2
+               1 for pX on the line
+                0 for pX  right of the line
+                this approach is only valid because we already know that y lies within ]y1;y2]
+    """
+
+    if x1 > x2:
+        # p1 is further right than p2
+        if x > x1:
+            # pX is further right than p1,
+            if y1 > y2:
+                # so it has to be left of the line p1-p2
+                return 2
+            else:
+                return 0
+
+        if x < x2:
+            # pX is further left than p2,
+            if y1 > y2:
+                # so it has to be right of the line p1-p2
+                return 0
+            else:
+                return 2
+
+        # x1 greater than x2
+        x1gtx2 = True
+
+    elif x1 == x2:
+        # this is a vertical line, the position of pX is also determined by y1 and y2
+
+        if y1 > y2:
+
+            if x > x1:
+                return 2
+            if x == x1:
+                return 1
+            else:
+                return 0
+
+        else:
+            if x > x1:
+                return 0
+            if x == x1:
+                return 1
+            else:
+                return 2
+
+    else:
+        # p2 is further right than p1
+
+        if x > x2:
+            # pX is further right than p2,
+            if y1 > y2:
+                return 2
+            else:
+                return 0
+
+        if x < x1:
+            # pX is further left than p1
+            if y1 > y2:
+                # so it has to be right of the line p1-p2
+                return 0
+            else:
+                return 2
+
+        x1gtx2 = False
+
+    # x is between [x1;x2]
+    # compute the x-intersection of the point with the line p1-p2
+    # delta_y =  cannot be 0 here because of the condition 'y lies within ]y1;y2]'
+    # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
+    x_difference = ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x
+
+    if x_difference > 0:
+        if x1gtx2:
+            if y1 > y2:
+                return 0
+            else:
+                return 2
+
+        else:
+            if y1 > y2:
+                return 0
+            else:
+                return 2
+
+    elif x_difference == 0:
+        return 1
+
+    else:
+        if x1gtx2:
+            if y1 > y2:
+                return 2
+            else:
+                return 0
+
+        else:
+            if y1 > y2:
+                return 2
+            else:
+                return 0
+
+
 @jit('b1(i8,i8,i8[:,:])', nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     wn = 0
     i = 0
     y1 = coords[1][0]
+    # TODO why start with both y1=y2= y[0]?
     for y2 in coords[1]:
         if y1 < y:
             if y2 >= y:
                 x1 = coords[0][i - 1]
                 x2 = coords[0][i]
-                """tests if a point is Left|On|Right of an infinite line from p1 to p2
-                //    Return: >0 for xy left of the line from! p1 to! p2
-                //            =0 for xy on the line
-                            <0 for xy  right of the line
-                everything has to be divided by 1000 because otherwise there would be overflow with int8
-                """
-                if ((x2 - x1) / 1000) * ((y - y1) / 1000) - ((x - x1) / 1000) * ((y2 - y1) / 1000) > 0:
+                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),position_to_line(x, y, x1, x2, y1, y2))
+                if position_to_line(x, y, x1, x2, y1, y2) == 2:
+                    # point is left of line
+                    # return true when its on the line?! this is very unlikely to happen!
+                    # and would need to be checked every time!
                     wn += 1
+
 
         else:
             if y2 < y:
                 x1 = coords[0][i - 1]
                 x2 = coords[0][i]
-                if ((x2 - x1) / 1000) * ((y - y1) / 1000) - ((x - x1) / 1000) * ((y2 - y1) / 1000) < 0:
+                if position_to_line(x, y, x1, x2, y1, y2) == 0:
+                    # point is right of line
                     wn -= 1
 
         y1 = y2
@@ -36,13 +144,15 @@ def inside_polygon(x, y, coords):
         if y2 >= y:
             x1 = coords[0][-1]
             x2 = coords[0][0]
-            if ((x2 - x1) / 1000) * ((y - y1) / 1000) - ((x - x1) / 1000) * ((y2 - y1) / 1000) > 0:
+            if position_to_line(x, y, x1, x2, y1, y2) == 2:
+                # point is left of line
                 wn += 1
     else:
         if y2 < y:
             x1 = coords[0][-1]
             x2 = coords[0][0]
-            if ((x2 - x1) / 1000) * ((y - y1) / 1000) - ((x - x1) / 1000) * ((y2 - y1) / 1000) < 0:
+            if position_to_line(x, y, x1, x2, y1, y2) == 0:
+                # point is right of line
                 wn -= 1
     return wn != 0
 

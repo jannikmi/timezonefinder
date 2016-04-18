@@ -3,6 +3,7 @@ import re
 
 #from distutils.core import setup
 from setuptools import setup
+import sys
 
 
 def get_version(package):
@@ -30,12 +31,15 @@ setup(
     author_email='python@michelfe.it',
     license='MIT licence',
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
-    keywords='timezone, coordinates, latitude, longitude, pytzwhere, tzwhere,',
+    keywords='timezone, coordinates, latitude, longitude, location, pytzwhere, tzwhere',
     classifiers=[
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        "Programming Language :: Python :: 2",
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
