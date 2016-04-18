@@ -1,3 +1,10 @@
+==============
+timezonefinder
+==============
+
+.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg
+        :target: https://travis-ci.org/MrMinimal64/timezonefinder
+
 This is a fast and lightweight python project to lookup the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
@@ -44,7 +51,7 @@ in your terminal simply:
 ::
 
     pip install timezonefinder
-	
+
 (you might need to run this command as administrator, because some other dependencies will be installed.)
 
 
@@ -59,7 +66,7 @@ Basics:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-	
+
 
 for testing if numba is being used:
 (if the import of the optimized algorithms worked)
@@ -101,8 +108,8 @@ for testing if numba is being used:
 
 ::
 
-    # this checks all the polygons within +-3 degree lng and +-3 degree lat 
-    # I recommend only slowly increasing the search radius 
+    # this checks all the polygons within +-3 degree lng and +-3 degree lat
+    # I recommend only slowly increasing the search radius
     # keep in mind that x degrees lat are not the same distance apart than x degree lng!
     print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
     # = Europe/Copenhagens
@@ -121,17 +128,17 @@ Further application:
     def find_timezone(request, lat, lng):
         lat = float(lat)
         lng = float(lng)
-        
+
         try:
             timezone_name = tf.timezone_at(lng, lat)
             if timezone_name is None:
                 timezone_name = tf.closest_timezone_at(lng, lat)
                 # maybe even increase the search radius when it is still None
-          
+
         except ValueError:
             # the coordinates were out of bounds
             # {handle error}
-        
+
         # ... do something with timezone_name ...
 
 **To get an aware datetime object from the timezone name:**
@@ -149,9 +156,9 @@ Further application:
         tz = timezone(timezone_name)
         aware_datetime = naive_datetime.replace(tzinfo=tz)
         aware_datetime_in_utc = aware_datetime.astimezone(utc)
-        
+
         naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
-        
+
     except UnknownTimeZoneError:
         # ... handle the error ...
 
@@ -208,25 +215,25 @@ Excerpt from my **test results**\ \*:
 ::
 
       testing 1000 realistic points
-      MISMATCHES**: 
+      MISMATCHES**:
       /
       testing 10000 random points
       MISMATCHES**:
       /
       in 11000 tries 0 mismatches were made
       fail percentage is: 0.0
-      
-      
+
+
       TIMES for 1000 realistic queries***:
       pytzwhere:  0:00:18.184299
       timezonefinder:  0:00:00.126715
       143.51 times faster
-      
+
       TIMES for  10000 random queries****:
       pytzwhere: 0:01:36.431927
       timezonefinder: 0:00:00.626145
       154.01 times faster
-      
+
       Startup times:
       pytzwhere: 0:00:09.531322
       timezonefinder: 0:00:00.000361
