@@ -665,6 +665,7 @@ class TimezoneFinder:
             boundaries = fromfile(self.binary_file, dtype='>i8', count=4)
             # only run the algorithm if it the point is withing the boundaries
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
+
                 if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                     return time_zone_names[ids[i]]
         return None

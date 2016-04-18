@@ -15,8 +15,6 @@ Muller <http://efele.net/maps/tz/world/>`__.
 Timezones at sea and Antarctica are not yet supported (because somewhat
 special rules apply there).
 
-[**Please note**: At the moment Python 2.x is not supported (Tests are not running and algorithms with ``numpy`` are not
- compatible). Write me to encourage me to work on this.]
 
 Dependencies
 ============
@@ -45,7 +43,7 @@ in your terminal simply:
 
     pip install timezonefinder
 	
-(you might need to run this command as administrator, because some other dependencies will be installed.)
+(you might need to run this command as administrator)
 
 
 Usage
@@ -91,8 +89,7 @@ for testing if numba is being used:
 ::
 
     # only use this when the point is not inside a polygon!
-    # this only checks the polygons in the surrounding shortcuts (not all polygons)
-
+    # this checks all the polygons within +-1 degree lng and +-1 degree lat
     point = (12.773955, 55.578595)
     print( tf.closest_timezone_at(*point) )
     # = Europe/Copenhagens
@@ -159,8 +156,7 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 **Using the conversion tool:**
 
-Place the ``file_converter.py`` in one folder with the ``tz_world.csv``
-from tzwhere and run it as a script. It converts the .csv in a new .csv
+Place the ``tz_world.csv`` from tzwhere in one folder with the ``file_converter.py`` and run it as a script. It converts the .csv in a new .csv
 and transforms this file into the needed .bin
 
 Place this .bin in your timezonfinder folder (overwriting the old file) to make it being used.
@@ -203,34 +199,63 @@ when only one timezone is close to the point.
 
 -  use of ``numba`` for speeding things up much further.
 
-Excerpt from my **test results**\ \*:
+**test results**\from the latest version \*:
 
 ::
 
-      testing 1000 realistic points
-      MISMATCHES**: 
-      /
-      testing 10000 random points
-      MISMATCHES**:
-      /
-      in 11000 tries 0 mismatches were made
-      fail percentage is: 0.0
-      
-      
-      TIMES for 1000 realistic queries***:
-      pytzwhere:  0:00:18.184299
-      timezonefinder:  0:00:00.126715
-      143.51 times faster
-      
-      TIMES for  10000 random queries****:
-      pytzwhere: 0:01:36.431927
-      timezonefinder: 0:00:00.626145
-      154.01 times faster
-      
-      Startup times:
-      pytzwhere: 0:00:09.531322
-      timezonefinder: 0:00:00.000361
-      26402.55 times faster
+
+    test correctness:
+    Results:
+    [point, target, tzwere is correct, timezonefinder is correct]
+    (-60.968888, -3.442172) America/Manaus True True
+    (14.1315716, 2.99999) Africa/Douala True True
+    (-106.1706459, 23.7891123) America/Mazatlan True True
+    (33, -84) uninhabited True True
+    (103.7069307, 1.3150701) Asia/Singapore True True
+    (-71.9996885, -52.7868679) America/Santiago True True
+    (-4.8663325, 40.0663485) Europe/Madrid True True
+    (-152.4617352, 62.3415036) America/Anchorage True True
+    (-44.7402611, 70.2989263) America/Godthab True True
+    (12.9125913, 50.8291834) Europe/Berlin True True
+    (37.0720767, 55.74929) Europe/Moscow True True
+    (14.1315716, 0.2350623) Africa/Brazzaville True True
+
+    testing timezone_at():
+    testing realistic points
+    MISMATCHES:
+
+    testing 10000 random points
+    MISMATCHES:
+
+    in 20000 tries 0 mismatches were made
+    fail percentage is: 0.0
+
+
+    testing certain_timezone_at():
+    testing realistic points
+    MISMATCHES:
+
+    testing 10000 random points
+    MISMATCHES:
+
+    in 20000 tries 0 mismatches were made
+    fail percentage is: 0.0
+
+
+    TIMES for 10000 realistic queries:
+    tzwhere: 0:03:02.433588
+    timezonefinder: 0:00:01.044089
+    174.73 times faster
+
+    TIMES for  10000 random queries:
+    tzwhere: 0:01:33.763882
+    timezonefinder: 0:00:00.886365
+    105.78 times faster
+
+    Startup times:
+    tzwhere: 0:00:08.302153
+    timezonefinder: 0:00:00.008768
+    946.87 times faster
 
 \*timezone\_at() with ``numba`` active
 
@@ -275,14 +300,21 @@ All points in Lesotho are counted to the 'Africa/Johannesburg' timezone instead 
 I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
 So actually this is a mistake in the data not my algorithms and the consequences are too small for me to fix this issue (those two timezones have the same utc-offset anyway).
 
-Again: write if you want me to work on this.
+Same for the small usbekish enclaves in Kirgisitan and some points in the Arizona Dessert (some weird rules apply here).
+
+Again: Write me if this matters to you. This would encourage me to work on it.
 
 
 Contact
 =======
 
+This is the first public python project I did, so most certainly there is stuff I missed,
+things I could have optimized even further etc. That's why, I would be really glad to get feedback on my code.
+
+
 If you notice that the tz data is outdated, encounter any bugs, have
-suggestions, criticism, etc. feel free to **open an Issue** on Git or
+suggestions, criticism, etc. feel free to **open an Issue**, **add Pull Requests** on Git or ...
+
 contact me: *python at michelfe dot it*
 
 License
