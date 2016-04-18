@@ -147,7 +147,7 @@ class PackageEqualityTest(unittest.TestCase):
         print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
         fail_percentage = mistakes * 100 / (2 * self.n)
         print('fail percentage is:', fail_percentage)
-        assert fail_percentage < 0.03
+        assert fail_percentage < 0.06
 
     def test_equality_certain(self):
         # Test the equality of the tzwhere with the certain_timezone_at() algorithms
@@ -195,7 +195,7 @@ class PackageEqualityTest(unittest.TestCase):
         print('\nin', 2 * self.n, 'tries', mistakes, 'mismatches were made')
         fail_percentage = mistakes * 100 / (2 * self.n)
         print('fail percentage is:', fail_percentage)
-        assert fail_percentage < 0.03
+        assert fail_percentage < 0.06
 
     def test_startup_time(self):
 
