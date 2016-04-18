@@ -1,3 +1,10 @@
+==============
+timezonefinder
+==============
+
+.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg
+        :target: https://travis-ci.org/MrMinimal64/timezonefinder
+
 This is a fast and lightweight python project to lookup the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
@@ -46,6 +53,7 @@ in your terminal simply:
 (you might need to run this command as administrator)
 
 
+
 Usage
 =====
 
@@ -57,7 +65,7 @@ Basics:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-	
+
 
 for testing if numba is being used:
 (if the import of the optimized algorithms worked)
@@ -98,8 +106,8 @@ for testing if numba is being used:
 
 ::
 
-    # this checks all the polygons within +-3 degree lng and +-3 degree lat 
-    # I recommend only slowly increasing the search radius 
+    # this checks all the polygons within +-3 degree lng and +-3 degree lat
+    # I recommend only slowly increasing the search radius
     # keep in mind that x degrees lat are not the same distance apart than x degree lng!
     print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
     # = Europe/Copenhagens
@@ -118,17 +126,17 @@ Further application:
     def find_timezone(request, lat, lng):
         lat = float(lat)
         lng = float(lng)
-        
+
         try:
             timezone_name = tf.timezone_at(lng, lat)
             if timezone_name is None:
                 timezone_name = tf.closest_timezone_at(lng, lat)
                 # maybe even increase the search radius when it is still None
-          
+
         except ValueError:
             # the coordinates were out of bounds
             # {handle error}
-        
+
         # ... do something with timezone_name ...
 
 **To get an aware datetime object from the timezone name:**
@@ -146,9 +154,9 @@ Further application:
         tz = timezone(timezone_name)
         aware_datetime = naive_datetime.replace(tzinfo=tz)
         aware_datetime_in_utc = aware_datetime.astimezone(utc)
-        
+
         naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
-        
+
     except UnknownTimeZoneError:
         # ... handle the error ...
 
@@ -256,6 +264,7 @@ when only one timezone is close to the point.
     tzwhere: 0:00:08.302153
     timezonefinder: 0:00:00.008768
     946.87 times faster
+
 
 \*timezone\_at() with ``numba`` active
 
