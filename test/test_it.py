@@ -1,7 +1,10 @@
-import unittest
-from timezonefinder.timezonefinder import TimezoneFinder
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import random
+import unittest
 from datetime import datetime
+
+from timezonefinder.timezonefinder import TimezoneFinder
 from tzwhere.tzwhere import tzwhere
 
 
@@ -19,7 +22,6 @@ class PackageEqualityTest(unittest.TestCase):
         print('Numba is NOT being used.')
 
     timezone_finder = TimezoneFinder()
-
 
     tz_where = tzwhere()
 
@@ -84,7 +86,6 @@ class PackageEqualityTest(unittest.TestCase):
 
     }
 
-
     def test_correctness(self):
         # Test correctness
         print('\ntest correctness:')
@@ -103,7 +104,7 @@ class PackageEqualityTest(unittest.TestCase):
         # Test the equality if the two algorithms
 
         mistakes = 0
-        print('\ntesting', self.n,'realistic points')
+        print('\ntesting', self.n, 'realistic points')
         print('MISMATCHES:')
 
         i = 0
@@ -140,7 +141,6 @@ class PackageEqualityTest(unittest.TestCase):
                     # print('mistake at point:', p)
                     # print(my_result, 'should be equal to', his_result)
                     # raise AssertionError('There was a mistake')
-
 
                     # assert my_result == his_result
 
@@ -235,8 +235,6 @@ class PackageEqualityTest(unittest.TestCase):
 
         assert his_time > my_time
 
-
-
     def test_speed(self):
 
         def check_speed_his_algor(points):
@@ -251,7 +249,6 @@ class PackageEqualityTest(unittest.TestCase):
             return end_time - start_time
 
             # test my first algorithm (boundaries, csv)
-
 
             # test second algorithm ( double, .bin)
 
@@ -274,7 +271,6 @@ class PackageEqualityTest(unittest.TestCase):
         for i in range(runs - 1):
             my_time += check_speed_my_algor(self.realistic_points)
             his_time += check_speed_his_algor(self.realistic_points)
-
 
         my_time /= self.runs
         his_time /= self.runs
@@ -305,7 +301,6 @@ class PackageEqualityTest(unittest.TestCase):
             return end_time - start_time
 
             # test my first algorithm (boundaries, csv)
-
 
             # test second algorithm ( double, .bin)
 
@@ -346,4 +341,3 @@ class PackageEqualityTest(unittest.TestCase):
             pass
 
         assert his_time > my_time
-

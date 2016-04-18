@@ -1,9 +1,9 @@
+# -*- coding:utf-8 -*-
+
 import os
 import re
 
-#from distutils.core import setup
 from setuptools import setup
-import sys
 
 
 def get_version(package):

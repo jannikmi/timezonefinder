@@ -1,8 +1,10 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import linecache
 import math
 import re
 from datetime import datetime
-from struct import *
+from struct import pack
 
 # number of shortcuts per longitude
 NR_SHORTCUTS_PER_LNG = 1
@@ -719,9 +721,8 @@ def compile_into_binary(path='tz_binary.bin'):
             # print(y_longs)
             # print(x_intersections(coordinate_to_longlong(lat), x_longs, y_longs))
             # raise ValueError
-            intersects = [longlong_to_coordinate(x) for x in
-                          x_intersections(coordinate_to_longlong(lat), x_longs, y_longs)]
-            intersects.sort()
+            intersects = sorted([longlong_to_coordinate(x) for x in
+                                 x_intersections(coordinate_to_longlong(lat), x_longs, y_longs)])
             # print(intersects)
 
             nr_of_intersects = len(intersects)
@@ -782,9 +783,8 @@ def compile_into_binary(path='tz_binary.bin'):
             # print(coordinate_to_longlong(lng))
             # print(x_longs)
             # print(x_intersections(coordinate_to_longlong(lng), x_longs, y_longs))
-            intersects = [longlong_to_coordinate(y) for y in
-                          y_intersections(coordinate_to_longlong(lng), x_longs, y_longs)]
-            intersects.sort()
+            intersects = sorted([longlong_to_coordinate(y) for y in
+                                 y_intersections(coordinate_to_longlong(lng), x_longs, y_longs)])
             # print(intersects)
 
             nr_of_intersects = len(intersects)
@@ -856,9 +856,9 @@ def compile_into_binary(path='tz_binary.bin'):
                 print('This is a big zone! computing exact shortcuts')
                 print('Nr of entries before')
                 print(len(column_nrs) * len(row_nrs))
-                
+
                 print('columns and rows before optimisation:')
-                
+
                 print(column_nrs)
                 print(row_nrs)
                 '''
@@ -894,7 +894,7 @@ def compile_into_binary(path='tz_binary.bin'):
                 '''
                 print('and after:')
                 print(len(shortcuts_for_line))
-                
+
                 column_nrs_after = set()
                 row_nrs_after = set()
                 for x, y in shortcuts_for_line:
