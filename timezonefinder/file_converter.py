@@ -947,19 +947,19 @@ def compile_into_binary(path='tz_binary.bin'):
     print('now writing file "', path, '"')
     output_file = open(path, 'wb')
     # write nr_of_lines
-    output_file.write(pack('!H', nr_of_lines))
+    output_file.write(pack(b'!H', nr_of_lines))
     # write start address of shortcut_data:
-    output_file.write(pack('!I', shortcut_start_address))
+    output_file.write(pack(b'!I', shortcut_start_address))
     # write zone_ids
     for zone_id in zone_ids:
-        output_file.write(pack('!H', zone_id))
+        output_file.write(pack(b'!H', zone_id))
     # write number of values
     for length in _length_of_rows():
-        output_file.write(pack('!H', length))
+        output_file.write(pack(b'!H', length))
 
     # write polygon_addresses
     for length in _length_of_rows():
-        output_file.write(pack('!I', polygon_address))
+        output_file.write(pack(b'!I', polygon_address))
         polygon_address += 16 * length
 
     if shortcut_start_address != polygon_address:
@@ -968,16 +968,16 @@ def compile_into_binary(path='tz_binary.bin'):
 
     # write boundary_data
     for xmax, xmin, ymax, ymin in _boundaries():
-        output_file.write(pack('!qqqq',
+        output_file.write(pack(b'!qqqq',
                                coordinate_to_longlong(xmax), coordinate_to_longlong(xmin), coordinate_to_longlong(ymax),
                                coordinate_to_longlong(ymin)))
 
     # write polygon_data
     for x_coords, y_coords in _coordinates():
         for x in x_coords:
-            output_file.write(pack('!q', coordinate_to_longlong(x)))
+            output_file.write(pack(b'!q', coordinate_to_longlong(x)))
         for y in y_coords:
-            output_file.write(pack('!q', coordinate_to_longlong(y)))
+            output_file.write(pack(b'!q', coordinate_to_longlong(y)))
 
     print('position after writing all polygon data:', output_file.tell())
     # write number of entries in shortcut field (x,y)
@@ -1007,16 +1007,16 @@ def compile_into_binary(path='tz_binary.bin'):
     for nr in nr_of_entries_in_shortcut:
         if nr > 300:
             raise ValueError(nr)
-        output_file.write(pack('!H', nr))
+        output_file.write(pack(b'!H', nr))
 
     # write  Address of first Polygon_nr  in shortcut field (x,y)
     # Attention: 0 is written when no entries are in this shortcut
     shortcut_address = output_file.tell() + 259200 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
     for nr in nr_of_entries_in_shortcut:
         if nr == 0:
-            output_file.write(pack('!I', 0))
+            output_file.write(pack(b'!I', 0))
         else:
-            output_file.write(pack('!I', shortcut_address))
+            output_file.write(pack(b'!I', shortcut_address))
             # each polygon takes up 2 bytes of space
             shortcut_address += 2 * nr
 
@@ -1025,7 +1025,7 @@ def compile_into_binary(path='tz_binary.bin'):
         for entry in entries:
             if entry > nr_of_lines:
                 raise ValueError(entry)
-            output_file.write(pack('!H', entry))
+            output_file.write(pack(b'!H', entry))
 
     print('Success!')
     return
