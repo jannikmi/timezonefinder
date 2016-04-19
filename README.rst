@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg
+.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
         :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 This is a fast and lightweight python project to lookup the corresponding
@@ -299,19 +299,18 @@ Speed Impact of Numba
     w/ numa: 0:00:02.688353
     40.2 times faster
 
-(this is not inlcuded in my tests because one cannot automatically enable
-and disable Numba)
+(this is not inlcuded in my tests)
 
 Known Issues
 ============
 
 All points in Lesotho are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
 I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
-So actually this is a mistake in the data not my algorithms and the consequences are too small for me to fix this issue (those two timezones have the same utc-offset anyway).
 
 Same for the small usbekish enclaves in Kirgisitan and some points in the Arizona Dessert (some weird rules apply here).
 
-Again: Write me if this matters to you. This would encourage me to work on it.
+Those are mistakes in the data not my algorithms and in order to fix this I would need check for and then separately handle these special cases.
+This would not only slow down the algorithms, but also make them ugly.
 
 
 Contact

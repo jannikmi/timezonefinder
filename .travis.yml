@@ -2,8 +2,26 @@ sudo: false
 language: python
 python: '3.5'
 
+python:
+  - 2.7
+  - 3.4
+  - 3.5
+
+
 install:
   - pip install tox
 
 script:
   - tox
+
+branches:
+    only:
+    - master
+
+notifications:
+    email:
+     recipients:
+     - python@michelfe.it
+     on_success: never
+     on_failure: always
+     on_start: always     # options: [always|never|change] default: always
