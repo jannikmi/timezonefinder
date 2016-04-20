@@ -5,11 +5,17 @@ Changelog
 **Note:** not mentioned versions only contain small and irrelevant changes (e.g. in the readme, setup.py...).
 I am new to all this, so I am often missing small things which are not really new features worth mentioning.
 
+1.5.2 (2016-04-20)
+------------------
+
+* added python 2.7.6 support: replaced strings in unpack (unsupported by python 2.7.6 or earlier) with byte strings
+* timezone names are now loaded from a separate file for modularity
+
 
 1.5.1 (2016-04-18)
 ------------------
 
-* added python 2.7 support:
+* added python 2.7.8+ support:
     Therefore I had to change the tests a little bit (some operations were not supported). This only affects output.
     I also had to replace one part of the algorithms to prevent overflow in Python 2.7
 
