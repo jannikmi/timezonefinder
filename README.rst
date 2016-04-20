@@ -207,7 +207,7 @@ when only one timezone is close to the point.
 
 -  use of ``numba`` for speeding things up much further.
 
-**test results**\ from the latest version \*:
+**test results** \from the latest version \*:
 
 ::
 
@@ -304,10 +304,10 @@ Speed Impact of Numba
 Known Issues
 ============
 
-All points in Lesotho are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
+All points in **Lesotho** are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
 I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
 
-Same for the small usbekish enclaves in Kirgisitan and some points in the Arizona Dessert (some weird rules apply here).
+Same for the small **usbekish enclaves** in **Kirgisitan** and some points in the **Arizona Dessert** (some weird rules apply here).
 
 Those are mistakes in the data not my algorithms and in order to fix this I would need check for and then separately handle these special cases.
 This would not only slow down the algorithms, but also make them ugly.
