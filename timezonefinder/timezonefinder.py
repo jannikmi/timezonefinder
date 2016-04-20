@@ -32,11 +32,11 @@ class TimezoneFinder:
         # open the file in binary reading mode
         self.binary_file = open(join(dirname(__file__), 'timezone_data.bin'), 'rb')
         # read the first 2byte int (= number of polygons stored in the .bin)
-        self.nr_of_entries = unpack('!H', self.binary_file.read(2))[0]
+        self.nr_of_entries = unpack(b'!H', self.binary_file.read(2))[0]
 
         # set addresses
         # the address where the shortcut section starts (after all the polygons) this is 34 433 054
-        self.shortcuts_start = unpack('!I', self.binary_file.read(4))[0]
+        self.shortcuts_start = unpack(b'!I', self.binary_file.read(4))[0]
 
         self.nr_val_start_address = 2 * self.nr_of_entries + 6
         self.adr_start_address = 4 * self.nr_of_entries + 6
@@ -54,7 +54,7 @@ class TimezoneFinder:
     def id_of(self, line=0):
         # ids start at address 6. per line one unsigned 2byte int is used
         self.binary_file.seek((6 + 2 * line))
-        return unpack('!H', self.binary_file.read(2))[0]
+        return unpack(b'!H', self.binary_file.read(2))[0]
 
     def ids_of(self, iterable):
 
@@ -63,7 +63,7 @@ class TimezoneFinder:
         i = 0
         for line_nr in iterable:
             self.binary_file.seek((6 + 2 * line_nr))
-            id_array[i] = unpack('!H', self.binary_file.read(2))[0]
+            id_array[i] = unpack(b'!H', self.binary_file.read(2))[0]
             i += 1
 
         return id_array
@@ -78,10 +78,10 @@ class TimezoneFinder:
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
         self.binary_file.seek(self.shortcuts_start + 720 * x + 2 * y)
 
-        nr_of_polygons = unpack('!H', self.binary_file.read(2))[0]
+        nr_of_polygons = unpack(b'!H', self.binary_file.read(2))[0]
 
         self.binary_file.seek(self.first_shortcut_address + 1440 * x + 4 * y)
-        self.binary_file.seek(unpack('!I', self.binary_file.read(4))[0])
+        self.binary_file.seek(unpack(b'!I', self.binary_file.read(4))[0])
         return fromfile(self.binary_file, dtype='>u2', count=nr_of_polygons)
 
     def polygons_of_shortcut(self, x=0, y=0):
@@ -90,18 +90,18 @@ class TimezoneFinder:
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
         self.binary_file.seek(self.shortcuts_start + 720 * x + 2 * y)
 
-        nr_of_polygons = unpack('!H', self.binary_file.read(2))[0]
+        nr_of_polygons = unpack(b'!H', self.binary_file.read(2))[0]
 
         self.binary_file.seek(self.first_shortcut_address + 1440 * x + 4 * y)
-        self.binary_file.seek(unpack('!I', self.binary_file.read(4))[0])
+        self.binary_file.seek(unpack(b'!I', self.binary_file.read(4))[0])
         return fromfile(self.binary_file, dtype='>u2', count=nr_of_polygons)
 
     def coords_of(self, line=0):
         self.binary_file.seek((self.nr_val_start_address + 2 * line))
-        nr_of_values = unpack('!H', self.binary_file.read(2))[0]
+        nr_of_values = unpack(b'!H', self.binary_file.read(2))[0]
 
         self.binary_file.seek((self.adr_start_address + 4 * line))
-        self.binary_file.seek(unpack('!I', self.binary_file.read(4))[0])
+        self.binary_file.seek(unpack(b'!I', self.binary_file.read(4))[0])
 
         return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
                       fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])

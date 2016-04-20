@@ -3,7 +3,7 @@ timezonefinder
 ==============
 
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
-        :target: https://travis-ci.org/MrMinimal64/timezonefinder
+    :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 This is a fast and lightweight python project to lookup the corresponding
 timezone for a given lat/lng on earth entirely offline.
