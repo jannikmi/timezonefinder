@@ -4,11 +4,18 @@ Changelog
 **Note:** not mentioned versions only contain small and irrelevant changes (e.g. in the readme, setup.py...).
 I am new to all this, so I am often missing small things which are not really new features worth mentioning.
 
+1.5.3 (2016-04-21)
+------------------
+
+* using 32-bit ints now (instead of 64-bit): I calculated that the minimum accuracy (at the equator) is 1cm with the approach I use. Tests passed.
+* Benefits: 18MB file instead of 35MB, another 10-30% speed boost (depending on your hardware)
+
+
 1.5.2 (2016-04-20)
 ------------------
 
 * added python 2.7.6 support: replaced strings in unpack (unsupported by python 2.7.6 or earlier) with byte strings
-* timezone names are now loaded from a separate file for modularity
+* timezone names are now loaded from a separate file for better modularity
 
 
 1.5.1 (2016-04-18)

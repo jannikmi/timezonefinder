@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from struct import pack
 
+from helpers import coord2int, int2coord
 from timezone_names import timezone_names
 
 # number of shortcuts per longitude
@@ -30,14 +31,6 @@ def check_zone_names():
 
     print(omitted_zones)
     return
-
-
-def coordinate_to_longlong(double):
-    return int(double * 10 ** 15)
-
-
-def longlong_to_coordinate(longlong):
-    return float(longlong / 10 ** 15)
 
 
 def inside_polygon(x, y, x_coords, y_coords):
@@ -158,12 +151,12 @@ def _coordinates():
             yield ([float(x) for x in row[5].split(' ')], [float(x) for x in row[6].strip().split(' ')])
 
 
-def longs_in(line=0):
+def ints_of(line=0):
     row = linecache.getline('tz_world_converted.csv', lineno=line)
     row = row.split(',')
     return (
-        [int(float(x) * 10 ** 15) for x in row[5].split(' ')],
-        [int(float(x) * 10 ** 15) for x in row[6].strip().split(' ')])
+        [coord2int(coord=float(x)) for x in row[5].split(' ')],
+        [coord2int(coord=float(x)) for x in row[6].strip().split(' ')])
 
 
 def _length_of_rows():
@@ -286,7 +279,7 @@ def compile_into_binary(path='tz_binary.bin'):
         shortcuts_for_line = set()
 
         # x_longs = binary_reader.x_coords_of(line)
-        longs = longs_in(line + 1)
+        longs = ints_of(line + 1)
         x_longs = longs[0]
         y_longs = longs[1]
 
@@ -302,8 +295,8 @@ def compile_into_binary(path='tz_binary.bin'):
             # print(y_longs)
             # print(x_intersections(coordinate_to_longlong(lat), x_longs, y_longs))
             # raise ValueError
-            intersects = sorted([longlong_to_coordinate(x) for x in
-                                 x_intersections(coordinate_to_longlong(lat), x_longs, y_longs)])
+            intersects = sorted([int2coord(x) for x in
+                                 x_intersections(coord2int(lat), x_longs, y_longs)])
             # print(intersects)
 
             nr_of_intersects = len(intersects)
@@ -319,7 +312,7 @@ def compile_into_binary(path='tz_binary.bin'):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut zone here!
                     # only select the top shortcut if it is actually inside the polygon (point a little up is inside)
-                    if inside_polygon(coordinate_to_longlong(intersection_in), coordinate_to_longlong(lat) + 1, x_longs,
+                    if inside_polygon(coord2int(intersection_in), coord2int(lat) + 1, x_longs,
                                       y_longs):
                         shortcuts_for_line.add((x_shortcut(intersection_in), y_shortcut(lat) - 1))
                     # the bottom shortcut is always selected
@@ -331,7 +324,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if inside_polygon(coordinate_to_longlong(middle), coordinate_to_longlong(lat) + 1, x_longs,
+                    if inside_polygon(coord2int(middle), coord2int(lat) + 1, x_longs,
                                       y_longs):
                         while intersection_in < intersection_out:
                             possible_longitudes.append(intersection_in)
@@ -364,8 +357,8 @@ def compile_into_binary(path='tz_binary.bin'):
             # print(coordinate_to_longlong(lng))
             # print(x_longs)
             # print(x_intersections(coordinate_to_longlong(lng), x_longs, y_longs))
-            intersects = sorted([longlong_to_coordinate(y) for y in
-                                 y_intersections(coordinate_to_longlong(lng), x_longs, y_longs)])
+            intersects = sorted([int2coord(y) for y in
+                                 y_intersections(coord2int(lng), x_longs, y_longs)])
             # print(intersects)
 
             nr_of_intersects = len(intersects)
@@ -381,7 +374,7 @@ def compile_into_binary(path='tz_binary.bin'):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut here!
                     # only select the left shortcut if it is actually inside the polygon (point a little left is inside)
-                    if inside_polygon(coordinate_to_longlong(lng) - 1, coordinate_to_longlong(intersection_in), x_longs,
+                    if inside_polygon(coord2int(lng) - 1, coord2int(intersection_in), x_longs,
                                       y_longs):
                         shortcuts_for_line.add((x_shortcut(lng) - 1, y_shortcut(intersection_in)))
                     # the right shortcut is always selected
@@ -393,7 +386,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if inside_polygon(coordinate_to_longlong(lng) - 1, coordinate_to_longlong(middle), x_longs,
+                    if inside_polygon(coord2int(lng) - 1, coord2int(middle), x_longs,
                                       y_longs):
                         while intersection_in < intersection_out:
                             possible_latitudes.append(intersection_in)
@@ -421,6 +414,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
     def construct_shortcuts():
         print('building shortucts...')
+        print('currently in line:')
         line = 0
         for xmax, xmin, ymax, ymin in _boundaries():
             # xmax, xmin, ymax, ymin = boundaries_of(line=line)
@@ -520,11 +514,13 @@ def compile_into_binary(path='tz_binary.bin'):
 
     print('calculating the shortcus took:', end_time - start_time)
 
-    polygon_address = (40 * nr_of_lines + 6)
-    shortcut_start_address = polygon_address + 8 * nr_of_floats
-    nr_of_floats += nr_of_lines * 4
+    # address where the actual polygon data starts. look in the description below to get more info
+    polygon_address = (24 * nr_of_lines + 6)
+
+    # for every original float now 4 bytes are needed (int32)
+    shortcut_start_address = polygon_address + 4 * nr_of_floats
     print('The number of polygons is:', nr_of_lines)
-    print('The number of floats in all the polygons is:', nr_of_floats)
+    print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
     print('now writing file "', path, '"')
     output_file = open(path, 'wb')
     # write nr_of_lines
@@ -541,7 +537,9 @@ def compile_into_binary(path='tz_binary.bin'):
     # write polygon_addresses
     for length in _length_of_rows():
         output_file.write(pack(b'!I', polygon_address))
-        polygon_address += 16 * length
+        # data of the next polygon is at the address after all the space the points take
+        # nr of points stored * 2 ints per point * 4 bytes per int
+        polygon_address += 8 * length
 
     if shortcut_start_address != polygon_address:
         # both should be the same!
@@ -549,16 +547,16 @@ def compile_into_binary(path='tz_binary.bin'):
 
     # write boundary_data
     for xmax, xmin, ymax, ymin in _boundaries():
-        output_file.write(pack(b'!qqqq',
-                               coordinate_to_longlong(xmax), coordinate_to_longlong(xmin), coordinate_to_longlong(ymax),
-                               coordinate_to_longlong(ymin)))
+        output_file.write(pack(b'!iiii',
+                               coord2int(xmax), coord2int(xmin), coord2int(ymax),
+                               coord2int(ymin)))
 
     # write polygon_data
     for x_coords, y_coords in _coordinates():
         for x in x_coords:
-            output_file.write(pack(b'!q', coordinate_to_longlong(x)))
+            output_file.write(pack(b'!i', coord2int(x)))
         for y in y_coords:
-            output_file.write(pack(b'!q', coordinate_to_longlong(y)))
+            output_file.write(pack(b'!i', coord2int(y)))
 
     print('position after writing all polygon data (=start of shortcut section):', output_file.tell())
     # write number of entries in shortcut field (x,y)
@@ -587,7 +585,7 @@ def compile_into_binary(path='tz_binary.bin'):
     # write all nr of entries
     for nr in nr_of_entries_in_shortcut:
         if nr > 300:
-            raise ValueError(nr)
+            raise ValueError("There are too many polygons in this shortcuts:", nr)
         output_file.write(pack(b'!H', nr))
 
     # write  Address of first Polygon_nr  in shortcut field (x,y)
@@ -606,7 +604,14 @@ def compile_into_binary(path='tz_binary.bin'):
         for entry in entries:
             if entry > nr_of_lines:
                 raise ValueError(entry)
-            output_file.write(pack(b'!H', entry))
+         2   output_file.write(pack(b'!H', entry))
+
+    last_address = output_file.tell()
+    shortcut_space = last_address - shortcut_start_address
+    polygon_space = nr_of_floats * 4
+
+    print('the shortcuts make up', round((shortcut_space / last_address) * 100, 2), '% of the file')
+    print('the polygon data makes up', round((polygon_space / last_address) * 100, 2), '% of the file')
 
     print('Success!')
     return
@@ -614,41 +619,42 @@ def compile_into_binary(path='tz_binary.bin'):
 
 """
 Data format in the .bin:
-IMPORTANT: all coordinates multiplied by 10**15 (to store them as longs/ints not floats, because floats arithmetic
-are slower)
+IMPORTANT: all coordinates (floats) are converted to int32 (multiplied by 10^7). This makes computations much faster
+and it takes lot less space, without loosing too much accuracy (min accuracy is 1cm still at the equator)
 
 no of rows (= no of polygons = no of boundaries)
 approx. 28k -> use 2byte unsigned short (has range until 65k)
 '!H' = n
 
-
 I Address of Shortcut area (end of polygons+1) @ 2
 
 '!H'  n times [H unsigned short: zone number=ID in this line, @ 6 + 2* lineNr]
 
-'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 6 + 4* lineNr]
+'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 6 + 2n + 2* lineNr]
 
 '!I'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
 @ 6 + 4 * n +  4*lineNr]
 
 
 
-n times 4 long longs: xmax, xmin, ymax, ymin  @ 6 + 8n
-'!qqqq'
+n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 6 + 8n + 16* lineNr
+'!iiii'
 
 
+[starting @ 6+ 24*n = polygon data start address]
+(for every line: x coords, y coords:)   stored  @ Address section (see above)
+'!i' * amount of points
 
-(for all lines: x coords, y coords:)   @ Address see above
-'!q'
-
-
-56700 times H   number of entries in shortcut field (x,y)  @ Pointer see above
-
-
-X times I   Address of first Polygon_nr  in shortcut field (x,y)  @ 56700 + Pointer see above
+360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
+[atm: 360* 1 * 180 * 2 = 129,600]
+129,600 times !H   number of entries in shortcut field (x,y)  @ Pointer see above
 
 
-X times H  Polygon_Nr     @Pointer see one above
+Address of first Polygon_nr  in shortcut field (x,y) [0 if there is no entry] @  Pointer see above + 129,600
+129,600 times !I
+
+[X = number of filled shortcuts]
+X times !H * amount Polygon_Nr    @ address stored in previous section
 
 """
 

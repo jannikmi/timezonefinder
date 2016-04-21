@@ -30,14 +30,17 @@ Dependencies
 
 ``numpy``
 
-maybe also ``numba`` and its Requirements
+
+**Optional:**
+
+``Numba`` and its Requirements
 
 This is only for precompiling the time critical algorithms. When you only look up a
 few points once in a while, the compilation time is probably outweighing
 the benefits. When using ``certain_timezone_at()`` and especially
 ``closest_timezone_at()`` however, I highly recommend using ``numba``
 (see speed comparison below)! The amount of shortcuts used in the
-``.bin`` are also only optimized for the use with ``numba``.
+``.bin`` is also only optimized for the use with ``numba``.
 
 Installation
 ============
@@ -192,9 +195,9 @@ when only one timezone is close to the point.
 
 **Differences:**
 
--  the data is now stored in a memory friendly 35MB ``.bin`` and needed
+-  the data is now stored in a memory friendly 18MB ``.bin`` and needed
    data is directly being read on the fly (instead of reading and
-   converting the 76MB ``.csv`` (mostly floats stored as strings!) into
+   converting the 76MB ``.csv`` -mostly floats stored as strings!- into
    memory every time a class is created).
 
 -  precomputed shortcuts are stored in the ``.bin`` to quickly look up
@@ -228,20 +231,25 @@ when only one timezone is close to the point.
     (37.0720767, 55.74929) Europe/Moscow True True
     (14.1315716, 0.2350623) Africa/Brazzaville True True
 
-    testing timezone_at():
     testing 10000 realistic points
     MISMATCHES:
+    (-110.46557383479337, 35.860783819335666) America/Phoenix America/Denver (not counted, see issue section)
+    (28.33811173592602, -30.053783637444724) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
 
     testing 10000 random points
     MISMATCHES:
+    (27.86670722464703, -29.135850729733704) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
 
     in 20000 tries 0 mismatches were made
     fail percentage is: 0.0
 
 
     testing certain_timezone_at():
-    testing realistic points
+
+    testing 10000 realistic points
     MISMATCHES:
+    (-110.46557383479337, 35.860783819335666) America/Phoenix America/Denver (not counted, see issue section)
+    (28.33811173592602, -30.053783637444724) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
 
     testing 10000 random points
     MISMATCHES:
@@ -250,23 +258,23 @@ when only one timezone is close to the point.
     fail percentage is: 0.0
 
 
-    TIMES for 10000 realistic queries:
-    tzwhere: 0:03:02.433588
-    timezonefinder: 0:00:01.044089
-    174.73 times faster
+    TIMES for  10000 realistic queries:
+    tzwhere: 0:02:55.985141
+    timezonefinder: 0:00:00.905828
+    194.28 times faster
 
     TIMES for  10000 random queries:
-    tzwhere: 0:01:33.763882
-    timezonefinder: 0:00:00.886365
-    105.78 times faster
+    tzwhere: 0:01:29.427567
+    timezonefinder: 0:00:00.604325
+    147.98 times faster
+
 
     Startup times:
     tzwhere: 0:00:08.302153
     timezonefinder: 0:00:00.008768
     946.87 times faster
 
-
-\*timezone\_at() with ``numba`` active
+\* with ``numba`` active. System: MacBookPro 2,4GHz i5 4GB RAM SSD
 
 \*\*mismatch: pytzwhere finds something and then timezonefinder finds
 something else
@@ -299,15 +307,18 @@ Speed Impact of Numba
     w/ numa: 0:00:02.688353
     40.2 times faster
 
-(this is not inlcuded in my tests)
+(this is not included in my tests)
 
 Known Issues
 ============
+
+I ran tests for approx. 5M points and this are the mistakes I found:
 
 All points in **Lesotho** are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
 I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
 
 Same for the small **usbekish enclaves** in **Kirgisitan** and some points in the **Arizona Dessert** (some weird rules apply here).
+
 
 Those are mistakes in the data not my algorithms and in order to fix this I would need check for and then separately handle these special cases.
 This would not only slow down the algorithms, but also make them ugly.

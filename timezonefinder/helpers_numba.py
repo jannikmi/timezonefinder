@@ -5,7 +5,7 @@ from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 from numba import jit
 
 
-@jit('uint8(i8,i8,i8,i8,i8,i8)', nopython=True, cache=True)
+@jit('uint(i4,i4,i4,i4,i4,i4)', nopython=True, cache=True)
 def position_to_line(x, y, x1, x2, y1, y2):
     """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
         Return: 2 for pX left of the line from! p1 to! p2
@@ -111,7 +111,7 @@ def position_to_line(x, y, x1, x2, y1, y2):
                 return 0
 
 
-@jit('b1(i8,i8,i8[:,:])', nopython=True, cache=True)
+@jit('b1(i4,i4,i4[:,:])', nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     wn = 0
     i = 0
@@ -269,22 +269,22 @@ def compute_min_distance(lng, lat, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_
                                             max(min(px_retrans_rad[0], lng_p1_rad), 0)))
 
 
-@jit('f8(i8)', nopython=True, cache=True)
-def long2coord(longlong):
-    return float(longlong / 10 ** 15)
+@jit('f8(i4)', nopython=True, cache=True)
+def int2coord(int32):
+    return float(int32 / 10 ** 7)
 
 
-@jit('i8(f8)', nopython=True, cache=True)
-def coord2long(double):
-    return int(double * 10 ** 15)
+@jit('i4(f8)', nopython=True, cache=True)
+def coord2int(double):
+    return int(double * 10 ** 7)
 
 
 @jit(nopython=True, cache=True)
 def distance_to_polygon(lng, lat, nr_points, points, trans_points):
     # transform all points (long long) to coords
     for i in range(nr_points):
-        trans_points[0][i] = long2coord(points[0][i])
-        trans_points[1][i] = long2coord(points[1][i])
+        trans_points[0][i] = int2coord(points[0][i])
+        trans_points[1][i] = int2coord(points[1][i])
 
     # check points -2, -1, 0 first
     pm1_lng = trans_points[0][0]

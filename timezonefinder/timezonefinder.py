@@ -14,9 +14,9 @@ except ImportError:
     numba = None
 
 if numba is not None:
-    from .helpers_numba import coord2long, distance_to_polygon, inside_polygon
+    from .helpers_numba import coord2int, distance_to_polygon, inside_polygon
 else:
-    from .helpers import coord2long, distance_to_polygon, inside_polygon
+    from .helpers import coord2int, distance_to_polygon, inside_polygon
 
 
 class TimezoneFinder:
@@ -31,6 +31,8 @@ class TimezoneFinder:
 
         # open the file in binary reading mode
         self.binary_file = open(join(dirname(__file__), 'timezone_data.bin'), 'rb')
+
+        # for more info on what is stored how in the .bin please read the comments in file_converter
         # read the first 2byte int (= number of polygons stored in the .bin)
         self.nr_of_entries = unpack(b'!H', self.binary_file.read(2))[0]
 
@@ -41,7 +43,8 @@ class TimezoneFinder:
         self.nr_val_start_address = 2 * self.nr_of_entries + 6
         self.adr_start_address = 4 * self.nr_of_entries + 6
         self.bound_start_address = 8 * self.nr_of_entries + 6
-        self.poly_start_address = 40 * self.nr_of_entries + 6
+        # self.poly_start_address = 40 * self.nr_of_entries + 6
+        self.poly_start_address = 24 * self.nr_of_entries + 6
         self.first_shortcut_address = self.shortcuts_start + 259200
 
     def __del__(self):
@@ -103,8 +106,11 @@ class TimezoneFinder:
         self.binary_file.seek((self.adr_start_address + 4 * line))
         self.binary_file.seek(unpack(b'!I', self.binary_file.read(4))[0])
 
-        return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
-                      fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])
+        # return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
+        #               fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])
+
+        return array([fromfile(self.binary_file, dtype='>i4', count=nr_of_values),
+                      fromfile(self.binary_file, dtype='>i4', count=nr_of_values)])
 
     # @profile
     def closest_timezone_at(self, lng, lat, delta_degree=1):
@@ -203,7 +209,6 @@ class TimezoneFinder:
         so certain simplifications are made and even when you get a hit the point might actually
         not be inside the polygon (for example when there is only one timezone nearby)
         if you want to make sure a point is really inside a timezone use 'certain_timezone_at'
-        make sure its called with valid values only!
         :param lng: longitude of the point in degree (-180 to 180)
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of the matching polygon or None
@@ -214,8 +219,8 @@ class TimezoneFinder:
         possible_polygons = self.shortcuts_of(lng, lat)
 
         # x = longitude  y = latitude  both converted to 8byte int
-        x = coord2long(lng)
-        y = coord2long(lat)
+        x = coord2int(lng)
+        y = coord2int(lat)
 
         nr_possible_polygons = len(possible_polygons)
 
@@ -238,8 +243,9 @@ class TimezoneFinder:
             polygon_nr = possible_polygons[i]
 
             # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-            self.binary_file.seek((self.bound_start_address + 32 * polygon_nr), )
-            boundaries = fromfile(self.binary_file, dtype='>i8', count=4)
+            # self.binary_file.seek((self.bound_start_address + 32 * polygon_nr), )
+            self.binary_file.seek((self.bound_start_address + 16 * polygon_nr), )
+            boundaries = fromfile(self.binary_file, dtype='>i4', count=4)
             # only run the algorithm if it the point is withing the boundaries
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
@@ -262,13 +268,13 @@ class TimezoneFinder:
         possible_polygons = self.shortcuts_of(lng, lat)
 
         # x = longitude  y = latitude  both converted to 8byte int
-        x = coord2long(lng)
-        y = coord2long(lat)
+        x = coord2int(lng)
+        y = coord2int(lat)
 
         for polygon_nr in possible_polygons:
             # get boundaries
-            self.binary_file.seek((self.bound_start_address + 32 * polygon_nr), )
-            boundaries = fromfile(self.binary_file, dtype='>i8', count=4)
+            self.binary_file.seek((self.bound_start_address + 16 * polygon_nr), )
+            boundaries = fromfile(self.binary_file, dtype='>i4', count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
                 if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                     if self.id_of(polygon_nr) >= 424:
