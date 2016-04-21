@@ -604,7 +604,7 @@ def compile_into_binary(path='tz_binary.bin'):
         for entry in entries:
             if entry > nr_of_lines:
                 raise ValueError(entry)
-         2   output_file.write(pack(b'!H', entry))
+            output_file.write(pack(b'!H', entry))
 
     last_address = output_file.tell()
     shortcut_space = last_address - shortcut_start_address
