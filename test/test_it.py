@@ -130,7 +130,7 @@ class PackageEqualityTest(unittest.TestCase):
             my_result = self.timezone_finder.timezone_at(*p)
             if my_result != his_result:
 
-                if his_result in self.excluded_zones_tzwhere and my_result in self.excluded_zones_timezonefinder:
+                if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                     print(p, my_result, his_result, '(not counted, see issue section)')
                 else:
                     mistakes += 1
@@ -152,7 +152,7 @@ class PackageEqualityTest(unittest.TestCase):
                 my_result = self.timezone_finder.timezone_at(*p)
 
                 if my_result != his_result:
-                    if his_result in self.excluded_zones_tzwhere and my_result in self.excluded_zones_timezonefinder:
+                    if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                         print(p, my_result, his_result, '(not counted, see issue section)')
                     else:
                         mistakes += 1
@@ -181,7 +181,7 @@ class PackageEqualityTest(unittest.TestCase):
             my_result = self.real_ps_results_certain[i]
 
             if my_result != his_result:
-                if his_result in self.excluded_zones_tzwhere and my_result in self.excluded_zones_timezonefinder:
+                if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                     print(self.realistic_points[i], my_result, his_result, '(not counted, see issue section)')
                 else:
                     mistakes += 1
@@ -204,7 +204,7 @@ class PackageEqualityTest(unittest.TestCase):
             i += 1
 
             if my_result != his_result:
-                if his_result in self.excluded_zones_tzwhere and my_result in self.excluded_zones_timezonefinder:
+                if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                     print(p, my_result, his_result, '(not counted, see issue section)')
                 else:
                     mistakes += 1
