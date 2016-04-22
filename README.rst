@@ -257,7 +257,7 @@ when only one timezone is close to the point.
     in 20000 tries 0 mismatches were made
     fail percentage is: 0.0
 
-
+    w/ Numba:
     TIMES for  10000 realistic queries:
     tzwhere: 0:02:55.985141
     timezonefinder: 0:00:00.905828
@@ -267,6 +267,19 @@ when only one timezone is close to the point.
     tzwhere: 0:01:29.427567
     timezonefinder: 0:00:00.604325
     147.98 times faster
+    
+    
+    w/o Numba:
+    TIMES for  1000 realistic queries:
+    tzwhere: 0:00:17.819268
+    timezonefinder: 0:00:03.269472
+    5.45 times faster
+    
+    
+    TIMES for  1000 random queries:
+    tzwhere: 0:00:09.189154
+    timezonefinder: 0:00:01.748470
+    5.26 times faster
 
 
     Startup times:
@@ -274,7 +287,7 @@ when only one timezone is close to the point.
     timezonefinder: 0:00:00.008768
     946.87 times faster
 
-\* with ``numba`` active. System: MacBookPro 2,4GHz i5 4GB RAM SSD
+\* Version: 1.5.3  System: MacBookPro 2,4GHz i5 4GB RAM SSD
 
 \*\*mismatch: pytzwhere finds something and then timezonefinder finds
 something else
