@@ -4,10 +4,10 @@ Changelog
 **Note:** not mentioned versions only contain small and irrelevant changes (e.g. in the readme, setup.py...).
 I am new to all this, so I am often missing small things which are not really new features worth mentioning.
 
-1.5.3 (2016-04-21)
+1.5.3 (2016-04-23)
 ------------------
 
-* using 32-bit ints now (instead of 64-bit): I calculated that the minimum accuracy (at the equator) is 1cm with the approach I use. Tests passed.
+* using 32-bit ints for storing the polygons now (instead of 64-bit): I calculated that the minimum accuracy (at the equator) is 1cm with the approach I use. Tests passed.
 * Benefits: 18MB file instead of 35MB, another 10-30% speed boost (depending on your hardware)
 
 

@@ -267,15 +267,15 @@ when only one timezone is close to the point.
     tzwhere: 0:01:29.427567
     timezonefinder: 0:00:00.604325
     147.98 times faster
-    
-    
+
+
     w/o Numba:
     TIMES for  1000 realistic queries:
     tzwhere: 0:00:17.819268
     timezonefinder: 0:00:03.269472
     5.45 times faster
-    
-    
+
+
     TIMES for  1000 random queries:
     tzwhere: 0:00:09.189154
     timezonefinder: 0:00:01.748470
@@ -287,7 +287,7 @@ when only one timezone is close to the point.
     timezonefinder: 0:00:00.008768
     946.87 times faster
 
-\* Version: 1.5.3  System: MacBookPro 2,4GHz i5 4GB RAM SSD
+\* Version: 1.5.3  System: MacBookPro 2,4GHz i5 4GB RAM SSD  tzwhere: numpy=True, shapely=False
 
 \*\*mismatch: pytzwhere finds something and then timezonefinder finds
 something else
@@ -341,11 +341,11 @@ Contact
 =======
 
 This is the first public python project I did, so most certainly there is stuff I missed,
-things I could have optimized even further etc. That's why, I would be really glad to get feedback on my code.
+things I could have optimized even further etc. That's why I would be really glad to get some feedback on my code.
 
 
 If you notice that the tz data is outdated, encounter any bugs, have
-suggestions, criticism, etc. feel free to **open an Issue**, **add Pull Requests** on Git or ...
+suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
 contact me: *python at michelfe dot it*
 
