@@ -105,7 +105,7 @@ for testing if numba is being used:
     print( tf.closest_timezone_at(*point) )
     # = Europe/Copenhagens
 
-**To increase search radius even more (very slow, use ``numba``!):**
+**To increase search radius even more (very slow, use numba!):**
 
 ::
 
@@ -180,7 +180,7 @@ Change to the directory of the timezonefinder package (location of ``file_conver
     rm tz_world.zip
 
 
-Credits to `cstich <https://github.com/cstich>`__
+Credits to `cstich <https://github.com/cstich>`__.
 There has to be a tz_world.json (of approx. 100MB) in the folder together with the ``file_converter.py`` now.
 Then you should run the converter by:
 
@@ -189,7 +189,7 @@ Then you should run the converter by:
     python file_converter.py
 
 
-this converts the .json into the needed .bin (overwriting the old version!) and updating the used timezone names.
+This converts the .json into the needed ``.bin`` (overwriting the old version!) and also updates the ``timezone_names.py``.
 
 **Please note:** Neither tests nor the file\_converter.py are optimized or
 really beautiful. Sorry for that. If you have questions just write me (s. section 'Contact' below)
@@ -199,7 +199,7 @@ Comparison to pytzwhere
 
 In comparison to
 `pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ I managed to
-*speed up* the queries *by up to 190 times* (depending on what versions you use, s. test results below).
+*speed up* the queries *by up to 190 times* (depending on the dependencies used, s. test results below).
 Initialisation time and memory usage are significanlty reduced,
 while my algorithm yields the same results. In some cases ``pytzwhere``
 even does not find anything and ``timezonefinder`` does, for example
@@ -254,6 +254,21 @@ when only one timezone is close to the point.
 
     testing 10000 realistic points
     [These tests dont make sense at the moment because tzwhere is still using old data]
+
+    shapely: OFF (tzwhere)
+    Numba: OFF (timezonefinder)
+
+    TIMES for  1000 realistic queries:
+    tzwhere: 0:00:17.819268
+    timezonefinder: 0:00:03.269472
+    5.45 times faster
+
+
+    TIMES for  1000 random queries:
+    tzwhere: 0:00:09.189154
+    timezonefinder: 0:00:01.748470
+    5.26 times faster
+
 
     shapely: OFF (tzwhere)
     Numba: ON (timezonefinder)
