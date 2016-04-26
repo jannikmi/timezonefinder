@@ -4,6 +4,15 @@ Changelog
 **Note:** not mentioned versions only contain small and irrelevant changes (e.g. in the readme, setup.py...).
 I am new to all this, so I am often missing small things which are not really new features worth mentioning.
 
+1.5.4 (2016-04-26)
+------------------
+
+* using the newest version (2016b) of the tz_world from http://efele.net/maps/tz/world/
+* rewrote the file_converter for parsing a .json created from the tz_worlds .shp
+* had to temporarily fix one polygon manually which had the invalid TZID: 'America/Monterey' (should be 'America/Monterrey')
+* had to make tests less strict because tzwhere still used the old data at the time and some results were simply different now
+
+
 1.5.3 (2016-04-23)
 ------------------
 
