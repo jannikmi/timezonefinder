@@ -1,5 +1,6 @@
 MANIFEST
 publish.py
+test/authors_tests.py
 
 # GITIGNORE DEFAULTS
 

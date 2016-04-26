@@ -1,36 +1,56 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import linecache
 import math
 import re
 from datetime import datetime
 from struct import pack
 
 from helpers import coord2int, int2coord
-from timezone_names import timezone_names
 
+# Don't change this setup or timezonefinder wont work!
+# different setups of shortcuts are not supported, because then addresses in the .bin
+# would need to be calculated depending on how many shortcuts are being used.
 # number of shortcuts per longitude
 NR_SHORTCUTS_PER_LNG = 1
 # shortcuts per latitude
 NR_SHORTCUTS_PER_LAT = 2
 
+all_tz_names = []
+ids = []
+boundaries = []
+all_coords = []
+all_lengths = []
+
 
 # HELPERS:
 
-def check_zone_names():
+def update_zone_names(path='timezone_names.py'):
     '''
-    scans for zone name in the original .csv which are not listed yet
+    TODO
     :return:
     '''
-    omitted_zones = []
-    for (zone_name, list_of_points) in _read_polygons_from_original_csv():
+    print('updating the zone names now')
+    unique_zones = []
+    for zone_name in all_tz_names:
 
-        if zone_name not in timezone_names:
-            if zone_name not in omitted_zones:
-                omitted_zones.append(zone_name)
+        if zone_name not in unique_zones:
+            unique_zones.append(zone_name)
 
-    print(omitted_zones)
-    return
+    unique_zones.sort()
+
+    for zone_name in all_tz_names:
+        # the ids of the polygons have to be set correctly
+        ids.append(unique_zones.index(zone_name))
+
+    # write all unique zones into the file at path with the syntax of a python array
+    file = open(path, 'w')
+    file.write(
+        'from __future__ import absolute_import, division, print_function, unicode_literals\n\ntimezone_names = [\n')
+    for zone_name in unique_zones:
+        file.write('    "' + zone_name + '"' + ',\n')
+
+    file.write(']\n')
+    print('Done\n')
 
 
 def inside_polygon(x, y, x_coords, y_coords):
@@ -63,106 +83,93 @@ def inside_polygon(x, y, x_coords, y_coords):
     return wn is not 0
 
 
-def _read_polygons_from_original_csv(path='tz_world.csv'):
-    with open(path, 'r') as f:
-        for row in f:
-            row = row.split(',')
-            yield (row[0], [[float(coordinate) for coordinate in point.split(' ')] for point in row[1:]])
+def parse_polygons_from_json(path='tz_world.json'):
+    f = open(path, 'r')
+    print('Parsing data from .json')
+    n = 0
+    for row in f:
 
+        if n % 1000 == 0:
+            print('line', n)
 
-def convert_csv(path='tz_world.csv'):
-    '''
-    create a new .csv with rearranged data
-    converts the zone names into their ids (int instead of string, for later storing it in a .bin)
-    additionally splits up the rows into:  id,xmax,xmin,ymax,ymin,y1 y2...,x1 x2 ...\n
-    #those boundaries help do quickly decide wether to check the polygon at all (saves a lot of time)
-    :param path:
-    :return:
-    '''
-    output_file = open('tz_world_converted.csv', 'w')
-    print('converting the old .csv now...')
-    i = 0
-    for (zone_name, list_of_points) in _read_polygons_from_original_csv(path):
-        if i % 1000 == 0:
-            print('line', i)
-        i += 1
-        xmax = -180
-        xmin = 180
-        ymax = -90
-        ymin = 90
-        string_of_x_coords = ''
-        string_of_y_coords = ''
-        # in the original .csv the earch polygon starts and ends with the same coordinate (=redundancy)
-        # this is not needed, because the algorithms can do the job without this because value will be in the RAM anyway
-        # 50+k floats and reading effort saved!
-        for i in range(len(list_of_points) - 1):
+        n += 1
+        # print(row)
+        tz_name_match = re.search(r'\"TZID\":\s\"(?P<name>.*)\"\s\}', row)
+        # tz_name = re.search(r'(TZID)', row)
+        # print(tz_name)
+        if tz_name_match is not None:
 
-            x = list_of_points[i][0]
-            y = list_of_points[i][1]
+            tz_name = tz_name_match.group('name').replace('\\', '')
+            all_tz_names.append(tz_name)
+            # print(tz_name)
 
-            match = re.match(r'[-]?\d+\.?\d?', str(y))
-            if match is None:
-                raise ValueError('newline in y coord at value: ' + str(i - 1), y)
+            coordinates = re.findall('[-]?\d+\.?\d+', row)
+            # print(coordinates)
 
-            match = re.match(r'[-]?\d+\.?\d?', str(x))
-            if match is None:
-                raise ValueError('newline in x coord at value: ' + str(i - 1), x)
+            # nr_floats = len(coordinates)
+            x_coords = []
+            y_coords = []
+            i = 0
+            for coord in coordinates:
+                if i % 2 == 0:
+                    x_coords.append(float(coord))
+                else:
+                    y_coords.append(float(coord))
+                i += 1
 
-            if x > xmax:
-                xmax = x
-            if x < xmin:
-                xmin = x
-            if y > ymax:
-                ymax = y
-            if y < ymin:
-                ymin = y
-            string_of_x_coords += str(x) + ' '
-            string_of_y_coords += str(y) + ' '
+            if i % 2 != 0:
+                raise ValueError(i, 'Floats in line', n, ' found. Should be even (pairs or (x,y) )')
 
-        output_file.write(
-            str(timezone_names.index(zone_name)) + ',' + str(xmax) + ',' + str(xmin) + ',' + str(ymax) + ',' + str(
-                ymin) + ',' + string_of_x_coords.strip() + ',' + string_of_y_coords.strip() + '\n')
+            all_coords.append((x_coords, y_coords))
+            all_lengths.append(len(x_coords))
+            # print(x_coords)
+            # print(y_coords)
+            xmax = -180.0
+            xmin = 180.0
+            ymax = -90.0
+            ymin = 90.0
+
+            for x in x_coords:
+
+                if x > xmax:
+                    xmax = x
+                if x < xmin:
+                    xmin = x
+
+            for y in y_coords:
+                if y > ymax:
+                    ymax = y
+                if y < ymin:
+                    ymin = y
+
+            boundaries.append((xmax, xmin, ymax, ymin))
+
+    print('Done\n')
 
 
 def _ids():
-    with open('tz_world_converted.csv', 'r') as f:
-        for row in f:
-            row = row.split(',')
-            # (id,xmax,xmin,ymax,ymin, [x1 x2 ...], [y1 y2...])
-            # x = horizontal = longitude, y = vertical = latitude
-            yield int(row[0])
+    for id in ids:
+        yield id
 
 
 def _boundaries():
-    with open('tz_world_converted.csv', 'r') as f:
-        for row in f:
-            row = row.split(',')
-            # (id,xmax,xmin,ymax,ymin, [x1 x2 ...], [y1 y2...])
-            # x = horizontal = longitude, y = vertical = latitude
-            yield (float(row[1]), float(row[2]), float(row[3]), float(row[4]),)
+    for b in boundaries:
+        yield b
 
 
 def _coordinates():
-    with open('tz_world_converted.csv', 'r') as f:
-        for row in f:
-            row = row.split(',')
-            # (id,xmax,xmin,ymax,ymin, [x1 x2 ...], [y1 y2...])
-            # x = horizontal = longitude, y = vertical = latitude
-            yield ([float(x) for x in row[5].split(' ')], [float(x) for x in row[6].strip().split(' ')])
+    for c in all_coords:
+        yield c
 
 
 def ints_of(line=0):
-    row = linecache.getline('tz_world_converted.csv', lineno=line)
-    row = row.split(',')
-    return (
-        [coord2int(coord=float(x)) for x in row[5].split(' ')],
-        [coord2int(coord=float(x)) for x in row[6].strip().split(' ')])
+    x_coords, y_coords = all_coords[line]
+    return [coord2int(x) for x in x_coords], [coord2int(x) for x in y_coords]
 
 
 def _length_of_rows():
-    with open('tz_world_converted.csv', 'r') as f:
-        for row in f:
-            yield len(row.split(',')[5].split(' '))
+    for length in all_lengths:
+        yield length
 
 
 def compile_into_binary(path='tz_binary.bin'):
@@ -279,7 +286,7 @@ def compile_into_binary(path='tz_binary.bin'):
         shortcuts_for_line = set()
 
         # x_longs = binary_reader.x_coords_of(line)
-        longs = ints_of(line + 1)
+        longs = ints_of(line)
         x_longs = longs[0]
         y_longs = longs[1]
 
@@ -426,6 +433,7 @@ def compile_into_binary(path='tz_binary.bin'):
             row_nrs = included_shortcut_row_nrs(ymax, ymin)
 
             if big_zone(xmax, xmin, ymax, ymin):
+
                 '''
                 print('line ' + str(line))
                 print('This is a big zone! computing exact shortcuts')
@@ -453,6 +461,8 @@ def compile_into_binary(path='tz_binary.bin'):
                 min_y_shortcut = row_nrs[0]
                 max_y_shortcut = row_nrs[-1]
                 shortcuts_to_remove = []
+
+                # remove shortcuts from outside the possible/valid area
                 for x, y in shortcuts_for_line:
                     if x < min_x_shortcut:
                         shortcuts_to_remove.append((x, y))
@@ -479,11 +489,12 @@ def compile_into_binary(path='tz_binary.bin'):
                 print(row_nrs_after)
                 print(shortcuts_for_line)
                 '''
+
                 if len(shortcuts_for_line) > len(column_nrs) * len(row_nrs):
                     raise ValueError(
                         'there are more shortcuts than before now. there is something wrong with the algorithm!')
                 if len(shortcuts_for_line) < 3:
-                    raise ValueError('algorithm not accurate enough. less than 3 zones detected')
+                    raise ValueError('algorithm not valid! less than 3 zones detected (should be at least 4)')
 
             else:
 
@@ -512,7 +523,7 @@ def compile_into_binary(path='tz_binary.bin'):
     construct_shortcuts()
     end_time = datetime.now()
 
-    print('calculating the shortcus took:', end_time - start_time)
+    print('calculating the shortcuts took:', end_time - start_time)
 
     # address where the actual polygon data starts. look in the description below to get more info
     polygon_address = (24 * nr_of_lines + 6)
@@ -659,14 +670,10 @@ X times !H * amount Polygon_Nr    @ address stored in previous section
 """
 
 if __name__ == '__main__':
-    convert_csv()
+    # reading the data from the .json you converted
+    parse_polygons_from_json(path='tz_world.json')
 
-    # Don't change this setup or timezonefinder wont work!
-    # different setups of shortcuts are not supported, because then addresses in the .bin
-    # would need to be calculated depending on how many shortcuts are being used.
+    # update all the zone names and set the right ids to be written in the .bin
+    update_zone_names(path='timezone_names.py')
 
-    # set the number of shortcuts created per longitude
-    NR_SHORTCUTS_PER_LNG = 1
-    # shortcuts per latitude
-    NR_SHORTCUTS_PER_LAT = 2
     compile_into_binary(path='timezone_data.bin')

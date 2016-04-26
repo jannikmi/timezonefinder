@@ -167,21 +167,40 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 **Using the conversion tool:**
 
-Place the ``tz_world.csv`` from tzwhere in one folder with the ``file_converter.py`` and run it as a script. It converts the .csv in a new .csv
-and transforms this file into the needed .bin
+Make sure you installed the GDAL framework (thats for converting .shp shapefiles into .json)
+Change to the directory of the timezonefinder package (location of ``file_converter.py``) in your terminal and then:
 
-Place this .bin in your timezonfinder folder (overwriting the old file) to make it being used.
+::
 
-**Please note:** Neither the tests nor the file\_converter.py are optimized or
-really beautiful. Sorry for that.
+    wget http://efele.net/maps/tz/world/tz_world.zip
+    # on mac: curl "http://efele.net/maps/tz/world/tz_world.zip" -o "tz_world.zip"
+    unzip tz_world
+    ogr2ogr -f GeoJSON -t_srs crs:84 tz_world.json ./world/tz_world.shp
+    rm ./world/ -r
+    rm tz_world.zip
+
+
+Credits to `cstich <https://github.com/cstich>`__
+There has to be a tz_world.json (of approx. 100MB) in the folder together with the ``file_converter.py`` now.
+Then you should run the converter by:
+
+::
+
+    python file_converter.py
+
+
+this converts the .json into the needed .bin (overwriting the old version!) and updating the used timezone names.
+
+**Please note:** Neither tests nor the file\_converter.py are optimized or
+really beautiful. Sorry for that. If you have questions just write me (s. section 'Contact' below)
 
 Comparison to pytzwhere
 =======================
 
 In comparison to
 `pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ I managed to
-*speed up* the queries *by more than 100 times* (s. test results below).
-Initialisation time and memory usage are also significanlty reduced,
+*speed up* the queries *by up to 190 times* (depending on what versions you use, s. test results below).
+Initialisation time and memory usage are significanlty reduced,
 while my algorithm yields the same results. In some cases ``pytzwhere``
 even does not find anything and ``timezonefinder`` does, for example
 when only one timezone is close to the point.
@@ -195,29 +214,31 @@ when only one timezone is close to the point.
 
 **Differences:**
 
+-  highly decreased memory usage
+
+-  highly reduced start up time
+
 -  the data is now stored in a memory friendly 18MB ``.bin`` and needed
-   data is directly being read on the fly (instead of reading and
-   converting the 76MB ``.csv`` -mostly floats stored as strings!- into
+   data is directly being read on the fly (instead of reading, converting and KEEPING the 76MB ``.csv``
+   -mostly floats stored as strings!- into
    memory every time a class is created).
 
 -  precomputed shortcuts are stored in the ``.bin`` to quickly look up
-   which polygons have to be checked (instead of creating the shortcuts
+   which polygons have to be checked (instead of computing and storing the shortcuts
    on every startup)
-
--  optimized algorithms
 
 -  introduced proximity algorithm
 
--  use of ``numba`` for speeding things up much further.
+-  use of ``numba`` for precompilation (reaching the speed of tzwhere with shapely on and having everything preloaded in the memory)
 
-**test results** \from the latest version \*:
+**test results**\*:
 
 ::
 
 
     test correctness:
     Results:
-    [point, target, tzwere is correct, timezonefinder is correct]
+    [point, target, timezonefinder is correct, tzwhere is correct]
     (-60.968888, -3.442172) America/Manaus True True
     (14.1315716, 2.99999) Africa/Douala True True
     (-106.1706459, 23.7891123) America/Mazatlan True True
@@ -232,31 +253,10 @@ when only one timezone is close to the point.
     (14.1315716, 0.2350623) Africa/Brazzaville True True
 
     testing 10000 realistic points
-    MISMATCHES:
-    (-110.46557383479337, 35.860783819335666) America/Phoenix America/Denver (not counted, see issue section)
-    (28.33811173592602, -30.053783637444724) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
+    [These tests dont make sense at the moment because tzwhere is still using old data]
 
-    testing 10000 random points
-    MISMATCHES:
-    (27.86670722464703, -29.135850729733704) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
-
-    in 20000 tries 0 mismatches were made
-    fail percentage is: 0.0
-
-
-    testing certain_timezone_at():
-
-    testing 10000 realistic points
-    MISMATCHES:
-    (-110.46557383479337, 35.860783819335666) America/Phoenix America/Denver (not counted, see issue section)
-    (28.33811173592602, -30.053783637444724) Africa/Johannesburg Africa/Maseru (not counted, see issue section)
-
-    testing 10000 random points
-    MISMATCHES:
-
-    in 20000 tries 0 mismatches were made
-    fail percentage is: 0.0
-
+    shapely: OFF (tzwhere)
+    Numba: ON (timezonefinder)
 
     TIMES for  10000 realistic queries:
     tzwhere: 0:02:55.985141
@@ -274,7 +274,26 @@ when only one timezone is close to the point.
     timezonefinder: 0:00:00.008768
     946.87 times faster
 
-\* with ``numba`` active. System: MacBookPro 2,4GHz i5 4GB RAM SSD
+
+    shapely: ON (tzwhere)
+    Numba: ON (timezonefinder)
+
+    TIMES for  10000 realistic queries:
+    tzwhere: 0:00:00.845834
+    timezonefinder: 0:00:00.979515
+    0.86 times faster
+
+    TIMES for  10000 random queries:
+    tzwhere: 0:00:01.358131
+    timezonefinder: 0:00:01.042770
+    1.3 times faster
+
+    Startup times:
+    tzwhere: 0:00:13.570615
+    timezonefinder: 0:00:00.000265
+    51209.87 times faster
+
+\* System: MacBookPro 2,4GHz i5 4GB RAM SSD pytzwhere with numpy active
 
 \*\*mismatch: pytzwhere finds something and then timezonefinder finds
 something else
