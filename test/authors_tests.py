@@ -92,35 +92,32 @@ class PackageEqualityTest(unittest.TestCase):
 
     '''
     def test_equality_endless(self):
-        # Test the equality if the two algorithms
+    # Test the equality of the two algorithms
 
-        mistake_after = 0
-        print('Endlessly testing for equality:')
-        # print('valid points checked:')
-        i = 0
+    print('Endlessly testing for equality:')
+    # print('valid points checked:')
+    i = 0
 
-        while 1:
-            point = random_point()
+    while 1:
+        point = random_point()
 
-            my_result_certain = self.timezone_finder.certain_timezone_at(*point)
+        my_result_certain = self.timezone_finder.certain_timezone_at(*point)
 
-            if my_result_certain is not None:
+        if my_result_certain is not None:
 
-                i += 1
-                if i % 1000 == 0:
-                    print(i)
+            i += 1
+            if i % 1000 == 0:
+                print(i)
 
-                his_result = self.tz_where.tzNameAt(latitude=point[1], longitude=point[0])
-                my_result = self.timezone_finder.timezone_at(point[0], point[1])
-                if my_result != his_result or my_result != my_result_certain:
-                    mistake_after = i
-                    # mistake_point_nrs.append(i)
-                    output_file = open('found_missmatches.txt', 'a')
-                    print('mistake at point:', i , point)
-                    print('my_result:', my_result, my_result_certain, 'should be equal to', his_result)
-                    output_file.write(str([i,point,my_result,my_result_certain,his_result]))
-                    output_file.write('\n')
-                    output_file.close()
+            his_result = self.tz_where.tzNameAt(latitude=point[1], longitude=point[0])
+            my_result = self.timezone_finder.timezone_at(point[0], point[1])
+            if my_result != his_result or my_result != my_result_certain:
+                output_file = open('found_missmatches.txt', 'a')
+                print('mistake at point:', i , point)
+                print('my_result:', my_result, my_result_certain, 'should be equal to', his_result)
+                output_file.write(str([i,point,my_result,my_result_certain,his_result]))
+                output_file.write('\n')
+                output_file.close()
 
                     # assert my_result == his_result
 

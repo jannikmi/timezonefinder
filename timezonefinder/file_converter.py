@@ -103,7 +103,7 @@ def parse_polygons_from_json(path='tz_world.json'):
             all_tz_names.append(tz_name)
             # print(tz_name)
 
-            coordinates = re.findall('[-]?\d+\.?\d+', row)
+            coordinates = re.findall('[-]?\d+\.?\d+', row)[:-2]
             # print(coordinates)
 
             # nr_floats = len(coordinates)
@@ -511,7 +511,6 @@ def compile_into_binary(path='tz_binary.bin'):
             # print('collected entries:')
             # print(n)
 
-    print('reading the converted .csv file')
     for ID in _ids():
         nr_of_lines += 1
         zone_ids.append(ID)

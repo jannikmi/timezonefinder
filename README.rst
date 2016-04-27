@@ -10,11 +10,9 @@ timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from and has been successfully tested against
 `pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__
-(`github <https://github.com/pegler/pytzwhere>`__), but aims to provide
+(`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
 improved performance and usability.
 
-It is also similar to
-`django-geo-timezones <https://pypi.python.org/pypi/django-geo-timezones/0.1.2>`__
 
 The underlying timezone data is based on work done by `Eric
 Muller <http://efele.net/maps/tz/world/>`__.
@@ -181,8 +179,8 @@ Change to the directory of the timezonefinder package (location of ``file_conver
 
 
 Credits to `cstich <https://github.com/cstich>`__.
-There has to be a tz_world.json (of approx. 100MB) in the folder together with the ``file_converter.py`` now.
-Then you should run the converter by:
+There should be a tz_world.json (of approx. 100MB) in the folder together with the ``file_converter.py`` now.
+Then run the converter by:
 
 ::
 
@@ -285,25 +283,6 @@ when only one timezone is close to the point.
     147.98 times faster
 
 
-    w/o Numba:
-    TIMES for  1000 realistic queries:
-    tzwhere: 0:00:17.819268
-    timezonefinder: 0:00:03.269472
-    5.45 times faster
-
-
-    TIMES for  1000 random queries:
-    tzwhere: 0:00:09.189154
-    timezonefinder: 0:00:01.748470
-    5.26 times faster
-
-
-    Startup times:
-    tzwhere: 0:00:08.302153
-    timezonefinder: 0:00:00.008768
-    946.87 times faster
-
-
     shapely: ON (tzwhere)
     Numba: ON (timezonefinder)
 
@@ -318,9 +297,9 @@ when only one timezone is close to the point.
     1.3 times faster
 
     Startup times:
-    tzwhere: 0:00:13.570615
-    timezonefinder: 0:00:00.000265
-    51209.87 times faster
+    tzwhere: 0:00:40.679195
+    timezonefinder: 0:00:00.001268
+    32081.38 times faster
 
 \* System: MacBookPro 2,4GHz i5 4GB RAM SSD pytzwhere with numpy active
 
