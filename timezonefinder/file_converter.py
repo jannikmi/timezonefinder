@@ -15,11 +15,18 @@ NR_SHORTCUTS_PER_LNG = 1
 # shortcuts per latitude
 NR_SHORTCUTS_PER_LAT = 2
 
+nr_of_lines = -1
 all_tz_names = []
 ids = []
 boundaries = []
 all_coords = []
 all_lengths = []
+amount_of_holes = 0
+first_hole_id_in_line = []
+related_line = []
+
+all_holes = []
+all_hole_lengths = []
 
 
 # HELPERS:
@@ -84,15 +91,16 @@ def inside_polygon(x, y, x_coords, y_coords):
 
 
 def parse_polygons_from_json(path='tz_world.json'):
+    global amount_of_holes
+    global nr_of_lines
+
     f = open(path, 'r')
     print('Parsing data from .json')
-    n = 0
+
+    # file_line is the current line in the .json file being parsed. This is not the id of the Polygon!
+    file_line = 0
     for row in f:
 
-        if n % 1000 == 0:
-            print('line', n)
-
-        n += 1
         # print(row)
         tz_name_match = re.search(r'\"TZID\":\s\"(?P<name>.*)\"\s\}', row)
         # tz_name = re.search(r'(TZID)', row)
@@ -101,49 +109,117 @@ def parse_polygons_from_json(path='tz_world.json'):
 
             tz_name = tz_name_match.group('name').replace('\\', '')
             all_tz_names.append(tz_name)
+            nr_of_lines += 1
             # print(tz_name)
 
-            coordinates = re.findall('[-]?\d+\.?\d+', row)[:-2]
+            actual_depth = 0
+            counted_coordinate_pairs = 0
+            encoutered_nr_of_coordinates = []
+            for char in row:
+                if char == '[':
+                    actual_depth += 1
+
+                elif char == ']':
+                    actual_depth -= 1
+                    if actual_depth == 2:
+                        counted_coordinate_pairs += 1
+
+                    if actual_depth == 1:
+                        encoutered_nr_of_coordinates.append(counted_coordinate_pairs)
+                        counted_coordinate_pairs = 0
+
+            if actual_depth != 0:
+                raise ValueError('uneven number of brackets detected. Something is wrong in line', file_line)
+
+            coordinates = re.findall('[-]?\d+\.?\d+', row)
+
+            if len(coordinates) != sum(encoutered_nr_of_coordinates) * 2:
+                raise ValueError('There number of coordinates is counten wrong:', len(coordinates),
+                                 sum(encoutered_nr_of_coordinates) * 2)
+
+            # TODO detect and store all the holes in the bin
             # print(coordinates)
 
             # nr_floats = len(coordinates)
             x_coords = []
             y_coords = []
-            i = 0
-            for coord in coordinates:
-                if i % 2 == 0:
-                    x_coords.append(float(coord))
-                else:
-                    y_coords.append(float(coord))
-                i += 1
-
-            if i % 2 != 0:
-                raise ValueError(i, 'Floats in line', n, ' found. Should be even (pairs or (x,y) )')
-
-            all_coords.append((x_coords, y_coords))
-            all_lengths.append(len(x_coords))
-            # print(x_coords)
-            # print(y_coords)
             xmax = -180.0
             xmin = 180.0
             ymax = -90.0
             ymin = 90.0
 
-            for x in x_coords:
+            pointer = 0
+            # the coordiate pairs within the first brackets [ [x,y], ..., [xn, yn] ] are the polygon coordinates
+            # The last coordinate pair should be left out (is equal to the first one)
+            for n in range(2 * (encoutered_nr_of_coordinates[0] - 1)):
+                if n % 2 == 0:
+                    x = float(coordinates[pointer])
+                    x_coords.append(x)
+                    if x > xmax:
+                        xmax = x
+                    if x < xmin:
+                        xmin = x
 
-                if x > xmax:
-                    xmax = x
-                if x < xmin:
-                    xmin = x
+                else:
+                    y = float(coordinates[pointer])
+                    y_coords.append(y)
+                    if y > ymax:
+                        ymax = y
+                    if y < ymin:
+                        ymin = y
 
-            for y in y_coords:
-                if y > ymax:
-                    ymax = y
-                if y < ymin:
-                    ymin = y
+                pointer += 1
+
+            all_coords.append((x_coords, y_coords))
+            all_lengths.append(len(x_coords))
+            # print(x_coords)
+            # print(y_coords)
 
             boundaries.append((xmax, xmin, ymax, ymin))
 
+            amount_holes_this_line = len(encoutered_nr_of_coordinates) - 1
+            if amount_holes_this_line > 0:
+                # store how many holes there are in this line
+                # store what the number of the first hole for this line is (for calculating the address to jump)
+                first_hole_id_in_line.append(amount_of_holes)
+                # keep track of how many holes there are
+                amount_of_holes += amount_holes_this_line
+                print(tz_name)
+
+                for i in range(amount_holes_this_line):
+                    related_line.append(nr_of_lines)
+                    print(nr_of_lines)
+
+                    # print(amount_holes_this_line)
+
+            # for every encoutered hole
+            for i in range(1, amount_holes_this_line + 1):
+                x_coords = []
+                y_coords = []
+
+                # since the last coordinate was being left out,
+                # we have to move the pointer 2 floats further to be in the hole data again
+                pointer += 2
+
+                # The last coordinate pair should be left out (is equal to the first one)
+                for n in range(2 * (encoutered_nr_of_coordinates[i] - 1)):
+                    if n % 2 == 0:
+                        x_coords.append(float(coordinates[pointer]))
+                    else:
+                        y_coords.append(float(coordinates[pointer]))
+
+                    pointer += 1
+
+                all_holes.append((x_coords, y_coords))
+                all_hole_lengths.append(len(x_coords))
+
+        file_line += 1
+
+    # so far the nr_of_lines was used to point to the current polygon but there is actually 1 more polygons in total
+    nr_of_lines += 1
+
+    print('amount_of_holes:', amount_of_holes)
+    print('amount of timezones:', nr_of_lines)
     print('Done\n')
 
 
@@ -173,8 +249,8 @@ def _length_of_rows():
 
 
 def compile_into_binary(path='tz_binary.bin'):
+    global nr_of_lines
     nr_of_floats = 0
-    nr_of_lines = 0
     zone_ids = []
     shortcuts = {}
 
@@ -511,9 +587,13 @@ def compile_into_binary(path='tz_binary.bin'):
             # print('collected entries:')
             # print(n)
 
+    # test_length = 0
     for ID in _ids():
-        nr_of_lines += 1
+        # test_length +=1
         zone_ids.append(ID)
+
+    # if test_length != nr_of_lines:
+    #     raise ValueError(test_length,nr_of_lines, len(ids))
 
     for length in _length_of_rows():
         nr_of_floats += 2 * length
@@ -525,10 +605,44 @@ def compile_into_binary(path='tz_binary.bin'):
     print('calculating the shortcuts took:', end_time - start_time)
 
     # address where the actual polygon data starts. look in the description below to get more info
-    polygon_address = (24 * nr_of_lines + 6)
+    polygon_address = (24 * nr_of_lines + 12)
 
     # for every original float now 4 bytes are needed (int32)
     shortcut_start_address = polygon_address + 4 * nr_of_floats
+
+    # write number of entries in shortcut field (x,y)
+    nr_of_entries_in_shortcut = []
+    shortcut_entries = []
+    amount_filled_shortcuts = 0
+
+    # count how many shortcut addresses will be written:
+    for x in range(360 * NR_SHORTCUTS_PER_LNG):
+        for y in range(180 * NR_SHORTCUTS_PER_LAT):
+            try:
+                this_lines_shortcuts = shortcuts[(x, y)]
+                shortcut_entries.append(this_lines_shortcuts)
+                amount_filled_shortcuts += 1
+                nr_of_entries_in_shortcut.append(len(this_lines_shortcuts))
+                # print((x,y,this_lines_shortcuts))
+            except KeyError:
+                nr_of_entries_in_shortcut.append(0)
+
+    amount_of_shortcuts = len(nr_of_entries_in_shortcut)
+    if amount_of_shortcuts != 64800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
+        print(amount_of_shortcuts)
+        raise ValueError('this number of shortcut zones is wrong')
+
+    print('The number of filled shortcut zones are:', amount_filled_shortcuts, '(=',
+          round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2), '% of all shortcuts)')
+
+    # for every shortcut !H and !I is written (nr of entries and address)
+    shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * 6
+    for nr in nr_of_entries_in_shortcut:
+        # every line in every shortcut takes up 2bytes
+        shortcut_space += 2 * nr
+
+    hole_start_address = shortcut_start_address + shortcut_space
+
     print('The number of polygons is:', nr_of_lines)
     print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
     print('now writing file "', path, '"')
@@ -537,6 +651,13 @@ def compile_into_binary(path='tz_binary.bin'):
     output_file.write(pack(b'!H', nr_of_lines))
     # write start address of shortcut_data:
     output_file.write(pack(b'!I', shortcut_start_address))
+
+    # !H amount of holes
+    output_file.write(pack(b'!H', amount_of_holes))
+
+    # !I Address of Hole area (end of shortcut area +1) @ 8
+    output_file.write(pack(b'!I', hole_start_address))
+
     # write zone_ids
     for zone_id in zone_ids:
         output_file.write(pack(b'!H', zone_id))
@@ -569,29 +690,8 @@ def compile_into_binary(path='tz_binary.bin'):
             output_file.write(pack(b'!i', coord2int(y)))
 
     print('position after writing all polygon data (=start of shortcut section):', output_file.tell())
-    # write number of entries in shortcut field (x,y)
-    nr_of_entries_in_shortcut = []
-    shortcut_entries = []
-    total_entries_in_shortcuts = 0
 
-    # count how many shortcut addresses will be written:
-    for x in range(360 * NR_SHORTCUTS_PER_LNG):
-        for y in range(180 * NR_SHORTCUTS_PER_LAT):
-            try:
-                this_lines_shortcuts = shortcuts[(x, y)]
-                shortcut_entries.append(this_lines_shortcuts)
-                total_entries_in_shortcuts += 1
-                nr_of_entries_in_shortcut.append(len(this_lines_shortcuts))
-                # print((x,y,this_lines_shortcuts))
-            except KeyError:
-                nr_of_entries_in_shortcut.append(0)
-
-    print('The number of filled shortcut zones are:', total_entries_in_shortcuts)
-
-    if len(nr_of_entries_in_shortcut) != 64800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
-        print(len(nr_of_entries_in_shortcut))
-        raise ValueError('this number of shortcut zones is wrong')
-
+    # [SHORTCUT AREA]
     # write all nr of entries
     for nr in nr_of_entries_in_shortcut:
         if nr > 300:
@@ -606,7 +706,7 @@ def compile_into_binary(path='tz_binary.bin'):
             output_file.write(pack(b'!I', 0))
         else:
             output_file.write(pack(b'!I', shortcut_address))
-            # each polygon takes up 2 bytes of space
+            # each line_nr takes up 2 bytes of space
             shortcut_address += 2 * nr
 
     # write Line_Nrs for every shortcut
@@ -616,12 +716,48 @@ def compile_into_binary(path='tz_binary.bin'):
                 raise ValueError(entry)
             output_file.write(pack(b'!H', entry))
 
+    # [HOLE AREA, Y = number of holes (very few: around 22)]
+
+    # '!H' for every hole store the related line
+    i = 0
+    for line in related_line:
+
+        if line > nr_of_lines:
+            raise ValueError(line)
+        output_file.write(pack(b'!H', line))
+        i += 1
+
+    if i > amount_of_holes:
+        raise ValueError('There are more related lines than holes.')
+
+    # '!H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+    for length in all_hole_lengths:
+        output_file.write(pack(b'!H', length))
+
+    # '!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+    hole_address = output_file.tell() + amount_of_holes * 4
+    for length in all_hole_lengths:
+        output_file.write(pack(b'!I', hole_address))
+        # each pair of points takes up 8 bytes of space
+        hole_address += 8 * length
+
+    # Y times [ 2x i signed ints for every hole: x coords, y coords ]
+    # write hole polygon_data
+    for x_coords, y_coords in all_holes:
+        for x in x_coords:
+            output_file.write(pack(b'!i', coord2int(x)))
+        for y in y_coords:
+            output_file.write(pack(b'!i', coord2int(y)))
+
     last_address = output_file.tell()
-    shortcut_space = last_address - shortcut_start_address
+    hole_space = last_address - hole_start_address
+    if shortcut_space != last_address - shortcut_start_address - hole_space:
+        raise ValueError('shortcut space is computed wrong')
     polygon_space = nr_of_floats * 4
 
-    print('the shortcuts make up', round((shortcut_space / last_address) * 100, 2), '% of the file')
     print('the polygon data makes up', round((polygon_space / last_address) * 100, 2), '% of the file')
+    print('the shortcuts make up', round((shortcut_space / last_address) * 100, 2), '% of the file')
+    print('the holes make up', round((hole_space / last_address) * 100, 2), '% of the file')
 
     print('Success!')
     return
@@ -636,25 +772,31 @@ no of rows (= no of polygons = no of boundaries)
 approx. 28k -> use 2byte unsigned short (has range until 65k)
 '!H' = n
 
-I Address of Shortcut area (end of polygons+1) @ 2
+!I Address of Shortcut area (end of polygons+1) @ 2
 
-'!H'  n times [H unsigned short: zone number=ID in this line, @ 6 + 2* lineNr]
+!H amount of holes @6
 
-'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 6 + 2n + 2* lineNr]
+!I Address of Hole area (end of shortcut area +1) @ 8
+
+'!H'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
+
+'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
 
 '!I'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
-@ 6 + 4 * n +  4*lineNr]
+@ 12 + 4 * n +  4*lineNr]
 
 
 
-n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 6 + 8n + 16* lineNr
+n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 12 + 8n + 16* lineNr
 '!iiii'
 
 
-[starting @ 6+ 24*n = polygon data start address]
+[starting @ 12+ 24*n = polygon data start address]
 (for every line: x coords, y coords:)   stored  @ Address section (see above)
 '!i' * amount of points
 
+
+[SHORTCUT AREA]
 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
 [atm: 360* 1 * 180 * 2 = 129,600]
 129,600 times !H   number of entries in shortcut field (x,y)  @ Pointer see above
@@ -665,6 +807,17 @@ Address of first Polygon_nr  in shortcut field (x,y) [0 if there is no entry] @ 
 
 [X = number of filled shortcuts]
 X times !H * amount Polygon_Nr    @ address stored in previous section
+
+
+[HOLE AREA, Y = number of holes (very few: around 22)]
+
+'!H' for every hole store the related line
+
+'!H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+
+'!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+
+Y times [ 2x i signed ints for every hole: x coords, y coords ]
 
 """
 

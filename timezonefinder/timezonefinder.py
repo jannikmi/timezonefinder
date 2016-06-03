@@ -14,9 +14,9 @@ except ImportError:
     numba = None
 
 if numba is not None:
-    from .helpers_numba import coord2int, distance_to_polygon, inside_polygon
+    from .helpers_numba import coord2int, distance_to_polygon, inside_polygon, all_the_same
 else:
-    from .helpers import coord2int, distance_to_polygon, inside_polygon
+    from .helpers import coord2int, distance_to_polygon, inside_polygon, all_the_same
 
 
 class TimezoneFinder:
@@ -40,12 +40,46 @@ class TimezoneFinder:
         # the address where the shortcut section starts (after all the polygons) this is 34 433 054
         self.shortcuts_start = unpack(b'!I', self.binary_file.read(4))[0]
 
-        self.nr_val_start_address = 2 * self.nr_of_entries + 6
-        self.adr_start_address = 4 * self.nr_of_entries + 6
-        self.bound_start_address = 8 * self.nr_of_entries + 6
-        # self.poly_start_address = 40 * self.nr_of_entries + 6
-        self.poly_start_address = 24 * self.nr_of_entries + 6
+        self.amount_of_holes = unpack(b'!H', self.binary_file.read(2))[0]
+
+        self.hole_area_start = unpack(b'!I', self.binary_file.read(4))[0]
+
+        self.nr_val_start_address = 2 * self.nr_of_entries + 12
+        self.adr_start_address = 4 * self.nr_of_entries + 12
+        self.bound_start_address = 8 * self.nr_of_entries + 12
+        # self.poly_start_address = 24 * self.nr_of_entries + 12
         self.first_shortcut_address = self.shortcuts_start + 259200
+
+        self.nr_val_hole_address = self.hole_area_start + self.amount_of_holes * 2
+        self.adr_hole_address = self.hole_area_start + self.amount_of_holes * 4
+        # self.hole_data_start = self.hole_area_start + self.amount_of_holes * 8
+
+        # for store for which polygons (how many) holes exits and the id of the first of those holes
+        self.hole_registry = {}
+        last_encountered_line_nr = 0
+        first_hole_id = 0
+        amount_of_holes = 0
+        self.binary_file.seek(self.hole_area_start)
+        for i in range(self.amount_of_holes):
+            related_line = unpack(b'!H', self.binary_file.read(2))[0]
+            # print(related_line)
+            if related_line == last_encountered_line_nr:
+                amount_of_holes += 1
+            else:
+                if i != 0:
+                    # write an entry in the registry
+                    self.hole_registry.update({
+                        last_encountered_line_nr: (amount_of_holes, first_hole_id)
+                    })
+
+                last_encountered_line_nr = related_line
+                first_hole_id = i
+                amount_of_holes = 1
+
+        # write the entry for the last hole(s) in the registry
+        self.hole_registry.update({
+            last_encountered_line_nr: (amount_of_holes, first_hole_id)
+        })
 
     def __del__(self):
         self.binary_file.close()
@@ -56,7 +90,7 @@ class TimezoneFinder:
 
     def id_of(self, line=0):
         # ids start at address 6. per line one unsigned 2byte int is used
-        self.binary_file.seek((6 + 2 * line))
+        self.binary_file.seek((12 + 2 * line))
         return unpack(b'!H', self.binary_file.read(2))[0]
 
     def ids_of(self, iterable):
@@ -65,7 +99,7 @@ class TimezoneFinder:
 
         i = 0
         for line_nr in iterable:
-            self.binary_file.seek((6 + 2 * line_nr))
+            self.binary_file.seek((12 + 2 * line_nr))
             id_array[i] = unpack(b'!H', self.binary_file.read(2))[0]
             i += 1
 
@@ -108,11 +142,28 @@ class TimezoneFinder:
 
         # return array([fromfile(self.binary_file, dtype='>i8', count=nr_of_values),
         #               fromfile(self.binary_file, dtype='>i8', count=nr_of_values)])
-
+        #
         return array([fromfile(self.binary_file, dtype='>i4', count=nr_of_values),
                       fromfile(self.binary_file, dtype='>i4', count=nr_of_values)])
 
-    # @profile
+    def _holes_of_line(self, line=0):
+        try:
+            amount_of_holes, hole_id = self.hole_registry[line]
+
+            for i in range(amount_of_holes):
+                self.binary_file.seek((self.nr_val_hole_address + 2 * hole_id))
+                nr_of_values = unpack(b'!H', self.binary_file.read(2))[0]
+
+                self.binary_file.seek((self.adr_hole_address + 4 * hole_id))
+                self.binary_file.seek(unpack(b'!I', self.binary_file.read(4))[0])
+
+                yield array([fromfile(self.binary_file, dtype='>i4', count=nr_of_values),
+                             fromfile(self.binary_file, dtype='>i4', count=nr_of_values)])
+                hole_id += 1
+
+        except KeyError:
+            return
+
     def closest_timezone_at(self, lng, lat, delta_degree=1):
         """
         This function searches for the closest polygon in the surrounding shortcuts.
@@ -214,7 +265,7 @@ class TimezoneFinder:
         :return: the timezone name of the matching polygon or None
         """
         if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+            raise ValueError('The coordinates are out ouf bounds: ( %f, %f, )' % (lng, lat))
 
         possible_polygons = self.shortcuts_of(lng, lat)
 
@@ -231,15 +282,16 @@ class TimezoneFinder:
             return timezone_names[self.id_of(possible_polygons[0])]
 
         # initialize the list of ids
+        # TODO sort from least to most occurrences
         ids = [self.id_of(p) for p in possible_polygons]
-
-        # if all the polygons belong to the same zone return it
-        first_entry = ids[0]
-        if ids.count(first_entry) == nr_possible_polygons:
-            return timezone_names[first_entry]
 
         # otherwise check if the point is included for all the possible polygons
         for i in range(nr_possible_polygons):
+
+            same_element = all_the_same(pointer=i, length=nr_possible_polygons, id_list=ids)
+            if same_element != -1:
+                return timezone_names[same_element]
+
             polygon_nr = possible_polygons[i]
 
             # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
@@ -249,8 +301,17 @@ class TimezoneFinder:
             # only run the algorithm if it the point is withing the boundaries
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
-                if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
-                    return timezone_names[ids[i]]
+                outside_all_holes = True
+                # when the point is within a hole of the polygon this timezone doesn't need to be checked
+                for hole_coordinates in self._holes_of_line(polygon_nr):
+                    if inside_polygon(x, y, hole_coordinates):
+                        outside_all_holes = False
+                        break
+
+                if outside_all_holes:
+                    if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
+                        return timezone_names[ids[i]]
+
         return None
 
     def certain_timezone_at(self, lng=0.0, lat=0.0):
@@ -272,12 +333,21 @@ class TimezoneFinder:
         y = coord2int(lat)
 
         for polygon_nr in possible_polygons:
+
             # get boundaries
             self.binary_file.seek((self.bound_start_address + 16 * polygon_nr), )
             boundaries = fromfile(self.binary_file, dtype='>i4', count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
-                if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
-                    if self.id_of(polygon_nr) >= 424:
-                        raise ValueError(self.id_of(polygon_nr))
-                    return timezone_names[self.id_of(polygon_nr)]
+
+                outside_all_holes = True
+                # when the point is within a hole of the polygon this timezone doesn't need to be checked
+                for hole_coordinates in self._holes_of_line(polygon_nr):
+                    if inside_polygon(x, y, hole_coordinates):
+                        outside_all_holes = False
+                        break
+
+                if outside_all_holes:
+                    if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
+                        return timezone_names[self.id_of(polygon_nr)]
+
         return None

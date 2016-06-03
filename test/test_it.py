@@ -55,6 +55,23 @@ TEST_LOCATIONS = (
     (37.466666, 126.6166667, 'Inchon seaport', 'Asia/Seoul'),
     (42.8, 132.8833333, 'Nakhodka seaport', 'Asia/Vladivostok'),
     (50.26, -5.051, 'Truro', 'Europe/London'),
+
+    # test cases for hole handling:
+    (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Baku'),
+    (39.8417402, 70.6020068, 'Tajikistani Enklave', 'Asia/Dushanbe'),
+    (47.7024174, 8.6848462, 'Busingen Ger', 'Europe/Busingen'),
+    (46.2085101, 6.1246227, 'Genf', 'Europe/Zurich'),
+    (-29.391356857138753, 28.50989829115889, 'Lesotho', 'Africa/Maseru'),
+    (39.93143377877638, 71.08546583764965, 'usbekish enclave', 'Asia/Tashkent'),
+    (40.0736177, 71.0411812, 'usbekish enclave', 'Asia/Tashkent'),
+    (35.7396116, -110.15029571, 'Arizona Desert 1', 'America/Denver'),
+    (36.4091869, -110.7520236, 'Arizona Desert 2', 'America/Phoenix'),
+    (36.10230848, -111.1882385, 'Arizona Desert 3', 'America/Phoenix'),
+
+    # Not sure about the right result:
+    # (68.3597987,-133.745786, 'America', 'America/Inuvik'),
+
+
     (50.26, -9.051, 'Far off Cornwall', None)
 )
 
@@ -88,6 +105,13 @@ class PackageEqualityTest(unittest.TestCase):
     else:
         print('Numba: OFF (timezonefinder)')
 
+    start_time = datetime.now()
+    timezone_finder = TimezoneFinder()
+    end_time = datetime.now()
+    my_time = end_time - start_time
+
+    print('Starting tz_where. This could take a moment...')
+
     # integrated start up time test:
     # (when doing this for multiple times things are already cached and therefore produce misleading results)
     start_time = datetime.now()
@@ -95,10 +119,6 @@ class PackageEqualityTest(unittest.TestCase):
     end_time = datetime.now()
     his_time = end_time - start_time
 
-    start_time = datetime.now()
-    timezone_finder = TimezoneFinder()
-    end_time = datetime.now()
-    my_time = end_time - start_time
     print('\nStartup times:')
     print('tzwhere:', his_time)
     print('timezonefinder:', my_time)
@@ -141,6 +161,7 @@ class PackageEqualityTest(unittest.TestCase):
         print('====================================================================')
         for (lat, lon, loc, expected) in TEST_LOCATIONS:
             computed = self.timezone_finder.timezone_at(lon, lat)
+
             if computed == expected:
                 ok = 'OK'
             else:
@@ -185,23 +206,19 @@ class PackageEqualityTest(unittest.TestCase):
 
     def test_equality(self):
         # Test the equality of the two packages for N realistic and N random points
-
         def print_equality_test(types_of_points, list_of_points):
             print('\ntesting', N, types_of_points)
             print('MISMATCHES:')
             template = '{0:40s} | {1:20s} | {2:21s} | {3:20s}'
             print(template.format('Point', 'timezone_at()', 'certain_timezone_at()', 'tzwhere'))
             print('=========================================================================')
-
             mistakes = 0
             for lng, lat in list_of_points:
                 his_result = self.tz_where.tzNameAt(lat, lng)
                 my_result_certain = self.timezone_finder.certain_timezone_at(lng, lat)
-
                 # test only makes sense if certain_timezone_at() or tzwhere find something
                 if his_result is not None or my_result_certain is not None:
                     my_result = self.timezone_finder.timezone_at(lng, lat)
-
                     if my_result != his_result or my_result_certain != his_result:
                         if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                             print(template.format((lat, lng), my_result, my_result_certain,
@@ -210,7 +227,6 @@ class PackageEqualityTest(unittest.TestCase):
                             mistakes += 1
                             print(template.format(str((lat, lng)), str(my_result), str(my_result_certain),
                                                   str(his_result)))
-
             print('\nin', N, 'tries', mistakes, 'mismatches were made')
             fail_percentage = mistakes * 100 / (2 * N)
             assert fail_percentage < 5
@@ -218,9 +234,7 @@ class PackageEqualityTest(unittest.TestCase):
         print_equality_test('realistic points', self.realistic_points)
         print_equality_test('random points', list_of_random_points(length=N))
 
-
     def test_speed(self):
-
         def check_speed_his_algor(list_of_points):
             start_time = datetime.now()
             for point in list_of_points:
@@ -236,10 +250,8 @@ class PackageEqualityTest(unittest.TestCase):
             return end_time - start_time
 
         def print_speed_test(type_of_points, list_of_points):
-
             my_time = check_speed_my_algor(list_of_points)
             his_time = check_speed_his_algor(list_of_points)
-
             print('')
             print('\nTIMES for ', N, type_of_points)
             print('tzwhere:', his_time)
@@ -248,7 +260,6 @@ class PackageEqualityTest(unittest.TestCase):
                 print(round(his_time / my_time, 2), 'times faster')
             except TypeError:
                 pass
-
                 # assert his_time > my_time
 
         print('\n\n')
@@ -256,11 +267,9 @@ class PackageEqualityTest(unittest.TestCase):
             print('shapely: ON (tzwhere)')
         else:
             print('shapely: OFF (tzwhere)')
-
         if TimezoneFinder.using_numba():
             print('Numba: ON (timezonefinder)')
         else:
             print('Numba: OFF (timezonefinder)')
-
         print_speed_test('realistic points', self.realistic_points)
         print_speed_test('random points', list_of_random_points(length=N))

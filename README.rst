@@ -5,7 +5,7 @@ timezonefinder
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
-This is a fast and lightweight python project to lookup the corresponding
+This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from and has been successfully tested against
@@ -19,6 +19,8 @@ Muller <http://efele.net/maps/tz/world/>`__.
 
 Timezones at sea and Antarctica are not yet supported (because somewhat
 special rules apply there).
+
+`timezone_finder <https://github.com/gunyarakun/timezone_finder>`__ is a ruby port of this package.
 
 
 Dependencies
@@ -78,6 +80,10 @@ for testing if numba is being used:
 
 
 **fast algorithm:**
+
+This approach is fast, but might not be what you are looking for:
+For example when there is only one possible timezone in proximity, this timezone would be returned
+(without checking if the point is included first).
 
 ::
 
@@ -196,10 +202,10 @@ Comparison to pytzwhere
 =======================
 
 In comparison to
-`pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ I managed to
-*speed up* the queries *by up to 190 times* (depending on the dependencies used, s. test results below).
-Initialisation time and memory usage are significanlty reduced,
-while my algorithm yields the same results. In some cases ``pytzwhere``
+`pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ most notably initialisation time and memory usage are
+significantly reduced, while the algorithms yield the same results and are as fast or event faster
+(depending on the dependencies used, s. test results below).
+In some cases ``pytzwhere``
 even does not find anything and ``timezonefinder`` does, for example
 when only one timezone is close to the point.
 
@@ -227,7 +233,7 @@ when only one timezone is close to the point.
 
 -  introduced proximity algorithm
 
--  use of ``numba`` for precompilation (reaching the speed of tzwhere with shapely on and having everything preloaded in the memory)
+-  use of ``numba`` for precompilation (almost reaching the speed of tzwhere with shapely on and keeping the hole data in the memory)
 
 **test results**\*:
 
@@ -272,24 +278,31 @@ when only one timezone is close to the point.
     shapely: OFF (tzwhere)
     Numba: ON (timezonefinder)
 
-    TIMES for  10000 realistic queries:
-    tzwhere: 0:02:55.985141
-    timezonefinder: 0:00:00.905828
-    194.28 times faster
 
-    TIMES for  10000 random queries:
-    tzwhere: 0:01:29.427567
-    timezonefinder: 0:00:00.604325
-    147.98 times faster
+    TIMES for  10000 realistic points
+    tzwhere: 0:03:01.536640
+    timezonefinder: 0:00:00.930006
+    195.2 times faster
+
+
+    TIMES for  10000 random points
+    tzwhere: 0:01:34.495648
+    timezonefinder: 0:00:00.545236
+    173.31 times faster
+
+    Startup times:
+    tzwhere: 0:00:07.760545
+    timezonefinder: 0:00:00.000874
+    8879.34 times faster
 
 
     shapely: ON (tzwhere)
     Numba: ON (timezonefinder)
 
-    TIMES for  10000 realistic queries:
-    tzwhere: 0:00:00.845834
-    timezonefinder: 0:00:00.979515
-    0.86 times faster
+    TIMES for  10000 realistic points
+    tzwhere: 0:00:00.787326
+    timezonefinder: 0:00:00.895679
+    0.88 times faster
 
     TIMES for  10000 random queries:
     tzwhere: 0:00:01.358131
@@ -297,9 +310,9 @@ when only one timezone is close to the point.
     1.3 times faster
 
     Startup times:
-    tzwhere: 0:00:40.679195
-    timezonefinder: 0:00:00.001268
-    32081.38 times faster
+    tzwhere: 0:00:35.286660
+    timezonefinder: 0:00:00.000281
+    125575.3 times faster
 
 \* System: MacBookPro 2,4GHz i5 4GB RAM SSD pytzwhere with numpy active
 
@@ -339,16 +352,7 @@ Speed Impact of Numba
 Known Issues
 ============
 
-I ran tests for approx. 5M points and this are the mistakes I found:
-
-All points in **Lesotho** are counted to the 'Africa/Johannesburg' timezone instead of 'Africa/Maseru'.
-I am pretty sure this is because it is completely surrounded by South Africa and in the data the area of Lesotho is not excluded from this timezone.
-
-Same for the small **usbekish enclaves** in **Kirgisitan** and some points in the **Arizona Dessert** (some weird rules apply here).
-
-
-Those are mistakes in the data not my algorithms and in order to fix this I would need check for and then separately handle these special cases.
-This would not only slow down the algorithms, but also make them ugly.
+I ran tests for approx. 5M points and these are no mistakes I found.
 
 
 Contact
@@ -362,6 +366,13 @@ If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
 contact me: *python at michelfe dot it*
+
+
+Credits
+=======
+
+Thanks to `Adam<https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+
 
 License
 =======
