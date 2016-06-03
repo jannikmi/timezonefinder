@@ -1,8 +1,15 @@
 Changelog
 =========
 
-**Note:** not mentioned versions only contain small and irrelevant changes (e.g. in the readme, setup.py...).
-I am new to all this, so I am often missing small things which are not really new features worth mentioning.
+
+1.5.5 (2016-06-03)
+------------------
+
+* using the newest version (2016d, May 2016) of the tz_world data from http://efele.net/maps/tz/world/
+* holes in the polygons which are stored in the tz_world data are now correctly stored and handled
+* rewrote the file_converter for storing the holes at the end of the timezone_data.bin
+* added specific test cases for hole handling
+* made some optimizations in the algorithms
 
 1.5.4 (2016-04-26)
 ------------------
@@ -16,7 +23,7 @@ I am new to all this, so I am often missing small things which are not really ne
 1.5.3 (2016-04-23)
 ------------------
 
-* using 32-bit ints for storing the polygons now (instead of 64-bit): I calculated that the minimum accuracy (at the equator) is 1cm with the approach I use. Tests passed.
+* using 32-bit ints for storing the polygons now (instead of 64-bit): I calculated that the minimum accuracy (at the equator) is 1cm with the encoding being used. Tests passed.
 * Benefits: 18MB file instead of 35MB, another 10-30% speed boost (depending on your hardware)
 
 
