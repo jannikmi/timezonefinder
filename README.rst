@@ -371,8 +371,7 @@ contact me: *python at michelfe dot it*
 Credits
 =======
 
-Thanks to `Adam<https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
-
+Thanks to `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
 
 License
 =======
