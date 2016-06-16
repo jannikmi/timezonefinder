@@ -15,12 +15,7 @@ SHAPELY = False
 
 # mistakes in these zones dont count as mistakes
 excluded_zones_timezonefinder = []
-# ['Asia/Srednekolymsk', 'Asia/Chita', 'Europe/Astrakhan', ]
-# 'Africa/Johannesburg', "America/Phoenix", 'America/Denver', ]
 excluded_zones_tzwhere = []
-# 'Asia/Yakutsk', 'Asia/Magadan', 'Europe/Volgograd', ]
-# 'Africa/Maseru', "America/Phoenix", 'America/Denver', ]
-
 
 TEST_LOCATIONS = (
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
@@ -80,6 +75,11 @@ TEST_LOCATIONS_PROXIMITY = (
     (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
     (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
     (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
+    (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
+    (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
+    (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
+    (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
+
 )
 
 
@@ -140,11 +140,8 @@ class PackageEqualityTest(unittest.TestCase):
     i = 0
     while i < N:
         lng, lat = random_point()
-        his_result = tz_where.tzNameAt(lat, lng)
-        result_certain = timezone_finder.certain_timezone_at(lng, lat)
-
         # a realistic point is a point where certain_timezone_at() or tzwhere find something
-        if his_result is not None or result_certain is not None:
+        if not (tz_where.tzNameAt(lat, lng) or timezone_finder.certain_timezone_at(lng, lat)):
             i += 1
             realistic_points.append((lng, lat))
             if i % ps_for_10percent == 0:

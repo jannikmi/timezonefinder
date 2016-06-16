@@ -96,6 +96,7 @@ def parse_polygons_from_json(path='tz_world.json'):
 
     f = open(path, 'r')
     print('Parsing data from .json')
+    print('encountered holes at: ')
 
     # file_line is the current line in the .json file being parsed. This is not the id of the Polygon!
     file_line = 0
@@ -648,26 +649,26 @@ def compile_into_binary(path='tz_binary.bin'):
     print('now writing file "', path, '"')
     output_file = open(path, 'wb')
     # write nr_of_lines
-    output_file.write(pack(b'!H', nr_of_lines))
+    output_file.write(pack(b'<H', nr_of_lines))
     # write start address of shortcut_data:
-    output_file.write(pack(b'!I', shortcut_start_address))
+    output_file.write(pack(b'<I', shortcut_start_address))
 
     # !H amount of holes
-    output_file.write(pack(b'!H', amount_of_holes))
+    output_file.write(pack(b'<H', amount_of_holes))
 
     # !I Address of Hole area (end of shortcut area +1) @ 8
-    output_file.write(pack(b'!I', hole_start_address))
+    output_file.write(pack(b'<I', hole_start_address))
 
     # write zone_ids
     for zone_id in zone_ids:
-        output_file.write(pack(b'!H', zone_id))
+        output_file.write(pack(b'<H', zone_id))
     # write number of values
     for length in _length_of_rows():
-        output_file.write(pack(b'!H', length))
+        output_file.write(pack(b'<H', length))
 
     # write polygon_addresses
     for length in _length_of_rows():
-        output_file.write(pack(b'!I', polygon_address))
+        output_file.write(pack(b'<I', polygon_address))
         # data of the next polygon is at the address after all the space the points take
         # nr of points stored * 2 ints per point * 4 bytes per int
         polygon_address += 8 * length
@@ -678,16 +679,16 @@ def compile_into_binary(path='tz_binary.bin'):
 
     # write boundary_data
     for xmax, xmin, ymax, ymin in _boundaries():
-        output_file.write(pack(b'!iiii',
+        output_file.write(pack(b'<iiii',
                                coord2int(xmax), coord2int(xmin), coord2int(ymax),
                                coord2int(ymin)))
 
     # write polygon_data
     for x_coords, y_coords in _coordinates():
         for x in x_coords:
-            output_file.write(pack(b'!i', coord2int(x)))
+            output_file.write(pack(b'<i', coord2int(x)))
         for y in y_coords:
-            output_file.write(pack(b'!i', coord2int(y)))
+            output_file.write(pack(b'<i', coord2int(y)))
 
     print('position after writing all polygon data (=start of shortcut section):', output_file.tell())
 
@@ -696,16 +697,16 @@ def compile_into_binary(path='tz_binary.bin'):
     for nr in nr_of_entries_in_shortcut:
         if nr > 300:
             raise ValueError("There are too many polygons in this shortcuts:", nr)
-        output_file.write(pack(b'!H', nr))
+        output_file.write(pack(b'<H', nr))
 
     # write  Address of first Polygon_nr  in shortcut field (x,y)
     # Attention: 0 is written when no entries are in this shortcut
     shortcut_address = output_file.tell() + 259200 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT
     for nr in nr_of_entries_in_shortcut:
         if nr == 0:
-            output_file.write(pack(b'!I', 0))
+            output_file.write(pack(b'<I', 0))
         else:
-            output_file.write(pack(b'!I', shortcut_address))
+            output_file.write(pack(b'<I', shortcut_address))
             # each line_nr takes up 2 bytes of space
             shortcut_address += 2 * nr
 
@@ -714,7 +715,7 @@ def compile_into_binary(path='tz_binary.bin'):
         for entry in entries:
             if entry > nr_of_lines:
                 raise ValueError(entry)
-            output_file.write(pack(b'!H', entry))
+            output_file.write(pack(b'<H', entry))
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
 
@@ -724,7 +725,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
         if line > nr_of_lines:
             raise ValueError(line)
-        output_file.write(pack(b'!H', line))
+        output_file.write(pack(b'<H', line))
         i += 1
 
     if i > amount_of_holes:
@@ -732,12 +733,12 @@ def compile_into_binary(path='tz_binary.bin'):
 
     # '!H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
     for length in all_hole_lengths:
-        output_file.write(pack(b'!H', length))
+        output_file.write(pack(b'<H', length))
 
     # '!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
     hole_address = output_file.tell() + amount_of_holes * 4
     for length in all_hole_lengths:
-        output_file.write(pack(b'!I', hole_address))
+        output_file.write(pack(b'<I', hole_address))
         # each pair of points takes up 8 bytes of space
         hole_address += 8 * length
 
@@ -745,9 +746,9 @@ def compile_into_binary(path='tz_binary.bin'):
     # write hole polygon_data
     for x_coords, y_coords in all_holes:
         for x in x_coords:
-            output_file.write(pack(b'!i', coord2int(x)))
+            output_file.write(pack(b'<i', coord2int(x)))
         for y in y_coords:
-            output_file.write(pack(b'!i', coord2int(y)))
+            output_file.write(pack(b'<i', coord2int(y)))
 
     last_address = output_file.tell()
     hole_space = last_address - hole_start_address

@@ -99,29 +99,51 @@ For example when there is only one possible timezone in proximity, this timezone
     print( tf.certain_timezone_at(*point) )
     # = Europe/Berlin
 
+
 **To find the closest timezone (slow):**
+only use this when the point is not inside a polygon!
+this checks all the polygons within +-1 degree lng and +-1 degree lat
 
 ::
 
-    # only use this when the point is not inside a polygon!
-    # this checks all the polygons within +-1 degree lng and +-1 degree lat
+    #
     point = (12.773955, 55.578595)
     print( tf.closest_timezone_at(*point) )
     # = Europe/Copenhagens
 
-**To increase search radius even more (very slow, use numba!):**
+
+**Other options:**
+
+To increase search radius even more, use the ``delta_degree``-option:
 
 ::
 
-    # this checks all the polygons within +-3 degree lng and +-3 degree lat
-    # I recommend only slowly increasing the search radius
-    # keep in mind that x degrees lat are not the same distance apart than x degree lng!
-    print( tf.closest_timezone_at(lng=point[0],lat=point[1],delta_degree=3) )
+    print( tf.closest_timezone_at(point[0],point[1],delta_degree=3))
     # = Europe/Copenhagens
 
-(to make sure you really got the closest timezone increase the search
-radius until you get a result. then increase the radius once more and
-take this result.)
+
+This checks all the polygons within +-3 degree lng and +-3 degree lat
+I recommend only slowly increasing the search radius, since computation time increases quite quickly
+(with the amount of polygons which need to be evaluated). When you want to use this feature a lot,
+consider using ``Numba``, to save computing time.
+
+
+Also keep in mind that x degrees lat are not the same distance apart than x degree lng!
+So to really make sure you got the closest timezone increase the search radius until you get a result,
+then increase the radius once more and take this result. This should only make a difference in really rare cases however.
+
+
+With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated)
+, instead of just evaluating the distances to all the vertices. This only makes a real difference when polygons are very close.
+
+
+With ``return_distances=True`` the output looks like this:
+
+( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])
+
+Note that some polygons might not be tested (for example when a zone is found to be the closest already).
+To prevent this use ``force_evaluation=True``.
+
 
 Further application:
 --------------------
@@ -242,19 +264,59 @@ when only one timezone is close to the point.
 
     test correctness:
     Results:
-    [point, target, timezonefinder is correct, tzwhere is correct]
-    (-60.968888, -3.442172) America/Manaus True True
-    (14.1315716, 2.99999) Africa/Douala True True
-    (-106.1706459, 23.7891123) America/Mazatlan True True
-    (33, -84) uninhabited True True
-    (103.7069307, 1.3150701) Asia/Singapore True True
-    (-71.9996885, -52.7868679) America/Santiago True True
-    (-4.8663325, 40.0663485) Europe/Madrid True True
-    (-152.4617352, 62.3415036) America/Anchorage True True
-    (-44.7402611, 70.2989263) America/Godthab True True
-    (12.9125913, 50.8291834) Europe/Berlin True True
-    (37.0720767, 55.74929) Europe/Moscow True True
-    (14.1315716, 0.2350623) Africa/Brazzaville True True
+    LOCATION             | EXPECTED             | COMPUTED             | Status
+    ====================================================================
+    Arlington, TN        | America/Chicago      | America/Chicago      | OK
+    Memphis, TN          | America/Chicago      | America/Chicago      | OK
+    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
+    Eugene, OR           | America/Los_Angeles  | America/Los_Angeles  | OK
+    Albany, NY           | America/New_York     | America/New_York     | OK
+    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
+    Los Angeles          | America/Los_Angeles  | America/Los_Angeles  | OK
+    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
+    Aspen, Colorado      | America/Denver       | America/Denver       | OK
+    Kiev                 | Europe/Kiev          | Europe/Kiev          | OK
+    Jogupalya            | Asia/Kolkata         | Asia/Kolkata         | OK
+    Washington DC        | America/New_York     | America/New_York     | OK
+    St Petersburg        | Europe/Moscow        | Europe/Moscow        | OK
+    Blagoveshchensk      | Asia/Yakutsk         | Asia/Yakutsk         | OK
+    Boston               | America/New_York     | America/New_York     | OK
+    Chicago              | America/Chicago      | America/Chicago      | OK
+    Orlando              | America/New_York     | America/New_York     | OK
+    Seattle              | America/Los_Angeles  | America/Los_Angeles  | OK
+    London               | Europe/London        | Europe/London        | OK
+    Church Crookham      | Europe/London        | Europe/London        | OK
+    Fleet                | Europe/London        | Europe/London        | OK
+    Paris                | Europe/Paris         | Europe/Paris         | OK
+    Macau                | Asia/Macau           | Asia/Macau           | OK
+    Russia               | Asia/Yekaterinburg   | Asia/Yekaterinburg   | OK
+    Salo                 | Europe/Helsinki      | Europe/Helsinki      | OK
+    Staffordshire        | Europe/London        | Europe/London        | OK
+    Muara                | Asia/Brunei          | Asia/Brunei          | OK
+    Puerto Montt seaport | America/Santiago     | America/Santiago     | OK
+    Akrotiri seaport     | Asia/Nicosia         | Asia/Nicosia         | OK
+    Inchon seaport       | Asia/Seoul           | Asia/Seoul           | OK
+    Nakhodka seaport     | Asia/Vladivostok     | Asia/Vladivostok     | OK
+    Truro                | Europe/London        | Europe/London        | OK
+    Aserbaid. Enklave    | Asia/Baku            | Asia/Baku            | OK
+    Tajikistani Enklave  | Asia/Dushanbe        | Asia/Dushanbe        | OK
+    Busingen Ger         | Europe/Busingen      | Europe/Busingen      | OK
+    Genf                 | Europe/Zurich        | Europe/Zurich        | OK
+    Lesotho              | Africa/Maseru        | Africa/Maseru        | OK
+    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
+    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
+    Arizona Desert 1     | America/Denver       | America/Denver       | OK
+    Arizona Desert 2     | America/Phoenix      | America/Phoenix      | OK
+    Arizona Desert 3     | America/Phoenix      | America/Phoenix      | OK
+    Far off Cornwall     | None                 | None                 | OK
+
+    closest_timezone_at():
+    LOCATION             | EXPECTED             | COMPUTED             | Status
+    ====================================================================
+    Arlington, TN        | America/Chicago      | America/Chicago      | OK
+    Memphis, TN          | America/Chicago      | America/Chicago      | OK
+    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
+    Shore Lake Michigan  | America/New_York     | America/New_York     | OK
 
     testing 10000 realistic points
     [These tests dont make sense at the moment because tzwhere is still using old data]
@@ -324,30 +386,6 @@ yields result)
 
 \*\*\*\*random queries: random points on earth
 
-Speed Impact of Numba
-=====================
-
-::
-
-    TIMES for 1000 realistic queries***:
-
-    timezone_at():
-    wo/ numa: 0:00:01.017575
-    w/ numa: 0:00:00.289854
-    3.51 times faster
-
-    certain_timezone_at():
-    wo/ numa:   0:00:05.445209
-    w/ numa: 0:00:00.290441
-    14.92 times faster
-
-    closest_timezone_at():
-    (delta_degree=1)
-    wo/ numa: 0:02:32.666238
-    w/ numa: 0:00:02.688353
-    40.2 times faster
-
-(this is not included in my tests)
 
 Known Issues
 ============
@@ -371,7 +409,7 @@ contact me: *python at michelfe dot it*
 Credits
 =======
 
-Thanks to `Adam<https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+Thanks to `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
 
 
 License

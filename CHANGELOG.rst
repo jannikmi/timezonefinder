@@ -1,6 +1,16 @@
 Changelog
 =========
 
+1.5.6 (2016-06-xx)
+------------------
+
+* using the newest version (2016X, ____ 2016) of the `tz_world data <http://efele.net/maps/tz/world/>`_
+* using little endian encoding now
+* introduced test for checking the proper functionality of the helper functions
+* wrote tests for proximity algorithms
+* improved proximity algorithms: introduced exact_computation, return_distances and force_evaluation functionality
+
+
 
 1.5.5 (2016-06-03)
 ------------------
