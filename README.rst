@@ -9,7 +9,7 @@ This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
 This project is derived from and has been successfully tested against
-`pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__
+`pytzwhere <https://pypi.python.org/pypi/tzwhere>`__
 (`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
 improved performance and usability.
 

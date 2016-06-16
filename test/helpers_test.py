@@ -125,9 +125,9 @@ class HelperTest(unittest.TestCase):
             result = distance_to_point_on_equator(radians(x), radians(y), p1_lng_rad)
             if km2deg(result) != 1:
                 raise AssertionError('should be equal:', km2deg(result), 1)
-            hav_result = degrees(haversine(radians(x), radians(y), p1_lng_rad, 0))
-            if km2deg(hav_result) != 1:
-                raise AssertionError('should be equal:', km2deg(result), 1)
+            hav_result = haversine(radians(x), radians(y), p1_lng_rad, 0)
+            if km2deg(hav_result) != 1.0:
+                raise AssertionError('should be equal:', km2deg(hav_result), 1.0)
 
         for i in range(1000):
             rnd_point = random_point()
