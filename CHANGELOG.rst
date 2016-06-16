@@ -1,11 +1,18 @@
 Changelog
 =========
 
+1.5.6 (2016-06-16)
+------------------
+
+* using little endian encoding now
+* introduced test for checking the proper functionality of the helper functions
+* wrote tests for proximity algorithms
+* improved proximity algorithms: introduced exact_computation, return_distances and force_evaluation functionality (s. Readme or documentation for more info)
 
 1.5.5 (2016-06-03)
 ------------------
 
-* using the newest version (2016d, May 2016) of the tz_world data from http://efele.net/maps/tz/world/
+* using the newest version (2016d, May 2016) of the `tz world data`_
 * holes in the polygons which are stored in the tz_world data are now correctly stored and handled
 * rewrote the file_converter for storing the holes at the end of the timezone_data.bin
 * added specific test cases for hole handling
@@ -14,7 +21,7 @@ Changelog
 1.5.4 (2016-04-26)
 ------------------
 
-* using the newest version (2016b) of the tz_world from http://efele.net/maps/tz/world/
+* using the newest version (2016b) of the `tz world data`_
 * rewrote the file_converter for parsing a .json created from the tz_worlds .shp
 * had to temporarily fix one polygon manually which had the invalid TZID: 'America/Monterey' (should be 'America/Monterrey')
 * had to make tests less strict because tzwhere still used the old data at the time and some results were simply different now
@@ -56,3 +63,5 @@ Changelog
     Especially the shortcut computation and the boundary storage in there save a lot of reading and computation time, when deciding which timezone the coordinates are in.
     It will help to keep the package up to date, even when the timezone data should change in the future.
 
+
+    .. _tz world data: <http://efele.net/maps/tz/world/>

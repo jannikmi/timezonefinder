@@ -1,6 +1,8 @@
 MANIFEST
 publish.py
 test/authors_tests.py
+
+
 /scrapyard.py
 
 # GITIGNORE DEFAULTS
@@ -107,4 +109,3 @@ target/
 ## File-based project format:
 *.ipr
 *.iws
-
