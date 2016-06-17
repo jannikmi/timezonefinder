@@ -23,6 +23,9 @@ special rules apply there).
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__ is a ruby port of this package.
 
 
+Also see: `GitHub <https://github.com/MrMinimal64/timezonefinder>`__ `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+
+
 Dependencies
 ============
 
@@ -79,10 +82,12 @@ for testing if numba is being used:
     # this is a static method returning True or False
 
 
-**fast algorithm:**
+**timezone_at():**
 
-This approach is fast, but might not be what you are looking for:
-For example when there is only one possible timezone in proximity, this timezone would be returned
+This is the default function to check which timezone a point lies in (similar to tzwheres ``tzNameAt()``).
+If no timezone has been found, ``None`` is being returned.
+**NOTE:** This approach is optimized for speed and the common case to only query points actually within a timezone.
+This might not be what you are looking for however: When there is only one possible timezone in proximity, this timezone would be returned
 (without checking if the point is included first).
 
 ::
@@ -92,7 +97,10 @@ For example when there is only one possible timezone in proximity, this timezone
     print( tf.timezone_at(*point) )
     # = Europe/Berlin
 
-**To make sure a point is really inside a timezone (slower):**
+**certain_timezone_at()**
+
+This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
+are checked until one polygon is matched.
 
 ::
 
@@ -100,9 +108,9 @@ For example when there is only one possible timezone in proximity, this timezone
     # = Europe/Berlin
 
 
-**To find the closest timezone (slow):**
-only use this when the point is not inside a polygon!
-this checks all the polygons within +-1 degree lng and +-1 degree lat
+**Proximity algorithm**
+Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
+This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
 ::
 
@@ -122,15 +130,15 @@ To increase search radius even more, use the ``delta_degree``-option:
     # = Europe/Copenhagens
 
 
-This checks all the polygons within +-3 degree lng and +-3 degree lat
+This checks all the polygons within +-3 degree lng and +-3 degree lat.
 I recommend only slowly increasing the search radius, since computation time increases quite quickly
-(with the amount of polygons which need to be evaluated). When you want to use this feature a lot,
-consider using ``Numba``, to save computing time.
+(with the amount of polygons which need to be evaluated) and there might be many polygons within a couple degrees. When you want to use this feature a lot,
+consider using ``Numba`` to save computing time.
 
 
-Also keep in mind that x degrees lat are not the same distance apart than x degree lng!
+Also keep in mind that x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
 So to really make sure you got the closest timezone increase the search radius until you get a result,
-then increase the radius once more and take this result. This should only make a difference in really rare cases however.
+then increase the radius once more and take this result. (this should only make a difference in really rare cases)
 
 
 With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated)
@@ -139,7 +147,7 @@ With ``exact_computation=True`` the distance to every polygon edge is computed (
 
 With ``return_distances=True`` the output looks like this:
 
-( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])
+( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
 
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
@@ -206,7 +214,6 @@ Change to the directory of the timezonefinder package (location of ``file_conver
     rm tz_world.zip
 
 
-Credits to `cstich <https://github.com/cstich>`__.
 There should be a tz_world.json (of approx. 100MB) in the folder together with the ``file_converter.py`` now.
 Then run the converter by:
 
@@ -225,7 +232,7 @@ Comparison to pytzwhere
 
 In comparison to
 `pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ most notably initialisation time and memory usage are
-significantly reduced, while the algorithms yield the same results and are as fast or event faster
+significantly reduced, while the algorithms yield the same results and are as fast or even faster
 (depending on the dependencies used, s. test results below).
 In some cases ``pytzwhere``
 even does not find anything and ``timezonefinder`` does, for example
@@ -317,9 +324,26 @@ when only one timezone is close to the point.
     Memphis, TN          | America/Chicago      | America/Chicago      | OK
     Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
     Shore Lake Michigan  | America/New_York     | America/New_York     | OK
+    English Channel1     | Europe/London        | Europe/London        | OK
+    English Channel2     | Europe/Paris         | Europe/Paris         | OK
+    Oresund Bridge1      | Europe/Stockholm     | Europe/Stockholm     | OK
+    Oresund Bridge2      | Europe/Copenhagen    | Europe/Copenhagen    | OK
 
     testing 10000 realistic points
     [These tests dont make sense at the moment because tzwhere is still using old data]
+    testing 1000 realistic points
+    MISMATCHES:
+    Point                                    | timezone_at()        | certain_timezone_at() | tzwhere
+    =========================================================================
+
+    in 1000 tries 0 mismatches were made
+
+    testing 1000 random points
+    MISMATCHES:
+    Point                                    | timezone_at()        | certain_timezone_at() | tzwhere
+    =========================================================================
+    (57.71985093778474, 50.93465824884237)   | Europe/Kirov         | Europe/Kirov          | Europe/Volgograd
+    (56.993217193375955, -123.66721983141636) | America/Dawson_Creek | America/Dawson_Creek  | America/Vancouver
 
 
     shapely: OFF (tzwhere)
@@ -376,7 +400,7 @@ when only one timezone is close to the point.
     timezonefinder: 0:00:00.000281
     125575.3 times faster
 
-\* System: MacBookPro 2,4GHz i5 4GB RAM SSD pytzwhere with numpy active
+\* System: MacBookPro 2,4GHz i5 (2014) 4GB RAM SSD pytzwhere with numpy active
 
 \*\*mismatch: pytzwhere finds something and then timezonefinder finds
 something else
@@ -409,7 +433,11 @@ contact me: *python at michelfe dot it*
 Credits
 =======
 
-Thanks to `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+Thanks to:
+
+`Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+
+`cstich <https://github.com/cstich>`__ for the little conversion script (.shp to .json)
 
 License
 =======
