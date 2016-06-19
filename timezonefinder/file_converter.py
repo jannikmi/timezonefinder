@@ -636,7 +636,7 @@ def compile_into_binary(path='tz_binary.bin'):
     print('The number of filled shortcut zones are:', amount_filled_shortcuts, '(=',
           round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2), '% of all shortcuts)')
 
-    # for every shortcut !H and !I is written (nr of entries and address)
+    # for every shortcut <H and <I is written (nr of entries and address)
     shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * 6
     for nr in nr_of_entries_in_shortcut:
         # every line in every shortcut takes up 2bytes
@@ -653,10 +653,10 @@ def compile_into_binary(path='tz_binary.bin'):
     # write start address of shortcut_data:
     output_file.write(pack(b'<I', shortcut_start_address))
 
-    # !H amount of holes
+    # <H amount of holes
     output_file.write(pack(b'<H', amount_of_holes))
 
-    # !I Address of Hole area (end of shortcut area +1) @ 8
+    # <I Address of Hole area (end of shortcut area +1) @ 8
     output_file.write(pack(b'<I', hole_start_address))
 
     # write zone_ids
@@ -719,7 +719,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
 
-    # '!H' for every hole store the related line
+    # '<H' for every hole store the related line
     i = 0
     for line in related_line:
 
@@ -731,11 +731,11 @@ def compile_into_binary(path='tz_binary.bin'):
     if i > amount_of_holes:
         raise ValueError('There are more related lines than holes.')
 
-    # '!H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+    # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
     for length in all_hole_lengths:
         output_file.write(pack(b'<H', length))
 
-    # '!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+    # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
     hole_address = output_file.tell() + amount_of_holes * 4
     for length in all_hole_lengths:
         output_file.write(pack(b'<I', hole_address))
@@ -771,52 +771,52 @@ and it takes lot less space, without loosing too much accuracy (min accuracy is 
 
 no of rows (= no of polygons = no of boundaries)
 approx. 28k -> use 2byte unsigned short (has range until 65k)
-'!H' = n
+'<H' = n
 
-!I Address of Shortcut area (end of polygons+1) @ 2
+<I Address of Shortcut area (end of polygons+1) @ 2
 
-!H amount of holes @6
+<H amount of holes @6
 
-!I Address of Hole area (end of shortcut area +1) @ 8
+<I Address of Hole area (end of shortcut area +1) @ 8
 
-'!H'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
+'<H'  n times [H unsigned short: zone number=ID in this line, @ 12 + 2* lineNr]
 
-'!H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
+'<H'  n times [H unsigned short: nr of values (coordinate PAIRS! x,y in long long) in this line, @ 12 + 2n + 2* lineNr]
 
-'!I'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
+'<I'n times [ I unsigned int: absolute address of the byte where the polygon-data of that line starts,
 @ 12 + 4 * n +  4*lineNr]
 
 
 
 n times 4 int32 (take up 4*4 per line): xmax, xmin, ymax, ymin  @ 12 + 8n + 16* lineNr
-'!iiii'
+'<iiii'
 
 
 [starting @ 12+ 24*n = polygon data start address]
 (for every line: x coords, y coords:)   stored  @ Address section (see above)
-'!i' * amount of points
+'<i' * amount of points
 
 
 [SHORTCUT AREA]
 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT:
 [atm: 360* 1 * 180 * 2 = 129,600]
-129,600 times !H   number of entries in shortcut field (x,y)  @ Pointer see above
+129,600 times <H   number of entries in shortcut field (x,y)  @ Pointer see above
 
 
 Address of first Polygon_nr  in shortcut field (x,y) [0 if there is no entry] @  Pointer see above + 129,600
-129,600 times !I
+129,600 times <I
 
 [X = number of filled shortcuts]
-X times !H * amount Polygon_Nr    @ address stored in previous section
+X times <H * amount Polygon_Nr    @ address stored in previous section
 
 
 [HOLE AREA, Y = number of holes (very few: around 22)]
 
-'!H' for every hole store the related line
+'<H' for every hole store the related line
 
-'!H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
+'<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
 
-'!I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
+'<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
 
 Y times [ 2x i signed ints for every hole: x coords, y coords ]
 
