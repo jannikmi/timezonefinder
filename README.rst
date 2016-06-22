@@ -5,6 +5,13 @@ timezonefinder
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
+.. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
+    :target: https://pypi.python.org/pypi/timezonefinder
+
+.. image:: https://img.shields.io/pypi/v/timezonefinder.svg
+    :target: https://pypi.python.org/pypi/timezonefinder
+
+
 This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
@@ -36,7 +43,7 @@ Dependencies
 
 **Optional:**
 
-``Numba`` and its Requirements
+``Numba`` (https://github.com/numba/numba) and its Requirement `llvm <http://llvmlite.pydata.org/en/latest/install/index.html>`_
 
 This is only for precompiling the time critical algorithms. When you only look up a
 few points once in a while, the compilation time is probably outweighing
@@ -84,7 +91,7 @@ for testing if numba is being used:
 
 **timezone_at():**
 
-This is the default function to check which timezone a point lies in (similar to tzwheres ``tzNameAt()``).
+This is the default function to check which timezone a point lies within (similar to tzwheres ``tzNameAt()``).
 If no timezone has been found, ``None`` is being returned.
 **NOTE:** This approach is optimized for speed and the common case to only query points actually within a timezone.
 This might not be what you are looking for however: When there is only one possible timezone in proximity, this timezone would be returned
@@ -97,7 +104,7 @@ This might not be what you are looking for however: When there is only one possi
     print( tf.timezone_at(*point) )
     # = Europe/Berlin
 
-**certain_timezone_at()**
+**certain_timezone_at():**
 
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are checked until one polygon is matched.
@@ -108,7 +115,8 @@ are checked until one polygon is matched.
     # = Europe/Berlin
 
 
-**Proximity algorithm**
+**Proximity algorithm:**
+
 Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
 This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
