@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Pending Release
+---------------
+
+* Made the ``timezone_at()`` functions keyword-args only to avoid any confusion
+  over the order of ``lat`` and ``lng``.
+
 1.5.6 (2016-06-16)
 ------------------
 

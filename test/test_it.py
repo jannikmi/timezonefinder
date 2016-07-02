@@ -141,7 +141,7 @@ class PackageEqualityTest(unittest.TestCase):
     while i < N:
         lng, lat = random_point()
         # a realistic point is a point where certain_timezone_at() or tzwhere find something
-        if not (tz_where.tzNameAt(lat, lng) or timezone_finder.certain_timezone_at(lng, lat)):
+        if not (tz_where.tzNameAt(lat, lng) or timezone_finder.certain_timezone_at(lng=lng, lat=lat)):
             i += 1
             realistic_points.append((lng, lat))
             if i % ps_for_10percent == 0:
@@ -156,13 +156,13 @@ class PackageEqualityTest(unittest.TestCase):
         no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', '=='))
         print('====================================================================')
-        for (lat, lon, loc, expected) in TEST_LOCATIONS:
-            computed = self.timezone_finder.timezone_at(lon, lat)
+        for (lat, lng, loc, expected) in TEST_LOCATIONS:
+            computed = self.timezone_finder.timezone_at(lng=lng, lat=lat)
 
             if computed == expected:
                 ok = 'OK'
             else:
-                print(lat, lon)
+                print(lat, lng)
                 ok = 'XX'
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
@@ -173,12 +173,12 @@ class PackageEqualityTest(unittest.TestCase):
         no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
-        for (lat, lon, loc, expected) in TEST_LOCATIONS:
-            computed = self.timezone_finder.certain_timezone_at(lon, lat)
+        for (lat, lng, loc, expected) in TEST_LOCATIONS:
+            computed = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
             else:
-                print(lat, lon)
+                print(lat, lng)
                 ok = 'XX'
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
@@ -189,12 +189,12 @@ class PackageEqualityTest(unittest.TestCase):
         no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
-        for (lat, lon, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-            computed = self.timezone_finder.closest_timezone_at(lon, lat)
+        for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
+            computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
             else:
-                print(lat, lon)
+                print(lat, lng)
                 ok = 'XX'
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
@@ -212,10 +212,10 @@ class PackageEqualityTest(unittest.TestCase):
             mistakes = 0
             for lng, lat in list_of_points:
                 his_result = self.tz_where.tzNameAt(lat, lng)
-                my_result_certain = self.timezone_finder.certain_timezone_at(lng, lat)
+                my_result_certain = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
                 # test only makes sense if certain_timezone_at() or tzwhere find something
                 if his_result is not None or my_result_certain is not None:
-                    my_result = self.timezone_finder.timezone_at(lng, lat)
+                    my_result = self.timezone_finder.timezone_at(lng=lng, lat=lat)
                     if my_result != his_result or my_result_certain != his_result:
                         if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
                             print(template.format((lat, lng), my_result, my_result_certain,
@@ -242,7 +242,7 @@ class PackageEqualityTest(unittest.TestCase):
         def check_speed_my_algor(list_of_points):
             start_time = datetime.now()
             for point in list_of_points:
-                self.timezone_finder.timezone_at(*point)
+                self.timezone_finder.timezone_at(lng=point[0], lat=point[1])
             end_time = datetime.now()
             return end_time - start_time
 
