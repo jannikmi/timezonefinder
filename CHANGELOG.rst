@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Candidate (2016-XX-XX)
+----------------------
+
+* fixed a little bug with too many arguments in a @jit function (*args, **kwargs)
+* clarified usage of the API in the Readme
+* prepared the usage of the ahead of time compilation functionality of numba. There are still some issues with this.
+*
+
+
 1.5.6 (2016-06-16)
 ------------------
 

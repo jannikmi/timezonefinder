@@ -267,7 +267,7 @@ def coord2int(double):
     return int(double * 10 ** 7)
 
 
-def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points, *args, **kwargs):
+def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
     # transform all points (long long) to coords
     for i in range(nr_points):
         trans_points[0][i] = radians(int2coord(points[0][i]))

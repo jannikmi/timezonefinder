@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from math import floor, radians
+from os import system
 from os.path import dirname, join
 from struct import unpack
 
@@ -8,14 +9,45 @@ from numpy import array, empty, fromfile
 
 from .timezone_names import timezone_names
 
+# for later when functions are automatically compiled on installation
+# try:
+#     import compiled_numba_funcs
+# except ImportError:
+#     precompilation = None
+#     try:
+#         import numba
+#     except ImportError:
+#         numba = None
+#
+#     if numba is not None:
+#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#     else:
+#         from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
+
+
 try:
     import numba
+
+    print(numba.__version__)
+
+    print('compiling the helpers ahead of time...')
+    # FIXME target architecture is wrong. because of old Numba version?
+    system("python3 /Users/jannikmi/GitHub/timezonefinder/timezonefinder/helpers_numba.py")
+    try:
+        from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+            all_the_same
+
+        print('... worked!')
+
+    except ImportError:
+        from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+            all_the_same
+
+    print('... did not work!')
+
 except ImportError:
     numba = None
-
-if numba is not None:
-    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, all_the_same
-else:
     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
 
 
@@ -87,6 +119,11 @@ class TimezoneFinder:
     @staticmethod
     def using_numba():
         return (numba is not None)
+
+    # TODO enable
+    #  @staticmethod
+    # def using_precompiled_funcs():
+    #     return (precompilation is not None)
 
     def id_of(self, line=0):
         # ids start at address 6. per line one unsigned 2byte int is used
@@ -163,6 +200,12 @@ class TimezoneFinder:
 
         except KeyError:
             return
+
+    def id_list(self, amount_polygons, polygon_nr_list):
+        output = empty([amount_polygons], dtype='i2')
+        for i in range(amount_polygons):
+            output[i] = self.id_of(polygon_nr_list[i])
+        return output
 
     def closest_timezone_at(self, lng, lat, delta_degree=1, exact_computation=False, return_distances=False,
                             force_evaluation=False):
@@ -244,14 +287,13 @@ class TimezoneFinder:
             return None
 
         # initialize the list of ids
-        ids = [self.id_of(x) for x in polygon_nrs]
+        ids = self.id_list(polygons_in_list, polygon_nrs)
 
         # if all the polygons in this shortcut belong to the same zone return it
-        first_entry = ids[0]
-        if ids.count(first_entry) == polygons_in_list:
+        same_element = all_the_same(pointer=0, length=polygons_in_list, id_list=ids)
+        if same_element != -1:
             if not (return_distances or force_evaluation):
-                return timezone_names[first_entry]
-                # TODO sort from least to most occurrences
+                return timezone_names[same_element]
 
         distances = [None for i in range(polygons_in_list)]
         pointer = 0
@@ -323,8 +365,9 @@ class TimezoneFinder:
             return timezone_names[self.id_of(possible_polygons[0])]
 
         # initialize the list of ids
-        # TODO sort from least to most occurrences
-        ids = [self.id_of(p) for p in possible_polygons]
+        ids = self.id_list(nr_possible_polygons, possible_polygons)
+        # TODO sort ids AND possible_polygons from least to most occurrences (->speed up?!)
+        self.sort_least_occurrences(possible_polygons, ids)
 
         # otherwise check if the point is included for all the possible polygons
         for i in range(nr_possible_polygons):
