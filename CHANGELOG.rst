@@ -1,13 +1,13 @@
 Changelog
 =========
 
-Candidate (2016-XX-XX)
-----------------------
+1.5.7 *unreleased* (2016-XX-XX)
+-------------------------------
 
 * fixed a little bug with too many arguments in a @jit function (*args, **kwargs)
 * clarified usage of the API in the Readme
 * prepared the usage of the ahead of time compilation functionality of numba. There are still some issues with this.
-*
+* sorting the polygons to check in the order of how often their zones appear gives a speed bonus
 
 
 1.5.6 (2016-06-16)

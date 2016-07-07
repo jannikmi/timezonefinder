@@ -13,7 +13,7 @@ N = 100
 # sets if tzwhere should be used with shapely
 SHAPELY = False
 
-# mistakes in these zones dont count as mistakes
+# mistakes in these zones don't count as mistakes
 excluded_zones_timezonefinder = []
 excluded_zones_tzwhere = []
 

@@ -154,8 +154,8 @@ def inside_polygon(x, y, coords):
     return wn != 0
 
 
-@cc.export('all_the_same', 'i2(i8,i8,i2[:])')
-@jit('i2(i8,i8,i2[:])', nopython=True, cache=True)
+@cc.export('all_the_same', 'i2(u8,u8,u2[:])')
+@jit('i2(u8,u8,u2[:])', nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
     # List mustn't be empty or Null
     # There is at least one
