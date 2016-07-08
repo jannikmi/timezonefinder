@@ -205,17 +205,43 @@ class TimezoneFinder:
     def compile_id_list(self, polygon_id_list, nr_of_polygons, dont_sort=False):
         """
         sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
+        approx. 0.24% of all realistic points benefit from sorting (0.4% for random points)
+        = percentage of sorting usage for 100k points
+        in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
+        has only one entry. That means after checking one polygon timezone_at() already stops.
         :param polygon_id_list:
         :param nr_of_polygons: length of polygon_id_list
         :param dont_sort: if this is set to True, the sorting algorithms is skipped
         :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
         """
+
+        def all_equal(input_data):
+            x = None
+            for x in input_data:
+                # first_val = x
+                break
+            for y in input_data:
+                if x != y:
+                    return False
+            return True
+
         # print(polygon_id_list)
         # print(zone_id_list)
-        counted_zones = {}
-        all_zones_occurred_only_once = True
         zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        if dont_sort:
+            pointer_local = 0
+            first_id = self.id_of(polygon_id_list[0])
+            equal = True
+            for polygon_id in polygon_id_list:
+                zone_id = self.id_of(polygon_id)
+                if zone_id != first_id:
+                    equal = False
+                zone_id_list[pointer_local] = zone_id
+                pointer_local += 1
 
+            return polygon_id_list, zone_id_list, equal
+
+        counted_zones = {}
         pointer_local = 0
         for polygon_id in polygon_id_list:
             zone_id = self.id_of(polygon_id)
@@ -223,7 +249,6 @@ class TimezoneFinder:
             pointer_local += 1
             try:
                 counted_zones[zone_id] += 1
-                all_zones_occurred_only_once = False
             except KeyError:
                 counted_zones[zone_id] = 1
         # print(counted_zones)
@@ -231,7 +256,7 @@ class TimezoneFinder:
         if len(counted_zones) == 1:
             return polygon_id_list, zone_id_list, True
 
-        if all_zones_occurred_only_once or dont_sort:
+        if all_equal(counted_zones.values()):
             return polygon_id_list, zone_id_list, False
 
         counted_zones_sorted = sorted(counted_zones.items(), key=lambda zone: zone[1])
@@ -345,7 +370,8 @@ class TimezoneFinder:
 
         # initialize the list of ids
         # TODO sorting doesn't give a bonus here?!
-        possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, polygons_in_list, dont_sort=True)
+        possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, polygons_in_list,
+                                                                       dont_sort=True)
 
         # if all the polygons in this shortcut belong to the same zone return it
         if zones_are_equal:
@@ -423,8 +449,8 @@ class TimezoneFinder:
 
         # initialize the list of ids
         # and sort possible_polygons from least to most occurrences of zone_id
-        possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, nr_possible_polygons)
-        if zones_are_equal:
+        possible_polygons, ids, only_one_zone = self.compile_id_list(possible_polygons, nr_possible_polygons)
+        if only_one_zone:
             return timezone_names[ids[0]]
 
         # otherwise check if the point is included for all the possible polygons
@@ -449,7 +475,7 @@ class TimezoneFinder:
                     if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                         return timezone_names[ids[i]]
 
-            # when after the current polygon only polygon from the same zone appear, return this zone
+            # when after the current polygon only polygons from the same zone appear, return this zone
             same_element = all_the_same(pointer=i + 1, length=nr_possible_polygons, id_list=ids)
             if same_element != -1:
                 return timezone_names[same_element]
