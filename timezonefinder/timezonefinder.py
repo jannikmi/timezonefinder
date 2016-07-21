@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from math import floor, radians
-from os import system
+# from os import system
 from os.path import dirname, join
 from struct import unpack
 
@@ -9,7 +9,7 @@ from numpy import array, empty, fromfile
 
 from .timezone_names import timezone_names
 
-# for later when functions are automatically compiled on installation
+# later functions should be automatically compiled once on installation:
 # try:
 #     import compiled_numba_funcs
 # except ImportError:
@@ -25,28 +25,36 @@ from .timezone_names import timezone_names
 #     else:
 #         from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
 
+#
+# try:
+#     import numba
+#
+#     print('using numba version:', numba.__version__)
+#
+#     print('compiling the helpers ahead of time...')
+#     # FIXME target architecture is wrong. because of old Numba version?
+#     # TODO in this environment numba could not be available
+#     system("python3 /Users/jannikmi/GitHub/timezonefinder/timezonefinder/helpers_numba.py")
+#     try:
+#         from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#
+#         print('... worked!')
+#
+#     except ImportError:
+#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#
+#     print('... did not work!')
+#
+# except ImportError:
+#     numba = None
+#     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
+#
 
 try:
     import numba
-
-    print('using numba version:', numba.__version__)
-
-    print('compiling the helpers ahead of time...')
-    # FIXME target architecture is wrong. because of old Numba version?
-    # TODO in this environment numba could not be available
-    system("python3 /Users/jannikmi/GitHub/timezonefinder/timezonefinder/helpers_numba.py")
-    try:
-        from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-            all_the_same
-
-        print('... worked!')
-
-    except ImportError:
-        from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-            all_the_same
-
-    print('... did not work!')
-
+    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, all_the_same
 except ImportError:
     numba = None
     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
@@ -209,6 +217,7 @@ class TimezoneFinder:
         = percentage of sorting usage for 100k points
         in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
         has only one entry. That means after checking one polygon timezone_at() already stops.
+        Sorting only really makes sense for closest_timezone_at().
         :param polygon_id_list:
         :param nr_of_polygons: length of polygon_id_list
         :param dont_sort: if this is set to True, the sorting algorithms is skipped

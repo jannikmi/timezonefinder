@@ -430,16 +430,6 @@ when only one timezone is close to the point.
     timezonefinder: 0:00:00.643133
     1.0 times faster
 
-    TIMES for  10000 realistic points
-tzwhere: 0:00:00.406666
-timezonefinder: 0:00:00.482787
-0.84 times faster
-
-
-TIMES for  10000 random points
-tzwhere: 0:00:00.591802
-timezonefinder: 0:00:00.614707
-0.96 times faster
 
     Startup times:
     tzwhere: 0:00:38.335302
