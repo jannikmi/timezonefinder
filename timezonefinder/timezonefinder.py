@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from math import floor, radians
+# from os import system
 from os.path import dirname, join
 from struct import unpack
 
@@ -9,14 +10,54 @@ from numpy import array, empty, fromfile
 from .functional import kwargs_only
 from .timezone_names import timezone_names
 
+# later functions should be automatically compiled once on installation:
+# try:
+#     import compiled_numba_funcs
+# except ImportError:
+#     precompilation = None
+#     try:
+#         import numba
+#     except ImportError:
+#         numba = None
+#
+#     if numba is not None:
+#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#     else:
+#         from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
+
+#
+# try:
+#     import numba
+#
+#     print('using numba version:', numba.__version__)
+#
+#     print('compiling the helpers ahead of time...')
+#     # FIXME target architecture is wrong. because of old Numba version?
+#     # TODO in this environment numba could not be available
+#     system("python3 /Users/jannikmi/GitHub/timezonefinder/timezonefinder/helpers_numba.py")
+#     try:
+#         from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#
+#         print('... worked!')
+#
+#     except ImportError:
+#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+#             all_the_same
+#
+#     print('... did not work!')
+#
+# except ImportError:
+#     numba = None
+#     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
+#
+
 try:
     import numba
+    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, all_the_same
 except ImportError:
     numba = None
-
-if numba is not None:
-    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, all_the_same
-else:
     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
 
 
@@ -88,6 +129,11 @@ class TimezoneFinder:
     @staticmethod
     def using_numba():
         return (numba is not None)
+
+    # TODO enable
+    #  @staticmethod
+    # def using_precompiled_funcs():
+    #     return (precompilation is not None)
 
     def id_of(self, line=0):
         # ids start at address 6. per line one unsigned 2byte int is used
@@ -165,6 +211,94 @@ class TimezoneFinder:
         except KeyError:
             return
 
+    def compile_id_list(self, polygon_id_list, nr_of_polygons, dont_sort=False):
+        """
+        sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
+        approx. 0.24% of all realistic points benefit from sorting (0.4% for random points)
+        = percentage of sorting usage for 100k points
+        in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
+        has only one entry. That means after checking one polygon timezone_at() already stops.
+        Sorting only really makes sense for closest_timezone_at().
+        :param polygon_id_list:
+        :param nr_of_polygons: length of polygon_id_list
+        :param dont_sort: if this is set to True, the sorting algorithms is skipped
+        :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
+        """
+
+        def all_equal(input_data):
+            x = None
+            for x in input_data:
+                # first_val = x
+                break
+            for y in input_data:
+                if x != y:
+                    return False
+            return True
+
+        # print(polygon_id_list)
+        # print(zone_id_list)
+        zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        if dont_sort:
+            pointer_local = 0
+            first_id = self.id_of(polygon_id_list[0])
+            equal = True
+            for polygon_id in polygon_id_list:
+                zone_id = self.id_of(polygon_id)
+                if zone_id != first_id:
+                    equal = False
+                zone_id_list[pointer_local] = zone_id
+                pointer_local += 1
+
+            return polygon_id_list, zone_id_list, equal
+
+        counted_zones = {}
+        pointer_local = 0
+        for polygon_id in polygon_id_list:
+            zone_id = self.id_of(polygon_id)
+            zone_id_list[pointer_local] = zone_id
+            pointer_local += 1
+            try:
+                counted_zones[zone_id] += 1
+            except KeyError:
+                counted_zones[zone_id] = 1
+        # print(counted_zones)
+
+        if len(counted_zones) == 1:
+            return polygon_id_list, zone_id_list, True
+
+        if all_equal(counted_zones.values()):
+            return polygon_id_list, zone_id_list, False
+
+        counted_zones_sorted = sorted(counted_zones.items(), key=lambda zone: zone[1])
+        # print(counted_zones_sorted)
+
+        sorted_polygon_id_list = empty([nr_of_polygons], dtype='<u2')
+        sorted_zone_id_list = empty([nr_of_polygons], dtype='<u2')
+
+        pointer_output = 0
+        pointer_output2 = 0
+        for zone_id, amount in counted_zones_sorted:
+            # write all polygons from this zone in the new list
+            pointer_local = 0
+            detected_polygons = 0
+            while detected_polygons < amount:
+                if zone_id_list[pointer_local] == zone_id:
+                    # the polygon at the pointer has the wanted zone_id
+                    detected_polygons += 1
+                    sorted_polygon_id_list[pointer_output] = polygon_id_list[pointer_local]
+                    pointer_output += 1
+
+                pointer_local += 1
+
+            for pointer_local in range(amount):
+                sorted_zone_id_list[pointer_output2] = zone_id
+                pointer_output2 += 1
+
+        # print(sorted_polygon_id_list)
+        # print(sorted_zone_id_list)
+
+        return sorted_polygon_id_list, sorted_zone_id_list, False
+
     @kwargs_only
     def closest_timezone_at(self, lng, lat, delta_degree=1, exact_computation=False, return_distances=False,
                             force_evaluation=False):
@@ -220,7 +354,7 @@ class TimezoneFinder:
         lng = radians(lng)
         lat = radians(lat)
 
-        polygon_nrs = []
+        possible_polygons = []
 
         # there are 2 shortcuts per 1 degree lat, so to cover 1 degree two shortcuts (rows) have to be checked
         # the highest shortcut is 0
@@ -237,28 +371,28 @@ class TimezoneFinder:
         for x in range(left, right + 1, 1):
             for y in range(top, bottom + 1, 1):
                 for p in self.polygons_of_shortcut(x, y):
-                    if p not in polygon_nrs:
-                        polygon_nrs.append(p)
+                    if p not in possible_polygons:
+                        possible_polygons.append(p)
 
-        polygons_in_list = len(polygon_nrs)
+        polygons_in_list = len(possible_polygons)
 
         if polygons_in_list == 0:
             return None
 
         # initialize the list of ids
-        ids = [self.id_of(x) for x in polygon_nrs]
+        # TODO sorting doesn't give a bonus here?!
+        possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, polygons_in_list,
+                                                                       dont_sort=True)
 
         # if all the polygons in this shortcut belong to the same zone return it
-        first_entry = ids[0]
-        if ids.count(first_entry) == polygons_in_list:
+        if zones_are_equal:
             if not (return_distances or force_evaluation):
-                return timezone_names[first_entry]
-                # TODO sort from least to most occurrences
+                return timezone_names[ids[0]]
 
         distances = [None for i in range(polygons_in_list)]
         pointer = 0
         if force_evaluation:
-            for polygon_nr in polygon_nrs:
+            for polygon_nr in possible_polygons:
                 distance = routine(polygon_nr)
                 distances[pointer] = distance
                 if distance < min_distance:
@@ -279,7 +413,7 @@ class TimezoneFinder:
 
                 else:
                     # this polygon has to be checked
-                    distance = routine(polygon_nrs[pointer])
+                    distance = routine(possible_polygons[pointer])
                     distances[pointer] = distance
 
                     already_checked[pointer] = True
@@ -326,26 +460,24 @@ class TimezoneFinder:
             return timezone_names[self.id_of(possible_polygons[0])]
 
         # initialize the list of ids
-        # TODO sort from least to most occurrences
-        ids = [self.id_of(p) for p in possible_polygons]
+        # and sort possible_polygons from least to most occurrences of zone_id
+        possible_polygons, ids, only_one_zone = self.compile_id_list(possible_polygons, nr_possible_polygons)
+        if only_one_zone:
+            return timezone_names[ids[0]]
 
         # otherwise check if the point is included for all the possible polygons
         for i in range(nr_possible_polygons):
-
-            same_element = all_the_same(pointer=i, length=nr_possible_polygons, id_list=ids)
-            if same_element != -1:
-                return timezone_names[same_element]
 
             polygon_nr = possible_polygons[i]
 
             # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
             self.binary_file.seek((self.bound_start_address + 16 * polygon_nr), )
             boundaries = fromfile(self.binary_file, dtype='<i4', count=4)
-            # only run the algorithm if it the point is withing the boundaries
+            # only run the expensive algorithm if the point is withing the boundaries
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
                 outside_all_holes = True
-                # when the point is within a hole of the polygon this timezone doesn't need to be checked
+                # when the point is within a hole of the polygon, this timezone doesn't need to be checked
                 for hole_coordinates in self._holes_of_line(polygon_nr):
                     if inside_polygon(x, y, hole_coordinates):
                         outside_all_holes = False
@@ -354,6 +486,11 @@ class TimezoneFinder:
                 if outside_all_holes:
                     if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                         return timezone_names[ids[i]]
+
+            # when after the current polygon only polygons from the same zone appear, return this zone
+            same_element = all_the_same(pointer=i + 1, length=nr_possible_polygons, id_list=ids)
+            if same_element != -1:
+                return timezone_names[same_element]
 
         return None
 

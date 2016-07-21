@@ -43,7 +43,9 @@ Dependencies
 
 **Optional:**
 
-``Numba`` (https://github.com/numba/numba) and its Requirement `llvm <http://llvmlite.pydata.org/en/latest/install/index.html>`_
+
+``Numba`` (https://github.com/numba/numba) and its Requirement `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_
+
 
 This is only for precompiling the time critical algorithms. When you only look up a
 few points once in a while, the compilation time is probably outweighing
@@ -85,24 +87,25 @@ for testing if numba is being used:
 
 ::
 
-    print(TimezoneFinder.using_numba())
-    # this is a static method returning True or False
+    TimezoneFinder.using_numba()   # this is a static method returning True or False
 
 
 **timezone_at():**
 
 This is the default function to check which timezone a point lies within (similar to tzwheres ``tzNameAt()``).
 If no timezone has been found, ``None`` is being returned.
-**NOTE:** This approach is optimized for speed and the common case to only query points actually within a timezone.
-This might not be what you are looking for however: When there is only one possible timezone in proximity, this timezone would be returned
-(without checking if the point is included first).
+
+**PLEASE NOTE:** This approach is optimized for speed and the common case to only query points within a timezone.
+The last possible timezone in proximity is always returned (without checking if the point is really included).
+So results might be misleading for points outside of any timezone.
+
 
 ::
 
-    # point = (longitude, latitude)
-    point = (13.358, 52.5061)
-    print( tf.timezone_at(*point) )
-    # = Europe/Berlin
+    longitude = 13.358
+    latitude = 52.5061
+    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+
 
 **certain_timezone_at():**
 
@@ -111,8 +114,7 @@ are checked until one polygon is matched.
 
 ::
 
-    print( tf.certain_timezone_at(*point) )
-    # = Europe/Berlin
+    tf.certain_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
 
 
 **Proximity algorithm:**
@@ -122,11 +124,9 @@ This returns the closest timezone of all polygons within +-1 degree lng and +-1 
 
 ::
 
-    #
-    point = (12.773955, 55.578595)
-    print( tf.closest_timezone_at(*point) )
-    # = Europe/Copenhagens
-
+    longitude = 12.773955
+    latitude = 55.578595
+    tf.closest_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Copenhagens'
 
 **Other options:**
 
@@ -134,8 +134,7 @@ To increase search radius even more, use the ``delta_degree``-option:
 
 ::
 
-    print( tf.closest_timezone_at(point[0],point[1],delta_degree=3))
-    # = Europe/Copenhagens
+    tf.closest_timezone_at(lng=longitude, lat=latitude, delta_degree=3)
 
 
 This checks all the polygons within +-3 degree lng and +-3 degree lat.
@@ -146,11 +145,11 @@ consider using ``Numba`` to save computing time.
 
 Also keep in mind that x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
 So to really make sure you got the closest timezone increase the search radius until you get a result,
-then increase the radius once more and take this result. (this should only make a difference in really rare cases)
+then increase the radius once more and take this result (should only make a difference in really rare cases).
 
 
-With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated)
-, instead of just evaluating the distances to all the vertices. This only makes a real difference when polygons are very close.
+With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated), instead of just evaluating the distances to all the vertices.
+ This only makes a real difference when polygons are very close.
 
 
 With ``return_distances=True`` the output looks like this:
@@ -160,6 +159,17 @@ With ``return_distances=True`` the output looks like this:
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
 
+::
+
+    longitude = 42.1052479
+    latitude = -16.622686
+    tf.closest_timezone_at(lng=longitude, lat=latitude, delta_degree=2,
+                                        exact_computation=True, return_distances=True, force_evaluation=True)
+    '''
+    returns ('uninhabited',
+    [80.66907784731714, 217.10924866254518, 293.5467252349301, 304.5274937839159, 238.18462606485667, 267.918674688949, 207.43831938964408, 209.6790144988553, 228.42135641542546],
+    ['uninhabited', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo'])
+    '''
 
 Further application:
 --------------------
@@ -173,9 +183,9 @@ Further application:
         lng = float(lng)
 
         try:
-            timezone_name = tf.timezone_at(lng, lat)
+            timezone_name = tf.timezone_at(lng=lng, lat=lat)
             if timezone_name is None:
-                timezone_name = tf.closest_timezone_at(lng, lat)
+                timezone_name = tf.closest_timezone_at(lng=lng, lat=lat)
                 # maybe even increase the search radius when it is still None
 
         except ValueError:
@@ -209,7 +219,7 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 **Using the conversion tool:**
 
-Make sure you installed the GDAL framework (thats for converting .shp shapefiles into .json)
+Make sure you installed the GDAL framework (that`s for converting .shp shapefiles into .json)
 Change to the directory of the timezonefinder package (location of ``file_converter.py``) in your terminal and then:
 
 ::
@@ -357,16 +367,21 @@ when only one timezone is close to the point.
     shapely: OFF (tzwhere)
     Numba: OFF (timezonefinder)
 
-    TIMES for  1000 realistic queries:
-    tzwhere: 0:00:17.819268
-    timezonefinder: 0:00:03.269472
-    5.45 times faster
+    TIMES for  1000 realistic points
+    tzwhere: 0:00:05.094224
+    timezonefinder: 0:00:00.108337
+    47.02 times faster
 
 
-    TIMES for  1000 random queries:
-    tzwhere: 0:00:09.189154
-    timezonefinder: 0:00:01.748470
-    5.26 times faster
+    TIMES for  1000 random points
+    tzwhere: 0:00:09.981483
+    timezonefinder: 0:00:01.031334
+    9.68 times faster
+
+    Startup times:
+    tzwhere: 0:00:08.548387
+    timezonefinder: 0:00:00.000122
+    70068.75 times faster
 
 
     shapely: OFF (tzwhere)
@@ -374,39 +389,58 @@ when only one timezone is close to the point.
 
 
     TIMES for  10000 realistic points
-    tzwhere: 0:03:01.536640
-    timezonefinder: 0:00:00.930006
-    195.2 times faster
+    tzwhere: 0:00:54.239579
+    timezonefinder: 0:00:00.395794
+    137.04 times faster
 
 
     TIMES for  10000 random points
-    tzwhere: 0:01:34.495648
-    timezonefinder: 0:00:00.545236
-    173.31 times faster
+    tzwhere: 0:01:30.232851
+    timezonefinder: 0:00:00.518453
+    174.04 times faster
 
     Startup times:
-    tzwhere: 0:00:07.760545
-    timezonefinder: 0:00:00.000874
-    8879.34 times faster
+    tzwhere: 0:00:08.328661
+    timezonefinder: 0:00:00.000297
+    28042.63 times faster
+
+    shapely: ON (tzwhere)
+    Numba: OFF (timezonefinder)
+
+
+    TIMES for  10000 realistic points
+    tzwhere: 0:00:00.429949
+    timezonefinder: 0:00:01.366008
+    0.31 times faster
+
+
+    TIMES for  10000 random points
+    tzwhere: 0:00:00.566208
+    timezonefinder: 0:00:11.725017
+    0.05 times faster
 
 
     shapely: ON (tzwhere)
     Numba: ON (timezonefinder)
 
-    TIMES for  10000 realistic points
-    tzwhere: 0:00:00.787326
-    timezonefinder: 0:00:00.895679
-    0.88 times faster
 
-    TIMES for  10000 random queries:
-    tzwhere: 0:00:01.358131
-    timezonefinder: 0:00:01.042770
-    1.3 times faster
+    TIMES for  10000 realistic points
+    tzwhere: 0:00:00.429525
+    timezonefinder: 0:00:00.431242
+    1.0 times faster
+
+
+    TIMES for  10000 random points
+    tzwhere: 0:00:00.640478
+    timezonefinder: 0:00:00.643133
+    1.0 times faster
+
 
     Startup times:
-    tzwhere: 0:00:35.286660
-    timezonefinder: 0:00:00.000281
-    125575.3 times faster
+    tzwhere: 0:00:38.335302
+    timezonefinder: 0:00:00.000143
+    268079.03 times faster
+
 
 \* System: MacBookPro 2,4GHz i5 (2014) 4GB RAM SSD pytzwhere with numpy active
 

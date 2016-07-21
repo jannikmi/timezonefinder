@@ -3,7 +3,7 @@ publish.py
 test/authors_tests.py
 
 
-/scrapyard.py
+scrapyard.py
 
 # GITIGNORE DEFAULTS
 

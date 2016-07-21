@@ -2,5 +2,5 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from .timezonefinder import TimezoneFinder
 
-__version__ = '1.5.6'
+__version__ = '1.5.7'
 __all__ = ('TimezoneFinder',)
