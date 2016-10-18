@@ -20,6 +20,45 @@ This project is derived from and has been successfully tested against
 (`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
 improved performance and usability.
 
+pytzwhere is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
+This is time, memory and CPU consuming. Additionaly calculating with floats is slow, keeping those 2M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case. For those reasons this package has been created:
+
+
+Comparison to pytzwhere
+=======================
+
+In comparison most notably initialisation time and memory usage are
+significantly reduced, while the algorithms yield the same results and are as fast or even faster
+(depending on the dependencies used, s. test results below).
+In some cases ``pytzwhere``
+even does not find anything and ``timezonefinder`` does, for example
+when only one timezone is close to the point.
+
+**Similarities:**
+
+-  results
+
+-  data being used
+
+
+**Differences:**
+
+-  highly decreased memory usage
+
+-  highly reduced start up time
+
+-  the data is now stored in a memory friendly 18MB binary file
+
+-  data is only being read on demand (every timezone to be checked separately )
+
+-  precomputed shortcuts are inlcuded in the ``.bin`` to quickly look up
+   which polygons have to be checked
+
+-  introduced proximity algorithm
+
+-  use of ``numba`` for code precompilation
+
+
 
 The underlying timezone data is based on work done by `Eric
 Muller <http://efele.net/maps/tz/world/>`__.
@@ -126,7 +165,7 @@ This returns the closest timezone of all polygons within +-1 degree lng and +-1 
 
     longitude = 12.773955
     latitude = 55.578595
-    tf.closest_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Copenhagens'
+    tf.closest_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Copenhagen'
 
 **Other options:**
 
@@ -217,9 +256,10 @@ Further application:
 
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
-**Using the conversion tool:**
+**Using the binary parsing tool:**
 
-Make sure you installed the GDAL framework (that`s for converting .shp shapefiles into .json)
+Included with this package comes a ``file_converter.py`` which purpose it is to parse the newest tz_world data (in .json) into the needed binary file.
+Make sure you installed the GDAL framework (that's for converting .shp shapefiles into .json)
 Change to the directory of the timezonefinder package (location of ``file_converter.py``) in your terminal and then:
 
 ::
@@ -243,46 +283,46 @@ Then run the converter by:
 This converts the .json into the needed ``.bin`` (overwriting the old version!) and also updates the ``timezone_names.py``.
 
 **Please note:** Neither tests nor the file\_converter.py are optimized or
-really beautiful. Sorry for that. If you have questions just write me (s. section 'Contact' below)
-
-Comparison to pytzwhere
-=======================
-
-In comparison to
-`pytzwhere <https://pypi.python.org/pypi/tzwhere/2.2>`__ most notably initialisation time and memory usage are
-significantly reduced, while the algorithms yield the same results and are as fast or even faster
-(depending on the dependencies used, s. test results below).
-In some cases ``pytzwhere``
-even does not find anything and ``timezonefinder`` does, for example
-when only one timezone is close to the point.
-
-**Similarities:**
-
--  results
-
--  data being used
+really beautiful. Sorry for that. If you have any questions, s. section 'Contact' below.
 
 
-**Differences:**
+Known Issues
+============
 
--  highly decreased memory usage
+I ran tests for approx. 5M points and these are no mistakes I found.
 
--  highly reduced start up time
 
--  the data is now stored in a memory friendly 18MB ``.bin`` and needed
-   data is directly being read on the fly (instead of reading, converting and KEEPING the 76MB ``.csv``
-   -mostly floats stored as strings!- into
-   memory every time a class is created).
+Contact
+=======
 
--  precomputed shortcuts are stored in the ``.bin`` to quickly look up
-   which polygons have to be checked (instead of computing and storing the shortcuts
-   on every startup)
+This is the first public python project I did, so most certainly there is stuff I missed,
+things I could have optimized even further etc. That's why I would be really glad to get some feedback on my code.
 
--  introduced proximity algorithm
 
--  use of ``numba`` for precompilation (almost reaching the speed of tzwhere with shapely on and keeping the hole data in the memory)
+If you notice that the tz data is outdated, encounter any bugs, have
+suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
-**test results**\*:
+contact me: *python at michelfe dot it*
+
+
+Credits
+=======
+
+Thanks to:
+
+`Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+
+`cstich <https://github.com/cstich>`__ for the little conversion script (.shp to .json)
+
+License
+=======
+
+``timezonefinder`` is distributed under the terms of the MIT license
+(see LICENSE.txt).
+
+
+test results\*:
+===============
 
 ::
 
@@ -368,15 +408,15 @@ when only one timezone is close to the point.
     Numba: OFF (timezonefinder)
 
     TIMES for  1000 realistic points
-    tzwhere: 0:00:05.094224
-    timezonefinder: 0:00:00.108337
-    47.02 times faster
+    tzwhere: 0:00:05.990420
+    timezonefinder: 0:00:00.075704
+    78.13 times faster
 
 
     TIMES for  1000 random points
-    tzwhere: 0:00:09.981483
-    timezonefinder: 0:00:01.031334
-    9.68 times faster
+    tzwhere: 0:00:08.626960
+    timezonefinder: 0:00:01.242737
+    5.94 times faster
 
     Startup times:
     tzwhere: 0:00:08.548387
@@ -425,15 +465,15 @@ when only one timezone is close to the point.
 
 
     TIMES for  10000 realistic points
-    tzwhere: 0:00:00.429525
-    timezonefinder: 0:00:00.431242
-    1.0 times faster
+    tzwhere: 0:00:00.376166
+    timezonefinder: 0:00:00.489993
+    0.3 times slower
 
 
     TIMES for  10000 random points
-    tzwhere: 0:00:00.640478
-    timezonefinder: 0:00:00.643133
-    1.0 times faster
+    tzwhere: 0:00:00.587144
+    timezonefinder: 0:00:00.613341
+    0.04 times slower
 
 
     Startup times:
@@ -451,38 +491,3 @@ something else
 yields result)
 
 \*\*\*\*random queries: random points on earth
-
-
-Known Issues
-============
-
-I ran tests for approx. 5M points and these are no mistakes I found.
-
-
-Contact
-=======
-
-This is the first public python project I did, so most certainly there is stuff I missed,
-things I could have optimized even further etc. That's why I would be really glad to get some feedback on my code.
-
-
-If you notice that the tz data is outdated, encounter any bugs, have
-suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
-
-contact me: *python at michelfe dot it*
-
-
-Credits
-=======
-
-Thanks to:
-
-`Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
-
-`cstich <https://github.com/cstich>`__ for the little conversion script (.shp to .json)
-
-License
-=======
-
-``timezonefinder`` is distributed under the terms of the MIT license
-(see LICENSE.txt).
