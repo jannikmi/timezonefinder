@@ -7,6 +7,7 @@ from struct import unpack
 
 from numpy import array, empty, fromfile
 
+from .functional import kwargs_only
 from .timezone_names import timezone_names
 
 # later functions should be automatically compiled once on installation:
@@ -298,6 +299,7 @@ class TimezoneFinder:
 
         return sorted_polygon_id_list, sorted_zone_id_list, False
 
+    @kwargs_only
     def closest_timezone_at(self, lng, lat, delta_degree=1, exact_computation=False, return_distances=False,
                             force_evaluation=False):
         """
@@ -427,6 +429,7 @@ class TimezoneFinder:
 
         return timezone_names[current_closest_id]
 
+    @kwargs_only
     def timezone_at(self, lng=0.0, lat=0.0):
         """
         this function looks up in which polygons the point could be included
@@ -491,6 +494,7 @@ class TimezoneFinder:
 
         return None
 
+    @kwargs_only
     def certain_timezone_at(self, lng=0.0, lat=0.0):
         """
         this function looks up in which polygon the point certainly is included

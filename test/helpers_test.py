@@ -160,4 +160,4 @@ class HelperTest(unittest.TestCase):
         print('=====')
         distance = distance_to_polygon(x_rad, y_rad, len(x_coords), points)
         print(km2deg(distance))
-        assert km2deg(distance) - sqrt(2) / 2 < 0.00001
+        assert abs(km2deg(distance) - sqrt(2) / 2) < 0.00001
