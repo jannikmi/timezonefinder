@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from struct import pack
 
-from helpers import coord2int, int2coord
+from .helpers import coord2int, int2coord
 
 # Don't change this setup or timezonefinder wont work!
 # different setups of shortcuts are not supported, because then addresses in the .bin

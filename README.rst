@@ -29,9 +29,8 @@ Comparison to pytzwhere
 
 In comparison most notably initialisation time and memory usage are
 significantly reduced, while the algorithms yield the same results and are as fast or even faster
-(depending on the dependencies used, s. test results below).
-In some cases ``pytzwhere``
-even does not find anything and ``timezonefinder`` does, for example
+(depending on the dependencies used, s. test results below). pytzwhere is using up to 450MB!!! of RAM while in use (with shapely active) and this package uses at most 16,4MB (= encountered memory consumption of the python process).
+In some cases ``pytzwhere`` even does not find anything and ``timezonefinder`` does, for example
 when only one timezone is close to the point.
 
 **Similarities:**
@@ -103,10 +102,12 @@ in your terminal simply:
 ::
 
     pip install timezonefinder
-
-(you might need to run this command as administrator)
-
-
+	
+	MAYBE ALSO:
+	pip3 install timezonefinder
+	pip install --upgrade timezonefinder 
+	sudo pip install timezonefinder
+	
 
 Usage
 =====

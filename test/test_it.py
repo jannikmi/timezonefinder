@@ -92,6 +92,20 @@ def list_of_random_points(length):
     return [random_point() for i in range(length)]
 
 
+def print_speedup(tz_where_time, timezoefinder_time):
+    print('tzwhere:', tz_where_time)
+    print('timezonefinder:', timezoefinder_time)
+    try:
+        speedup = round(tz_where_time / timezoefinder_time - 1, 2)
+        if speedup < 0:
+            print(round(timezoefinder_time / tz_where_time - 1, 2), 'times slower')
+        else:
+            print(speedup, 'times faster')
+    except TypeError:
+        pass
+        # assert his_time > my_time
+
+
 class PackageEqualityTest(unittest.TestCase):
     # do the preparations which have to be made only once
 
@@ -119,13 +133,7 @@ class PackageEqualityTest(unittest.TestCase):
     end_time = datetime.now()
     his_time = end_time - start_time
 
-    print('\nStartup times:')
-    print('tzwhere:', his_time)
-    print('timezonefinder:', my_time)
-    try:
-        print(round(his_time / my_time, 2), 'times faster')
-    except TypeError:
-        pass
+    print_speedup(tz_where_time=his_time, timezoefinder_time=my_time)
     print('\n\n')
 
     # create an array of n points where tzwhere finds something (realistic queries)
@@ -252,13 +260,7 @@ class PackageEqualityTest(unittest.TestCase):
             his_time = check_speed_his_algor(list_of_points)
             print('')
             print('\nTIMES for ', N, type_of_points)
-            print('tzwhere:', his_time)
-            print('timezonefinder:', my_time)
-            try:
-                print(round(his_time / my_time, 2), 'times faster')
-            except TypeError:
-                pass
-                # assert his_time > my_time
+            print_speedup(tz_where_time=his_time, timezoefinder_time=my_time)
 
         print('\n\n')
         if SHAPELY:

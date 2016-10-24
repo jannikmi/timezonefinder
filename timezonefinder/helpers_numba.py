@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
 from numba import float64, int8, int32, jit, typeof
+
 # from numba.pycc import CC
 
 # cc = CC('compiled_helpers', )
@@ -11,97 +12,6 @@ from numba import float64, int8, int32, jit, typeof
 
 dtype_3floattuple = typeof((1.0, 1.0, 1.0))
 dtype_2floattuple = typeof((1.0, 1.0))
-
-
-# @cc.export('position_to_line', int8(int32, int32, int32, int32, int32, int32))
-@jit(int8(int32, int32, int32, int32, int32, int32), nopython=True, cache=True)
-def position_to_line(x, y, x1, x2, y1, y2):
-    """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
-            Return: -1 for pX left of the line from! p1 to! p2
-                    0 for pX on the line [is not needed]
-                    1 for pX  right of the line
-                    this approach is only valid because we already know that y lies within ]y1;y2]
-        """
-
-    if x1 < x2:
-        # p2 is further right than p1
-        if x > x2:
-            # pX is further right than p2,
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        if x < x1:
-            # pX is further left than p1
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-        x1gtx2 = False
-
-    else:
-        # p1 is further right than p2
-        if x > x1:
-            # pX is further right than p1,
-            if y1 > y2:
-                # so it has to be left of the line p1-p2
-                return -1
-            else:
-                return 1
-
-        if x < x2:
-            # pX is further left than p2,
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-#         # TODO is no return also accepted
-        if x1 == x2 and x == x1:
-            # could also be equal
-            return 0
-
-        # x1 greater than x2
-        x1gtx2 = True
-
-    # x is between [x1;x2]
-    # compute the x-intersection of the point with the line p1-p2
-    # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
-    # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
-    delta_x = ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x
-
-    if delta_x > 0:
-        if x1gtx2:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-        else:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-    elif delta_x == 0:
-        return 0
-
-    else:
-        if x1gtx2:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        else:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
 
 
 # @cc.export('inside_polygon', 'b1(i4,i4,i4[:,:])')
@@ -116,20 +26,25 @@ def inside_polygon(x, y, coords):
             if y2 >= y:
                 x1 = coords[0][i - 1]
                 x2 = coords[0][i]
-                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),
-                #       position_to_line(x, y, x1, x2, y1, y2))
-                if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                    # point is left of line
-                    # return true when its on the line?! this is very unlikely to happen!
-                    # and would need to be checked every time!
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                # if needed: compute the x value of the intersection of the point with the line p1-p2
+                # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
+                # NOTE: bracket placement is important here (computation with 64-bit ints!). first divide then multiply!
+                # delta_x is difference between X and x-value of the intersection
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
                     wn += 1
+
 
         else:
             if y2 < y:
                 x1 = coords[0][i - 1]
                 x2 = coords[0][i]
-                if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                    # point is right of line
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
                     wn -= 1
 
         y1 = y2
@@ -141,15 +56,19 @@ def inside_polygon(x, y, coords):
         if y2 >= y:
             x1 = coords[0][-1]
             x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                # point is left of line
+            # only crossings "right" of the point should be counted
+            x1GEx = x <= x1
+            x2GEx = x <= x2
+            if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
                 wn += 1
     else:
         if y2 < y:
             x1 = coords[0][-1]
             x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                # point is right of line
+            # only crossings "right" of the point should be counted
+            x1GEx = x <= x1
+            x2GEx = x <= x2
+            if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
                 wn -= 1
     return wn != 0
 
@@ -348,6 +267,5 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
 
     return min_distance
 
-
 # if __name__ == "__main__":
-    # cc.compile()
+# cc.compile()

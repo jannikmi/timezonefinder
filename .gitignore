@@ -1,6 +1,8 @@
 MANIFEST
 publish.py
 test/authors_tests.py
+test/memory_usage_test1.py
+test/memory_usage_test2.py
 
 
 scrapyard.py
