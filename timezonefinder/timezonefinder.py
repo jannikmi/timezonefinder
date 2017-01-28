@@ -35,7 +35,8 @@ from .timezone_names import timezone_names
 #     print('compiling the helpers ahead of time...')
 #     # FIXME target architecture is wrong. because of old Numba version?
 #     # TODO in this environment numba could not be available
-#     system("python3 /Users/jannikmi/GitHub/timezonefinder/timezonefinder/helpers_numba.py")
+#     # precompile functions by running the helpers_numba.py script
+#     system("python3 " + join(dirname(__file__), 'helpers_numba.py'))
 #     try:
 #         from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
 #             all_the_same
@@ -59,7 +60,6 @@ try:
 except ImportError:
     numba = None
     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
-
 
 class TimezoneFinder:
     """
@@ -215,10 +215,11 @@ class TimezoneFinder:
         """
         sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
         approx. 0.24% of all realistic points benefit from sorting (0.4% for random points)
-        = percentage of sorting usage for 100k points
+         = percentage of sorting usage for 100k points
         in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
-        has only one entry. That means after checking one polygon timezone_at() already stops.
-        Sorting only really makes sense for closest_timezone_at().
+         has only one entry. That means after checking one polygon timezone_at() already stops.
+        As a consequence sorting only really makes sense for closest_timezone_at(), because in that use case the
+         polygon list is quite long
         :param polygon_id_list:
         :param nr_of_polygons: length of polygon_id_list
         :param dont_sort: if this is set to True, the sorting algorithms is skipped
@@ -238,8 +239,8 @@ class TimezoneFinder:
         # print(polygon_id_list)
         # print(zone_id_list)
         zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        pointer_local = 0
         if dont_sort:
-            pointer_local = 0
             first_id = self.id_of(polygon_id_list[0])
             equal = True
             for polygon_id in polygon_id_list:
@@ -252,7 +253,6 @@ class TimezoneFinder:
             return polygon_id_list, zone_id_list, equal
 
         counted_zones = {}
-        pointer_local = 0
         for polygon_id in polygon_id_list:
             zone_id = self.id_of(polygon_id)
             zone_id_list[pointer_local] = zone_id
@@ -276,7 +276,6 @@ class TimezoneFinder:
         sorted_zone_id_list = empty([nr_of_polygons], dtype='<u2')
 
         pointer_output = 0
-        pointer_output2 = 0
         for zone_id, amount in counted_zones_sorted:
             # write all polygons from this zone in the new list
             pointer_local = 0
@@ -286,13 +285,10 @@ class TimezoneFinder:
                     # the polygon at the pointer has the wanted zone_id
                     detected_polygons += 1
                     sorted_polygon_id_list[pointer_output] = polygon_id_list[pointer_local]
+                    sorted_zone_id_list[pointer_output] = zone_id
                     pointer_output += 1
 
                 pointer_local += 1
-
-            for pointer_local in range(amount):
-                sorted_zone_id_list[pointer_output2] = zone_id
-                pointer_output2 += 1
 
         # print(sorted_polygon_id_list)
         # print(sorted_zone_id_list)
@@ -380,7 +376,7 @@ class TimezoneFinder:
             return None
 
         # initialize the list of ids
-        # TODO sorting doesn't give a bonus here?!
+        # this list is sorted (see documentation of compile_id_list() )
         possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, polygons_in_list,
                                                                        dont_sort=True)
 

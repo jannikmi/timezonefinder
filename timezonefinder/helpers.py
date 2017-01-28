@@ -2,62 +2,42 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
-
 def inside_polygon(x, y, coords):
-    wn = 0
-    i = 0
-    y1 = coords[1][0]
-    # TODO why start with both y1=y2= y[0]?
+    contained = False
+    # the edge from the last to the first point is checked first
+    i = -1
+    y1 = coords[1][-1]
+    y_gt_y1 = y > y1
     for y2 in coords[1]:
-        if y1 < y:
-            if y2 >= y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
+        y_gt_y2 = y > y2
+        if y_gt_y1:
+            if not y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                # if needed: compute the x value of the intersection of the point with the line p1-p2
-                # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
-                # NOTE: bracket placement is important here (computation with 64-bit ints!). first divide then multiply!
-                # delta_x is difference between X and x-value of the intersection
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
-                    wn += 1
-
+                # compare the slope of the line [p1-p2] and [p-p2]
+                # depending on the position of p2 this determines whether the polygon edge is right or left of the point
+                # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
+                # ( dy/dx > a  ==  dy > a * dx )
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) <= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         else:
-            if y2 < y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
+            if y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
-                    wn -= 1
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) >= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         y1 = y2
+        y_gt_y1 = y_gt_y2
         i += 1
-
-    y1 = coords[1][-1]
-    y2 = coords[1][0]
-    if y1 < y:
-        if y2 >= y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            # only crossings "right" of the point should be counted
-            x1GEx = x <= x1
-            x2GEx = x <= x2
-            if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
-                wn += 1
-    else:
-        if y2 < y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            # only crossings "right" of the point should be counted
-            x1GEx = x <= x1
-            x2GEx = x <= x2
-            if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x >= 0):
-                wn -= 1
-    return wn != 0
+    return contained
 
 
 def all_the_same(pointer, length, id_list):

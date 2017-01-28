@@ -8,7 +8,7 @@ from timezonefinder.timezonefinder import TimezoneFinder
 from tzwhere.tzwhere import tzwhere
 
 # number of points to test (in each test, realistic and random ones)
-N = 100
+N = 1000
 
 # sets if tzwhere should be used with shapely
 SHAPELY = False
@@ -84,7 +84,7 @@ TEST_LOCATIONS_PROXIMITY = (
 
 
 def random_point():
-    # tzwhere does not work for points with more latitude!
+    # tzwhere does not work for points with higher latitude!
     return random.uniform(-180, 180), random.uniform(-84, 84)
 
 
@@ -124,7 +124,7 @@ class PackageEqualityTest(unittest.TestCase):
     end_time = datetime.now()
     my_time = end_time - start_time
 
-    print('Starting tz_where. This could take a moment...')
+    print('Starting tz_where. This could take a while...')
 
     # integrated start up time test:
     # (when doing this for multiple times things are already cached and therefore produce misleading results)

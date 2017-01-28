@@ -21,7 +21,7 @@ This project is derived from and has been successfully tested against
 improved performance and usability.
 
 pytzwhere is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
-This is time, memory and CPU consuming. Additionaly calculating with floats is slow, keeping those 2M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case. For those reasons this package has been created:
+This is time, memory and CPU consuming. Additionaly calculating with floats is slow, keeping those 2M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case. For these reasons this package has been created:
 
 
 Comparison to pytzwhere
@@ -88,8 +88,7 @@ Dependencies
 This is only for precompiling the time critical algorithms. When you only look up a
 few points once in a while, the compilation time is probably outweighing
 the benefits. When using ``certain_timezone_at()`` and especially
-``closest_timezone_at()`` however, I highly recommend using ``numba``
-(see speed comparison below)! The amount of shortcuts used in the
+``closest_timezone_at()`` however, I highly recommend using ``numba``! The amount of shortcuts used in the
 ``.bin`` is also only optimized for the use with ``numba``.
 
 Installation
@@ -102,12 +101,12 @@ in your terminal simply:
 ::
 
     pip install timezonefinder
-	
-	MAYBE ALSO:
+
+	OR POSSIBLY:
 	pip3 install timezonefinder
-	pip install --upgrade timezonefinder 
+	pip install --upgrade timezonefinder
 	sudo pip install timezonefinder
-	
+
 
 Usage
 =====
@@ -329,7 +328,55 @@ test results\*:
 
 
     test correctness:
-    Results:
+
+    results timezone_at()
+    LOCATION             | EXPECTED             | COMPUTED             | ==
+    ====================================================================
+    Arlington, TN        | America/Chicago      | America/Chicago      | OK
+    Memphis, TN          | America/Chicago      | America/Chicago      | OK
+    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
+    Eugene, OR           | America/Los_Angeles  | America/Los_Angeles  | OK
+    Albany, NY           | America/New_York     | America/New_York     | OK
+    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
+    Los Angeles          | America/Los_Angeles  | America/Los_Angeles  | OK
+    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
+    Aspen, Colorado      | America/Denver       | America/Denver       | OK
+    Kiev                 | Europe/Kiev          | Europe/Kiev          | OK
+    Jogupalya            | Asia/Kolkata         | Asia/Kolkata         | OK
+    Washington DC        | America/New_York     | America/New_York     | OK
+    St Petersburg        | Europe/Moscow        | Europe/Moscow        | OK
+    Blagoveshchensk      | Asia/Yakutsk         | Asia/Yakutsk         | OK
+    Boston               | America/New_York     | America/New_York     | OK
+    Chicago              | America/Chicago      | America/Chicago      | OK
+    Orlando              | America/New_York     | America/New_York     | OK
+    Seattle              | America/Los_Angeles  | America/Los_Angeles  | OK
+    London               | Europe/London        | Europe/London        | OK
+    Church Crookham      | Europe/London        | Europe/London        | OK
+    Fleet                | Europe/London        | Europe/London        | OK
+    Paris                | Europe/Paris         | Europe/Paris         | OK
+    Macau                | Asia/Macau           | Asia/Macau           | OK
+    Russia               | Asia/Yekaterinburg   | Asia/Yekaterinburg   | OK
+    Salo                 | Europe/Helsinki      | Europe/Helsinki      | OK
+    Staffordshire        | Europe/London        | Europe/London        | OK
+    Muara                | Asia/Brunei          | Asia/Brunei          | OK
+    Puerto Montt seaport | America/Santiago     | America/Santiago     | OK
+    Akrotiri seaport     | Asia/Nicosia         | Asia/Nicosia         | OK
+    Inchon seaport       | Asia/Seoul           | Asia/Seoul           | OK
+    Nakhodka seaport     | Asia/Vladivostok     | Asia/Vladivostok     | OK
+    Truro                | Europe/London        | Europe/London        | OK
+    Aserbaid. Enklave    | Asia/Baku            | Asia/Baku            | OK
+    Tajikistani Enklave  | Asia/Dushanbe        | Asia/Dushanbe        | OK
+    Busingen Ger         | Europe/Busingen      | Europe/Busingen      | OK
+    Genf                 | Europe/Zurich        | Europe/Zurich        | OK
+    Lesotho              | Africa/Maseru        | Africa/Maseru        | OK
+    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
+    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
+    Arizona Desert 1     | America/Denver       | America/Denver       | OK
+    Arizona Desert 2     | America/Phoenix      | America/Phoenix      | OK
+    Arizona Desert 3     | America/Phoenix      | America/Phoenix      | OK
+    Far off Cornwall     | None                 | None                 | OK
+
+    certain_timezone_at():
     LOCATION             | EXPECTED             | COMPUTED             | Status
     ====================================================================
     Arlington, TN        | America/Chicago      | America/Chicago      | OK
@@ -388,9 +435,9 @@ test results\*:
     Oresund Bridge1      | Europe/Stockholm     | Europe/Stockholm     | OK
     Oresund Bridge2      | Europe/Copenhagen    | Europe/Copenhagen    | OK
 
-    testing 10000 realistic points
-    [These tests dont make sense at the moment because tzwhere is still using old data]
+
     testing 1000 realistic points
+    [These tests dont make sense at the moment because tzwhere is still using old data]
     MISMATCHES:
     Point                                    | timezone_at()        | certain_timezone_at() | tzwhere
     =========================================================================
@@ -401,28 +448,29 @@ test results\*:
     MISMATCHES:
     Point                                    | timezone_at()        | certain_timezone_at() | tzwhere
     =========================================================================
-    (57.71985093778474, 50.93465824884237)   | Europe/Kirov         | Europe/Kirov          | Europe/Volgograd
-    (56.993217193375955, -123.66721983141636) | America/Dawson_Creek | America/Dawson_Creek  | America/Vancouver
+    (52.556196302942254, 84.36852922840882)  | Asia/Barnaul         | Asia/Barnaul          | Asia/Omsk
+    (57.18998787794777, 84.3847046324397)    | Asia/Tomsk           | Asia/Tomsk            | Asia/Novosibirsk
+
+    in 1000 tries 2 mismatches were made
 
 
     shapely: OFF (tzwhere)
     Numba: OFF (timezonefinder)
 
     TIMES for  1000 realistic points
-    tzwhere: 0:00:05.990420
-    timezonefinder: 0:00:00.075704
-    78.13 times faster
+    tzwhere: 0:00:05.695566
+    timezonefinder: 0:00:00.061465
+    91.66 times faster
 
 
     TIMES for  1000 random points
-    tzwhere: 0:00:08.626960
-    timezonefinder: 0:00:01.242737
-    5.94 times faster
+    tzwhere: 0:00:10.162281
+    timezonefinder: 0:00:00.701672
+    13.48 times faster
 
-    Startup times:
-    tzwhere: 0:00:08.548387
-    timezonefinder: 0:00:00.000122
-    70068.75 times faster
+    tzwhere: 0:00:08.556277
+    timezonefinder: 0:00:00.001287
+    6647.23 times faster
 
 
     shapely: OFF (tzwhere)
@@ -450,15 +498,15 @@ test results\*:
 
 
     TIMES for  10000 realistic points
-    tzwhere: 0:00:00.429949
-    timezonefinder: 0:00:01.366008
-    0.31 times faster
+    tzwhere: 0:00:00.734116
+    timezonefinder: 0:00:00.733868
+    0.0 times faster
 
 
     TIMES for  10000 random points
-    tzwhere: 0:00:00.566208
-    timezonefinder: 0:00:11.725017
-    0.05 times faster
+    tzwhere: 0:00:00.671462
+    timezonefinder: 0:00:07.343086
+    9.94 times slower
 
 
     shapely: ON (tzwhere)

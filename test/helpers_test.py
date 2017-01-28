@@ -20,31 +20,38 @@ class HelperTest(unittest.TestCase):
 
 
     def test_inside_polygon(self):
+
+        polygon_test_cases = [
+            ([0.5, 0.5, -0.5, -0.5, 0.5], [0.0, 0.5, 0.5, -0.5, -0.5]),
+
+        ]
         p_test_cases = [
+
             # (x,y),
+            # inside
+            (0, 0.000),
+            #
+            # # outside
             (-1, 1),
             (0, 1),
             (1, 1),
             (-1, 0),
-            (0, 0),
             (1, 0),
             (-1, -1),
             (0, -1),
             (1, -1),
 
             # on the line test cases
-            # (-0.5, 0.5),
+            # inclusion is not defined if point lies on the line
+            # (0.0, -0.5),
             # (0, 0.5),
             # (-0.5, 0),
             # (0.5, 0),
         ]
-
-        polygon_test_cases = [
-            ([0.5, -0.5, -0.5, 0.5], [0.5, 0.5, -0.5, -0.5]),
-        ]
-
         expected_results = [
-            (False, False, False, False, True, False, False, False, False,),
+            (True,
+             False, False, False, False, False, False, False, False,)
+            # (True, True, True, True)
         ]
 
         n = 0

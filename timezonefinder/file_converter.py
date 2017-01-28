@@ -6,8 +6,9 @@ from datetime import datetime
 from struct import pack
 
 from .helpers import coord2int, int2coord
+from .helpers import inside_polygon
 
-# Don't change this setup or timezonefinder wont work!
+# ATTENTION: Don't change these setings or timezonefinder wont work!
 # different setups of shortcuts are not supported, because then addresses in the .bin
 # would need to be calculated depending on how many shortcuts are being used.
 # number of shortcuts per longitude
@@ -60,34 +61,8 @@ def update_zone_names(path='timezone_names.py'):
     print('Done\n')
 
 
-def inside_polygon(x, y, x_coords, y_coords):
-    def is_left_of(x, y, x1, x2, y1, y2):
-        return (x2 - x1) * (y - y1) - (x - x1) * (y2 - y1)
-
-    n = len(y_coords) - 1
-
-    wn = 0
-    for i in range(n):
-        iplus = i + 1
-        if y_coords[i] <= y:
-            # print('Y1<=y')
-            if y_coords[iplus] > y:
-                # print('Y2>y')
-                if is_left_of(x, y, x_coords[i], x_coords[iplus], y_coords[i], y_coords[iplus]) > 0:
-                    wn += 1
-                    # print('wn is:')
-                    # print(wn)
-
-        else:
-            # print('Y1>y')
-            if y_coords[iplus] <= y:
-                # print('Y2<=y')
-                if is_left_of(x, y, x_coords[i], x_coords[iplus], y_coords[i], y_coords[iplus]) < 0:
-                    wn -= 1
-                    # print('wn is:')
-                    # print(wn)
-
-    return wn is not 0
+def contained(x, y, x_coords, y_coords):
+    return inside_polygon(x,y,[x_coords,y_coords])
 
 
 def parse_polygons_from_json(path='tz_world.json'):
@@ -396,7 +371,7 @@ def compile_into_binary(path='tz_binary.bin'):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut zone here!
                     # only select the top shortcut if it is actually inside the polygon (point a little up is inside)
-                    if inside_polygon(coord2int(intersection_in), coord2int(lat) + 1, x_longs,
+                    if contained(coord2int(intersection_in), coord2int(lat) + 1, x_longs,
                                       y_longs):
                         shortcuts_for_line.add((x_shortcut(intersection_in), y_shortcut(lat) - 1))
                     # the bottom shortcut is always selected
@@ -408,7 +383,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if inside_polygon(coord2int(middle), coord2int(lat) + 1, x_longs,
+                    if contained(coord2int(middle), coord2int(lat) + 1, x_longs,
                                       y_longs):
                         while intersection_in < intersection_out:
                             possible_longitudes.append(intersection_in)
@@ -458,7 +433,7 @@ def compile_into_binary(path='tz_binary.bin'):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut here!
                     # only select the left shortcut if it is actually inside the polygon (point a little left is inside)
-                    if inside_polygon(coord2int(lng) - 1, coord2int(intersection_in), x_longs,
+                    if contained(coord2int(lng) - 1, coord2int(intersection_in), x_longs,
                                       y_longs):
                         shortcuts_for_line.add((x_shortcut(lng) - 1, y_shortcut(intersection_in)))
                     # the right shortcut is always selected
@@ -470,7 +445,7 @@ def compile_into_binary(path='tz_binary.bin'):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if inside_polygon(coord2int(lng) - 1, coord2int(middle), x_longs,
+                    if contained(coord2int(lng) - 1, coord2int(middle), x_longs,
                                       y_longs):
                         while intersection_in < intersection_out:
                             possible_latitudes.append(intersection_in)
