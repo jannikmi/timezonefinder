@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
-from numba import float64, int8, int32, b1, i2, i4, u2, u8, f8, jit, typeof
+from numba import b1, f8, float64, i2, i4, int8, int32, jit, typeof, u2, u8
 # from numba.pycc import CC
 
 # cc = CC('compiled_helpers', )
@@ -105,7 +105,7 @@ def position_to_line(x, y, x1, x2, y1, y2):
 
 
 # @cc.export('inside_polygon', 'b1(i4,i4,i4[:,:])')
-@jit(b1(i4,i4,i4[:,:]), nopython=True, cache=True)
+@jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     wn = 0
     i = 0
@@ -155,7 +155,7 @@ def inside_polygon(x, y, coords):
 
 
 # @cc.export('all_the_same', 'i2(u8,u8,u2[:])')
-@jit(i2(u8,u8,u2[:]), nopython=True, cache=True)
+@jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
     # List mustn't be empty or Null
     # There is at least one
@@ -304,7 +304,7 @@ def coord2int(double):
 
 
 # @cc.export('distance_to_polygon_exact', 'f8(f8,f8,i4,i4[:,:],f8[:,:])')
-@jit(f8(f8,f8,i4,i4[:,:],f8[:,:]), nopython=True, cache=True)
+@jit(f8(f8, f8, i4, i4[:, :], f8[:, :]), nopython=True, cache=True)
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
     # transform all points (long long) to coords
     for i in range(nr_points):
@@ -338,7 +338,7 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
 
 # @cc.export('distance_to_polygon', 'f8(f8,f8,i4,i4[:,:])')
-@jit(f8(f8,f8,i4,i4[:,:]), nopython=True, cache=True)
+@jit(f8(f8, f8, i4, i4[:, :]), nopython=True, cache=True)
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
     min_distance = 40100000
 
