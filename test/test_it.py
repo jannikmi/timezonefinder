@@ -4,9 +4,8 @@ import random
 import unittest
 from datetime import datetime
 
-from tzwhere.tzwhere import tzwhere
-
 from timezonefinder.timezonefinder import TimezoneFinder
+from tzwhere.tzwhere import tzwhere
 
 # number of points to test (in each test, realistic and random ones)
 N = 100
