@@ -5,9 +5,11 @@ Changelog
 1.5.7 (2016-07-21)
 ------------------
 
+ATTENTION: API changed! not necessarily backward compatible!
+
+* all functions are now keyword-args only (to prevent lng lat mix-up errors)
 * fixed a little bug with too many arguments in a @jit function
 * clarified usage of the API in the Readme
-* all functions are now keyword-args only (to prevent lng lat mix-up errors)
 * prepared the usage of the ahead of time compilation functionality of Numba. It is not enabled yet.
 * sorting the polygons to check in the order of how often their zones appear gives a speed bonus
 
