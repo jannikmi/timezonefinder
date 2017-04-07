@@ -19,7 +19,7 @@ excluded_zones_tzwhere = []
 
 TEST_LOCATIONS = (
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
+    (35.1322601, -90.0902499, 'Memphis, TN', 'America/Chicago'),
     (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
     (44.12, -123.22, 'Eugene, OR', 'America/Los_Angeles'),
     (42.652647, -73.756371, 'Albany, NY', 'America/New_York'),
@@ -84,12 +84,26 @@ TEST_LOCATIONS_PROXIMITY = (
 
 
 def random_point():
-    # tzwhere does not work for points with more latitude!
+    # tzwhere does not work for points with higher latitude!
     return random.uniform(-180, 180), random.uniform(-84, 84)
 
 
 def list_of_random_points(length):
     return [random_point() for i in range(length)]
+
+
+def print_speedup(tz_where_time, timezoefinder_time):
+    print('tzwhere:', tz_where_time)
+    print('timezonefinder:', timezoefinder_time)
+    try:
+        speedup = round(tz_where_time / timezoefinder_time - 1, 2)
+        if speedup < 0:
+            print(round(timezoefinder_time / tz_where_time - 1, 2), 'times slower')
+        else:
+            print(speedup, 'times faster')
+    except TypeError:
+        pass
+        # assert his_time > my_time
 
 
 class PackageEqualityTest(unittest.TestCase):
@@ -110,7 +124,7 @@ class PackageEqualityTest(unittest.TestCase):
     end_time = datetime.now()
     my_time = end_time - start_time
 
-    print('Starting tz_where. This could take a moment...')
+    print('Starting tz_where. This could take a while...')
 
     # integrated start up time test:
     # (when doing this for multiple times things are already cached and therefore produce misleading results)
@@ -119,13 +133,7 @@ class PackageEqualityTest(unittest.TestCase):
     end_time = datetime.now()
     his_time = end_time - start_time
 
-    print('\nStartup times:')
-    print('tzwhere:', his_time)
-    print('timezonefinder:', my_time)
-    try:
-        print(round(his_time / my_time, 2), 'times faster')
-    except TypeError:
-        pass
+    print_speedup(tz_where_time=his_time, timezoefinder_time=my_time)
     print('\n\n')
 
     # create an array of n points where tzwhere finds something (realistic queries)
@@ -232,6 +240,7 @@ class PackageEqualityTest(unittest.TestCase):
         print_equality_test('random points', list_of_random_points(length=N))
 
     def test_speed(self):
+        print("Speed Tests:\n____________")
 
         def check_speed_his_algor(list_of_points):
             start_time = datetime.now()
@@ -252,13 +261,7 @@ class PackageEqualityTest(unittest.TestCase):
             his_time = check_speed_his_algor(list_of_points)
             print('')
             print('\nTIMES for ', N, type_of_points)
-            print('tzwhere:', his_time)
-            print('timezonefinder:', my_time)
-            try:
-                print(round(his_time / my_time, 2), 'times faster')
-            except TypeError:
-                pass
-                # assert his_time > my_time
+            print_speedup(tz_where_time=his_time, timezoefinder_time=my_time)
 
         print('\n\n')
         if SHAPELY:

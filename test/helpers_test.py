@@ -4,8 +4,9 @@ import random
 import unittest
 from math import degrees, radians, sqrt
 
-from timezonefinder.helpers import (coord2int, distance_to_point_on_equator, distance_to_polygon,
-                                    distance_to_polygon_exact, haversine, inside_polygon, position_to_line)
+from timezonefinder.helpers import (all_the_same, convert2coord_pairs, convert2coords, coord2int,
+                                    distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact,
+                                    haversine, inside_polygon)
 
 
 def random_point():
@@ -18,74 +19,39 @@ def list_of_random_points(length):
 
 
 class HelperTest(unittest.TestCase):
-    def test_position_to_line(self):
-        """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
-            Return: -1 for pX left of the line from! p1 to! p2
-                    0 for pX on the line [is not needed]
-                    1 for pX  right of the line
-                    this approach is only valid because we already know that y lies within ]y1;y2]
-        """
-        p_test_cases = [
-            # (x,y),
-            (-1, 1),
-            (0, 1),
-            (1, 1),
-            (-1, 0),
-            (0, 0),
-            (1, 0),
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-        ]
-
-        p1p2_test_cases = [
-            (-1, 1, -1, 1),
-            (1, -1, 1, -1),
-            (-1, 1, 1, -1),
-            (1, -1, -1, 1),
-        ]
-
-        expected_results = [
-            (-1, -1, 0, -1, 0, 1, 0, 1, 1),
-            (1, 1, 0, 1, 0, -1, 0, -1, -1),
-            (0, -1, -1, 1, 0, -1, 1, 1, 0),
-            (0, 1, 1, -1, 0, 1, -1, -1, 0),
-        ]
-
-        n = 0
-        for x1, x2, y1, y2 in p1p2_test_cases:
-            i = 0
-            for x, y in p_test_cases:
-                assert position_to_line(x, y, x1, x2, y1, y2) == expected_results[n][i]
-                i += 1
-            n += 1
-
     def test_inside_polygon(self):
+
+        polygon_test_cases = [
+            ([0.5, 0.5, -0.5, -0.5, 0.5], [0.0, 0.5, 0.5, -0.5, -0.5]),
+
+        ]
         p_test_cases = [
+
             # (x,y),
+            # inside
+            (0, 0.000),
+            #
+            # # outside
             (-1, 1),
             (0, 1),
             (1, 1),
             (-1, 0),
-            (0, 0),
             (1, 0),
             (-1, -1),
             (0, -1),
             (1, -1),
 
             # on the line test cases
-            # (-0.5, 0.5),
+            # inclusion is not defined if point lies on the line
+            # (0.0, -0.5),
             # (0, 0.5),
             # (-0.5, 0),
             # (0.5, 0),
         ]
-
-        polygon_test_cases = [
-            ([0.5, -0.5, -0.5, 0.5], [0.5, 0.5, -0.5, -0.5]),
-        ]
-
         expected_results = [
-            (False, False, False, False, True, False, False, False, False,),
+            (True,
+             False, False, False, False, False, False, False, False,)
+            # (True, True, True, True)
         ]
 
         n = 0
@@ -95,6 +61,32 @@ class HelperTest(unittest.TestCase):
                 assert inside_polygon(x, y, coords) == expected_results[n][i]
                 i += 1
             n += 1
+
+    def test_all_the_same(self):
+
+        test_cases = [
+            (0, 3, [1, 3, 2]),
+            (1, 3, [1, 3, 2]),
+            (2, 3, [1, 3, 2]),
+            (1, 3, [1, 2, 2]),
+            (0, 1, [1]),
+
+        ]
+
+        expected_results = [
+            -1,
+            -1,
+            2,
+            2,
+            1,
+        ]
+
+        i = 0
+
+        for pointer, length, id_list in test_cases:
+            # print(pointer, length, id_list, all_the_same(pointer, length, id_list) )
+            assert all_the_same(pointer, length, id_list) == expected_results[i]
+            i += 1
 
     def test_distance_computation(self):
 
@@ -161,3 +153,14 @@ class HelperTest(unittest.TestCase):
         distance = distance_to_polygon(x_rad, y_rad, len(x_coords), points)
         print(km2deg(distance))
         assert abs(km2deg(distance) - sqrt(2) / 2) < 0.00001
+
+    def test_convert2coord_pairs(self):
+
+        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
+        # print(convert2coord_pairs(data))
+        assert (convert2coord_pairs(data) == [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)])
+
+    def test_convert2coords(self):
+        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
+        # print(convert2coords(data))
+        assert (convert2coords(data) == ([1.0, 2.0, 3.0], [1.0, 2.0, 3.0]))

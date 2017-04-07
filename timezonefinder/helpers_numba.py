@@ -1,190 +1,91 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
+from numba import b1, f8, i2, i4, jit, typeof, u2, u8
 
-from numba import b1, f8, float64, i2, i4, int8, int32, jit, typeof, u2, u8
+# # for Ahead-Of-Time Compilation:
 # from numba.pycc import CC
-
 # cc = CC('compiled_helpers', )
-# Uncomment the following line to print out the compilation steps
+# # Uncomment the following line to print out the compilation steps
 # # cc.verbose = True
 
 dtype_3floattuple = typeof((1.0, 1.0, 1.0))
 dtype_2floattuple = typeof((1.0, 1.0))
 
 
-# @cc.export('position_to_line', int8(int32, int32, int32, int32, int32, int32))
-@jit(int8(int32, int32, int32, int32, int32, int32), nopython=True, cache=True)
-def position_to_line(x, y, x1, x2, y1, y2):
-    """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
-            Return: -1 for pX left of the line from! p1 to! p2
-                    0 for pX on the line [is not needed]
-                    1 for pX  right of the line
-                    this approach is only valid because we already know that y lies within ]y1;y2]
-        """
-
-    if x1 < x2:
-        # p2 is further right than p1
-        if x > x2:
-            # pX is further right than p2,
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        if x < x1:
-            # pX is further left than p1
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-        x1gtx2 = False
-
-    else:
-        # p1 is further right than p2
-        if x > x1:
-            # pX is further right than p1,
-            if y1 > y2:
-                # so it has to be left of the line p1-p2
-                return -1
-            else:
-                return 1
-
-        if x < x2:
-            # pX is further left than p2,
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-#         # TODO is no return also accepted
-        if x1 == x2 and x == x1:
-            # could also be equal
-            return 0
-
-        # x1 greater than x2
-        x1gtx2 = True
-
-    # x is between [x1;x2]
-    # compute the x-intersection of the point with the line p1-p2
-    # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
-    # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
-    delta_x = ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x
-
-    if delta_x > 0:
-        if x1gtx2:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-        else:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-    elif delta_x == 0:
-        return 0
-
-    else:
-        if x1gtx2:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        else:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-
-# @cc.export('inside_polygon', 'b1(i4,i4,i4[:,:])')
+# @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
 @jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
 def inside_polygon(x, y, coords):
-    wn = 0
-    i = 0
-    y1 = coords[1][0]
-    # TODO why start with both y1=y2= y[0]?
+    contained = False
+    # the edge from the last to the first point is checked first
+    i = -1
+    y1 = coords[1][-1]
+    y_gt_y1 = y > y1
     for y2 in coords[1]:
-        if y1 < y:
-            if y2 >= y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
-                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),
-                #       position_to_line(x, y, x1, x2, y1, y2))
-                if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                    # point is left of line
-                    # return true when its on the line?! this is very unlikely to happen!
-                    # and would need to be checked every time!
-                    wn += 1
+        y_gt_y2 = y > y2
+        if y_gt_y1:
+            if not y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                # compare the slope of the lines [p1-p2] and [p-p2]
+                # depending on the position of p2 this determines whether the polygon edge is right or left of the point
+                # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
+                # ( dy/dx > a  ==  dy > a * dx )
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) <= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         else:
-            if y2 < y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
-                if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                    # point is right of line
-                    wn -= 1
+            if y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) >= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         y1 = y2
+        y_gt_y1 = y_gt_y2
         i += 1
-
-    y1 = coords[1][-1]
-    y2 = coords[1][0]
-    if y1 < y:
-        if y2 >= y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                # point is left of line
-                wn += 1
-    else:
-        if y2 < y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                # point is right of line
-                wn -= 1
-    return wn != 0
+    return contained
 
 
-# @cc.export('all_the_same', 'i2(u8,u8,u2[:])')
+# @cc.export('all_the_same', i2(u8, u8, u2[:]))
 @jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
-    # List mustn't be empty or Null
-    # There is at least one
-
+    """
+    :param pointer: from that element the list is checked for equality
+    :param length:
+    :param id_list: List mustn't be empty or Null. There has to be at least one element
+    :return: returns the first encountered element if starting from the pointer all elements are the same,
+     otherwise it returns -1
+    """
     element = id_list[pointer]
     pointer += 1
-
     while pointer < length:
         if element != id_list[pointer]:
             return -1
         pointer += 1
-
     return element
 
 
-# @cc.export('cartesian2rad', dtype_2floattuple(float64, float64, float64))
-@jit(dtype_2floattuple(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('cartesian2rad', dtype_2floattuple(f8, f8, f8))
+@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
 def cartesian2rad(x, y, z):
     return atan2(y, x), asin(z)
 
 
-# @cc.export('cartesian2coords', dtype_2floattuple(float64, float64, float64))
-@jit(dtype_2floattuple(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('cartesian2coords', dtype_2floattuple(f8, f8, f8))
+@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
 def cartesian2coords(x, y, z):
     return degrees(atan2(y, x)), degrees(asin(z))
 
 
-# @cc.export('x_rotate', dtype_3floattuple(float64, dtype_3floattuple))
-@jit(dtype_3floattuple(float64, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('x_rotate', dtype_3floattuple(f8, dtype_3floattuple))
+@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
 def x_rotate(rad, point):
     # Attention: this rotation uses radians!
     # x stays the same
@@ -193,8 +94,8 @@ def x_rotate(rad, point):
     return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
 
 
-# @cc.export('y_rotate', dtype_3floattuple(float64, dtype_3floattuple))
-@jit(dtype_3floattuple(float64, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('y_rotate', dtype_3floattuple(f8, dtype_3floattuple))
+@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
 def y_rotate(rad, point):
     # y stays the same
     # this is actually a rotation with -rad (use symmetry of sin/cos)
@@ -203,14 +104,14 @@ def y_rotate(rad, point):
     return point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad
 
 
-# @cc.export('coords2cartesian', dtype_3floattuple(float64, float64))
-@jit(dtype_3floattuple(float64, float64), nopython=True, cache=True)
+# @cc.export('coords2cartesian', dtype_3floattuple(f8, f8))
+@jit(dtype_3floattuple(f8, f8), nopython=True, cache=True)
 def coords2cartesian(lng_rad, lat_rad):
     return cos(lng_rad) * cos(lat_rad), sin(lng_rad) * cos(lat_rad), sin(lat_rad)
 
 
-# @cc.export('distance_to_point_on_equator', float64(float64, float64, float64))
-@jit(float64(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('distance_to_point_on_equator', f8(f8, f8, f8))
+@jit(f8(f8, f8, f8), nopython=True, cache=True)
 def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     """
     uses the simplified haversine formula for this special case (lat_p1 = 0)
@@ -224,8 +125,8 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     return 12742 * asin(sqrt(((sin(lat_rad / 2)) ** 2 + cos(lat_rad) * (sin((lng_rad - lng_rad_p1) / 2)) ** 2)))
 
 
-# @cc.export('haversine', float64(float64, float64, float64, float64))
-@jit(float64(float64, float64, float64, float64), nopython=True, cache=True)
+# @cc.export('haversine', f8(f8, f8, f8, f8))
+@jit(f8(f8, f8, f8, f8), nopython=True, cache=True)
 def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     :param lng_p1: the longitude of point 1 in radians
@@ -240,8 +141,8 @@ def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
         sqrt(((sin((lat_p1 - lat_p2) / 2)) ** 2 + cos(lat_p2) * cos(lat_p1) * (sin((lng_p1 - lng_p2) / 2)) ** 2)))
 
 
-# @cc.export('compute_min_distance', float64(float64, float64, float64, float64, float64, float64, float64, float64))
-@jit(float64(float64, float64, float64, float64, float64, float64, float64, float64), nopython=True, cache=True)
+# @cc.export('compute_min_distance', f8(f8, f8, f8, f8, f8, f8, f8, f8))
+@jit(f8(f8, f8, f8, f8, f8, f8, f8, f8), nopython=True, cache=True)
 def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat):
     """
     :param lng_rad: lng of px in radians
@@ -291,22 +192,22 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
                                                            max(min(px_retrans_rad[0], lng_p1_rad), 0)))
 
 
-# @cc.export('int2coord', float64(int32))
-@jit(float64(int32), nopython=True, cache=True)
-def int2coord(int32):
-    return float(int32 / 10 ** 7)
+# @cc.export('int2coord', f8(i4))
+@jit(f8(i4), nopython=True, cache=True)
+def int2coord(i4):
+    return float(i4 / 10 ** 7)
 
 
-# @cc.export('coord2int', int32(float64))
-@jit(int32(float64), nopython=True, cache=True)
+# @cc.export('coord2int', i4(f8))
+@jit(i4(f8), nopython=True, cache=True)
 def coord2int(double):
     return int(double * 10 ** 7)
 
 
-# @cc.export('distance_to_polygon_exact', 'f8(f8,f8,i4,i4[:,:],f8[:,:])')
+# @cc.export('distance_to_polygon_exact', f8(f8, f8, i4, i4[:, :], f8[:, :]))
 @jit(f8(f8, f8, i4, i4[:, :], f8[:, :]), nopython=True, cache=True)
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
-    # transform all points (long long) to coords
+    # transform all points (int) to coords (float)
     for i in range(nr_points):
         trans_points[0][i] = radians(int2coord(points[0][i]))
         trans_points[1][i] = radians(int2coord(points[1][i]))
@@ -337,9 +238,10 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
     return min_distance
 
 
-# @cc.export('distance_to_polygon', 'f8(f8,f8,i4,i4[:,:])')
+# @cc.export('distance_to_polygon', f8(f8, f8, i4, i4[:, :]))
 @jit(f8(f8, f8, i4, i4[:, :]), nopython=True, cache=True)
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
+    # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
     min_distance = 40100000
 
     for i in range(nr_points):
@@ -348,6 +250,5 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
 
     return min_distance
 
-
 # if __name__ == "__main__":
-    # cc.compile()
+#     cc.compile()

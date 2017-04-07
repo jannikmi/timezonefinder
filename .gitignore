@@ -1,8 +1,8 @@
 MANIFEST
 publish.py
-test/authors_tests.py
-
-
+test/memory_usage_test_tzwhere.py
+test/memory_usage_test_timezonefinder.py
+timezonefinder/tz_world.json
 scrapyard.py
 
 # GITIGNORE DEFAULTS
@@ -109,3 +109,4 @@ target/
 ## File-based project format:
 *.ipr
 *.iws
+

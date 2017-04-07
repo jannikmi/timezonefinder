@@ -3,155 +3,58 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
 
-def position_to_line(x, y, x1, x2, y1, y2):
-    """tests if a point pX(x,y) is Left|On|Right of an infinite line from p1 to p2
-            Return: -1 for pX left of the line from! p1 to! p2
-                    0 for pX on the line [is not needed]
-                    1 for pX  right of the line
-                    this approach is only valid because we already know that y lies within ]y1;y2]
-        """
-
-    if x1 < x2:
-        # p2 is further right than p1
-        if x > x2:
-            # pX is further right than p2,
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        if x < x1:
-            # pX is further left than p1
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-        x1gtx2 = False
-
-    else:
-        # p1 is further right than p2
-        if x > x1:
-            # pX is further right than p1,
-            if y1 > y2:
-                # so it has to be left of the line p1-p2
-                return -1
-            else:
-                return 1
-
-        if x < x2:
-            # pX is further left than p2,
-            if y1 > y2:
-                # so it has to be right of the line p1-p2
-                return 1
-            else:
-                return -1
-
-        # TODO is no return also accepted
-        if x1 == x2 and x == x1:
-            # could also be equal
-            return 0
-
-        # x1 greater than x2
-        x1gtx2 = True
-
-    # x is between [x1;x2]
-    # compute the x-intersection of the point with the line p1-p2
-    # delta_y cannot be 0 here because of the condition 'y lies within ]y1;y2]'
-    # NOTE: bracket placement is important here (we are dealing with 64-bit ints!). first divide then multiply!
-    delta_x = ((y - y1) * ((x2 - x1) / (y2 - y1))) + x1 - x
-
-    if delta_x > 0:
-        if x1gtx2:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-        else:
-            if y1 > y2:
-                return 1
-            else:
-                return -1
-
-    elif delta_x == 0:
-        return 0
-
-    else:
-        if x1gtx2:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-        else:
-            if y1 > y2:
-                return -1
-            else:
-                return 1
-
-
 def inside_polygon(x, y, coords):
-    wn = 0
-    i = 0
-    y1 = coords[1][0]
-    # TODO why start with both y1=y2= y[0]?
+    contained = False
+    # the edge from the last to the first point is checked first
+    i = -1
+    y1 = coords[1][-1]
+    y_gt_y1 = y > y1
     for y2 in coords[1]:
-        if y1 < y:
-            if y2 >= y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
-                # print(long2coord(x), long2coord(y), long2coord(x1), long2coord(x2), long2coord(y1), long2coord(y2),
-                #       position_to_line(x, y, x1, x2, y1, y2))
-                if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                    # point is left of line
-                    # return true when its on the line?! this is very unlikely to happen!
-                    # and would need to be checked every time!
-                    wn += 1
+        y_gt_y2 = y > y2
+        if y_gt_y1:
+            if not y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                # compare the slope of the line [p1-p2] and [p-p2]
+                # depending on the position of p2 this determines whether the polygon edge is right or left of the point
+                # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
+                # ( dy/dx > a  ==  dy > a * dx )
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) <= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         else:
-            if y2 < y:
-                x1 = coords[0][i - 1]
-                x2 = coords[0][i]
-                if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                    # point is right of line
-                    wn -= 1
+            if y_gt_y2:
+                x1 = coords[0][i]
+                x2 = coords[0][i + 1]
+                # only crossings "right" of the point should be counted
+                x1GEx = x <= x1
+                x2GEx = x <= x2
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) >= (y2 - y1) * (x2 - x)):
+                    contained = not contained
 
         y1 = y2
+        y_gt_y1 = y_gt_y2
         i += 1
-
-    y1 = coords[1][-1]
-    y2 = coords[1][0]
-    if y1 < y:
-        if y2 >= y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == -1:
-                # point is left of line
-                wn += 1
-    else:
-        if y2 < y:
-            x1 = coords[0][-1]
-            x2 = coords[0][0]
-            if position_to_line(x, y, x1, x2, y1, y2) == 1:
-                # point is right of line
-                wn -= 1
-    return wn != 0
+    return contained
 
 
 def all_the_same(pointer, length, id_list):
-    # List mustn't be empty or Null
-    # There is at least one
-
+    """
+    :param pointer: from that element the list is checked for equality
+    :param length:
+    :param id_list: List mustn't be empty or Null. There has to be at least one element
+    :return: returns the first encountered element if starting from the pointer all elements are the same,
+     otherwise it returns -1
+    """
     element = id_list[pointer]
     pointer += 1
-
     while pointer < length:
         if element != id_list[pointer]:
             return -1
         pointer += 1
-
     return element
 
 
@@ -268,7 +171,7 @@ def coord2int(double):
 
 
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
-    # transform all points (long long) to coords
+    # transform all points (int) to coords (float)
     for i in range(nr_points):
         trans_points[0][i] = radians(int2coord(points[0][i]))
         trans_points[1][i] = radians(int2coord(points[1][i]))
@@ -300,6 +203,7 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
 
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
+    # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
     min_distance = 40100000
 
     for i in range(nr_points):
@@ -307,3 +211,18 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
                                                    radians(int2coord(points[1][i]))))
 
     return min_distance
+
+
+def convert2coord_pairs(polygon_data):
+    # return a list of coordinate tuples (x,y)
+    coodinate_list = []
+    i = 0
+    for x in polygon_data[0]:
+        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
+        i += 1
+    return coodinate_list
+
+
+def convert2coords(polygon_data):
+    # return a tuple of coordinate lists
+    return [int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]
