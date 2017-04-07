@@ -4,7 +4,7 @@ Changelog
 2.0.0 (2017-04-07)
 ------------------
 
-* ATTENTION: major change!: there is a second version of timezonefinder now: `timezonefinderL<https://github.com/MrMinimal64/timezonefinderL>`__. There the data has been simplified
+* ATTENTION: major change!: there is a second version of timezonefinder now: `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__. There the data has been simplified
     for increasing speed reducing data size. Around 56% of the coordinates of the timezone polygons have been deleted there. Around 60% of the polygons (mostly small islands) have been included in the simplified polygons.
     For any coordinate on landmass the results should stay the same, but accuracy at the shorelines is lost.
     This eradicates the usefulness of closest_timezone_at() and certain_timezone_at() but the main use case for this package (= determining the timezone of a point on landmass) is improved.
