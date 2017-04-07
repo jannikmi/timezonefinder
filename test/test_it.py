@@ -8,7 +8,7 @@ from timezonefinder.timezonefinder import TimezoneFinder
 from tzwhere.tzwhere import tzwhere
 
 # number of points to test (in each test, realistic and random ones)
-N = 1000
+N = 100
 
 # sets if tzwhere should be used with shapely
 SHAPELY = False
@@ -19,7 +19,7 @@ excluded_zones_tzwhere = []
 
 TEST_LOCATIONS = (
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
+    (35.1322601, -90.0902499, 'Memphis, TN', 'America/Chicago'),
     (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
     (44.12, -123.22, 'Eugene, OR', 'America/Los_Angeles'),
     (42.652647, -73.756371, 'Albany, NY', 'America/New_York'),
@@ -240,6 +240,7 @@ class PackageEqualityTest(unittest.TestCase):
         print_equality_test('random points', list_of_random_points(length=N))
 
     def test_speed(self):
+        print("Speed Tests:\n____________")
 
         def check_speed_his_algor(list_of_points):
             start_time = datetime.now()

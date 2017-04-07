@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
+
 def inside_polygon(x, y, coords):
     contained = False
     # the edge from the last to the first point is checked first
@@ -41,19 +42,19 @@ def inside_polygon(x, y, coords):
 
 
 def all_the_same(pointer, length, id_list):
-    # returns the first encountered element if starting from the pointer all elements are the same
-    # otherwise it returns -1
-    # List mustn't be empty or Null
-    # There is at least one
-
+    """
+    :param pointer: from that element the list is checked for equality
+    :param length:
+    :param id_list: List mustn't be empty or Null. There has to be at least one element
+    :return: returns the first encountered element if starting from the pointer all elements are the same,
+     otherwise it returns -1
+    """
     element = id_list[pointer]
     pointer += 1
-
     while pointer < length:
         if element != id_list[pointer]:
             return -1
         pointer += 1
-
     return element
 
 
@@ -170,7 +171,7 @@ def coord2int(double):
 
 
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
-    # transform all points (long long) to coords
+    # transform all points (int) to coords (float)
     for i in range(nr_points):
         trans_points[0][i] = radians(int2coord(points[0][i]))
         trans_points[1][i] = radians(int2coord(points[1][i]))
@@ -202,6 +203,7 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
 
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
+    # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
     min_distance = 40100000
 
     for i in range(nr_points):
@@ -209,3 +211,18 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
                                                    radians(int2coord(points[1][i]))))
 
     return min_distance
+
+
+def convert2coord_pairs(polygon_data):
+    # return a list of coordinate tuples (x,y)
+    coodinate_list = []
+    i = 0
+    for x in polygon_data[0]:
+        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
+        i += 1
+    return coodinate_list
+
+
+def convert2coords(polygon_data):
+    # return a tuple of coordinate lists
+    return [int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]

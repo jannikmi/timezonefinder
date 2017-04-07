@@ -2,20 +2,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
-from numba import float64, int8, int32, jit, typeof
+from numba import b1, f8, i2, i4, jit, typeof, u2, u8
 
+
+# # for Ahead-Of-Time Compilation:
 # from numba.pycc import CC
-
 # cc = CC('compiled_helpers', )
-# Uncomment the following line to print out the compilation steps
+# # Uncomment the following line to print out the compilation steps
 # # cc.verbose = True
 
 dtype_3floattuple = typeof((1.0, 1.0, 1.0))
 dtype_2floattuple = typeof((1.0, 1.0))
 
 
-# @cc.export('inside_polygon', 'b1(i4,i4,i4[:,:])')
-@jit('b1(i4,i4,i4[:,:])', nopython=True, cache=True)
+# @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
+@jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
 def inside_polygon(x, y, coords):
     contained = False
     # the edge from the last to the first point is checked first
@@ -54,37 +55,39 @@ def inside_polygon(x, y, coords):
     return contained
 
 
-# @cc.export('all_the_same', 'i2(u8,u8,u2[:])')
-@jit('i2(u8,u8,u2[:])', nopython=True, cache=True)
+# @cc.export('all_the_same', i2(u8, u8, u2[:]))
+@jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
-    # List mustn't be empty or Null
-    # There is at least one
-
+    """
+    :param pointer: from that element the list is checked for equality
+    :param length:
+    :param id_list: List mustn't be empty or Null. There has to be at least one element
+    :return: returns the first encountered element if starting from the pointer all elements are the same,
+     otherwise it returns -1
+    """
     element = id_list[pointer]
     pointer += 1
-
     while pointer < length:
         if element != id_list[pointer]:
             return -1
         pointer += 1
-
     return element
 
 
-# @cc.export('cartesian2rad', dtype_2floattuple(float64, float64, float64))
-@jit(dtype_2floattuple(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('cartesian2rad', dtype_2floattuple(f8, f8, f8))
+@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
 def cartesian2rad(x, y, z):
     return atan2(y, x), asin(z)
 
 
-# @cc.export('cartesian2coords', dtype_2floattuple(float64, float64, float64))
-@jit(dtype_2floattuple(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('cartesian2coords', dtype_2floattuple(f8, f8, f8))
+@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
 def cartesian2coords(x, y, z):
     return degrees(atan2(y, x)), degrees(asin(z))
 
 
-# @cc.export('x_rotate', dtype_3floattuple(float64, dtype_3floattuple))
-@jit(dtype_3floattuple(float64, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('x_rotate', dtype_3floattuple(f8, dtype_3floattuple))
+@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
 def x_rotate(rad, point):
     # Attention: this rotation uses radians!
     # x stays the same
@@ -93,8 +96,8 @@ def x_rotate(rad, point):
     return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
 
 
-# @cc.export('y_rotate', dtype_3floattuple(float64, dtype_3floattuple))
-@jit(dtype_3floattuple(float64, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('y_rotate', dtype_3floattuple(f8, dtype_3floattuple))
+@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
 def y_rotate(rad, point):
     # y stays the same
     # this is actually a rotation with -rad (use symmetry of sin/cos)
@@ -103,14 +106,14 @@ def y_rotate(rad, point):
     return point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad
 
 
-# @cc.export('coords2cartesian', dtype_3floattuple(float64, float64))
-@jit(dtype_3floattuple(float64, float64), nopython=True, cache=True)
+# @cc.export('coords2cartesian', dtype_3floattuple(f8, f8))
+@jit(dtype_3floattuple(f8, f8), nopython=True, cache=True)
 def coords2cartesian(lng_rad, lat_rad):
     return cos(lng_rad) * cos(lat_rad), sin(lng_rad) * cos(lat_rad), sin(lat_rad)
 
 
-# @cc.export('distance_to_point_on_equator', float64(float64, float64, float64))
-@jit(float64(float64, float64, float64), nopython=True, cache=True)
+# @cc.export('distance_to_point_on_equator', f8(f8, f8, f8))
+@jit(f8(f8, f8, f8), nopython=True, cache=True)
 def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     """
     uses the simplified haversine formula for this special case (lat_p1 = 0)
@@ -124,8 +127,8 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     return 12742 * asin(sqrt(((sin(lat_rad / 2)) ** 2 + cos(lat_rad) * (sin((lng_rad - lng_rad_p1) / 2)) ** 2)))
 
 
-# @cc.export('haversine', float64(float64, float64, float64, float64))
-@jit(float64(float64, float64, float64, float64), nopython=True, cache=True)
+# @cc.export('haversine', f8(f8, f8, f8, f8))
+@jit(f8(f8, f8, f8, f8), nopython=True, cache=True)
 def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     :param lng_p1: the longitude of point 1 in radians
@@ -140,8 +143,8 @@ def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
         sqrt(((sin((lat_p1 - lat_p2) / 2)) ** 2 + cos(lat_p2) * cos(lat_p1) * (sin((lng_p1 - lng_p2) / 2)) ** 2)))
 
 
-# @cc.export('compute_min_distance', float64(float64, float64, float64, float64, float64, float64, float64, float64))
-@jit(float64(float64, float64, float64, float64, float64, float64, float64, float64), nopython=True, cache=True)
+# @cc.export('compute_min_distance', f8(f8, f8, f8, f8, f8, f8, f8, f8))
+@jit(f8(f8, f8, f8, f8, f8, f8, f8, f8), nopython=True, cache=True)
 def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat):
     """
     :param lng_rad: lng of px in radians
@@ -191,22 +194,22 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
                                                            max(min(px_retrans_rad[0], lng_p1_rad), 0)))
 
 
-# @cc.export('int2coord', float64(int32))
-@jit(float64(int32), nopython=True, cache=True)
-def int2coord(int32):
-    return float(int32 / 10 ** 7)
+# @cc.export('int2coord', f8(i4))
+@jit(f8(i4), nopython=True, cache=True)
+def int2coord(i4):
+    return float(i4 / 10 ** 7)
 
 
-# @cc.export('coord2int', int32(float64))
-@jit(int32(float64), nopython=True, cache=True)
+# @cc.export('coord2int', i4(f8))
+@jit(i4(f8), nopython=True, cache=True)
 def coord2int(double):
     return int(double * 10 ** 7)
 
 
-# @cc.export('distance_to_polygon_exact', 'f8(f8,f8,i4,i4[:,:],f8[:,:])')
-@jit('f8(f8,f8,i4,i4[:,:],f8[:,:])', nopython=True, cache=True)
+# @cc.export('distance_to_polygon_exact', f8(f8, f8, i4, i4[:, :], f8[:, :]))
+@jit(f8(f8, f8, i4, i4[:, :], f8[:, :]), nopython=True, cache=True)
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
-    # transform all points (long long) to coords
+    # transform all points (int) to coords (float)
     for i in range(nr_points):
         trans_points[0][i] = radians(int2coord(points[0][i]))
         trans_points[1][i] = radians(int2coord(points[1][i]))
@@ -237,9 +240,10 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
     return min_distance
 
 
-# @cc.export('distance_to_polygon', 'f8(f8,f8,i4,i4[:,:])')
-@jit('f8(f8,f8,i4,i4[:,:])', nopython=True, cache=True)
+# @cc.export('distance_to_polygon', f8(f8, f8, i4, i4[:, :]))
+@jit(f8(f8, f8, i4, i4[:, :]), nopython=True, cache=True)
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
+    # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
     min_distance = 40100000
 
     for i in range(nr_points):
