@@ -178,9 +178,9 @@ To prevent this use ``force_evaluation=True``.
 
 
 for querying timezones for their geometric shape use ``get_geometry()``.
-output format: [ [polygon1, hole1,...), [polygon2, ...], ...]
-and each polygon and hole is itself formated like: ([longitudes], [latitudes])
-or [(lng1,lat1), (lng2,lat2),...] if ``coords_as_pairs=True``.
+output format: ``[ [polygon1, hole1,...), [polygon2, ...], ...]``
+and each polygon and hole is itself formated like: ``([longitudes], [latitudes])``
+or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
 ::
 
@@ -297,7 +297,7 @@ things I could have optimized even further etc. That's why I would be really gla
 If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
-contact me: *python at michelfe dot it*
+contact me: *[python] {at} [michelfe] {dot} [it]*
 
 
 Credits
@@ -306,9 +306,12 @@ Credits
 Thanks to:
 
 `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
-`cstich <https://github.com/cstich>`__ for the little conversion script (.shp to .json)
-`snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe
-`synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27
+
+`cstich <https://github.com/cstich>`__ for the little conversion script (.shp to .json).
+
+`snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe.
+
+`synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 
 License
 =======

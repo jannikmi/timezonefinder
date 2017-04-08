@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-
 import os
 import re
 
@@ -12,6 +11,7 @@ def get_version(package):
     """
     init_py = open(os.path.join(package, '__init__.py')).read()
     return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+
 
 version = get_version('timezonefinder')
 
@@ -26,17 +26,18 @@ setup(
     version=version,
     packages=['timezonefinder'],
     package_data={'timezonefinder': ['poly_zone_ids.bin',
-                                    'poly_coord_amount.bin',
-                                    'poly_adr2data.bin',
-                                    'poly_max_values.bin',
-                                    'poly_data.bin',
-                                    'hole_poly_ids.bin',
-                                    'hole_coord_amount.bin',
-                                    'hole_adr2data.bin',
-                                    'hole_data.bin',
-                                    'shortcuts_entry_amount.bin',
-                                    'shortcuts_adr2data.bin',
-                                    'shortcuts_data.bin',]},
+                                     'poly_coord_amount.bin',
+                                     'poly_adr2data.bin',
+                                     'poly_max_values.bin',
+                                     'poly_data.bin',
+                                     'hole_poly_ids.bin',
+                                     'hole_coord_amount.bin',
+                                     'hole_adr2data.bin',
+                                     'hole_data.bin',
+                                     'shortcuts_entry_amount.bin',
+                                     'shortcuts_adr2data.bin',
+                                     'shortcuts_data.bin',
+                                     'shortcuts_unique_id.bin', ]},
     description='Python library to look up timezone from lat / long offline. Improved version of "pytzwhere".',
     author='J. Michelfeit',
     author_email='python@michelfe.it',
