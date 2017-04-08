@@ -19,7 +19,7 @@ Check out the faster and lighter version `timezonefinderL <https://github.com/Mr
 and its demo and API at: `timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__
 
 The underlying timezone data is based on work done by `Eric
-Muller <http://efele.net/maps/tz/world/>`__. Current TZ version: 2016d (with 1.5.8)
+Muller <http://efele.net/maps/tz/world/>`__. Current TZ version: 2016d (since 1.5.8)
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__

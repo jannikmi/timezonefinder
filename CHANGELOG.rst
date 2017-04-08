@@ -1,6 +1,12 @@
 Changelog
 =========
 
+2.0.1 (2017-04-08)
+------------------
+
+* added missing package data entries (2.0.0 didn't include all necessary .bin files)
+
+
 2.0.0 (2017-04-07)
 ------------------
 
