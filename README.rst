@@ -15,8 +15,8 @@ timezonefinder
 This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
-Check out the faster and lighter version `timezonefinderL<https://github.com/MrMinimal64/timezonefinderL>`__
-and its demo and API at: `timezonefinderL GUI<http://timezonefinder.michelfe.it/gui>`__
+Check out the faster and lighter version `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__
+and its demo and API at: `timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__
 
 The underlying timezone data is based on work done by `Eric
 Muller <http://efele.net/maps/tz/world/>`__. Current TZ version: 2016d (with 1.5.8)
@@ -24,8 +24,8 @@ Muller <http://efele.net/maps/tz/world/>`__. Current TZ version: 2016d (with 1.5
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
-`conda-forge feedstock<https://github.com/conda-forge/timezonefinder-feedstock>`__
-`timezone_finder (ruby port)<https://github.com/gunyarakun/timezone_finder>`__
+`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+`timezone_finder (ruby port) <https://github.com/gunyarakun/timezone_finder>`__
 
 
 This project is derived from and has been successfully tested against
