@@ -30,6 +30,7 @@ setup(
                                      'poly_adr2data.bin',
                                      'poly_max_values.bin',
                                      'poly_data.bin',
+                                     'poly_nr2zone_id.bin',
                                      'hole_poly_ids.bin',
                                      'hole_coord_amount.bin',
                                      'hole_adr2data.bin',
