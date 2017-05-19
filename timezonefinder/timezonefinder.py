@@ -90,7 +90,6 @@ class TimezoneFinder:
     """
 
     def __init__(self):
-
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
         self.poly_zone_ids = open(join(dirname(__file__), 'poly_zone_ids.bin'), 'rb')
@@ -181,8 +180,10 @@ class TimezoneFinder:
 
     def coords_of(self, line=0):
         # how many coordinates are stored in this polygon
-        self.poly_coord_amount.seek(2 * line)
-        nr_of_values = unpack(b'<H', self.poly_coord_amount.read(2))[0]
+        self.poly_coord_amount.seek(4 * line)
+        nr_of_values = unpack(b'<I', self.poly_coord_amount.read(4))[0]
+        if nr_of_values == 0:
+            raise ValueError
 
         self.poly_adr2data.seek(4 * line)
         self.poly_data.seek(unpack(b'<I', self.poly_adr2data.read(4))[0])
@@ -210,13 +211,12 @@ class TimezoneFinder:
 
     def get_polygon(self, polygon_nr, coords_as_pairs=False):
         list_of_converted_polygons = []
-
         if coords_as_pairs:
             conversion_method = convert2coord_pairs
         else:
             conversion_method = convert2coords
-
         list_of_converted_polygons.append(conversion_method(self.coords_of(line=polygon_nr)))
+
         for hole in self._holes_of_line(polygon_nr):
             list_of_converted_polygons.append(conversion_method(hole))
 
@@ -249,7 +249,6 @@ class TimezoneFinder:
         first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
         # read poly_nr of the first polygon of the next zone
         last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
-        print(first_polygon_nr, last_polygon_nr, range(first_polygon_nr, last_polygon_nr))
         poly_nrs = range(first_polygon_nr, last_polygon_nr)
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
@@ -308,7 +307,6 @@ class TimezoneFinder:
                 counted_zones[zone_id] += 1
             except KeyError:
                 counted_zones[zone_id] = 1
-        # print(counted_zones)
 
         if len(counted_zones) == 1:
             # there is only one zone. no sorting needed.

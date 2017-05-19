@@ -4,7 +4,7 @@ import random
 import unittest
 from datetime import datetime
 
-from timezonefinder.timezonefinder import TimezoneFinder
+from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords
 from tzwhere.tzwhere import tzwhere
 
 # number of points to test (in each test, realistic and random ones)
@@ -71,15 +71,16 @@ TEST_LOCATIONS = (
 )
 
 TEST_LOCATIONS_PROXIMITY = (
-    (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
-    (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
-    (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
-    (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
-    (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
-    (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
-    (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
-
+    # the polygons in the new data do not follow the coastlines any more
+    # proximity tests are not meaningful at the moment
+    # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
+    # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
+    # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
+    # (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
+    # (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
+    # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
+    # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
+    # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
 )
 
 
@@ -209,35 +210,36 @@ class PackageEqualityTest(unittest.TestCase):
 
         assert no_mistakes_made
 
-    def test_equality(self):
-        # Test the equality of the two packages for N realistic and N random points
-        def print_equality_test(types_of_points, list_of_points):
-            print('\ntesting', N, types_of_points)
-            print('MISMATCHES:')
-            template = '{0:40s} | {1:20s} | {2:21s} | {3:20s}'
-            print(template.format('Point', 'timezone_at()', 'certain_timezone_at()', 'tzwhere'))
-            print('=========================================================================')
-            mistakes = 0
-            for lng, lat in list_of_points:
-                his_result = self.tz_where.tzNameAt(lat, lng)
-                my_result_certain = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
-                # test only makes sense if certain_timezone_at() or tzwhere find something
-                if his_result is not None or my_result_certain is not None:
-                    my_result = self.timezone_finder.timezone_at(lng=lng, lat=lat)
-                    if my_result != his_result or my_result_certain != his_result:
-                        if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
-                            print(template.format((lat, lng), my_result, my_result_certain,
-                                                  his_result), '(not counted, see issue section)')
-                        else:
-                            mistakes += 1
-                            print(template.format(str((lat, lng)), str(my_result), str(my_result_certain),
-                                                  str(his_result)))
-            print('\nin', N, 'tries', mistakes, 'mismatches were made')
-            fail_percentage = mistakes * 100 / (2 * N)
-            assert fail_percentage < 5
-
-        print_equality_test('realistic points', self.realistic_points)
-        print_equality_test('random points', list_of_random_points(length=N))
+    # disabled because underlying data is completely different atm
+    # def test_equality(self):
+    #     # Test the equality of the two packages for N realistic and N random points
+    #     def print_equality_test(types_of_points, list_of_points):
+    #         print('\ntesting', N, types_of_points)
+    #         print('MISMATCHES:')
+    #         template = '{0:40s} | {1:20s} | {2:21s} | {3:20s}'
+    #         print(template.format('Point', 'timezone_at()', 'certain_timezone_at()', 'tzwhere'))
+    #         print('=========================================================================')
+    #         mistakes = 0
+    #         for lng, lat in list_of_points:
+    #             his_result = self.tz_where.tzNameAt(lat, lng)
+    #             my_result_certain = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
+    #             # test only makes sense if certain_timezone_at() or tzwhere find something
+    #             if his_result is not None or my_result_certain is not None:
+    #                 my_result = self.timezone_finder.timezone_at(lng=lng, lat=lat)
+    #                 if my_result != his_result or my_result_certain != his_result:
+    #                     if his_result in excluded_zones_tzwhere and my_result in excluded_zones_timezonefinder:
+    #                         print(template.format((lat, lng), my_result, my_result_certain,
+    #                                               his_result), '(not counted, see issue section)')
+    #                     else:
+    #                         mistakes += 1
+    #                         print(template.format(str((lat, lng)), str(my_result), str(my_result_certain),
+    #                                               str(his_result)))
+    #         print('\nin', N, 'tries', mistakes, 'mismatches were made')
+    #         fail_percentage = mistakes * 100 / (2 * N)
+    #         assert fail_percentage < 5
+    #
+    #     print_equality_test('realistic points', self.realistic_points)
+    #     print_equality_test('random points', list_of_random_points(length=N))
 
     def test_speed(self):
         print("Speed Tests:\n____________")
@@ -274,3 +276,14 @@ class PackageEqualityTest(unittest.TestCase):
             print('Numba: OFF (timezonefinder)')
         print_speed_test('realistic points', self.realistic_points)
         print_speed_test('random points', list_of_random_points(length=N))
+
+    @staticmethod
+    def test_convert2coord_pairs():
+        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
+        # print(convert2coord_pairs(data))
+        assert (convert2coord_pairs(data) == [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)])
+
+    @staticmethod
+    def test_convert2coords():
+        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
+        assert (convert2coords(data) == [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]])
