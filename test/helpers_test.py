@@ -4,9 +4,8 @@ import random
 import unittest
 from math import degrees, radians, sqrt
 
-from timezonefinder.helpers import (all_the_same, convert2coord_pairs, convert2coords, coord2int,
-                                    distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact,
-                                    haversine, inside_polygon)
+from timezonefinder.helpers import (all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon,
+                                    distance_to_polygon_exact, haversine, inside_polygon)
 
 
 def random_point():
@@ -153,14 +152,3 @@ class HelperTest(unittest.TestCase):
         distance = distance_to_polygon(x_rad, y_rad, len(x_coords), points)
         print(km2deg(distance))
         assert abs(km2deg(distance) - sqrt(2) / 2) < 0.00001
-
-    def test_convert2coord_pairs(self):
-
-        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
-        # print(convert2coord_pairs(data))
-        assert (convert2coord_pairs(data) == [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)])
-
-    def test_convert2coords(self):
-        data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
-        # print(convert2coords(data))
-        assert (convert2coords(data) == ([1.0, 2.0, 3.0], [1.0, 2.0, 3.0]))

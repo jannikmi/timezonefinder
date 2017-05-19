@@ -1,6 +1,20 @@
 Changelog
 =========
 
+
+2.1.0 (2017-05-19)
+------------------
+
+* updated the data to `2017a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2017a>`__ (tz_world is not being maintained any more)
+* the file_converter has been updated to parse the new format of .json files
+* the new data is much bigger (based on OSM Data, +40MB). I am sorry for this but its still better than small outdated data!
+* in case size and speed matter more you than actuality, you can still check out older versions of timezonefinder(L)
+* the new timezone polygons are not limited to the coastlines, but they are including some large parts of the sea. This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
+* the polygons can not be simplified much more and as a consequence timezonefinderL is not being updated any more.
+* simplification functions (used for compiling the data for timezonefinderL) have been deleted from the file_converter
+* the readme has been updated to inform about this major change
+* some tests have been temporarily disabled (with tzwhere still using a very old version of tz_world, a comparison does not make too much sense atm)
+
 2.0.1 (2017-04-08)
 ------------------
 

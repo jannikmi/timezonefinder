@@ -211,18 +211,3 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
                                                    radians(int2coord(points[1][i]))))
 
     return min_distance
-
-
-def convert2coord_pairs(polygon_data):
-    # return a list of coordinate tuples (x,y)
-    coodinate_list = []
-    i = 0
-    for x in polygon_data[0]:
-        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
-        i += 1
-    return coodinate_list
-
-
-def convert2coords(polygon_data):
-    # return a tuple of coordinate lists
-    return [int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]
