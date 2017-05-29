@@ -64,12 +64,11 @@ Installation
 ============
 
 
-Installation with conda: see instructions at `conda-forge feedstock<https://github.com/conda-forge/timezonefinder-feedstock>`__
+Installation with conda: see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
 
 Installation with pip:
-(install the dependencies)
-then in the command line:
+in the command line:
 
 ::
 
