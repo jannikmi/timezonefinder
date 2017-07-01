@@ -4,7 +4,7 @@ from math import floor, radians
 # from os import system
 from os.path import dirname, join
 from struct import unpack
-from sys import argv, exit
+from sys import exit
 
 from numpy import array, empty, float64, fromfile
 
@@ -583,6 +583,7 @@ class TimezoneFinder:
 
 
 if __name__ == '__main__':
+    from sys import argv
     arguments = argv
     nr_arguments = len(arguments)
     if nr_arguments < 3:
