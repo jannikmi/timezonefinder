@@ -10,6 +10,9 @@ timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
+    
+.. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg   
+    :target: https://anaconda.org/conda-forge/timezonefinder
 
 
 This is a fast and lightweight python project for looking up the corresponding
