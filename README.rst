@@ -18,11 +18,6 @@ timezonefinder
 This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
-NOTE: tz_world is not being maintained any more and the new data (s. below) is unfortunately much bigger (40+MB). I am sorry for this, but at least it is up to date.
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder(L).
-The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
-
-
 The underlying timezone data is now based on work done by `Evan Siroky <https://github.com/evansiroky/timezone-boundary-builder>`__. Current version: 2017a (March 2017, since 2.1.0)
 Previously: `tz_world <http://efele.net/maps/tz/world/>`__ 2016d (May 2016, until 2.0.2)
 
@@ -41,6 +36,10 @@ improved performance and usability.
 
 ``pytzwhere`` is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
 This is time, memory and CPU consuming. Additionally calculating with floats is slow, keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
+
+
+NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I wanted to keep this as lightweight as possible, but at least the data it is up to date. 
+In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL. The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
 
 
 Check out the even faster and lighter (but outdated) version `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__
