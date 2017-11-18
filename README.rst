@@ -38,8 +38,10 @@ improved performance and usability.
 This is time, memory and CPU consuming. Additionally calculating with floats is slow, keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
 
 
-NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I wanted to keep this as lightweight as possible, but at least the data it is up to date. 
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL. The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
+NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date. 
+In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL. 
+
+NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
 
 
 Check out the even faster and lighter (but outdated) version `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__
@@ -122,8 +124,11 @@ So results might be misleading for points outside of any timezone.
 
 **certain_timezone_at():**
 
+NOTE: The timezone polygons do NOT follow the shorelines any more!
+
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
-are checked until one polygon is matched.
+are checked until one polygon is matched. 
+
 
 ::
 
@@ -131,6 +136,8 @@ are checked until one polygon is matched.
 
 
 **closest_timezone_at():**
+
+NOTE: The timezone polygons do NOT follow the shorelines any more! This causes the computed distance from a timezone polygon to be not really meaninful/accurate.
 
 Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
 This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
@@ -283,7 +290,7 @@ Most certainly there is stuff I missed, things I could have optimized even furth
 If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
-contact me: *[python] {at} [michelfe] {dot} [it]*
+contact me: *[python] {*-at-*} [michelfe] {-*dot*-} [it]*
 
 
 Credits
