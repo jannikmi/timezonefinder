@@ -5,9 +5,9 @@ from datetime import datetime
 from math import ceil, floor
 from struct import pack
 
-# # keep in mind: numba optimized fct. cannot be used here, because numpy classes are not being used at this stage yet!
+# keep in mind: numba optimized fct. cannot be used here, because numpy classes are not being used at this stage yet!
 from .helpers import coord2int, inside_polygon, int2coord
-from .timezone_names import timezone_names
+# from helpers import coord2int, inside_polygon, int2coord
 
 # import sys
 # from os.path import dirname
@@ -142,13 +142,13 @@ def parse_polygons_from_json(path='combined.json'):
     global nr_of_lines
     global ids
 
-    print('Parsing data from {}\nthis could take a while...'.format(path))
+    print('Parsing data from {}\nthis could take a while...\n'.format(path))
 
     tz_list = json.loads(open(path).read()).get('features')
     # this counter just counts polygons, not holes!
     polygon_counter = 0
     current_zone_id = 0
-    print('holes found at: (poly_nr, zone_name)')
+    print('holes found at: (poly_nr zone_name)')
     for tz_dict in tz_list:
         tz_name = tz_dict.get('properties').get("tzid")
         # print(tz_name)
@@ -872,9 +872,10 @@ if __name__ == '__main__':
     # sort data according to zone_id
     update_zone_names(path='timezone_names.py')
 
-    # IMPORTANT: run these first two function once and then restart the whole process
-    # (because the compilation into binaries needs the new timezone name file!)
+    # IMPORTANT: import the newly compiled timezone_names!
+    # the compilation process needs the new version of the timezone name file
+    from .timezone_names import timezone_names
+    # from timezone_names import timezone_names
 
-    # compute shortcuts
-    # write everything into the binaries
+    # compute shortcuts and write everything into the binaries
     compile_binaries()

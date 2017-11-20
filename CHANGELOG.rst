@@ -2,6 +2,14 @@ Changelog
 =========
 
 
+2.1.1 (2017-11-20)
+------------------
+
+* updated the data to `2017c <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2017c>`__
+* minor improvements in code style and readme
+* include publishing routine script
+
+
 2.1.0 (2017-05-19)
 ------------------
 
