@@ -198,15 +198,16 @@ class PackageEqualityTest(unittest.TestCase):
         no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
-        for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-            computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
-            if computed == expected:
-                ok = 'OK'
-            else:
-                print(lat, lng)
-                ok = 'XX'
-                no_mistakes_made = False
-            print(template.format(loc, str(expected), str(computed), ok))
+        print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')
+        # for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
+        #     computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
+        #     if computed == expected:
+        #         ok = 'OK'
+        #     else:
+        #         print(lat, lng)
+        #         ok = 'XX'
+        #         no_mistakes_made = False
+        #     print(template.format(loc, str(expected), str(computed), ok))
 
         assert no_mistakes_made
 

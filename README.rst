@@ -3,32 +3,34 @@ timezonefinder
 ==============
 
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
-    :target: https://travis-ci.org/MrMinimal64/timezonefinder
+:target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
-    :target: https://pypi.python.org/pypi/timezonefinder
+:target: https://pypi.python.org/pypi/timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
-    :target: https://pypi.python.org/pypi/timezonefinder
+:target: https://pypi.python.org/pypi/timezonefinder
 
 
 This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
-NOTE: tz_world is not being maintained any more and the new data (s. below) is unfortunately much bigger (40+MB). I am sorry for this, but at least it is up to date.
+NOTE: the old smaller data set `tz_world <http://efele.net/maps/tz/world/>`__  is not being maintained any more and the new data (s. below) is unfortunately much bigger (40+MB).
+I originally wanted to keep this package as lightweight as possible, but actuality is even more important I guess.
 In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder(L).
-The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
+
+NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
 
 
-The underlying timezone data is now based on work done by `Evan Siroky <https://github.com/evansiroky/timezone-boundary-builder>`__. Current version: 2017a (March 2017, since 2.1.0)
-Previously: `tz_world <http://efele.net/maps/tz/world/>`__ 2016d (May 2016, until 2.0.2)
-
+Current data set in use: `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__. version: 2017c (Oct 2017, since 2.1.1)
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
-`timezone_finder (ruby port) <https://github.com/gunyarakun/timezone_finder>`__
+`timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
+`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter (but outdated) version
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of timezonefinderL
 
 
 This project is derived from and has been successfully tested against
@@ -37,11 +39,9 @@ This project is derived from and has been successfully tested against
 improved performance and usability.
 
 ``pytzwhere`` is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
-This is time, memory and CPU consuming. Additionally calculating with floats is slow, keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
+This is time, memory and CPU consuming. Additionally calculating with floats is slow,
+keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
 
-
-Check out the even faster and lighter (but outdated) version `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__
-and its demo and API at: `timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__
 
 
 Dependencies
@@ -248,9 +248,8 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 **parsing the data:**
 
 
-Download the latest .json from `GitHub <https://github.com/evansiroky/timezone-boundary-builder>`__.
-Place it inside the timezonefinder folder and run the ``file_converter.py`` first only until the ``timezone_names.py`` have been updated.
-Then abort and rerun ``file_converter.py``, this time until the compilation of the binary files is completed. (compilation need to import the new timezone_names.py file)
+Download the latest ``timezones.geojson.zip`` file from `GitHub <https://github.com/evansiroky/timezone-boundary-builder/releases>`__, unzip and
+place the ``combined.json`` inside the timezonefinder folder. Now run the ``file_converter.py`` until the compilation of the binary files is completed.
 
 
 **Calling timezonefinder from the command line:**

@@ -80,6 +80,14 @@ def convert2coord_pairs(polygon_data):
     return coodinate_list
 
 
+def coord2shortcut(lng, lat):
+    return int(floor((lng + 180))), int(floor((90 - lat) * 2))
+
+
+def assert_valid_range(lng,lat):
+    if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+        raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+
 class TimezoneFinder:
     """
     This class lets you quickly find the timezone of a point on earth.
@@ -112,9 +120,8 @@ class TimezoneFinder:
         # store for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few (+-22) it is feasible to keep them in the memory
         self.hole_registry = {}
-        i = 0
         # read the polygon ids for all the holes
-        for block in iter(lambda: self.hole_poly_ids.read(2), b''):
+        for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(2), b'')):
             poly_id = unpack(b'<H', block)[0]
             try:
                 amount_of_holes, hole_id = self.hole_registry[poly_id]
@@ -125,7 +132,6 @@ class TimezoneFinder:
                 self.hole_registry.update({
                     poly_id: (1, i)
                 })
-            i += 1
 
     def __del__(self):
         self.poly_zone_ids.close()
@@ -159,11 +165,9 @@ class TimezoneFinder:
     def ids_of(self, iterable):
         id_array = empty(shape=len(iterable), dtype='<i1')
 
-        i = 0
-        for line_nr in iterable:
+        for i, line_nr in enumerate(iterable):
             self.poly_zone_ids.seek((2 * line_nr))
             id_array[i] = unpack(b'<H', self.poly_zone_ids.read(2))[0]
-            i += 1
 
         return id_array
 
@@ -259,16 +263,13 @@ class TimezoneFinder:
         :return: (list of zone_ids, boolean: do all entries belong to the same zone)
         """
         zone_id_list = empty([nr_of_polygons], dtype='<u2', )
-        pointer_local = 0
-
         first_id = self.id_of(polygon_id_list[0])
         equal = True
-        for polygon_id in polygon_id_list:
+        for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
             if zone_id != first_id:
                 equal = False
             zone_id_list[pointer_local] = zone_id
-            pointer_local += 1
 
         return zone_id_list, equal
 
@@ -297,12 +298,10 @@ class TimezoneFinder:
             return True
 
         zone_id_list = empty([nr_of_polygons], dtype='<u2', )
-        pointer_local = 0
         counted_zones = {}
-        for polygon_id in polygon_id_list:
+        for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
             zone_id_list[pointer_local] = zone_id
-            pointer_local += 1
             try:
                 counted_zones[zone_id] += 1
             except KeyError:
@@ -374,13 +373,11 @@ class TimezoneFinder:
             nr_points = len(coords[0])
             return distance_to_polygon(lng, lat, nr_points, coords)
 
-        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+        assert_valid_range(lng, lat)
 
         # transform point X into cartesian coordinates
         current_closest_id = None
-        central_x_shortcut = int(floor((lng + 180)))
-        central_y_shortcut = int(floor((90 - lat) * 2))
+        central_x_shortcut, central_y_shortcut = coord2shortcut(lng, lat)
 
         lng = radians(lng)
         lat = radians(lat)
@@ -429,16 +426,14 @@ class TimezoneFinder:
 
         distances = empty(polygons_in_list, dtype=float64)
         # [None for i in range(polygons_in_list)]
-        pointer = 0
 
         if force_evaluation:
-            for polygon_nr in possible_polygons:
+            for pointer, polygon_nr in enumerate(possible_polygons):
                 distance = routine(polygon_nr)
                 distances[pointer] = distance
                 if distance < min_distance:
                     min_distance = distance
                     current_closest_id = ids[pointer]
-                pointer += 1
 
         else:
             # stores which polygons have been checked yet
@@ -480,15 +475,12 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of a matching polygon or None
         """
-        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-            raise ValueError('The coordinates are out ouf bounds: ( %f, %f, )' % (lng, lat))
-
+        assert_valid_range(lng, lat)
         # x = longitude  y = latitude  both converted to 8byte int
         x = coord2int(lng)
         y = coord2int(lat)
 
-        shortcut_id_x = int(floor((lng + 180)))
-        shortcut_id_y = int(floor((90 - lat) * 2))
+        shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek((720 * shortcut_id_x + 2 * shortcut_id_y))
         try:
             return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(2))[0]]
@@ -548,11 +540,8 @@ class TimezoneFinder:
         :return: the timezone name of the polygon the point is included in or None
         """
 
-        if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-            raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
-
-        shortcut_id_x = int(floor((lng + 180)))
-        shortcut_id_y = int(floor((90 - lat) * 2))
+        assert_valid_range(lng, lat)
+        shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
 
         # x = longitude  y = latitude  both converted to 8byte int
