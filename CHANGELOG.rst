@@ -1,6 +1,11 @@
 Changelog
 =========
 
+2.1.2 (2017-11-20)
+------------------
+
+* bugfix: possibly uninitialized variable in closest_timezone_at()
+
 
 2.1.1 (2017-11-20)
 ------------------

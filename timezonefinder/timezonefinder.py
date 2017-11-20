@@ -437,10 +437,10 @@ class TimezoneFinder:
                     current_closest_id = ids[pointer]
 
         else:
+            pointer = 0
             # stores which polygons have been checked yet
             already_checked = [False] * polygons_in_list  # initialize array with False
             while pointer < polygons_in_list:
-
                 # only check a polygon when its id is not the closest a the moment and it has not been checked already!
                 if already_checked[pointer] or ids[pointer] == current_closest_id:
                     # go to the next polygon
@@ -574,6 +574,7 @@ class TimezoneFinder:
 
 if __name__ == '__main__':
     from sys import argv
+
     arguments = argv
     nr_arguments = len(arguments)
     if nr_arguments < 3:

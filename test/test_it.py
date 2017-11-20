@@ -71,6 +71,8 @@ TEST_LOCATIONS = (
 )
 
 TEST_LOCATIONS_PROXIMITY = (
+    # dummy test point (is usefull for testing if function works properly
+    (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
     # the polygons in the new data do not follow the coastlines any more
     # proximity tests are not meaningful at the moment
     # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
@@ -199,15 +201,15 @@ class PackageEqualityTest(unittest.TestCase):
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
         print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')
-        # for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-        #     computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
-        #     if computed == expected:
-        #         ok = 'OK'
-        #     else:
-        #         print(lat, lng)
-        #         ok = 'XX'
-        #         no_mistakes_made = False
-        #     print(template.format(loc, str(expected), str(computed), ok))
+        for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
+            computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
+            if computed == expected:
+                ok = 'OK'
+            else:
+                print(lat, lng)
+                ok = 'XX'
+                no_mistakes_made = False
+            print(template.format(loc, str(expected), str(computed), ok))
 
         assert no_mistakes_made
 
