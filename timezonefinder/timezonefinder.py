@@ -84,9 +84,10 @@ def coord2shortcut(lng, lat):
     return int(floor((lng + 180))), int(floor((90 - lat) * 2))
 
 
-def assert_valid_range(lng,lat):
+def assert_valid_range(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
         raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+
 
 class TimezoneFinder:
     """

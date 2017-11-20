@@ -3,13 +3,16 @@ timezonefinder
 ==============
 
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
-:target: https://travis-ci.org/MrMinimal64/timezonefinder
+    :target: https://travis-ci.org/MrMinimal64/timezonefinder
+
 
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
-:target: https://pypi.python.org/pypi/timezonefinder
+    :target: https://pypi.python.org/pypi/timezonefinder
+
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
-:target: https://pypi.python.org/pypi/timezonefinder
+    :target: https://pypi.python.org/pypi/timezonefinder
+
 
 
 This is a fast and lightweight python project for looking up the corresponding
