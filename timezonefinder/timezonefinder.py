@@ -84,9 +84,19 @@ def coord2shortcut(lng, lat):
     return int(floor((lng + 180))), int(floor((90 - lat) * 2))
 
 
-def assert_valid_range(lng, lat):
+def rectify(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds: (', lng, ',', lat, ')')
+    # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
+    # are not included in the shortcut lookup system
+    if lng == 180.0:
+        # a longitude of 180 however equals lng=0 (earth is a sphere)
+        lng = 0.0
+    if lat == -90.0:
+        # a latitude of -90 (=exact south pole) corresponds to just one single point on earth
+        #  and it has the same timezones as the points with a slightly higher latitude
+        lat = -89.999
+    return lng,lat
 
 
 class TimezoneFinder:
@@ -374,7 +384,7 @@ class TimezoneFinder:
             nr_points = len(coords[0])
             return distance_to_polygon(lng, lat, nr_points, coords)
 
-        assert_valid_range(lng, lat)
+        lng, lat = rectify(lng, lat)
 
         # transform point X into cartesian coordinates
         current_closest_id = None
@@ -476,7 +486,7 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of a matching polygon or None
         """
-        assert_valid_range(lng, lat)
+        lng, lat = rectify(lng, lat)
         # x = longitude  y = latitude  both converted to 8byte int
         x = coord2int(lng)
         y = coord2int(lat)
@@ -541,7 +551,7 @@ class TimezoneFinder:
         :return: the timezone name of the polygon the point is included in or None
         """
 
-        assert_valid_range(lng, lat)
+        lng,lat = rectify(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
 

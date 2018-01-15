@@ -159,6 +159,12 @@ class PackageEqualityTest(unittest.TestCase):
 
     print("Done.")
 
+    def test_shortcut_boundary(self):
+        assert self.timezone_finder.timezone_at(lng=-180.0, lat=90.0) is None
+        assert self.timezone_finder.timezone_at(lng=180.0, lat=90.0) is None
+        assert self.timezone_finder.timezone_at(lng=180.0, lat=-90.0) is None
+        assert self.timezone_finder.timezone_at(lng=-180.0, lat=-90.0) is None
+
     def test_correctness(self):
         print('\nresults timezone_at()')
         template = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
