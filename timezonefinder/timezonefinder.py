@@ -2,14 +2,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import floor, radians
 # from os import system
-from os.path import dirname, join
+from os.path import dirname, join, abspath, pardir
 from struct import unpack
 from sys import argv, exit
+import pickle
 
 from numpy import array, empty, float64, fromfile
 
 from .functional import kwargs_only
-from .timezone_names import timezone_names
 
 # later functions should be automatically compiled once on installation:
 # try:
@@ -57,11 +57,14 @@ from .timezone_names import timezone_names
 try:
     import numba
     from .helpers_numba import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same
+        all_the_same, TIMEZONE_NAMES_FILE
 except ImportError:
     numba = None
     from .helpers import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same
+        all_the_same, TIMEZONE_NAMES_FILE
+
+with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'rb') as f:
+    timezone_names = pickle.load(f)
 
 
 # those two helper functions cannot be outsourced to helpers.py because they create lists (not supported by numba)
@@ -96,7 +99,7 @@ def rectify(lng, lat):
         # a latitude of -90 (=exact south pole) corresponds to just one single point on earth
         #  and it has the same timezones as the points with a slightly higher latitude
         lat = -89.999
-    return lng,lat
+    return lng, lat
 
 
 class TimezoneFinder:
@@ -239,8 +242,8 @@ class TimezoneFinder:
 
     def get_geometry(self, tz_name='', tz_id=0, use_id=False, coords_as_pairs=False):
         '''
-        :param tz_name: one of the names in timezone_names.py
-        :param tz_id: the id of the timezone (=index in timezone_names.py)
+        :param tz_name: one of the names in timezone_names
+        :param tz_id: the id of the timezone (=index in timezone_names)
         :param use_id: determines whether id or name should be used
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
@@ -551,7 +554,7 @@ class TimezoneFinder:
         :return: the timezone name of the polygon the point is included in or None
         """
 
-        lng,lat = rectify(lng, lat)
+        lng, lat = rectify(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
 

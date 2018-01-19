@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
 
+TIMEZONE_NAMES_FILE = 'timezone_names.pickle'
+
 def inside_polygon(x, y, coords):
     contained = False
     # the edge from the last to the first point is checked first

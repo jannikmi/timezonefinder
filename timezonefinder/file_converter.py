@@ -4,17 +4,21 @@ import json
 from datetime import datetime
 from math import ceil, floor
 from struct import pack
+import pickle
+from os.path import abspath
+
+
+
 
 # keep in mind: numba optimized fct. cannot be used here, because numpy classes are not being used at this stage yet!
-from .helpers import coord2int, inside_polygon, int2coord
-# from helpers import coord2int, inside_polygon, int2coord
+from .helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
+# from helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
 
 # import sys
 # from os.path import dirname
 #
 # sys.path.insert(0, dirname(__file__))
 # from helpers import coord2int, int2coord, inside_polygon
-# from timezone_names import timezone_names
 
 # ATTENTION: Don't change these settings or timezonefinder wont work!
 # different setups of shortcuts are not supported, because then addresses in the .bin
@@ -233,7 +237,7 @@ def parse_polygons_from_json(path='combined.json'):
     print('\n')
 
 
-def update_zone_names(path='timezone_names.py'):
+def update_zone_names(path=TIMEZONE_NAMES_FILE):
     global ids
     global list_of_pointers
     global all_boundaries
@@ -241,15 +245,9 @@ def update_zone_names(path='timezone_names.py'):
     global all_lengths
     global polynrs_of_holes
     print('updating the zone names in {} now...'.format(path))
-
-    # write all zone names into the file at path with the syntax of a python array
-    file = open(path, 'w')
-    file.write(
-        'from __future__ import absolute_import, division, print_function, unicode_literals\n\ntimezone_names = [\n')
-    for zone_name in all_tz_names:
-        file.write('    "' + zone_name + '"' + ',\n')
-
-    file.write(']\n')
+    # pickle the zone names (python array)
+    with open(abspath(path), 'wb') as f:
+        pickle.dump(all_tz_names, f)
     print('...Done.\n\nComputing where zones start and end...')
     i = 0
     last_id = -1
@@ -870,12 +868,11 @@ if __name__ == '__main__':
     parse_polygons_from_json(path='combined.json')
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
     # sort data according to zone_id
-    update_zone_names(path='timezone_names.py')
+    update_zone_names(path=TIMEZONE_NAMES_FILE)
 
-    # IMPORTANT: import the newly compiled timezone_names!
-    # the compilation process needs the new version of the timezone name file
-    from .timezone_names import timezone_names
-    # from timezone_names import timezone_names
-
+    # IMPORTANT: import the newly compiled timezone_names pickle!
+    # the compilation process needs the new version of the timezone names
+    with open(TIMEZONE_NAMES_FILE, 'rb') as f:
+        timezone_names = pickle.load(f)
     # compute shortcuts and write everything into the binaries
     compile_binaries()
