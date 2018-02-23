@@ -1,12 +1,12 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from math import floor, radians
-# from os import system
-from pkg_resources import resource_stream
 from struct import unpack
 from sys import exit
 
 from numpy import array, empty, float64, fromfile
+# from os import system
+from pkg_resources import resource_stream
 
 from .functional import kwargs_only
 from .timezone_names import timezone_names
