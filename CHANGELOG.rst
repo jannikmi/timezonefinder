@@ -1,6 +1,14 @@
 Changelog
 =========
 
+2.X.X (...)
+
+* fixing minor issue #52 (shortcuts being out of bounds for extreme coordinate values)
+* use pickle to store and load timezone_names (instead of previous hacky
+approach to write it as text file)
+* using argparse package now for parsing the command line arguments
+* added option of choosing between functions timezone_at() and certain_timezone_at() with flag -f
+
 
 2.1.1 (2017-11-20)
 ------------------

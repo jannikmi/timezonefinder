@@ -586,20 +586,23 @@ class TimezoneFinder:
 
 
 if __name__ == '__main__':
-    arguments = argv
-    nr_arguments = len(arguments)
-    if nr_arguments < 3:
-        print('Error: not enough arguments given\ncommand should look like: python timezonefinder.py lng lat [-v]')
-        exit(1)
+    import argparse
 
+    parser = argparse.ArgumentParser(description='parse training parameters')
+    parser.add_argument('lng', type=float, help='longitude to be queried')
+    parser.add_argument('lat', type=float, help='latitude to be queried')
+    parser.add_argument('-v', action='store_true', help='verbosity flag')
+    parser.add_argument('-f', '--function', type=int, choices=[0, 1], default=0,
+                        help='function to be called. 0: timezone_at(...) 1: certain_timezone_at(...)')
+
+    # takes input from sys.argv
+    parsed_args = parser.parse_args()
     tf = TimezoneFinder()
-    longitude = float(arguments[1])
-    latitude = float(arguments[2])
-    tz = tf.timezone_at(lng=longitude, lat=latitude)
-
-    if nr_arguments > 3 and arguments[3] == '-v':
-        # verbose mode:
-        print('Looking for TZ at lat=', latitude, ' lon=', longitude)
+    functions = [tf.timezone_at, tf.certain_timezone_at]
+    tz = functions[parsed_args.function](lng=parsed_args.lng, lat=parsed_args.lat)
+    if parsed_args.v:
+        print('Looking for TZ at lat=', parsed_args.lat, ' lng=', parsed_args.lng)
+        print('Function:', ['timezone_at()', 'certain_timezone_at()'][parsed_args.function])
         print('Timezone=', tz)
     else:
         print(tz)

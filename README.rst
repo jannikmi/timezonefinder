@@ -257,22 +257,18 @@ place the ``combined.json`` inside the timezonefinder folder. Now run the ``file
 
 **Calling timezonefinder from the command line:**
 
-With -v you get verbose output, without it only the timezone name is printed.
-Internally this is calling the function timezone_at(). Please note that this is slow.
+With -v you get verbose output, without it only the timezone name is being printed.
+Choose between functions timezone_at() and certain_timezone_at() with flag -f (default: timezone_at()).
+Please note that this is much slower than keeping a Timezonefinder class directly in Python,
+because here all binary files are being opend again for each query.
 
 ::
 
-    python timezonefinder.py lng lat [-v]
+    usage: timezonefinder.py [-h] [-v] [-f {0,1}] lng lat
 
 
 
 
-
-Known Issues
-============
-
-I ran tests for approx. 5M points and the only differences (in comparison to tzwhere) are due to the outdated
-data being used by tzwhere.
 
 
 Contact
@@ -310,18 +306,11 @@ License
 Comparison to pytzwhere
 =======================
 
-In comparison most notably initialisation time and memory usage are
-significantly reduced, while the algorithms yield the same results and are as fast or even faster
-(depending on the dependencies used, s. test results below). pytzwhere is using up to 450MB!!! of RAM while in use (with shapely and numpy active) and this package uses at most 40MB (= encountered memory consumption of the python process).
-In some cases ``pytzwhere`` even does not find anything and ``timezonefinder`` does, for example
-when only one timezone is close to the point.
-
-**Similarities:**
-
--  results
-
--  data being used
-
+In comparison most notably initialisation time and memory usage are significantly reduced.
+``pytzwhere`` is using up to 450MB of RAM (with ``shapely`` and ``numpy`` active),
+because it is parsing and keeping all the timezone polygons in the memory.
+This uses unnecessary time/ computation/ memory and this was the reason I created this package in the first place.
+This package uses at most 40MB (= encountered memory consumption of the python process) and has some more advantages:
 
 **Differences:**
 
@@ -329,9 +318,9 @@ when only one timezone is close to the point.
 
 -  highly reduced start up time
 
--  usage of 32bit int (instead of 64+bit float) reduces computing time and memory consumption
-
--  the precision of 32bit int is still high enough (according to my calculations worst resolution is 1cm at the equator -> far more precise than the discrete polygons)
+-  usage of 32bit int (instead of 64+bit float) reduces computing time and memory consumption.
+The accuracy of 32bit int is still high enough. According to my calculations the worst accuracy is 1cm at the equator.
+This far more precise than the discrete polygons in the data.
 
 -  the data is stored in memory friendly binary files (approx. 41MB in total, original data 120MB .json)
 
@@ -347,119 +336,10 @@ when only one timezone is close to the point.
 
 
 
-test results\*:
+test results:
 ===============
 
 ::
-
-
-    test correctness:
-
-    results timezone_at()
-    LOCATION             | EXPECTED             | COMPUTED             | ==
-    ====================================================================
-    Arlington, TN        | America/Chicago      | America/Chicago      | OK
-    Memphis, TN          | America/Chicago      | America/Chicago      | OK
-    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
-    Eugene, OR           | America/Los_Angeles  | America/Los_Angeles  | OK
-    Albany, NY           | America/New_York     | America/New_York     | OK
-    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
-    Los Angeles          | America/Los_Angeles  | America/Los_Angeles  | OK
-    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
-    Aspen, Colorado      | America/Denver       | America/Denver       | OK
-    Kiev                 | Europe/Kiev          | Europe/Kiev          | OK
-    Jogupalya            | Asia/Kolkata         | Asia/Kolkata         | OK
-    Washington DC        | America/New_York     | America/New_York     | OK
-    St Petersburg        | Europe/Moscow        | Europe/Moscow        | OK
-    Blagoveshchensk      | Asia/Yakutsk         | Asia/Yakutsk         | OK
-    Boston               | America/New_York     | America/New_York     | OK
-    Chicago              | America/Chicago      | America/Chicago      | OK
-    Orlando              | America/New_York     | America/New_York     | OK
-    Seattle              | America/Los_Angeles  | America/Los_Angeles  | OK
-    London               | Europe/London        | Europe/London        | OK
-    Church Crookham      | Europe/London        | Europe/London        | OK
-    Fleet                | Europe/London        | Europe/London        | OK
-    Paris                | Europe/Paris         | Europe/Paris         | OK
-    Macau                | Asia/Macau           | Asia/Macau           | OK
-    Russia               | Asia/Yekaterinburg   | Asia/Yekaterinburg   | OK
-    Salo                 | Europe/Helsinki      | Europe/Helsinki      | OK
-    Staffordshire        | Europe/London        | Europe/London        | OK
-    Muara                | Asia/Brunei          | Asia/Brunei          | OK
-    Puerto Montt seaport | America/Santiago     | America/Santiago     | OK
-    Akrotiri seaport     | Asia/Nicosia         | Asia/Nicosia         | OK
-    Inchon seaport       | Asia/Seoul           | Asia/Seoul           | OK
-    Nakhodka seaport     | Asia/Vladivostok     | Asia/Vladivostok     | OK
-    Truro                | Europe/London        | Europe/London        | OK
-    Aserbaid. Enklave    | Asia/Baku            | Asia/Baku            | OK
-    Tajikistani Enklave  | Asia/Dushanbe        | Asia/Dushanbe        | OK
-    Busingen Ger         | Europe/Busingen      | Europe/Busingen      | OK
-    Genf                 | Europe/Zurich        | Europe/Zurich        | OK
-    Lesotho              | Africa/Maseru        | Africa/Maseru        | OK
-    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
-    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
-    Arizona Desert 1     | America/Denver       | America/Denver       | OK
-    Arizona Desert 2     | America/Phoenix      | America/Phoenix      | OK
-    Arizona Desert 3     | America/Phoenix      | America/Phoenix      | OK
-    Far off Cornwall     | None                 | None                 | OK
-
-    certain_timezone_at():
-    LOCATION             | EXPECTED             | COMPUTED             | Status
-    ====================================================================
-    Arlington, TN        | America/Chicago      | America/Chicago      | OK
-    Memphis, TN          | America/Chicago      | America/Chicago      | OK
-    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
-    Eugene, OR           | America/Los_Angeles  | America/Los_Angeles  | OK
-    Albany, NY           | America/New_York     | America/New_York     | OK
-    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
-    Los Angeles          | America/Los_Angeles  | America/Los_Angeles  | OK
-    Moscow               | Europe/Moscow        | Europe/Moscow        | OK
-    Aspen, Colorado      | America/Denver       | America/Denver       | OK
-    Kiev                 | Europe/Kiev          | Europe/Kiev          | OK
-    Jogupalya            | Asia/Kolkata         | Asia/Kolkata         | OK
-    Washington DC        | America/New_York     | America/New_York     | OK
-    St Petersburg        | Europe/Moscow        | Europe/Moscow        | OK
-    Blagoveshchensk      | Asia/Yakutsk         | Asia/Yakutsk         | OK
-    Boston               | America/New_York     | America/New_York     | OK
-    Chicago              | America/Chicago      | America/Chicago      | OK
-    Orlando              | America/New_York     | America/New_York     | OK
-    Seattle              | America/Los_Angeles  | America/Los_Angeles  | OK
-    London               | Europe/London        | Europe/London        | OK
-    Church Crookham      | Europe/London        | Europe/London        | OK
-    Fleet                | Europe/London        | Europe/London        | OK
-    Paris                | Europe/Paris         | Europe/Paris         | OK
-    Macau                | Asia/Macau           | Asia/Macau           | OK
-    Russia               | Asia/Yekaterinburg   | Asia/Yekaterinburg   | OK
-    Salo                 | Europe/Helsinki      | Europe/Helsinki      | OK
-    Staffordshire        | Europe/London        | Europe/London        | OK
-    Muara                | Asia/Brunei          | Asia/Brunei          | OK
-    Puerto Montt seaport | America/Santiago     | America/Santiago     | OK
-    Akrotiri seaport     | Asia/Nicosia         | Asia/Nicosia         | OK
-    Inchon seaport       | Asia/Seoul           | Asia/Seoul           | OK
-    Nakhodka seaport     | Asia/Vladivostok     | Asia/Vladivostok     | OK
-    Truro                | Europe/London        | Europe/London        | OK
-    Aserbaid. Enklave    | Asia/Baku            | Asia/Baku            | OK
-    Tajikistani Enklave  | Asia/Dushanbe        | Asia/Dushanbe        | OK
-    Busingen Ger         | Europe/Busingen      | Europe/Busingen      | OK
-    Genf                 | Europe/Zurich        | Europe/Zurich        | OK
-    Lesotho              | Africa/Maseru        | Africa/Maseru        | OK
-    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
-    usbekish enclave     | Asia/Tashkent        | Asia/Tashkent        | OK
-    Arizona Desert 1     | America/Denver       | America/Denver       | OK
-    Arizona Desert 2     | America/Phoenix      | America/Phoenix      | OK
-    Arizona Desert 3     | America/Phoenix      | America/Phoenix      | OK
-    Far off Cornwall     | None                 | None                 | OK
-
-    closest_timezone_at():
-    LOCATION             | EXPECTED             | COMPUTED             | Status
-    ====================================================================
-    Arlington, TN        | America/Chicago      | America/Chicago      | OK
-    Memphis, TN          | America/Chicago      | America/Chicago      | OK
-    Anchorage, AK        | America/Anchorage    | America/Anchorage    | OK
-    Shore Lake Michigan  | America/New_York     | America/New_York     | OK
-    English Channel1     | Europe/London        | Europe/London        | OK
-    English Channel2     | Europe/Paris         | Europe/Paris         | OK
-    Oresund Bridge1      | Europe/Stockholm     | Europe/Stockholm     | OK
-    Oresund Bridge2      | Europe/Copenhagen    | Europe/Copenhagen    | OK
 
 
     Speed Tests:
@@ -483,16 +363,3 @@ test results\*:
     timezonefinder: 0:00:00.000888
     33068.02 times faster
 
-
-    NOTE: all the other test are not expressive atm, because tz_where is using very outdated data
-
-
-    \* System: MacBookPro 2,4GHz i5 (2014) 4GB RAM pytzwhere with numpy active
-
-    \*\*mismatch: pytzwhere finds something and then timezonefinder finds
-    something else
-
-    \*\*\*realistic queries: just points within a timezone (= pytzwhere
-    yields result)
-
-    \*\*\*\*random queries: random points on earth
