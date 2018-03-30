@@ -22,10 +22,11 @@ NOTE: the old smaller data set `tz_world <http://efele.net/maps/tz/world/>`__  i
 I originally wanted to keep this package as lightweight as possible, but actuality is even more important I guess.
 In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder(L).
 
-NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world). This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
+NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
+This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
 
 
-Current data set in use: `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__. version: 2017c (Oct 2017, since 2.1.1)
+Current data set in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ release. version: 2017c (Oct 2017, since 2.1.1)
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
@@ -36,17 +37,6 @@ Also see:
 `timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of timezonefinderL
 
 
-This project is derived from and has been successfully tested against
-`pytzwhere <https://pypi.python.org/pypi/tzwhere>`__
-(`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
-improved performance and usability.
-
-``pytzwhere`` is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
-This is time, memory and CPU consuming. Additionally calculating with floats is slow,
-keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
-
-
-
 Dependencies
 ============
 
@@ -55,13 +45,12 @@ Dependencies
 
 **Optional:**
 
-``Numba`` (https://github.com/numba/numba) and its Requirement `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_
+If the vanilla Python code is too slow for you, also install
 
+``Numba`` (https://github.com/numba/numba) and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
-This is only for precompiling the time critical algorithms. When you only look up a
-few points once in a while, the compilation time is probably outweighing
-the benefits. When using ``certain_timezone_at()`` and especially
-``closest_timezone_at()`` however, I highly recommend using ``numba``!
+This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled.
+
 
 Installation
 ============
@@ -125,7 +114,11 @@ So results might be misleading for points outside of any timezone.
 **certain_timezone_at():**
 
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
-are checked until one polygon is matched.
+are checked until one polygon is matched. ``None`` is being returned without any match.
+
+NOTE: The timezone polygons do NOT follow the shorelines any more. Just because you do not get ``None``,
+the point could still lie off land!
+
 
 ::
 
@@ -136,6 +129,8 @@ are checked until one polygon is matched.
 
 Only use this when the point is not inside a polygon, because the approach otherwise makes no sense.
 This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+
+NOTE: The timezone polygons do NOT follow the shorelines any more. This makes the results of closest_timezone_at() somewhat meaningless.
 
 ::
 
@@ -306,6 +301,14 @@ License
 Comparison to pytzwhere
 =======================
 
+This project has originally been derived from `pytzwhere <https://pypi.python.org/pypi/tzwhere>`__
+(`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
+improved performance and usability.
+
+``pytzwhere`` is parsing a 76MB .csv file (floats stored as strings!) completely into memory and computing shortcuts from this data on every startup.
+This is time, memory and CPU consuming. Additionally calculating with floats is slow,
+keeping those 4M+ floats in the RAM all the time is unnecessary and the precision of floats is not even needed in this case (s. detailed comparison and speed tests below).
+
 In comparison most notably initialisation time and memory usage are significantly reduced.
 ``pytzwhere`` is using up to 450MB of RAM (with ``shapely`` and ``numpy`` active),
 because it is parsing and keeping all the timezone polygons in the memory.
@@ -362,4 +365,7 @@ test results:
     tzwhere: 0:00:29.365294
     timezonefinder: 0:00:00.000888
     33068.02 times faster
+
+
+    all other cross tests are not meaningful because tz_where is still using the outdated tz_world data set
 

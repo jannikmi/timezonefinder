@@ -1,13 +1,15 @@
 Changelog
 =========
 
-2.X.X (...)
 
+2.X.X (2018-...)
+------------------
+
+* TODO updated the data to `2018X <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018X>`__
 * fixing minor issue #52 (shortcuts being out of bounds for extreme coordinate values)
-* use pickle to store and load timezone_names (instead of previous hacky
-approach to write it as text file)
+* use pickle to store and load timezone_names (instead of previous hacky approach to compile a python script as a string)
 * using argparse package now for parsing the command line arguments
-* added option of choosing between functions timezone_at() and certain_timezone_at() with flag -f
+* added option of choosing between functions timezone_at() and certain_timezone_at() on the command line with flag -f 
 
 
 2.1.1 (2017-11-20)
