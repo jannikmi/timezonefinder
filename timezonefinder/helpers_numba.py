@@ -9,6 +9,8 @@ from numba import b1, f8, i2, i4, jit, typeof, u2, u8
 # # Uncomment the following line to print out the compilation steps
 # # cc.verbose = True
 
+TIMEZONE_NAMES_FILE = 'timezone_names.json'
+
 dtype_3floattuple = typeof((1.0, 1.0, 1.0))
 dtype_2floattuple = typeof((1.0, 1.0))
 

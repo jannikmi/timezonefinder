@@ -12,6 +12,7 @@ script:
 branches:
     only:
     - master
+    - dev
 
 notifications:
     email:
@@ -19,4 +20,4 @@ notifications:
      - python@michelfe.it
      on_success: never
      on_failure: always
-     on_start: always     # options: [always|never|change] default: always
+     on_start: never   # options: [always|never|change] default: always

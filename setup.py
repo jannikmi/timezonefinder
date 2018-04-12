@@ -39,7 +39,7 @@ setup(
                                      'shortcuts_adr2data.bin',
                                      'shortcuts_data.bin',
                                      'shortcuts_unique_id.bin',
-                                     'timezone_names.pickle', ]},
+                                     'timezone_names.json', ]},
     description='Python library to look up timezone from lat / long offline. Improved version of "pytzwhere".',
     author='J. Michelfeit',
     author_email='python@michelfe.it',

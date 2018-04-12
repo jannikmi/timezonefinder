@@ -2,14 +2,18 @@ Changelog
 =========
 
 
-2.X.X (2018-...)
+2.1.2 (2018-04-12)
 ------------------
 
-* TODO updated the data to `2018X <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018X>`__
+* updated the data to `2018d <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018d>`__
 * fixing minor issue #52 (shortcuts being out of bounds for extreme coordinate values)
-* use pickle to store and load timezone_names (instead of previous hacky approach to compile a python script as a string)
+* the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id.
+    this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned)
 * using argparse package now for parsing the command line arguments
-* added option of choosing between functions timezone_at() and certain_timezone_at() on the command line with flag -f 
+* added option of choosing between functions timezone_at() and certain_timezone_at() on the command line with flag -f
+* the timezone names are now being stored in a readable JSON file
+* adjusted the main test cases
+* corrections and clarifications in the readme and code comments
 
 
 2.1.1 (2017-11-20)

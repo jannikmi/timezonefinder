@@ -1,3 +1,4 @@
+
 import os
 import sys
 import re
@@ -123,15 +124,24 @@ if __name__ == "__main__":
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Run tests', 'Exit')
 
+    print('Enter virtual env name or press enter for running without virtual env:')
+    virt_env_name = None
+    virt_env_name = input()
+
+    if virt_env_name == '':
+        virt_env_act_command = ''
+    else:
+        virt_env_act_command = 'source activate ' + virt_env_name.strip() + ';'
+
     print('___________')
     print('Running TESTS:')
 
-    # TODO automatisch abbrechen wenn fehler ausgegeben?
-    routine("rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
 
-    routine("tox -e py{27,35}-codestyle", 'checking syntax, codestyle and imports', 'continue')
+    routine(virt_env_act_command+"rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
 
-    routine("tox -e py27", 'checking if package is building with tox', 'continue')
+    routine(virt_env_act_command+"tox -e py{27,35}-codestyle", 'checking syntax, codestyle and imports', 'continue')
+
+    routine(virt_env_act_command+"tox -e py27", 'checking if package is building with tox', 'continue')
 
     print('Tests finished.')
 

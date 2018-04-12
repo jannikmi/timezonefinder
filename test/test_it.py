@@ -10,14 +10,14 @@ from tzwhere.tzwhere import tzwhere
 # number of points to test (in each test, realistic and random ones)
 N = 100
 
-# sets if tzwhere should be used with shapely
-SHAPELY = False
+SHAPELY = True  # tzwhere requires shapely now
 
 # mistakes in these zones don't count as mistakes
 excluded_zones_timezonefinder = []
 excluded_zones_tzwhere = []
 
-TEST_LOCATIONS = (
+TEST_LOCATIONS = [
+    # lat, lng, description, correct output
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
     (35.1322601, -90.0902499, 'Memphis, TN', 'America/Chicago'),
     (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
@@ -63,16 +63,29 @@ TEST_LOCATIONS = (
     (36.4091869, -110.7520236, 'Arizona Desert 2', 'America/Phoenix'),
     (36.10230848, -111.1882385, 'Arizona Desert 3', 'America/Phoenix'),
 
+    (50.26, -9.051, 'Far off Cornwall', None),
+
     # Not sure about the right result:
     # (68.3597987,-133.745786, 'America', 'America/Inuvik'),
+]
 
+# certain algorithm should give the same results for all normal test cases
+TEST_LOCATIONS_CERTAIN = TEST_LOCATIONS + [
+    # add some test cases for testing if None is being returned outside of timezone polygons
+    # the polygons in the new data do not follow the coastlines any more
+    # these tests are not meaningful at the moment
 
-    (50.26, -9.051, 'Far off Cornwall', None)
-)
+    # (40.7271, -73.98, 'Shore Lake Michigan', None),
+    # (51.032593, 1.4082031, 'English Channel1',  None),
+    # (50.9623651, 1.5732592, 'English Channel2',  None),
+    # (55.5609615, 12.850585, 'Oresund Bridge1',  None),
+    # (55.6056074, 12.7128568, 'Oresund Bridge2',  None),
+]
 
-TEST_LOCATIONS_PROXIMITY = (
+TEST_LOCATIONS_PROXIMITY = [
     # the polygons in the new data do not follow the coastlines any more
     # proximity tests are not meaningful at the moment
+
     # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
     # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
     # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
@@ -81,7 +94,7 @@ TEST_LOCATIONS_PROXIMITY = (
     # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
     # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
     # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
-)
+]
 
 
 def random_point():
@@ -104,7 +117,6 @@ def print_speedup(tz_where_time, timezoefinder_time):
             print(speedup, 'times faster')
     except TypeError:
         pass
-        # assert his_time > my_time
 
 
 class PackageEqualityTest(unittest.TestCase):
@@ -130,7 +142,7 @@ class PackageEqualityTest(unittest.TestCase):
     # integrated start up time test:
     # (when doing this for multiple times things are already cached and therefore produce misleading results)
     start_time = datetime.now()
-    tz_where = tzwhere(shapely=SHAPELY)
+    tz_where = tzwhere()
     end_time = datetime.now()
     his_time = end_time - start_time
 
@@ -160,15 +172,17 @@ class PackageEqualityTest(unittest.TestCase):
     print("Done.")
 
     def test_shortcut_boundary(self):
+        # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
         assert self.timezone_finder.timezone_at(lng=-180.0, lat=90.0) is None
         assert self.timezone_finder.timezone_at(lng=180.0, lat=90.0) is None
         assert self.timezone_finder.timezone_at(lng=180.0, lat=-90.0) is None
         assert self.timezone_finder.timezone_at(lng=-180.0, lat=-90.0) is None
 
     def test_correctness(self):
-        print('\nresults timezone_at()')
-        template = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
         no_mistakes_made = True
+        template = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
+
+        print('\nresults timezone_at()')
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', '=='))
         print('====================================================================')
         for (lat, lng, loc, expected) in TEST_LOCATIONS:
@@ -182,13 +196,10 @@ class PackageEqualityTest(unittest.TestCase):
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
 
-        assert no_mistakes_made
-
         print('\ncertain_timezone_at():')
-        no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
-        for (lat, lng, loc, expected) in TEST_LOCATIONS:
+        for (lat, lng, loc, expected) in TEST_LOCATIONS_CERTAIN:
             computed = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
@@ -198,10 +209,7 @@ class PackageEqualityTest(unittest.TestCase):
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
 
-        assert no_mistakes_made
-
         print('\nclosest_timezone_at():')
-        no_mistakes_made = True
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
         print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')

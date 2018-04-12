@@ -5,7 +5,7 @@ from math import floor, radians
 from os.path import dirname, join, abspath, pardir
 from struct import unpack
 from sys import argv, exit
-import pickle
+import json
 
 from numpy import array, empty, float64, fromfile
 
@@ -63,8 +63,8 @@ except ImportError:
     from .helpers import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
         all_the_same, TIMEZONE_NAMES_FILE
 
-with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'rb') as f:
-    timezone_names = pickle.load(f)
+with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
+    timezone_names = json.loads(f.read())
 
 
 # those two helper functions cannot be outsourced to helpers.py because they create lists (not supported by numba)
@@ -290,11 +290,12 @@ class TimezoneFinder:
     def compile_id_list(self, polygon_id_list, nr_of_polygons):
         """
         sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
-        4.8% of all shortcuts include polygons from more than one zone
+        only 4.8% of all shortcuts include polygons from more than one zone
         but only for about 0.4% sorting would be beneficial (zones have different frequencies)
         in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
          has only one entry.
-        As a consequence the effort of sorting only really makes sense for closest_timezone_at(), because only in
+         the polygon lists of all single shortcut are already sorted (during compilation of the binary files)
+        sorting should be used for closest_timezone_at(), because only in
          that use case the polygon lists are quite long (multiple shortcuts are being checked simultaneously).
         :param polygon_id_list:
         :param nr_of_polygons: length of polygon_id_list
@@ -450,6 +451,7 @@ class TimezoneFinder:
                     current_closest_id = ids[pointer]
 
         else:
+            pointer = 0
             # stores which polygons have been checked yet
             already_checked = [False] * polygons_in_list  # initialize array with False
             while pointer < polygons_in_list:
@@ -497,6 +499,7 @@ class TimezoneFinder:
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek((720 * shortcut_id_x + 2 * shortcut_id_y))
         try:
+            # check if there is just one possible zone in this shortcut
             return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(2))[0]]
         except IndexError:
             possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
