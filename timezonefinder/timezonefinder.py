@@ -1,17 +1,19 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import json
 from math import floor, radians
 # from os import system
-from os.path import dirname, join, abspath, pardir
+from os.path import abspath, dirname, join, pardir
 from struct import unpack
-from sys import argv, exit
-import json
 
 from numpy import array, empty, float64, fromfile
+from six.moves import range
 
 from .functional import kwargs_only
 
-# later functions should be automatically compiled once on installation:
+# from sys import argv, exit
+
+# TODO functions should be automatically compiled once on installation:
 # try:
 #     import compiled_numba_funcs
 # except ImportError:
@@ -140,11 +142,11 @@ class TimezoneFinder:
             try:
                 amount_of_holes, hole_id = self.hole_registry[poly_id]
                 self.hole_registry.update({
-                    poly_id: (amount_of_holes + 1, hole_id)
+                    poly_id: (amount_of_holes + 1, hole_id),
                 })
             except KeyError:
                 self.hole_registry.update({
-                    poly_id: (1, i)
+                    poly_id: (1, i),
                 })
 
     def __del__(self):
@@ -267,7 +269,7 @@ class TimezoneFinder:
         first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
         # read poly_nr of the first polygon of the next zone
         last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
-        poly_nrs = range(first_polygon_nr, last_polygon_nr)
+        poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
     def id_list(self, polygon_id_list, nr_of_polygons):
@@ -276,7 +278,7 @@ class TimezoneFinder:
         :param nr_of_polygons: length of polygon_id_list
         :return: (list of zone_ids, boolean: do all entries belong to the same zone)
         """
-        zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        zone_id_list = empty([nr_of_polygons], dtype='<u2')
         first_id = self.id_of(polygon_id_list[0])
         equal = True
         for pointer_local, polygon_id in enumerate(polygon_id_list):
@@ -312,7 +314,7 @@ class TimezoneFinder:
                     return False
             return True
 
-        zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        zone_id_list = empty([nr_of_polygons], dtype='<u2')
         counted_zones = {}
         for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
@@ -326,11 +328,11 @@ class TimezoneFinder:
             # there is only one zone. no sorting needed.
             return polygon_id_list, zone_id_list, True
 
-        if all_equal(counted_zones.values()):
+        if all_equal(list(counted_zones.values())):
             # all the zones have the same amount of polygons. no sorting needed.
             return polygon_id_list, zone_id_list, False
 
-        counted_zones_sorted = sorted(counted_zones.items(), key=lambda zone: zone[1])
+        counted_zones_sorted = sorted(list(counted_zones.items()), key=lambda zone: zone[1])
         sorted_polygon_id_list = empty([nr_of_polygons], dtype='<u2')
         sorted_zone_id_list = empty([nr_of_polygons], dtype='<u2')
 

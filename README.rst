@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder.svg?branch=master
+.. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 
@@ -23,10 +23,9 @@ I originally wanted to keep this package as lightweight as possible, but actuali
 In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder(L).
 
 NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
-This makes the results of closest_timezone_at() somewhat meaningless (as with timezonefinderL).
+This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with timezonefinderL).
 
-
-Current data set in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ release. version: 2018d (since 2.1.2, without oceans, Apr2018, 116MB, JSON)
+Current data set in use (since 3.0.0): precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ release. version: 2018d (without oceans, Apr2018, 116MB, JSON)
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
@@ -42,6 +41,7 @@ Dependencies
 
 (``python``)
 ``numpy``
+``six``
 
 **Optional:**
 
@@ -49,7 +49,7 @@ If the vanilla Python code is too slow for you, also install
 
 ``Numba`` (https://github.com/numba/numba) and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
-This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled.
+This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled to speed things up.
 
 
 Installation
@@ -57,6 +57,7 @@ Installation
 
 
 Installation with conda: see instructions at `conda-forge feedstock<https://github.com/conda-forge/timezonefinder-feedstock>`__
+(NOTE: The newest version of timezonefinder might not be available via conda yet)
 
 
 Installation with pip:
@@ -270,7 +271,6 @@ Contact
 =======
 
 Most certainly there is stuff I missed, things I could have optimized even further etc. I would be really glad to get some feedback on my code.
-
 
 If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...

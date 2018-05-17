@@ -4,8 +4,10 @@ import random
 import unittest
 from datetime import datetime
 
-from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords
+from six.moves import range
 from tzwhere.tzwhere import tzwhere
+
+from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords
 
 # number of points to test (in each test, realistic and random ones)
 N = 100

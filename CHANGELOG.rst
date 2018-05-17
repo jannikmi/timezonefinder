@@ -2,9 +2,11 @@ Changelog
 =========
 
 
-2.1.2 (2018-04-12)
+3.0.0 (2018-05-17)
 ------------------
 
+* ATTENTION: the package six is now required! (was necessary because of the new testing routine. improves compatibility standards)
+* updated build/testing/publishing routine
 * updated the data to `2018d <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018d>`__
 * fixing minor issue #52 (shortcuts being out of bounds for extreme coordinate values)
 * the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id.

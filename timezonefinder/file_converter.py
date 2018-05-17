@@ -3,12 +3,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 from datetime import datetime
 from math import ceil, floor
+from os.path import abspath, join, pardir
 from struct import pack
-from os.path import dirname, join, abspath, pardir
+
+from six.moves import range, zip
 
 # keep in mind: the fater numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
-from .helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
+from .helpers import TIMEZONE_NAMES_FILE, coord2int, inside_polygon, int2coord
 
 # from helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
 
@@ -52,23 +54,23 @@ hole_coord_amount: the amount of coordinates in every hole ('<H')
 hole_adr2data: address in hole_data.bin where data for every hole starts ('<I')
 hole_data: coordinates for every hole (multiple times '<i')
 
-[SHORTCUTS:] the surface of the world is split up into a grid of shortcut rectangles. 
+[SHORTCUTS:] the surface of the world is split up into a grid of shortcut rectangles.
 -> there are a total of 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT shortcuts
 shortcut here means storing for every cell in a grid of the world map which polygons are located in that cell
 they can therefore be used to drastically reduce the amount of polygons which need to be checked in order to
 decide which timezone a point is located in.
 
 the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
-this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned) 
+this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned)
 
 shortcuts_entry_amount: the amount of polygons for every shortcut ('<H')
 shortcuts_adr2data: address in shortcut_data.bin where data for every shortcut starts ('<I')
 shortcuts_data: polygon numbers (ids) for every shortcut (multiple times '<H')
 shortcuts_unique_id: the zone id if only polygons from one zone are present,
-                     a high number (with no corresponding zone) if not ('<H'). 
+                     a high number (with no corresponding zone) if not ('<H').
                      the majority of zones either have no polygons at all (sea) or just one zone.
-                     this zone then can be instantly returned without actually
-                     
+                     this zone then can be instantly returned without actually testing polygons.
+
 also stored extra binary if only one zone (to directly return that zone without checking)
 
 
@@ -78,8 +80,10 @@ highest entry amount is 30
 frequencies of entry amounts (from 0 to max entries):
 [89768, 32917, 6217, 617, 59, 11, 4, 1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1]
 relative accumulated frequencies [%]:
-[69.27, 94.66, 99.46, 99.94, 99.98, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-[30.73, 5.34, 0.54, 0.06, 0.02, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[69.27, 94.66, 99.46, 99.94, 99.98, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+[30.73, 5.34, 0.54, 0.06, 0.02, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 69.27 % of all shortcuts are empty
 
 highest amount of different zones in one shortcut is 7
@@ -208,7 +212,7 @@ def polys_of_one_zone():
     for i in range(len(timezone_names)):
         start = poly_nr2zone_id[i]
         end = poly_nr2zone_id[i + 1]
-        yield range(start, end)
+        yield list(range(start, end))
 
 
 def replace_entry(iterable, entry, substitute):
@@ -713,7 +717,7 @@ def compile_binaries():
         # has only one entry (important to check the zone with one entry first!).
         polygon_ids = [poly_zone_ids[poly_nr] for poly_nr in poly_nrs]
         id_freq = [polygon_ids.count(id) for id in polygon_ids]
-        zipped = zip(poly_nrs, polygon_ids, id_freq)
+        zipped = list(zip(poly_nrs, polygon_ids, id_freq))
         # also make sure polygons with the same zone freq. are ordered after their zone id
         # (polygons from different zones should not get mixed up)
         sort = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])

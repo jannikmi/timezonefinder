@@ -1,7 +1,31 @@
-
 import os
 import sys
 import re
+
+
+# required packages
+# pip-tools
+# numpy
+# (llvmlite, numba)
+
+
+# commands
+# tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
+# rstcheck *.rst
+# tox -r -e py{27,36}-codestyle
+# tox -r -e py27
+
+# its important to pin requirements to get reproducible errors!
+# compile a new requirements file (with the latest versions)
+# pip-compile --upgrade
+# pip-compile --output-file requirements.txt requirements.in
+# only update the flask package:
+# pip-compile --upgrade-package flask
+# compile a new requirements file (with versions currently used in the virtual env )
+# pip-compile --generate-hashes requirements.in
+
+# do NOT sync. will install ONLY the packages specified! (no more tox etc. installed!)
+# pip-sync
 
 
 def get_version(package):
@@ -59,6 +83,7 @@ def routine(command=None, message='', option1='next', option2='exit'):
         print(message)
 
         if command:
+            print('running command:', command)
             os.system(command)
 
         print('__________\nDone. Options:')
@@ -119,34 +144,53 @@ if __name__ == "__main__":
     print('version number has been set to:', version)
     print('=====================')
 
-    routine(None, 'Is the newest OSM data version in use? Does the readme show correct data version?', 'OK. Continue', 'Exit')
+    routine(None, 'Is the newest OSM data version in use? Does the readme show correct data version?', 'OK. Continue',
+            'Exit')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Run tests', 'Exit')
+    routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
+    routine(None,
+            'Maybe update test routine (requirements.txt) with pip-compile! Commands are written in the beginning of this script',
+            'Done. Run tests', 'Exit')
 
-    print('Enter virtual env name or press enter for running without virtual env:')
-    virt_env_name = None
-    virt_env_name = input()
-
-    if virt_env_name == '':
-        virt_env_act_command = ''
-    else:
-        virt_env_act_command = 'source activate ' + virt_env_name.strip() + ';'
+    # print('Enter virtual env name:')
+    # virtual env has to be given!
+    # virt_env_name = input()
+    virt_env_name = 'tzEnv'
+    virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
 
     print('___________')
     print('Running TESTS:')
 
+    # routine(virt_env_act_command + "pip-compile requirements.in;pip-sync",
+    #         'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
-    routine(virt_env_act_command+"rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
+    routine(virt_env_act_command + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
 
-    routine(virt_env_act_command+"tox -e py{27,35}-codestyle", 'checking syntax, codestyle and imports', 'continue')
+    # IMPORTANT: -r flag to rebuild tox virtual env
+    # only when dependencies have changed!
+    rebuild_flag = ''
+    print('when the dependencies (in requirements.txt) have changed enter 1 (-> rebuild tox)')
+    try:
+        inp = int(input())
+        if inp == 1:
+            rebuild_flag = ' -r'
+    except ValueError:
+        pass
 
-    routine(virt_env_act_command+"tox -e py27", 'checking if package is building with tox', 'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
+            'checking syntax, codestyle and imports',
+            'continue')
+
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
+            'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'checking if package is building with tox',
+            'continue')
 
     print('Tests finished.')
 
     routine(None,
-            'Please commit your changes, push and then merge them into the master. Then wait if Travis tests build successfully.',
+            'Please commit your changes, push and wait if Travis tests build successfully. Only then merge them into the master.',
             'Build successful. Publish and upload now.', 'Exit.')
 
     # TODO do this automatically, problem are the commit messages (often the same as changelog)
@@ -165,6 +209,23 @@ if __name__ == "__main__":
     print('=================')
     print('PUBLISHING:')
 
+    '''
+    ~/.pypirc file required:
+    [distutils]
+    index-servers =
+    pypi
+    pypitest
+    
+    [pypi]
+    repository=https://pypi.python.org/pypi
+    username=MrMinimal64
+    password=****
+    
+    [pypitest]
+    repository=https://testpypi.python.org/pypi
+    username=MrMinimal64
+    password=your_password
+    '''
     routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.')
 
     # tag erstellen

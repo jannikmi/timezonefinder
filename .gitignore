@@ -5,6 +5,7 @@ timezonefinder/combined.json
 scrapyard.py
 .DS_Store
 tmp.py
+.pytest_cache
 
 # GITIGNORE DEFAULTS
 
