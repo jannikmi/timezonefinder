@@ -4,11 +4,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import sys
 
 import pytest
+import six
 
 from timezonefinder.functional import kwargs_only
 
 if sys.version_info[0] == 2:
-    text_type = unicode  # noqa
+    # text_type = unicode  # noqa
+    text_type = six.text_type  # noqa
+
 else:
     text_type = str
 

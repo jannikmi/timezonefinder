@@ -4,8 +4,12 @@ import random
 import unittest
 from math import degrees, radians, sqrt
 
-from timezonefinder.helpers import (all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon,
-                                    distance_to_polygon_exact, haversine, inside_polygon)
+from six.moves import range
+
+from timezonefinder.helpers import (
+    all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact, haversine,
+    inside_polygon,
+)
 
 
 def random_point():
@@ -48,8 +52,7 @@ class HelperTest(unittest.TestCase):
             # (0.5, 0),
         ]
         expected_results = [
-            (True,
-             False, False, False, False, False, False, False, False,)
+            (True, False, False, False, False, False, False, False, False),
             # (True, True, True, True)
         ]
 

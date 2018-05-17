@@ -1,17 +1,20 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import json
 from math import floor, radians
+# from os import system
+from os.path import abspath, join, pardir
 from struct import unpack
-from sys import exit
 
 from numpy import array, empty, float64, fromfile
-# from os import system
 from pkg_resources import resource_stream
+from six.moves import range
 
 from .functional import kwargs_only
-from .timezone_names import timezone_names
 
-# later functions should be automatically compiled once on installation:
+# from sys import argv, exit
+
+# TODO functions should be automatically precompiled once on installation:
 # try:
 #     import compiled_numba_funcs
 # except ImportError:
@@ -57,11 +60,15 @@ from .timezone_names import timezone_names
 try:
     import numba
     from .helpers_numba import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same
+        all_the_same, TIMEZONE_NAMES_FILE
 except ImportError:
     numba = None
     from .helpers import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same
+        all_the_same, TIMEZONE_NAMES_FILE
+
+with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
+    # TODO make np. array?
+    timezone_names = json.loads(f.read())
 
 
 # those two helper functions cannot be outsourced to helpers.py because they create lists (not supported by numba)
@@ -84,9 +91,19 @@ def coord2shortcut(lng, lat):
     return int(floor((lng + 180))), int(floor((90 - lat) * 2))
 
 
-def assert_valid_range(lng, lat):
+def rectify(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError('The coordinates are out ouf bounds: (', lng, ',', lat, ')')
+        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds: (', lng, ',', lat, ')')
+    # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
+    # are not included in the shortcut lookup system
+    if lng == 180.0:
+        # a longitude of 180 however equals lng=0 (earth is a sphere)
+        lng = 0.0
+    if lat == -90.0:
+        # a latitude of -90 (=exact south pole) corresponds to just one single point on earth
+        #  and it has the same timezones as the points with a slightly higher latitude
+        lat = -89.999
+    return lng, lat
 
 
 class TimezoneFinder:
@@ -127,11 +144,11 @@ class TimezoneFinder:
             try:
                 amount_of_holes, hole_id = self.hole_registry[poly_id]
                 self.hole_registry.update({
-                    poly_id: (amount_of_holes + 1, hole_id)
+                    poly_id: (amount_of_holes + 1, hole_id),
                 })
             except KeyError:
                 self.hole_registry.update({
-                    poly_id: (1, i)
+                    poly_id: (1, i),
                 })
 
     def __del__(self):
@@ -229,8 +246,8 @@ class TimezoneFinder:
 
     def get_geometry(self, tz_name='', tz_id=0, use_id=False, coords_as_pairs=False):
         '''
-        :param tz_name: one of the names in timezone_names.py
-        :param tz_id: the id of the timezone (=index in timezone_names.py)
+        :param tz_name: one of the names in timezone_names
+        :param tz_id: the id of the timezone (=index in timezone_names)
         :param use_id: determines whether id or name should be used
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
@@ -254,7 +271,7 @@ class TimezoneFinder:
         first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
         # read poly_nr of the first polygon of the next zone
         last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
-        poly_nrs = range(first_polygon_nr, last_polygon_nr)
+        poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
     def id_list(self, polygon_id_list, nr_of_polygons):
@@ -263,7 +280,7 @@ class TimezoneFinder:
         :param nr_of_polygons: length of polygon_id_list
         :return: (list of zone_ids, boolean: do all entries belong to the same zone)
         """
-        zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        zone_id_list = empty([nr_of_polygons], dtype='<u2')
         first_id = self.id_of(polygon_id_list[0])
         equal = True
         for pointer_local, polygon_id in enumerate(polygon_id_list):
@@ -277,11 +294,12 @@ class TimezoneFinder:
     def compile_id_list(self, polygon_id_list, nr_of_polygons):
         """
         sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
-        4.8% of all shortcuts include polygons from more than one zone
+        only 4.8% of all shortcuts include polygons from more than one zone
         but only for about 0.4% sorting would be beneficial (zones have different frequencies)
         in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
          has only one entry.
-        As a consequence the effort of sorting only really makes sense for closest_timezone_at(), because only in
+         the polygon lists of all single shortcut are already sorted (during compilation of the binary files)
+        sorting should be used for closest_timezone_at(), because only in
          that use case the polygon lists are quite long (multiple shortcuts are being checked simultaneously).
         :param polygon_id_list:
         :param nr_of_polygons: length of polygon_id_list
@@ -298,7 +316,7 @@ class TimezoneFinder:
                     return False
             return True
 
-        zone_id_list = empty([nr_of_polygons], dtype='<u2', )
+        zone_id_list = empty([nr_of_polygons], dtype='<u2')
         counted_zones = {}
         for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
@@ -312,11 +330,11 @@ class TimezoneFinder:
             # there is only one zone. no sorting needed.
             return polygon_id_list, zone_id_list, True
 
-        if all_equal(counted_zones.values()):
+        if all_equal(list(counted_zones.values())):
             # all the zones have the same amount of polygons. no sorting needed.
             return polygon_id_list, zone_id_list, False
 
-        counted_zones_sorted = sorted(counted_zones.items(), key=lambda zone: zone[1])
+        counted_zones_sorted = sorted(list(counted_zones.items()), key=lambda zone: zone[1])
         sorted_polygon_id_list = empty([nr_of_polygons], dtype='<u2')
         sorted_zone_id_list = empty([nr_of_polygons], dtype='<u2')
 
@@ -374,7 +392,7 @@ class TimezoneFinder:
             nr_points = len(coords[0])
             return distance_to_polygon(lng, lat, nr_points, coords)
 
-        assert_valid_range(lng, lat)
+        lng, lat = rectify(lng, lat)
 
         # transform point X into cartesian coordinates
         current_closest_id = None
@@ -476,7 +494,7 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of a matching polygon or None
         """
-        assert_valid_range(lng, lat)
+        lng, lat = rectify(lng, lat)
         # x = longitude  y = latitude  both converted to 8byte int
         x = coord2int(lng)
         y = coord2int(lat)
@@ -484,6 +502,7 @@ class TimezoneFinder:
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek((720 * shortcut_id_x + 2 * shortcut_id_y))
         try:
+            # check if there is just one possible zone in this shortcut
             return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(2))[0]]
         except IndexError:
             possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
@@ -541,7 +560,7 @@ class TimezoneFinder:
         :return: the timezone name of the polygon the point is included in or None
         """
 
-        assert_valid_range(lng, lat)
+        lng, lat = rectify(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
 
@@ -573,22 +592,24 @@ class TimezoneFinder:
 
 
 if __name__ == '__main__':
-    from sys import argv
 
-    arguments = argv
-    nr_arguments = len(arguments)
-    if nr_arguments < 3:
-        print('Error: not enough arguments given\ncommand should look like: python timezonefinder.py lng lat [-v]')
-        exit(1)
+    import argparse
 
+    parser = argparse.ArgumentParser(description='parse training parameters')
+    parser.add_argument('lng', type=float, help='longitude to be queried')
+    parser.add_argument('lat', type=float, help='latitude to be queried')
+    parser.add_argument('-v', action='store_true', help='verbosity flag')
+    parser.add_argument('-f', '--function', type=int, choices=[0, 1], default=0,
+                        help='function to be called. 0: timezone_at(...) 1: certain_timezone_at(...)')
+
+    # takes input from sys.argv
+    parsed_args = parser.parse_args()
     tf = TimezoneFinder()
-    longitude = float(arguments[1])
-    latitude = float(arguments[2])
-    tz = tf.timezone_at(lng=longitude, lat=latitude)
-
-    if nr_arguments > 3 and arguments[3] == '-v':
-        # verbose mode:
-        print('Looking for TZ at lat=', latitude, ' lon=', longitude)
+    functions = [tf.timezone_at, tf.certain_timezone_at]
+    tz = functions[parsed_args.function](lng=parsed_args.lng, lat=parsed_args.lat)
+    if parsed_args.v:
+        print('Looking for TZ at lat=', parsed_args.lat, ' lng=', parsed_args.lng)
+        print('Function:', ['timezone_at()', 'certain_timezone_at()'][parsed_args.function])
         print('Timezone=', tz)
     else:
         print(tz)

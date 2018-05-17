@@ -3,18 +3,111 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 from datetime import datetime
 from math import ceil, floor
+from os.path import abspath, join, pardir
 from struct import pack
 
-# keep in mind: numba optimized fct. cannot be used here, because numpy classes are not being used at this stage yet!
-from .helpers import coord2int, inside_polygon, int2coord
-# from helpers import coord2int, inside_polygon, int2coord
+from six.moves import range, zip
+
+# keep in mind: the fater numba optimized helper fct. cannot be used here,
+# because numpy classes are not being used at this stage yet!
+from .helpers import TIMEZONE_NAMES_FILE, coord2int, inside_polygon, int2coord
+
+# from helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
 
 # import sys
 # from os.path import dirname
 #
 # sys.path.insert(0, dirname(__file__))
 # from helpers import coord2int, int2coord, inside_polygon
-# from timezone_names import timezone_names
+
+
+"""
+USE INSTRUCTIONS:
+
+- download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder
+- unzip and place the combined.json inside this timezonefinder folder
+- run this file_converter.py as a script until the compilation of the binary files is completed.
+
+
+IMPORTANT: all coordinates (floats) are being converted to int32 (multiplied by 10^7). This makes computations faster
+and it takes lot less space, without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
+
+B = unsigned char (1byte = 8bit Integer)
+H = unsigned short (2 byte integer)
+I = unsigned 4byte integer
+i = signed 4byte integer
+
+
+Binaries being written:
+
+[POLYGONS:] there are approx. 1k Polygons (evansiroky/timezone-boundary-builder 2017a)
+poly_zone_ids: the related zone_id for every polygon ('<H')
+poly_coord_amount: the amount of coordinates in every polygon ('<I')
+poly_adr2data: address in poly_data.bin where data for every polygon starts ('<I')
+poly_max_values: boundaries for every polygon ('<iiii': xmax, xmin, ymax, ymin)
+poly_data: coordinates for every polygon (multiple times '<i') (for every polygon first all x then all y values!)
+poly_nr2zone_id: the polygon number of the first polygon from every zone('<H')
+
+[HOLES:] number of holes (162 evansiroky/timezone-boundary-builder 2018d)
+hole_poly_ids: the related polygon_nr (=id) for every hole ('<H')
+hole_coord_amount: the amount of coordinates in every hole ('<H')
+hole_adr2data: address in hole_data.bin where data for every hole starts ('<I')
+hole_data: coordinates for every hole (multiple times '<i')
+
+[SHORTCUTS:] the surface of the world is split up into a grid of shortcut rectangles.
+-> there are a total of 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT shortcuts
+shortcut here means storing for every cell in a grid of the world map which polygons are located in that cell
+they can therefore be used to drastically reduce the amount of polygons which need to be checked in order to
+decide which timezone a point is located in.
+
+the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
+this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned)
+
+shortcuts_entry_amount: the amount of polygons for every shortcut ('<H')
+shortcuts_adr2data: address in shortcut_data.bin where data for every shortcut starts ('<I')
+shortcuts_data: polygon numbers (ids) for every shortcut (multiple times '<H')
+shortcuts_unique_id: the zone id if only polygons from one zone are present,
+                     a high number (with no corresponding zone) if not ('<H').
+                     the majority of zones either have no polygons at all (sea) or just one zone.
+                     this zone then can be instantly returned without actually testing polygons.
+
+also stored extra binary if only one zone (to directly return that zone without checking)
+
+
+
+shortcut statistics: (data version 2018d)
+highest entry amount is 30
+frequencies of entry amounts (from 0 to max entries):
+[89768, 32917, 6217, 617, 59, 11, 4, 1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1]
+relative accumulated frequencies [%]:
+[69.27, 94.66, 99.46, 99.94, 99.98, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+[30.73, 5.34, 0.54, 0.06, 0.02, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+69.27 % of all shortcuts are empty
+
+highest amount of different zones in one shortcut is 7
+frequencies of entry amounts (from 0 to max):
+[89768, 33199, 5999, 593, 35, 4, 1, 1]
+relative accumulated frequencies [%]:
+[69.27, 94.88, 99.51, 99.97, 100.0, 100.0, 100.0, 100.0]
+[30.73, 5.12, 0.49, 0.03, 0.0, 0.0, 0.0, 0.0]
+--------------------------------
+
+The number of filled shortcut zones are: 39832 (= 30.73 % of all shortcuts)
+The number of polygons is: 1018
+The number of floats in all the polygons is (2 per point): 10434626
+
+the polygon data makes up 97.2 % of the data
+the shortcuts make up 2.03 % of the data
+holes make up 0.77 % of the data
+"""
+
+INPUT_JSON_FILE_NAME = 'combined.json'
+
+# in debugging mode parse only some polygons
+DEBUG = False
+DEBUG_POLY_STOP = 20
 
 # ATTENTION: Don't change these settings or timezonefinder wont work!
 # different setups of shortcuts are not supported, because then addresses in the .bin
@@ -24,11 +117,11 @@ NR_SHORTCUTS_PER_LNG = 1
 # shortcuts per latitude
 NR_SHORTCUTS_PER_LAT = 2
 
-INVALID_ZONE_ID = 65535  # highest possible with H
+INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
 nr_of_lines = -1
 all_tz_names = []
-ids = []
+poly_zone_ids = []
 all_boundaries = []
 all_coords = []
 all_lengths = []
@@ -119,7 +212,7 @@ def polys_of_one_zone():
     for i in range(len(timezone_names)):
         start = poly_nr2zone_id[i]
         end = poly_nr2zone_id[i + 1]
-        yield range(start, end)
+        yield list(range(start, end))
 
 
 def replace_entry(iterable, entry, substitute):
@@ -137,19 +230,21 @@ def _holes_in_poly(poly_nr):
         i += 1
 
 
-def parse_polygons_from_json(path='combined.json'):
+def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
     global amount_of_holes
     global nr_of_lines
-    global ids
+    global poly_zone_ids
 
     print('Parsing data from {}\nthis could take a while...\n'.format(path))
-
     tz_list = json.loads(open(path).read()).get('features')
     # this counter just counts polygons, not holes!
     polygon_counter = 0
     current_zone_id = 0
     print('holes found at: (poly_nr zone_name)')
     for tz_dict in tz_list:
+        if DEBUG and polygon_counter > DEBUG_POLY_STOP:
+            break
+
         tz_name = tz_dict.get('properties').get("tzid")
         # print(tz_name)
         all_tz_names.append(tz_name)
@@ -175,7 +270,7 @@ def parse_polygons_from_json(path='combined.json'):
             # assert len(x_coords) > 0
             all_lengths.append(len(x_coords))
             all_boundaries.append((max(x_coords), min(x_coords), max(y_coords), min(y_coords)))
-            ids.append(current_zone_id)
+            poly_zone_ids.append(current_zone_id)
 
             # everything else is interpreted as a hole!
             for hole in poly_with_hole:
@@ -217,11 +312,11 @@ def parse_polygons_from_json(path='combined.json'):
         raise ValueError('polygon id cannot be encoded as short (int16) in hole_coord_amount.bin! there are',
                          nr_of_lines, 'polygons')
 
-    if ids[-1] > 2 ** 16:
+    if poly_zone_ids[-1] > 2 ** 16:
         # 420 different zones in evansiroky/timezone-boundary-builder 2017a
         # used in shortcuts_unique_id and poly_zone_ids
         raise ValueError('zone id cannot be encoded as char (int8). the last id is',
-                         ids[-1])
+                         poly_zone_ids[-1])
 
     if 0 in all_lengths:
         raise ValueError()
@@ -233,27 +328,21 @@ def parse_polygons_from_json(path='combined.json'):
     print('\n')
 
 
-def update_zone_names(path='timezone_names.py'):
-    global ids
+def update_zone_names(path=TIMEZONE_NAMES_FILE):
+    global poly_zone_ids
     global list_of_pointers
     global all_boundaries
     global all_coords
     global all_lengths
     global polynrs_of_holes
     print('updating the zone names in {} now...'.format(path))
-
-    # write all zone names into the file at path with the syntax of a python array
-    file = open(path, 'w')
-    file.write(
-        'from __future__ import absolute_import, division, print_function, unicode_literals\n\ntimezone_names = [\n')
-    for zone_name in all_tz_names:
-        file.write('    "' + zone_name + '"' + ',\n')
-
-    file.write(']\n')
+    # pickle the zone names (python array)
+    with open(abspath(path), 'w') as f:
+        f.write(json.dumps(all_tz_names))
     print('...Done.\n\nComputing where zones start and end...')
     i = 0
     last_id = -1
-    for zone_id in ids:
+    for zone_id in poly_zone_ids:
         if zone_id != last_id:
             poly_nr2zone_id.append(i)
             if zone_id < last_id:
@@ -291,7 +380,7 @@ def compile_binaries():
         for entry in shortcut_entries:
             registered_zone_ids = []
             for polygon_nr in entry:
-                id = ids[polygon_nr]
+                id = poly_zone_ids[polygon_nr]
                 if id not in registered_zone_ids:
                     registered_zone_ids.append(id)
 
@@ -597,8 +686,8 @@ def compile_binaries():
                 for column_nr in column_nrs:
                     for row_nr in row_nrs:
                         shortcuts_for_line.append((column_nr, row_nr))
-
                         # print(shortcuts_for_line)
+
             for shortcut in shortcuts_for_line:
                 shortcuts[shortcut] = shortcuts.get(shortcut, []) + [line]
 
@@ -618,14 +707,31 @@ def compile_binaries():
     shortcut_entries = []
     amount_filled_shortcuts = 0
 
+    def sort_poly_shortcut(poly_nrs):
+        # TODO write test
+        # the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
+        # this is critical for ruling out zones faster
+        # (as soon as just polygons of one zone are left this zone can be returned)
+        # only around 5% of all shortcuts include polygons from more than one zone
+        # in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
+        # has only one entry (important to check the zone with one entry first!).
+        polygon_ids = [poly_zone_ids[poly_nr] for poly_nr in poly_nrs]
+        id_freq = [polygon_ids.count(id) for id in polygon_ids]
+        zipped = list(zip(poly_nrs, polygon_ids, id_freq))
+        # also make sure polygons with the same zone freq. are ordered after their zone id
+        # (polygons from different zones should not get mixed up)
+        sort = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])
+        return [x[0] for x in sort]  # take only the polygon nrs
+
     # count how many shortcut addresses will be written:
+    # flatten out the shortcuts in one list in the order they are going to be written inside the polygon file
     for x in range(360 * NR_SHORTCUTS_PER_LNG):
         for y in range(180 * NR_SHORTCUTS_PER_LAT):
             try:
-                this_lines_shortcuts = shortcuts[(x, y)]
-                shortcut_entries.append(this_lines_shortcuts)
+                shortcuts_this_entry = shortcuts[(x, y)]
+                shortcut_entries.append(sort_poly_shortcut(shortcuts_this_entry))
                 amount_filled_shortcuts += 1
-                nr_of_entries_in_shortcut.append(len(this_lines_shortcuts))
+                nr_of_entries_in_shortcut.append(len(shortcuts_this_entry))
                 # print((x,y,this_lines_shortcuts))
             except KeyError:
                 nr_of_entries_in_shortcut.append(0)
@@ -661,7 +767,7 @@ def compile_binaries():
     path = 'poly_zone_ids.bin'
     print('writing file "', path, '"')
     output_file = open(path, 'wb')
-    for zone_id in ids:
+    for zone_id in poly_zone_ids:
         output_file.write(pack(b'<H', zone_id))
     output_file.close()
 
@@ -711,7 +817,7 @@ def compile_binaries():
     output_file = open(path, 'wb')
     for nr in nr_of_entries_in_shortcut:
         if nr > 300:
-            raise ValueError("There are too many polygons in this shortcuts:", nr)
+            raise ValueError("There are too many polygons in this shortcut:", nr)
         output_file.write(pack(b'<H', nr))
     output_file.close()
 
@@ -745,16 +851,16 @@ def compile_binaries():
     path = 'shortcuts_unique_id.bin'
     print('writing file "', path, '"')
     output_file = open(path, 'wb')
-    if ids[-1] >= INVALID_ZONE_ID:
+    if poly_zone_ids[-1] >= INVALID_ZONE_ID:
         raise ValueError(
             'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
     for x in range(360 * NR_SHORTCUTS_PER_LNG):
         for y in range(180 * NR_SHORTCUTS_PER_LAT):
             try:
-                this_lines_shortcuts = shortcuts[(x, y)]
-                unique_id = ids[this_lines_shortcuts[0]]
-                for nr in this_lines_shortcuts:
-                    if ids[nr] != unique_id:
+                shortcuts_this_entry = shortcuts[(x, y)]
+                unique_id = poly_zone_ids[shortcuts_this_entry[0]]
+                for nr in shortcuts_this_entry:
+                    if poly_zone_ids[nr] != unique_id:
                         # there is a polygon from a different zone (hence an invalid id should be written)
                         unique_id = INVALID_ZONE_ID
                         break
@@ -827,55 +933,17 @@ def compile_binaries():
     return
 
 
-"""
-IMPORTANT: all coordinates (floats) are being converted to int32 (multiplied by 10^7). This makes computations faster
-and it takes lot less space, without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
-
-B = unsigned char (8bit Integer)
-H = unsigned short (2 byte integer)
-I = unsigned 4byte integer
-i = signed 4byte integer
-
-
-Binaries being written:
-
-[POLYGONS:] there are approx. 1k Polygons (evansiroky/timezone-boundary-builder 2017a)
-poly_zone_ids: the related zone_id for every polygon ('<H')
-poly_coord_amount: the amount of coordinates in every polygon ('<I')
-poly_adr2data: address in poly_data.bin where data for every polygon starts ('<I')
-poly_max_values: boundaries for every polygon ('<iiii': xmax, xmin, ymax, ymin)
-poly_data: coordinates for every polygon (multiple times '<i') (for every polygon first all x then all y values!)
-poly_nr2zone_id: the polygon number of the first polygon from every zone('<H')
-
-[HOLES:] number of holes (very few: around 22)
-hole_poly_ids: the related polygon_nr (=id) for every hole ('<H')
-hole_coord_amount: the amount of coordinates in every hole ('<H')
-hole_adr2data: address in hole_data.bin where data for every hole starts ('<I')
-hole_data: coordinates for every hole (multiple times '<i')
-
-[SHORTCUTS:] there are a total of 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT shortcuts
-shortcut here means storing for every cell in a grid of the world map which polygons are located in that cell
-they can therefore be used to drastically reduce the amount of polygons which need to be checked in order to
-decide which timezone a point is located in
-
-shortcuts_entry_amount: the amount of polygons for every shortcut ('<H')
-shortcuts_adr2data: address in shortcut_data.bin where data for every shortcut starts ('<I')
-shortcuts_data: polygon numbers (ids) for every shortcut (multiple times '<H')
-shortcuts_unique_id: the zone id if only polygons from one zone are present,
-                     a high number (with no corresponding zone) if not ('<H')
-"""
-
 if __name__ == '__main__':
-    # pasting the data from the .json into RAM
-    parse_polygons_from_json(path='combined.json')
+    # parsing the data from the .json into RAM
+    parse_polygons_from_json(path=INPUT_JSON_FILE_NAME)
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
     # sort data according to zone_id
-    update_zone_names(path='timezone_names.py')
+    update_zone_names(path=TIMEZONE_NAMES_FILE)
 
-    # IMPORTANT: import the newly compiled timezone_names!
-    # the compilation process needs the new version of the timezone name file
-    from .timezone_names import timezone_names
-    # from timezone_names import timezone_names
+    # IMPORTANT: import the newly compiled timezone_names pickle!
+    # the compilation process needs the new version of the timezone names
+    with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
+        timezone_names = json.loads(f.read())
 
     # compute shortcuts and write everything into the binaries
     compile_binaries()

@@ -2,6 +2,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
+from six.moves import range
+
+TIMEZONE_NAMES_FILE = 'timezone_names.json'
+
 
 def inside_polygon(x, y, coords):
     contained = False
