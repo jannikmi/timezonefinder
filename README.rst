@@ -56,8 +56,7 @@ Installation
 ============
 
 
-Installation with conda: see instructions at `conda-forge feedstock<https://github.com/conda-forge/timezonefinder-feedstock>`__
-(NOTE: The newest version of timezonefinder might not be available via conda yet)
+Installation with conda: see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__ (NOTE: The newest version of timezonefinder might not be available via conda yet)
 
 
 Installation with pip:
@@ -319,7 +318,7 @@ This package uses at most 40MB (= encountered memory consumption of the python p
 
 -  highly reduced start up time
 
--  usage of 32bit int (instead of 64+bit float) reduces computing time and memory consumption. The accuracy of 32bit int is still high enough. According to my calculations the worst accuracy is 1cm at the equator. This far more precise than the discrete polygons in the data.
+-  usage of 32bit int (instead of 64+bit float) reduces computing time and memory consumption. The accuracy of 32bit int is still high enough. According to my calculations the worst accuracy is 1cm at the equator. This is far more precise than the discrete polygons in the data.
 
 -  the data is stored in memory friendly binary files (approx. 41MB in total, original data 120MB .json)
 
