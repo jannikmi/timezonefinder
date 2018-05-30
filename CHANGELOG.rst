@@ -7,6 +7,12 @@ Changelog
 * bugfix: possibly uninitialized variable in closest_timezone_at()
 
 
+3.0.1 (2018-05-30)
+------------------
+
+* fixing minor issue #58 (readme not rendering in pyPI)
+
+
 3.0.0 (2018-05-17)
 ------------------
 
