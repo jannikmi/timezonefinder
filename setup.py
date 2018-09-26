@@ -75,5 +75,6 @@ setup(
     install_requires=[
         'numpy',
         'six',
+        'kwargs_only',
     ],
 )

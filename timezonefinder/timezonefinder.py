@@ -6,10 +6,9 @@ from math import floor, radians
 from os.path import abspath, dirname, join, pardir
 from struct import unpack
 
+from kwargs_only import kwargs_only
 from numpy import array, empty, float64, fromfile
 from six.moves import range
-
-from .functional import kwargs_only
 
 # from sys import argv, exit
 

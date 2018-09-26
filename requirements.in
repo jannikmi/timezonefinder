@@ -1,4 +1,6 @@
 numpy
+six
+kwargs_only
 
 docutils
 flake8
@@ -10,4 +12,4 @@ multilint
 pygments
 pytest
 pytest-cov
-six
+

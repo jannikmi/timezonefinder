@@ -6,6 +6,8 @@ Changelog
 3.0.2 (2018-09-26)
 ------------------
 
+* ATTENTION: the package `kwargs_only <https://github.com/adamchainz/kwargs-only>`__ is now required! This functionality has previously been implemented by the author directly within this package, but some code features got deprecated.
+* updated build/testing/publishing routine
 * fixing issue #61 (six dependency not listed in setup.py)
 * no more default arguments for timezone_at() and certain_timezone_at()
 * no more comparison to (py-)tzwhere in the tests (test_it.py)

@@ -39,15 +39,17 @@ Also see:
 Dependencies
 ============
 
-(``python``)
-``numpy``
-``six``
+(``python``),
+``numpy``,
+``six``,
+``kwargs_only``
+
 
 **Optional:**
 
 If the vanilla Python code is too slow for you, also install
 
-``Numba`` (https://github.com/numba/numba) and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
+`Numba <https://github.com/numba/numba>`__ and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
 This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled to speed things up.
 
