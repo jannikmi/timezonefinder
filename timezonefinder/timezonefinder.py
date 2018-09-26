@@ -481,7 +481,7 @@ class TimezoneFinder:
         return timezone_names[current_closest_id]
 
     @kwargs_only
-    def timezone_at(self, lng=0.0, lat=0.0):
+    def timezone_at(self, lng, lat):
         """
         this function looks up in which polygons the point could be included in
         to speed things up there are shortcuts being used (stored in a binary file)
@@ -550,7 +550,7 @@ class TimezoneFinder:
             return None
 
     @kwargs_only
-    def certain_timezone_at(self, lng=0.0, lat=0.0):
+    def certain_timezone_at(self, lng, lat):
         """
         this function looks up in which polygon the point certainly is included
         this is much slower than 'timezone_at'!

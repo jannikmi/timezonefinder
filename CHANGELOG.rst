@@ -2,6 +2,18 @@ Changelog
 =========
 
 
+
+3.0.2 (2018-09-26)
+------------------
+
+* fixing issue #61 (six dependency not listed in setup.py)
+* no more default arguments for timezone_at() and certain_timezone_at()
+* no more comparison to (py-)tzwhere in the tests (test_it.py)
+* updated requirements.txt (removed tzwhere and dependencies)
+* prepared helpers_test.py for also testing helpers_numba.py
+* exchanged deprecated inspect.getargspec() into .getfullargspec() in functional.py
+
+
 3.0.1 (2018-05-30)
 ------------------
 
@@ -22,6 +34,13 @@ Changelog
 * the timezone names are now being stored in a readable JSON file
 * adjusted the main test cases
 * corrections and clarifications in the readme and code comments
+
+
+
+2.1.2 (2017-11-20)
+------------------
+
+* bugfix: possibly uninitialized variable in closest_timezone_at()
 
 
 2.1.1 (2017-11-20)

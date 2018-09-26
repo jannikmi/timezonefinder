@@ -1,5 +1,5 @@
 numpy
-tzwhere
+# tzwhere # tests do not require tzwhere any more (no comparison)
 
 docutils
 flake8

@@ -13,7 +13,8 @@ def kwargs_only(func):
 
         def foo(*, bar=default):
     """
-    signature = inspect.getargspec(func)
+    # signature = inspect.getargspec(func) # deprecated
+    signature = inspect.getfullargspec(func)
 
     if signature.args[:1] in (['self'], ['cls']):
         allowable_args = 1

@@ -4,20 +4,20 @@ import re
 
 
 # required packages
-# pip-tools
 # numpy
+# six
 # (llvmlite, numba)
 
+# for testing:
+# pip-tools
+# rstcheck
+# pytest
 
-# commands
-# tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
-# rstcheck *.rst
-# tox -r -e py{27,36}-codestyle
-# tox -r -e py27
-
+# pip-tools package:
 # its important to pin requirements to get reproducible errors!
 # compile a new requirements file (with the latest versions)
 # pip-compile --upgrade
+# same as?!:
 # pip-compile --output-file requirements.txt requirements.in
 # only update the flask package:
 # pip-compile --upgrade-package flask
@@ -26,6 +26,12 @@ import re
 
 # do NOT sync. will install ONLY the packages specified! (no more tox etc. installed!)
 # pip-sync
+
+# commands
+# tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
+# rstcheck *.rst
+# tox -r -e py{27,36}-codestyle
+# tox -r -e py27
 
 
 def get_version(package):
@@ -178,13 +184,13 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,37}-codestyle",
             'checking syntax, codestyle and imports',
             'continue')
 
     routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
             'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'checking if package is building with tox',
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37", 'checking if package is building with tox',
             'continue')
 
     print('Tests finished.')

@@ -241,7 +241,38 @@ Further application:
     except UnknownTimeZoneError:
         # ... handle the error ...
 
+
+**Getting a location's time zone offset from UTC in minutes:**
+
+solution from `communikein <https://github.com/communikein>`__
+
+::
+
+    from timezonefinder import TimezoneFinder
+    from pytz import timezone
+    import pytz
+    from datetime import datetime
+
+    utc = pytz.utc
+    tf = TimezoneFinder()
+
+    def offset(target):
+        """
+        returns a location's time zone offset from UTC in minutes.
+        """
+        today = datetime.now()
+        tz_target = timezone(tf.certain_timezone_at(lat=target['lat'], lng=target['lng']))
+        # ATTENTION: tz_target could be None! handle error case
+        today_target = tz_target.localize(today)
+        today_utc = utc.localize(today)
+        return (today_utc - today_target).total_seconds() / 60
+
+    bergamo = dict({'lat':45.69, 'lng':9.67})
+    print(offset(bergamo))
+
+
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
+
 
 **parsing the data:**
 
