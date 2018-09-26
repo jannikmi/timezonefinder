@@ -74,5 +74,7 @@ setup(
     long_description=readme + '\n\n' + changelog,
     install_requires=[
         'numpy',
+        'six',
+        'kwargs_only',
     ],
 )

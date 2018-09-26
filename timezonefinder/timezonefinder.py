@@ -6,11 +6,10 @@ from math import floor, radians
 from os.path import abspath, join, pardir
 from struct import unpack
 
+from kwargs_only import kwargs_only
 from numpy import array, empty, float64, fromfile
 from pkg_resources import resource_stream
 from six.moves import range
-
-from .functional import kwargs_only
 
 # from sys import argv, exit
 
@@ -482,7 +481,7 @@ class TimezoneFinder:
         return timezone_names[current_closest_id]
 
     @kwargs_only
-    def timezone_at(self, lng=0.0, lat=0.0):
+    def timezone_at(self, lng, lat):
         """
         this function looks up in which polygons the point could be included in
         to speed things up there are shortcuts being used (stored in a binary file)
@@ -551,7 +550,7 @@ class TimezoneFinder:
             return None
 
     @kwargs_only
-    def certain_timezone_at(self, lng=0.0, lat=0.0):
+    def certain_timezone_at(self, lng, lat):
         """
         this function looks up in which polygon the point certainly is included
         this is much slower than 'timezone_at'!

@@ -43,15 +43,17 @@ Also see:
 Dependencies
 ============
 
-(``python``)
-``numpy``
-``six``
+(``python``),
+``numpy``,
+``six``,
+``kwargs_only``
+
 
 **Optional:**
 
 If the vanilla Python code is too slow for you, also install
 
-``Numba`` (https://github.com/numba/numba) and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
+`Numba <https://github.com/numba/numba>`__ and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
 This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled to speed things up.
 
@@ -250,10 +252,10 @@ Further application:
     except UnknownTimeZoneError:
         # ... handle the error ...
 
-also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
-**a location's time zone offset from UTC in minutes:**
-solution from @communikein
+**Getting a location's time zone offset from UTC in minutes:**
+
+solution from `communikein <https://github.com/communikein>`__
 
 ::
 
@@ -266,6 +268,9 @@ solution from @communikein
     tf = TimezoneFinder()
 
     def offset(target):
+        """
+        returns a location's time zone offset from UTC in minutes.
+        """
         today = datetime.now()
         tz_target = timezone(tf.certain_timezone_at(lat=target['lat'], lng=target['lng']))
         # ATTENTION: tz_target could be None! handle error case
@@ -275,6 +280,9 @@ solution from @communikein
 
     bergamo = dict({'lat':45.69, 'lng':9.67})
     print(offset(bergamo))
+
+
+also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 
 **parsing the data:**
