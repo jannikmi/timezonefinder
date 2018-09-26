@@ -3,8 +3,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import random
 import unittest
 from math import degrees, radians, sqrt
-import numpy as np
 
+import numpy as np
 from six.moves import range
 
 # from timezonefinder.helpers import (
@@ -12,7 +12,7 @@ from six.moves import range
 #     haversine,
 #     inside_polygon,
 # )
-#
+
 
 def random_point():
     # tzwhere does not work for points with more latitude!
@@ -24,7 +24,6 @@ def list_of_random_points(length):
 
 
 class HelperTest(unittest.TestCase):
-
     import timezonefinder.helpers as helpers
     fct_dict = {
         "all_the_same": helpers.all_the_same,
@@ -36,6 +35,7 @@ class HelperTest(unittest.TestCase):
         "inside_polygon": helpers.inside_polygon,
     }
     print('\ntesting helpers.py functions...')
+
     # use only numpy data structures, because the functions are reused for testing the numba helpers
 
     def test_inside_polygon(self):
@@ -163,7 +163,7 @@ class HelperTest(unittest.TestCase):
             lng_rnd_point2 = random_point()[0]
             hav_result = degrees(haversine(radians(rnd_point[0]), radians(rnd_point[1]), lng_rnd_point2, 0))
             result = degrees(distance_to_point_on_equator(radians(rnd_point[0]), radians(rnd_point[1]), lng_rnd_point2))
-            self.assertAlmostEqual(hav_result, result,places=7)
+            self.assertAlmostEqual(hav_result, result, places=7)
             # if abs(hav_result - result) > 0.000001:
             #     raise AssertionError(i, 'should be equal:', hav_result, result, rnd_point, lng_rnd_point2)
 
@@ -191,6 +191,7 @@ class HelperTest(unittest.TestCase):
         distance = distance_to_polygon(x_rad, y_rad, len(x_coords), points)
         # print(km2deg(distance))
         assert abs(km2deg(distance) - sqrt(2) / 2) < 0.00001
+
 
 # TODO all Numba compiled functions have to receive their arguments in the proper data type. conversions needed! numpy?!
 # class HelperTestNumba(HelperTest):

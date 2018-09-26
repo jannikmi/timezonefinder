@@ -2,9 +2,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import random
 import unittest
-import pytest
 from datetime import datetime
 
+import pytest
 from six.moves import range
 
 from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords
