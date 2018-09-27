@@ -14,8 +14,11 @@ import re
 # pytest
 
 # pip-tools package:
+# TODO write bash script for this
+# compile with python 2!
 # its important to pin requirements to get reproducible errors!
 # compile a new requirements file (with the latest versions)
+# source activate py2env
 # pip-compile --upgrade
 # same as?!:
 # pip-compile --output-file requirements.txt requirements.in
@@ -154,6 +157,7 @@ if __name__ == "__main__":
             'Exit')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
+    routine(None, 'Are all dependencies written in setup.py, requirements.in/.txt and the Readme?', 'OK. Continue', 'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
             'Maybe update test routine (requirements.txt) with pip-compile! Commands are written in the beginning of this script',

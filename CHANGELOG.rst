@@ -2,6 +2,12 @@ Changelog
 =========
 
 
+3.1.0 (2018-09-27)
+------------------
+
+* fixing typo in requirements.txt
+* updated publishing routine: reminder to include all direct dependencies and to compile the requirements.txt with python 2 (pip-tools)
+
 
 3.0.2 (2018-09-26)
 ------------------
