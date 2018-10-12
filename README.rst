@@ -46,7 +46,7 @@ Dependencies
 (``python``),
 ``numpy``,
 ``six``,
-``kwargs_only``
+``kwargs-only``
 
 
 **Optional:**
