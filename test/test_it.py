@@ -7,7 +7,17 @@ from datetime import datetime
 import pytest
 from six.moves import range
 
-from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords
+from timezonefinder.timezonefinder import TimezoneFinder, convert2coord_pairs, convert2coords, coord2shortcut
+
+
+def proto_test_case(data, fct):
+    for input, expected_output in data:
+        # print(input, expected_output, fct(input))
+        actual_output = fct(input)
+        if actual_output != expected_output:
+            print('input: {} expected: {} got: {}'.format(input, expected_output, actual_output))
+        assert actual_output == expected_output
+
 
 # removed tzwhere comparison, since it is outdated
 # from tzwhere.tzwhere import tzwhere
@@ -231,6 +241,13 @@ class PackageEqualityTest(unittest.TestCase):
             self.timezone_finder.timezone_at(lng=-180.01, lat=-90.0)
             self.timezone_finder.timezone_at(lng=-180.0, lat=-90.01)
 
+    def test_kwargs_only(self):
+        # calling timezonefinder fcts without keyword arguments should raise an error
+        with pytest.raises(TypeError):
+            self.timezone_finder.timezone_at(23.0, 42.0)
+            self.timezone_finder.timezone_at(23.0, lng=42.0)
+            self.timezone_finder.timezone_at(23.0, lat=42.0)
+
     def test_correctness(self):
         no_mistakes_made = True
         template = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
@@ -319,3 +336,36 @@ class PackageEqualityTest(unittest.TestCase):
     def test_convert2coords():
         data = [[10000000, 20000000, 30000000], [10000000, 20000000, 30000000]]
         assert (convert2coords(data) == [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]])
+
+    @staticmethod
+    def test_coord2shortcut():
+
+        def coord2shortcut_test_fct(input):
+            (lng, lat) = input
+            return coord2shortcut(lng, lat)
+
+        data = [
+            # shortcut numbering starts at "the top left" with x,y= 0,0
+            # always (only) the "top" and "left" borders belong to a shortcut
+            # the other borders belong to the next neighbouring shortcut
+            ((-180.0, 90.0), (0, 0)),
+            # shortcuts are constant for every 1 degree lng and 0.5 degree lat
+            # defined with NR_SHORTCUTS_PER_LNG, NR_SHORTCUTS_PER_LAT in timezonefinder.file_converter
+            ((-179.9, 89.9), (0, 0)),
+
+            # shortcut numbering follows the lng, lat coordinate grid
+            ((-179.0, 90.0), (1, 0)),
+            ((-178.9, 89.9), (1, 0)),
+            ((-180.0, 89.5), (0, 1)),
+            ((-179.9, 89.4), (0, 1)),
+            ((-180.0, 89.0), (0, 2)),
+            ((-179.9, 88.9), (0, 2)),
+
+            # shortcut numbering end at "the top left" with x,y= 359, 359
+            # lng= 180.0 == -180.0
+            # lat =-90.0 is not allowed (=bottom border of a shortcut)
+            ((179.9, -89.9), (359, 359)),
+            ((179.8, -89.8), (359, 359)),
+        ]
+
+        proto_test_case(data, coord2shortcut_test_fct)

@@ -188,13 +188,19 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,37}-codestyle",
+    # FIXME
+    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
+    #         'checking syntax, codestyle and imports',
+    #         'continue')
+
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-codestyle",
             'checking syntax, codestyle and imports',
             'continue')
 
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
-            'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37", 'checking if package is building with tox',
+    # FIXME
+    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
+    #         'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'checking if package is building with tox',
             'continue')
 
     print('Tests finished.')

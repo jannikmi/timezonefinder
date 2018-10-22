@@ -76,6 +76,8 @@ then in the command line:
 Usage
 =====
 
+check ``example.py``
+
 Basics:
 -------
 
@@ -250,13 +252,11 @@ solution from `communikein <https://github.com/communikein>`__
 
 ::
 
-    from timezonefinder import TimezoneFinder
     from pytz import timezone
     import pytz
     from datetime import datetime
 
     utc = pytz.utc
-    tf = TimezoneFinder()
 
     def offset(target):
         """

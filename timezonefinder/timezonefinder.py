@@ -6,9 +6,10 @@ from math import floor, radians
 from os.path import abspath, dirname, join, pardir
 from struct import unpack
 
-from kwargs_only import kwargs_only
 from numpy import array, empty, float64, fromfile
 from six.moves import range
+
+from .kwargs_only import kwargs_only
 
 # from sys import argv, exit
 
@@ -93,12 +94,16 @@ def rectify(lng, lat):
         raise ValueError('The coordinates should be given in degrees. They are out ouf bounds: (', lng, ',', lat, ')')
     # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
     # are not included in the shortcut lookup system
+    # always (only) the "top" and "left" borders belong to a shortcut
     if lng == 180.0:
-        # a longitude of 180 however equals lng=0 (earth is a sphere)
+        # a longitude of 180.0 is not allowed, because the right border of a shortcut
+        # is already considered to lie within the next shortcut
+        # it however equals lng=0.0 (earth is a sphere)
         lng = 0.0
     if lat == -90.0:
-        # a latitude of -90 (=exact south pole) corresponds to just one single point on earth
-        #  and it has the same timezones as the points with a slightly higher latitude
+        # a latitude of -90.0 (=exact south pole) corresponds to just one single point on earth
+        # and is not allowed, because bottom border of a shortcut is already considered to lie within the next shortcut
+        # it has the same timezones as the points with a slightly higher latitude
         lat = -89.999
     return lng, lat
 
@@ -252,7 +257,6 @@ class TimezoneFinder:
          and each polygon and hole is itself formated like: ([longitudes], [latitudes])
          or [(lng1,lat1), (lng2,lat2),...] if ``coords_as_pairs=True``.
 
-        TODO optimize, store additional info in binaries to compile this faster, maybe sort polygons after id
         '''
 
         if use_id:
