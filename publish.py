@@ -35,6 +35,7 @@ import re
 # rstcheck *.rst
 # tox -r -e py{27,36}-codestyle
 # tox -r -e py27
+# tox -r -e py36
 
 
 def get_version(package):

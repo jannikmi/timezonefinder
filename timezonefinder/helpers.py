@@ -7,18 +7,42 @@ from six.moves import range
 TIMEZONE_NAMES_FILE = 'timezone_names.json'
 
 
-def inside_polygon(x, y, coords):
+def inside_polygon(x, y, coordinates):
+    """
+    :param x:
+    :param y:
+    :param coordinates: a polygon represented by a list containing two lists (x and y coordinates):
+        [ [x1,x2,x3...], [y1,y2,y3...]]
+        those lists are actually numpy arrays which are being read directly from a binary file
+    :return: true if the point (x,y) lies within the polygon
+
+    Some overflow considerations for the critical comparison of line segment slopes:
+
+        (y2 - y) * (x2 - x1) <= delta_y_max * delta_x_max
+        (y2 - y1) * (x2 - x) <= delta_y_max * delta_x_max
+        delta_y_max * delta_x_max = 180 * 360 < 65 x10^3
+
+    ints are being used instead of floats (by multiplying with 10^7).
+    That gives us values for sure smaller than 65 x10^10
+    So these numbers need up to log_2(65 x10^10) ~ 40 bits to be represented.
+    Even though values this big should never occur in practice
+    (timezone polygons do not span the whole lng lat coordinate space),
+    32bit accuracy hence is not safe to use here.
+    However since python 2.2 automatically uses the appropriate int representation
+     (cf. https://www.python.org/dev/peps/pep-0237/)
+     and hence overflow should actually never be an issue in vanilla python.
+    """
     contained = False
     # the edge from the last to the first point is checked first
     i = -1
-    y1 = coords[1][-1]
+    y1 = coordinates[1][-1]
     y_gt_y1 = y > y1
-    for y2 in coords[1]:
+    for y2 in coordinates[1]:
         y_gt_y2 = y > y2
         if y_gt_y1:
             if not y_gt_y2:
-                x1 = coords[0][i]
-                x2 = coords[0][i + 1]
+                x1 = coordinates[0][i]
+                x2 = coordinates[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
@@ -32,8 +56,8 @@ def inside_polygon(x, y, coords):
 
         else:
             if y_gt_y2:
-                x1 = coords[0][i]
-                x2 = coords[0][i + 1]
+                x1 = coordinates[0][i]
+                x2 = coordinates[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
