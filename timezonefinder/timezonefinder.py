@@ -282,15 +282,11 @@ class TimezoneFinder:
         :return: (list of zone_ids, boolean: do all entries belong to the same zone)
         """
         zone_id_list = empty([nr_of_polygons], dtype='<u2')
-        first_id = self.id_of(polygon_id_list[0])
-        equal = True
         for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
-            if zone_id != first_id:
-                equal = False
             zone_id_list[pointer_local] = zone_id
 
-        return zone_id_list, equal
+        return zone_id_list
 
     def compile_id_list(self, polygon_id_list, nr_of_polygons):
         """
@@ -504,7 +500,7 @@ class TimezoneFinder:
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek((720 * shortcut_id_x + 2 * shortcut_id_y))
         try:
-            # check if there is just one possible zone in this shortcut
+            # if there is just one possible zone in this shortcut instantly return its name
             return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(2))[0]]
         except IndexError:
             possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
@@ -516,13 +512,17 @@ class TimezoneFinder:
                 return timezone_names[self.id_of(possible_polygons[0])]
 
             # create a list of all the timezone ids of all possible polygons
-            ids, only_one_zone = self.id_list(possible_polygons, nr_possible_polygons)
-            if only_one_zone:
-                # all of the polygons belong to the same zone. return its name.
-                return timezone_names[ids[0]]
+            ids = self.id_list(possible_polygons, nr_possible_polygons)
 
-            # otherwise check until the point is included in one of the possible polygons
+            # check until the point is included in one of the possible polygons
             for i in range(nr_possible_polygons):
+
+                # when including the current polygon only polygons from the same zone remain,
+                same_element = all_the_same(pointer=i, length=nr_possible_polygons, id_list=ids)
+                if same_element != -1:
+                    # return the name of that zone
+                    return timezone_names[same_element]
+
                 polygon_nr = possible_polygons[i]
 
                 # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
@@ -532,7 +532,7 @@ class TimezoneFinder:
                 if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
                     outside_all_holes = True
-                    # when the point is within a hole of the polygon, this timezone doesn't need to be checked
+                    # when the point is within a hole of the polygon, this timezone must not be returned
                     for hole_coordinates in self._holes_of_line(polygon_nr):
                         if inside_polygon(x, y, hole_coordinates):
                             outside_all_holes = False
@@ -543,14 +543,9 @@ class TimezoneFinder:
                             # the point is included in this polygon. return its timezone name without further checks
                             return timezone_names[ids[i]]
 
-                # when after the current polygon only polygons from the same zone remain, return the name of that zone
-                same_element = all_the_same(pointer=i + 1, length=nr_possible_polygons, id_list=ids)
-                if same_element != -1:
-                    return timezone_names[same_element]
-
-            # this statement is actually never reached, because the timezone name of the last polygon is always returned
+            # the timezone name of the last polygon should always be returned
             # if no other polygon has been matched beforehand.
-            return None
+            raise ValueError('BUG: this statement should never be reached. Please open up an issue on Github!')
 
     @kwargs_only
     def certain_timezone_at(self, lng, lat):

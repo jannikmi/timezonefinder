@@ -22,6 +22,8 @@ from .helpers import TIMEZONE_NAMES_FILE, coord2int, inside_polygon, int2coord
 
 
 """
+TODO write tests
+
 USE INSTRUCTIONS:
 
 - download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder

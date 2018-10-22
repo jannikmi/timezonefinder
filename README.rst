@@ -100,8 +100,8 @@ for testing if numba is being used:
 
 **timezone_at():**
 
-This is the default function to check which timezone a point lies within (similar to tzwheres ``tzNameAt()``).
-If no timezone has been found, ``None`` is being returned.
+This is the default function to check which timezone a point lies within.
+If no timezone has been matched, ``None`` is being returned.
 
 **PLEASE NOTE:** This approach is optimized for speed and the common case to only query points within a timezone.
 The last possible timezone in proximity is always returned (without checking if the point is really included).
@@ -118,7 +118,7 @@ So results might be misleading for points outside of any timezone.
 **certain_timezone_at():**
 
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
-are checked until one polygon is matched. ``None`` is being returned without any match.
+are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
 NOTE: The timezone polygons do NOT follow the shorelines any more. Just because you do not get ``None``,
 the point could still lie off land!
@@ -131,8 +131,7 @@ the point could still lie off land!
 
 **closest_timezone_at():**
 
-Only use this when the point is not inside a polygon (simply computes and compares the distances to the polygon boundaries!).
-This returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+This simply computes and compares the distances to the timezone polygon boundaries (expensive!). It returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
 NOTE: The timezone polygons do NOT follow the shorelines any more. This makes the results of closest_timezone_at() somewhat meaningless.
 
@@ -142,7 +141,8 @@ NOTE: The timezone polygons do NOT follow the shorelines any more. This makes th
     latitude = 55.578595
     tf.closest_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Copenhagen'
 
-Other options:
+
+Options:
 To increase search radius even more, use the ``delta_degree``-option:
 
 ::
@@ -157,10 +157,10 @@ consider using ``Numba`` to save computing time.
 
 
 Also keep in mind that x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
-As a consequence getting a result does NOT mean that there is no closer timezone! It might just not be within the area being queried.
+As a consequence getting a result does NOT mean that there is no closer timezone! It might just not be within the area (given in degree!) being queried.
 
 With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated), instead of just evaluating the distances to all the vertices.
-This only makes a real difference when polygons are very close.
+This only makes a real difference when the boundary of a polygon is very close to the query point.
 
 
 With ``return_distances=True`` the output looks like this:
@@ -187,7 +187,7 @@ To prevent this use ``force_evaluation=True``.
 **get_geometry:**
 
 
-for querying timezones for their geometric shape use ``get_geometry()``.
+For querying a timezone for its geometric multi-polygon shape use ``get_geometry()``.
 output format: ``[ [polygon1, hole1,...), [polygon2, ...], ...]``
 and each polygon and hole is itself formated like: ``([longitudes], [latitudes])``
 or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.

@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
+from numpy import int64
 from six.moves import range
 
 from numba import b1, f8, i2, i4, jit, typeof, u2, u8
@@ -22,6 +23,8 @@ dtype_2floattuple = typeof((1.0, 1.0))
 @jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
 def inside_polygon(x, y, coordinates):
     """
+    Implementing the ray casting point in polygon test algorithm
+    cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
     :param x:
     :param y:
     :param coordinates: a polygon represented by a list containing two lists (x and y coordinates):
@@ -35,17 +38,18 @@ def inside_polygon(x, y, coordinates):
         (y2 - y1) * (x2 - x) <= delta_y_max * delta_x_max
         delta_y_max * delta_x_max = 180 * 360 < 65 x10^3
 
-    ints are being used instead of floats (by multiplying with 10^7).
-    That gives us values for sure smaller than 65 x10^10
-    So these numbers need up to log_2(65 x10^10) ~ 40 bits to be represented.
-    Even though values this big should never occur in practice
-    (timezone polygons do not span the whole lng lat coordinate space),
-    32bit accuracy hence is not safe to use here.
-    However since python 2.2 automatically uses the appropriate int representation
-     (cf. https://www.python.org/dev/peps/pep-0237/)
-     and hence overflow should actually never be an issue in vanilla python.
-     With numba however types are static, so
-     TODO use in64 (=i8) to make sure no overflow happens. Problem: polygons are stored with i4 in the .bin files!
+    Instead of calculating with float I decided using just ints (by multiplying with 10^7). That gives us:
+
+        delta_y_max * delta_x_max = 180x10^7 * 360x10^7
+        delta_y_max * delta_x_max <= 65x^17
+
+    So these numbers need up to log_2(65 x10^10) ~ 63 bits to be represented! Even though values this big should never
+     occur in practice (timezone polygons do not span the whole lng lat coordinate space),
+     32bit accuracy is not safe to use here!
+     Python 2.2 automatically uses the appropriate int data type preventing overflow
+     (cf. https://www.python.org/dev/peps/pep-0237/),
+     but here the data types are numpy internal static data types. The data is stored as int32
+     -> use int64 when comparing slopes!
     """
     contained = False
     # the edge from the last to the first point is checked first
@@ -65,7 +69,8 @@ def inside_polygon(x, y, coordinates):
                 # depending on the position of p2 this determines whether the polygon edge is right or left of the point
                 # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
                 # ( dy/dx > a  ==  dy > a * dx )
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) <= (y2 - y1) * (x2 - x)):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
+                                         and int64(y2 - y) * int64(x2 - x1) <= int64(y2 - y1) * int64(x2 - x)):
                     contained = not contained
 
         else:
@@ -75,7 +80,8 @@ def inside_polygon(x, y, coordinates):
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) >= (y2 - y1) * (x2 - x)):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
+                                         and int64(y2 - y) * int64(x2 - x1) >= int64(y2 - y1) * int64(x2 - x)):
                     contained = not contained
 
         y1 = y2
@@ -88,7 +94,7 @@ def inside_polygon(x, y, coordinates):
 @jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
     """
-    :param pointer: from that element the list is checked for equality
+    :param pointer: starting from that element the list is being checked for equality of its elements
     :param length:
     :param id_list: List mustn't be empty or Null. There has to be at least one element
     :return: returns the first encountered element if starting from the pointer all elements are the same,

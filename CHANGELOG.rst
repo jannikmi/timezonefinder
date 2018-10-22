@@ -7,8 +7,9 @@ Changelog
 
 * ATTENTION: the package `kwargs_only <https://github.com/adamchainz/kwargs-only>`__ is not a requirement any more!
 * fixing #63 (kwargs_only not in conda) by directly providing the kwargs_only functionality again
-* TODO updated the data to `2017f <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2017f>`__
 * added example.py with the code examples from the readme
+* fixing #62 (overflow happening because of using numpy.int32): forcing int64 type conversion
+* TODO updated the data to `2017f <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2017f>`__
 
 
 3.1.0 (2018-09-27)

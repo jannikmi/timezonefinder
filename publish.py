@@ -158,10 +158,11 @@ if __name__ == "__main__":
             'Exit')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all dependencies written in setup.py, requirements.in/.txt and the Readme?', 'OK. Continue', 'Exit')
+    routine(None, 'Are all dependencies written in setup.py, requirements.in/.txt and the Readme?', 'OK. Continue',
+            'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
-            'Maybe update test routine (requirements.txt) with pip-compile! Commands are written in the beginning of this script',
+            'Maybe update test routine (requirements.txt) with pip-compile with python 2! Commands are written in the beginning of this script',
             'Done. Run tests', 'Exit')
 
     # print('Enter virtual env name:')
@@ -174,7 +175,7 @@ if __name__ == "__main__":
     print('Running TESTS:')
 
     # routine(virt_env_act_command + "pip-compile requirements.in;pip-sync",
-    #         'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
+    #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
     routine(virt_env_act_command + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
 
@@ -189,19 +190,10 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    # FIXME
-    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
-    #         'checking syntax, codestyle and imports',
-    #         'continue')
-
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-codestyle",
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
             'checking syntax, codestyle and imports',
             'continue')
-
-    # FIXME
-    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
-    #         'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'checking if package is building with tox',
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
             'continue')
 
     print('Tests finished.')
