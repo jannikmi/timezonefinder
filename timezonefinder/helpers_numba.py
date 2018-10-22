@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
 
+from numpy import int64
 from six.moves import range
 
 from numba import b1, f8, i2, i4, jit, typeof, u2, u8
@@ -20,18 +21,47 @@ dtype_2floattuple = typeof((1.0, 1.0))
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
 @jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
-def inside_polygon(x, y, coords):
+def inside_polygon(x, y, coordinates):
+    """
+    Implementing the ray casting point in polygon test algorithm
+    cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
+    :param x:
+    :param y:
+    :param coordinates: a polygon represented by a list containing two lists (x and y coordinates):
+        [ [x1,x2,x3...], [y1,y2,y3...]]
+        those lists are actually numpy arrays which are being read directly from a binary file
+    :return: true if the point (x,y) lies within the polygon
+
+    Some overflow considerations for the critical comparison of line segment slopes:
+
+        (y2 - y) * (x2 - x1) <= delta_y_max * delta_x_max
+        (y2 - y1) * (x2 - x) <= delta_y_max * delta_x_max
+        delta_y_max * delta_x_max = 180 * 360 < 65 x10^3
+
+    Instead of calculating with float I decided using just ints (by multiplying with 10^7). That gives us:
+
+        delta_y_max * delta_x_max = 180x10^7 * 360x10^7
+        delta_y_max * delta_x_max <= 65x^17
+
+    So these numbers need up to log_2(65 x10^10) ~ 63 bits to be represented! Even though values this big should never
+     occur in practice (timezone polygons do not span the whole lng lat coordinate space),
+     32bit accuracy is not safe to use here!
+     Python 2.2 automatically uses the appropriate int data type preventing overflow
+     (cf. https://www.python.org/dev/peps/pep-0237/),
+     but here the data types are numpy internal static data types. The data is stored as int32
+     -> use int64 when comparing slopes!
+    """
     contained = False
     # the edge from the last to the first point is checked first
     i = -1
-    y1 = coords[1][-1]
+    y1 = coordinates[1][-1]
     y_gt_y1 = y > y1
-    for y2 in coords[1]:
+    for y2 in coordinates[1]:
         y_gt_y2 = y > y2
         if y_gt_y1:
             if not y_gt_y2:
-                x1 = coords[0][i]
-                x2 = coords[0][i + 1]
+                x1 = coordinates[0][i]
+                x2 = coordinates[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
@@ -39,17 +69,19 @@ def inside_polygon(x, y, coords):
                 # depending on the position of p2 this determines whether the polygon edge is right or left of the point
                 # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
                 # ( dy/dx > a  ==  dy > a * dx )
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) <= (y2 - y1) * (x2 - x)):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
+                                         and int64(y2 - y) * int64(x2 - x1) <= int64(y2 - y1) * int64(x2 - x)):
                     contained = not contained
 
         else:
             if y_gt_y2:
-                x1 = coords[0][i]
-                x2 = coords[0][i + 1]
+                x1 = coordinates[0][i]
+                x2 = coordinates[0][i + 1]
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (y2 - y) * (x2 - x1) >= (y2 - y1) * (x2 - x)):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
+                                         and int64(y2 - y) * int64(x2 - x1) >= int64(y2 - y1) * int64(x2 - x)):
                     contained = not contained
 
         y1 = y2
@@ -62,7 +94,7 @@ def inside_polygon(x, y, coords):
 @jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
 def all_the_same(pointer, length, id_list):
     """
-    :param pointer: from that element the list is checked for equality
+    :param pointer: starting from that element the list is being checked for equality of its elements
     :param length:
     :param id_list: List mustn't be empty or Null. There has to be at least one element
     :return: returns the first encountered element if starting from the pointer all elements are the same,

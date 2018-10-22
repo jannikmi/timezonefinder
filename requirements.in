@@ -1,6 +1,5 @@
 numpy
 six
-kwargs-only
 
 docutils
 flake8
