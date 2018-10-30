@@ -11,14 +11,13 @@ timezonefinder
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
-
 .. image:: https://img.shields.io/conda/dn/conda-forge/timezonefinder.svg
     :target: https://anaconda.org/conda-forge/timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
-.. image:: https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg
+.. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg
     :target: https://anaconda.org/conda-forge/timezonefinder
 
 
@@ -26,14 +25,15 @@ timezonefinder
 This is a fast and lightweight python project for looking up the corresponding
 timezone for a given lat/lng on earth entirely offline.
 
-NOTE: the old smaller data set `tz_world <http://efele.net/maps/tz/world/>`__  is not being maintained any more and the new data (s. below) is unfortunately much bigger (40+MB).
-I originally wanted to keep this package as lightweight as possible, but actuality is even more important I guess.
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder(L).
+
+NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date.
+In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL.
 
 NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
 This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with timezonefinderL).
 
 Current data set in use (since 3.0.0): precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ release. version: 2018d (without oceans, Apr2018, 116MB, JSON)
+
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
@@ -52,6 +52,7 @@ Dependencies
 ``six``
 
 
+
 **Optional:**
 
 If the vanilla Python code is too slow for you, also install
@@ -68,9 +69,9 @@ Installation
 Installation with conda: see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__ (NOTE: The newest version of timezonefinder might not be available via conda yet)
 
 
+
 Installation with pip:
-(install the dependencies)
-then in the command line:
+in the command line:
 
 ::
 
@@ -124,11 +125,14 @@ So results might be misleading for points outside of any timezone.
 
 **certain_timezone_at():**
 
+NOTE: The timezone polygons do NOT follow the shorelines any more!
+
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
 NOTE: The timezone polygons do NOT follow the shorelines any more. Just because you do not get ``None``,
 the point could still lie off land!
+
 
 
 ::
@@ -138,9 +142,12 @@ the point could still lie off land!
 
 **closest_timezone_at():**
 
-This simply computes and compares the distances to the timezone polygon boundaries (expensive!). It returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
-NOTE: The timezone polygons do NOT follow the shorelines any more. This makes the results of closest_timezone_at() somewhat meaningless.
+This simply computes and compares the distances to the timezone polygon boundaries (expensive!).
+It returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+
+NOTE: The timezone polygons do NOT follow the shorelines any more! This causes the computed distance from a timezone polygon to be not really meaningful/accurate.
+
 
 ::
 
@@ -316,7 +323,7 @@ Most certainly there is stuff I missed, things I could have optimized even furth
 If you notice that the tz data is outdated, encounter any bugs, have
 suggestions, criticism, etc. feel free to **open an Issue**, **add a Pull Requests** on Git or ...
 
-contact me: *[python] {at} [michelfe] {dot} [it]*
+contact me: *[python] {*-at-*} [michelfe] {-*dot*-} [it]*
 
 
 Acknowledgements
@@ -381,16 +388,10 @@ test results:
 
 ::
 
-
-    Speed Tests:
-    _________________________
-    shapely: ON (tzwhere)
-    Numba: ON (timezonefinder)
-
-    tzwhere: 0:01:53.723689
-    timezonefinder: 0:00:00.002525
-    45038.08 times faster
-
+    Startup times:
+    tzwhere: 0:00:29.365294
+    timezonefinder: 0:00:00.000888
+    33068.02 times faster
 
     all other cross tests are not meaningful because tz_where is still using the outdated tz_world data set
 

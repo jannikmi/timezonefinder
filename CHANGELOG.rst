@@ -3,8 +3,8 @@ Changelog
 
 
 
-3.2.1 (2018-xx-xx)
-------------------
+3.2.1 (to come)
+---------------
 
 * updated the data to TODO
 * added tests for overflow in helpers.py/inside_polygon()
@@ -60,7 +60,6 @@ Changelog
 * the timezone names are now being stored in a readable JSON file
 * adjusted the main test cases
 * corrections and clarifications in the readme and code comments
-
 
 
 2.1.2 (2017-11-20)

@@ -97,6 +97,7 @@ TEST_LOCATIONS_CERTAIN = TEST_LOCATIONS + [
     # (55.6056074, 12.7128568, 'Oresund Bridge2',  None),
 ]
 
+
 TEST_LOCATIONS_PROXIMITY = [
     # the polygons in the new data do not follow the coastlines any more
     # proximity tests are not meaningful at the moment
@@ -283,15 +284,15 @@ class PackageEqualityTest(unittest.TestCase):
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
         print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')
-        # for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-        #     computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
-        #     if computed == expected:
-        #         ok = 'OK'
-        #     else:
-        #         print(lat, lng)
-        #         ok = 'XX'
-        #         no_mistakes_made = False
-        #     print(template.format(loc, str(expected), str(computed), ok))
+        for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
+            computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
+            if computed == expected:
+                ok = 'OK'
+            else:
+                print(lat, lng)
+                ok = 'XX'
+                no_mistakes_made = False
+            print(template.format(loc, str(expected), str(computed), ok))
 
         assert no_mistakes_made
 

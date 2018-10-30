@@ -3,17 +3,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 from math import floor, radians
 # from os import system
-from os.path import abspath, dirname, join, pardir
+from os.path import abspath, join, pardir
 from struct import unpack
 
 from numpy import array, empty, float64, fromfile
+from pkg_resources import resource_stream
 from six.moves import range
 
 from .kwargs_only import kwargs_only
 
 # from sys import argv, exit
 
-# TODO functions should be automatically compiled once on installation:
+# TODO functions should be automatically precompiled once on installation:
 # try:
 #     import compiled_numba_funcs
 # except ImportError:
@@ -66,6 +67,7 @@ except ImportError:
         all_the_same, TIMEZONE_NAMES_FILE
 
 with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
+    # TODO make np. array?
     timezone_names = json.loads(f.read())
 
 
@@ -120,22 +122,22 @@ class TimezoneFinder:
     def __init__(self):
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
-        self.poly_zone_ids = open(join(dirname(__file__), 'poly_zone_ids.bin'), 'rb')
-        self.poly_coord_amount = open(join(dirname(__file__), 'poly_coord_amount.bin'), 'rb')
-        self.poly_adr2data = open(join(dirname(__file__), 'poly_adr2data.bin'), 'rb')
-        self.poly_data = open(join(dirname(__file__), 'poly_data.bin'), 'rb')
-        self.poly_max_values = open(join(dirname(__file__), 'poly_max_values.bin'), 'rb')
-        self.poly_nr2zone_id = open(join(dirname(__file__), 'poly_nr2zone_id.bin'), 'rb')
+        self.poly_zone_ids = resource_stream(__name__, 'poly_zone_ids.bin')
+        self.poly_coord_amount = resource_stream(__name__, 'poly_coord_amount.bin')
+        self.poly_adr2data = resource_stream(__name__, 'poly_adr2data.bin')
+        self.poly_data = resource_stream(__name__, 'poly_data.bin')
+        self.poly_max_values = resource_stream(__name__, 'poly_max_values.bin')
+        self.poly_nr2zone_id = resource_stream(__name__, 'poly_nr2zone_id.bin')
 
-        self.hole_poly_ids = open(join(dirname(__file__), 'hole_poly_ids.bin'), 'rb')
-        self.hole_coord_amount = open(join(dirname(__file__), 'hole_coord_amount.bin'), 'rb')
-        self.hole_adr2data = open(join(dirname(__file__), 'hole_adr2data.bin'), 'rb')
-        self.hole_data = open(join(dirname(__file__), 'hole_data.bin'), 'rb')
+        self.hole_poly_ids = resource_stream(__name__, 'hole_poly_ids.bin')
+        self.hole_coord_amount = resource_stream(__name__, 'hole_coord_amount.bin')
+        self.hole_adr2data = resource_stream(__name__, 'hole_adr2data.bin')
+        self.hole_data = resource_stream(__name__, 'hole_data.bin')
 
-        self.shortcuts_entry_amount = open(join(dirname(__file__), 'shortcuts_entry_amount.bin'), 'rb')
-        self.shortcuts_adr2data = open(join(dirname(__file__), 'shortcuts_adr2data.bin'), 'rb')
-        self.shortcuts_data = open(join(dirname(__file__), 'shortcuts_data.bin'), 'rb')
-        self.shortcuts_unique_id = open(join(dirname(__file__), 'shortcuts_unique_id.bin'), 'rb')
+        self.shortcuts_entry_amount = resource_stream(__name__, 'shortcuts_entry_amount.bin')
+        self.shortcuts_adr2data = resource_stream(__name__, 'shortcuts_adr2data.bin')
+        self.shortcuts_data = resource_stream(__name__, 'shortcuts_data.bin')
+        self.shortcuts_unique_id = resource_stream(__name__, 'shortcuts_unique_id.bin')
 
         # store for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few (+-22) it is feasible to keep them in the memory
@@ -456,7 +458,6 @@ class TimezoneFinder:
             # stores which polygons have been checked yet
             already_checked = [False] * polygons_in_list  # initialize array with False
             while pointer < polygons_in_list:
-
                 # only check a polygon when its id is not the closest a the moment and it has not been checked already!
                 if already_checked[pointer] or ids[pointer] == current_closest_id:
                     # go to the next polygon
@@ -589,6 +590,7 @@ class TimezoneFinder:
 
 
 if __name__ == '__main__':
+
     import argparse
 
     parser = argparse.ArgumentParser(description='parse training parameters')
