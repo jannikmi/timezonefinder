@@ -5,13 +5,21 @@ timezonefinder
 .. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
+.. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
+    :target: https://circleci.com/gh/conda-forge/timezonefinder-feedstock
 
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
 
+.. image:: https://img.shields.io/conda/dn/conda-forge/timezonefinder.svg
+    :target: https://anaconda.org/conda-forge/timezonefinder
+
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
+
+.. image:: https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg
+    :target: https://anaconda.org/conda-forge/timezonefinder
 
 
 
@@ -41,8 +49,7 @@ Dependencies
 
 (``python``),
 ``numpy``,
-``six``,
-``kwargs_only``
+``six``
 
 
 **Optional:**
@@ -276,11 +283,13 @@ solution from `communikein <https://github.com/communikein>`__
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 
-**parsing the data:**
+**Parsing the data** (Using your own data):
 
 
-Download the latest ``timezones.geojson.zip`` file from `GitHub <https://github.com/evansiroky/timezone-boundary-builder/releases>`__, unzip and
+Download the latest ``timezones.geojson.zip`` data set file from `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__, unzip and
 place the ``combined.json`` inside the timezonefinder folder. Now run the ``file_converter.py`` until the compilation of the binary files is completed.
+
+If you want to use your own data set, create a ``combined.json`` file with the same format as the timezone-boundary-builder and compile everything with ``file_converter.py``.
 
 
 **Calling timezonefinder from the command line:**

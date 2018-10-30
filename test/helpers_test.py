@@ -7,6 +7,7 @@ from math import degrees, radians, sqrt
 import numpy as np
 from six.moves import range
 
+
 # from timezonefinder.helpers import (
 #     all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact,
 #     haversine,
@@ -84,6 +85,17 @@ class HelperTest(unittest.TestCase):
                 assert inside_polygon(x, y, np.array(coords)) == expected_results[n][i]
                 i += 1
             n += 1
+
+        # test for overflow:
+        # make numpy overflow runtime warning raise an error
+        np.seterr(all='warn')
+        import warnings
+        warnings.filterwarnings('error')
+        # delta_y_max * delta_x_max = 180x10^7 * 360x10^7
+        coords = np.array([[0.0, self.fct_dict['coord2int'](360.0), 0.0],
+                  [0.0, self.fct_dict['coord2int'](180.0), self.fct_dict['coord2int'](180.0)]])
+        x, y = 1, 1  # choose so (x-x_i) and (y-y_i) get big!
+        assert inside_polygon(x, y, np.array(coords))
 
     def test_all_the_same(self):
 

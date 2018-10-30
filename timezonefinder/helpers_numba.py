@@ -32,7 +32,7 @@ def inside_polygon(x, y, coordinates):
         those lists are actually numpy arrays which are being read directly from a binary file
     :return: true if the point (x,y) lies within the polygon
 
-    Some overflow considerations for the critical comparison of line segment slopes:
+    Some overflow considerations for the critical part of comparing the line segment slopes:
 
         (y2 - y) * (x2 - x1) <= delta_y_max * delta_x_max
         (y2 - y1) * (x2 - x) <= delta_y_max * delta_x_max
@@ -278,7 +278,8 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 # @cc.export('distance_to_polygon', f8(f8, f8, i4, i4[:, :]))
 @jit(f8(f8, f8, i4, i4[:, :]), nopython=True, cache=True)
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
-    # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
+    # the maximum possible distance is half the perimeter of earth
+    # equatorial circumference: 40075.017 km
     min_distance = 40100000
 
     for i in range(nr_points):

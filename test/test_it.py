@@ -369,3 +369,14 @@ class PackageEqualityTest(unittest.TestCase):
         ]
 
         proto_test_case(data, coord2shortcut_test_fct)
+
+    def test_overflow(self):
+        longitude = -123.2
+        latitude = 48.4
+        # make numpy overflow runtime warning raise an error
+        import numpy as np
+        np.seterr(all='warn')
+        import warnings
+        warnings.filterwarnings('error')
+        # must not raise a warning
+        timezone = self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))

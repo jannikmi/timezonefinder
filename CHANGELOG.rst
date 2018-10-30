@@ -7,6 +7,7 @@ Changelog
 ------------------
 
 * updated the data to TODO
+* added tests for overflow in helpers.py/inside_polygon()
 
 
 3.2.0 (2018-10-23)
