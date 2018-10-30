@@ -380,4 +380,4 @@ class PackageEqualityTest(unittest.TestCase):
         import warnings
         warnings.filterwarnings('error')
         # must not raise a warning
-        timezone = self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))
+        self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))

@@ -8,13 +8,6 @@ import numpy as np
 from six.moves import range
 
 
-# from timezonefinder.helpers import (
-#     all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact,
-#     haversine,
-#     inside_polygon,
-# )
-
-
 def random_point():
     # tzwhere does not work for points with more latitude!
     return random.uniform(-180, 180), random.uniform(-84, 84)
@@ -23,6 +16,12 @@ def random_point():
 def list_of_random_points(length):
     return [random_point() for i in range(length)]
 
+
+# from timezonefinder.helpers import (
+#     all_the_same, coord2int, distance_to_point_on_equator, distance_to_polygon, distance_to_polygon_exact,
+#     haversine,
+#     inside_polygon,
+# )
 
 class HelperTest(unittest.TestCase):
     import timezonefinder.helpers as helpers
@@ -93,7 +92,7 @@ class HelperTest(unittest.TestCase):
         warnings.filterwarnings('error')
         # delta_y_max * delta_x_max = 180x10^7 * 360x10^7
         coords = np.array([[0.0, self.fct_dict['coord2int'](360.0), 0.0],
-                  [0.0, self.fct_dict['coord2int'](180.0), self.fct_dict['coord2int'](180.0)]])
+                           [0.0, self.fct_dict['coord2int'](180.0), self.fct_dict['coord2int'](180.0)]])
         x, y = 1, 1  # choose so (x-x_i) and (y-y_i) get big!
         assert inside_polygon(x, y, np.array(coords))
 

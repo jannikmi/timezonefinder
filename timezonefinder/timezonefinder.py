@@ -6,8 +6,8 @@ from math import floor, radians
 from os.path import abspath, join, pardir
 from struct import unpack
 
+from importlib_resources import open_binary
 from numpy import array, empty, float64, fromfile
-from pkg_resources import resource_stream
 from six.moves import range
 
 from .kwargs_only import kwargs_only
@@ -122,22 +122,22 @@ class TimezoneFinder:
     def __init__(self):
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
-        self.poly_zone_ids = resource_stream(__name__, 'poly_zone_ids.bin')
-        self.poly_coord_amount = resource_stream(__name__, 'poly_coord_amount.bin')
-        self.poly_adr2data = resource_stream(__name__, 'poly_adr2data.bin')
-        self.poly_data = resource_stream(__name__, 'poly_data.bin')
-        self.poly_max_values = resource_stream(__name__, 'poly_max_values.bin')
-        self.poly_nr2zone_id = resource_stream(__name__, 'poly_nr2zone_id.bin')
+        self.poly_zone_ids = open_binary('timezonefinder', 'poly_zone_ids.bin')
+        self.poly_coord_amount = open_binary('timezonefinder', 'poly_coord_amount.bin')
+        self.poly_adr2data = open_binary('timezonefinder', 'poly_adr2data.bin')
+        self.poly_data = open_binary('timezonefinder', 'poly_data.bin')
+        self.poly_max_values = open_binary('timezonefinder', 'poly_max_values.bin')
+        self.poly_nr2zone_id = open_binary('timezonefinder', 'poly_nr2zone_id.bin')
 
-        self.hole_poly_ids = resource_stream(__name__, 'hole_poly_ids.bin')
-        self.hole_coord_amount = resource_stream(__name__, 'hole_coord_amount.bin')
-        self.hole_adr2data = resource_stream(__name__, 'hole_adr2data.bin')
-        self.hole_data = resource_stream(__name__, 'hole_data.bin')
+        self.hole_poly_ids = open_binary('timezonefinder', 'hole_poly_ids.bin')
+        self.hole_coord_amount = open_binary('timezonefinder', 'hole_coord_amount.bin')
+        self.hole_adr2data = open_binary('timezonefinder', 'hole_adr2data.bin')
+        self.hole_data = open_binary('timezonefinder', 'hole_data.bin')
 
-        self.shortcuts_entry_amount = resource_stream(__name__, 'shortcuts_entry_amount.bin')
-        self.shortcuts_adr2data = resource_stream(__name__, 'shortcuts_adr2data.bin')
-        self.shortcuts_data = resource_stream(__name__, 'shortcuts_data.bin')
-        self.shortcuts_unique_id = resource_stream(__name__, 'shortcuts_unique_id.bin')
+        self.shortcuts_entry_amount = open_binary('timezonefinder', 'shortcuts_entry_amount.bin')
+        self.shortcuts_adr2data = open_binary('timezonefinder', 'shortcuts_adr2data.bin')
+        self.shortcuts_data = open_binary('timezonefinder', 'shortcuts_data.bin')
+        self.shortcuts_unique_id = open_binary('timezonefinder', 'shortcuts_unique_id.bin')
 
         # store for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few (+-22) it is feasible to keep them in the memory

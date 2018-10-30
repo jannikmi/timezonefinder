@@ -1,5 +1,6 @@
 numpy
 six
+importlib_resources
 
 docutils
 flake8

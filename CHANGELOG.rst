@@ -3,10 +3,11 @@ Changelog
 
 
 
-3.2.1 (to come)
----------------
+3.2.1 (2018-10-30)
+------------------
 
-* updated the data to TODO
+* ATTENTION: the package ``importlib_resources`` is now required
+* fixing automatic Conda build by exchanging ``pkg_resources.resource_stream`` with ``importlib_resources.open_binary``
 * added tests for overflow in helpers.py/inside_polygon()
 
 

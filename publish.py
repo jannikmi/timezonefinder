@@ -190,15 +190,11 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    # FIXME 27
-    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
-    #         'checking syntax, codestyle and imports',
-    #         'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-codestyle",
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
             'checking syntax, codestyle and imports',
             'continue')
-    # routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
-    #         'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
+            'continue')
     routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36",
             'checking syntax, codestyle and imports',
             'continue')

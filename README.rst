@@ -49,7 +49,8 @@ Dependencies
 
 (``python``),
 ``numpy``,
-``six``
+``six``,
+``importlib_resources``
 
 
 
