@@ -1,6 +1,11 @@
 Changelog
 =========
 
+3.3.0 (2018-11-17)
+------------------
+
+* updated the data to `2018g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018d>`__
+
 
 
 3.2.1 (2018-10-30)

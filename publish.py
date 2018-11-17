@@ -154,8 +154,6 @@ if __name__ == "__main__":
     print('version number has been set to:', version)
     print('=====================')
 
-    routine(None, 'Is the newest OSM data version in use? Does the readme show correct data version?', 'OK. Continue',
-            'Exit')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
     routine(None, 'Are all dependencies written in setup.py, requirements.in/.txt and the Readme?', 'OK. Continue',

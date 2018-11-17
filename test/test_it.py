@@ -229,8 +229,8 @@ class PackageEqualityTest(unittest.TestCase):
         # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
         assert self.timezone_finder.timezone_at(lng=-180.0, lat=90.0) is None
         assert self.timezone_finder.timezone_at(lng=180.0, lat=90.0) is None
-        assert self.timezone_finder.timezone_at(lng=180.0, lat=-90.0) is None
-        assert self.timezone_finder.timezone_at(lng=-180.0, lat=-90.0) is None
+        assert self.timezone_finder.timezone_at(lng=180.0, lat=-90.0) == 'Antarctica/McMurdo'
+        assert self.timezone_finder.timezone_at(lng=-180.0, lat=-90.0) == 'Antarctica/McMurdo'
 
         with pytest.raises(ValueError):
             self.timezone_finder.timezone_at(lng=180.01, lat=90.0)

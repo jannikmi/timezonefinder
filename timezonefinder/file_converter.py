@@ -8,7 +8,7 @@ from struct import pack
 
 from six.moves import range, zip
 
-# keep in mind: the fater numba optimized helper fct. cannot be used here,
+# keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
 from .helpers import TIMEZONE_NAMES_FILE, coord2int, inside_polygon, int2coord
 
@@ -26,7 +26,7 @@ TODO write tests
 
 USE INSTRUCTIONS:
 
-- download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder
+- download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder/releases
 - unzip and place the combined.json inside this timezonefinder folder
 - run this file_converter.py as a script until the compilation of the binary files is completed.
 
@@ -77,32 +77,57 @@ also stored extra binary if only one zone (to directly return that zone without 
 
 
 
-shortcut statistics: (data version 2018d)
-highest entry amount is 30
+statistics: (data version 2018g)
+
+
+maximal amount of coordinates in one polygon: 139130
+amount_of_holes: 219
+amount of polygons: 1177
+
+shortcut statistics:
+highest entry amount is 46
 frequencies of entry amounts (from 0 to max entries):
-[89768, 32917, 6217, 617, 59, 11, 4, 1, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1]
+[76359, 45216, 7204, 710, 81, 17, 4, 1, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 relative accumulated frequencies [%]:
-[69.27, 94.66, 99.46, 99.94, 99.98, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
-    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-[30.73, 5.34, 0.54, 0.06, 0.02, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-69.27 % of all shortcuts are empty
+[58.92, 93.81, 99.37, 99.91, 99.98, 99.99, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
+        100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+[41.08, 6.19, 0.63, 0.09, 0.02, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0]
+58.92 % of all shortcuts are empty
 
 highest amount of different zones in one shortcut is 7
 frequencies of entry amounts (from 0 to max):
-[89768, 33199, 5999, 593, 35, 4, 1, 1]
+[76359, 45555, 6963, 672, 43, 6, 1, 1]
 relative accumulated frequencies [%]:
-[69.27, 94.88, 99.51, 99.97, 100.0, 100.0, 100.0, 100.0]
-[30.73, 5.12, 0.49, 0.03, 0.0, 0.0, 0.0, 0.0]
+[58.92, 94.07, 99.44, 99.96, 99.99, 100.0, 100.0, 100.0]
+[41.08, 5.93, 0.56, 0.04, 0.01, 0.0, 0.0, 0.0]
 --------------------------------
 
-The number of filled shortcut zones are: 39832 (= 30.73 % of all shortcuts)
-The number of polygons is: 1018
-The number of floats in all the polygons is (2 per point): 10434626
+The number of filled shortcut zones are: 53241 (= 41.08 % of all shortcuts)
+The number of polygons is: 1177
+The number of floats in all the polygons is (2 per point): 10887056
+writing file " poly_nr2zone_id.bin "
+Done
 
-the polygon data makes up 97.2 % of the data
-the shortcuts make up 2.03 % of the data
-holes make up 0.77 % of the data
+writing file " poly_zone_ids.bin "
+writing file " poly_max_values.bin "
+writing file " poly_data.bin "
+writing file " poly_adr2data.bin "
+writing file " poly_coord_amount.bin "
+writing file " shortcuts_entry_amount.bin "
+writing file " shortcuts_adr2data.bin "
+writing file " shortcuts_data.bin "
+writing file " shortcuts_unique_id.bin "
+writing file " hole_poly_ids.bin "
+writing file " hole_coord_amount.bin "
+writing file " hole_adr2data.bin "
+writing file " hole_data.bin "
+the polygon data makes up 97.11 % of the data
+the shortcuts make up 2.01 % of the data
+holes make up 0.88 % of the data
 """
 
 INPUT_JSON_FILE_NAME = 'combined.json'

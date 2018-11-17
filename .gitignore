@@ -6,7 +6,6 @@ scrapyard.py
 .DS_Store
 tmp.py
 .pytest_cache
-venv/
 
 # GITIGNORE DEFAULTS
 
