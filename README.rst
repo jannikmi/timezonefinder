@@ -11,13 +11,23 @@ timezonefinder
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
-.. image:: https://img.shields.io/conda/dn/conda-forge/timezonefinder.svg
-    :target: https://anaconda.org/conda-forge/timezonefinder
+.. image:: https://img.shields.io/pypi/dd/timezonefinder.svg
+    :target: https://pypi.python.org/pypi/timezonefinder
+
+.. image:: https://img.shields.io/pypi/dd/timezonefinder.svg
+    :alt: daily PyPI downloads
+    :target: https://pypi.python.org/pypi/timezonefinder
+
+.. image:: https://pepy.tech/badge/timezonefinder
+    :alt: Total PyPI downloads
+    :target: https://pypi.python.org/pypi/timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
+    :alt: latest version on PyPI
     :target: https://pypi.python.org/pypi/timezonefinder
 
 .. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg
+    :alt: latest version on Conda
     :target: https://anaconda.org/conda-forge/timezonefinder
 
 
