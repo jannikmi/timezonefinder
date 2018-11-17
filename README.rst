@@ -32,7 +32,7 @@ In case size and speed matter more you than actuality, consider checking out old
 NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
 This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with timezonefinderL).
 
-Current data set in use (since 3.0.0): precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ release. version: 2018d (without oceans, Apr2018, 116MB, JSON)
+Current data set in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
 
 
 Also see:
@@ -92,7 +92,7 @@ Basics:
 
 in Python:
 
-::
+.. code-block:: python
 
     from timezonefinder import TimezoneFinder
 
@@ -102,7 +102,7 @@ in Python:
 for testing if numba is being used:
 (if the import of the optimized algorithms worked)
 
-::
+.. code-block:: python
 
     TimezoneFinder.using_numba()   # this is a static method returning True or False
 
@@ -117,7 +117,7 @@ The last possible timezone in proximity is always returned (without checking if 
 So results might be misleading for points outside of any timezone.
 
 
-::
+.. code-block:: python
 
     longitude = 13.358
     latitude = 52.5061
@@ -136,7 +136,7 @@ the point could still lie off land!
 
 
 
-::
+.. code-block:: python
 
     tf.certain_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
 
@@ -150,7 +150,7 @@ It returns the closest timezone of all polygons within +-1 degree lng and +-1 de
 NOTE: The timezone polygons do NOT follow the shorelines any more! This causes the computed distance from a timezone polygon to be not really meaningful/accurate.
 
 
-::
+.. code-block:: python
 
     longitude = 12.773955
     latitude = 55.578595
@@ -160,7 +160,7 @@ NOTE: The timezone polygons do NOT follow the shorelines any more! This causes t
 Options:
 To increase search radius even more, use the ``delta_degree``-option:
 
-::
+.. code-block:: python
 
     tf.closest_timezone_at(lng=longitude, lat=latitude, delta_degree=3)
 
@@ -185,7 +185,8 @@ With ``return_distances=True`` the output looks like this:
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
 
-::
+
+.. code-block:: python
 
     longitude = 42.1052479
     latitude = -16.622686
@@ -207,7 +208,8 @@ output format: ``[ [polygon1, hole1,...), [polygon2, ...], ...]``
 and each polygon and hole is itself formated like: ``([longitudes], [latitudes])``
 or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
-::
+
+.. code-block:: python
 
     tf.get_geometry(tz_name='Africa/Addis_Ababa', coords_as_pairs=True)
 
@@ -221,27 +223,29 @@ Further application:
 
 **To maximize the chances of getting a result in a** ``Django`` **view it might look like:**
 
-::
+
+.. code-block:: python
 
     def find_timezone(request, lat, lng):
         lat = float(lat)
         lng = float(lng)
-
         try:
             timezone_name = tf.timezone_at(lng=lng, lat=lat)
             if timezone_name is None:
                 timezone_name = tf.closest_timezone_at(lng=lng, lat=lat)
                 # maybe even increase the search radius when it is still None
-
         except ValueError:
             # the coordinates were out of bounds
-            # {handle error}
-
+            pass # {handle error}
         # ... do something with timezone_name ...
+
+
+
 
 **To get an aware datetime object from the timezone name:**
 
-::
+
+.. code-block:: python
 
     # first pip install pytz
     from pytz import timezone, utc
@@ -258,14 +262,15 @@ Further application:
         naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
 
     except UnknownTimeZoneError:
-        # ... handle the error ...
+        pass # {handle error}
+
 
 
 **Getting a location's time zone offset from UTC in minutes:**
 
 solution from `communikein <https://github.com/communikein>`__
 
-::
+.. code-block:: python
 
     from pytz import timezone
     import pytz

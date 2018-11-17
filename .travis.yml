@@ -18,6 +18,6 @@ notifications:
     email:
      recipients:
      - python@michelfe.it
-     on_success: never
+     on_success: always
      on_failure: always
      on_start: never   # options: [always|never|change] default: always
