@@ -1,6 +1,14 @@
 Changelog
 =========
 
+
+3.4.0 (2019-01-06)
+------------------
+
+* updated the data to `2018i <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2018i>`__
+* introduced ``global_settings.py`` to globally define settings and get rid of "magic numbers".
+
+
 3.3.0 (2018-11-17)
 ------------------
 

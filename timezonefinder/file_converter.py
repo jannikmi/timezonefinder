@@ -8,11 +8,20 @@ from struct import pack
 
 from six.moves import range, zip
 
-# keep in mind: the faster numba optimized helper fct. cannot be used here,
-# because numpy classes are not being used at this stage yet!
+from .global_settings import (
+    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
+    NR_SHORTCUTS_PER_LNG,
+)
+# # keep in mind: the faster numba optimized helper fct. cannot be used here,
+# # because numpy classes are not being used at this stage yet!
 from .helpers import TIMEZONE_NAMES_FILE, coord2int, inside_polygon, int2coord
 
 # from helpers import coord2int, inside_polygon, int2coord, TIMEZONE_NAMES_FILE
+# from global_settings import (
+#     DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
+#     NR_SHORTCUTS_PER_LNG,
+# )
+
 
 # import sys
 # from os.path import dirname
@@ -129,22 +138,6 @@ the polygon data makes up 97.11 % of the data
 the shortcuts make up 2.01 % of the data
 holes make up 0.88 % of the data
 """
-
-INPUT_JSON_FILE_NAME = 'combined.json'
-
-# in debugging mode parse only some polygons
-DEBUG = False
-DEBUG_POLY_STOP = 20
-
-# ATTENTION: Don't change these settings or timezonefinder wont work!
-# different setups of shortcuts are not supported, because then addresses in the .bin
-# need to be calculated depending on how many shortcuts are being used.
-# number of shortcuts per longitude
-NR_SHORTCUTS_PER_LNG = 1
-# shortcuts per latitude
-NR_SHORTCUTS_PER_LAT = 2
-
-INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
 nr_of_lines = -1
 all_tz_names = []
@@ -318,13 +311,13 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
 
         current_zone_id += 1
 
-    if max(all_lengths) >= 2 ** 32:
+    if max(all_lengths) >= 2 ** (8 * NR_BYTES_I):
         # 34621 in tz_world 2016d (small enough for int16)
         # 137592 in evansiroky/timezone-boundary-builder 2017a (now int32 is needed!)
         raise ValueError('amount of coords cannot be represented by int32 in poly_coord_amount.bin:',
                          max(all_lengths))
 
-    if max(all_hole_lengths) >= 2 ** 16:
+    if max(all_hole_lengths) >= 2 ** (8 * NR_BYTES_H):
         # 21071 in evansiroky/timezone-boundary-builder 2017a (int16 still enough)
         raise ValueError('amount of coords cannot be represented by short (int16) in hole_coord_amount.bin:',
                          max(all_hole_lengths))
@@ -333,13 +326,13 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
     if polygon_counter != nr_of_lines:
         raise ValueError('polygon counter and entry number in all_length is different:', polygon_counter, nr_of_lines)
 
-    if nr_of_lines >= 2 ** 16:
+    if nr_of_lines >= 2 ** (8 * NR_BYTES_H):
         # 24k in tz_world 2016d
         # 1022 in evansiroky/timezone-boundary-builder 2017a
         raise ValueError('polygon id cannot be encoded as short (int16) in hole_coord_amount.bin! there are',
                          nr_of_lines, 'polygons')
 
-    if poly_zone_ids[-1] > 2 ** 16:
+    if poly_zone_ids[-1] > 2 ** (8 * NR_BYTES_H):
         # 420 different zones in evansiroky/timezone-boundary-builder 2017a
         # used in shortcuts_unique_id and poly_zone_ids
         raise ValueError('zone id cannot be encoded as char (int8). the last id is',
@@ -727,6 +720,7 @@ def compile_binaries():
     end_time = datetime.now()
     print('calculating the shortcuts took:', end_time - start_time, '\n')
 
+    # there are two floats per coordinate (lng, lat)
     nr_of_floats = 2 * sum(all_lengths)
 
     # write number of entries in shortcut field (x,y)
@@ -766,7 +760,7 @@ def compile_binaries():
     amount_of_shortcuts = len(nr_of_entries_in_shortcut)
     print_shortcut_statistics()
 
-    if amount_of_shortcuts != 64800 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
+    if amount_of_shortcuts != 360 * 180 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
         print(amount_of_shortcuts)
         raise ValueError('this number of shortcut zones is wrong')
 
@@ -774,16 +768,16 @@ def compile_binaries():
           round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2), '% of all shortcuts)')
 
     # for every shortcut <H and <I is written (nr of entries and address)
-    shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * 6
+    shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * (NR_BYTES_H + NR_BYTES_I)
     for nr in nr_of_entries_in_shortcut:
         # every line in every shortcut takes up 2bytes
-        shortcut_space += 2 * nr
+        shortcut_space += NR_BYTES_H * nr
 
     print('The number of polygons is:', nr_of_lines)
     print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
 
     path = 'poly_nr2zone_id.bin'
-    print('writing file "', path, '"')
+    print('writing file', path)
     output_file = open(path, 'wb')
     for zone_id in poly_nr2zone_id:
         output_file.write(pack(b'<H', zone_id))
@@ -933,7 +927,7 @@ def compile_binaries():
     for length in all_hole_lengths:
         output_file.write(pack(b'<I', adr))
         # each pair of points takes up 8 bytes of space
-        adr += 8 * length
+        adr += 2 * NR_BYTES_I * length
     hole_space += output_file.tell()
     output_file.close()
 
@@ -950,7 +944,7 @@ def compile_binaries():
     hole_space += output_file.tell()
     output_file.close()
 
-    polygon_space = nr_of_floats * 4
+    polygon_space = nr_of_floats * NR_BYTES_I
     total_space = polygon_space + hole_space + shortcut_space
 
     print('the polygon data makes up', percent(polygon_space, total_space), '% of the data')
