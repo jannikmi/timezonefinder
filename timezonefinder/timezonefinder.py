@@ -10,6 +10,7 @@ from importlib_resources import open_binary
 from numpy import array, empty, float64, fromfile
 from six.moves import range
 
+from .global_settings import MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG
 from .kwargs_only import kwargs_only
 
 # from sys import argv, exit
@@ -67,7 +68,6 @@ except ImportError:
         all_the_same, TIMEZONE_NAMES_FILE
 
 with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
-    # TODO make np. array?
     timezone_names = json.loads(f.read())
 
 
@@ -143,7 +143,7 @@ class TimezoneFinder:
         # since there are very few (+-22) it is feasible to keep them in the memory
         self.hole_registry = {}
         # read the polygon ids for all the holes
-        for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(2), b'')):
+        for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
             poly_id = unpack(b'<H', block)[0]
             try:
                 amount_of_holes, hole_id = self.hole_registry[poly_id]
@@ -181,38 +181,39 @@ class TimezoneFinder:
     #     return (precompilation is not None)
 
     def id_of(self, line=0):
-        self.poly_zone_ids.seek(2 * line)
-        return unpack(b'<H', self.poly_zone_ids.read(2))[0]
+        self.poly_zone_ids.seek(NR_BYTES_H * line)
+        return unpack(b'<H', self.poly_zone_ids.read(NR_BYTES_H))[0]
 
     def ids_of(self, iterable):
         id_array = empty(shape=len(iterable), dtype='<i1')
 
         for i, line_nr in enumerate(iterable):
-            self.poly_zone_ids.seek((2 * line_nr))
-            id_array[i] = unpack(b'<H', self.poly_zone_ids.read(2))[0]
+            self.poly_zone_ids.seek((NR_BYTES_H * line_nr))
+            id_array[i] = unpack(b'<H', self.poly_zone_ids.read(NR_BYTES_H))[0]
 
         return id_array
 
-    def polygons_of_shortcut(self, x=0, y=0):
+    def polygon_ids_of_shortcut(self, x=0, y=0):
         # get the address of the first entry in this shortcut
         # offset: 180 * number of shortcuts per lat degree * 2bytes = entries per column of x shortcuts
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
-        self.shortcuts_entry_amount.seek(720 * x + 2 * y)
-        nr_of_entries = unpack(b'<H', self.shortcuts_entry_amount.read(2))[0]
+        nr_lat_shortcuts = 180 * NR_SHORTCUTS_PER_LAT
+        self.shortcuts_entry_amount.seek(nr_lat_shortcuts * NR_BYTES_H * x + NR_BYTES_H * y)
+        nr_of_entries = unpack(b'<H', self.shortcuts_entry_amount.read(NR_BYTES_H))[0]
 
-        self.shortcuts_adr2data.seek(1440 * x + 4 * y)
-        self.shortcuts_data.seek(unpack(b'<I', self.shortcuts_adr2data.read(4))[0])
+        self.shortcuts_adr2data.seek(nr_lat_shortcuts * NR_BYTES_I * x + NR_BYTES_I * y)
+        self.shortcuts_data.seek(unpack(b'<I', self.shortcuts_adr2data.read(NR_BYTES_I))[0])
         return fromfile(self.shortcuts_data, dtype='<u2', count=nr_of_entries)
 
     def coords_of(self, line=0):
         # how many coordinates are stored in this polygon
-        self.poly_coord_amount.seek(4 * line)
-        nr_of_values = unpack(b'<I', self.poly_coord_amount.read(4))[0]
+        self.poly_coord_amount.seek(NR_BYTES_I * line)
+        nr_of_values = unpack(b'<I', self.poly_coord_amount.read(NR_BYTES_I))[0]
         if nr_of_values == 0:
             raise ValueError
 
-        self.poly_adr2data.seek(4 * line)
-        self.poly_data.seek(unpack(b'<I', self.poly_adr2data.read(4))[0])
+        self.poly_adr2data.seek(NR_BYTES_I * line)
+        self.poly_data.seek(unpack(b'<I', self.poly_adr2data.read(NR_BYTES_I))[0])
 
         return array([fromfile(self.poly_data, dtype='<i4', count=nr_of_values),
                       fromfile(self.poly_data, dtype='<i4', count=nr_of_values)])
@@ -222,11 +223,11 @@ class TimezoneFinder:
             amount_of_holes, hole_id = self.hole_registry[line]
 
             for i in range(amount_of_holes):
-                self.hole_coord_amount.seek(2 * hole_id)
-                nr_of_values = unpack(b'<H', self.hole_coord_amount.read(2))[0]
+                self.hole_coord_amount.seek(NR_BYTES_H * hole_id)
+                nr_of_values = unpack(b'<H', self.hole_coord_amount.read(NR_BYTES_H))[0]
 
-                self.hole_adr2data.seek(4 * hole_id)
-                self.hole_data.seek(unpack(b'<I', self.hole_adr2data.read(4))[0])
+                self.hole_adr2data.seek(NR_BYTES_I * hole_id)
+                self.hole_data.seek(unpack(b'<I', self.hole_adr2data.read(NR_BYTES_I))[0])
 
                 yield array([fromfile(self.hole_data, dtype='<i4', count=nr_of_values),
                              fromfile(self.hole_data, dtype='<i4', count=nr_of_values)])
@@ -269,11 +270,11 @@ class TimezoneFinder:
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
 
-        self.poly_nr2zone_id.seek(2 * zone_id)
+        self.poly_nr2zone_id.seek(NR_BYTES_H * zone_id)
         # read poly_nr of the first polygon of that zone
-        first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
+        first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(NR_BYTES_H))[0]
         # read poly_nr of the first polygon of the next zone
-        last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(2))[0]
+        last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(NR_BYTES_H))[0]
         poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
@@ -305,6 +306,7 @@ class TimezoneFinder:
         :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
         """
 
+        # TODO functional
         def all_equal(iterable):
             x = None
             for x in iterable:
@@ -404,19 +406,19 @@ class TimezoneFinder:
 
         # there are 2 shortcuts per 1 degree lat, so to cover 1 degree two shortcuts (rows) have to be checked
         # the highest shortcut is 0
-        top = max(central_y_shortcut - 2 * delta_degree, 0)
+        top = max(central_y_shortcut - NR_SHORTCUTS_PER_LAT * delta_degree, 0)
         # the lowest shortcut is 359 (= 2 shortcuts per 1 degree lat)
-        bottom = min(central_y_shortcut + 2 * delta_degree, 359)
+        bottom = min(central_y_shortcut + NR_SHORTCUTS_PER_LAT * delta_degree, 359)
 
         # the most left shortcut is 0
-        left = max(central_x_shortcut - delta_degree, 0)
+        left = max(central_x_shortcut - NR_SHORTCUTS_PER_LNG * delta_degree, 0)
         # the most right shortcut is 359 (= 1 shortcuts per 1 degree lng)
-        right = min(central_x_shortcut + delta_degree, 359)
+        right = min(central_x_shortcut + NR_SHORTCUTS_PER_LAT * delta_degree, 359)
 
         # select all the polygons from the surrounding shortcuts
         for x in range(left, right + 1, 1):
             for y in range(top, bottom + 1, 1):
-                for p in self.polygons_of_shortcut(x, y):
+                for p in self.polygon_ids_of_shortcut(x, y):
                     if p not in possible_polygons:
                         possible_polygons.append(p)
 
@@ -439,9 +441,7 @@ class TimezoneFinder:
         else:
             routine = normal_routine
 
-        # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
-        min_distance = 40100
-
+        min_distance = MAX_HAVERSINE_DISTANCE
         distances = empty(polygons_in_list, dtype=float64)
         # [None for i in range(polygons_in_list)]
 
@@ -499,12 +499,13 @@ class TimezoneFinder:
         y = coord2int(lat)
 
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
-        self.shortcuts_unique_id.seek((720 * shortcut_id_x + 2 * shortcut_id_y))
+        self.shortcuts_unique_id.seek(
+            (180 * NR_SHORTCUTS_PER_LAT * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
         try:
             # if there is just one possible zone in this shortcut instantly return its name
-            return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(2))[0]]
+            return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
         except IndexError:
-            possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
+            possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
             nr_possible_polygons = len(possible_polygons)
             if nr_possible_polygons == 0:
                 return None
@@ -527,7 +528,7 @@ class TimezoneFinder:
                 polygon_nr = possible_polygons[i]
 
                 # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-                self.poly_max_values.seek(16 * polygon_nr)
+                self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
                 boundaries = fromfile(self.poly_max_values, dtype='<i4', count=4)
                 # only run the expensive algorithm if the point is withing the boundaries
                 if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
@@ -560,7 +561,7 @@ class TimezoneFinder:
 
         lng, lat = rectify(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
-        possible_polygons = self.polygons_of_shortcut(shortcut_id_x, shortcut_id_y)
+        possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
 
         # x = longitude  y = latitude  both converted to 8byte int
         x = coord2int(lng)
@@ -570,7 +571,7 @@ class TimezoneFinder:
         for polygon_nr in possible_polygons:
 
             # get boundaries
-            self.poly_max_values.seek(16 * polygon_nr)
+            self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
             boundaries = fromfile(self.poly_max_values, dtype='<i4', count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
