@@ -133,8 +133,6 @@ So results might be misleading for points outside of any timezone.
 
 **certain_timezone_at():**
 
-NOTE: The timezone polygons do NOT follow the shorelines any more!
-
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
@@ -221,7 +219,6 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 .. code-block:: python
 
     tf.get_geometry(tz_name='Africa/Addis_Ababa', coords_as_pairs=True)
-
     tf.get_geometry(tz_id=400, use_id=True)
 
 

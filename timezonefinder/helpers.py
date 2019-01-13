@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
+from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
 from six.moves import range
 
-TIMEZONE_NAMES_FILE = 'timezone_names.json'
+from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
 
 
 def inside_polygon(x, y, coordinates):
@@ -29,11 +29,11 @@ def inside_polygon(x, y, coordinates):
     Instead of calculating with float I decided using just ints (by multiplying with 10^7). That gives us:
 
         delta_y_max * delta_x_max = 180x10^7 * 360x10^7
-        delta_y_max * delta_x_max <= 65x^17
+        delta_y_max * delta_x_max <= 65x10^17
 
     So these numbers need up to log_2(65 x10^17) ~ 63 bits to be represented! Even though values this big should never
      occur in practice (timezone polygons do not span the whole lng lat coordinate space),
-     32bit accuracy is not safe to use here!
+     32bit accuracy hence is not safe to use here!
      Python 2.2 automatically uses the appropriate int data type preventing overflow
      (cf. https://www.python.org/dev/peps/pep-0237/),
      but here the data types are numpy internal static data types. The data is stored as int32
@@ -59,7 +59,8 @@ def inside_polygon(x, y, coordinates):
                 # ( dy/dx > a  ==  dy > a * dx )
                 # int64 accuracy needed here!
                 if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and int64(y2 - y) * int64(x2 - x1) <= int64(y2 - y1) * int64(x2 - x)):
+                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) <= (
+                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
                     contained = not contained
 
         else:
@@ -70,12 +71,14 @@ def inside_polygon(x, y, coordinates):
                 x1GEx = x <= x1
                 x2GEx = x <= x2
                 if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and int64(y2 - y) * int64(x2 - x1) >= int64(y2 - y1) * int64(x2 - x)):
+                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) >= (
+                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
                     contained = not contained
 
         y1 = y2
         y_gt_y1 = y_gt_y2
         i += 1
+
     return contained
 
 
@@ -200,12 +203,12 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
                                                            max(min(px_retrans_rad[0], lng_p1_rad), 0)))
 
 
-def int2coord(int32):
-    return float(int32 / 10 ** 7)
+def int2coord(i4):
+    return float(i4 * INT2COORD_FACTOR)
 
 
 def coord2int(double):
-    return int(double * 10 ** 7)
+    return int(double * COORD2INT_FACTOR)
 
 
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
@@ -241,12 +244,51 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
 
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
-    # the maximum possible distance is half the perimeter of earth
-    # equatorial circumference: 40075.017 km
-    min_distance = 40100000
+    min_distance = MAX_HAVERSINE_DISTANCE
 
     for i in range(nr_points):
         min_distance = min(min_distance, haversine(lng_rad, lat_rad, radians(int2coord(points[0][i])),
                                                    radians(int2coord(points[1][i]))))
 
     return min_distance
+
+
+def coord2shortcut(lng, lat):
+    return int(floor((lng + 180))), int(floor((90 - lat) * 2))
+
+
+def rectify_coordinates(lng, lat):
+    if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds.')
+
+    # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
+    # are not included in the shortcut lookup system
+    # always (only) the "top" and "left" borders belong to a shortcut
+    if lng == 180.0:
+        # a longitude of 180.0 is not allowed, because the right border of a shortcut
+        # is already considered to lie within the next shortcut
+        # it however equals lng=0.0 (earth is a sphere)
+        lng = 0.0
+
+    if lat == -90.0:
+        # a latitude of -90.0 (=exact south pole) corresponds to just one single point on earth
+        # and is not allowed, because bottom border of a shortcut is already considered to lie within the next shortcut
+        # it has the same timezones as the points with a slightly higher latitude
+        lat += INT2COORD_FACTOR  # adjust by the smallest possible amount
+
+    return lng, lat
+
+
+def convert2coords(polygon_data):
+    # return a tuple of coordinate lists
+    return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
+
+
+def convert2coord_pairs(polygon_data):
+    # return a list of coordinate tuples (x,y)
+    coodinate_list = []
+    i = 0
+    for x in polygon_data[0]:
+        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
+        i += 1
+    return coodinate_list

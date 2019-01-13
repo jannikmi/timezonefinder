@@ -1,113 +1,33 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-from math import floor, radians
+from math import radians
 # from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
 
 from importlib_resources import open_binary
-from numpy import array, empty, float64, fromfile
+from numpy import array, empty, fromfile
 from six.moves import range
 
-from .global_settings import MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG
+from .global_settings import (
+    DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
+    DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
+    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+)
 from .kwargs_only import kwargs_only
-
-# from sys import argv, exit
-
-# TODO functions should be automatically precompiled once on installation:
-# try:
-#     import compiled_numba_funcs
-# except ImportError:
-#     precompilation = None
-#     try:
-#         import numba
-#     except ImportError:
-#         numba = None
-#
-#     if numba is not None:
-#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#     else:
-#         from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
-#
-#
-# try:
-#     import numba
-#
-#     print('using numba version:', numba.__version__)
-#
-#     print('compiling the helpers ahead of time...')
-#     # FIXME target architecture is wrong. because of old Numba version?
-#     # TODO in this environment numba could not be available
-#     # precompile functions by running the helpers_numba.py script
-#     system("python3 " + join(dirname(__file__), 'helpers_numba.py'))
-#     try:
-#         from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#
-#         print('... worked!')
-#
-#     except ImportError:
-#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#
-#     print('... did not work!')
-#
-# except ImportError:
-#     numba = None
-#     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
 
 try:
     import numba
-    from .helpers_numba import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same, TIMEZONE_NAMES_FILE
+    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+        all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
 except ImportError:
     numba = None
-    from .helpers import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same, TIMEZONE_NAMES_FILE
+    from .helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+        all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
 
 with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
     timezone_names = json.loads(f.read())
-
-
-# those two helper functions cannot be outsourced to helpers.py because they create lists (not supported by numba)
-def convert2coords(polygon_data):
-    # return a tuple of coordinate lists
-    return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
-
-
-def convert2coord_pairs(polygon_data):
-    # return a list of coordinate tuples (x,y)
-    coodinate_list = []
-    i = 0
-    for x in polygon_data[0]:
-        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
-        i += 1
-    return coodinate_list
-
-
-def coord2shortcut(lng, lat):
-    return int(floor((lng + 180))), int(floor((90 - lat) * 2))
-
-
-def rectify(lng, lat):
-    if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds: (', lng, ',', lat, ')')
-    # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
-    # are not included in the shortcut lookup system
-    # always (only) the "top" and "left" borders belong to a shortcut
-    if lng == 180.0:
-        # a longitude of 180.0 is not allowed, because the right border of a shortcut
-        # is already considered to lie within the next shortcut
-        # it however equals lng=0.0 (earth is a sphere)
-        lng = 0.0
-    if lat == -90.0:
-        # a latitude of -90.0 (=exact south pole) corresponds to just one single point on earth
-        # and is not allowed, because bottom border of a shortcut is already considered to lie within the next shortcut
-        # it has the same timezones as the points with a slightly higher latitude
-        lat = -89.999
-    return lng, lat
 
 
 class TimezoneFinder:
@@ -144,7 +64,7 @@ class TimezoneFinder:
         self.hole_registry = {}
         # read the polygon ids for all the holes
         for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
-            poly_id = unpack(b'<H', block)[0]
+            poly_id = unpack(DTYPE_FORMAT_H, block)[0]
             try:
                 amount_of_holes, hole_id = self.hole_registry[poly_id]
                 self.hole_registry.update({
@@ -182,14 +102,14 @@ class TimezoneFinder:
 
     def id_of(self, line=0):
         self.poly_zone_ids.seek(NR_BYTES_H * line)
-        return unpack(b'<H', self.poly_zone_ids.read(NR_BYTES_H))[0]
+        return unpack(DTYPE_FORMAT_H, self.poly_zone_ids.read(NR_BYTES_H))[0]
 
     def ids_of(self, iterable):
-        id_array = empty(shape=len(iterable), dtype='<i1')
+        id_array = empty(shape=len(iterable), dtype=DTYPE_FORMAT_B_NUMPY)
 
         for i, line_nr in enumerate(iterable):
             self.poly_zone_ids.seek((NR_BYTES_H * line_nr))
-            id_array[i] = unpack(b'<H', self.poly_zone_ids.read(NR_BYTES_H))[0]
+            id_array[i] = unpack(DTYPE_FORMAT_H, self.poly_zone_ids.read(NR_BYTES_H))[0]
 
         return id_array
 
@@ -199,24 +119,24 @@ class TimezoneFinder:
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
         nr_lat_shortcuts = 180 * NR_SHORTCUTS_PER_LAT
         self.shortcuts_entry_amount.seek(nr_lat_shortcuts * NR_BYTES_H * x + NR_BYTES_H * y)
-        nr_of_entries = unpack(b'<H', self.shortcuts_entry_amount.read(NR_BYTES_H))[0]
+        nr_of_entries = unpack(DTYPE_FORMAT_H, self.shortcuts_entry_amount.read(NR_BYTES_H))[0]
 
         self.shortcuts_adr2data.seek(nr_lat_shortcuts * NR_BYTES_I * x + NR_BYTES_I * y)
-        self.shortcuts_data.seek(unpack(b'<I', self.shortcuts_adr2data.read(NR_BYTES_I))[0])
-        return fromfile(self.shortcuts_data, dtype='<u2', count=nr_of_entries)
+        self.shortcuts_data.seek(unpack(DTYPE_FORMAT_I, self.shortcuts_adr2data.read(NR_BYTES_I))[0])
+        return fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
 
     def coords_of(self, line=0):
         # how many coordinates are stored in this polygon
         self.poly_coord_amount.seek(NR_BYTES_I * line)
-        nr_of_values = unpack(b'<I', self.poly_coord_amount.read(NR_BYTES_I))[0]
+        nr_of_values = unpack(DTYPE_FORMAT_I, self.poly_coord_amount.read(NR_BYTES_I))[0]
         if nr_of_values == 0:
             raise ValueError
 
         self.poly_adr2data.seek(NR_BYTES_I * line)
-        self.poly_data.seek(unpack(b'<I', self.poly_adr2data.read(NR_BYTES_I))[0])
+        self.poly_data.seek(unpack(DTYPE_FORMAT_I, self.poly_adr2data.read(NR_BYTES_I))[0])
 
-        return array([fromfile(self.poly_data, dtype='<i4', count=nr_of_values),
-                      fromfile(self.poly_data, dtype='<i4', count=nr_of_values)])
+        return array([fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                      fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
 
     def _holes_of_line(self, line=0):
         try:
@@ -224,13 +144,13 @@ class TimezoneFinder:
 
             for i in range(amount_of_holes):
                 self.hole_coord_amount.seek(NR_BYTES_H * hole_id)
-                nr_of_values = unpack(b'<H', self.hole_coord_amount.read(NR_BYTES_H))[0]
+                nr_of_values = unpack(DTYPE_FORMAT_H, self.hole_coord_amount.read(NR_BYTES_H))[0]
 
                 self.hole_adr2data.seek(NR_BYTES_I * hole_id)
-                self.hole_data.seek(unpack(b'<I', self.hole_adr2data.read(NR_BYTES_I))[0])
+                self.hole_data.seek(unpack(DTYPE_FORMAT_I, self.hole_adr2data.read(NR_BYTES_I))[0])
 
-                yield array([fromfile(self.hole_data, dtype='<i4', count=nr_of_values),
-                             fromfile(self.hole_data, dtype='<i4', count=nr_of_values)])
+                yield array([fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                             fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
                 hole_id += 1
 
         except KeyError:
@@ -256,10 +176,9 @@ class TimezoneFinder:
         :param use_id: determines whether id or name should be used
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
-        output format: [ [polygon1, hole1, hole2...], [polygon1, ...], ...]
+        output format: [ [polygon1, hole1, hole2...], [polygon2, ...], ...]
          and each polygon and hole is itself formated like: ([longitudes], [latitudes])
          or [(lng1,lat1), (lng2,lat2),...] if ``coords_as_pairs=True``.
-
         '''
 
         if use_id:
@@ -272,9 +191,9 @@ class TimezoneFinder:
 
         self.poly_nr2zone_id.seek(NR_BYTES_H * zone_id)
         # read poly_nr of the first polygon of that zone
-        first_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(NR_BYTES_H))[0]
+        first_polygon_nr = unpack(DTYPE_FORMAT_H, self.poly_nr2zone_id.read(NR_BYTES_H))[0]
         # read poly_nr of the first polygon of the next zone
-        last_polygon_nr = unpack(b'<H', self.poly_nr2zone_id.read(NR_BYTES_H))[0]
+        last_polygon_nr = unpack(DTYPE_FORMAT_H, self.poly_nr2zone_id.read(NR_BYTES_H))[0]
         poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
@@ -284,7 +203,7 @@ class TimezoneFinder:
         :param nr_of_polygons: length of polygon_id_list
         :return: (list of zone_ids, boolean: do all entries belong to the same zone)
         """
-        zone_id_list = empty([nr_of_polygons], dtype='<u2')
+        zone_id_list = empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
         for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
             zone_id_list[pointer_local] = zone_id
@@ -317,7 +236,7 @@ class TimezoneFinder:
                     return False
             return True
 
-        zone_id_list = empty([nr_of_polygons], dtype='<u2')
+        zone_id_list = empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
         counted_zones = {}
         for pointer_local, polygon_id in enumerate(polygon_id_list):
             zone_id = self.id_of(polygon_id)
@@ -336,8 +255,8 @@ class TimezoneFinder:
             return polygon_id_list, zone_id_list, False
 
         counted_zones_sorted = sorted(list(counted_zones.items()), key=lambda zone: zone[1])
-        sorted_polygon_id_list = empty([nr_of_polygons], dtype='<u2')
-        sorted_zone_id_list = empty([nr_of_polygons], dtype='<u2')
+        sorted_polygon_id_list = empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
+        sorted_zone_id_list = empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
 
         pointer_output = 0
         for zone_id, amount in counted_zones_sorted:
@@ -385,7 +304,7 @@ class TimezoneFinder:
         def exact_routine(polygon_nr):
             coords = self.coords_of(polygon_nr)
             nr_points = len(coords[0])
-            empty_array = empty([2, nr_points], dtype=float64)
+            empty_array = empty([2, nr_points], dtype=DTYPE_FORMAT_F_NUMPY)
             return distance_to_polygon_exact(lng, lat, nr_points, coords, empty_array)
 
         def normal_routine(polygon_nr):
@@ -393,7 +312,7 @@ class TimezoneFinder:
             nr_points = len(coords[0])
             return distance_to_polygon(lng, lat, nr_points, coords)
 
-        lng, lat = rectify(lng, lat)
+        lng, lat = rectify_coordinates(lng, lat)
 
         # transform point X into cartesian coordinates
         current_closest_id = None
@@ -442,7 +361,7 @@ class TimezoneFinder:
             routine = normal_routine
 
         min_distance = MAX_HAVERSINE_DISTANCE
-        distances = empty(polygons_in_list, dtype=float64)
+        distances = empty(polygons_in_list, dtype=DTYPE_FORMAT_F_NUMPY)
         # [None for i in range(polygons_in_list)]
 
         if force_evaluation:
@@ -493,7 +412,7 @@ class TimezoneFinder:
         :param lat: latitude in degree (90 to -90)
         :return: the timezone name of a matching polygon or None
         """
-        lng, lat = rectify(lng, lat)
+        lng, lat = rectify_coordinates(lng, lat)
         # x = longitude  y = latitude  both converted to 8byte int
         x = coord2int(lng)
         y = coord2int(lat)
@@ -503,7 +422,7 @@ class TimezoneFinder:
             (180 * NR_SHORTCUTS_PER_LAT * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
         try:
             # if there is just one possible zone in this shortcut instantly return its name
-            return timezone_names[unpack(b'<H', self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
+            return timezone_names[unpack(DTYPE_FORMAT_H, self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
         except IndexError:
             possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
             nr_possible_polygons = len(possible_polygons)
@@ -529,7 +448,7 @@ class TimezoneFinder:
 
                 # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
                 self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-                boundaries = fromfile(self.poly_max_values, dtype='<i4', count=4)
+                boundaries = fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
                 # only run the expensive algorithm if the point is withing the boundaries
                 if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
@@ -559,7 +478,7 @@ class TimezoneFinder:
         :return: the timezone name of the polygon the point is included in or None
         """
 
-        lng, lat = rectify(lng, lat)
+        lng, lat = rectify_coordinates(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
 
@@ -572,7 +491,7 @@ class TimezoneFinder:
 
             # get boundaries
             self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-            boundaries = fromfile(self.poly_max_values, dtype='<i4', count=4)
+            boundaries = fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
                 outside_all_holes = True

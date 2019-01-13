@@ -1,5 +1,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# NOTE: Changes in the global settings might not immediately affect
+# the precompiled (and cached) functions in helpers_numba.py!
+
+
 INPUT_JSON_FILE_NAME = 'combined.json'
 
 DEBUG = False
@@ -18,13 +22,42 @@ NR_SHORTCUTS_PER_LAT = 2
 
 INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
+TIMEZONE_NAMES_FILE = 'timezone_names.json'
+
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
+DTYPE_FORMAT_B_NUMPY = '<i1'
+
 # H = unsigned short (2 byte integer)
 NR_BYTES_H = 2
-# I = unsigned 4byte integer
+DTYPE_FORMAT_H = b'<H'
+DTYPE_FORMAT_H_NUMPY = '<u2'
+
 # i = signed 4byte integer
 NR_BYTES_I = 4
+DTYPE_FORMAT_SIGNED_I_NUMPY = '<i4'
+
+# I = unsigned 4byte integer
+DTYPE_FORMAT_I = b'<I'
+
+# f = 8byte signed float
+DTYPE_FORMAT_F_NUMPY = '<f8'
+
+# IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
+# is the same as testing if 360 fits into the domain of I4 (unsigned!)
+MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I-1)
+
+# from math import floor,log10
+# DECIMAL_PLACES_SHIFT = floor(log10(MAX_ALLOWED_COORD_VAL/180.0)) # == 7
+DECIMAL_PLACES_SHIFT = 7
+INT2COORD_FACTOR = 10 ** (-DECIMAL_PLACES_SHIFT)
+COORD2INT_FACTOR = 10 ** DECIMAL_PLACES_SHIFT
+max_int_val = 180.0 * COORD2INT_FACTOR
+assert (max_int_val < MAX_ALLOWED_COORD_VAL)
 
 # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
 MAX_HAVERSINE_DISTANCE = 40100
+
+# TESTS
+
+DECIMAL_PLACES_ACCURACY = 7

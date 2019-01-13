@@ -1,26 +1,31 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt
+from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
 from six.moves import range
 
-from numba import b1, f8, i2, i4, jit, typeof, u2, u8
+from numba import b1, f8, i2, i4, njit, typeof, u2, u8
 
-# # for Ahead-Of-Time Compilation:
-# from numba.pycc import CC
-# cc = CC('compiled_helpers', )
+from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
+
+# from global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
+
+
+# for Ahead-Of-Time Compilation:
+
+# cc = CC('precompiled_helpers', )
 # # Uncomment the following line to print out the compilation steps
-# # cc.verbose = True
+# cc.verbose = True
 
-TIMEZONE_NAMES_FILE = 'timezone_names.json'
+dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
+dtype_2float_tuple = typeof((1.0, 1.0))
+dtype_2int_tuple = typeof((1, 1))
 
-dtype_3floattuple = typeof((1.0, 1.0, 1.0))
-dtype_2floattuple = typeof((1.0, 1.0))
 
-
+# njit is equal to @jit(nopython=True)
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-@jit(b1(i4, i4, i4[:, :]), nopython=True, cache=True)
+@njit(b1(i4, i4, i4[:, :]), cache=True)
 def inside_polygon(x, y, coordinates):
     """
     Implementing the ray casting point in polygon test algorithm
@@ -29,7 +34,8 @@ def inside_polygon(x, y, coordinates):
     :param y:
     :param coordinates: a polygon represented by a list containing two lists (x and y coordinates):
         [ [x1,x2,x3...], [y1,y2,y3...]]
-        those lists are actually numpy arrays which are being read directly from a binary file
+        those lists are actually numpy arrays which are bei
+        ng read directly from a binary file
     :return: true if the point (x,y) lies within the polygon
 
     Some overflow considerations for the critical part of comparing the line segment slopes:
@@ -41,11 +47,11 @@ def inside_polygon(x, y, coordinates):
     Instead of calculating with float I decided using just ints (by multiplying with 10^7). That gives us:
 
         delta_y_max * delta_x_max = 180x10^7 * 360x10^7
-        delta_y_max * delta_x_max <= 65x^17
+        delta_y_max * delta_x_max <= 65x10^17
 
-    So these numbers need up to log_2(65 x10^10) ~ 63 bits to be represented! Even though values this big should never
+    So these numbers need up to log_2(65 x10^17) ~ 63 bits to be represented! Even though values this big should never
      occur in practice (timezone polygons do not span the whole lng lat coordinate space),
-     32bit accuracy is not safe to use here!
+     32bit accuracy hence is not safe to use here!
      Python 2.2 automatically uses the appropriate int data type preventing overflow
      (cf. https://www.python.org/dev/peps/pep-0237/),
      but here the data types are numpy internal static data types. The data is stored as int32
@@ -65,12 +71,14 @@ def inside_polygon(x, y, coordinates):
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                # compare the slope of the lines [p1-p2] and [p-p2]
+                # compare the slope of the line [p1-p2] and [p-p2]
                 # depending on the position of p2 this determines whether the polygon edge is right or left of the point
                 # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
                 # ( dy/dx > a  ==  dy > a * dx )
+                # int64 accuracy needed here!
                 if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and int64(y2 - y) * int64(x2 - x1) <= int64(y2 - y1) * int64(x2 - x)):
+                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) <= (
+                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
                     contained = not contained
 
         else:
@@ -81,17 +89,19 @@ def inside_polygon(x, y, coordinates):
                 x1GEx = x <= x1
                 x2GEx = x <= x2
                 if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and int64(y2 - y) * int64(x2 - x1) >= int64(y2 - y1) * int64(x2 - x)):
+                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) >= (
+                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
                     contained = not contained
 
         y1 = y2
         y_gt_y1 = y_gt_y2
         i += 1
+
     return contained
 
 
 # @cc.export('all_the_same', i2(u8, u8, u2[:]))
-@jit(i2(u8, u8, u2[:]), nopython=True, cache=True)
+@njit(i2(u8, u8, u2[:]), cache=True)
 def all_the_same(pointer, length, id_list):
     """
     :param pointer: starting from that element the list is being checked for equality of its elements
@@ -109,20 +119,20 @@ def all_the_same(pointer, length, id_list):
     return element
 
 
-# @cc.export('cartesian2rad', dtype_2floattuple(f8, f8, f8))
-@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
+# @cc.export('cartesian2rad', dtype_2float_tuple(f8, f8, f8))
+@njit(dtype_2float_tuple(f8, f8, f8), cache=True)
 def cartesian2rad(x, y, z):
     return atan2(y, x), asin(z)
 
 
-# @cc.export('cartesian2coords', dtype_2floattuple(f8, f8, f8))
-@jit(dtype_2floattuple(f8, f8, f8), nopython=True, cache=True)
+# @cc.export('cartesian2coords', dtype_2float_tuple(f8, f8, f8))
+@njit(dtype_2float_tuple(f8, f8, f8), cache=True)
 def cartesian2coords(x, y, z):
     return degrees(atan2(y, x)), degrees(asin(z))
 
 
-# @cc.export('x_rotate', dtype_3floattuple(f8, dtype_3floattuple))
-@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('x_rotate', dtype_3float_tuple(f8, dtype_3float_tuple))
+@njit(dtype_3float_tuple(f8, dtype_3float_tuple), cache=True)
 def x_rotate(rad, point):
     # Attention: this rotation uses radians!
     # x stays the same
@@ -131,8 +141,8 @@ def x_rotate(rad, point):
     return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
 
 
-# @cc.export('y_rotate', dtype_3floattuple(f8, dtype_3floattuple))
-@jit(dtype_3floattuple(f8, dtype_3floattuple), nopython=True, cache=True)
+# @cc.export('y_rotate', dtype_3float_tuple(f8, dtype_3float_tuple))
+@njit(dtype_3float_tuple(f8, dtype_3float_tuple), cache=True)
 def y_rotate(rad, point):
     # y stays the same
     # this is actually a rotation with -rad (use symmetry of sin/cos)
@@ -141,14 +151,14 @@ def y_rotate(rad, point):
     return point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad
 
 
-# @cc.export('coords2cartesian', dtype_3floattuple(f8, f8))
-@jit(dtype_3floattuple(f8, f8), nopython=True, cache=True)
+# @cc.export('coords2cartesian', dtype_3float_tuple(f8, f8))
+@njit(dtype_3float_tuple(f8, f8), cache=True)
 def coords2cartesian(lng_rad, lat_rad):
     return cos(lng_rad) * cos(lat_rad), sin(lng_rad) * cos(lat_rad), sin(lat_rad)
 
 
 # @cc.export('distance_to_point_on_equator', f8(f8, f8, f8))
-@jit(f8(f8, f8, f8), nopython=True, cache=True)
+@njit(f8(f8, f8, f8), cache=True)
 def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     """
     uses the simplified haversine formula for this special case (lat_p1 = 0)
@@ -163,7 +173,7 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
 
 
 # @cc.export('haversine', f8(f8, f8, f8, f8))
-@jit(f8(f8, f8, f8, f8), nopython=True, cache=True)
+@njit(f8(f8, f8, f8, f8), cache=True)
 def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     :param lng_p1: the longitude of point 1 in radians
@@ -179,7 +189,7 @@ def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
 
 
 # @cc.export('compute_min_distance', f8(f8, f8, f8, f8, f8, f8, f8, f8))
-@jit(f8(f8, f8, f8, f8, f8, f8, f8, f8), nopython=True, cache=True)
+@njit(f8(f8, f8, f8, f8, f8, f8, f8, f8), cache=True)
 def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat):
     """
     :param lng_rad: lng of px in radians
@@ -230,19 +240,19 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
 
 
 # @cc.export('int2coord', f8(i4))
-@jit(f8(i4), nopython=True, cache=True)
+@njit(f8(i4), cache=True)
 def int2coord(i4):
-    return float(i4 / 10 ** 7)
+    return float(i4 * INT2COORD_FACTOR)
 
 
 # @cc.export('coord2int', i4(f8))
-@jit(i4(f8), nopython=True, cache=True)
+@njit(i4(f8), cache=True)
 def coord2int(double):
-    return int(double * 10 ** 7)
+    return int(double * COORD2INT_FACTOR)
 
 
 # @cc.export('distance_to_polygon_exact', f8(f8, f8, i4, i4[:, :], f8[:, :]))
-@jit(f8(f8, f8, i4, i4[:, :], f8[:, :]), nopython=True, cache=True)
+@njit(f8(f8, f8, i4, i4[:, :], f8[:, :]), cache=True)
 def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points):
     # transform all points (int) to coords (float)
     for i in range(nr_points):
@@ -276,17 +286,66 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
 
 # @cc.export('distance_to_polygon', f8(f8, f8, i4, i4[:, :]))
-@jit(f8(f8, f8, i4, i4[:, :]), nopython=True, cache=True)
+@njit(f8(f8, f8, i4, i4[:, :]), cache=True)
 def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
-    # the maximum possible distance is half the perimeter of earth
-    # equatorial circumference: 40075.017 km
-    min_distance = 40100000
+    min_distance = MAX_HAVERSINE_DISTANCE
 
     for i in range(nr_points):
         min_distance = min(min_distance, haversine(lng_rad, lat_rad, radians(int2coord(points[0][i])),
                                                    radians(int2coord(points[1][i]))))
-
     return min_distance
+
+    # if __name__ == "__main__":
+    #     cc.compile()
+
+
+# @cc.export('coord2shortcut', dtype_2int_tuple(f8, f8))
+@njit(dtype_2int_tuple(f8, f8), cache=True)
+def coord2shortcut(lng, lat):
+    return int(floor((lng + 180))), int(floor((90 - lat) * 2))
+
+
+# @cc.export('rectify_coordinates', dtype_2float_tuple(f8, f8))
+@njit(dtype_2float_tuple(f8, f8), cache=True)
+def rectify_coordinates(lng, lat):
+    if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
+        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds.')
+
+    # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
+    # are not included in the shortcut lookup system
+    # always (only) the "top" and "left" borders belong to a shortcut
+    if lng == 180.0:
+        # a longitude of 180.0 is not allowed, because the right border of a shortcut
+        # is already considered to lie within the next shortcut
+        # it however equals lng=0.0 (earth is a sphere)
+        lng = 0.0
+
+    if lat == -90.0:
+        # a latitude of -90.0 (=exact south pole) corresponds to just one single point on earth
+        # and is not allowed, because bottom border of a shortcut is already considered to lie within the next shortcut
+        # it has the same timezones as the points with a slightly higher latitude
+        lat += INT2COORD_FACTOR  # adjust by the smallest possible amount
+
+    return lng, lat
+
+
+# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
+@njit(cache=True)
+def convert2coords(polygon_data):
+    # return a tuple of coordinate lists
+    return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
+
+
+# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
+@njit(cache=True)
+def convert2coord_pairs(polygon_data):
+    # return a list of coordinate tuples (x,y)
+    coodinate_list = []
+    i = 0
+    for x in polygon_data[0]:
+        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
+        i += 1
+    return coodinate_list
 
 # if __name__ == "__main__":
 #     cc.compile()
