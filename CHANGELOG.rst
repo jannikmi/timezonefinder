@@ -2,13 +2,14 @@ Changelog
 =========
 
 
-3.4.1 (2019-0X-XX)
+3.4.1 (2019-01-13)
 ------------------
 
 * added test cases for the Numba helpers (#55)
 * added more polygon tests to test the function inside_polygon()
 * added global data type definitions (format strings) to ``global_settings.py``
-
+* removed tzwhere completely from the main tests (no comparison any more).
+* removed code drafts for ahead of time compilation (#40)
 
 3.4.0 (2019-01-06)
 ------------------

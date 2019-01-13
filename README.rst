@@ -217,7 +217,6 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 .. code-block:: python
 
     tf.get_geometry(tz_name='Africa/Addis_Ababa', coords_as_pairs=True)
-
     tf.get_geometry(tz_id=400, use_id=True)
 
 

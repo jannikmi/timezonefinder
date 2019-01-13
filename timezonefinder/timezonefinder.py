@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-from math import floor, radians
+from math import radians
 # from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
@@ -11,71 +11,23 @@ from numpy import array, empty, fromfile
 from six.moves import range
 
 from .global_settings import (
-    MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG,
-    DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY,
-    DTYPE_FORMAT_F_NUMPY, TIMEZONE_NAMES_FILE
+    DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
+    DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
+    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 from .kwargs_only import kwargs_only
 
-# from sys import argv, exit
-
-# TODO functions should be automatically precompiled once on installation:
-# try:
-#     import compiled_numba_funcs
-# except ImportError:
-#     precompilation = None
-#     try:
-#         import numba
-#     except ImportError:
-#         numba = None
-#
-#     if numba is not None:
-#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#     else:
-#         from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
-#
-#
-# try:
-#     import numba
-#
-#     print('using numba version:', numba.__version__)
-#
-#     print('compiling the helpers ahead of time...')
-#     # FIXME target architecture is wrong. because of old Numba version?
-#     # TODO in this environment numba could not be available
-#     # precompile functions by running the helpers_numba.py script
-#     system("python3 " + join(dirname(__file__), 'helpers_numba.py'))
-#     try:
-#         from compiled_helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#
-#         print('... worked!')
-#
-#     except ImportError:
-#         from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-#             all_the_same
-#
-#     print('... did not work!')
-#
-# except ImportError:
-#     numba = None
-#     from .helpers import coord2int, distance_to_polygon_exact, inside_polygon, all_the_same, distance_to_polygon
-
 try:
     import numba
-    from .helpers_numba import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same, rectify_coordinates, coord2shortcut
+    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+        all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
 except ImportError:
     numba = None
-    from .helpers import coord2int, int2coord, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same, rectify_coordinates, coord2shortcut
+    from .helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+        all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
 
 with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
     timezone_names = json.loads(f.read())
-
-
-
 
 
 class TimezoneFinder:
@@ -224,10 +176,9 @@ class TimezoneFinder:
         :param use_id: determines whether id or name should be used
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
-        output format: [ [polygon1, hole1, hole2...], [polygon1, ...], ...]
+        output format: [ [polygon1, hole1, hole2...], [polygon2, ...], ...]
          and each polygon and hole is itself formated like: ([longitudes], [latitudes])
          or [(lng1,lat1), (lng2,lat2),...] if ``coords_as_pairs=True``.
-
         '''
 
         if use_id:
@@ -353,7 +304,7 @@ class TimezoneFinder:
         def exact_routine(polygon_nr):
             coords = self.coords_of(polygon_nr)
             nr_points = len(coords[0])
-            empty_array = empty([2, nr_points], dtype=float64)
+            empty_array = empty([2, nr_points], dtype=DTYPE_FORMAT_F_NUMPY)
             return distance_to_polygon_exact(lng, lat, nr_points, coords, empty_array)
 
         def normal_routine(polygon_nr):

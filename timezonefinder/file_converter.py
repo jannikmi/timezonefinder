@@ -10,7 +10,7 @@ from six.moves import range, zip
 
 from .global_settings import (
     DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
-    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE
+    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 # # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # # because numpy classes are not being used at this stage yet!

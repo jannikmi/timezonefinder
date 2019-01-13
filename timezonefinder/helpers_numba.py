@@ -1,22 +1,26 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt, floor
+from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
-from numba import b1, f8, i2, i4, njit, typeof, u2, u8
 from numpy import int64
 from six.moves import range
 
-from .global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
+from numba import b1, f8, i2, i4, njit, typeof, u2, u8
 
-# # for Ahead-Of-Time Compilation:
-# from numba.pycc import CC
-# cc = CC('compiled_helpers', )
+from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
+
+# from global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
+
+
+# for Ahead-Of-Time Compilation:
+
+# cc = CC('precompiled_helpers', )
 # # Uncomment the following line to print out the compilation steps
-# # cc.verbose = True
+# cc.verbose = True
 
-dtype_3floattuple = typeof((1.0, 1.0, 1.0))
-dtype_2floattuple = typeof((1.0, 1.0))
-dtype_2inttuple = typeof((1, 1))
+dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
+dtype_2float_tuple = typeof((1.0, 1.0))
+dtype_2int_tuple = typeof((1, 1))
 
 
 # njit is equal to @jit(nopython=True)
@@ -115,20 +119,20 @@ def all_the_same(pointer, length, id_list):
     return element
 
 
-# @cc.export('cartesian2rad', dtype_2floattuple(f8, f8, f8))
-@njit(dtype_2floattuple(f8, f8, f8), cache=True)
+# @cc.export('cartesian2rad', dtype_2float_tuple(f8, f8, f8))
+@njit(dtype_2float_tuple(f8, f8, f8), cache=True)
 def cartesian2rad(x, y, z):
     return atan2(y, x), asin(z)
 
 
-# @cc.export('cartesian2coords', dtype_2floattuple(f8, f8, f8))
-@njit(dtype_2floattuple(f8, f8, f8), cache=True)
+# @cc.export('cartesian2coords', dtype_2float_tuple(f8, f8, f8))
+@njit(dtype_2float_tuple(f8, f8, f8), cache=True)
 def cartesian2coords(x, y, z):
     return degrees(atan2(y, x)), degrees(asin(z))
 
 
-# @cc.export('x_rotate', dtype_3floattuple(f8, dtype_3floattuple))
-@njit(dtype_3floattuple(f8, dtype_3floattuple), cache=True)
+# @cc.export('x_rotate', dtype_3float_tuple(f8, dtype_3float_tuple))
+@njit(dtype_3float_tuple(f8, dtype_3float_tuple), cache=True)
 def x_rotate(rad, point):
     # Attention: this rotation uses radians!
     # x stays the same
@@ -137,8 +141,8 @@ def x_rotate(rad, point):
     return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
 
 
-# @cc.export('y_rotate', dtype_3floattuple(f8, dtype_3floattuple))
-@njit(dtype_3floattuple(f8, dtype_3floattuple), cache=True)
+# @cc.export('y_rotate', dtype_3float_tuple(f8, dtype_3float_tuple))
+@njit(dtype_3float_tuple(f8, dtype_3float_tuple), cache=True)
 def y_rotate(rad, point):
     # y stays the same
     # this is actually a rotation with -rad (use symmetry of sin/cos)
@@ -147,8 +151,8 @@ def y_rotate(rad, point):
     return point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad
 
 
-# @cc.export('coords2cartesian', dtype_3floattuple(f8, f8))
-@njit(dtype_3floattuple(f8, f8), cache=True)
+# @cc.export('coords2cartesian', dtype_3float_tuple(f8, f8))
+@njit(dtype_3float_tuple(f8, f8), cache=True)
 def coords2cartesian(lng_rad, lat_rad):
     return cos(lng_rad) * cos(lat_rad), sin(lng_rad) * cos(lat_rad), sin(lat_rad)
 
@@ -291,19 +295,18 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
                                                    radians(int2coord(points[1][i]))))
     return min_distance
 
-
-# if __name__ == "__main__":
-#     cc.compile()
+    # if __name__ == "__main__":
+    #     cc.compile()
 
 
 # @cc.export('coord2shortcut', dtype_2int_tuple(f8, f8))
-@njit(dtype_2inttuple(f8, f8), cache=True)
+@njit(dtype_2int_tuple(f8, f8), cache=True)
 def coord2shortcut(lng, lat):
     return int(floor((lng + 180))), int(floor((90 - lat) * 2))
 
 
-# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
-@njit(dtype_2floattuple(f8, f8), cache=True)
+# @cc.export('rectify_coordinates', dtype_2float_tuple(f8, f8))
+@njit(dtype_2float_tuple(f8, f8), cache=True)
 def rectify_coordinates(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
         raise ValueError('The coordinates should be given in degrees. They are out ouf bounds.')
@@ -326,11 +329,15 @@ def rectify_coordinates(lng, lat):
     return lng, lat
 
 
+# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
+@njit(cache=True)
 def convert2coords(polygon_data):
     # return a tuple of coordinate lists
     return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
 
 
+# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
+@njit(cache=True)
 def convert2coord_pairs(polygon_data):
     # return a list of coordinate tuples (x,y)
     coodinate_list = []
@@ -339,3 +346,6 @@ def convert2coord_pairs(polygon_data):
         coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
         i += 1
     return coodinate_list
+
+# if __name__ == "__main__":
+#     cc.compile()

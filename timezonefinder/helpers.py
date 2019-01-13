@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from math import asin, atan2, ceil, cos, degrees, radians, sin, sqrt, floor
+from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
 from six.moves import range
 
-from .global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
+from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
 
 
 def inside_polygon(x, y, coordinates):
@@ -277,3 +277,18 @@ def rectify_coordinates(lng, lat):
         lat += INT2COORD_FACTOR  # adjust by the smallest possible amount
 
     return lng, lat
+
+
+def convert2coords(polygon_data):
+    # return a tuple of coordinate lists
+    return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
+
+
+def convert2coord_pairs(polygon_data):
+    # return a list of coordinate tuples (x,y)
+    coodinate_list = []
+    i = 0
+    for x in polygon_data[0]:
+        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
+        i += 1
+    return coodinate_list
