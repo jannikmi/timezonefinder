@@ -2,6 +2,14 @@ Changelog
 =========
 
 
+3.4.1 (2019-0X-XX)
+------------------
+
+* added test cases for the Numba helpers (#55)
+* added more polygon tests to test the function inside_polygon()
+* added global data type definitions (format strings) to ``global_settings.py``
+
+
 3.4.0 (2019-01-06)
 ------------------
 
