@@ -1,0 +1,9 @@
+[run]
+source = timezonefinder
+
+[report]
+omit =
+    *file_converter.py
+    *global_settings.py
+    *kwargs_only.py
+    *__init__*

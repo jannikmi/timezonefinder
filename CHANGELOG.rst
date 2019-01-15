@@ -2,6 +2,13 @@ Changelog
 =========
 
 
+3.4.2 (2019-01-15)
+------------------
+
+* BUGFIX: fixing #70 (broken py2.7 with numba support)
+* added automatic tox tests for py2.7 py3 environments with numba installed
+* fixed coverage report
+
 3.4.1 (2019-01-13)
 ------------------
 

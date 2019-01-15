@@ -4,10 +4,17 @@ python: '3.6'
 
 
 install:
+#  - pip install coveralls tox
   - pip install tox
 
 script:
+#  - coverage erase
   - tox
+
+after_success:
+#  - coverage combine
+#  - coveralls
+
 
 branches:
     only:

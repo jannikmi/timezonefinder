@@ -309,7 +309,7 @@ def coord2shortcut(lng, lat):
 @njit(dtype_2float_tuple(f8, f8), cache=True)
 def rectify_coordinates(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError('The coordinates should be given in degrees. They are out ouf bounds.')
+        raise ValueError(b'The coordinates should be given in degrees. They are out ouf bounds.')
 
     # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
     # are not included in the shortcut lookup system

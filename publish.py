@@ -1,6 +1,6 @@
 import os
-import sys
 import re
+import sys
 
 
 # required packages
@@ -12,6 +12,8 @@ import re
 # pip-tools
 # rstcheck
 # pytest
+
+# --cov-config=tox.ini
 
 # pip-tools package:
 # TODO write bash script for this
@@ -101,7 +103,7 @@ def routine(command=None, message='', option1='next', option2='exit'):
         print('2)', option2)
         print('anything else to repeat this step.')
         try:
-            inp = int(input())
+            inp = int(raw_input())
 
             if inp == 1:
                 print('==============')
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     print('2) no, exit')
     print('anything else skip.')
     try:
-        inp = int(input())
+        inp = int(raw_input())
         if inp == 1:
             os.system('git checkout dev')
             print('==============')
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     version_input = None
     while 1:
         try:
-            version_input = input()
+            version_input = raw_input()
         except ValueError:
             pass
 
@@ -165,8 +167,8 @@ if __name__ == "__main__":
 
     # print('Enter virtual env name:')
     # virtual env has to be given!
-    # virt_env_name = input()
-    virt_env_name = 'tzEnv'
+    # virt_env_name = raw_input()
+    virt_env_name = 'tzEnvPy2'
     virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
 
     print('___________')
@@ -182,19 +184,24 @@ if __name__ == "__main__":
     rebuild_flag = ''
     print('when the dependencies (in requirements.txt) have changed enter 1 (-> rebuild tox)')
     try:
-        inp = int(input())
+        inp = int(raw_input())
         if inp == 1:
             rebuild_flag = ' -r'
     except ValueError:
         pass
 
+    # routine(virt_env_act_command + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
+
     routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
             'checking syntax, codestyle and imports',
             'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'checking if package is building with tox',
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'build tests py2',
             'continue')
     routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36",
-            'checking syntax, codestyle and imports',
+            'build tests py3',
+            'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-numba",
+            'build tests with numba installed',
             'continue')
 
     print('Tests finished.')
