@@ -1,6 +1,8 @@
 import os
 import re
 import sys
+from os.path import abspath, join, pardir, isfile
+from os import listdir
 
 
 # required packages
@@ -12,6 +14,9 @@ import sys
 # pip-tools
 # rstcheck
 # pytest
+
+# for uploading:
+# twine
 
 # --cov-config=tox.ini
 
@@ -103,7 +108,7 @@ def routine(command=None, message='', option1='next', option2='exit'):
         print('2)', option2)
         print('anything else to repeat this step.')
         try:
-            inp = int(raw_input())
+            inp = int(input())
 
             if inp == 1:
                 print('==============')
@@ -123,7 +128,7 @@ if __name__ == "__main__":
     print('2) no, exit')
     print('anything else skip.')
     try:
-        inp = int(raw_input())
+        inp = int(input())
         if inp == 1:
             os.system('git checkout dev')
             print('==============')
@@ -141,7 +146,7 @@ if __name__ == "__main__":
     version_input = None
     while 1:
         try:
-            version_input = raw_input()
+            version_input = input()
         except ValueError:
             pass
 
@@ -167,7 +172,7 @@ if __name__ == "__main__":
 
     # print('Enter virtual env name:')
     # virtual env has to be given!
-    # virt_env_name = raw_input()
+    # virt_env_name = input()
     virt_env_name = 'tzEnvPy2'
     virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
 
@@ -184,7 +189,7 @@ if __name__ == "__main__":
     rebuild_flag = ''
     print('when the dependencies (in requirements.txt) have changed enter 1 (-> rebuild tox)')
     try:
-        inp = int(raw_input())
+        inp = int(input())
         if inp == 1:
             rebuild_flag = ' -r'
     except ValueError:
@@ -226,24 +231,21 @@ if __name__ == "__main__":
     print('=================')
     print('PUBLISHING:')
 
-    '''
-    ~/.pypirc file required:
-    [distutils]
-    index-servers =
-    pypi
-    pypitest
-    
-    [pypi]
-    repository=https://pypi.python.org/pypi
-    username=MrMinimal64
-    password=****
-    
-    [pypitest]
-    repository=https://testpypi.python.org/pypi
-    username=MrMinimal64
-    password=your_password
-    '''
-    routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.')
+    # routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.') # deprecated
+    # new twine publishing routine:
+    # https://packaging.python.org/tutorials/packaging-projects/
+    routine("python3 setup.py sdist bdist_wheel", 'building the package now.')
+
+    path = abspath(join(__file__, pardir, 'dist'))
+    all_archives_this_version = [f for f in listdir(path) if isfile(join(path, f)) and version_number in f]
+    paths2archives = [abspath(join(path, f)) for f in all_archives_this_version]
+    command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
+
+    # upload all archives of this version
+    routine(virt_env_act_command + command, 'testing if upload works.')
+
+    command = "twine upload " + ' '.join(paths2archives)
+    routine(virt_env_act_command + command, 'real upload to PyPI.')
 
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
