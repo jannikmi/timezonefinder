@@ -2,6 +2,13 @@ Changelog
 =========
 
 
+4.0.0 (2019-xx-xx)
+------------------
+
+* ATTENTION: No more Python2 support! (#72)
+* BUGFIX: fixing #74 (broken py3 with numba support)
+
+
 3.4.2 (2019-01-15)
 ------------------
 

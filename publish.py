@@ -5,45 +5,49 @@ from os.path import abspath, join, pardir, isfile
 from os import listdir
 
 
-# required packages
-# numpy
-# six
-# (llvmlite, numba)
+"""
+required packages
+numpy
+six
+(llvmlite, numba)
 
-# for testing:
-# pip-tools
-# rstcheck
-# pytest
 
-# for uploading:
-# twine
+these packages have to be installed in virtual environment in use:
 
-# --cov-config=tox.ini
+for testing:
+pip-tools
+rstcheck
+pytest
 
-# pip-tools package:
-# TODO write bash script for this
-# compile with python 2!
-# its important to pin requirements to get reproducible errors!
-# compile a new requirements file (with the latest versions)
-# source activate py2env
-# pip-compile --upgrade
-# same as?!:
-# pip-compile --output-file requirements.txt requirements.in
-# only update the flask package:
-# pip-compile --upgrade-package flask
-# compile a new requirements file (with versions currently used in the virtual env )
-# pip-compile --generate-hashes requirements.in
+for uploading:
+twine
 
-# do NOT sync. will install ONLY the packages specified! (no more tox etc. installed!)
-# pip-sync
+--cov-config=tox.ini
 
-# commands
-# tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
-# rstcheck *.rst
-# tox -r -e py{27,36}-codestyle
-# tox -r -e py27
-# tox -r -e py36
+pip-tools package:
+TODO write bash script for this
+its important to pin requirements to get reproducible errors!
+compile a new requirements file (with the latest versions)
+source activate tzEnv
+pip-compile --upgrade
+same as?!:
+pip-compile --output-file requirements.txt requirements_numba.in
+pip-compile --output-file requirements_numba.txt requirements_numba.in
+only update the flask package:
+pip-compile --upgrade-package flask
+compile a new requirements file (with versions currently used in the virtual env )
+pip-compile --generate-hashes requirements_numba.in
 
+do NOT sync. will install ONLY the packages specified! (no more tox etc. installed!)
+pip-sync
+
+commands
+tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
+rstcheck *.rst
+tox -r -e py36-codestyle
+tox -r -e py36
+tox -r -e py36-numba
+"""
 
 def get_version(package):
     """
@@ -163,7 +167,7 @@ if __name__ == "__main__":
 
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all dependencies written in setup.py, requirements.in/.txt and the Readme?', 'OK. Continue',
+    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Readme?', 'OK. Continue',
             'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
@@ -179,7 +183,7 @@ if __name__ == "__main__":
     print('___________')
     print('Running TESTS:')
 
-    # routine(virt_env_act_command + "pip-compile requirements.in;pip-sync",
+    # routine(virt_env_act_command + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
     routine(virt_env_act_command + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
