@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import unittest
 from datetime import datetime
 
@@ -113,7 +114,8 @@ class MainPackageTest(unittest.TestCase):
         print('Numba: OFF (precompiled functions NOT in use)')
 
     start_time = datetime.now()
-    timezone_finder = TimezoneFinder()
+    in_memory_mode = True if os.getenv('IN_MEMORY_MODE') == '1' else False
+    timezone_finder = TimezoneFinder(in_memory=in_memory_mode)
     end_time = datetime.now()
     my_time = end_time - start_time
     print_time(timezoefinder_time=my_time)

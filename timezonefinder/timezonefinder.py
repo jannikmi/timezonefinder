@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-from io import BytesIO
+from io import BytesIO, SEEK_CUR
 from math import radians
 # from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
 
 from importlib_resources import open_binary
-from numpy import array, empty, fromfile, fromstring
+from numpy import array, empty, fromfile, frombuffer, dtype
 from six.moves import range
 
 from .global_settings import (
@@ -86,11 +86,13 @@ class TimezoneFinder:
         else:
             return bin_fd
 
-    def fromfile(self, file, *args, **kwargs):
+    def fromfile(self, file, **kwargs):
         if not self.in_memory:
-            return fromfile(file, *args, **kwargs)
+            return fromfile(file, **kwargs)
         else:
-            return fromstring(file.getvalue(), *args)
+            res = frombuffer(file.getbuffer(), **kwargs, offset=file.tell())
+            file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
+            return res
 
     def __del__(self):
         self.poly_zone_ids.close()
