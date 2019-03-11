@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-from io import BytesIO, SEEK_CUR
+from io import SEEK_CUR, BytesIO
 from math import radians
 # from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
 
 from importlib_resources import open_binary
-from numpy import array, empty, fromfile, frombuffer, dtype
+from numpy import array, dtype, empty, frombuffer, fromfile
 from six.moves import range
 
 from .global_settings import (
@@ -90,7 +90,7 @@ class TimezoneFinder:
         if not self.in_memory:
             return fromfile(file, **kwargs)
         else:
-            res = frombuffer(file.getbuffer(), **kwargs, offset=file.tell())
+            res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
             file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
             return res
 
