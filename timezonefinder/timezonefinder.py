@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
+from io import BytesIO
 from math import radians
 # from os import system
 from os.path import abspath, join, pardir
@@ -9,8 +10,6 @@ from struct import unpack
 from importlib_resources import open_binary
 from numpy import array, empty, fromfile, fromstring
 from six.moves import range
-
-from io import BytesIO
 
 from .global_settings import (
     DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
