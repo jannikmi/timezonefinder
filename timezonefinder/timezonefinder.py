@@ -7,8 +7,10 @@ from os.path import abspath, join, pardir
 from struct import unpack
 
 from importlib_resources import open_binary
-from numpy import array, empty, fromfile
+from numpy import array, empty, fromfile, fromstring
 from six.moves import range
+
+from io import BytesIO
 
 from .global_settings import (
     DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
@@ -38,26 +40,27 @@ class TimezoneFinder:
         this gives a SHORTCUT to which of the 27k+ polygons should be tested
         (tests evaluated this to be the fastest setup when being used with numba)
     """
+    def __init__(self, in_memory=False):
+        self.in_memory = in_memory
 
-    def __init__(self):
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
-        self.poly_zone_ids = open_binary('timezonefinder', 'poly_zone_ids.bin')
-        self.poly_coord_amount = open_binary('timezonefinder', 'poly_coord_amount.bin')
-        self.poly_adr2data = open_binary('timezonefinder', 'poly_adr2data.bin')
-        self.poly_data = open_binary('timezonefinder', 'poly_data.bin')
-        self.poly_max_values = open_binary('timezonefinder', 'poly_max_values.bin')
-        self.poly_nr2zone_id = open_binary('timezonefinder', 'poly_nr2zone_id.bin')
+        self.poly_zone_ids = self.open_binary('timezonefinder', 'poly_zone_ids.bin')
+        self.poly_coord_amount = self.open_binary('timezonefinder', 'poly_coord_amount.bin')
+        self.poly_adr2data = self.open_binary('timezonefinder', 'poly_adr2data.bin')
+        self.poly_data = self.open_binary('timezonefinder', 'poly_data.bin')
+        self.poly_max_values = self.open_binary('timezonefinder', 'poly_max_values.bin')
+        self.poly_nr2zone_id = self.open_binary('timezonefinder', 'poly_nr2zone_id.bin')
 
-        self.hole_poly_ids = open_binary('timezonefinder', 'hole_poly_ids.bin')
-        self.hole_coord_amount = open_binary('timezonefinder', 'hole_coord_amount.bin')
-        self.hole_adr2data = open_binary('timezonefinder', 'hole_adr2data.bin')
-        self.hole_data = open_binary('timezonefinder', 'hole_data.bin')
+        self.hole_poly_ids = self.open_binary('timezonefinder', 'hole_poly_ids.bin')
+        self.hole_coord_amount = self.open_binary('timezonefinder', 'hole_coord_amount.bin')
+        self.hole_adr2data = self.open_binary('timezonefinder', 'hole_adr2data.bin')
+        self.hole_data = self.open_binary('timezonefinder', 'hole_data.bin')
 
-        self.shortcuts_entry_amount = open_binary('timezonefinder', 'shortcuts_entry_amount.bin')
-        self.shortcuts_adr2data = open_binary('timezonefinder', 'shortcuts_adr2data.bin')
-        self.shortcuts_data = open_binary('timezonefinder', 'shortcuts_data.bin')
-        self.shortcuts_unique_id = open_binary('timezonefinder', 'shortcuts_unique_id.bin')
+        self.shortcuts_entry_amount = self.open_binary('timezonefinder', 'shortcuts_entry_amount.bin')
+        self.shortcuts_adr2data = self.open_binary('timezonefinder', 'shortcuts_adr2data.bin')
+        self.shortcuts_data = self.open_binary('timezonefinder', 'shortcuts_data.bin')
+        self.shortcuts_unique_id = self.open_binary('timezonefinder', 'shortcuts_unique_id.bin')
 
         # store for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few (+-22) it is feasible to keep them in the memory
@@ -74,6 +77,21 @@ class TimezoneFinder:
                 self.hole_registry.update({
                     poly_id: (1, i),
                 })
+
+    def open_binary(self, *args):
+        bin_fd = open_binary(*args)
+        if self.in_memory:
+            mem_bin_fd = BytesIO(bin_fd.read())
+            mem_bin_fd.seek(0)
+            return mem_bin_fd
+        else:
+            return bin_fd
+
+    def fromfile(self, file, *args, **kwargs):
+        if not self.in_memory:
+            return fromfile(file, *args, **kwargs)
+        else:
+            return fromstring(file.getvalue(), *args)
 
     def __del__(self):
         self.poly_zone_ids.close()
@@ -123,7 +141,7 @@ class TimezoneFinder:
 
         self.shortcuts_adr2data.seek(nr_lat_shortcuts * NR_BYTES_I * x + NR_BYTES_I * y)
         self.shortcuts_data.seek(unpack(DTYPE_FORMAT_I, self.shortcuts_adr2data.read(NR_BYTES_I))[0])
-        return fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
+        return self.fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
 
     def coords_of(self, line=0):
         # how many coordinates are stored in this polygon
@@ -135,8 +153,8 @@ class TimezoneFinder:
         self.poly_adr2data.seek(NR_BYTES_I * line)
         self.poly_data.seek(unpack(DTYPE_FORMAT_I, self.poly_adr2data.read(NR_BYTES_I))[0])
 
-        return array([fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-                      fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
+        return array([self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                      self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
 
     def _holes_of_line(self, line=0):
         try:
@@ -149,8 +167,8 @@ class TimezoneFinder:
                 self.hole_adr2data.seek(NR_BYTES_I * hole_id)
                 self.hole_data.seek(unpack(DTYPE_FORMAT_I, self.hole_adr2data.read(NR_BYTES_I))[0])
 
-                yield array([fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-                             fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
+                yield array([self.fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                             self.fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
                 hole_id += 1
 
         except KeyError:
@@ -448,7 +466,7 @@ class TimezoneFinder:
 
                 # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
                 self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-                boundaries = fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
+                boundaries = self.fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
                 # only run the expensive algorithm if the point is withing the boundaries
                 if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
@@ -491,7 +509,7 @@ class TimezoneFinder:
 
             # get boundaries
             self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-            boundaries = fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
+            boundaries = self.fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
                 outside_all_holes = True

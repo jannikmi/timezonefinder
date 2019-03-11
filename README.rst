@@ -190,6 +190,8 @@ With ``return_distances=True`` the output looks like this:
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
 
+A single timezone might be represented by multiple polygons and the distance to each of the candidate polygons is being computed and returned. Hence one may get multiple results for one timezone. Example:
+
 
 .. code-block:: python
 
