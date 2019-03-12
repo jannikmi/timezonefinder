@@ -1,16 +1,17 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
+import sys
+from io import SEEK_CUR, BytesIO
 from math import radians
 # from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
 
+import numpy as np
 from importlib_resources import open_binary
-from numpy import array, empty, fromfile, fromstring
+from numpy import array, dtype, empty, fromfile
 from six.moves import range
-
-from io import BytesIO
 
 from .global_settings import (
     DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
@@ -42,6 +43,13 @@ class TimezoneFinder:
     """
     def __init__(self, in_memory=False):
         self.in_memory = in_memory
+
+        if sys.version_info[0] < 3:
+            if in_memory:
+                raise Exception('in_memory feature is supported only for python 3.x')
+            self.fromfile = self.fromfile_2x
+        else:
+            self.fromfile = self.fromfile_3x
 
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
@@ -83,15 +91,21 @@ class TimezoneFinder:
         if self.in_memory:
             mem_bin_fd = BytesIO(bin_fd.read())
             mem_bin_fd.seek(0)
+            bin_fd.close()
             return mem_bin_fd
         else:
             return bin_fd
 
-    def fromfile(self, file, *args, **kwargs):
+    def fromfile_3x(self, file, **kwargs):
         if not self.in_memory:
-            return fromfile(file, *args, **kwargs)
+            return fromfile(file, **kwargs)
         else:
-            return fromstring(file.getvalue(), *args)
+            res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
+            file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
+            return res
+
+    def fromfile_2x(self, file, **kwargs):
+        return fromfile(file, **kwargs)
 
     def __del__(self):
         self.poly_zone_ids.close()

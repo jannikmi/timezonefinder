@@ -3,7 +3,6 @@
 from __future__ import (
     absolute_import, division, print_function, unicode_literals,
 )
-
 import sys
 
 import pytest
@@ -15,4 +14,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # run test for in_memory=False
     sys.exit(main())

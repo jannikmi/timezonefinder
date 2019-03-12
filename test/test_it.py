@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import sys
 import unittest
 from datetime import datetime
 
@@ -138,6 +139,9 @@ class MainPackageTest(unittest.TestCase):
 
     print("Done.\n")
 
+    def setUp(self):
+        self.timezone_finder = TimezoneFinder()
+
     def test_speed(self):
         print("\n\nSpeed Tests:\n-------------")
 
@@ -240,3 +244,12 @@ class MainPackageTest(unittest.TestCase):
         warnings.filterwarnings('error')
         # must not raise a warning
         self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))
+
+
+class MainPackageTest2(MainPackageTest):
+    def setUp(self):
+        if sys.version_info[0] < 3:
+            self.timezone_finder = TimezoneFinder()
+        else:
+            print("** In Memory test")
+            self.timezone_finder = TimezoneFinder(in_memory=True)
