@@ -100,7 +100,7 @@ class TimezoneFinder:
         if not self.in_memory:
             return fromfile(file, **kwargs)
         else:
-            res = np.frombuffer(file.getbuffer()[file.tell():], **kwargs)
+            res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
             file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
             return res
 
