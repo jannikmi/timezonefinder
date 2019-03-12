@@ -12,8 +12,7 @@ from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_D
 # from global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
 
 
-# for Ahead-Of-Time Compilation:
-
+# TODO Ahead-Of-Time Compilation:
 # cc = CC('precompiled_helpers', )
 # # Uncomment the following line to print out the compilation steps
 # cc.verbose = True

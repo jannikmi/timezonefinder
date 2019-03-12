@@ -19,6 +19,7 @@ DEBUG_POLY_STOP = 20
 NR_SHORTCUTS_PER_LNG = 1
 # shortcuts per latitude
 NR_SHORTCUTS_PER_LAT = 2
+NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 
 INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
@@ -45,7 +46,7 @@ DTYPE_FORMAT_F_NUMPY = '<f8'
 
 # IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
 # is the same as testing if 360 fits into the domain of I4 (unsigned!)
-MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I-1)
+MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I - 1)
 
 # from math import floor,log10
 # DECIMAL_PLACES_SHIFT = floor(log10(MAX_ALLOWED_COORD_VAL/180.0)) # == 7

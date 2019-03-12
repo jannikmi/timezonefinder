@@ -1,10 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import sys
 from io import SEEK_CUR, BytesIO
 from math import radians
-# from os import system
 from os.path import abspath, join, pardir
 from struct import unpack
 
@@ -15,7 +13,7 @@ from six.moves import range
 
 from .global_settings import (
     DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
-    DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
+    DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT,
     NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 from .kwargs_only import kwargs_only
@@ -41,15 +39,9 @@ class TimezoneFinder:
         this gives a SHORTCUT to which of the 27k+ polygons should be tested
         (tests evaluated this to be the fastest setup when being used with numba)
     """
+
     def __init__(self, in_memory=False):
         self.in_memory = in_memory
-
-        if sys.version_info[0] < 3:
-            if in_memory:
-                raise Exception('in_memory feature is supported only for python 3.x')
-            self.fromfile = self.fromfile_2x
-        else:
-            self.fromfile = self.fromfile_3x
 
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
@@ -96,16 +88,13 @@ class TimezoneFinder:
         else:
             return bin_fd
 
-    def fromfile_3x(self, file, **kwargs):
+    def fromfile(self, file, **kwargs):
         if not self.in_memory:
             return fromfile(file, **kwargs)
         else:
             res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
             file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
             return res
-
-    def fromfile_2x(self, file, **kwargs):
-        return fromfile(file, **kwargs)
 
     def __del__(self):
         self.poly_zone_ids.close()
@@ -149,11 +138,10 @@ class TimezoneFinder:
         # get the address of the first entry in this shortcut
         # offset: 180 * number of shortcuts per lat degree * 2bytes = entries per column of x shortcuts
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
-        nr_lat_shortcuts = 180 * NR_SHORTCUTS_PER_LAT
-        self.shortcuts_entry_amount.seek(nr_lat_shortcuts * NR_BYTES_H * x + NR_BYTES_H * y)
+        self.shortcuts_entry_amount.seek(NR_LAT_SHORTCUTS * NR_BYTES_H * x + NR_BYTES_H * y)
         nr_of_entries = unpack(DTYPE_FORMAT_H, self.shortcuts_entry_amount.read(NR_BYTES_H))[0]
 
-        self.shortcuts_adr2data.seek(nr_lat_shortcuts * NR_BYTES_I * x + NR_BYTES_I * y)
+        self.shortcuts_adr2data.seek(NR_LAT_SHORTCUTS * NR_BYTES_I * x + NR_BYTES_I * y)
         self.shortcuts_data.seek(unpack(DTYPE_FORMAT_I, self.shortcuts_adr2data.read(NR_BYTES_I))[0])
         return self.fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
 
