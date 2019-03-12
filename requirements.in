@@ -1,5 +1,4 @@
 numpy
-six
 importlib_resources
 
 docutils
@@ -7,7 +6,6 @@ flake8
 flake8-commas
 futures<3.2.0
 isort
-modernize
 multilint
 pygments
 pytest

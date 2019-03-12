@@ -1,8 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import sys
+# -*- coding:utf-8 -*-
+import timeit
 import unittest
-from datetime import datetime
+from math import log10
 
 import pytest
 
@@ -18,6 +17,24 @@ N = 100
 
 # mistakes in these zones don't count as mistakes
 excluded_zones_timezonefinder = []
+
+tf = None
+point_list = []
+in_memory_mode = False
+
+
+def eval_time_fct():
+    global tf, point_list
+    for point in point_list:
+        tf.timezone_at(lng=point[0], lat=point[1])
+
+
+def time_preprocess(time):
+    valid_digits = 4
+    zero_digits = abs(min(0, int(log10(time))))
+    digits_to_print = zero_digits + valid_digits
+    return str(round(time, digits_to_print)) + 's'
+
 
 TEST_LOCATIONS = [
     # lat, lng, description, correct output
@@ -100,67 +117,62 @@ TEST_LOCATIONS_PROXIMITY = [
 ]
 
 
-def print_time(timezoefinder_time):
-    print('required time:', timezoefinder_time)
-
-
 class MainPackageTest(unittest.TestCase):
-    # do the preparations which have to be made only once
+    in_memory_mode = False
 
-    print("startup time:")
-    if TimezoneFinder.using_numba():
-        print('Numba: ON (precompiled functions in use)')
-    else:
-        print('Numba: OFF (precompiled functions NOT in use)')
+    def print_tf_class_props(self):
+        print("in memory mode:", self.in_memory_mode)
+        if TimezoneFinder.using_numba():
+            print('Numba: ON (precompiled functions in use)')
+        else:
+            print('Numba: OFF (precompiled functions NOT in use)')
 
-    start_time = datetime.now()
-    timezone_finder = TimezoneFinder()
-    end_time = datetime.now()
-    my_time = end_time - start_time
-    print_time(timezoefinder_time=my_time)
-    print('\n')
+    @classmethod
+    def setUpClass(cls):
+        # preparations which have to be made only once
+        print("\nSTARTING PACKAGE TESTS\n\n")
+        cls.print_tf_class_props(cls)
 
-    # create an array of points where timezone_finder finds something (realistic queries)
-    print('collecting and storing', N, 'realistic points for the tests...')
-    realistic_points = []
-    ps_for_10percent = int(N / 10)
-    percent_done = 0
+        global in_memory_mode
+        in_memory_mode = cls.in_memory_mode
+        t = timeit.timeit("TimezoneFinder(in_memory=in_memory_mode)", globals=globals(), number=1)
+        print('startup time:', time_preprocess(t), '\n')
 
-    i = 0
-    while i < N:
-        lng, lat = random_point()
-        # a realistic point is a point where certain_timezone_at() finds something
-        if timezone_finder.certain_timezone_at(lng=lng, lat=lat):
-            i += 1
-            realistic_points.append((lng, lat))
-            if i % ps_for_10percent == 0:
-                percent_done += 10
-                print(percent_done, '%')
+        cls.timezone_finder = TimezoneFinder(in_memory=cls.in_memory_mode)
 
-    print("Done.\n")
+        # create an array of points where timezone_finder finds something (realistic queries)
+        print('collecting and storing', N, 'realistic points for the tests...')
+        cls.realistic_points = []
+        ps_for_10percent = int(N / 10)
+        percent_done = 0
 
-    def setUp(self):
-        self.timezone_finder = TimezoneFinder()
+        i = 0
+        while i < N:
+            lng, lat = random_point()
+            # a realistic point is a point where certain_timezone_at() finds something
+            if cls.timezone_finder.certain_timezone_at(lng=lng, lat=lat):
+                i += 1
+                cls.realistic_points.append((lng, lat))
+                if i % ps_for_10percent == 0:
+                    percent_done += 10
+                    print(percent_done, '%')
+
+        print("Done.\n")
 
     def test_speed(self):
         print("\n\nSpeed Tests:\n-------------")
-
-        def check_speed_of_algorithm(list_of_points):
-            start_time = datetime.now()
-            for point in list_of_points:
-                self.timezone_finder.timezone_at(lng=point[0], lat=point[1])
-            end_time = datetime.now()
-            return end_time - start_time
+        self.print_tf_class_props()
 
         def print_speed_test(type_of_points, list_of_points):
-            my_time = check_speed_of_algorithm(list_of_points)
-            print('\nrequired time for ', N, type_of_points)
-            print_time(timezoefinder_time=my_time)
+            global tf, point_list
+            tf = self.timezone_finder
+            point_list = list_of_points
+            t = timeit.timeit("eval_time_fct()", globals=globals(), number=1)
+            print('\ntesting', N, type_of_points)
+            print('total time:', time_preprocess(t))
+            t_avg = t / len(list_of_points)
+            print('avg time per point:', time_preprocess(t_avg))
 
-        if TimezoneFinder.using_numba():
-            print('Numba: ON (timezonefinder)')
-        else:
-            print('Numba: OFF (timezonefinder)')
         print_speed_test('realistic points', self.realistic_points)
         print_speed_test('random points', list_of_random_points(length=N))
 
@@ -247,9 +259,4 @@ class MainPackageTest(unittest.TestCase):
 
 
 class MainPackageTest2(MainPackageTest):
-    def setUp(self):
-        if sys.version_info[0] < 3:
-            self.timezone_finder = TimezoneFinder()
-        else:
-            print("** In Memory test")
-            self.timezone_finder = TimezoneFinder(in_memory=True)
+    in_memory_mode = True

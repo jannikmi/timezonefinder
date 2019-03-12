@@ -54,11 +54,7 @@ Also see:
 Dependencies
 ============
 
-(``python``),
-``numpy``,
-``six``,
-``importlib_resources``
-
+``python3``, ``numpy``, ``importlib_resources``
 
 
 **Optional:**
@@ -87,8 +83,6 @@ in the command line:
 
 
 
-
-
 Usage
 =====
 
@@ -106,6 +100,13 @@ in Python:
     tf = TimezoneFinder()
 
 
+To save computing time at the cost of memory consumption and initialisation time pass ``in_memory=True``. This causes all binary files to be read into memory. See the "speed test results" below.
+
+.. code-block:: python
+
+    tf = TimezoneFinder(in_memory=True)
+
+
 for testing if numba is being used:
 (if the import of the optimized algorithms worked)
 
@@ -119,9 +120,10 @@ for testing if numba is being used:
 This is the default function to check which timezone a point lies within.
 If no timezone has been matched, ``None`` is being returned.
 
-**PLEASE NOTE:** This approach is optimized for speed and the common case to only query points within a timezone.
-The last possible timezone in proximity is always returned (without checking if the point is really included).
-So results might be misleading for points outside of any timezone.
+**NOTE:**
+
+* to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
+* this approach is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
 
 
 .. code-block:: python
@@ -325,8 +327,6 @@ because here all binary files are being opend again for each query.
 
 
 
-
-
 Contact
 =======
 
@@ -354,6 +354,46 @@ License
 
 ``timezonefinder`` is distributed under the terms of the MIT license
 (see LICENSE.txt).
+
+
+
+speed test results:
+===================
+
+on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
+
+::
+
+    Speed Tests:
+    -------------
+    in memory mode: False
+    Numba: ON (timezonefinder)
+
+    startup time: 0.002598s
+
+    testing 100000 realistic points
+    total time: 9.9578s
+    avg time per point: 9.958e-05s
+
+    testing 100000 random points
+    total time: 6.2784s
+    avg time per point: 6.278e-05s
+
+
+    in memory mode: True
+    Numba: ON (timezonefinder)
+
+    startup time: 0.04962s
+
+    testing 100000 realistic points
+    total time: 2.322s
+    avg time per point: 2.322e-05s
+
+
+    testing 100000 random points
+    total time: 1.2581s
+    avg time per point: 1.258e-05s
+
 
 
 Comparison to pytzwhere
@@ -394,9 +434,6 @@ This package uses at most 40MB (= encountered memory consumption of the python p
 -  further speedup possible by the use of ``numba`` (code precompilation)
 
 
-
-test results:
-===============
 
 ::
 

@@ -1,12 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 import json
 from datetime import datetime
 from math import ceil, floor
 from os.path import abspath, join, pardir
 from struct import pack
-
-from six.moves import range, zip
 
 from .global_settings import (
     DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,

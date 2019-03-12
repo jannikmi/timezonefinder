@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 import json
 from io import SEEK_CUR, BytesIO
 from math import radians
@@ -9,14 +8,12 @@ from struct import unpack
 import numpy as np
 from importlib_resources import open_binary
 from numpy import array, dtype, empty, fromfile
-from six.moves import range
 
 from .global_settings import (
     DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
     DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT,
     NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
-from .kwargs_only import kwargs_only
 
 try:
     import numba
@@ -31,6 +28,14 @@ with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
     timezone_names = json.loads(f.read())
 
 
+def fromfile_memory(file, **kwargs):
+    # res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
+    # faster:
+    res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
+    file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
+    return res
+
+
 class TimezoneFinder:
     """
     This class lets you quickly find the timezone of a point on earth.
@@ -42,6 +47,11 @@ class TimezoneFinder:
 
     def __init__(self, in_memory=False):
         self.in_memory = in_memory
+
+        if self.in_memory:
+            self.fromfile = fromfile_memory
+        else:
+            self.fromfile = fromfile
 
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
@@ -87,14 +97,6 @@ class TimezoneFinder:
             return mem_bin_fd
         else:
             return bin_fd
-
-    def fromfile(self, file, **kwargs):
-        if not self.in_memory:
-            return fromfile(file, **kwargs)
-        else:
-            res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
-            file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
-            return res
 
     def __del__(self):
         self.poly_zone_ids.close()
@@ -295,8 +297,7 @@ class TimezoneFinder:
 
         return sorted_polygon_id_list, sorted_zone_id_list, False
 
-    @kwargs_only
-    def closest_timezone_at(self, lng, lat, delta_degree=1, exact_computation=False, return_distances=False,
+    def closest_timezone_at(self, *, lat, lng, delta_degree=1, exact_computation=False, return_distances=False,
                             force_evaluation=False):
         """
         This function searches for the closest polygon in the surrounding shortcuts.
@@ -419,8 +420,7 @@ class TimezoneFinder:
             return timezone_names[current_closest_id], distances, [timezone_names[x] for x in ids]
         return timezone_names[current_closest_id]
 
-    @kwargs_only
-    def timezone_at(self, lng, lat):
+    def timezone_at(self, *, lng, lat):
         """
         this function looks up in which polygons the point could be included in
         to speed things up there are shortcuts being used (stored in a binary file)
@@ -488,8 +488,7 @@ class TimezoneFinder:
             # if no other polygon has been matched beforehand.
             raise ValueError('BUG: this statement should never be reached. Please open up an issue on Github!')
 
-    @kwargs_only
-    def certain_timezone_at(self, lng, lat):
+    def certain_timezone_at(self, *, lng, lat):
         """
         this function looks up in which polygon the point certainly is included
         this is much slower than 'timezone_at'!

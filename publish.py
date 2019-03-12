@@ -2,8 +2,6 @@ import os
 import re
 import sys
 from os.path import abspath, join, pardir, isfile
-from os import listdir
-
 
 """
 required packages
@@ -31,7 +29,7 @@ compile a new requirements file (with the latest versions)
 source activate tzEnv
 pip-compile --upgrade
 same as?!:
-pip-compile --output-file requirements.txt requirements_numba.in
+pip-compile --output-file requirements.txt requirements.in
 pip-compile --output-file requirements_numba.txt requirements_numba.in
 only update the flask package:
 pip-compile --upgrade-package flask
@@ -49,11 +47,12 @@ tox -r -e py36
 tox -r -e py36-numba
 """
 
+
 def get_version(package):
     """
     Return package version as listed in `__version__` in `__init__.py`.
     """
-    init_py = open(os.path.join(package, '__init__.py')).read()
+    init_py = open(join(package, '__init__.py')).read()
     return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
 
 
@@ -67,7 +66,7 @@ def set_version(new_version_number=None, old_version_number=''):
     import fileinput
     import sys
 
-    file = os.path.join('timezonefinder', '__init__.py')
+    file = join('timezonefinder', '__init__.py')
 
     for line in fileinput.input(file, inplace=1):
         if old_version_number in line:
@@ -99,13 +98,13 @@ def convert_version(new_version_input='', old_version='1.0.0'):
     return new_version_input
 
 
-def routine(command=None, message='', option1='next', option2='exit'):
+def routine(cmd=None, message='', option1='next', option2='exit'):
     while 1:
         print(message)
 
-        if command:
-            print('running command:', command)
-            os.system(command)
+        if cmd:
+            print('running command:', cmd)
+            os.system(cmd)
 
         print('__________\nDone. Options:')
         print('1)', option1)
@@ -167,17 +166,19 @@ if __name__ == "__main__":
 
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Readme?', 'OK. Continue',
+    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Readme?',
+            'OK. Continue',
             'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
-            'Maybe update test routine (requirements.txt) with pip-compile with python 2! Commands are written in the beginning of this script',
+            'Maybe update test routine (requirements.txt) with pip-compile!'
+            ' Commands are written in the beginning of this script',
             'Done. Run tests', 'Exit')
 
     # print('Enter virtual env name:')
     # virtual env has to be given!
     # virt_env_name = input()
-    virt_env_name = 'tzEnvPy2'
+    virt_env_name = 'tzEnv'
     virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
 
     print('___________')
@@ -200,23 +201,17 @@ if __name__ == "__main__":
         pass
 
     # routine(virt_env_act_command + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
-
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-codestyle",
-            'checking syntax, codestyle and imports',
-            'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py27", 'build tests py2',
-            'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36",
-            'build tests py3',
-            'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py{27,36}-numba",
-            'build tests with numba installed',
-            'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-codestyle",
+            'checking syntax, codestyle and imports', 'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'build tests py3', 'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-numba",
+            'build tests with numba installed', 'continue')
 
     print('Tests finished.')
 
     routine(None,
-            'Please commit your changes, push and wait if Travis tests build successfully. Only then merge them into the master.',
+            'Please commit your changes, push and wait if Travis tests build successfully. '
+            'Only then merge them into the master.',
             'Build successful. Publish and upload now.', 'Exit.')
 
     # TODO do this automatically, problem are the commit messages (often the same as changelog)
@@ -241,7 +236,7 @@ if __name__ == "__main__":
     routine("python3 setup.py sdist bdist_wheel", 'building the package now.')
 
     path = abspath(join(__file__, pardir, 'dist'))
-    all_archives_this_version = [f for f in listdir(path) if isfile(join(path, f)) and version_number in f]
+    all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_number in f]
     paths2archives = [abspath(join(path, f)) for f in all_archives_this_version]
     command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
 

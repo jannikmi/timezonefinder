@@ -1,9 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
-from six.moves import range
 
 from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
 

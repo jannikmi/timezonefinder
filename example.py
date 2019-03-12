@@ -3,6 +3,8 @@ from timezonefinder import TimezoneFinder
 TimezoneFinder.using_numba()  # this is a static method returning True or False
 
 tf = TimezoneFinder()
+# or
+tf = TimezoneFinder(in_memory=True)
 
 longitude, latitude = 13.358, 52.5061
 tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
@@ -43,6 +45,7 @@ def find_timezone(request, lat, lng):
 
 # To get an aware datetime object from the timezone name:
 # first install pytz
+
 
 def make_aware(naive_datetime, timezone_name):
     # naive means: tzinfo is None

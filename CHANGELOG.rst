@@ -2,12 +2,14 @@ Changelog
 =========
 
 
-4.0.0 (2019-xx-xx)
+4.0.0 (2019-03-12)
 ------------------
 
-* ATTENTION: No more Python2 support! (#72)
+* ATTENTION: Dropped Python2 support (#72)! `six` dependency no longer required.
 * BUGFIX: fixing #74 (broken py3 with numba support)
-
+* added `in_memory`-mode (adapted unit tests to test both modes, added speed tests and explanation to readme)
+* use of timeit in speed tests for more accurate results
+* dropped use of kwargs_only decorator (can be implemented directly with python3)
 
 3.4.2 (2019-01-15)
 ------------------

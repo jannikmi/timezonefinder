@@ -1,8 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 # NOTE: Changes in the global settings might not immediately affect
 # the precompiled (and cached) functions in helpers_numba.py!
-
 
 INPUT_JSON_FILE_NAME = 'combined.json'
 

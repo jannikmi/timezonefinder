@@ -1,15 +1,17 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
-from six.moves import range
 
 from numba import b1, f8, i2, i4, njit, typeof, u2, u8
 
 from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
 
-# from global_settings import MAX_HAVERSINE_DISTANCE, INT2COORD_FACTOR, COORD2INT_FACTOR
+# from global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
+
+dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
+dtype_2float_tuple = typeof((1.0, 1.0))
+dtype_2int_tuple = typeof((1, 1))
 
 
 # TODO Ahead-Of-Time Compilation:
@@ -17,11 +19,8 @@ from .global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_D
 # # Uncomment the following line to print out the compilation steps
 # cc.verbose = True
 
-dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
-dtype_2float_tuple = typeof((1.0, 1.0))
-dtype_2int_tuple = typeof((1, 1))
 
-
+# TODO 'skip' decorator when numba is not installed and combine both helper files
 # njit is equal to @jit(nopython=True)
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
 @njit(b1(i4, i4, i4[:, :]), cache=True)
@@ -294,9 +293,6 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
                                                    radians(int2coord(points[1][i]))))
     return min_distance
 
-    # if __name__ == "__main__":
-    #     cc.compile()
-
 
 # @cc.export('coord2shortcut', dtype_2int_tuple(f8, f8))
 @njit(dtype_2int_tuple(f8, f8), cache=True)
@@ -328,14 +324,12 @@ def rectify_coordinates(lng, lat):
     return lng, lat
 
 
-# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
 @njit(cache=True)
 def convert2coords(polygon_data):
     # return a tuple of coordinate lists
     return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
 
 
-# @cc.export('rectify_coordinates', dtype_2floattuple(f8, f8))
 @njit(cache=True)
 def convert2coord_pairs(polygon_data):
     # return a list of coordinate tuples (x,y)
