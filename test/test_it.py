@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import os
+import sys
 import unittest
 from datetime import datetime
 
@@ -114,8 +114,7 @@ class MainPackageTest(unittest.TestCase):
         print('Numba: OFF (precompiled functions NOT in use)')
 
     start_time = datetime.now()
-    in_memory_mode = True if os.getenv('IN_MEMORY_MODE') == '1' else False
-    timezone_finder = TimezoneFinder(in_memory=in_memory_mode)
+    timezone_finder = TimezoneFinder()
     end_time = datetime.now()
     my_time = end_time - start_time
     print_time(timezoefinder_time=my_time)
@@ -139,6 +138,9 @@ class MainPackageTest(unittest.TestCase):
                 print(percent_done, '%')
 
     print("Done.\n")
+
+    def setUp(self):
+        self.timezone_finder = TimezoneFinder()
 
     def test_speed(self):
         print("\n\nSpeed Tests:\n-------------")
@@ -242,3 +244,12 @@ class MainPackageTest(unittest.TestCase):
         warnings.filterwarnings('error')
         # must not raise a warning
         self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))
+
+
+class MainPackageTest2(MainPackageTest):
+    def setUp(self):
+        if sys.version_info[0] < 3:
+            self.timezone_finder = TimezoneFinder()
+        else:
+            print("** In Memory test")
+            self.timezone_finder = TimezoneFinder(in_memory=True)
