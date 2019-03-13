@@ -64,7 +64,5 @@ setup(
         'Topic :: Software Development :: Localization',
     ],
     long_description=readme + '\n\n' + changelog,
-    install_requires=[
-        'numpy',
-    ],
+    install_requires=['numpy', 'importlib_resources'],
 )

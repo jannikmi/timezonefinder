@@ -361,6 +361,7 @@ speed test results:
 ===================
 
 on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
+realistic points: points included in a timezone
 
 ::
 

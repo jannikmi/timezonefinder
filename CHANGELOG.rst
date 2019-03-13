@@ -1,6 +1,11 @@
 Changelog
 =========
 
+4.0.1 (2019-03-12)
+------------------
+
+* BUGFIX: fixing #77 (missing dependency in setup.py)
+
 
 4.0.0 (2019-03-12)
 ------------------
