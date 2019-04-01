@@ -72,7 +72,7 @@ TEST_LOCATIONS = [
     (50.26, -5.051, 'Truro', 'Europe/London'),
 
     # test cases for hole handling:
-    (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Baku'),
+    (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Yerevan'),
     (39.8417402, 70.6020068, 'Tajikistani Enklave', 'Asia/Dushanbe'),
     (47.7024174, 8.6848462, 'Busingen Ger', 'Europe/Busingen'),
     (46.2085101, 6.1246227, 'Genf', 'Europe/Zurich'),

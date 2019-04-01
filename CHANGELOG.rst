@@ -1,6 +1,12 @@
 Changelog
 =========
 
+4.0.2 (2019-04-01)
+------------------
+
+* updated the data to `2019a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2019a>`__
+
+
 4.0.1 (2019-03-12)
 ------------------
 
