@@ -30,16 +30,21 @@ timezonefinder
 
 
 This is a fast and lightweight python project for looking up the corresponding
-timezone for a given lat/lng on earth entirely offline.
+timezone for given coordinates on earth entirely offline.
 
+Timezones internally are being represented by polygons.
+To find out which timezone a point belongs to, it is being checked if the point lies within a polygon.
+A few tweaks have been added to keep the computational requirements low.
 
-NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date.
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL.
+Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
+
+NOTE: The huge underlying timezone boundary data set in use now blew up the size of this package.
+It had to be changed, because the smaller "tz_world" data set is not being maintained any more.
+I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date.
+In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
 
 NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
-This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with timezonefinderL).
-
-Current data set in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
+This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__).
 
 
 Also see:
@@ -138,8 +143,9 @@ If no timezone has been matched, ``None`` is being returned.
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
-NOTE: The timezone polygons do NOT follow the shorelines any more. Just because you do not get ``None``,
-the point could still lie off land!
+NOTE: The timezone polygons do NOT follow the shoreline.
+Consequently even if certain_timezone_at() does not return ``None``, a query point could be in the sea.
+
 
 
 
@@ -151,10 +157,13 @@ the point could still lie off land!
 **closest_timezone_at():**
 
 
-This simply computes and compares the distances to the timezone polygon boundaries (expensive!).
-It returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+This function computes and compares the distances to the timezone polygon boundaries (expensive!).
+By default the function returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
-NOTE: The timezone polygons do NOT follow the shorelines any more! This causes the computed distance from a timezone polygon to be not really meaningful/accurate.
+NOTE: The function does not check whether a point is included in a timezone polygon.
+
+NOTE: The timezone polygons do NOT follow the shoreline.
+This causes the computed distance from a timezone polygon to be not really accurate!
 
 
 .. code-block:: python
@@ -360,42 +369,49 @@ License
 speed test results:
 ===================
 
-on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
-
-"realistic points": points included in a timezone
+obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
 ::
 
     Speed Tests:
     -------------
-    in memory mode: False
-    Numba: ON (timezonefinder)
+    "realistic points": points included in a timezone
 
-    startup time: 0.002598s
+
+    in memory mode: False
+    Numba: ON (precompiled functions in use)
+
+    startup time: 0.001301s
 
     testing 100000 realistic points
-    total time: 9.9578s
-    avg time per point: 9.958e-05s
+    total time: 6.7015s
+    avg. points per second: 1.5 * 10^4
 
     testing 100000 random points
-    total time: 6.2784s
-    avg time per point: 6.278e-05s
+    total time: 4.6289s
+    avg. points per second: 2.2 * 10^4
 
 
     in memory mode: True
     Numba: ON (timezonefinder)
 
-    startup time: 0.04962s
+    startup time: 0.03545s
+
+
+    in memory mode: True
+    Numba: ON (precompiled functions in use)
 
     testing 100000 realistic points
-    total time: 2.322s
-    avg time per point: 2.322e-05s
+    total time: 2.0659s
+    avg. points per second: 4.8 * 10^4
 
 
     testing 100000 random points
-    total time: 1.2581s
-    avg time per point: 1.258e-05s
+    total time: 1.1928s
+    avg. points per second: 8.4 * 10^4
 
+
+Speed bonus of in-memory mode: 3x (realistic points), 4x (random pts)
 
 
 Comparison to pytzwhere
