@@ -1,6 +1,16 @@
 Changelog
 =========
 
+4.0.3 (2019-06-23)
+------------------
+
+* clarification of readme: referenced latest `timezonefinderL` release, better rst headlines, updated shield.io banner syntax
+* clarification of speedup times (exponential notation)
+* removed `six` and py2 dependency from tests
+* minor updates to publishing routine
+* minor improvement in timezone_at(): conversion coordinates to int later only when required
+
+
 4.0.2 (2019-04-01)
 ------------------
 

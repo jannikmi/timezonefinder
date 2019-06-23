@@ -1,8 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import random
-
-from six.moves import range
 
 
 def proto_test_case(data, fct):

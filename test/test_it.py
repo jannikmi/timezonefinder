@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import timeit
 import unittest
-from math import log10
+from math import floor, log10
 
 import pytest
 
@@ -13,7 +13,7 @@ from timezonefinder.timezonefinder import TimezoneFinder
 
 
 # number of points to test (in each test, realistic and random ones)
-N = 100
+N = int(1e2)
 
 # mistakes in these zones don't count as mistakes
 excluded_zones_timezonefinder = []
@@ -160,7 +160,7 @@ class MainPackageTest(unittest.TestCase):
         print("Done.\n")
 
     def test_speed(self):
-        print("\n\nSpeed Tests:\n-------------")
+        print('\n\nSpeed Tests:\n-------------\n"realistic points": points included in a timezone\n')
         self.print_tf_class_props()
 
         def print_speed_test(type_of_points, list_of_points):
@@ -170,8 +170,10 @@ class MainPackageTest(unittest.TestCase):
             t = timeit.timeit("eval_time_fct()", globals=globals(), number=1)
             print('\ntesting', N, type_of_points)
             print('total time:', time_preprocess(t))
-            t_avg = t / len(list_of_points)
-            print('avg time per point:', time_preprocess(t_avg))
+            pts_p_sec = len(list_of_points) / t
+            exp = floor(log10(pts_p_sec))
+            pts_p_sec = round(pts_p_sec / 10 ** exp, 1)  # normalize
+            print('avg. points per second: {} * 10^{}'.format(pts_p_sec, exp))
 
         print_speed_test('realistic points', self.realistic_points)
         print_speed_test('random points', list_of_random_points(length=N))

@@ -47,8 +47,10 @@ tox -r -e py36
 tox -r -e py36-numba
 """
 
+PACKAGE = 'timezonefinder'
 
-def get_version(package):
+
+def get_version(package=PACKAGE):
     """
     Return package version as listed in `__version__` in `__init__.py`.
     """
@@ -66,7 +68,7 @@ def set_version(new_version_number=None, old_version_number=''):
     import fileinput
     import sys
 
-    file = join('timezonefinder', '__init__.py')
+    file = join(PACKAGE, '__init__.py')
 
     for line in fileinput.input(file, inplace=1):
         if old_version_number in line:
@@ -142,7 +144,7 @@ if __name__ == "__main__":
 
     # TODO run authors tests
 
-    old_version = get_version('timezonefinder')
+    old_version = get_version()
 
     print('The actual version number is:', old_version)
     print('Enter new version number:')
@@ -160,7 +162,7 @@ if __name__ == "__main__":
 
         print('Invalid version input. Should be of format "x.x.xxx" and higher than the old version.')
 
-    version = get_version('timezonefinder')
+    version = get_version()
     print('version number has been set to:', version)
     print('=====================')
 
@@ -171,7 +173,7 @@ if __name__ == "__main__":
             'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
-            'Maybe update test routine (requirements.txt) with pip-compile!'
+            'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
             ' Commands are written in the beginning of this script',
             'Done. Run tests', 'Exit')
 
@@ -259,4 +261,4 @@ if __name__ == "__main__":
     print('Publishing Done.')
     print('now run:')
     print('(only when the upload didnt work) python3 setup.py bdist_wheel upload')
-    print('sudo -H pip3 install timezonefinder --upgrade')
+    print('sudo -H pip install ' + PACKAGE + ' --upgrade')

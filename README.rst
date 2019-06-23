@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
+.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder/master.svg
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 .. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
@@ -30,29 +30,30 @@ timezonefinder
 
 
 This is a fast and lightweight python project for looking up the corresponding
-timezone for a given lat/lng on earth entirely offline.
+timezone for given coordinates on earth entirely offline.
 
+Timezones internally are being represented by polygons.
+To find out which timezone a point belongs to, it is being checked if the point lies within a polygon.
+A few tweaks have been added to keep the computational requirements low.
 
-NOTE: the huge underlying timezone boundary data set (s. below) in use now blew up the size of this package. It had to be changed, because the smaller "tz_world" data set is not being maintained any more. I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date.
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even timezoenfinderL.
+Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
 
-NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
-This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with timezonefinderL).
+NOTE: The timezone polygons do NOT follow the shorelines any more (as they did with the previous data set tz_world).
+This makes the results of ``closest_timezone_at()`` and ``certain_timezone_at()`` somewhat meaningless.
 
-Current data set in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
-
+If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
-`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter (but outdated) version
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of timezonefinderL
+`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter version
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of the outdated ``timezonefinderL``
 
 
 Dependencies
-============
+------------
 
 ``python3``, ``numpy``, ``importlib_resources``
 
@@ -67,7 +68,7 @@ This causes the time critical algorithms (in ``helpers_numba.py``) to be automat
 
 
 Installation
-============
+------------
 
 
 Installation with conda: see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__ (NOTE: The newest version of timezonefinder might not be available via conda yet)
@@ -84,12 +85,12 @@ in the command line:
 
 
 Usage
-=====
+-----
 
 check ``example.py``
 
 Basics:
--------
+=======
 
 in Python:
 
@@ -123,7 +124,7 @@ If no timezone has been matched, ``None`` is being returned.
 **NOTE:**
 
 * to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
-* this approach is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
+* this function is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
 
 
 .. code-block:: python
@@ -138,8 +139,9 @@ If no timezone has been matched, ``None`` is being returned.
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
-NOTE: The timezone polygons do NOT follow the shorelines any more. Just because you do not get ``None``,
-the point could still lie off land!
+NOTE: The timezone polygons do NOT follow the shoreline.
+Consequently even if certain_timezone_at() does not return ``None``, a query point could be in the sea.
+
 
 
 
@@ -151,10 +153,14 @@ the point could still lie off land!
 **closest_timezone_at():**
 
 
-This simply computes and compares the distances to the timezone polygon boundaries (expensive!).
-It returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
+This function computes and compares the distances to the timezone polygon boundaries (expensive!).
+By default the function returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
-NOTE: The timezone polygons do NOT follow the shorelines any more! This causes the computed distance from a timezone polygon to be not really meaningful/accurate.
+NOTE:
+
+* This function does not check whether a point is included in a timezone polygon.
+
+* The timezone polygons do NOT follow the shoreline. This causes the computed distance from a timezone polygon to be not really accurate!
 
 
 .. code-block:: python
@@ -165,6 +171,8 @@ NOTE: The timezone polygons do NOT follow the shorelines any more! This causes t
 
 
 Options:
+
+
 To increase search radius even more, use the ``delta_degree``-option:
 
 .. code-block:: python
@@ -187,7 +195,10 @@ This only makes a real difference when the boundary of a polygon is very close t
 
 With ``return_distances=True`` the output looks like this:
 
-( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
+::
+
+    ( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
+
 
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
@@ -227,7 +238,7 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
 
 Further application:
---------------------
+====================
 
 **To maximize the chances of getting a result in a** ``Django`` **view it might look like:**
 
@@ -328,7 +339,7 @@ because here all binary files are being opend again for each query.
 
 
 Contact
-=======
+-------
 
 Most certainly there is stuff I missed, things I could have optimized even further etc. I would be really glad to get some feedback on my code.
 
@@ -339,7 +350,7 @@ contact me: *[python] {*-at-*} [michelfe] {-*dot*-} [it]*
 
 
 Acknowledgements
-================
+----------------
 
 Thanks to:
 
@@ -350,56 +361,63 @@ Thanks to:
 `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 
 License
-=======
+-------
 
 ``timezonefinder`` is distributed under the terms of the MIT license
 (see LICENSE.txt).
 
 
 
-speed test results:
-===================
+Speed Test Results:
+-------------------
 
-on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
-
-"realistic points": points included in a timezone
+obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
 ::
 
     Speed Tests:
     -------------
-    in memory mode: False
-    Numba: ON (timezonefinder)
+    "realistic points": points included in a timezone
 
-    startup time: 0.002598s
+
+    in memory mode: False
+    Numba: ON (precompiled functions in use)
+
+    startup time: 0.001301s
 
     testing 100000 realistic points
-    total time: 9.9578s
-    avg time per point: 9.958e-05s
+    total time: 6.7015s
+    avg. points per second: 1.5 * 10^4
 
     testing 100000 random points
-    total time: 6.2784s
-    avg time per point: 6.278e-05s
+    total time: 4.6289s
+    avg. points per second: 2.2 * 10^4
 
 
     in memory mode: True
     Numba: ON (timezonefinder)
 
-    startup time: 0.04962s
+    startup time: 0.03545s
+
+
+    in memory mode: True
+    Numba: ON (precompiled functions in use)
 
     testing 100000 realistic points
-    total time: 2.322s
-    avg time per point: 2.322e-05s
+    total time: 2.0659s
+    avg. points per second: 4.8 * 10^4
 
 
     testing 100000 random points
-    total time: 1.2581s
-    avg time per point: 1.258e-05s
+    total time: 1.1928s
+    avg. points per second: 8.4 * 10^4
 
+
+Speed bonus of in-memory mode: 3x (realistic points), 4x (random pts)
 
 
 Comparison to pytzwhere
-=======================
+-----------------------
 
 This project has originally been derived from `pytzwhere <https://pypi.python.org/pypi/tzwhere>`__
 (`github <https://github.com/pegler/pytzwhere>`__), but aims at providing
