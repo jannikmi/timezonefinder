@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import timeit
 import unittest
-from math import log10, floor
+from math import floor, log10
 
 import pytest
 

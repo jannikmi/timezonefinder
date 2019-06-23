@@ -38,8 +38,8 @@ A few tweaks have been added to keep the computational requirements low.
 
 Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
 
-NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
-This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless.
+NOTE: The timezone polygons do NOT follow the shorelines any more (as they did with the previous data set tz_world).
+This makes the results of ``closest_timezone_at()`` and ``certain_timezone_at()`` somewhat meaningless.
 
 If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
 
@@ -49,7 +49,7 @@ Also see:
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
 `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter version
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of outdated ``timezonefinderL``
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of the outdated ``timezonefinderL``
 
 
 Dependencies
@@ -124,7 +124,7 @@ If no timezone has been matched, ``None`` is being returned.
 **NOTE:**
 
 * to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
-* this approach is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
+* this function is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
 
 
 .. code-block:: python
@@ -156,10 +156,11 @@ Consequently even if certain_timezone_at() does not return ``None``, a query poi
 This function computes and compares the distances to the timezone polygon boundaries (expensive!).
 By default the function returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
 
-NOTE: The function does not check whether a point is included in a timezone polygon.
+NOTE:
 
-NOTE: The timezone polygons do NOT follow the shoreline.
-This causes the computed distance from a timezone polygon to be not really accurate!
+* This function does not check whether a point is included in a timezone polygon.
+
+* The timezone polygons do NOT follow the shoreline. This causes the computed distance from a timezone polygon to be not really accurate!
 
 
 .. code-block:: python
@@ -170,6 +171,8 @@ This causes the computed distance from a timezone polygon to be not really accur
 
 
 Options:
+
+
 To increase search radius even more, use the ``delta_degree``-option:
 
 .. code-block:: python
@@ -192,7 +195,10 @@ This only makes a real difference when the boundary of a polygon is very close t
 
 With ``return_distances=True`` the output looks like this:
 
-( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
+::
+
+    ( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
+
 
 Note that some polygons might not be tested (for example when a zone is found to be the closest already).
 To prevent this use ``force_evaluation=True``.
