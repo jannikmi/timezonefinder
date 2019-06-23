@@ -4,8 +4,8 @@ import unittest
 from math import log10, floor
 
 import pytest
-from auxiliaries import list_of_random_points, random_point
 
+from auxiliaries import list_of_random_points, random_point
 from timezonefinder.global_settings import INT2COORD_FACTOR
 from timezonefinder.timezonefinder import TimezoneFinder
 
@@ -13,7 +13,7 @@ from timezonefinder.timezonefinder import TimezoneFinder
 
 
 # number of points to test (in each test, realistic and random ones)
-N = int(1e5)
+N = int(1e2)
 
 # mistakes in these zones don't count as mistakes
 excluded_zones_timezonefinder = []

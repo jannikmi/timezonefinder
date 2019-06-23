@@ -1,10 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# -*- coding:utf-8 -*-
 import unittest
 from math import degrees, radians, sqrt
 
 import numpy as np
-from six.moves import range, zip
 
 from auxiliaries import proto_test_case, random_point
 # from .auxiliaries import random_point, proto_test_case

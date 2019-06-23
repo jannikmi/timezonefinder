@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
+.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder/master.svg
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 .. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
@@ -38,26 +38,22 @@ A few tweaks have been added to keep the computational requirements low.
 
 Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
 
-NOTE: The huge underlying timezone boundary data set in use now blew up the size of this package.
-It had to be changed, because the smaller "tz_world" data set is not being maintained any more.
-I originally wanted to keep this as lightweight as possible, but it is even more important that the data it is up to date.
-In case size and speed matter more you than actuality, consider checking out older versions of timezonefinder or even `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
-
 NOTE: The timezone polygons also do NOT follow the shorelines any more (as they did with tz_world).
-This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless (as with `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__).
+This makes the results of closest_timezone_at() and certain_timezone_at() somewhat meaningless.
 
+If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
-`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter (but outdated) version
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of timezonefinderL
+`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter version
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of outdated ``timezonefinderL``
 
 
 Dependencies
-============
+------------
 
 ``python3``, ``numpy``, ``importlib_resources``
 
@@ -72,7 +68,7 @@ This causes the time critical algorithms (in ``helpers_numba.py``) to be automat
 
 
 Installation
-============
+------------
 
 
 Installation with conda: see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__ (NOTE: The newest version of timezonefinder might not be available via conda yet)
@@ -89,12 +85,12 @@ in the command line:
 
 
 Usage
-=====
+-----
 
 check ``example.py``
 
 Basics:
--------
+=======
 
 in Python:
 
@@ -236,7 +232,7 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
 
 Further application:
---------------------
+====================
 
 **To maximize the chances of getting a result in a** ``Django`` **view it might look like:**
 
@@ -337,7 +333,7 @@ because here all binary files are being opend again for each query.
 
 
 Contact
-=======
+-------
 
 Most certainly there is stuff I missed, things I could have optimized even further etc. I would be really glad to get some feedback on my code.
 
@@ -348,7 +344,7 @@ contact me: *[python] {*-at-*} [michelfe] {-*dot*-} [it]*
 
 
 Acknowledgements
-================
+----------------
 
 Thanks to:
 
@@ -359,15 +355,15 @@ Thanks to:
 `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 
 License
-=======
+-------
 
 ``timezonefinder`` is distributed under the terms of the MIT license
 (see LICENSE.txt).
 
 
 
-speed test results:
-===================
+Speed Test Results:
+-------------------
 
 obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
@@ -415,7 +411,7 @@ Speed bonus of in-memory mode: 3x (realistic points), 4x (random pts)
 
 
 Comparison to pytzwhere
-=======================
+-----------------------
 
 This project has originally been derived from `pytzwhere <https://pypi.python.org/pypi/tzwhere>`__
 (`github <https://github.com/pegler/pytzwhere>`__), but aims at providing

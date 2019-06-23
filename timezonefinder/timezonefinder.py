@@ -433,9 +433,6 @@ class TimezoneFinder:
         :return: the timezone name of a matching polygon or None
         """
         lng, lat = rectify_coordinates(lng, lat)
-        # x = longitude  y = latitude  both converted to 8byte int
-        x = coord2int(lng)
-        y = coord2int(lat)
 
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek(
@@ -454,6 +451,9 @@ class TimezoneFinder:
 
             # create a list of all the timezone ids of all possible polygons
             ids = self.id_list(possible_polygons, nr_possible_polygons)
+            # x = longitude  y = latitude  both converted to 8byte int
+            x = coord2int(lng)
+            y = coord2int(lat)
 
             # check until the point is included in one of the possible polygons
             for i in range(nr_possible_polygons):
