@@ -1,6 +1,15 @@
 Changelog
 =========
 
+
+4.1.0 (2019-07-07)
+------------------
+
+* updated the data to `2019b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2019a>`__
+* added description of using vectorized input in readme
+
+
+
 4.0.3 (2019-06-23)
 ------------------
 
