@@ -17,7 +17,7 @@ timezonefinder
 
 .. image:: https://pepy.tech/badge/timezonefinder
     :alt: Total PyPI downloads
-    :target: https://pypi.python.org/pypi/timezonefinder
+    :target: https://pepy.tech/project/timezonefinder
 
 .. image:: https://img.shields.io/pypi/v/timezonefinder.svg
     :alt: latest version on PyPI
@@ -240,6 +240,13 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 Further application:
 ====================
 
+
+**To use vectorized input:**
+
+Check `numpy.vectorize <https://docs.scipy.org/doc/numpy/reference/generated/numpy.vectorize.html>`__
+and `pandas.DataFrame.apply <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html>`__
+
+
 **To maximize the chances of getting a result in a** ``Django`` **view it might look like:**
 
 
@@ -287,7 +294,9 @@ Further application:
 
 **Getting a location's time zone offset from UTC in minutes:**
 
-solution from `communikein <https://github.com/communikein>`__
+solution from `communikein <https://github.com/communikein>`__ and `phineas-pta <https://github.com/phineas-pta>`__
+
+
 
 .. code-block:: python
 
@@ -304,9 +313,15 @@ solution from `communikein <https://github.com/communikein>`__
         today = datetime.now()
         tz_target = timezone(tf.certain_timezone_at(lat=target['lat'], lng=target['lng']))
         # ATTENTION: tz_target could be None! handle error case
-        today_target = tz_target.localize(today)
-        today_utc = utc.localize(today)
-        return (today_utc - today_target).total_seconds() / 60
+
+        # today_target = tz_target.localize(today)
+        # today_utc = utc.localize(today)
+        # offset = today_utc - today_target
+        offset = tz_target.utcoffset(today)
+
+        # if `today` is in summer time while the target isn't, you may want to substract the DST
+        offset -= tz_target.dst(today)
+        return offset.total_seconds() / 60
 
     bergamo = dict({'lat':45.69, 'lng':9.67})
     print(offset(bergamo))
