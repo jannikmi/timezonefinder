@@ -9,7 +9,8 @@ also load timezone names json from this location (#86)
 * make timezone names a class attribute (instead of a global variable)
 * simplify code for opening and closing multiple binary files
 * added tests for a specified path to the data
-* update tox tests to Python 3.7, pinned new requirements
+* testing multiple python3 versions automatically
+* pinned new requirements
 
 
 4.1.0 (2019-07-07)

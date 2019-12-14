@@ -3,8 +3,8 @@ from timezonefinder import TimezoneFinder
 TimezoneFinder.using_numba()  # this is a static method returning True or False
 
 tf = TimezoneFinder()
-# or
-tf = TimezoneFinder(in_memory=True) # to use the faster "in-memory" mode
+# tf = TimezoneFinder(in_memory=True) # to use the faster "in-memory" mode
+# tf = TimezoneFinder(bin_file_location='path/to/files') # to use data files from another location
 
 longitude, latitude = 13.358, 52.5061
 tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
@@ -72,11 +72,8 @@ def get_offset(target):
     """
     returns a location's time zone offset from UTC in minutes.
     """
-    from pytz import timezone
-    import pytz
+    from pytz import timezone, utc
     from datetime import datetime
-
-    utc = pytz.utc
 
     today = datetime.now()
     tz_target = timezone(tf.certain_timezone_at(lat=target['lat'], lng=target['lng']))
@@ -85,5 +82,5 @@ def get_offset(target):
     today_utc = utc.localize(today)
     return (today_utc - today_target).total_seconds() / 60
 
-# bergamo = dict({'lat':45.69, 'lng':9.67})
-# print(get_offset(bergamo))
+bergamo = dict({'lat':45.69, 'lng':9.67})
+print(get_offset(bergamo))
