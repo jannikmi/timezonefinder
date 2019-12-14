@@ -12,6 +12,7 @@ six
 
 these packages have to be installed in virtual environment in use:
 
+right python version! (will influence the tox environments!)
 for testing:
 pip-tools
 rstcheck
@@ -26,6 +27,7 @@ pip-tools package:
 TODO write bash script for this
 its important to pin requirements to get reproducible errors!
 compile a new requirements file (with the latest versions)
+
 source activate tzEnv
 pip-compile --upgrade
 same as?!:

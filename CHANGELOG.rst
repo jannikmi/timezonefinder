@@ -4,14 +4,13 @@ Changelog
 4.2.0 (2019-12-xx)
 ------------------
 
-* added option to specify the location of the binary data files to use. making it possible to easily point to own compiled data
-also load timezone names json from this location (#86)
+* added option to specify the location of the binary data files to use. making it possible to easily point to own compiled data. also load timezone names json from this location (#86)
 * make timezone names a class attribute (instead of a global variable)
 * simplify code for opening and closing multiple binary files
 * added tests for a specified path to the data
 * testing multiple python3 versions automatically
 * pinned new requirements
-
+* importlib_resources removed from the dependencies
 
 4.1.0 (2019-07-07)
 ------------------

@@ -5,13 +5,9 @@ language: python
 # Test test matrix is spells out each supported version of Python explicitly:
 matrix:
     include:
-        -   python: 3.8
+        # has to be the same py version specified in tox.ini
+        -   python: 3.7
             env: TOXENV=codestyle
-
-        -   python: 3.5
-            env: TOXENV=py35
-        -   python: 3.5
-            env: TOXENV=py35-numba
 
         -   python: 3.6
             env: TOXENV=py36
@@ -25,17 +21,11 @@ matrix:
 
         -   python: 3.8
             env: TOXENV=py38
-        -   python: 3.8
-            env: TOXENV=py38-numba
 
-        -   python: pypy3
-            env: TOXENV=pypy3
-        -   python: pypy3
-            env: TOXENV=pypy3-numba
 
-allow_failures:
-    # Tests with pypy are allowed to fail
-    -   env: pypy3, pypy3-numba
+#allow_failures:
+#    # Tests with ... are allowed to fail
+#    -   env: ...
 
 
 install:

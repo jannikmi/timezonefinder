@@ -32,6 +32,9 @@ timezonefinder
 This is a fast and lightweight python project for looking up the corresponding
 timezone for given coordinates on earth entirely offline.
 
+Currently tested under: python 3.6, 3.7, 3.8
+
+
 Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by simple point in polygon tests.
 A few tweaks help to keep the computational requirements low and make this package fast.
 
@@ -54,7 +57,7 @@ Also see:
 Dependencies
 ------------
 
-``python3``, ``numpy``, ``importlib_resources``
+``python3``, ``numpy``
 
 
 **Optional:**
@@ -64,6 +67,7 @@ If the vanilla Python code is too slow for you, also install
 `Numba <https://github.com/numba/numba>`__ and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
 This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically JIT compiled to speed things up.
+ATTENTION: Python 3.8 is NOT yet supported by Numba yet. Use Python version 3.6 or 3.7
 
 
 Installation
