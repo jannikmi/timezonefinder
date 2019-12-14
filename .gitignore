@@ -1,6 +1,7 @@
 MANIFEST
 timezonefinder/combined.json
 scrapyard.py
+playground.py
 .DS_Store
 tmp.py
 .pytest_cache

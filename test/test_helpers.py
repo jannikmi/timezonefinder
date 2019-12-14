@@ -5,7 +5,6 @@ from math import degrees, radians, sqrt
 import numpy as np
 
 from auxiliaries import proto_test_case, random_point
-# from .auxiliaries import random_point, proto_test_case
 from timezonefinder.global_settings import (
     COORD2INT_FACTOR, DECIMAL_PLACES_ACCURACY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY,
     INT2COORD_FACTOR, MAX_ALLOWED_COORD_VAL,

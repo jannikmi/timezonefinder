@@ -4,7 +4,7 @@ TimezoneFinder.using_numba()  # this is a static method returning True or False
 
 tf = TimezoneFinder()
 # or
-tf = TimezoneFinder(in_memory=True)
+tf = TimezoneFinder(in_memory=True) # to use the faster "in-memory" mode
 
 longitude, latitude = 13.358, 52.5061
 tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'

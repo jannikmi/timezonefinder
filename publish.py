@@ -168,9 +168,10 @@ if __name__ == "__main__":
 
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Readme?',
+    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Wiki?',
             'OK. Continue',
             'Exit')
+    routine(None, 'Are all (new) features described in the Wiki?', 'OK. Continue', 'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
             'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'

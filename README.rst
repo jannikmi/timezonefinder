@@ -32,24 +32,23 @@ timezonefinder
 This is a fast and lightweight python project for looking up the corresponding
 timezone for given coordinates on earth entirely offline.
 
-Timezones internally are being represented by polygons.
-To find out which timezone a point belongs to, it is being checked if the point lies within a polygon.
-A few tweaks have been added to keep the computational requirements low.
+Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by simple point in polygon tests.
+A few tweaks help to keep the computational requirements low and make this package fast.
 
 Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
 
 NOTE: The timezone polygons do NOT follow the shorelines any more (as they did with the previous data set tz_world).
 This makes the results of ``closest_timezone_at()`` and ``certain_timezone_at()`` somewhat meaningless.
 
-If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__.
+If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__ which just uses precomputed shortcuts instead of timezone polygons.
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
-`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__: faster, lighter version
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of the outdated ``timezonefinderL``
+`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__,
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of an older ``timezonefinderL`` version
 
 
 Dependencies
@@ -64,7 +63,7 @@ If the vanilla Python code is too slow for you, also install
 
 `Numba <https://github.com/numba/numba>`__ and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
-This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically precompiled to speed things up.
+This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically JIT compiled to speed things up.
 
 
 Installation
@@ -337,6 +336,13 @@ Download the latest ``timezones.geojson.zip`` data set file from `timezone-bound
 place the ``combined.json`` inside the timezonefinder folder. Now run the ``file_converter.py`` until the compilation of the binary files is completed.
 
 If you want to use your own data set, create a ``combined.json`` file with the same format as the timezone-boundary-builder and compile everything with ``file_converter.py``.
+This will create new binary files.
+You can configure to use data files from a specific location:
+
+
+.. code-block:: python
+
+    tf = TimezoneFinder(bin_file_location='path/to/files')
 
 
 **Calling timezonefinder from the command line:**
@@ -396,17 +402,17 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
 
     in memory mode: False
-    Numba: ON (precompiled functions in use)
+    Numba: ON (JIT compiled functions in use)
 
     startup time: 0.001301s
 
     testing 100000 realistic points
-    total time: 6.7015s
-    avg. points per second: 1.5 * 10^4
+    total time: 5.0705s
+    avg. points per second: 2.0 * 10^4
 
     testing 100000 random points
-    total time: 4.6289s
-    avg. points per second: 2.2 * 10^4
+    total time: 3.2575s
+    avg. points per second: 3.1 * 10^4
 
 
     in memory mode: True
@@ -416,7 +422,7 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
 
     in memory mode: True
-    Numba: ON (precompiled functions in use)
+    Numba: ON (JIT compiled functions in use)
 
     testing 100000 realistic points
     total time: 2.0659s
@@ -427,8 +433,6 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
     total time: 1.1928s
     avg. points per second: 8.4 * 10^4
 
-
-Speed bonus of in-memory mode: 3x (realistic points), 4x (random pts)
 
 
 Comparison to pytzwhere
@@ -466,7 +470,7 @@ This package uses at most 40MB (= encountered memory consumption of the python p
 
 -  function ``get_geometry()`` enables querying timezones for their geometric shape (= multipolygon with holes)
 
--  further speedup possible by the use of ``numba`` (code precompilation)
+-  further speedup possible by the use of ``numba`` (code JIT compilation)
 
 
 
