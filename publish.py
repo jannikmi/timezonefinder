@@ -12,13 +12,24 @@ six
 
 these packages have to be installed in virtual environment in use:
 
+right python version! (will influence the tox environments!)
 for testing:
 pip-tools
-rstcheck
+ rstcheck>=3.3.1
 pytest
 
 for uploading:
 twine
+
+documentation generation:
+conda install sphinx
+https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
+
+Use the Makefile to build the docs, like so:
+make builder
+where "builder" is one of the supported builders, e.g. html, latex or linkcheck.
+make html
+
 
 --cov-config=tox.ini
 
@@ -26,6 +37,7 @@ pip-tools package:
 TODO write bash script for this
 its important to pin requirements to get reproducible errors!
 compile a new requirements file (with the latest versions)
+
 source activate tzEnv
 pip-compile --upgrade
 same as?!:
@@ -36,7 +48,7 @@ pip-compile --upgrade-package flask
 compile a new requirements file (with versions currently used in the virtual env )
 pip-compile --generate-hashes requirements_numba.in
 
-do NOT sync. will install ONLY the packages specified! (no more tox etc. installed!)
+do NOT sync. will install ONLY the packages specified! (tox etc. would not be installed any more!)
 pip-sync
 
 commands
@@ -168,28 +180,34 @@ if __name__ == "__main__":
 
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
     routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Readme?',
-            'OK. Continue',
-            'Exit')
-    routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
             'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
             ' Commands are written in the beginning of this script',
             'Done. Run tests', 'Exit')
+    routine(None,
+            'Are all pinned dependencies written in settings.py, setup.py, requirements.in/.txt requirements_numba.in/.txt and the Wiki?',
+            'OK. Continue',
+            'Exit')
+    routine(None, 'Are all (new) features documented?', 'OK. Continue', 'Exit')
+    routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
+
+    print('___________')
+    print('Running TESTS:')
 
     # print('Enter virtual env name:')
     # virtual env has to be given!
     # virt_env_name = input()
     virt_env_name = 'tzEnv'
-    virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
-
-    print('___________')
-    print('Running TESTS:')
+    virt_env_act_command = f'source activate {virt_env_name}; '
 
     # routine(virt_env_act_command + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
     routine(virt_env_act_command + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
+
+    print('generating documentation now...')
+    os.system('(cd ./docs && exec make html)')
+    print('done.')
 
     # IMPORTANT: -r flag to rebuild tox virtual env
     # only when dependencies have changed!
@@ -203,10 +221,10 @@ if __name__ == "__main__":
         pass
 
     # routine(virt_env_act_command + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-codestyle",
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e codestyle",
             'checking syntax, codestyle and imports', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36", 'build tests py3', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py36-numba",
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37", 'build tests py3', 'continue')
+    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37-numba",
             'build tests with numba installed', 'continue')
 
     print('Tests finished.')

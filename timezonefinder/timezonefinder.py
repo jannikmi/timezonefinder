@@ -6,26 +6,22 @@ from os.path import abspath, join, pardir
 from struct import unpack
 
 import numpy as np
-from importlib_resources import open_binary
 from numpy import array, dtype, empty, fromfile
 
-from .global_settings import (
-    DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
-    DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT,
-    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+from timezonefinder.global_settings import (
+    DATA_ATTRIBUTE_NAMES, DATA_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
+    DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I,
+    NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 
 try:
     import numba
-    from .helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
-        all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
+    from timezonefinder.helpers_numba import coord2int, distance_to_polygon_exact, distance_to_polygon, \
+        inside_polygon, all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
 except ImportError:
     numba = None
-    from .helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
+    from timezonefinder.helpers import coord2int, distance_to_polygon_exact, distance_to_polygon, inside_polygon, \
         all_the_same, rectify_coordinates, coord2shortcut, convert2coord_pairs, convert2coords
-
-with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
-    timezone_names = json.loads(f.read())
 
 
 def fromfile_memory(file, **kwargs):
@@ -37,15 +33,20 @@ def fromfile_memory(file, **kwargs):
 
 
 class TimezoneFinder:
-    """
-    This class lets you quickly find the timezone of a point on earth.
-    It keeps the binary files open in reading mode to enable fast consequent access.
-    currently per half degree of latitude and per degree of longitude a set of candidate polygons are stored
-        this gives a SHORTCUT to which of the 27k+ polygons should be tested
-        (tests evaluated this to be the fastest setup when being used with numba)
-    """
+    # TODO get rid of dict, add self.hole_registry...
+    __slots__ = DATA_ATTRIBUTE_NAMES + ['__dict__']  # allows dynamic assignment of new variables
 
-    def __init__(self, in_memory=False):
+    def __init__(self, bin_file_location=None, in_memory=False):
+        """
+        Class for quickly finding the timezone of a point on earth offline.
+        Opens the required data in binary files to enable fast access.
+        currently per half degree of latitude and per degree of longitude a set of candidate polygons are stored
+        this gives a SHORTCUT to which of the 27k+ polygons should be tested
+        (tests evaluated this to be the fastest setup when being used with Numba)
+
+        :param bin_file_location: path to the binary data files to use
+        :param in_memory: whether to completely read and keep the binary files in memory
+        """
         self.in_memory = in_memory
 
         if self.in_memory:
@@ -55,25 +56,23 @@ class TimezoneFinder:
 
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
-        self.poly_zone_ids = self.open_binary('timezonefinder', 'poly_zone_ids.bin')
-        self.poly_coord_amount = self.open_binary('timezonefinder', 'poly_coord_amount.bin')
-        self.poly_adr2data = self.open_binary('timezonefinder', 'poly_adr2data.bin')
-        self.poly_data = self.open_binary('timezonefinder', 'poly_data.bin')
-        self.poly_max_values = self.open_binary('timezonefinder', 'poly_max_values.bin')
-        self.poly_nr2zone_id = self.open_binary('timezonefinder', 'poly_nr2zone_id.bin')
+        if bin_file_location is None:
+            bin_file_location = abspath(join(__file__, pardir))
 
-        self.hole_poly_ids = self.open_binary('timezonefinder', 'hole_poly_ids.bin')
-        self.hole_coord_amount = self.open_binary('timezonefinder', 'hole_coord_amount.bin')
-        self.hole_adr2data = self.open_binary('timezonefinder', 'hole_adr2data.bin')
-        self.hole_data = self.open_binary('timezonefinder', 'hole_data.bin')
+        for attribute_name in DATA_ATTRIBUTE_NAMES:
+            bin_file = open(join(bin_file_location, attribute_name + DATA_FILE_ENDING), mode='rb')
+            if self.in_memory:
+                bf_in_mem = BytesIO(bin_file.read())
+                bf_in_mem.seek(0)
+                bin_file.close()
+                bin_file = bf_in_mem
+            setattr(self, attribute_name, bin_file)
 
-        self.shortcuts_entry_amount = self.open_binary('timezonefinder', 'shortcuts_entry_amount.bin')
-        self.shortcuts_adr2data = self.open_binary('timezonefinder', 'shortcuts_adr2data.bin')
-        self.shortcuts_data = self.open_binary('timezonefinder', 'shortcuts_data.bin')
-        self.shortcuts_unique_id = self.open_binary('timezonefinder', 'shortcuts_unique_id.bin')
+        with open(join(bin_file_location, TIMEZONE_NAMES_FILE), 'r') as f:
+            self.timezone_names = json.loads(f.read())
 
         # store for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few (+-22) it is feasible to keep them in the memory
+        # since there are very few (~22) it is feasible to keep them in the memory
         self.hole_registry = {}
         # read the polygon ids for all the holes
         for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
@@ -88,40 +87,17 @@ class TimezoneFinder:
                     poly_id: (1, i),
                 })
 
-    def open_binary(self, *args):
-        bin_fd = open_binary(*args)
-        if self.in_memory:
-            mem_bin_fd = BytesIO(bin_fd.read())
-            mem_bin_fd.seek(0)
-            bin_fd.close()
-            return mem_bin_fd
-        else:
-            return bin_fd
-
     def __del__(self):
-        self.poly_zone_ids.close()
-        self.poly_coord_amount.close()
-        self.poly_adr2data.close()
-        self.poly_data.close()
-        self.poly_max_values.close()
-        self.poly_nr2zone_id.close()
-        self.hole_poly_ids.close()
-        self.hole_coord_amount.close()
-        self.hole_adr2data.close()
-        self.hole_data.close()
-        self.shortcuts_entry_amount.close()
-        self.shortcuts_adr2data.close()
-        self.shortcuts_data.close()
-        self.shortcuts_unique_id.close()
+        for attribute_name in DATA_ATTRIBUTE_NAMES:
+            getattr(self, attribute_name).close()
 
     @staticmethod
     def using_numba():
+        """
+        for testing if Numba is being used or not
+        :return: True if the import of the JIT compiled algorithms worked. False otherwise
+        """
         return numba is not None
-
-    # TODO enable
-    #  @staticmethod
-    # def using_precompiled_funcs():
-    #     return (precompilation is not None)
 
     def id_of(self, line=0):
         self.poly_zone_ids.seek(NR_BYTES_H * line)
@@ -207,7 +183,7 @@ class TimezoneFinder:
             zone_id = tz_id
         else:
             try:
-                zone_id = timezone_names.index(tz_name)
+                zone_id = self.timezone_names.index(tz_name)
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
 
@@ -374,7 +350,7 @@ class TimezoneFinder:
         # if all the polygons in this shortcut belong to the same zone return it
         if zones_are_equal:
             if not (return_distances or force_evaluation):
-                return timezone_names[ids[0]]
+                return self.timezone_names[ids[0]]
 
         if exact_computation:
             routine = exact_routine
@@ -417,8 +393,8 @@ class TimezoneFinder:
                         pointer = 1
 
         if return_distances:
-            return timezone_names[current_closest_id], distances, [timezone_names[x] for x in ids]
-        return timezone_names[current_closest_id]
+            return self.timezone_names[current_closest_id], distances, [self.timezone_names[x] for x in ids]
+        return self.timezone_names[current_closest_id]
 
     def timezone_at(self, *, lng, lat):
         """
@@ -439,7 +415,7 @@ class TimezoneFinder:
             (180 * NR_SHORTCUTS_PER_LAT * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
         try:
             # if there is just one possible zone in this shortcut instantly return its name
-            return timezone_names[unpack(DTYPE_FORMAT_H, self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
+            return self.timezone_names[unpack(DTYPE_FORMAT_H, self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
         except IndexError:
             possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
             nr_possible_polygons = len(possible_polygons)
@@ -447,7 +423,7 @@ class TimezoneFinder:
                 return None
             if nr_possible_polygons == 1:
                 # there is only one polygon in that area. return its timezone name without further checks
-                return timezone_names[self.id_of(possible_polygons[0])]
+                return self.timezone_names[self.id_of(possible_polygons[0])]
 
             # create a list of all the timezone ids of all possible polygons
             ids = self.id_list(possible_polygons, nr_possible_polygons)
@@ -462,7 +438,7 @@ class TimezoneFinder:
                 same_element = all_the_same(pointer=i, length=nr_possible_polygons, id_list=ids)
                 if same_element != -1:
                     # return the name of that zone
-                    return timezone_names[same_element]
+                    return self.timezone_names[same_element]
 
                 polygon_nr = possible_polygons[i]
 
@@ -482,7 +458,7 @@ class TimezoneFinder:
                     if outside_all_holes:
                         if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
                             # the point is included in this polygon. return its timezone name without further checks
-                            return timezone_names[ids[i]]
+                            return self.timezone_names[ids[i]]
 
             # the timezone name of the last polygon should always be returned
             # if no other polygon has been matched beforehand.
@@ -522,14 +498,14 @@ class TimezoneFinder:
 
                 if outside_all_holes:
                     if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
-                        return timezone_names[self.id_of(polygon_nr)]
+                        return self.timezone_names[self.id_of(polygon_nr)]
 
         # no polygon has been matched
         return None
 
 
 if __name__ == '__main__':
-
+    # TODO test
     import argparse
 
     parser = argparse.ArgumentParser(description='parse training parameters')

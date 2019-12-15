@@ -1,11 +1,24 @@
 Changelog
 =========
 
+4.2.0 (2019-12-15)
+------------------
+
+* added option to specify the location of the binary data files to use. making it possible to easily point to own compiled data. also load timezone names json from this location
+* make timezone names a class attribute (instead of a global variable)
+* simplify code for opening and closing multiple binary files
+* added tests for a specified path to the data
+* testing multiple python3 versions automatically
+* pinned new requirements
+* importlib_resources removed from the dependencies
+* added a documentation at: https://timezonefinder.readthedocs.io/en/latest/
+* added contribution guidelines
+
 
 4.1.0 (2019-07-07)
 ------------------
 
-* updated the data to `2019b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2019a>`__
+* updated the data to `2019b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2019b>`__
 * added description of using vectorized input in readme
 
 

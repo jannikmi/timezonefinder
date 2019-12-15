@@ -2,11 +2,12 @@
 import timeit
 import unittest
 from math import floor, log10
+from os.path import abspath, join, pardir
 
 import pytest
 
 from auxiliaries import list_of_random_points, random_point
-from timezonefinder.global_settings import INT2COORD_FACTOR
+from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME
 from timezonefinder.timezonefinder import TimezoneFinder
 
 # from .auxiliaries import random_point, list_of_random_points
@@ -119,13 +120,14 @@ TEST_LOCATIONS_PROXIMITY = [
 
 class MainPackageTest(unittest.TestCase):
     in_memory_mode = False
+    bin_file_dir = None
 
     def print_tf_class_props(self):
         print("in memory mode:", self.in_memory_mode)
         if TimezoneFinder.using_numba():
-            print('Numba: ON (precompiled functions in use)')
+            print('Numba: ON (JIT compiled functions in use)')
         else:
-            print('Numba: OFF (precompiled functions NOT in use)')
+            print('Numba: OFF (JIT compiled functions NOT in use)')
 
     @classmethod
     def setUpClass(cls):
@@ -138,7 +140,7 @@ class MainPackageTest(unittest.TestCase):
         t = timeit.timeit("TimezoneFinder(in_memory=in_memory_mode)", globals=globals(), number=1)
         print('startup time:', time_preprocess(t), '\n')
 
-        cls.timezone_finder = TimezoneFinder(in_memory=cls.in_memory_mode)
+        cls.timezone_finder = TimezoneFinder(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
 
         # create an array of points where timezone_finder finds something (realistic queries)
         print('collecting and storing', N, 'realistic points for the tests...')
@@ -260,5 +262,18 @@ class MainPackageTest(unittest.TestCase):
         self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))
 
 
-class MainPackageTest2(MainPackageTest):
+class MainPackageTestMEM(MainPackageTest):
     in_memory_mode = True
+
+
+abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
+
+
+class MainPackageTestDIR(MainPackageTest):
+    # point to a dir where all bin files are located:
+    bin_file_dir = abs_default_path
+
+
+class MainPackageTestMEMDIR(MainPackageTest):
+    in_memory_mode = True
+    bin_file_dir = abs_default_path

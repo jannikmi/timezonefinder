@@ -1,10 +1,8 @@
 numpy
-importlib_resources
 
 docutils
 flake8
 flake8-commas
-futures<3.2.0
 isort
 multilint
 pygments

@@ -2,9 +2,9 @@
 # NOTE: Changes in the global settings might not immediately affect
 # the precompiled (and cached) functions in helpers_numba.py!
 
-INPUT_JSON_FILE_NAME = 'combined.json'
-
+PACKAGE_NAME = 'timezonefinder'
 DEBUG = False
+INPUT_JSON_FILE_NAME = 'combined.json'
 
 # in debugging mode parse only some polygons
 DEBUG_POLY_STOP = 20
@@ -22,6 +22,23 @@ NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
 TIMEZONE_NAMES_FILE = 'timezone_names.json'
+DATA_ATTRIBUTE_NAMES = ['poly_zone_ids',
+                        'poly_coord_amount',
+                        'poly_adr2data',
+                        'poly_max_values',
+                        'poly_data',
+                        'poly_nr2zone_id',
+                        'hole_poly_ids',
+                        'hole_coord_amount',
+                        'hole_adr2data',
+                        'hole_data',
+                        'shortcuts_entry_amount',
+                        'shortcuts_adr2data',
+                        'shortcuts_data',
+                        'shortcuts_unique_id']
+DATA_FILE_ENDING = '.bin'
+BIN_FILE_NAMES = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTE_NAMES]
+DATA_FILE_NAMES = BIN_FILE_NAMES + [TIMEZONE_NAMES_FILE]
 
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1

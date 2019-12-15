@@ -14,5 +14,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # run test for in_memory=False
     sys.exit(main())

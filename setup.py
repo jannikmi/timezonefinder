@@ -4,6 +4,8 @@ import re
 
 from setuptools import setup
 
+from timezonefinder.global_settings import DATA_FILE_NAMES
+
 
 def get_version(package):
     """
@@ -25,23 +27,7 @@ setup(
     name='timezonefinder',
     version=version,
     packages=['timezonefinder'],
-    package_data={
-        'timezonefinder': ['poly_zone_ids.bin',
-                           'poly_coord_amount.bin',
-                           'poly_adr2data.bin',
-                           'poly_max_values.bin',
-                           'poly_data.bin',
-                           'poly_nr2zone_id.bin',
-                           'hole_poly_ids.bin',
-                           'hole_coord_amount.bin',
-                           'hole_adr2data.bin',
-                           'hole_data.bin',
-                           'shortcuts_entry_amount.bin',
-                           'shortcuts_adr2data.bin',
-                           'shortcuts_data.bin',
-                           'shortcuts_unique_id.bin',
-                           'timezone_names.json'],
-    },
+    package_data={'timezonefinder': DATA_FILE_NAMES},
     description='fast python package for finding the timezone of any point on earth (coordinates) offline',
     author='J. Michelfeit',
     author_email='python@michelfe.it',
@@ -56,13 +42,10 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Localization',
     ],
     long_description=readme + '\n\n' + changelog,
-    install_requires=['numpy', 'importlib_resources'],
+    install_requires=['numpy'],
 )
