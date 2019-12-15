@@ -34,7 +34,7 @@ def get_version(package):
     return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
 
 
-import timezonefinder  # needed for auto document
+# import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
 
 # -- Project information -----------------------------------------------------
 
