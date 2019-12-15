@@ -21,7 +21,7 @@ Create a new instance of the TimezoneFinder class to allow fast consequent timez
 
 
 To save computing time at the cost of memory consumption and initialisation time pass ``in_memory=True``. This causes all binary files to be read into memory.
-See the :ref:`speed test results <speed_tests>`.
+See the :ref:`speed test results <speed-tests>`.
 
 .. code-block:: python
 

@@ -1,6 +1,4 @@
 
-.. _about:
-
 =====
 About
 =====
@@ -37,7 +35,7 @@ License
 (see `LICENSE <https://github.com/MrMinimal64/timezonefinder/blob/master/LICENSE>`__).
 
 
-.. _speed_tests:
+.. _speed-tests:
 
 Speed Test Results:
 -------------------

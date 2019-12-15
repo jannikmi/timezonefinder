@@ -26,8 +26,6 @@ conda install sphinx
 https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
 
 Use the Makefile to build the docs, like so:
-make builder
-where "builder" is one of the supported builders, e.g. html, latex or linkcheck.
 make html
 
 
@@ -53,10 +51,17 @@ pip-sync
 
 commands
 tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
-rstcheck *.rst
-tox -r -e py36-codestyle
-tox -r -e py36
-tox -r -e py36-numba
+# rstcheck will complain about non referenced hyperlinks in doc .rst files! (cannot detect cross file references!)
+rstcheck *.rst 
+tox -r -e codestyle
+tox -r -e py37
+tox -r -e py37-numba
+
+Use the Makefile to build the docs, like so:
+cd ./docs
+make html
+# for online build of docs, release tag must be created!
+
 """
 
 PACKAGE = 'timezonefinder'
