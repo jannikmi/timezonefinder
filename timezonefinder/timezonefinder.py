@@ -93,6 +93,10 @@ class TimezoneFinder:
 
     @staticmethod
     def using_numba():
+        """
+        for testing if Numba is being used or not
+        :return: True if the import of the JIT compiled algorithms worked. False otherwise
+        """
         return numba is not None
 
     def id_of(self, line=0):

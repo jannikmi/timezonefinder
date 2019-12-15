@@ -24,7 +24,6 @@ tf.get_geometry(tz_id=400, use_id=True)
 
 
 # To maximize the chances of getting a result in a Django view it might look like:
-
 def find_timezone(request, lat, lng):
     lat = float(lat)
     lng = float(lng)
@@ -45,13 +44,13 @@ def find_timezone(request, lat, lng):
 
 # To get an aware datetime object from the timezone name:
 # first install pytz
+# first install pytz
+from pytz import timezone, utc
+from pytz.exceptions import UnknownTimeZoneError
 
 
 def make_aware(naive_datetime, timezone_name):
     # naive means: tzinfo is None
-    from pytz import timezone, utc
-    from pytz.exceptions import UnknownTimeZoneError
-
     try:
         tz = timezone(timezone_name)
         aware_datetime = naive_datetime.replace(tzinfo=tz)
@@ -65,22 +64,22 @@ def make_aware(naive_datetime, timezone_name):
 
 
 # Getting a location's time zone offset from UTC in minutes:
-# solution from https://github.com/communikein
-# first install pytz
+# adapted solution from https://github.com/communikein and `phineas-pta <https://github.com/phineas-pta>`__
+from datetime import datetime
+from pytz import timezone, utc
 
-def get_offset(target):
+def get_offset(*, lat, lng):
     """
     returns a location's time zone offset from UTC in minutes.
     """
-    from pytz import timezone, utc
-    from datetime import datetime
 
     today = datetime.now()
-    tz_target = timezone(tf.certain_timezone_at(lat=target['lat'], lng=target['lng']))
+    tz_target = timezone(tf.certain_timezone_at(lng=lng, lat=lat))
     # ATTENTION: tz_target could be None! handle error case
     today_target = tz_target.localize(today)
     today_utc = utc.localize(today)
     return (today_utc - today_target).total_seconds() / 60
 
-bergamo = dict({'lat':45.69, 'lng':9.67})
-print(get_offset(bergamo))
+
+bergamo = {'lat': 45.69, 'lng': 9.67}
+minute_offset = get_offset(**bergamo)

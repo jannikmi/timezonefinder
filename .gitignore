@@ -6,6 +6,13 @@ playground.py
 tmp.py
 .pytest_cache
 
+
+# Sphinx
+docs/_build
+
+
+
+
 # GITIGNORE DEFAULTS
 
 

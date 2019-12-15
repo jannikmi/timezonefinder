@@ -21,6 +21,16 @@ pytest
 for uploading:
 twine
 
+documentation generation:
+conda install sphinx
+https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
+
+Use the Makefile to build the docs, like so:
+make builder
+where "builder" is one of the supported builders, e.g. html, latex or linkcheck.
+make html
+
+
 --cov-config=tox.ini
 
 pip-tools package:
@@ -173,7 +183,7 @@ if __name__ == "__main__":
     routine(None, 'Are all dependencies written in setup.py, requirements_numba.in/.txt and the Wiki?',
             'OK. Continue',
             'Exit')
-    routine(None, 'Are all (new) features described in the Wiki?', 'OK. Continue', 'Exit')
+    routine(None, 'Are all (new) features documented?', 'OK. Continue', 'Exit')
     routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
     routine(None,
             'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
@@ -185,6 +195,8 @@ if __name__ == "__main__":
     # virt_env_name = input()
     virt_env_name = 'tzEnv'
     virt_env_act_command = 'source activate ' + virt_env_name.strip() + '; '
+
+    # TODO switch to docs and run make html
 
     print('___________')
     print('Running TESTS:')
