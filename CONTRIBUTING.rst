@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs via `Github Issues <https://github.com/MrMinimal64/timezonefinder/issues>`_.
+Report bugs via `Github Issues`__.
 
 If you are reporting a bug, please include:
 
@@ -50,7 +50,7 @@ Probably for some features the documentation is missing or unclear. You can help
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue via `Github Issues <https://github.com/MrMinimal64/timezonefinder/issues>`_.
+The best way to send feedback is to file an issue via `Github Issues`__.
 
 If you are proposing a feature:
 
@@ -103,3 +103,10 @@ Ready to contribute? Here's how to set up Django-MySQL for local development.
 
 * Submit a pull request through the GitHub website. This will trigger the
    Travis CI build which runs the tests against all supported versions of Python.
+
+
+
+.. _issues: https://github.com/MrMinimal64/timezonefinder/issues
+
+__ issues_
+
