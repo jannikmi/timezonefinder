@@ -39,7 +39,7 @@ License
 
 .. _speed_tests:
 
-Speed Test Results:
+Speed Test Results
 -------------------
 
 obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
@@ -66,13 +66,9 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
 
 
     in memory mode: True
-    Numba: ON (timezonefinder)
+    Numba: ON (JIT compiled functions in use)
 
     startup time: 0.03545s
-
-
-    in memory mode: True
-    Numba: ON (JIT compiled functions in use)
 
     testing 100000 realistic points
     total time: 2.0659s

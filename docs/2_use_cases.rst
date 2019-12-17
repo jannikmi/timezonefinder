@@ -69,6 +69,9 @@ place the ``combined.json`` inside the ``timezonefinder`` folder. Now run the ``
 
 If you want to use your own data set, create a ``combined.json`` file with the same format .json as the timezone-boundary-builder and follow the above instructions.
 
+You can also use data files from another location as described :ref:`HERE <init>`
+
+
 
 Django
 ------

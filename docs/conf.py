@@ -4,6 +4,11 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+
+# ATTENTION: all required packages must be configured to be installed during the online build!
+# import timezonefinder  # needed for auto document
+
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -33,8 +38,6 @@ def get_version(package):
     init_py = open(os.path.join(project_root, package, '__init__.py')).read()
     return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
 
-
-# import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
 
 # -- Project information -----------------------------------------------------
 
