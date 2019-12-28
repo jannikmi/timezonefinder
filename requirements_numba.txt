@@ -12,7 +12,7 @@ entrypoints==0.3          # via flake8
 flake8-commas==2.0.0
 flake8==3.7.9
 isort==4.3.21
-llvmlite==0.27.1          # via numba
+llvmlite==0.30.0          # via numba
 mccabe==0.6.1             # via flake8
 more-itertools==8.0.2     # via pytest
 multilint==4.0.0
