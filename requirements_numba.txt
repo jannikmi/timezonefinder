@@ -17,7 +17,7 @@ mccabe==0.6.1             # via flake8
 more-itertools==8.0.2     # via pytest
 multilint==4.0.0
 numba==0.42.1
-numpy==1.16.2
+numpy==1.18.0
 pluggy==0.9.0             # via pytest
 py==1.8.0                 # via pytest
 pycodestyle==2.5.0        # via flake8
