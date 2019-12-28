@@ -20,9 +20,6 @@ version = get_version('timezonefinder')
 with open('README.rst') as f:
     readme = f.read()
 
-with open('CHANGELOG.rst') as changelog_file:
-    changelog = changelog_file.read()
-
 setup(
     name='timezonefinder',
     version=version,
@@ -44,8 +41,9 @@ setup(
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Software Development :: Localization',
     ],
-    long_description=readme + '\n\n' + changelog,
+    long_description=readme,
     install_requires=['numpy'],
 )

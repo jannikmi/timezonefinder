@@ -48,6 +48,17 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
     -------------
     "realistic points": points included in a timezone
 
+    in memory mode: True
+    Numba: OFF (JIT compiled functions NOT in use)
+
+    testing 1000 realistic points
+    total time: 7.0352s
+    avg. points per second: 1.4 * 10^2
+
+    testing 1000 random points
+    total time: 3.1339s
+    avg. points per second: 3.2 * 10^2
+
 
     in memory mode: False
     Numba: ON (JIT compiled functions in use)
