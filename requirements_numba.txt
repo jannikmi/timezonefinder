@@ -15,7 +15,7 @@ isort==4.3.21
 llvmlite==0.27.1          # via numba
 mccabe==0.6.1             # via flake8
 more-itertools==8.0.2     # via pytest
-multilint==2.4.0
+multilint==4.0.0
 numba==0.42.1
 numpy==1.16.2
 pluggy==0.9.0             # via pytest
