@@ -17,7 +17,7 @@ more-itertools==8.0.2     # via pytest
 multilint==4.0.0
 numpy==1.18.0
 pluggy==0.13.1             # via pytest
-py==1.8.0                 # via pytest
+py==1.8.1                 # via pytest
 pycodestyle==2.5.0        # via flake8
 pyflakes==2.1.1           # via flake8
 pygments==2.3.1
