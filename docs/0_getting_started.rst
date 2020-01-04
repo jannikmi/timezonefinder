@@ -18,7 +18,10 @@ in your command line:
 
 ::
 
-    pip install timezonefinder
+    pip install timezonefinder[numba]
+
+
+TODO explain extras
 
 
 

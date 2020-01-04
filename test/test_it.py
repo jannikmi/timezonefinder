@@ -129,7 +129,6 @@ class MainPackageTest(unittest.TestCase):
             print('TimezoneFinder.using_numba()==False (JIT compiled functions NOT in use)')
         print("in_memory={}".format(self.in_memory_mode))
 
-
     @classmethod
     def setUpClass(cls):
         # preparations which have to be made only once

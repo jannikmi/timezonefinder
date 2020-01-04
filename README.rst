@@ -42,8 +42,8 @@ Quick Guide:
 
 ::
 
-    pip install timezonefinder
-    pip install numba  # optional, x100 speedup
+    pip install timezonefinder[numba] # also installs numba -> x100 speedup
+
 
 .. code-block:: python
 

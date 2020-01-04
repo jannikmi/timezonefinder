@@ -1,13 +1,12 @@
 import os
 import re
 import sys
-from os.path import abspath, join, pardir, isfile
+from os.path import abspath, isfile, join, pardir
 
 """
 required packages
 numpy
-six
-(llvmlite, numba)
+(numba)
 
 
 these packages have to be installed in virtual environment in use:
@@ -15,8 +14,9 @@ these packages have to be installed in virtual environment in use:
 right python version! (will influence the tox environments!)
 for testing:
 pip-tools
- rstcheck>=3.3.1
+rstcheck>=3.3.1
 pytest
+isort
 
 for uploading:
 twine
@@ -52,52 +52,42 @@ pip-sync
 commands
 tox -r to rebuild your tox virtualenvs when you've made changes to requirements setup
 # rstcheck will complain about non referenced hyperlinks in doc .rst files! (cannot detect cross file references!)
-rstcheck *.rst 
+rstcheck *.rst
 tox -r -e codestyle
 tox -r -e py37
 tox -r -e py37-numba
+
+automatically update imports: isort -rc .
+dont use for example.py
+
 
 Use the Makefile to build the docs, like so:
 cd ./docs
 make html
 # for online build of docs, release tag must be created!
 
+use bandit to check for vulnerabilities:
+
+conda install bandit
+bandit ./timezonefinder/*.py
+
+
 """
 
 PACKAGE = 'timezonefinder'
+VERSION_FILE = 'VERSION'
 
 
-def get_version(package=PACKAGE):
-    """
-    Return package version as listed in `__version__` in `__init__.py`.
-    """
-    init_py = open(join(package, '__init__.py')).read()
-    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+# TODO not required, set version in version file
+def get_version():
+    return open(VERSION_FILE, 'r').read().strip()
 
 
-def set_version(new_version_number=None, old_version_number=''):
-    """
-    Set package version as listed in `__version__` in `__init__.py`.
-    """
-    if new_version_number is None:
-        return ValueError
-
-    import fileinput
-    import sys
-
-    file = join(PACKAGE, '__init__.py')
-
-    for line in fileinput.input(file, inplace=1):
-        if old_version_number in line:
-            line = line.replace(old_version_number, new_version_number)
-        sys.stdout.write(line)
-
-
-def convert_version(new_version_input='', old_version='1.0.0'):
-    new_version_input = re.search('\d\.\d\.\d+', new_version_input)
+def parse_version(new_version_input='', old_version_str='1.0.0'):
+    new_version_input = re.search(r'\d\.\d\.\d+', new_version_input)
 
     if new_version_input is None:
-        return None
+        raise ValueError  # will cause new input request
     else:
         new_version_input = new_version_input.group()
 
@@ -105,16 +95,21 @@ def convert_version(new_version_input='', old_version='1.0.0'):
 
     split_new_version = [int(x) for x in new_version_input.split('.')]
     # print(split_new_version)
-    split_old_version = [int(x) for x in old_version.split('.')]
+    split_old_version = [int(x) for x in old_version_str.split('.')]
     # print(split_old_version)
 
     for i in range(3):
         if split_new_version[i] > split_old_version[i]:
             break
         if split_new_version[i] < split_old_version[i]:
-            return None
+            raise ValueError  # will cause new input request
 
     return new_version_input
+
+
+def set_version(new_version_str):
+    with open(VERSION_FILE, 'w') as version_file:
+        version_file.write(new_version_str)
 
 
 def routine(cmd=None, message='', option1='next', option2='exit'):
@@ -159,8 +154,6 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    # TODO run authors tests
-
     old_version = get_version()
 
     print('The actual version number is:', old_version)
@@ -169,28 +162,31 @@ if __name__ == "__main__":
     while 1:
         try:
             version_input = input()
-        except ValueError:
-            pass
-
-        version_number = convert_version(version_input, old_version)
-        if version_number is not None:
-            set_version(version_number, old_version, )
+            version_str = parse_version(version_input, old_version)
+            set_version(version_str)
             break
-
-        print('Invalid version input. Should be of format "x.x.xxx" and higher than the old version.')
+        except ValueError:
+            print(
+                f'Invalid version input. Should be of format "x.x.xxx" and higher than the old version {old_version}.')
+            pass  # try again
 
     version = get_version()
-    print('version number has been set to:', version)
+    print('the version number has been set to:', version)
     print('=====================')
 
+    # TODO data could contain errors, test before upload
+    routine(None, 'have you uploaded new data and pinned the version in setup.py (under extras)?!', 'OK. Continue',
+            'Exit')
+    routine(None, 'Are all data files listed in global_settings.py?!', 'OK. Continue', 'Exit')
+    routine(None, 'Remember to list all relevant importable objects in __all__ variable in __init__.py!',
+            'OK. Continue', 'Exit')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
-    routine(None, 'Are all .bin files listed in the package data in setup.py?!', 'OK. Continue', 'Exit')
     routine(None,
             'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
             ' Commands are written in the beginning of this script',
             'Done. Run tests', 'Exit')
     routine(None,
-            'Are all pinned dependencies written in settings.py, setup.py, requirements.in/.txt requirements_numba.in/.txt and the Wiki?',
+            'Are all pinned dependencies written in setup.py and the Documentation?',
             'OK. Continue',
             'Exit')
     routine(None, 'Are all (new) features documented?', 'OK. Continue', 'Exit')
@@ -261,7 +257,7 @@ if __name__ == "__main__":
     routine("python3 setup.py sdist bdist_wheel", 'building the package now.')
 
     path = abspath(join(__file__, pardir, 'dist'))
-    all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_number in f]
+    all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
     paths2archives = [abspath(join(path, f)) for f in all_archives_this_version]
     command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
 

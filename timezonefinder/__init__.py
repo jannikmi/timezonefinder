@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 from .timezonefinder import TimezoneFinder
 
-__version__ = '4.2.0'
+# https://docs.python.org/3/tutorial/modules.html#importing-from-a-package
+# determines which objects will be imported with "import *"
 __all__ = ('TimezoneFinder',)

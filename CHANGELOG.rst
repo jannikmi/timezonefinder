@@ -1,6 +1,27 @@
 Changelog
 =========
 
+
+5.0.0 (TBA)
+-----------
+
+* TODO some data files as JSON!
+* TODO option to only use shortcut, function?
+* TODO private repo, without the actual data. for data files! but regular upload to pypI,
+* TODO added bash script for download latest data in, document usage, keep it in this repo, not data repo! to keep documentation etc. in one place
+
+https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones.geojson.zip
+https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones-with-oceans.geojson.zip
+
+
+* added "extras" simplifying the installation of Numba and TODO data, TODO documentation! readme!
+* TODO specify minimal version of data extra
+* added minimal required python version (at the moment 3.6)
+* added minimal required version of the dependencies
+* simplified and updated settings (e.g. reading current version from file)
+
+
+
 4.2.0 (2019-12-15)
 ------------------
 
