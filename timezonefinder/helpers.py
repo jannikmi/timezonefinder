@@ -257,7 +257,7 @@ def coord2shortcut(lng, lat):
 
 def rectify_coordinates(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError(b'The coordinates should be given in degrees. They are out ouf bounds.')
+        raise ValueError(b'The coordinates should be given in degrees. They are out of bounds.')
 
     # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
     # are not included in the shortcut lookup system
