@@ -89,7 +89,7 @@ def set_version(new_version_number=None, old_version_number=''):
 
 
 def convert_version(new_version_input='', old_version='1.0.0'):
-    new_version_input = re.search('\d\.\d\.\d+', new_version_input)
+    new_version_input = re.search(r'\d\.\d\.\d+', new_version_input)
 
     if new_version_input is None:
         return None
