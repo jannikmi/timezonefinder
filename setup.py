@@ -1,8 +1,4 @@
 # -*- coding:utf-8 -*-
-from setuptools import setup
-
-from timezonefinder.global_settings import DATA_FILES_LOCAL
-
 setup(
     name='timezonefinder',
     packages=['timezonefinder'],
@@ -25,9 +21,10 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
-        'Natural Language:: English',
+        'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
@@ -45,3 +42,7 @@ setup(
     # TODO data extras, oceans, test
     extras_require={'numba': ["numba>=0.48"]},
 )
+from setuptools import setup
+
+from timezonefinder.global_settings import DATA_FILES_LOCAL
+
