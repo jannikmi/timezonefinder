@@ -73,9 +73,9 @@ def inside_polygon(x, y, coordinates):
                 # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
                 # ( dy/dx > a  ==  dy > a * dx )
                 # int64 accuracy needed here!
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) <= (
-                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (
+                    int64(y2) - int64(y)) * (int64(x2) - int64(x1)) <= (int64(y2) - int64(y1)) * (
+                                             int64(x2) - int64(x))):
                     contained = not contained
 
         else:
@@ -85,9 +85,9 @@ def inside_polygon(x, y, coordinates):
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx)
-                                         and (int64(y2) - int64(y)) * (int64(x2) - int64(x1)) >= (
-                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
+                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (
+                    int64(y2) - int64(y)) * (int64(x2) - int64(x1)) >= (int64(y2) - int64(y1)) * (
+                                             int64(x2) - int64(x))):
                     contained = not contained
 
         y1 = y2

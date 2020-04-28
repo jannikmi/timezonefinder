@@ -26,12 +26,9 @@ project_root = os.path.dirname(cwd)
 sys.path.insert(0, os.path.join(project_root, 'src'))
 
 
-def get_version(package):
-    """
-    Return package version as listed in `__version__` in `__init__.py`.
-    """
-    init_py = open(os.path.join(project_root, package, '__init__.py')).read()
-    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+def get_version():
+    return open(os.path.join(project_root, 'VERSION')).read()
+
 
 
 # import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
@@ -43,7 +40,7 @@ copyright = '2019, Jannik Michelfeit'
 author = 'Jannik Michelfeit'
 
 # The full version, including alpha/beta/rc tags.
-release = get_version('timezonefinder')
+release = get_version()
 
 # -- General configuration ---------------------------------------------------
 

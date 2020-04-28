@@ -2,7 +2,7 @@
 # will be pinned by pip-compile in 'requirements_tests.txt'
 # python3.6+
 
-numba>=0.42
+numba>=0.48
 numpy>=1.16
 
 docutils

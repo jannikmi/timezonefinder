@@ -43,5 +43,5 @@ setup(
     # http://peak.telecommunity.com/DevCenter/setuptools#accessing-data-files-at-runtime
     zip_safe=False,
     # TODO data extras, oceans, test
-    extras_require={'numba': ["numba>=0.42"]},
+    extras_require={'numba': ["numba>=0.48"]},
 )
