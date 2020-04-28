@@ -1,4 +1,8 @@
 # -*- coding:utf-8 -*-
+from setuptools import setup
+
+from timezonefinder.global_settings import DATA_FILES_LOCAL
+
 setup(
     name='timezonefinder',
     packages=['timezonefinder'],
