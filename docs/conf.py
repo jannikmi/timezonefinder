@@ -10,27 +10,31 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import re
-import sys
+# import os
+# import sys
+#
+# # sys.path.insert(0, os.path.abspath('.'))
+#
+# # Get the project root dir, which is the parent dir of this
+# cwd = os.getcwd()
+# project_root = os.path.dirname(cwd)
+#
+# # Insert the project root dir as the first element in the PYTHONPATH.
+# # This lets us ensure that the source package is imported, and that its
+# # version is used.
+# sys.path.insert(0, os.path.join(project_root, 'src'))
+# print(sys.path)
 
-# sys.path.insert(0, os.path.abspath('.'))
-
-# Get the project root dir, which is the parent dir of this
-cwd = os.getcwd()
-project_root = os.path.dirname(cwd)
-
-# Insert the project root dir as the first element in the PYTHONPATH.
-# This lets us ensure that the source package is imported, and that its
-# version is used.
-sys.path.insert(0, os.path.join(project_root, 'src'))
+from os.path import pardir, join
 
 
 def get_version():
-    return open(os.path.join(project_root, 'VERSION')).read()
+    return open(join(pardir, 'VERSION')).read()
 
 
-
+# TODO
+# import sys
+# sys.path.insert(0, pardir)
 # import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
 
 # -- Project information -----------------------------------------------------
@@ -75,7 +79,7 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'classic'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
