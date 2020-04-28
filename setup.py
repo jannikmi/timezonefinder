@@ -14,12 +14,12 @@ setup(
     author='J. Michelfeit',
     author_email='python@michelfe.it',
     license='MIT licence',
-    license_file='LICENSE',
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
     project_urls={
         "Source Code": "https://github.com/MrMinimal64/timezonefinder",
         "Documentation": "https://timezonefinder.readthedocs.io/en/latest/",
         "Changelog": "https://github.com/MrMinimal64/timezonefinder/blob/master/CHANGELOG.rst",
+        "License": "https://github.com/MrMinimal64/timezonefinder/blob/master/LICENSE",
     },
     keywords='timezone coordinates latitude longitude location pytzwhere tzwhere',
     classifiers=[
@@ -46,7 +46,3 @@ setup(
     # TODO data extras, oceans, test
     extras_require={'numba': ["numba>=0.48"]},
 )
-from setuptools import setup
-
-from timezonefinder.global_settings import DATA_FILES_LOCAL
-
