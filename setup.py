@@ -14,20 +14,21 @@ setup(
     author='J. Michelfeit',
     author_email='python@michelfe.it',
     license='MIT licence',
-    license_file='LICENSE',
     url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
     project_urls={
         "Source Code": "https://github.com/MrMinimal64/timezonefinder",
         "Documentation": "https://timezonefinder.readthedocs.io/en/latest/",
         "Changelog": "https://github.com/MrMinimal64/timezonefinder/blob/master/CHANGELOG.rst",
+        "License": "https://github.com/MrMinimal64/timezonefinder/blob/master/LICENSE",
     },
     keywords='timezone coordinates latitude longitude location pytzwhere tzwhere',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
-        'Natural Language:: English',
+        'Natural Language :: English',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',

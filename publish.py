@@ -233,7 +233,7 @@ if __name__ == "__main__":
     routine(None,
             'Please commit your changes, push and wait if Travis tests build successfully. '
             'Only then merge them into the master.',
-            'Build successful. Publish and upload now.', 'Exit.')
+            'Build successful. try packaging.')
 
     # TODO do this automatically, problem are the commit messages (often the same as changelog)
     # git commit --message
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     # routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.') # deprecated
     # new twine publishing routine:
     # https://packaging.python.org/tutorials/packaging-projects/
-    routine("python3 setup.py sdist bdist_wheel", 'building the package now.')
+    routine("python3 setup.py sdist bdist_wheel", 'building the package now.', 'packaging done. try publishing.')
 
     path = abspath(join(__file__, pardir, 'dist'))
     all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
 
     # upload all archives of this version
-    routine(virt_env_act_command + command, 'testing if upload works.')
+    routine(virt_env_act_command + command, 'testing if upload works.', 'publishing test done. start real publishing.')
 
     command = "twine upload " + ' '.join(paths2archives)
     routine(virt_env_act_command + command, 'real upload to PyPI.')
