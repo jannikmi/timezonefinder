@@ -1,13 +1,16 @@
 # -*- coding:utf-8 -*-
 from setuptools import setup
 
-from timezonefinder.global_settings import DATA_FILE_NAMES
+from timezonefinder.global_settings import DATA_FILES_LOCAL
 
 setup(
     name='timezonefinder',
     packages=['timezonefinder'],
-    package_data={'timezonefinder': DATA_FILE_NAMES},
+    package_data={'timezonefinder': DATA_FILES_LOCAL},
     description='fast python package for finding the timezone of any point on earth (coordinates) offline',
+    # version: in VERSION file https://packaging.python.org/guides/single-sourcing-package-version/
+    # With this approach you must make sure that the VERSION file is included in all your source
+    # and binary distributions (e.g. add include VERSION to your MANIFEST.in).
     author='J. Michelfeit',
     author_email='python@michelfe.it',
     license='MIT licence',
@@ -35,6 +38,9 @@ setup(
     ],
     install_requires=['numpy>=1.16'],
     python_requires='>=3.6',
+    # TODO http://peak.telecommunity.com/DevCenter/setuptools#setting-the-zip-safe-flag
+    #  if the project uses pkg_resources for all its data file access
+    # http://peak.telecommunity.com/DevCenter/setuptools#accessing-data-files-at-runtime
     zip_safe=False,
     # TODO data extras, oceans, test
     extras_require={'numba': ["numba>=0.42"]},

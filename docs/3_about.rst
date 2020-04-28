@@ -156,4 +156,4 @@ Thanks to:
 
 `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 
-
+`zedrdave <https://github.com/zedrdave>`__ for valuable feedback.

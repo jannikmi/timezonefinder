@@ -1,8 +1,12 @@
+#!/usr/bin/python
 # -*- coding:utf-8 -*-
+import path_modification # to make timezonefinder package discoverable
+from os.path import abspath, join, pardir
+
 import json
+
 from datetime import datetime
 from math import ceil, floor
-from os.path import abspath, join, pardir
 from struct import pack
 
 from timezonefinder.global_settings import (
@@ -12,20 +16,6 @@ from timezonefinder.global_settings import (
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
 from timezonefinder.helpers import coord2int, inside_polygon, int2coord
-
-# from helpers import coord2int, inside_polygon, int2coord
-# from global_settings import (
-#         DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
-#         NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
-# )
-
-
-# import sys
-# from os.path import dirname
-#
-# sys.path.insert(0, dirname(__file__))
-# from helpers import coord2int, int2coord, inside_polygon
-
 
 """
 TODO write tests
@@ -773,6 +763,24 @@ def compile_binaries():
     print('The number of polygons is:', nr_of_lines)
     print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
 
+    # # TODO
+    # # store for which polygons (how many) holes exits and the id of the first of those holes
+    # # since there are very few (~22) it is feasible to keep them in the memory
+    # self.hole_registry = {}
+    # # read the polygon ids for all the holes
+    # for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
+    #     poly_id = unpack(DTYPE_FORMAT_H, block)[0]
+    #     try:
+    #         amount_of_holes, hole_id = self.hole_registry[poly_id]
+    #         self.hole_registry.update({
+    #             poly_id: (amount_of_holes + 1, hole_id),
+    #         })
+    #     except KeyError:
+    #         self.hole_registry.update({
+    #             poly_id: (1, i),
+    #         })
+
+    print('creating output files:')
     path = 'poly_nr2zone_id.bin'
     print('writing file', path)
     output_file = open(path, 'wb')
@@ -868,26 +876,39 @@ def compile_binaries():
     # write corresponding zone id for every shortcut (iff unique)
     path = 'shortcuts_unique_id.bin'
     print('writing file "', path, '"')
-    output_file = open(path, 'wb')
     if poly_zone_ids[-1] >= INVALID_ZONE_ID:
         raise ValueError(
             'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
+    output_file = open(path, 'wb')
+    majority_ids = []
     for x in range(360 * NR_SHORTCUTS_PER_LNG):
         for y in range(180 * NR_SHORTCUTS_PER_LAT):
+            shortcuts_this_entry = shortcuts[(x, y)]
             try:
-                shortcuts_this_entry = shortcuts[(x, y)]
                 unique_id = poly_zone_ids[shortcuts_this_entry[0]]
+                majority_id = unique_id
+                # TODO compute majority id
                 for nr in shortcuts_this_entry:
                     if poly_zone_ids[nr] != unique_id:
                         # there is a polygon from a different zone (hence an invalid id should be written)
                         unique_id = INVALID_ZONE_ID
                         break
-                output_file.write(pack(b'<H', unique_id))
             except KeyError:
-                # also write an Invalid Id when there is no polygon at all
-                output_file.write(pack(b'<H', INVALID_ZONE_ID))
+                # also write an invalid id when there is no polygon at all
+                unique_id = INVALID_ZONE_ID
+                majority_id = INVALID_ZONE_ID
+            output_file.write(pack(b'<H', unique_id))
+            majority_ids.append(majority_id)
 
     output_file.close()
+
+    path = 'shortcuts_majority_id.bin'
+    print('writing file "', path, '"')
+    output_file = open(path, 'wb')
+    for majority_id in majority_ids:
+        output_file.write(pack(b'<H', majority_id))
+    output_file.close()
+
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
 
@@ -952,6 +973,7 @@ def compile_binaries():
 
 
 if __name__ == '__main__':
+    # TODO add option to modify expected input file name
     # parsing the data from the .json into RAM
     parse_polygons_from_json(path=INPUT_JSON_FILE_NAME)
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin

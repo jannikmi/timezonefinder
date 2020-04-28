@@ -13,13 +13,14 @@ these packages have to be installed in virtual environment in use:
 
 right python version! (will influence the tox environments!)
 for testing:
-pip-tools
-rstcheck>=3.3.1
-pytest
-isort
+conda install pytest
+conda install isort
+conda install twine
 
-for uploading:
-twine
+pip install rstcheck pip-tools
+
+rstcheck>=3.3.1
+twine for uploading securely
 
 documentation generation:
 conda install sphinx
@@ -39,7 +40,7 @@ compile a new requirements file (with the latest versions)
 source activate tzEnv
 pip-compile --upgrade
 same as?!:
-pip-compile --output-file requirements.txt requirements.in
+pip-compile --output-file requirements_tests.txt requirements_tests.in
 pip-compile --output-file requirements_numba.txt requirements_numba.in
 only update the flask package:
 pip-compile --upgrade-package flask
@@ -71,14 +72,17 @@ use bandit to check for vulnerabilities:
 conda install bandit
 bandit ./timezonefinder/*.py
 
-
 """
 
 PACKAGE = 'timezonefinder'
 VERSION_FILE = 'VERSION'
 
+# print('Enter virtual env name:')
+# virtual env has to be given!
+# VIRT_ENV_NAME = input()
+VIRT_ENV_NAME = 'tzEnv'
 
-# TODO not required, set version in version file
+
 def get_version():
     return open(VERSION_FILE, 'r').read().strip()
 
@@ -195,11 +199,7 @@ if __name__ == "__main__":
     print('___________')
     print('Running TESTS:')
 
-    # print('Enter virtual env name:')
-    # virtual env has to be given!
-    # virt_env_name = input()
-    virt_env_name = 'tzEnv'
-    virt_env_act_command = f'source activate {virt_env_name}; '
+    virt_env_act_command = f'source activate {VIRT_ENV_NAME}; '
 
     # routine(virt_env_act_command + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
@@ -239,14 +239,14 @@ if __name__ == "__main__":
     # git commit --message
     # git push dev
 
+    # TODO wait for Travis to finish positively
+
     # if not in master
 
     # TODO ask to push in master
     # git merge ...
 
     # TODO switching to master
-
-    # TODO wait for Travis to finish
 
     print('=================')
     print('PUBLISHING:')
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
 
-    routine("git tag -a v%s -m 'Version %s'" % (version, version), 'Creating tag', 'Continue')
+    routine(f"git tag -a v{version} -m 'Version {version}'", 'Creating tag', 'Continue')
 
     routine(None, 'Do you want to push the git release tag?', 'Yes', 'No')
     # in den master pushen
@@ -279,5 +279,5 @@ if __name__ == "__main__":
     print('______________')
     print('Publishing Done.')
     print('now run:')
-    print('(only when the upload didnt work) python3 setup.py bdist_wheel upload')
-    print('sudo -H pip install ' + PACKAGE + ' --upgrade')
+    print("only when the upload didn't work: python3 setup.py bdist_wheel upload")
+    print(f'sudo -H pip install {PACKAGE} --upgrade')

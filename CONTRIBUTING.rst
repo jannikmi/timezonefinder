@@ -17,7 +17,7 @@ Report bugs via `Github Issues`_.
 
 If you are reporting a bug, please include:
 
-* Your version of timezonefinder, python and Numba (if you use it)
+* Your version of this package, python and Numba (if you use it)
 * Any other details about your local setup that might be helpful in troubleshooting, e.g. operating system.
 * Detailed steps to reproduce the bug.
 * Detailed description of the bug (error log etc.).
@@ -62,7 +62,7 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up Django-MySQL for local development.
+Ready to contribute? Here's how to set up this package for local development.
 
 *  Fork this repo on GitHub.
 *  Clone your fork locally
