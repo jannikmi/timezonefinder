@@ -123,11 +123,11 @@ class MainPackageTest(unittest.TestCase):
     bin_file_dir = None
 
     def print_tf_class_props(self):
-        print("in memory mode:", self.in_memory_mode)
         if TimezoneFinder.using_numba():
-            print('Numba: ON (JIT compiled functions in use)')
+            print('TimezoneFinder.using_numba()==True (JIT compiled functions in use)')
         else:
-            print('Numba: OFF (JIT compiled functions NOT in use)')
+            print('TimezoneFinder.using_numba()==False (JIT compiled functions NOT in use)')
+        print("in_memory={}".format(self.in_memory_mode))
 
     @classmethod
     def setUpClass(cls):

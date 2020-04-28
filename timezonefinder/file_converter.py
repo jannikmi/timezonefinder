@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding:utf-8 -*-
 import json
 from datetime import datetime
@@ -5,28 +6,16 @@ from math import ceil, floor
 from os.path import abspath, join, pardir
 from struct import pack
 
+import path_modification  # to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
-    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
-    NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H,
+    NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
 from timezonefinder.helpers import coord2int, inside_polygon, int2coord
 
-# from helpers import coord2int, inside_polygon, int2coord
-# from global_settings import (
-#         DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT,
-#         NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
-# )
-
-
-# import sys
-# from os.path import dirname
-#
-# sys.path.insert(0, dirname(__file__))
-# from helpers import coord2int, int2coord, inside_polygon
-
-
+path_modification.dummy_fct()  # simply to use import
 """
 TODO write tests
 
@@ -83,41 +72,59 @@ also stored extra binary if only one zone (to directly return that zone without 
 
 
 
-statistics: (data version 2018g)
+statistics: (data version 2020a)
+
+maximal amount of coordinates in one polygon: 148063
+amount_of_holes: 255
+amount of polygons: 1201
 
 
-maximal amount of coordinates in one polygon: 139130
-amount_of_holes: 219
-amount of polygons: 1177
+updating the zone names in timezone_names.json now...
+...Done.
+
+Computing where zones start and end...
+...Done.
+
+building shortucts...
+currently at polygon nr:
+0
+100
+200
+300
+400
+500
+600
+700
+800
+900
+1000
+1100
+1200
+calculating the shortcuts took: 0:01:03.713896
 
 shortcut statistics:
-highest entry amount is 46
+highest entry amount is 49
 frequencies of entry amounts (from 0 to max entries):
-[76359, 45216, 7204, 710, 81, 17, 4, 1, 3, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+[76352, 45110, 7294, 734, 79, 15, 5, 1, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
+ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 relative accumulated frequencies [%]:
-[58.92, 93.81, 99.37, 99.91, 99.98, 99.99, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
-    100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,
-        100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
-[41.08, 6.19, 0.63, 0.09, 0.02, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0]
-58.92 % of all shortcuts are empty
+[58.91, 93.72, 99.35, 99.92, 99.98, 99.99, 99.99, 99.99, ...]
+[41.09, 6.28, 0.65, 0.08, 0.02, 0.01, 0.01, 0.01, 0.0, ...]
+58.91 % of all shortcuts are empty
 
 highest amount of different zones in one shortcut is 7
 frequencies of entry amounts (from 0 to max):
-[76359, 45555, 6963, 672, 43, 6, 1, 1]
+[76352, 45454, 7048, 695, 43, 6, 1, 1]
 relative accumulated frequencies [%]:
-[58.92, 94.07, 99.44, 99.96, 99.99, 100.0, 100.0, 100.0]
-[41.08, 5.93, 0.56, 0.04, 0.01, 0.0, 0.0, 0.0]
+[58.91, 93.99, 99.42, 99.96, 99.99, 100.0, 100.0, 100.0]
+[41.09, 6.01, 0.58, 0.04, 0.01, 0.0, 0.0, 0.0]
 --------------------------------
 
-The number of filled shortcut zones are: 53241 (= 41.08 % of all shortcuts)
-The number of polygons is: 1177
-The number of floats in all the polygons is (2 per point): 10887056
-writing file " poly_nr2zone_id.bin "
-Done
-
+The number of filled shortcut zones are: 53248 (= 41.09 % of all shortcuts)
+The number of polygons is: 1201
+The number of floats in all the polygons is (2 per point): 11882442
+creating output files:
+writing file poly_nr2zone_id.bin
 writing file " poly_zone_ids.bin "
 writing file " poly_max_values.bin "
 writing file " poly_data.bin "
@@ -131,9 +138,10 @@ writing file " hole_poly_ids.bin "
 writing file " hole_coord_amount.bin "
 writing file " hole_adr2data.bin "
 writing file " hole_data.bin "
-the polygon data makes up 97.11 % of the data
-the shortcuts make up 2.01 % of the data
-holes make up 0.88 % of the data
+the polygon data makes up 97.15 % of the data
+the shortcuts make up 1.84 % of the data
+holes make up 1.01 % of the data
+Success!
 """
 
 nr_of_lines = -1
@@ -355,7 +363,7 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
     print('updating the zone names in {} now...'.format(path))
     # pickle the zone names (python array)
     with open(abspath(path), 'w') as f:
-        f.write(json.dumps(all_tz_names))
+        f.write(json.dumps(all_tz_names, indent=4))
     print('...Done.\n\nComputing where zones start and end...')
     i = 0
     last_id = -1
@@ -773,6 +781,25 @@ def compile_binaries():
     print('The number of polygons is:', nr_of_lines)
     print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
 
+    # # TODO
+    # # store for which polygons (how many) holes exits and the id of the first of those holes
+    # # since there are very few (~22) it is feasible to keep them in the memory
+    # self.hole_registry = {}
+    # # read the polygon ids for all the holes
+    # for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
+    #     poly_id = unpack(DTYPE_FORMAT_H, block)[0]
+    #     try:
+    #         amount_of_holes, hole_id = self.hole_registry[poly_id]
+    #         self.hole_registry.update({
+    #             poly_id: (amount_of_holes + 1, hole_id),
+    #         })
+    #     except KeyError:
+    #         self.hole_registry.update({
+    #             poly_id: (1, i),
+    #         })
+
+    # TODO use with statement
+    print('creating output files:')
     path = 'poly_nr2zone_id.bin'
     print('writing file', path)
     output_file = open(path, 'wb')
@@ -780,7 +807,6 @@ def compile_binaries():
         output_file.write(pack(b'<H', zone_id))
     output_file.close()
 
-    print('Done\n')
     # write zone_ids
     path = 'poly_zone_ids.bin'
     print('writing file "', path, '"')
@@ -857,37 +883,49 @@ def compile_binaries():
     # write Line_Nrs for every shortcut
     path = 'shortcuts_data.bin'
     print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for entries in shortcut_entries:
-        for entry in entries:
-            if entry > nr_of_lines:
-                raise ValueError(entry)
-            output_file.write(pack(b'<H', entry))
-    output_file.close()
+    with open(path, 'wb') as output_file:
+        for entries in shortcut_entries:
+            for entry in entries:
+                if entry > nr_of_lines:
+                    raise ValueError(entry)
+                output_file.write(pack(b'<H', entry))
 
     # write corresponding zone id for every shortcut (iff unique)
     path = 'shortcuts_unique_id.bin'
     print('writing file "', path, '"')
-    output_file = open(path, 'wb')
     if poly_zone_ids[-1] >= INVALID_ZONE_ID:
         raise ValueError(
             'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
-    for x in range(360 * NR_SHORTCUTS_PER_LNG):
-        for y in range(180 * NR_SHORTCUTS_PER_LAT):
-            try:
-                shortcuts_this_entry = shortcuts[(x, y)]
-                unique_id = poly_zone_ids[shortcuts_this_entry[0]]
-                for nr in shortcuts_this_entry:
-                    if poly_zone_ids[nr] != unique_id:
-                        # there is a polygon from a different zone (hence an invalid id should be written)
-                        unique_id = INVALID_ZONE_ID
-                        break
-                output_file.write(pack(b'<H', unique_id))
-            except KeyError:
-                # also write an Invalid Id when there is no polygon at all
-                output_file.write(pack(b'<H', INVALID_ZONE_ID))
 
-    output_file.close()
+    with open(path, 'wb') as output_file:
+        # majority_ids = [] TODO
+        for x in range(360 * NR_SHORTCUTS_PER_LNG):
+            for y in range(180 * NR_SHORTCUTS_PER_LAT):
+                try:
+                    shortcuts_this_entry = shortcuts[(x, y)]
+                    unique_id = poly_zone_ids[shortcuts_this_entry[0]]
+                    # majority_id = unique_id
+                    # TODO compute majority id, sort zone ids after frequency, use first
+                    for nr in shortcuts_this_entry:
+                        if poly_zone_ids[nr] != unique_id:
+                            # there is a polygon from a different zone (hence an invalid id should be written)
+                            unique_id = INVALID_ZONE_ID
+                            break
+                except KeyError:
+                    # also write an invalid id when there is no polygon at all
+                    unique_id = INVALID_ZONE_ID
+                    # majority_id = INVALID_ZONE_ID
+                output_file.write(pack(b'<H', unique_id))
+                # majority_ids.append(majority_id)
+
+    # # TODO use
+    # path = 'shortcuts_majority_id.bin'
+    # print('writing file "', path, '"')
+    # output_file = open(path, 'wb')
+    # for majority_id in majority_ids:
+    #     output_file.write(pack(b'<H', majority_id))
+    # output_file.close()
+
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
 
@@ -952,6 +990,7 @@ def compile_binaries():
 
 
 if __name__ == '__main__':
+    # TODO add option to modify expected input file name
     # parsing the data from the .json into RAM
     parse_polygons_from_json(path=INPUT_JSON_FILE_NAME)
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin

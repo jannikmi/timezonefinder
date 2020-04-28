@@ -9,9 +9,9 @@ import numpy as np
 from numpy import array, dtype, empty, fromfile
 
 from timezonefinder.global_settings import (
-    DATA_ATTRIBUTE_NAMES, DATA_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
-    DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I,
-    NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+    DATA_ATTRIBUTES, DATA_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
+    DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
+    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 
 try:
@@ -33,8 +33,11 @@ def fromfile_memory(file, **kwargs):
 
 
 class TimezoneFinder:
-    # TODO get rid of dict, add self.hole_registry...
-    __slots__ = DATA_ATTRIBUTE_NAMES + ['__dict__']  # allows dynamic assignment of new variables
+    # TODO docstring
+    # TODO document attributes
+    # TODO rename DATA Attributes
+    # __slots__ = DATA_ATTRIBUTES + ['__dict__']  # allows dynamic assignment of new variables
+    __slots__ = DATA_ATTRIBUTES + ['in_memory', 'hole_registry', 'fromfile', 'timezone_names']
 
     def __init__(self, bin_file_location=None, in_memory=False):
         """
@@ -59,7 +62,7 @@ class TimezoneFinder:
         if bin_file_location is None:
             bin_file_location = abspath(join(__file__, pardir))
 
-        for attribute_name in DATA_ATTRIBUTE_NAMES:
+        for attribute_name in DATA_ATTRIBUTES:
             bin_file = open(join(bin_file_location, attribute_name + DATA_FILE_ENDING), mode='rb')
             if self.in_memory:
                 bf_in_mem = BytesIO(bin_file.read())
@@ -88,7 +91,7 @@ class TimezoneFinder:
                 })
 
     def __del__(self):
-        for attribute_name in DATA_ATTRIBUTE_NAMES:
+        for attribute_name in DATA_ATTRIBUTES:
             getattr(self, attribute_name).close()
 
     @staticmethod

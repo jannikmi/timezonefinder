@@ -16,8 +16,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import re
+import sys
 
 # sys.path.insert(0, os.path.abspath('.'))
 
@@ -31,12 +31,9 @@ project_root = os.path.dirname(cwd)
 sys.path.insert(0, os.path.join(project_root, 'src'))
 
 
-def get_version(package):
-    """
-    Return package version as listed in `__version__` in `__init__.py`.
-    """
-    init_py = open(os.path.join(project_root, package, '__init__.py')).read()
-    return re.search("__version__ = ['\"]([^'\"]+)['\"]", init_py).group(1)
+def get_version():
+    return open(os.path.join(project_root, 'VERSION')).read()
+
 
 
 # -- Project information -----------------------------------------------------
@@ -46,7 +43,7 @@ copyright = '2019, Jannik Michelfeit'
 author = 'Jannik Michelfeit'
 
 # The full version, including alpha/beta/rc tags.
-release = get_version('timezonefinder')
+release = get_version()
 
 # -- General configuration ---------------------------------------------------
 

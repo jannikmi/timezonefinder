@@ -13,11 +13,11 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs via `Github Issues`__.
+Report bugs via `Github Issues`_.
 
 If you are reporting a bug, please include:
 
-* Your version of timezonefinder, python and Numba (if you use it)
+* Your version of this package, python and Numba (if you use it)
 * Any other details about your local setup that might be helpful in troubleshooting, e.g. operating system.
 * Detailed steps to reproduce the bug.
 * Detailed description of the bug (error log etc.).
@@ -50,7 +50,7 @@ Probably for some features the documentation is missing or unclear. You can help
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue via `Github Issues`__.
+The best way to send feedback is to file an issue via `Github Issues`_.
 
 If you are proposing a feature:
 
@@ -62,7 +62,7 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up Django-MySQL for local development.
+Ready to contribute? Here's how to set up this package for local development.
 
 *  Fork this repo on GitHub.
 *  Clone your fork locally
@@ -106,7 +106,4 @@ Ready to contribute? Here's how to set up Django-MySQL for local development.
 
 
 
-.. _issues: https://github.com/MrMinimal64/timezonefinder/issues
-
-__ issues_
-
+.. _Github Issues: https://github.com/MrMinimal64/timezonefinder/issues

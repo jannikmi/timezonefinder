@@ -1,6 +1,7 @@
 include README.rst
 include CHANGELOG.rst
 include LICENSE
+include VERSION
 
 recursive-include test *
 recursive-exclude * __pycache__

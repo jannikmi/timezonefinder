@@ -3,6 +3,9 @@
 # the precompiled (and cached) functions in helpers_numba.py!
 
 PACKAGE_NAME = 'timezonefinder'
+# TODO
+DATA_PACKAGE_NAME = 'timezonefinder_data'
+OCEAN_DATA_PACKAGE_NAME = 'timezonefinder_data_oceans'
 DEBUG = False
 INPUT_JSON_FILE_NAME = 'combined.json'
 
@@ -19,26 +22,33 @@ NR_SHORTCUTS_PER_LNG = 1
 NR_SHORTCUTS_PER_LAT = 2
 NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 
-INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
-
 TIMEZONE_NAMES_FILE = 'timezone_names.json'
-DATA_ATTRIBUTE_NAMES = ['poly_zone_ids',
-                        'poly_coord_amount',
-                        'poly_adr2data',
-                        'poly_max_values',
-                        'poly_data',
-                        'poly_nr2zone_id',
-                        'hole_poly_ids',
-                        'hole_coord_amount',
-                        'hole_adr2data',
-                        'hole_data',
-                        'shortcuts_entry_amount',
-                        'shortcuts_adr2data',
-                        'shortcuts_data',
-                        'shortcuts_unique_id']
 DATA_FILE_ENDING = '.bin'
-BIN_FILE_NAMES = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTE_NAMES]
-DATA_FILE_NAMES = BIN_FILE_NAMES + [TIMEZONE_NAMES_FILE]
+SHORTCUT_ATTRIBUTE_NAME = 'shortcuts_unique_id'
+SHORTCUT_FILE_NAME = SHORTCUT_ATTRIBUTE_NAME + DATA_FILE_ENDING
+DATA_ATTRIBUTES_LOCAL = [SHORTCUT_ATTRIBUTE_NAME]
+BIN_FILES_LOCAL = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTES_LOCAL]
+DATA_FILES_LOCAL = BIN_FILES_LOCAL + [TIMEZONE_NAMES_FILE]
+
+# loaded from the # TODO external data packages
+DATA_ATTRIBUTES_EXTERNAL = ['poly_zone_ids',
+                            'poly_coord_amount',
+                            'poly_adr2data',
+                            'poly_max_values',
+                            'poly_data',
+                            'poly_nr2zone_id',
+                            'hole_poly_ids',
+                            'hole_coord_amount',
+                            'hole_adr2data',
+                            'hole_data',
+                            'shortcuts_entry_amount',
+                            'shortcuts_adr2data',
+                            'shortcuts_data',
+                            # 'shortcuts_majority_id', TODO
+                            ]
+DATA_ATTRIBUTES = DATA_ATTRIBUTES_LOCAL + DATA_ATTRIBUTES_EXTERNAL
+BIN_FILES_EXTERNAL = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTES]
+DATA_FILES_LOCAL = BIN_FILES_EXTERNAL + BIN_FILES_LOCAL  # TODO split up (change). needed in setup of data packages!
 
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
@@ -48,6 +58,8 @@ DTYPE_FORMAT_B_NUMPY = '<i1'
 NR_BYTES_H = 2
 DTYPE_FORMAT_H = b'<H'
 DTYPE_FORMAT_H_NUMPY = '<u2'
+
+INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
 
 # i = signed 4byte integer
 NR_BYTES_I = 4

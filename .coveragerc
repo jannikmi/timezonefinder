@@ -5,5 +5,4 @@ source = timezonefinder
 omit =
     *file_converter.py
     *global_settings.py
-    *kwargs_only.py
     *__init__*

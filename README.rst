@@ -5,6 +5,10 @@ timezonefinder
 .. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder/master.svg
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
+.. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
+    :alt: documentation status
+    :target: https://timezonefinder.readthedocs.io/en/latest/?badge=latest
+
 .. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
     :target: https://circleci.com/gh/conda-forge/timezonefinder-feedstock
 
@@ -28,10 +32,6 @@ timezonefinder
     :target: https://anaconda.org/conda-forge/timezonefinder
 
 
-.. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
-    :alt: documentation status
-    :target: https://timezonefinder.readthedocs.io/en/latest/?badge=latest
-
 
 
 This is a fast and lightweight python package for looking up the corresponding
@@ -42,7 +42,7 @@ Quick Guide:
 
 ::
 
-    pip install timezonefinder
+    pip install timezonefinder[numba] # also installs numba -> x100 speedup
 
 
 .. code-block:: python

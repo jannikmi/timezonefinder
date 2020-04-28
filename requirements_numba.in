@@ -1,6 +1,9 @@
-numba
+# Test dependencies (with numba)
+# will be pinned by pip-compile in 'requirements_tests.txt'
+# python3.6+
 
-numpy
+numba>=0.48
+numpy>=1.16
 
 docutils
 flake8

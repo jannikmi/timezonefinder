@@ -1,0 +1,15 @@
+# Test dependencies
+# will be pinned by pip-compile in 'requirements_tests.txt'
+# python3.6+
+
+numpy>=1.16
+
+docutils
+flake8
+flake8-commas
+isort
+multilint
+pygments
+pytest
+pytest-cov
+

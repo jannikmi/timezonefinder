@@ -1,5 +1,4 @@
 
-.. _getting_started:
 
 ===============
 Getting started
@@ -19,7 +18,10 @@ in your command line:
 
 ::
 
-    pip install timezonefinder
+    pip install timezonefinder[numba]
+
+
+TODO explain extras
 
 
 
@@ -37,7 +39,7 @@ If the vanilla Python code is too slow for you, also install
 
 `Numba <https://github.com/numba/numba>`__ and all its Requirements (e.g. `llvmlite <http://llvmlite.pydata.org/en/latest/install/index.html>`_)
 
-This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically JIT compiled to speed things up.
+This causes the time critical algorithms (in ``helpers_numba.py``) to be automatically JIT compiled to speed things up by a factor of 100 (cf. :ref:`speed test results <speed-tests>`).
 
 
 .. warning::
