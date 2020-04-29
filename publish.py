@@ -206,6 +206,7 @@ if __name__ == "__main__":
     print('generating documentation now...')
     os.system('(cd ./docs && exec make html)')
     print('done.')
+    # TODO test
 
     # IMPORTANT: -r flag to rebuild tox virtual env
     # only when dependencies have changed!
@@ -221,9 +222,8 @@ if __name__ == "__main__":
     # routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
     routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e codestyle",
             'checking syntax, codestyle and imports', 'continue')
-    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37", 'build tests py3', 'continue')
-    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37-numba",
-            'build tests with numba installed', 'continue')
+    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37", 'build tests py3')
+    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37-numba", 'build tests with numba installed')
 
     print('Tests finished.')
 

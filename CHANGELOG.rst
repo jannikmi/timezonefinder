@@ -23,6 +23,11 @@ https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezone
 * TODO importlib_resources dependency
 
 
+4.3.1 (2020-04-29)
+------------------
+
+BUGFIX #99: include the correct timezone_names.json in build
+
 
 4.3.0 (2020-04-28)
 ------------------
