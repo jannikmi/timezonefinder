@@ -1,5 +1,5 @@
 # -*- coding:utf-8 -*-
-"""modify pythonpath to make timezonefinder package discoverable."""
+"""modify pythonpath to make parent package discoverable."""
 
 import sys
 from os.path import pardir

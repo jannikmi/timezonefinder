@@ -78,9 +78,8 @@ PACKAGE = 'timezonefinder'
 VERSION_FILE = 'VERSION'
 
 # print('Enter virtual env name:')
-# virtual env has to be given!
-# VIRT_ENV_NAME = input()
 VIRT_ENV_NAME = 'tzEnv'
+VIRT_ENV_ACT_CMD = f'. ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; '
 
 
 def get_version():
@@ -199,12 +198,10 @@ if __name__ == "__main__":
     print('___________')
     print('Running TESTS:')
 
-    virt_env_act_command = f'source activate {VIRT_ENV_NAME}; '
-
-    # routine(virt_env_act_command + "pip-compile requirements_numba.in;pip-sync",
+    # routine(VIRT_ENV_ACT_CMD + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
-    routine(virt_env_act_command + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
+    routine(VIRT_ENV_ACT_CMD + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
 
     print('generating documentation now...')
     os.system('(cd ./docs && exec make html)')
@@ -221,11 +218,11 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    # routine(virt_env_act_command + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e codestyle",
+    # routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
+    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e codestyle",
             'checking syntax, codestyle and imports', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37", 'build tests py3', 'continue')
-    routine(virt_env_act_command + "tox" + rebuild_flag + " -e py37-numba",
+    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37", 'build tests py3', 'continue')
+    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37-numba",
             'build tests with numba installed', 'continue')
 
     print('Tests finished.')
@@ -262,10 +259,10 @@ if __name__ == "__main__":
     command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
 
     # upload all archives of this version
-    routine(virt_env_act_command + command, 'testing if upload works.', 'publishing test done. start real publishing.')
+    routine(VIRT_ENV_ACT_CMD + command, 'testing if upload works.', 'publishing test done. start real publishing.')
 
     command = "twine upload " + ' '.join(paths2archives)
-    routine(virt_env_act_command + command, 'real upload to PyPI.')
+    routine(VIRT_ENV_ACT_CMD + command, 'real upload to PyPI.')
 
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
