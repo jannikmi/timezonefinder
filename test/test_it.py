@@ -10,9 +10,6 @@ from auxiliaries import list_of_random_points, random_point
 from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME
 from timezonefinder.timezonefinder import TimezoneFinder
 
-# from .auxiliaries import random_point, list_of_random_points
-
-
 # number of points to test (in each test, realistic and random ones)
 N = int(1e2)
 
@@ -71,6 +68,7 @@ TEST_LOCATIONS = [
     (37.466666, 126.6166667, 'Inchon seaport', 'Asia/Seoul'),
     (42.8, 132.8833333, 'Nakhodka seaport', 'Asia/Vladivostok'),
     (50.26, -5.051, 'Truro', 'Europe/London'),
+    (37.81, -122.35, 'San Francisco Bay', 'America/Los_Angeles'),
 
     # test cases for hole handling:
     (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Yerevan'),

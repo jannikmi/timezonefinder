@@ -1,8 +1,13 @@
-include README.rst
+global-exclude *.py[cod]
+
 include CHANGELOG.rst
+include CONTRIBUTING.rst
 include LICENSE
+include README.rst
 include VERSION
 
-recursive-include test *
+recursive-include tests *.py
+
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
+recursive-exclude * *.DS_Store

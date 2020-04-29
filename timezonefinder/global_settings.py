@@ -48,7 +48,7 @@ DATA_ATTRIBUTES_EXTERNAL = ['poly_zone_ids',
                             ]
 DATA_ATTRIBUTES = DATA_ATTRIBUTES_LOCAL + DATA_ATTRIBUTES_EXTERNAL
 BIN_FILES_EXTERNAL = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTES]
-DATA_FILES_LOCAL = BIN_FILES_EXTERNAL + BIN_FILES_LOCAL  # TODO split up (change). needed in setup of data packages!
+DATA_FILES_LOCAL = DATA_FILES_LOCAL + BIN_FILES_EXTERNAL  # TODO split up (change). needed in setup of data packages!
 
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
