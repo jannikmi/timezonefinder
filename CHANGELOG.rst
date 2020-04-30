@@ -26,8 +26,8 @@ https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezone
 4.3.1 (2020-04-29)
 ------------------
 
-BUGFIX #99: include the correct timezone_names.json in build
-
+* BUGFIX #99: include the correct timezone_names.json in build
+* wheel specific for the supported python versions (3.6, 3.7, 3.8)
 
 4.3.0 (2020-04-28)
 ------------------

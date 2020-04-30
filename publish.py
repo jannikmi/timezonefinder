@@ -81,7 +81,8 @@ VERSION_FILE = 'VERSION'
 VIRT_ENV_NAME = 'tzEnv'
 VIRT_ENV_ACT_CMD = f'. ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; '
 PY_VERSION_IDS = ['36', '37', '38']  # the supported python versions to create wheels for
-PYTHON_TAG = '.'.join([f'py{v}'for v in PY_VERSION_IDS])
+PYTHON_TAG = '.'.join([f'py{v}' for v in PY_VERSION_IDS])
+
 
 def get_version():
     return open(VERSION_FILE, 'r').read().strip()
@@ -185,8 +186,8 @@ if __name__ == "__main__":
     routine(None, 'Remember to list all relevant importable objects in __all__ variable in __init__.py')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent')
     routine(None, 'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
-            ' Commands are written in the beginning of this script')
-    routine(None, 'Have all pinned dependencies been listed in setup.py and the Documentation?',)
+                  ' Commands are written in the beginning of this script')
+    routine(None, 'Have all pinned dependencies been listed in setup.py and the Documentation?', )
     routine(None, 'Have all (new) features been documented?')
     routine(None, f'Remember to write a changelog now for version {version}')
 
@@ -196,7 +197,7 @@ if __name__ == "__main__":
     # routine(VIRT_ENV_ACT_CMD + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
-    routine(VIRT_ENV_ACT_CMD + "rstcheck *.rst", 'checking syntax of all .rst files:', 'next: build check')
+    routine(f'{VIRT_ENV_ACT_CMD} rstcheck *.rst', 'checking syntax of all .rst files:', 'next: build check')
 
     print('generating documentation now...')
     os.system('(cd ./docs && exec make html)')
@@ -215,10 +216,9 @@ if __name__ == "__main__":
         pass
 
     # routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
-    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e codestyle",
-            'checking syntax, codestyle and imports', 'continue')
-    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37", 'build tests py3')
-    routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag + " -e py37-numba", 'build tests with numba installed')
+    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e codestyle', 'checking syntax, codestyle and imports')
+    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e py37', 'run tests')
+    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e py37-numba', 'run tests with numba installed')
 
     print('Tests finished.')
 
@@ -246,7 +246,9 @@ if __name__ == "__main__":
     # routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.') # deprecated
     # new twine publishing routine:
     # https://packaging.python.org/tutorials/packaging-projects/
-    routine(f"python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}", 'building the package now.')
+    # delete the build folder before to get a fresh build
+    routine(f"rm -r -f build; python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}", 'building the package now.'
+            'build done. check the included files! test uploading.')
 
     path = abspath(join(__file__, pardir, 'dist'))
     all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
