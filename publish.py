@@ -80,7 +80,8 @@ VERSION_FILE = 'VERSION'
 # print('Enter virtual env name:')
 VIRT_ENV_NAME = 'tzEnv'
 VIRT_ENV_ACT_CMD = f'. ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; '
-
+PY_VERSION_IDS = ['36', '37', '38']  # the supported python versions to create wheels for
+PYTHON_TAG = '.'.join([f'py{v}'for v in PY_VERSION_IDS])
 
 def get_version():
     return open(VERSION_FILE, 'r').read().strip()
@@ -178,22 +179,16 @@ if __name__ == "__main__":
     print('=====================')
 
     # TODO data could contain errors, test before upload
-    routine(None, 'have you uploaded new data and pinned the version in setup.py (under extras)?!', 'OK. Continue',
-            'Exit')
-    routine(None, 'Are all data files listed in global_settings.py?!', 'OK. Continue', 'Exit')
-    routine(None, 'Remember to list all relevant importable objects in __all__ variable in __init__.py!',
-            'OK. Continue', 'Exit')
-    routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent!', 'OK. Continue', 'Exit')
-    routine(None,
-            'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
-            ' Commands are written in the beginning of this script',
-            'Done. Run tests', 'Exit')
-    routine(None,
-            'Are all pinned dependencies written in setup.py and the Documentation?',
-            'OK. Continue',
-            'Exit')
-    routine(None, 'Are all (new) features documented?', 'OK. Continue', 'Exit')
-    routine(None, 'Remember to write a changelog now for version %s' % version, 'Done. Continue', 'Exit')
+    routine(None, 'Remember to properly specify all supported python versions in publish.py and setup.py')
+    routine(None, 'Remember to uploaded new EXTERNAL data and pin the version in setup.py (under extras)')
+    routine(None, 'Remember to list all LOCAL data files in global_settings.py')
+    routine(None, 'Remember to list all relevant importable objects in __all__ variable in __init__.py')
+    routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent')
+    routine(None, 'Maybe re-pin the test dependencies (requirements.txt) with pip-compile!'
+            ' Commands are written in the beginning of this script')
+    routine(None, 'Have all pinned dependencies been listed in setup.py and the Documentation?',)
+    routine(None, 'Have all (new) features been documented?')
+    routine(None, f'Remember to write a changelog now for version {version}')
 
     print('___________')
     print('Running TESTS:')
@@ -251,7 +246,7 @@ if __name__ == "__main__":
     # routine("python3 setup.py sdist bdist_wheel upload", 'Uploading the package now.') # deprecated
     # new twine publishing routine:
     # https://packaging.python.org/tutorials/packaging-projects/
-    routine("python3 setup.py sdist bdist_wheel", 'building the package now.', 'packaging done. try publishing.')
+    routine(f"python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}", 'building the package now.')
 
     path = abspath(join(__file__, pardir, 'dist'))
     all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
