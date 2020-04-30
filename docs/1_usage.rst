@@ -10,6 +10,11 @@ Usage
     For a more detailed documentation of all the features please confer to the docstrings in the actual code.
 
 
+.. _init:
+
+Initialisation
+--------------
+
 
 Create a new instance of the TimezoneFinder class to allow fast consequent timezone queries:
 
@@ -28,12 +33,22 @@ See the :ref:`speed test results <speed-tests>`.
     tf = TimezoneFinder(in_memory=True)
 
 
+Use the argument ``bin_file_location`` to use data files from another location:
+
+.. code-block:: python
+
+    tf = TimezoneFinder(bin_file_location='path/to/files')
+
+
+
+
+
+For testing if the import of the JIT compiled algorithms worked:
 
 
 .. code-block:: python
 
     TimezoneFinder.using_numba()   # returns True or False
-
 
 
 
