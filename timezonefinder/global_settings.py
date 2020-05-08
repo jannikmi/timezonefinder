@@ -22,14 +22,17 @@ NR_SHORTCUTS_PER_LNG = 1
 NR_SHORTCUTS_PER_LAT = 2
 NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 
+BINARY_FILE_ENDING = '.bin'
+
+# LOCAL DATA FILES
+DIRECT_SHORTCUT_NAME = 'shortcuts_direct_id'
+UNIQUE_SHORTCUT_NAME = 'shortcuts_unique_id'
+DATA_ATTRIBUTES_LOCAL = [UNIQUE_SHORTCUT_NAME,DIRECT_SHORTCUT_NAME]
+BIN_FILES_LOCAL = [specifier + BINARY_FILE_ENDING for specifier in DATA_ATTRIBUTES_LOCAL]
 TIMEZONE_NAMES_FILE = 'timezone_names.json'
-DATA_FILE_ENDING = '.bin'
-SHORTCUT_ATTRIBUTE_NAME = 'shortcuts_unique_id'
-SHORTCUT_FILE_NAME = SHORTCUT_ATTRIBUTE_NAME + DATA_FILE_ENDING
-DATA_ATTRIBUTES_LOCAL = [SHORTCUT_ATTRIBUTE_NAME]
-BIN_FILES_LOCAL = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTES_LOCAL]
 DATA_FILES_LOCAL = BIN_FILES_LOCAL + [TIMEZONE_NAMES_FILE]
 
+# EXTERNAL DATA FILES
 # loaded from the # TODO external data packages
 DATA_ATTRIBUTES_EXTERNAL = ['poly_zone_ids',
                             'poly_coord_amount',
@@ -47,7 +50,7 @@ DATA_ATTRIBUTES_EXTERNAL = ['poly_zone_ids',
                             # 'shortcuts_majority_id', TODO
                             ]
 DATA_ATTRIBUTES = DATA_ATTRIBUTES_LOCAL + DATA_ATTRIBUTES_EXTERNAL
-BIN_FILES_EXTERNAL = [specifier + DATA_FILE_ENDING for specifier in DATA_ATTRIBUTES]
+BIN_FILES_EXTERNAL = [specifier + BINARY_FILE_ENDING for specifier in DATA_ATTRIBUTES]
 DATA_FILES_LOCAL = DATA_FILES_LOCAL + BIN_FILES_EXTERNAL  # TODO split up (change). needed in setup of data packages!
 
 # B = unsigned char (1byte = 8bit Integer)
@@ -59,7 +62,7 @@ NR_BYTES_H = 2
 DTYPE_FORMAT_H = b'<H'
 DTYPE_FORMAT_H_NUMPY = '<u2'
 
-INVALID_ZONE_ID = 65535  # highest possible with H (2 byte integer)
+INVALID_VALUE_DTYPE_H = 2 ** (NR_BYTES_H * 8) - 1  # = 65535 = highest possible value with H (2 byte unsigned integer)
 
 # i = signed 4byte integer
 NR_BYTES_I = 4

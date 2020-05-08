@@ -7,7 +7,8 @@ Changelog
 
 * TODO optimise imports
 * TODO some data files as JSON! instead of binary. small simple ones
-* TODO option to only use shortcut, function?
+* TODO directly included the most common timezone of each shortcut
+* TODO option to only use shortcut, function?,
 * TODO make publish script reusable! specify package name globally
 * TODO private repo, without the actual data. for data files! but regular upload to pypI,
 * TODO describe loading priority
@@ -21,6 +22,8 @@ https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezone
     TODO document! also in minimal example in readme!
 * TODO specify minimal version of data extra! ('pin')
 * TODO importlib_resources dependency
+
+TODO read binary names, dtypes from config
 
 
 4.3.1 (2020-04-29)

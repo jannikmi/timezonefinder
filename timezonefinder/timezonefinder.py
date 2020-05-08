@@ -9,7 +9,7 @@ import numpy as np
 from numpy import array, dtype, empty, fromfile
 
 from timezonefinder.global_settings import (
-    DATA_ATTRIBUTES, DATA_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
+    DATA_ATTRIBUTES, BINARY_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
     NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
@@ -63,7 +63,7 @@ class TimezoneFinder:
             bin_file_location = abspath(join(__file__, pardir))
 
         for attribute_name in DATA_ATTRIBUTES:
-            bin_file = open(join(bin_file_location, attribute_name + DATA_FILE_ENDING), mode='rb')
+            bin_file = open(join(bin_file_location, attribute_name + BINARY_FILE_ENDING), mode='rb')
             if self.in_memory:
                 bf_in_mem = BytesIO(bin_file.read())
                 bf_in_mem.seek(0)

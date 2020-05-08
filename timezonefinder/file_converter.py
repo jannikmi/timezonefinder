@@ -2,14 +2,15 @@
 # -*- coding:utf-8 -*-
 import json
 from datetime import datetime
-from math import ceil, floor
+from math import ceil, floor, inf
 from os.path import abspath, join, pardir
 from struct import pack
 
 import path_modification  # to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
-    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_ZONE_ID, NR_BYTES_H,
-    NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_VALUE_DTYPE_H, NR_BYTES_H,
+    NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, DTYPE_FORMAT_H, DIRECT_SHORTCUT_NAME,
+    UNIQUE_SHORTCUT_NAME,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
@@ -59,16 +60,20 @@ decide which timezone a point is located in.
 
 the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
 this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned)
+NOTE:
 
 shortcuts_entry_amount: the amount of polygons for every shortcut ('<H')
 shortcuts_adr2data: address in shortcut_data.bin where data for every shortcut starts ('<I')
 shortcuts_data: polygon numbers (ids) for every shortcut (multiple times '<H')
-shortcuts_unique_id: the zone id if only polygons from one zone are present,
-                     a high number (with no corresponding zone) if not ('<H').
+shortcuts_direct_id: the id of the most common zone in that shortcut,
+                     a high number (with no corresponding zone) if no zone is present ('<H').
                      the majority of zones either have no polygons at all (sea) or just one zone.
                      this zone then can be instantly returned without actually testing polygons.
-
-also stored extra binary if only one zone (to directly return that zone without checking)
+shortcuts_unique_id: the zone id if only polygons from one zone are present,
+                     a high number (with no corresponding zone) if not ('<H').
+                     this zone then can be instantly returned without actually testing polygons.
+                    the majority of shortcuts either have no polygons at all (sea) or just one zone
+                    (cf. statistics below)
 
 
 
@@ -741,35 +746,55 @@ def compile_binaries():
         # only around 5% of all shortcuts include polygons from more than one zone
         # in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
         # has only one entry (important to check the zone with one entry first!).
-        polygon_ids = [poly_zone_ids[poly_nr] for poly_nr in poly_nrs]
-        id_freq = [polygon_ids.count(id) for id in polygon_ids]
-        zipped = list(zip(poly_nrs, polygon_ids, id_freq))
+        zone_ids = [poly_zone_ids[poly_nr] for poly_nr in poly_nrs]
+        zone_id_freq = [zone_ids.count(id) for id in zone_ids]
+        zipped = list(zip(poly_nrs, zone_ids, zone_id_freq))
         # also make sure polygons with the same zone freq. are ordered after their zone id
         # (polygons from different zones should not get mixed up)
-        sort = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])
-        return [x[0] for x in sort]  # take only the polygon nrs
+        zipped_sorted = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])
+        # [x[0] for x in zipped_sorted]  # take only the polygon nrs
+        return zip(*zipped_sorted)  # TODO debug
 
-    # count how many shortcut addresses will be written:
+    if poly_zone_ids[-1] >= INVALID_VALUE_DTYPE_H:
+        raise ValueError(
+            'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
+
+    direct_ids = []
+    unique_ids = []
+    # count how many shortcut addresses will be written
     # flatten out the shortcuts in one list in the order they are going to be written inside the polygon file
     for x in range(360 * NR_SHORTCUTS_PER_LNG):
         for y in range(180 * NR_SHORTCUTS_PER_LAT):
             try:
                 shortcuts_this_entry = shortcuts[(x, y)]
-                shortcut_entries.append(sort_poly_shortcut(shortcuts_this_entry))
+                shortcuts_sorted, zone_ids, zone_id_freqs = sort_poly_shortcut(shortcuts_this_entry)
+                shortcut_entries.append(shortcuts_sorted)
                 amount_filled_shortcuts += 1
                 nr_of_entries_in_shortcut.append(len(shortcuts_this_entry))
                 # print((x,y,this_lines_shortcuts))
+                direct_id = zone_ids[0]  # most common zone id
+                if direct_id == zone_ids[-1]:
+                    unique_id = direct_id
+                else:
+                    # there is a polygon from a different zone (hence an invalid id should be written)
+                    unique_id = INVALID_VALUE_DTYPE_H
+
             except KeyError:
                 nr_of_entries_in_shortcut.append(0)
+                # also write an invalid id when there is no polygon at all
+                direct_id = INVALID_VALUE_DTYPE_H
+                unique_id = INVALID_VALUE_DTYPE_H
+
+            direct_ids.append(direct_id)
+            unique_ids.append(unique_id)
 
     amount_of_shortcuts = len(nr_of_entries_in_shortcut)
     print_shortcut_statistics()
 
     if amount_of_shortcuts != 360 * 180 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
-        print(amount_of_shortcuts)
-        raise ValueError('this number of shortcut zones is wrong')
+        raise ValueError('this number of shortcut zones is wrong:', amount_of_shortcuts)
 
-    print('The number of filled shortcut zones are:', amount_filled_shortcuts, '(=',
+    print('The number of filled shortcut zones are: ', amount_filled_shortcuts, '(=',
           round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2), '% of all shortcuts)')
 
     # for every shortcut <H and <I is written (nr of entries and address)
@@ -798,6 +823,7 @@ def compile_binaries():
     #             poly_id: (1, i),
     #         })
 
+    # TODO read binary names from config
     # TODO use with statement
     print('creating output files:')
     path = 'poly_nr2zone_id.bin'
@@ -854,15 +880,16 @@ def compile_binaries():
         output_file.write(pack(b'<I', length))
     output_file.close()
 
+    # TODO automatically detect if the written value is too big (overflow), for each data type in use
     # [SHORTCUT AREA]
     # write all nr of entries
     path = 'shortcuts_entry_amount.bin'
     print('writing file "', path, '"')
     output_file = open(path, 'wb')
     for nr in nr_of_entries_in_shortcut:
-        if nr > 300:
+        if nr >= INVALID_VALUE_DTYPE_H:
             raise ValueError("There are too many polygons in this shortcut:", nr)
-        output_file.write(pack(b'<H', nr))
+        output_file.write(pack(DTYPE_FORMAT_H, nr))
     output_file.close()
 
     # write  Address of first Polygon_nr  in shortcut field (x,y)
@@ -890,41 +917,19 @@ def compile_binaries():
                     raise ValueError(entry)
                 output_file.write(pack(b'<H', entry))
 
+    # TODO debug
+    def write_binary(path, data, data_format=DTYPE_FORMAT_H, upper_limit_value=INVALID_VALUE_DTYPE_H):
+        print(f'writing file "{path}"')
+        with open(path, 'wb') as output_file:
+            for value in data:
+                if value >= upper_limit_value:
+                    raise ValueError(f'trying to write value {value} exceeding limit {upper_limit_value}'
+                                     f' in data type {data_format}.')
+                output_file.write(pack(data_format, value))
+
     # write corresponding zone id for every shortcut (iff unique)
-    path = 'shortcuts_unique_id.bin'
-    print('writing file "', path, '"')
-    if poly_zone_ids[-1] >= INVALID_ZONE_ID:
-        raise ValueError(
-            'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
-
-    with open(path, 'wb') as output_file:
-        # majority_ids = [] TODO
-        for x in range(360 * NR_SHORTCUTS_PER_LNG):
-            for y in range(180 * NR_SHORTCUTS_PER_LAT):
-                try:
-                    shortcuts_this_entry = shortcuts[(x, y)]
-                    unique_id = poly_zone_ids[shortcuts_this_entry[0]]
-                    # majority_id = unique_id
-                    # TODO compute majority id, sort zone ids after frequency, use first
-                    for nr in shortcuts_this_entry:
-                        if poly_zone_ids[nr] != unique_id:
-                            # there is a polygon from a different zone (hence an invalid id should be written)
-                            unique_id = INVALID_ZONE_ID
-                            break
-                except KeyError:
-                    # also write an invalid id when there is no polygon at all
-                    unique_id = INVALID_ZONE_ID
-                    # majority_id = INVALID_ZONE_ID
-                output_file.write(pack(b'<H', unique_id))
-                # majority_ids.append(majority_id)
-
-    # # TODO use
-    # path = 'shortcuts_majority_id.bin'
-    # print('writing file "', path, '"')
-    # output_file = open(path, 'wb')
-    # for majority_id in majority_ids:
-    #     output_file.write(pack(b'<H', majority_id))
-    # output_file.close()
+    write_binary(UNIQUE_SHORTCUT_NAME, unique_ids)
+    write_binary(DIRECT_SHORTCUT_NAME, direct_ids)
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
