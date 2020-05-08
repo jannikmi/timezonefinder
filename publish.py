@@ -79,7 +79,7 @@ VERSION_FILE = 'VERSION'
 
 # print('Enter virtual env name:')
 VIRT_ENV_NAME = 'tzEnv'
-VIRT_ENV_ACT_CMD = f'. ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; '
+VIRT_ENV_COMMAND = f'. ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; '
 PY_VERSION_IDS = ['36', '37', '38']  # the supported python versions to create wheels for
 PYTHON_TAG = '.'.join([f'py{v}' for v in PY_VERSION_IDS])
 
@@ -194,10 +194,10 @@ if __name__ == "__main__":
     print('___________')
     print('Running TESTS:')
 
-    # routine(VIRT_ENV_ACT_CMD + "pip-compile requirements_numba.in;pip-sync",
+    # routine(VIRT_ENV_COMMAND + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
-    routine(f'{VIRT_ENV_ACT_CMD} rstcheck *.rst', 'checking syntax of all .rst files:', 'next: build check')
+    routine(f'{VIRT_ENV_COMMAND} rstcheck *.rst', 'checking syntax of all .rst files:', 'next: build check')
 
     print('generating documentation now...')
     os.system('(cd ./docs && exec make html)')
@@ -215,10 +215,10 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    # routine(VIRT_ENV_ACT_CMD + "tox" + rebuild_flag, 'checking syntax, codestyle and imports', 'continue')
-    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e codestyle', 'checking syntax, codestyle and imports')
-    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e py37', 'run tests')
-    routine(f'{VIRT_ENV_ACT_CMD} tox {rebuild_flag} -e py37-numba', 'run tests with numba installed')
+    routine(f'{VIRT_ENV_COMMAND} tox {rebuild_flag} -e codestyle', 'checking syntax, codestyle and imports',
+            'run tests')
+    routine(f'{VIRT_ENV_COMMAND} tox {rebuild_flag} -e py37', 'run tests')
+    routine(f'{VIRT_ENV_COMMAND} tox {rebuild_flag} -e py37-numba', 'run tests with numba installed')
 
     print('Tests finished.')
 
@@ -248,7 +248,7 @@ if __name__ == "__main__":
     # https://packaging.python.org/tutorials/packaging-projects/
     # delete the build folder before to get a fresh build
     routine(f"rm -r -f build; python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}", 'building the package now.'
-            'build done. check the included files! test uploading.')
+                                                                                            'build done. check the included files! test uploading.')
 
     path = abspath(join(__file__, pardir, 'dist'))
     all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
@@ -256,10 +256,10 @@ if __name__ == "__main__":
     command = "twine upload --repository-url https://test.pypi.org/legacy/ " + ' '.join(paths2archives)
 
     # upload all archives of this version
-    routine(VIRT_ENV_ACT_CMD + command, 'testing if upload works.', 'publishing test done. start real publishing.')
+    routine(VIRT_ENV_COMMAND + command, 'testing if upload works.', 'publishing test done. start real publishing.')
 
     command = "twine upload " + ' '.join(paths2archives)
-    routine(VIRT_ENV_ACT_CMD + command, 'real upload to PyPI.')
+    routine(VIRT_ENV_COMMAND + command, 'real upload to PyPI.')
 
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
