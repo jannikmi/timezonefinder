@@ -7,8 +7,8 @@ PACKAGE_NAME = 'timezonefinder'
 DATA_PACKAGE_NAME = 'timezonefinder_data'
 OCEAN_DATA_PACKAGE_NAME = 'timezonefinder_data_oceans'
 # TODO
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 INPUT_JSON_FILE_NAME = 'combined.json'
 
 # in debugging mode parse only some polygons
@@ -38,36 +38,37 @@ DATA_FILES_LOCAL = BIN_FILES_LOCAL + [TIMEZONE_NAMES_FILE]
 # loaded from the # TODO external data packages
 POLY_ZONE_IDS = 'poly_zone_ids'
 POLY_COORD_AMOUNT = 'poly_coord_amount'
-POLY_ADR_DATA = 'poly_adr2data'
-POLY_MAX_VALUE = 'poly_max_values'
+POLY_ADR2DATA = 'poly_adr2data'
+POLY_MAX_VALUES = 'poly_max_values'
 POLY_DATA = 'poly_data'
-POLY_NR_ZONE_ID = 'poly_nr2zone_id'
+POLY_NR2ZONE_ID = 'poly_nr2zone_id'
 HOLE_POLY_IDS = 'hole_poly_ids'
 HOLE_COORD_AMOUNT = 'hole_coord_amount'
-HOLE_ADR_DATA = 'hole_adr2data'
+HOLE_ADR2DATA = 'hole_adr2data'
 HOLE_DATA = 'hole_data'
 SHORTCUTS_ENTRY_AMOUNT = 'shortcuts_entry_amount'
-SHORTCUTS_ADR_DATA = 'shortcuts_adr2data'
+SHORTCUTS_ADR2DATA = 'shortcuts_adr2data'
 SHORTCUTS_DATA = 'shortcuts_data'
 DATA_ATTRIBUTES_EXTERNAL = [
     POLY_ZONE_IDS,
     POLY_COORD_AMOUNT,
-    POLY_ADR_DATA,
-    POLY_MAX_VALUE,
+    POLY_ADR2DATA,
+    POLY_MAX_VALUES,
     POLY_DATA,
-    POLY_NR_ZONE_ID,
+    POLY_NR2ZONE_ID,
     HOLE_POLY_IDS,
     HOLE_COORD_AMOUNT,
-    HOLE_ADR_DATA,
+    HOLE_ADR2DATA,
     HOLE_DATA,
     SHORTCUTS_ENTRY_AMOUNT,
-    SHORTCUTS_ADR_DATA,
+    SHORTCUTS_ADR2DATA,
     SHORTCUTS_DATA,
 ]
 DATA_ATTRIBUTES = DATA_ATTRIBUTES_LOCAL + DATA_ATTRIBUTES_EXTERNAL
 BIN_FILES_EXTERNAL = [specifier + BINARY_FILE_ENDING for specifier in DATA_ATTRIBUTES]
 DATA_FILES_LOCAL = DATA_FILES_LOCAL + BIN_FILES_EXTERNAL  # TODO split up (change). needed in setup of data packages!
 
+# TODO create variables for used dtype for each  type of data (polygon address, coordinate...)
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
 DTYPE_FORMAT_B_NUMPY = '<i1'
@@ -85,6 +86,10 @@ INVALID_VALUE_DTYPE_H = THRES_DTYPE_H - 1
 # i = signed 4byte integer
 NR_BYTES_I = 4
 DTYPE_FORMAT_SIGNED_I_NUMPY = '<i4'
+DTYPE_FORMAT_SIGNED_I = b'<i'
+THRES_DTYPE_SIGNED_I_UPPER = 2 ** ((NR_BYTES_I * 8)-1)
+THRES_DTYPE_SIGNED_I_LOWER = -THRES_DTYPE_SIGNED_I_UPPER
+
 
 # I = unsigned 4byte integer
 DTYPE_FORMAT_I = b'<I'
@@ -92,6 +97,10 @@ THRES_DTYPE_I = 2 ** (NR_BYTES_I * 8)
 
 # f = 8byte signed float
 DTYPE_FORMAT_F_NUMPY = '<f8'
+
+COORDINATE_DTYPE = DTYPE_FORMAT_SIGNED_I
+POLY_ADR_DTYPE = DTYPE_FORMAT_H
+HOLE_ADR_DTYPE = DTYPE_FORMAT_H
 
 # IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
 # is the same as testing if 360 fits into the domain of I4 (unsigned!)

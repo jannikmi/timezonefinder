@@ -24,8 +24,14 @@ https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezone
 * TODO specify minimal version of data extra! ('pin')
 * TODO importlib_resources dependency
 
-TODO read binary names, dtypes from config
+TODO use direct shortcut id
 
+improvements of file_converter.py:
+
+* read binary names from config
+* read data types from config
+* use with statement for writing binaries
+* automatically detect overflow for each data type in use
 
 4.3.1 (2020-04-29)
 ------------------

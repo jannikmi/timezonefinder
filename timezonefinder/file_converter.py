@@ -10,7 +10,10 @@ import path_modification  # to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
     DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, THRES_DTYPE_H, NR_BYTES_H,
     NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, DTYPE_FORMAT_H, DIRECT_SHORTCUT_NAME,
-    UNIQUE_SHORTCUT_NAME, BINARY_FILE_ENDING, THRES_DTYPE_I, DTYPE_FORMAT_I, INVALID_VALUE_DTYPE_H,
+    UNIQUE_SHORTCUT_NAME, BINARY_FILE_ENDING, THRES_DTYPE_I, DTYPE_FORMAT_I, INVALID_VALUE_DTYPE_H, POLY_NR2ZONE_ID,
+    POLY_ZONE_IDS, POLY_ADR2DATA, POLY_COORD_AMOUNT, POLY_DATA, DTYPE_FORMAT_SIGNED_I, POLY_MAX_VALUES,
+    SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_DATA, SHORTCUTS_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_POLY_IDS, HOLE_ADR2DATA,
+    THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, HOLE_DATA,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
@@ -153,12 +156,12 @@ nr_of_polygons = -1
 nr_of_zones = -1
 all_tz_names = []
 poly_zone_ids = []
-all_boundaries = []
-all_coords = []
-all_lengths = []
+poly_boundaries = []
+polygons = []
+polygon_lengths = []
 nr_of_holes = 0
 polynrs_of_holes = []
-all_holes = []
+holes = []
 all_hole_lengths = []
 list_of_pointers = []
 poly_nr2zone_id = []
@@ -200,7 +203,7 @@ def accumulated_frequency(int_list):
 
 
 def ints_of(line=0):
-    x_coords, y_coords = all_coords[line]
+    x_coords, y_coords = polygons[line]
     return [coord2int(x) for x in x_coords], [coord2int(x) for x in y_coords]
 
 
@@ -230,7 +233,7 @@ def get_shortcuts(x, y):
 
 def _polygons(id_list):
     for i in id_list:
-        yield all_coords[i]
+        yield polygons[i]
 
 
 def not_empty(iterable):
@@ -257,7 +260,7 @@ def _holes_in_poly(poly_nr):
     i = 0
     for nr in polynrs_of_holes:
         if nr == poly_nr:
-            yield all_holes[i]
+            yield holes[i]
         i += 1
 
 
@@ -291,7 +294,6 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
             break
 
         tz_name = tz_dict.get('properties').get("tzid")
-        # print(tz_name)
         all_tz_names.append(tz_name)
         geometry = tz_dict.get("geometry")
         if geometry.get('type') == 'MultiPolygon':
@@ -305,36 +307,39 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
         for poly_with_hole in multipolygon:
             # the first entry is polygon
             x_coords, y_coords = extract_coords(poly_with_hole.pop(0))
-            all_coords.append((x_coords, y_coords))
-            all_lengths.append(len(x_coords))
-            all_boundaries.append((max(x_coords), min(x_coords), max(y_coords), min(y_coords)))
+            polygons.append((x_coords, y_coords))
+            polygon_lengths.append(len(x_coords))
+            poly_boundaries.append((max(x_coords), min(x_coords), max(y_coords), min(y_coords)))
             poly_zone_ids.append(current_zone_id)
 
             # everything else is interpreted as a hole!
-            for hole in poly_with_hole:
-                print(f'polygon #{polygon_counter} zone: {tz_name}')
+            for hole_nr, hole in enumerate(poly_with_hole):
+                print(f'{nr_of_holes}: polygon #{polygon_counter} ({hole_nr}) zone: {tz_name}')
                 nr_of_holes += 1  # keep track of how many holes there are
                 polynrs_of_holes.append(polygon_counter)
                 x_coords, y_coords = extract_coords(hole)
-                all_holes.append((x_coords, y_coords))
+                holes.append((x_coords, y_coords))
                 all_hole_lengths.append(len(x_coords))
 
             polygon_counter += 1
 
         current_zone_id += 1
 
-    nr_of_polygons = len(all_lengths)
-    nr_of_zones = current_zone_id - 1
+    nr_of_polygons = len(polygon_lengths)
+    assert polygon_counter == nr_of_polygons
+    nr_of_zones = len(all_tz_names)
+    assert current_zone_id == nr_of_zones
     assert nr_of_polygons >= nr_of_zones
 
     assert polygon_counter == nr_of_polygons, \
         f'polygon counter {polygon_counter} and entry amount in all_length {nr_of_polygons} are different.'
 
-    max_poly_length = max(all_lengths)
-    if 0 in all_lengths:
+    max_poly_length = max(polygon_lengths)
+    if 0 in polygon_lengths:
         raise ValueError()
 
     # binary file value range tests:
+    # TODO
     assert max_poly_length < THRES_DTYPE_I, \
         f'address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
 
@@ -361,10 +366,11 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
 def update_zone_names(path=TIMEZONE_NAMES_FILE):
     global poly_zone_ids
     global list_of_pointers
-    global all_boundaries
-    global all_coords
-    global all_lengths
+    global poly_boundaries
+    global polygons
+    global polygon_lengths
     global polynrs_of_holes
+    global nr_of_zones
     print('updating the zone names in {} now...'.format(path))
     # pickle the zone names (python array)
     with open(abspath(path), 'w') as f:
@@ -375,12 +381,64 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
     for zone_id in poly_zone_ids:
         if zone_id != last_id:
             poly_nr2zone_id.append(i)
-            if zone_id < last_id:
-                raise ValueError()
+            assert zone_id >= last_id
             last_id = zone_id
         i += 1
-    poly_nr2zone_id.append(i)
+    assert zone_id == nr_of_zones - 1
+    # poly_nr2zone_id.append(i) # TODO
     print('...Done.\n')
+
+
+def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
+    assert value > lower_value_limit, \
+        f'trying to write value {value} subceeding limit {lower_value_limit} (data type {data_format})'
+    assert value < upper_value_limit, \
+        f'trying to write value {value} exceeding limit {upper_value_limit} (data type {data_format})'
+    output_file.write(pack(data_format, value))
+
+
+def write_coordinate_value(output_file, coord):
+    value = coord2int(coord)
+    write_value(output_file, value, data_format=DTYPE_FORMAT_SIGNED_I, lower_value_limit=THRES_DTYPE_SIGNED_I_LOWER,
+                upper_value_limit=THRES_DTYPE_SIGNED_I_UPPER)
+
+
+def write_regular(output_file, data, *args, **kwargs):
+    for value in data:
+        write_value(output_file, value, *args, **kwargs)
+
+
+def write_coordinates(output_file, data, *args, **kwargs):
+    for x_coords, y_coords in data:
+        for x in x_coords:
+            write_coordinate_value(output_file, x)
+
+        for y in y_coords:
+            write_coordinate_value(output_file, y)
+
+
+def write_boundaries(output_file, data, *args, **kwargs):
+    for boundaries in data:
+        for boundary in boundaries:
+            write_coordinate_value(output_file, boundary)
+
+
+def write_binary(bin_file_name, data, data_format=DTYPE_FORMAT_H, lower_value_limit=-1,
+                 upper_value_limit=THRES_DTYPE_H, writing_fct=write_regular):
+    path = bin_file_name + BINARY_FILE_ENDING
+    print(f'writing {path}')
+    with open(path, 'wb') as output_file:
+        writing_fct(output_file, data, data_format, lower_value_limit, upper_value_limit)
+        file_length = output_file.tell()
+    return file_length
+
+
+def write_coordinate_data(bin_file_name, data):
+    return write_binary(bin_file_name, data, writing_fct=write_coordinates)
+
+
+def write_boundary_data(bin_file_name, data):
+    return write_binary(bin_file_name, data, writing_fct=write_boundaries)
 
 
 def compile_binaries():
@@ -655,7 +713,7 @@ def compile_binaries():
         print('building shortucts...')
         print('currently at polygon nr:')
         line = 0
-        for xmax, xmin, ymax, ymin in all_boundaries:
+        for xmax, xmin, ymax, ymin in poly_boundaries:
             # xmax, xmin, ymax, ymin = boundaries_of(line=line)
             if line % 100 == 0:
                 print(line)
@@ -731,7 +789,7 @@ def compile_binaries():
     print('calculating the shortcuts took:', end_time - start_time, '\n')
 
     # there are two floats per coordinate (lng, lat)
-    nr_of_floats = 2 * sum(all_lengths)
+    nr_of_floats = 2 * sum(polygon_lengths)
 
     # write number of entries in shortcut field (x,y)
     nr_of_entries_in_shortcut = []
@@ -755,6 +813,7 @@ def compile_binaries():
         # [x[0] for x in zipped_sorted]  # take only the polygon nrs
         return zip(*zipped_sorted)  # TODO debug
 
+    # TODO
     if poly_zone_ids[-1] >= THRES_DTYPE_H:
         raise ValueError(
             'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
@@ -773,7 +832,7 @@ def compile_binaries():
                 nr_of_entries_in_shortcut.append(len(shortcuts_this_entry))
                 # print((x,y,this_lines_shortcuts))
                 direct_id = zone_ids[0]  # most common zone id
-                if direct_id == zone_ids[-1]:
+                if direct_id == zone_ids[-1]:  # equal to least common zone id
                     unique_id = direct_id
                 else:
                     # there is a polygon from a different zone (hence an invalid id should be written)
@@ -804,9 +863,17 @@ def compile_binaries():
         shortcut_space += NR_BYTES_H * nr
 
     print('number of polygons:', nr_of_polygons)
-    print(f'number of floats in all the polygons: {nr_of_floats:} (2 per point)')
+    print(f'number of floats in all the polygons: {nr_of_floats:,} (2 per point)')
 
-    # # TODO
+    def compile_addresses(length_list, multiplier=1, byte_amount_per_entry=1):
+        adr = 0
+        addresses = [adr]
+        for length in length_list:
+            adr += multiplier * byte_amount_per_entry * length
+            addresses.append(adr)
+        return addresses
+
+    # # TODO json
     # # store for which polygons (how many) holes exits and the id of the first of those holes
     # # since there are very few (~22) it is feasible to keep them in the memory
     # self.hole_registry = {}
@@ -823,166 +890,65 @@ def compile_binaries():
     #             poly_id: (1, i),
     #         })
 
-    # TODO read binary names from config
-    # TODO use with statement
-    # TODO automatically detect if the written value is too big (overflow), for each data type in use
-    print('creating output files:')
-    path = 'poly_nr2zone_id.bin'
-    print('writing file', path)
-    output_file = open(path, 'wb')
-    for zone_id in poly_nr2zone_id:
-        output_file.write(pack(b'<H', zone_id))
-    output_file.close()
+    write_binary(POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons)
+    write_binary(POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
+    write_boundary_data(POLY_MAX_VALUES, poly_boundaries)
+    write_coordinate_data(POLY_DATA, polygons)
+    write_binary(POLY_COORD_AMOUNT, polygon_lengths, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
 
-    # write zone_ids
-    path = 'poly_zone_ids.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for zone_id in poly_zone_ids:
-        output_file.write(pack(b'<H', zone_id))
-    output_file.close()
-
-    # write boundary_data
-    path = 'poly_max_values.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for xmax, xmin, ymax, ymin in all_boundaries:
-        output_file.write(pack(b'<iiii', coord2int(xmax), coord2int(xmin), coord2int(ymax), coord2int(ymin)))
-    output_file.close()
-
-    # write polygon_data, addresses and number of values
-    path = 'poly_data.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    addresses = []
-    i = 0
-    for x_coords, y_coords in all_coords:
-        addresses.append(output_file.tell())
-        if all_lengths[i] != len(x_coords):
-            raise ValueError('x_coords do not have the expected length!', all_lengths[i], len(x_coords))
-        for x in x_coords:
-            output_file.write(pack(b'<i', coord2int(x)))
-        for y in y_coords:
-            output_file.write(pack(b'<i', coord2int(y)))
-        i += 1
-    output_file.close()
-
-    path = 'poly_adr2data.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for adr in addresses:
-        output_file.write(pack(b'<I', adr))
-    output_file.close()
-
-    path = 'poly_coord_amount.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for length in all_lengths:
-        output_file.write(pack(b'<I', length))
-    output_file.close()
+    # 2 entries per coordinate
+    poly_addresses = compile_addresses(polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    write_binary(POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
 
     # [SHORTCUT AREA]
-    # write all nr of entries
-    path = 'shortcuts_entry_amount.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for nr in nr_of_entries_in_shortcut:
-        if nr >= THRES_DTYPE_H:
-            raise ValueError("There are too many polygons in this shortcut:", nr)
-        output_file.write(pack(DTYPE_FORMAT_H, nr))
-    output_file.close()
+    write_binary(SHORTCUTS_ENTRY_AMOUNT, nr_of_entries_in_shortcut, upper_value_limit=nr_of_polygons)
 
-    # write  Address of first Polygon_nr  in shortcut field (x,y)
-    # Attention: 0 is written when no entries are in this shortcut
+    # write address of first "shortcut" (=polygon number) in shortcut field (x,y)
     adr = 0
-    path = 'shortcuts_adr2data.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for nr in nr_of_entries_in_shortcut:
-        if nr == 0:
-            output_file.write(pack(b'<I', 0))
-        else:
-            output_file.write(pack(b'<I', adr))
-            # each line_nr takes up 2 bytes of space
-            adr += 2 * nr
-    output_file.close()
-
-    # write Line_Nrs for every shortcut
-    path = 'shortcuts_data.bin'
-    print('writing file "', path, '"')
+    path = SHORTCUTS_ADR2DATA + BINARY_FILE_ENDING
+    print(f'writing {path}')
     with open(path, 'wb') as output_file:
-        for entries in shortcut_entries:
-            for entry in entries:
-                assert entry < nr_of_polygons
-                output_file.write(pack(b'<H', entry))
+        for nr in nr_of_entries_in_shortcut:
+            if nr == 0:
+                # ATTENTION: write 0 when there are no entries in this shortcut
+                output_file.write(pack(DTYPE_FORMAT_I, 0))
+            else:
+                output_file.write(pack(DTYPE_FORMAT_I, adr))
+                # each line_nr takes up x bytes of space
+                adr += NR_BYTES_H * nr
 
-    # TODO debug
-    def write_binary(bin_file_name, data, data_format=DTYPE_FORMAT_H, upper_value_limit=THRES_DTYPE_H):
-        path = bin_file_name + BINARY_FILE_ENDING
-        print(f'writing {path}')
-        with open(path, 'wb') as output_file:
-            for value in data:
-                assert value < upper_value_limit, \
-                    f'trying to write value {value} exceeding limit {upper_value_limit} of data type {data_format}.'
-                output_file.write(pack(data_format, value))
+    def flatten(l):  # only one level!
+        return [item for sublist in l for item in sublist]
 
-    # write corresponding zone id for every shortcut (iff unique)
+    shortcut_data = flatten(shortcut_entries)
+    write_binary(SHORTCUTS_DATA, shortcut_data, upper_value_limit=nr_of_polygons)
     write_binary(UNIQUE_SHORTCUT_NAME, unique_ids)
     write_binary(DIRECT_SHORTCUT_NAME, direct_ids)
-    raise ValueError
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
 
     # '<H' for every hole store the related line
-    path = 'hole_poly_ids.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    i = 0
-    for line in polynrs_of_holes:
-        if line > nr_of_polygons:
-            raise ValueError(line, nr_of_polygons)
-        output_file.write(pack(b'<H', line))
-        i += 1
-    hole_space += output_file.tell()
-    output_file.close()
-
-    if i > nr_of_holes:
-        raise ValueError('There are more related lines than holes.')
+    assert len(polynrs_of_holes) == nr_of_holes
+    used_space = write_binary(HOLE_POLY_IDS, polynrs_of_holes, upper_value_limit=nr_of_polygons)
+    hole_space += used_space
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
-    path = 'hole_coord_amount.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for length in all_hole_lengths:
-        output_file.write(pack(b'<H', length))
-    hole_space += output_file.tell()
-    output_file.close()
+    assert len(all_hole_lengths) == nr_of_holes
+    used_space = write_binary(HOLE_COORD_AMOUNT, all_hole_lengths)
+    hole_space += used_space
 
     # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
-    adr = 0
-    path = 'hole_adr2data.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for length in all_hole_lengths:
-        output_file.write(pack(b'<I', adr))
-        # each pair of points takes up 8 bytes of space
-        adr += 2 * NR_BYTES_I * length
-    hole_space += output_file.tell()
-    output_file.close()
+    write_binary(POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+
+    # 2 entries per coordinate
+    hole_adr2data = compile_addresses(all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    used_space = write_binary(HOLE_ADR2DATA, hole_adr2data, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+    hole_space += used_space
 
     # Y times [ 2x i signed ints for every hole: x coords, y coords ]
-    # write hole polygon_data
-    path = 'hole_data.bin'
-    print('writing file "', path, '"')
-    output_file = open(path, 'wb')
-    for x_coords, y_coords in all_holes:
-        for x in x_coords:
-            output_file.write(pack(b'<i', coord2int(x)))
-        for y in y_coords:
-            output_file.write(pack(b'<i', coord2int(y)))
-    hole_space += output_file.tell()
-    output_file.close()
+    used_space = write_coordinate_data(HOLE_DATA, holes)
+    hole_space += used_space
 
     polygon_space = nr_of_floats * NR_BYTES_I
     total_space = polygon_space + hole_space + shortcut_space
