@@ -8,9 +8,9 @@ from struct import pack
 
 import path_modification  # to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
-    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, INVALID_VALUE_DTYPE_H, NR_BYTES_H,
+    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, THRES_DTYPE_H, NR_BYTES_H,
     NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, DTYPE_FORMAT_H, DIRECT_SHORTCUT_NAME,
-    UNIQUE_SHORTCUT_NAME,
+    UNIQUE_SHORTCUT_NAME, BINARY_FILE_ENDING, THRES_DTYPE_I, DTYPE_FORMAT_I, INVALID_VALUE_DTYPE_H,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
@@ -149,13 +149,14 @@ holes make up 1.01 % of the data
 Success!
 """
 
-nr_of_lines = -1
+nr_of_polygons = -1
+nr_of_zones = -1
 all_tz_names = []
 poly_zone_ids = []
 all_boundaries = []
 all_coords = []
 all_lengths = []
-amount_of_holes = 0
+nr_of_holes = 0
 polynrs_of_holes = []
 all_holes = []
 all_hole_lengths = []
@@ -260,17 +261,31 @@ def _holes_in_poly(poly_nr):
         i += 1
 
 
-def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
-    global amount_of_holes
-    global nr_of_lines
-    global poly_zone_ids
+def extract_coords(polygon):
+    x_coords, y_coords = list(zip(*polygon))
+    x_coords = list(x_coords)
+    y_coords = list(y_coords)
+    # IMPORTANT: polygon are represented without point repetition at the end
+    # -> do not use the last coordinate (only if equal to the first)!
+    assert x_coords[0] == x_coords[-1]
+    assert y_coords[0] == y_coords[-1]
+    x_coords.pop(-1)
+    y_coords.pop(-1)
+    assert len(x_coords) == len(y_coords)
+    assert len(x_coords) > 0
+    return x_coords, y_coords
 
-    print('Parsing data from {}\nthis could take a while...\n'.format(path))
-    tz_list = json.loads(open(path).read()).get('features')
-    # this counter just counts polygons, not holes!
-    polygon_counter = 0
+
+def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
+    global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids
+
+    print(f'parsing {path}\n...\n')
+    with open(path) as json_file:
+        tz_list = json.loads(json_file.read()).get('features')
+
+    polygon_counter = 0  # this counter just counts polygons, not holes!
     current_zone_id = 0
-    print('holes found at: (poly_nr zone_name)')
+    print('extracting data.\nfound holes:')
     for tz_dict in tz_list:
         if DEBUG and polygon_counter > DEBUG_POLY_STOP:
             break
@@ -288,32 +303,19 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
         # multipolygon has depth 4
         # assert depth_of_array(multipolygon) == 4
         for poly_with_hole in multipolygon:
-            # assert len(poly_with_hole) > 0
             # the first entry is polygon
-            x_coords, y_coords = list(zip(*poly_with_hole.pop(0)))
-            # IMPORTANT: do not use the last value (is equal to the first)!
-            x_coords = list(x_coords)
-            y_coords = list(y_coords)
-            x_coords.pop(-1)
-            y_coords.pop(-1)
+            x_coords, y_coords = extract_coords(poly_with_hole.pop(0))
             all_coords.append((x_coords, y_coords))
-            # assert len(x_coords) > 0
             all_lengths.append(len(x_coords))
             all_boundaries.append((max(x_coords), min(x_coords), max(y_coords), min(y_coords)))
             poly_zone_ids.append(current_zone_id)
 
             # everything else is interpreted as a hole!
             for hole in poly_with_hole:
-                print(polygon_counter, tz_name)
-                # keep track of how many holes there are
-                amount_of_holes += 1
+                print(f'polygon #{polygon_counter} zone: {tz_name}')
+                nr_of_holes += 1  # keep track of how many holes there are
                 polynrs_of_holes.append(polygon_counter)
-                x_coords, y_coords = list(zip(*hole))
-                # IMPORTANT: do not use the last value (is equal to the first)!
-                x_coords = list(x_coords)
-                y_coords = list(y_coords)
-                x_coords.pop(-1)
-                y_coords.pop(-1)
+                x_coords, y_coords = extract_coords(hole)
                 all_holes.append((x_coords, y_coords))
                 all_hole_lengths.append(len(x_coords))
 
@@ -321,40 +323,38 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
 
         current_zone_id += 1
 
-    if max(all_lengths) >= 2 ** (8 * NR_BYTES_I):
-        # 34621 in tz_world 2016d (small enough for int16)
-        # 137592 in evansiroky/timezone-boundary-builder 2017a (now int32 is needed!)
-        raise ValueError('amount of coords cannot be represented by int32 in poly_coord_amount.bin:',
-                         max(all_lengths))
+    nr_of_polygons = len(all_lengths)
+    nr_of_zones = current_zone_id - 1
+    assert nr_of_polygons >= nr_of_zones
 
-    if max(all_hole_lengths) >= 2 ** (8 * NR_BYTES_H):
-        # 21071 in evansiroky/timezone-boundary-builder 2017a (int16 still enough)
-        raise ValueError('amount of coords cannot be represented by short (int16) in hole_coord_amount.bin:',
-                         max(all_hole_lengths))
+    assert polygon_counter == nr_of_polygons, \
+        f'polygon counter {polygon_counter} and entry amount in all_length {nr_of_polygons} are different.'
 
-    nr_of_lines = len(all_lengths)
-    if polygon_counter != nr_of_lines:
-        raise ValueError('polygon counter and entry number in all_length is different:', polygon_counter, nr_of_lines)
-
-    if nr_of_lines >= 2 ** (8 * NR_BYTES_H):
-        # 24k in tz_world 2016d
-        # 1022 in evansiroky/timezone-boundary-builder 2017a
-        raise ValueError('polygon id cannot be encoded as short (int16) in hole_coord_amount.bin! there are',
-                         nr_of_lines, 'polygons')
-
-    if poly_zone_ids[-1] > 2 ** (8 * NR_BYTES_H):
-        # 420 different zones in evansiroky/timezone-boundary-builder 2017a
-        # used in shortcuts_unique_id and poly_zone_ids
-        raise ValueError('zone id cannot be encoded as char (int8). the last id is',
-                         poly_zone_ids[-1])
-
+    max_poly_length = max(all_lengths)
     if 0 in all_lengths:
         raise ValueError()
 
+    # binary file value range tests:
+    assert max_poly_length < THRES_DTYPE_I, \
+        f'address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
+
+    max_hole_poly_length = max(all_hole_lengths)
+    assert max_hole_poly_length < THRES_DTYPE_H, \
+        f'address overflow: the maximal amount of coords in hole polygons ' \
+        f'{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
+
+    assert nr_of_polygons < THRES_DTYPE_H, \
+        f'address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!'
+
+    assert nr_of_zones < THRES_DTYPE_H, \
+        f'address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!'
+
     print('... parsing done.')
-    print('maximal amount of coordinates in one polygon:', max(all_lengths))
-    print('amount_of_holes:', amount_of_holes)
-    print('amount of polygons:', nr_of_lines)
+    print('amount of polygons:', nr_of_polygons)
+    print('maximal amount of coordinates in one polygon:', max_poly_length)
+    print('amount of holes:', nr_of_holes)
+    print('maximal amount of coordinates in a hole polygon:', max_hole_poly_length)
+    print('amount of time zones:', nr_of_zones)
     print('\n')
 
 
@@ -384,7 +384,7 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
 
 
 def compile_binaries():
-    global nr_of_lines
+    global nr_of_polygons
     global shortcuts
 
     def print_shortcut_statistics():
@@ -755,7 +755,7 @@ def compile_binaries():
         # [x[0] for x in zipped_sorted]  # take only the polygon nrs
         return zip(*zipped_sorted)  # TODO debug
 
-    if poly_zone_ids[-1] >= INVALID_VALUE_DTYPE_H:
+    if poly_zone_ids[-1] >= THRES_DTYPE_H:
         raise ValueError(
             'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
 
@@ -803,8 +803,8 @@ def compile_binaries():
         # every line in every shortcut takes up 2bytes
         shortcut_space += NR_BYTES_H * nr
 
-    print('The number of polygons is:', nr_of_lines)
-    print('The number of floats in all the polygons is (2 per point):', nr_of_floats)
+    print('number of polygons:', nr_of_polygons)
+    print(f'number of floats in all the polygons: {nr_of_floats:} (2 per point)')
 
     # # TODO
     # # store for which polygons (how many) holes exits and the id of the first of those holes
@@ -825,6 +825,7 @@ def compile_binaries():
 
     # TODO read binary names from config
     # TODO use with statement
+    # TODO automatically detect if the written value is too big (overflow), for each data type in use
     print('creating output files:')
     path = 'poly_nr2zone_id.bin'
     print('writing file', path)
@@ -880,14 +881,13 @@ def compile_binaries():
         output_file.write(pack(b'<I', length))
     output_file.close()
 
-    # TODO automatically detect if the written value is too big (overflow), for each data type in use
     # [SHORTCUT AREA]
     # write all nr of entries
     path = 'shortcuts_entry_amount.bin'
     print('writing file "', path, '"')
     output_file = open(path, 'wb')
     for nr in nr_of_entries_in_shortcut:
-        if nr >= INVALID_VALUE_DTYPE_H:
+        if nr >= THRES_DTYPE_H:
             raise ValueError("There are too many polygons in this shortcut:", nr)
         output_file.write(pack(DTYPE_FORMAT_H, nr))
     output_file.close()
@@ -913,23 +913,23 @@ def compile_binaries():
     with open(path, 'wb') as output_file:
         for entries in shortcut_entries:
             for entry in entries:
-                if entry > nr_of_lines:
-                    raise ValueError(entry)
+                assert entry < nr_of_polygons
                 output_file.write(pack(b'<H', entry))
 
     # TODO debug
-    def write_binary(path, data, data_format=DTYPE_FORMAT_H, upper_limit_value=INVALID_VALUE_DTYPE_H):
-        print(f'writing file "{path}"')
+    def write_binary(bin_file_name, data, data_format=DTYPE_FORMAT_H, upper_value_limit=THRES_DTYPE_H):
+        path = bin_file_name + BINARY_FILE_ENDING
+        print(f'writing {path}')
         with open(path, 'wb') as output_file:
             for value in data:
-                if value >= upper_limit_value:
-                    raise ValueError(f'trying to write value {value} exceeding limit {upper_limit_value}'
-                                     f' in data type {data_format}.')
+                assert value < upper_value_limit, \
+                    f'trying to write value {value} exceeding limit {upper_value_limit} of data type {data_format}.'
                 output_file.write(pack(data_format, value))
 
     # write corresponding zone id for every shortcut (iff unique)
     write_binary(UNIQUE_SHORTCUT_NAME, unique_ids)
     write_binary(DIRECT_SHORTCUT_NAME, direct_ids)
+    raise ValueError
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
@@ -940,14 +940,14 @@ def compile_binaries():
     output_file = open(path, 'wb')
     i = 0
     for line in polynrs_of_holes:
-        if line > nr_of_lines:
-            raise ValueError(line, nr_of_lines)
+        if line > nr_of_polygons:
+            raise ValueError(line, nr_of_polygons)
         output_file.write(pack(b'<H', line))
         i += 1
     hole_space += output_file.tell()
     output_file.close()
 
-    if i > amount_of_holes:
+    if i > nr_of_holes:
         raise ValueError('There are more related lines than holes.')
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]

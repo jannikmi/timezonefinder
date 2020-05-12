@@ -5,6 +5,7 @@ Changelog
 5.0.0 (TBA)
 -----------
 
+* TODO typing
 * TODO optimise imports
 * TODO some data files as JSON! instead of binary. small simple ones
 * TODO directly included the most common timezone of each shortcut
