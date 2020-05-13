@@ -42,7 +42,6 @@ setup(
     # TODO http://peak.telecommunity.com/DevCenter/setuptools#setting-the-zip-safe-flag
     #  if the project uses pkg_resources for all its data file access
     # http://peak.telecommunity.com/DevCenter/setuptools#accessing-data-files-at-runtime
-    zip_safe=False,
-    # TODO data extras, oceans, test
+    # zip_safe=False,
     extras_require={'numba': ["numba>=0.48"]},
 )

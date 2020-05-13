@@ -97,7 +97,7 @@ TEST_LOCATIONS_CERTAIN = TEST_LOCATIONS + [
     # add some test cases for testing if None is being returned outside of timezone polygons
     # the polygons in the new data do not follow the coastlines any more
     # these tests are not meaningful at the moment
-
+    #
     # (40.7271, -73.98, 'Shore Lake Michigan', None),
     # (51.032593, 1.4082031, 'English Channel1',  None),
     # (50.9623651, 1.5732592, 'English Channel2',  None),
@@ -109,18 +109,19 @@ TEST_LOCATIONS_PROXIMITY = [
     # the polygons in the new data do not follow the coastlines any more
     # proximity tests are not meaningful at the moment
 
-    # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
-    # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
-    # (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
-    # (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
+    (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
+    (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
+    (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
+    (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
+    (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
     # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
-    # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
+    (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
     # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
 ]
 
 
-class BaseTimezonefinderClassTest(unittest.TestCase):
+# tests for TimezonefinderL class
+class BaseTimezoneFinderClassTest(unittest.TestCase):
     in_memory_mode = False
     bin_file_dir = None
     class_under_test = TimezoneFinderL
@@ -145,7 +146,7 @@ class BaseTimezonefinderClassTest(unittest.TestCase):
         global in_memory_mode, class_under_test
         in_memory_mode = cls.in_memory_mode
         class_under_test = cls.class_under_test
-        t = timeit.timeit("class_under_test(in_memory=in_memory_mode)", globals=globals(), number=1)
+        t = timeit.timeit("class_under_test(in_memory=in_memory_mode)", globals=globals(), number=10)
         print('startup time:', time_preprocess(t), '\n')
 
         cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
@@ -235,27 +236,25 @@ class BaseTimezonefinderClassTest(unittest.TestCase):
         return no_mistakes_made, template
 
 
-class BaseClassTestMEM(BaseTimezonefinderClassTest):
+class BaseClassTestMEM(BaseTimezoneFinderClassTest):
     in_memory_mode = True
 
 
 abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
 
 
-class BaseClassTestDIR(BaseTimezonefinderClassTest):
+class BaseClassTestDIR(BaseTimezoneFinderClassTest):
     # point to a dir where all bin files are located:
     bin_file_dir = abs_default_path
 
 
-class BaseClassTestMEMDIR(BaseTimezonefinderClassTest):
+class BaseClassTestMEMDIR(BaseTimezoneFinderClassTest):
     in_memory_mode = True
     bin_file_dir = abs_default_path
 
 
 # tests for Timezonefinder class
-
-
-class TimezonefinderClassTest(BaseTimezonefinderClassTest):
+class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
     class_under_test = TimezoneFinder
     realistic_pt_fct_name = 'certain_timezone_at'
     test_locations = TEST_LOCATIONS
@@ -320,14 +319,11 @@ class TimezonefinderClassTestMEM(TimezonefinderClassTest):
     in_memory_mode = True
 
 
-abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
-
-
-class TimezonefinderClassTestDIR(BaseTimezonefinderClassTest):
+class TimezonefinderClassTestDIR(BaseTimezoneFinderClassTest):
     # point to a dir where all bin files are located:
     bin_file_dir = abs_default_path
 
 
-class TimezonefinderClassTestMEMDIR(BaseTimezonefinderClassTest):
+class TimezonefinderClassTestMEMDIR(BaseTimezoneFinderClassTest):
     in_memory_mode = True
     bin_file_dir = abs_default_path

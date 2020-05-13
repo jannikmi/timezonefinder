@@ -31,7 +31,6 @@ POLY_MAX_VALUES = 'poly_max_values'
 POLY_DATA = 'poly_data'
 POLY_NR2ZONE_ID = 'poly_nr2zone_id'
 
-HOLE_POLY_IDS = 'hole_poly_ids'
 HOLE_COORD_AMOUNT = 'hole_coord_amount'
 HOLE_ADR2DATA = 'hole_adr2data'
 HOLE_DATA = 'hole_data'
@@ -48,7 +47,6 @@ BINARY_DATA_ATTRIBUTES = [
     POLY_MAX_VALUES,
     POLY_DATA,
     POLY_NR2ZONE_ID,
-    HOLE_POLY_IDS,
     HOLE_COORD_AMOUNT,
     HOLE_ADR2DATA,
     HOLE_DATA,

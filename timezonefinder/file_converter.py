@@ -335,7 +335,6 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
     if 0 in polygon_lengths:
         raise ValueError()
 
-    # TODO
     # binary file value range tests:
     assert nr_of_polygons < THRES_DTYPE_H, \
         f'address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!'
@@ -380,7 +379,6 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
             last_id = zone_id
         i += 1
     assert zone_id == nr_of_zones - 1
-    # poly_nr2zone_id.append(i) # TODO
     print('...Done.\n')
 
 
@@ -807,12 +805,7 @@ def compile_binaries():
         # (polygons from different zones should not get mixed up)
         zipped_sorted = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])
         # [x[0] for x in zipped_sorted]  # take only the polygon nrs
-        return zip(*zipped_sorted)  # TODO debug
-
-    # TODO
-    if poly_zone_ids[-1] >= THRES_DTYPE_H:
-        raise ValueError(
-            'There are too many zones for this data type (H). The shortcuts_unique_id file need a Invalid Id!')
+        return zip(*zipped_sorted)
 
     direct_ids = []
     unique_ids = []
@@ -909,7 +902,6 @@ def compile_binaries():
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
 
-    # TODO
     # store for which polygons (how many) holes exits and the id of the first of those holes
     # since there are very few it is feasible to keep them in memory
     # -> export and import as json
@@ -926,17 +918,8 @@ def compile_binaries():
                 poly_id: (1, i),
             })
 
-    # print(hole_registry)
-    # raise ValueError
-
     with open(HOLE_REGISTRY_FILE, 'w') as json_file:
         json.dump(hole_registry, json_file, indent=4)
-
-    # TODO required?!
-    # '<H' for every hole store the related line
-    assert len(polynrs_of_holes) == nr_of_holes
-    used_space = write_binary(HOLE_POLY_IDS, polynrs_of_holes, upper_value_limit=nr_of_polygons)
-    hole_space += used_space
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
     assert len(all_hole_lengths) == nr_of_holes

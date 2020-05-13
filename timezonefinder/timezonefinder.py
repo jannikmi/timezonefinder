@@ -94,7 +94,6 @@ class AbstractTimezoneFinder(ABC):
         pass
 
 
-# TODO document usage!
 class TimezoneFinderL(AbstractTimezoneFinder):
     """ a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
 

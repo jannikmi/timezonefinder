@@ -15,7 +15,7 @@ Initialisation
 --------------
 
 
-Create a new instance of the TimezoneFinder class to allow fast consequent timezone queries:
+Create a new instance of the TimezoneFinder :ref:`TimezoneFinder class <api_finder>` to allow fast consequent timezone queries:
 
 .. code-block:: python
 
@@ -61,14 +61,15 @@ If no timezone has been matched, ``None`` is being returned.
 
 .. code-block:: python
 
-    longitude = 13.358
-    latitude = 52.5061
+    latitude, longitude = 52.5061, 13.358
     tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
 
 .. note::
     * to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
     * this function is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
 
+
+For even faster results use :ref:`TimezoneFinderL <usage_finderL>`.
 
 
 certain_timezone_at()
@@ -212,4 +213,29 @@ Calling timezonefinder from the command line
 
 With ``-v`` you get verbose output, without it only the timezone name is being printed.
 Choose between functions ``0: timezone_at()`` and ``1: certain_timezone_at()`` with flag ``-f`` (default: timezone_at()).
-Please note that this is much slower than keeping a Timezonefinder class directly in Python, because here all binary files are being opened again for each query.
+Please note that this is much slower than keeping a ``TimezoneFinder`` class directly in Python, because here all binary files are being opened again for each query.
+
+
+.. _usage_finderL:
+
+TimezoneFinderL
+---------------
+
+:ref:`TimezoneFinderL <api_finderL>` is a light version of the :ref:`TimezoneFinder class <api_finder>`.
+It is useful for quickly suggesting probable timezones without using as many computational resources (cf. :ref:`speed tests <speed-tests>`).
+Instead of using timezone polygon data this class instantly returns the most common timezone in that area.
+
+TimezoneFinderL only offers the function ``timezone_at()`` (:ref:`API documentation <api_finderL>`).
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinderL
+
+    tf = TimezoneFinderL(in_memory=True)
+    latitude, longitude = 52.5061, 13.358
+    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+
+
+.. note::
+
+    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json`` and ``shortcuts_direct_id.bin`` to obtain a truly lightweight installation.

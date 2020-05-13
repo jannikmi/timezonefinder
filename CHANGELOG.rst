@@ -5,24 +5,32 @@ Changelog
 5.0.0 (TBA)
 -----------
 
-* TODO typing
-* TODO optimise imports
-* read hole registry directly from a json file
-* directly included the most common timezone of each shortcut ("shortcuts_direct_id.bin")
-* TODO option to only use shortcut, function?
-* TODO private repo, without the actual data. for data files! but regular upload to pypI,
-* TODO describe loading priority
-* TODO added bash script for download latest data in, document usage, keep it in this repo, not data repo! to keep documentation etc. in one place
+
 * TODO removed data files
-
-https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones.geojson.zip
-https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones-with-oceans.geojson.zip
-
 * TODO added "extra" simplifying the installation of TODO external data
     TODO document! also in minimal example in readme!
 * TODO specify minimal version of data extra! ('pin')
+* TODO describe loading priority
+* TODO private repo, without the actual data. for data files! but regular upload to pypI,
 * TODO importlib_resources dependency
 
+* TODO added bash script for downloading the latest data
+TODO document, option w. oceans?!
+https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones.geojson.zip
+https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones-with-oceans.geojson.zip
+
+TODO document class attributes
+TODO create variables for used dtype for each type of data (polygon address, coordinate...)
+
+
+4.3.1 (2020-05-13)
+------------------
+
+* added new class TimezonefinderL for using JUST shortcuts (no timezone polygon data)
+* therefore included the most common timezone of each shortcut stored in the binary file
+* introduced typing
+* included API documentation
+* read hole registry directly from json, "hole_poly_ids.bin" not required any more
 
 
 improvements of file_converter.py:
@@ -32,9 +40,6 @@ improvements of file_converter.py:
 * use with statement for writing binaries
 * automatically detect overflow for each data type in use
 
-TODO use direct shortcut id
-TODO document attributes
-# TODO create variables for used dtype for each type of data (polygon address, coordinate...)
 
 
 4.3.1 (2020-04-29)
