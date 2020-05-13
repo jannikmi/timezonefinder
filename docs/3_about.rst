@@ -48,6 +48,8 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
     -------------
     "realistic points": points included in a timezone
 
+    testing class <class 'timezonefinder.timezonefinder.TimezoneFinder'>
+
     in memory mode: True
     Numba: OFF (JIT compiled functions NOT in use)
 
@@ -87,6 +89,32 @@ obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7
     testing 100000 random points
     total time: 1.1928s
     avg. points per second: 8.4 * 10^4
+
+
+    testing class <class 'timezonefinder.timezonefinder.TimezoneFinderL'>
+
+    startup time: 0.0005124s
+
+    using_numba()==True (JIT compiled functions in use)
+    in_memory=True
+
+    testing 100000 realistic points
+    total time: 0.1855s
+    avg. points per second: 5.4 * 10^5
+
+    testing 100000 random points
+    total time: 0.1722s
+    avg. points per second: 5.8 * 10^5
+
+    in_memory=False
+
+    testing 100000 realistic points
+    total time: 0.502s
+    avg. points per second: 2.0 * 10^5
+
+    testing 100000 random points
+    total time: 0.5323s
+    avg. points per second: 1.9 * 10^5
 
 
 

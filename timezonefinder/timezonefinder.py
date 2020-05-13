@@ -1,19 +1,22 @@
 # -*- coding:utf-8 -*-
 import json
+from abc import ABC, abstractmethod
 from io import SEEK_CUR, BytesIO
 from math import radians
 from os.path import abspath, join, pardir
 from struct import unpack
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from numpy import array, dtype, empty, fromfile
 
 from timezonefinder.global_settings import (
-    BINARY_DATA_ATTRIBUTES, BINARY_FILE_ENDING, DATA_ATTRIBUTE_NAMES, DTYPE_FORMAT_B_NUMPY,
-    DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
-    DTYPE_FORMAT_SIGNED_I_NUMPY, HOLE_REGISTRY_FILE, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
-    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+    BINARY_DATA_ATTRIBUTES, BINARY_FILE_ENDING, DATA_ATTRIBUTE_NAMES, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY,
+    DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, HOLE_ADR2DATA,
+    HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_REGISTRY, HOLE_REGISTRY_FILE, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
+    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, POLY_ADR2DATA, POLY_COORD_AMOUNT,
+    POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA, SHORTCUTS_DATA,
+    SHORTCUTS_DIRECT_ID, SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_UNIQUE_ID, TIMEZONE_NAMES, TIMEZONE_NAMES_FILE,
 )
 
 try:
@@ -34,37 +37,30 @@ def fromfile_memory(file, **kwargs):
     return res
 
 
-class TimezoneFinder:
-    """ Class for quickly finding the timezone of a point on earth offline.
+class AbstractTimezoneFinder(ABC):
+    # TODO document attributes in all classes
+    # prevent dynamic attribute assignment (-> safe memory)
+    __slots__ = ['bin_file_location', 'in_memory', '_fromfile', TIMEZONE_NAMES]
 
-    Opens the required data in binary files to enable fast access.
-    Currently per half degree of latitude and per degree of longitude the set of all candidate polygons are stored.
-    Because of these so called 'shortcuts' not all timezone polygons have to be tested during a query.
-    For a detailed documentation of data management please refer to the code documentation of
-    `file_converter.py <https://github.com/MrMinimal64/timezonefinder/blob/master/timezonefinder/file_converter.py>`__
-
-    :param bin_file_location: path to the binary data files to use
-    :param in_memory: whether to completely read and keep the binary files in memory
-    """
-
-    # TODO document attributes
-    __slots__ = DATA_ATTRIBUTE_NAMES + ['in_memory', 'fromfile']
+    binary_data_attributes: List[str] = []
 
     def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
         self.in_memory = in_memory
 
         if self.in_memory:
-            self.fromfile = fromfile_memory
+            self._fromfile = fromfile_memory
         else:
-            self.fromfile = fromfile
+            self._fromfile = fromfile
 
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
         if bin_file_location is None:
-            bin_file_location = abspath(join(__file__, pardir))
+            self.bin_file_location = abspath(join(__file__, pardir))
+        else:
+            self.bin_file_location = bin_file_location
 
-        for attribute_name in BINARY_DATA_ATTRIBUTES:
-            bin_file = open(join(bin_file_location, attribute_name + BINARY_FILE_ENDING), mode='rb')
+        for attribute_name in self.binary_data_attributes:
+            bin_file = open(join(self.bin_file_location, attribute_name + BINARY_FILE_ENDING), mode='rb')
             if self.in_memory:
                 bf_in_mem = BytesIO(bin_file.read())
                 bf_in_mem.seek(0)
@@ -72,17 +68,11 @@ class TimezoneFinder:
                 bin_file = bf_in_mem
             setattr(self, attribute_name, bin_file)
 
-        with open(join(bin_file_location, TIMEZONE_NAMES_FILE), 'r') as json_file:
-            self.timezone_names = json.loads(json_file.read())
-
-        # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few (~22) it is feasible to keep them in the memory
-        with open(join(bin_file_location, HOLE_REGISTRY_FILE), 'r') as json_file:
-            hole_registry_tmp = json.loads(json_file.read())
-            self.hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
+        with open(join(self.bin_file_location, TIMEZONE_NAMES_FILE), 'r') as json_file:
+            setattr(self, TIMEZONE_NAMES, json.loads(json_file.read()))
 
     def __del__(self):
-        for attribute_name in BINARY_DATA_ATTRIBUTES:
+        for attribute_name in self.binary_data_attributes:
             getattr(self, attribute_name).close()
 
     @staticmethod
@@ -93,16 +83,93 @@ class TimezoneFinder:
         """
         return numba is not None
 
+    @abstractmethod
+    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+        """ looks up in which timezone the given coordinate is included in
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the timezone name of a matching polygon or None
+        """
+        pass
+
+
+# TODO document usage!
+class TimezoneFinderL(AbstractTimezoneFinder):
+    """ a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
+
+    Instead of using timezone polygon data like TimezoneFinder,
+    this class only uses a precomputed 'shortcut' to suggest a probable result:
+    the most common zone in a rectangle of a half degree of latitude and one degree of longitude
+    """
+
+    # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__
+    # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
+    __slots__ = [SHORTCUTS_DIRECT_ID]
+    binary_data_attributes = [SHORTCUTS_DIRECT_ID]
+
+    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+        """ instantly returns the name of the most common zone within a shortcut
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
+        """
+        lng, lat = rectify_coordinates(lng, lat)
+        shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
+        shortcut_direct_id = getattr(self, SHORTCUTS_DIRECT_ID)
+        shortcut_direct_id.seek(
+            (NR_LAT_SHORTCUTS * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
+        try:
+            return getattr(self, TIMEZONE_NAMES)[
+                unpack(DTYPE_FORMAT_H, shortcut_direct_id.read(NR_BYTES_H))[0]]
+        except IndexError:
+            return None
+
+
+class TimezoneFinder(AbstractTimezoneFinder):
+    """ Class for quickly finding the timezone of a point on earth offline.
+
+    Opens the required timezone polygon data in binary files to enable fast access.
+    Currently per half degree of latitude and per degree of longitude the set of all candidate polygons are stored.
+    Because of these so called 'shortcuts' not all timezone polygons have to be tested during a query.
+    For a detailed documentation of data management please refer to the code documentation of
+    `file_converter.py <https://github.com/MrMinimal64/timezonefinder/blob/master/timezonefinder/file_converter.py>`__
+
+    :ivar binary_data_attributes: the names of all attributes which store the opened binary data files
+
+    :param bin_file_location: path to the binary data files to use, None if native package data should be used
+    :param in_memory: whether to completely read and keep the binary files in memory
+    """
+
+    # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__
+    # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
+    __slots__ = DATA_ATTRIBUTE_NAMES
+
+    binary_data_attributes = BINARY_DATA_ATTRIBUTES
+
+    def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
+        super(TimezoneFinder, self).__init__(bin_file_location, in_memory)
+
+        # stores for which polygons (how many) holes exits and the id of the first of those holes
+        # since there are very few (~22) it is feasible to keep them in the memory
+        with open(join(self.bin_file_location, HOLE_REGISTRY_FILE), 'r') as json_file:
+            hole_registry_tmp = json.loads(json_file.read())
+            # convert the json string keys to int
+            setattr(self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()})
+
     def id_of(self, polygon_nr: int = 0):
-        self.poly_zone_ids.seek(NR_BYTES_H * polygon_nr)
-        return unpack(DTYPE_FORMAT_H, self.poly_zone_ids.read(NR_BYTES_H))[0]
+        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
+        poly_zone_ids.seek(NR_BYTES_H * polygon_nr)
+        return unpack(DTYPE_FORMAT_H, poly_zone_ids.read(NR_BYTES_H))[0]
 
     def ids_of(self, iterable):
+        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
         id_array = empty(shape=len(iterable), dtype=DTYPE_FORMAT_B_NUMPY)
 
         for i, line_nr in enumerate(iterable):
-            self.poly_zone_ids.seek((NR_BYTES_H * line_nr))
-            id_array[i] = unpack(DTYPE_FORMAT_H, self.poly_zone_ids.read(NR_BYTES_H))[0]
+            poly_zone_ids.seek((NR_BYTES_H * line_nr))
+            id_array[i] = unpack(DTYPE_FORMAT_H, poly_zone_ids.read(NR_BYTES_H))[0]
 
         return id_array
 
@@ -110,39 +177,47 @@ class TimezoneFinder:
         # get the address of the first entry in this shortcut
         # offset: 180 * number of shortcuts per lat degree * 2bytes = entries per column of x shortcuts
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
-        self.shortcuts_entry_amount.seek(NR_LAT_SHORTCUTS * NR_BYTES_H * x + NR_BYTES_H * y)
-        nr_of_entries = unpack(DTYPE_FORMAT_H, self.shortcuts_entry_amount.read(NR_BYTES_H))[0]
+        shortcuts_entry_amount = getattr(self, SHORTCUTS_ENTRY_AMOUNT)
+        shortcuts_adr2data = getattr(self, SHORTCUTS_ADR2DATA)
+        shortcuts_data = getattr(self, SHORTCUTS_DATA)
 
-        self.shortcuts_adr2data.seek(NR_LAT_SHORTCUTS * NR_BYTES_I * x + NR_BYTES_I * y)
-        self.shortcuts_data.seek(unpack(DTYPE_FORMAT_I, self.shortcuts_adr2data.read(NR_BYTES_I))[0])
-        return self.fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
+        shortcuts_entry_amount.seek(NR_LAT_SHORTCUTS * NR_BYTES_H * x + NR_BYTES_H * y)
+        nr_of_entries = unpack(DTYPE_FORMAT_H, shortcuts_entry_amount.read(NR_BYTES_H))[0]
+
+        shortcuts_adr2data.seek(NR_LAT_SHORTCUTS * NR_BYTES_I * x + NR_BYTES_I * y)
+        shortcuts_data.seek(unpack(DTYPE_FORMAT_I, shortcuts_adr2data.read(NR_BYTES_I))[0])
+        return self._fromfile(shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
 
     def coords_of(self, polygon_nr: int = 0):
+        poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
+        poly_adr2data = getattr(self, POLY_ADR2DATA)
+        poly_data = getattr(self, POLY_DATA)
+
         # how many coordinates are stored in this polygon
-        self.poly_coord_amount.seek(NR_BYTES_I * polygon_nr)
-        nr_of_values = unpack(DTYPE_FORMAT_I, self.poly_coord_amount.read(NR_BYTES_I))[0]
-        if nr_of_values == 0:
-            raise ValueError
+        poly_coord_amount.seek(NR_BYTES_I * polygon_nr)
+        nr_of_values = unpack(DTYPE_FORMAT_I, poly_coord_amount.read(NR_BYTES_I))[0]
 
-        self.poly_adr2data.seek(NR_BYTES_I * polygon_nr)
-        self.poly_data.seek(unpack(DTYPE_FORMAT_I, self.poly_adr2data.read(NR_BYTES_I))[0])
-
-        return array([self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-                      self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
+        poly_adr2data.seek(NR_BYTES_I * polygon_nr)
+        poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
+        return array([self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                      self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
 
     def _holes_of_poly(self, polygon_nr: int = 0):
+        hole_coord_amount = getattr(self, HOLE_COORD_AMOUNT)
+        hole_adr2data = getattr(self, HOLE_ADR2DATA)
+        hole_data = getattr(self, HOLE_DATA)
+
         try:
-            amount_of_holes, hole_id = self.hole_registry[polygon_nr]  # json keys are strings
-
+            amount_of_holes, hole_id = getattr(self, HOLE_REGISTRY)[polygon_nr]  # json keys are strings
             for i in range(amount_of_holes):
-                self.hole_coord_amount.seek(NR_BYTES_H * hole_id)
-                nr_of_values = unpack(DTYPE_FORMAT_H, self.hole_coord_amount.read(NR_BYTES_H))[0]
+                hole_coord_amount.seek(NR_BYTES_H * hole_id)
+                nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
 
-                self.hole_adr2data.seek(NR_BYTES_I * hole_id)
-                self.hole_data.seek(unpack(DTYPE_FORMAT_I, self.hole_adr2data.read(NR_BYTES_I))[0])
+                hole_adr2data.seek(NR_BYTES_I * hole_id)
+                hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
 
-                yield array([self.fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-                             self.fromfile(self.hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
+                yield array([self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                             self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
                 hole_id += 1
 
         except KeyError:
@@ -164,8 +239,8 @@ class TimezoneFinder:
     def get_geometry(self, tz_name='', tz_id=0, use_id=False, coords_as_pairs=False):
         """ retrieves the geometry of a timezone polygon
 
-        :param tz_name: one of the names in ``self.timezone_names``
-        :param tz_id: the id of the timezone (=index in ``self.timezone_names``)
+        :param tz_name: one of the names in ``getattr(self, TIMEZONE_NAMES)``
+        :param tz_id: the id of the timezone (=index in ``getattr(self, TIMEZONE_NAMES)``)
         :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
@@ -178,15 +253,16 @@ class TimezoneFinder:
             zone_id = tz_id
         else:
             try:
-                zone_id = self.timezone_names.index(tz_name)
+                zone_id = getattr(self, TIMEZONE_NAMES).index(tz_name)
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
 
-        self.poly_nr2zone_id.seek(NR_BYTES_H * zone_id)
+        poly_nr2zone_id = getattr(self, POLY_NR2ZONE_ID)
+        poly_nr2zone_id.seek(NR_BYTES_H * zone_id)
         # read poly_nr of the first polygon of that zone
-        first_polygon_nr = unpack(DTYPE_FORMAT_H, self.poly_nr2zone_id.read(NR_BYTES_H))[0]
+        first_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
         # read poly_nr of the first polygon of the next zone
-        last_polygon_nr = unpack(DTYPE_FORMAT_H, self.poly_nr2zone_id.read(NR_BYTES_H))[0]
+        last_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
         poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
@@ -203,7 +279,7 @@ class TimezoneFinder:
 
         return zone_id_list
 
-    def compile_id_list(self, polygon_id_list, nr_of_polygons) -> Tuple[List[int], List[int], bool]:
+    def compile_id_list(self, polygon_id_list, nr_of_polygons):
         """ sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
 
         only 4.8% of all shortcuts include polygons from more than one zone
@@ -219,7 +295,6 @@ class TimezoneFinder:
         :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
         """
 
-        # TODO functional
         def all_equal(iterable):
             x = None
             for x in iterable:
@@ -347,9 +422,10 @@ class TimezoneFinder:
         possible_polygons, ids, zones_are_equal = self.compile_id_list(possible_polygons, polygons_in_list)
 
         # if all the polygons in this shortcut belong to the same zone return it
+        timezone_names = getattr(self, TIMEZONE_NAMES)
         if zones_are_equal:
             if not (return_distances or force_evaluation):
-                return self.timezone_names[ids[0]]
+                return timezone_names[ids[0]]
 
         if exact_computation:
             routine = exact_routine
@@ -392,11 +468,12 @@ class TimezoneFinder:
                         pointer = 1
 
         if return_distances:
-            return self.timezone_names[current_closest_id], distances, [self.timezone_names[x] for x in ids]
-        return self.timezone_names[current_closest_id]
+            return timezone_names[current_closest_id], distances, [timezone_names[x] for x
+                                                                   in ids]
+        return timezone_names[current_closest_id]
 
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
-        """ looks up in which polygons the point could be included in
+        """ looks up in which timezone the given coordinate is possibly included in
 
         to speed things up there are shortcuts being used (stored in a binary file)
         especially for large polygons it is expensive to check if a point is really included,
@@ -411,11 +488,12 @@ class TimezoneFinder:
         lng, lat = rectify_coordinates(lng, lat)
 
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
-        self.shortcuts_unique_id.seek(
+        getattr(self, SHORTCUTS_UNIQUE_ID).seek(
             (NR_LAT_SHORTCUTS * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
         try:
             # if there is just one possible zone in this shortcut instantly return its name
-            return self.timezone_names[unpack(DTYPE_FORMAT_H, self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
+            return getattr(self, TIMEZONE_NAMES)[
+                unpack(DTYPE_FORMAT_H, getattr(self, SHORTCUTS_UNIQUE_ID).read(NR_BYTES_H))[0]]
         except IndexError:
             possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
             nr_possible_polygons = len(possible_polygons)
@@ -423,7 +501,7 @@ class TimezoneFinder:
                 return None
             if nr_possible_polygons == 1:
                 # there is only one polygon in that area. return its timezone name without further checks
-                return self.timezone_names[self.id_of(possible_polygons[0])]
+                return getattr(self, TIMEZONE_NAMES)[self.id_of(possible_polygons[0])]
 
             # create a list of all the timezone ids of all possible polygons
             ids = self.id_list(possible_polygons, nr_possible_polygons)
@@ -438,13 +516,13 @@ class TimezoneFinder:
                 same_element = all_the_same(pointer=i, length=nr_possible_polygons, id_list=ids)
                 if same_element != -1:
                     # return the name of that zone
-                    return self.timezone_names[same_element]
+                    return getattr(self, TIMEZONE_NAMES)[same_element]
 
                 polygon_nr = possible_polygons[i]
 
                 # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-                self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-                boundaries = self.fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
+                getattr(self, POLY_MAX_VALUES).seek(4 * NR_BYTES_I * polygon_nr)
+                boundaries = self._fromfile(getattr(self, POLY_MAX_VALUES), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
                 # only run the expensive algorithm if the point is withing the boundaries
                 if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
@@ -458,7 +536,7 @@ class TimezoneFinder:
                     if outside_all_holes:
                         if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
                             # the point is included in this polygon. return its timezone name without further checks
-                            return self.timezone_names[ids[i]]
+                            return getattr(self, TIMEZONE_NAMES)[ids[i]]
 
             # the timezone name of the last polygon should always be returned
             # if no other polygon has been matched beforehand.
@@ -486,8 +564,8 @@ class TimezoneFinder:
         for polygon_nr in possible_polygons:
 
             # get boundaries
-            self.poly_max_values.seek(4 * NR_BYTES_I * polygon_nr)
-            boundaries = self.fromfile(self.poly_max_values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
+            getattr(self, POLY_MAX_VALUES).seek(4 * NR_BYTES_I * polygon_nr)
+            boundaries = self._fromfile(getattr(self, POLY_MAX_VALUES), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=4)
             if not (x > boundaries[0] or x < boundaries[1] or y > boundaries[2] or y < boundaries[3]):
 
                 outside_all_holes = True
@@ -499,10 +577,9 @@ class TimezoneFinder:
 
                 if outside_all_holes:
                     if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
-                        return self.timezone_names[self.id_of(polygon_nr)]
+                        return getattr(self, TIMEZONE_NAMES)[self.id_of(polygon_nr)]
 
-        # no polygon has been matched
-        return None
+        return None  # no polygon has been matched
 
 
 if __name__ == '__main__':

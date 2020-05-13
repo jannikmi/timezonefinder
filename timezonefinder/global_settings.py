@@ -3,13 +3,12 @@
 # the precompiled (and cached) functions in helpers_numba.py!
 
 PACKAGE_NAME = 'timezonefinder'
-# TODO
-DEBUG = False
-# DEBUG = True
+
 INPUT_JSON_FILE_NAME = 'combined.json'
 
-# in debugging mode parse only some polygons
-DEBUG_POLY_STOP = 20
+DEBUG = False
+# DEBUG = True
+DEBUG_POLY_STOP = 20  # parse only some polygons in debugging mode
 
 # no "magic numbers" import all as "constants" from this global settings file
 # ATTENTION: Don't change these settings or timezonefinder wont work!
@@ -22,7 +21,6 @@ NR_SHORTCUTS_PER_LAT = 2
 NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 
 # DATA FILES
-
 # BINARY
 BINARY_FILE_ENDING = '.bin'
 
@@ -41,7 +39,6 @@ HOLE_DATA = 'hole_data'
 SHORTCUTS_ENTRY_AMOUNT = 'shortcuts_entry_amount'
 SHORTCUTS_ADR2DATA = 'shortcuts_adr2data'
 SHORTCUTS_DATA = 'shortcuts_data'
-SHORTCUTS_DIRECT_ID = 'shortcuts_direct_id'
 SHORTCUTS_UNIQUE_ID = 'shortcuts_unique_id'
 
 BINARY_DATA_ATTRIBUTES = [
@@ -59,21 +56,25 @@ BINARY_DATA_ATTRIBUTES = [
     SHORTCUTS_ADR2DATA,
     SHORTCUTS_DATA,
     SHORTCUTS_UNIQUE_ID,
-    SHORTCUTS_DIRECT_ID,
 ]
-BINARY_FILES = [specifier + BINARY_FILE_ENDING for specifier in BINARY_DATA_ATTRIBUTES]
+
+SHORTCUTS_DIRECT_ID = 'shortcuts_direct_id'  # for TimezoneFinderL only
 
 # JSON
 JSON_FILE_ENDING = '.json'
 TIMEZONE_NAMES = 'timezone_names'
 HOLE_REGISTRY = 'hole_registry'
-JSON_DATA_ATTRIBUTES = [TIMEZONE_NAMES, HOLE_REGISTRY]
+JSON_DATA_ATTRIBUTES = [TIMEZONE_NAMES]
 TIMEZONE_NAMES_FILE = TIMEZONE_NAMES + JSON_FILE_ENDING
 HOLE_REGISTRY_FILE = HOLE_REGISTRY + JSON_FILE_ENDING
-JSON_FILES = [TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE]
 
-DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + JSON_DATA_ATTRIBUTES
-DATA_FILES = BINARY_FILES + JSON_FILES
+DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [HOLE_REGISTRY]
+
+# all data files that should be included in the build:
+ALL_BINARY_FILES = [specifier + BINARY_FILE_ENDING for specifier in BINARY_DATA_ATTRIBUTES] + [
+    SHORTCUTS_DIRECT_ID + BINARY_FILE_ENDING]
+ALL_JSON_FILES = [TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE]
+PACKAGE_DATA_FILES = ALL_BINARY_FILES + ALL_JSON_FILES
 
 # TODO create variables for used dtype for each type of data (polygon address, coordinate...)
 # B = unsigned char (1byte = 8bit Integer)
@@ -104,10 +105,6 @@ THRES_DTYPE_I = 2 ** (NR_BYTES_I * 8)
 # f = 8byte signed float
 DTYPE_FORMAT_F_NUMPY = '<f8'
 
-COORDINATE_DTYPE = DTYPE_FORMAT_SIGNED_I
-POLY_ADR_DTYPE = DTYPE_FORMAT_H
-HOLE_ADR_DTYPE = DTYPE_FORMAT_H
-
 # IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
 # is the same as testing if 360 fits into the domain of I4 (unsigned!)
 MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I - 1)
@@ -124,5 +121,4 @@ assert (max_int_val < MAX_ALLOWED_COORD_VAL)
 MAX_HAVERSINE_DISTANCE = 40100
 
 # TESTS
-
 DECIMAL_PLACES_ACCURACY = 7

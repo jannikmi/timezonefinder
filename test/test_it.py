@@ -8,7 +8,7 @@ import pytest
 
 from auxiliaries import list_of_random_points, random_point
 from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME
-from timezonefinder.timezonefinder import TimezoneFinder
+from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL
 
 # number of points to test (in each test, realistic and random ones)
 N = int(1e2)
@@ -19,6 +19,7 @@ excluded_zones_timezonefinder = []
 tf = None
 point_list = []
 in_memory_mode = False
+class_under_test = TimezoneFinder
 
 
 def eval_time_fct():
@@ -34,7 +35,7 @@ def time_preprocess(time):
     return str(round(time, digits_to_print)) + 's'
 
 
-TEST_LOCATIONS = [
+EASY_TEST_LOCATIONS = [
     # lat, lng, description, correct output
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
     (35.1322601, -90.0902499, 'Memphis, TN', 'America/Chicago'),
@@ -51,6 +52,9 @@ TEST_LOCATIONS = [
     (59.932490, 30.3164291, 'St Petersburg', 'Europe/Moscow'),
     (50.300624, 127.559166, 'Blagoveshchensk', 'Asia/Yakutsk'),
     (42.439370, -71.0700416, 'Boston', 'America/New_York'),
+]
+
+TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (41.84937, -87.6611995, 'Chicago', 'America/Chicago'),
     (28.626873, -81.7584514, 'Orlando', 'America/New_York'),
     (47.610615, -122.3324847, 'Seattle', 'America/Los_Angeles'),
@@ -116,29 +120,35 @@ TEST_LOCATIONS_PROXIMITY = [
 ]
 
 
-class MainPackageTest(unittest.TestCase):
+class BaseTimezonefinderClassTest(unittest.TestCase):
     in_memory_mode = False
     bin_file_dir = None
+    class_under_test = TimezoneFinderL
+    realistic_pt_fct_name = 'timezone_at'
+    test_locations = EASY_TEST_LOCATIONS
 
     def print_tf_class_props(self):
-        if TimezoneFinder.using_numba():
-            print('TimezoneFinder.using_numba()==True (JIT compiled functions in use)')
+        print('\n\ntest properties:')
+        print(f'testing class {self.class_under_test}')
+        if self.class_under_test.using_numba():
+            print('using_numba()==True (JIT compiled functions in use)')
         else:
-            print('TimezoneFinder.using_numba()==False (JIT compiled functions NOT in use)')
-        print("in_memory={}".format(self.in_memory_mode))
+            print('using_numba()==False (JIT compiled functions NOT in use)')
+        print(f"in_memory={self.in_memory_mode}")
+        print(f"file location={self.bin_file_dir}\n")
 
     @classmethod
     def setUpClass(cls):
         # preparations which have to be made only once
-        print("\nSTARTING PACKAGE TESTS\n\n")
         cls.print_tf_class_props(cls)
 
-        global in_memory_mode
+        global in_memory_mode, class_under_test
         in_memory_mode = cls.in_memory_mode
-        t = timeit.timeit("TimezoneFinder(in_memory=in_memory_mode)", globals=globals(), number=1)
+        class_under_test = cls.class_under_test
+        t = timeit.timeit("class_under_test(in_memory=in_memory_mode)", globals=globals(), number=1)
         print('startup time:', time_preprocess(t), '\n')
 
-        cls.timezone_finder = TimezoneFinder(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
+        cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
 
         # create an array of points where timezone_finder finds something (realistic queries)
         print('collecting and storing', N, 'realistic points for the tests...')
@@ -147,10 +157,11 @@ class MainPackageTest(unittest.TestCase):
         percent_done = 0
 
         i = 0
+        realistic_pt_fct = getattr(cls.test_instance, cls.realistic_pt_fct_name)
         while i < N:
             lng, lat = random_point()
             # a realistic point is a point where certain_timezone_at() finds something
-            if cls.timezone_finder.certain_timezone_at(lng=lng, lat=lat):
+            if realistic_pt_fct(lng=lng, lat=lat):
                 i += 1
                 cls.realistic_points.append((lng, lat))
                 if i % ps_for_10percent == 0:
@@ -165,7 +176,7 @@ class MainPackageTest(unittest.TestCase):
 
         def print_speed_test(type_of_points, list_of_points):
             global tf, point_list
-            tf = self.timezone_finder
+            tf = self.test_instance
             point_list = list_of_points
             t = timeit.timeit("eval_time_fct()", globals=globals(), number=1)
             print('\ntesting', N, type_of_points)
@@ -180,26 +191,26 @@ class MainPackageTest(unittest.TestCase):
 
     def test_shortcut_boundary(self):
         # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
-        assert self.timezone_finder.timezone_at(lng=-180.0, lat=90.0) is None
-        assert self.timezone_finder.timezone_at(lng=180.0, lat=90.0) is None
-        assert self.timezone_finder.timezone_at(lng=180.0, lat=-90.0) == 'Antarctica/McMurdo'
-        assert self.timezone_finder.timezone_at(lng=-180.0, lat=-90.0) == 'Antarctica/McMurdo'
+        assert self.test_instance.timezone_at(lng=-180.0, lat=90.0) is None
+        assert self.test_instance.timezone_at(lng=180.0, lat=90.0) is None
+        assert self.test_instance.timezone_at(lng=180.0, lat=-90.0) == 'Antarctica/McMurdo'
+        assert self.test_instance.timezone_at(lng=-180.0, lat=-90.0) == 'Antarctica/McMurdo'
 
         with pytest.raises(ValueError):
-            self.timezone_finder.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.timezone_finder.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
-            self.timezone_finder.timezone_at(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.timezone_finder.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.timezone_finder.timezone_at(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.timezone_finder.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.timezone_finder.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
+            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
+            self.test_instance.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
+            self.test_instance.timezone_at(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
+            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
+            self.test_instance.timezone_at(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
+            self.test_instance.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
+            self.test_instance.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
 
     def test_kwargs_only(self):
         # calling timezonefinder fcts without keyword arguments should raise an error
         with pytest.raises(TypeError):
-            self.timezone_finder.timezone_at(23.0, 42.0)
-            self.timezone_finder.timezone_at(23.0, lng=42.0)
-            self.timezone_finder.timezone_at(23.0, lat=42.0)
+            self.test_instance.timezone_at(23.0, 42.0)
+            self.test_instance.timezone_at(23.0, lng=42.0)
+            self.test_instance.timezone_at(23.0, lat=42.0)
 
     def test_correctness(self):
         no_mistakes_made = True
@@ -208,8 +219,8 @@ class MainPackageTest(unittest.TestCase):
         print('\nresults timezone_at()')
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', '=='))
         print('====================================================================')
-        for (lat, lng, loc, expected) in TEST_LOCATIONS:
-            computed = self.timezone_finder.timezone_at(lng=lng, lat=lat)
+        for (lat, lng, loc, expected) in self.test_locations:
+            computed = self.test_instance.timezone_at(lng=lng, lat=lat)
 
             if computed == expected:
                 ok = 'OK'
@@ -219,11 +230,56 @@ class MainPackageTest(unittest.TestCase):
                 no_mistakes_made = False
             print(template.format(loc, str(expected), str(computed), ok))
 
+        assert no_mistakes_made
+
+        return no_mistakes_made, template
+
+
+class BaseClassTestMEM(BaseTimezonefinderClassTest):
+    in_memory_mode = True
+
+
+abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
+
+
+class BaseClassTestDIR(BaseTimezonefinderClassTest):
+    # point to a dir where all bin files are located:
+    bin_file_dir = abs_default_path
+
+
+class BaseClassTestMEMDIR(BaseTimezonefinderClassTest):
+    in_memory_mode = True
+    bin_file_dir = abs_default_path
+
+
+# tests for Timezonefinder class
+
+
+class TimezonefinderClassTest(BaseTimezonefinderClassTest):
+    class_under_test = TimezoneFinder
+    realistic_pt_fct_name = 'certain_timezone_at'
+    test_locations = TEST_LOCATIONS
+
+    def test_kwargs_only(self):
+        super(TimezonefinderClassTest, self).test_kwargs_only()
+
+        with pytest.raises(TypeError):
+            self.test_instance.certain_timezone_at(23.0, 42.0)
+            self.test_instance.certain_timezone_at(23.0, lng=42.0)
+            self.test_instance.certain_timezone_at(23.0, lat=42.0)
+
+            self.test_instance.closest_timezone_at(23.0, 42.0)
+            self.test_instance.closest_timezone_at(23.0, lng=42.0)
+            self.test_instance.closest_timezone_at(23.0, lat=42.0)
+
+    def test_correctness(self):
+        no_mistakes_made, template = super(TimezonefinderClassTest, self).test_correctness()
+
         print('\ncertain_timezone_at():')
         print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
         for (lat, lng, loc, expected) in TEST_LOCATIONS_CERTAIN:
-            computed = self.timezone_finder.certain_timezone_at(lng=lng, lat=lat)
+            computed = self.test_instance.certain_timezone_at(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
             else:
@@ -237,7 +293,7 @@ class MainPackageTest(unittest.TestCase):
         print('====================================================================')
         print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')
         for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-            computed = self.timezone_finder.closest_timezone_at(lng=lng, lat=lat)
+            computed = self.test_instance.closest_timezone_at(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
             else:
@@ -257,21 +313,21 @@ class MainPackageTest(unittest.TestCase):
         import warnings
         warnings.filterwarnings('error')
         # must not raise a warning
-        self.timezone_finder.certain_timezone_at(lat=float(latitude), lng=float(longitude))
+        self.test_instance.certain_timezone_at(lat=float(latitude), lng=float(longitude))
 
 
-class MainPackageTestMEM(MainPackageTest):
+class TimezonefinderClassTestMEM(TimezonefinderClassTest):
     in_memory_mode = True
 
 
 abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
 
 
-class MainPackageTestDIR(MainPackageTest):
+class TimezonefinderClassTestDIR(BaseTimezonefinderClassTest):
     # point to a dir where all bin files are located:
     bin_file_dir = abs_default_path
 
 
-class MainPackageTestMEMDIR(MainPackageTest):
+class TimezonefinderClassTestMEMDIR(BaseTimezonefinderClassTest):
     in_memory_mode = True
     bin_file_dir = abs_default_path
