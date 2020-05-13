@@ -1,7 +1,4 @@
 
-.. TODO auto docstring documentation. with auto doc http://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#module-sphinx.ext.autodoc
-
-
 ============================
 timezonefinder
 ============================
@@ -17,8 +14,9 @@ a fast and lightweight python package for looking up the corresponding timezone 
     Usage <1_usage>
     Use Cases  <2_use_cases>
     About <3_about>
-    Contributing <4_contributing>
-    Changelog <5_changelog>
+    API <4_api>
+    Contributing <5_contributing>
+    Changelog <6_changelog>
 
 
 

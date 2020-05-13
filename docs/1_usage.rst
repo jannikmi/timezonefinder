@@ -4,10 +4,9 @@
 Usage
 =====
 
-
 .. note::
 
-    For a more detailed documentation of all the features please confer to the docstrings in the actual code.
+   Also check out the :ref:`API documentation <api>` or the `code <https://github.com/MrMinimal64/timezonefinder>`__.
 
 
 .. _init:
@@ -33,7 +32,7 @@ See the :ref:`speed test results <speed-tests>`.
     tf = TimezoneFinder(in_memory=True)
 
 
-Use the argument ``bin_file_location`` to use data files from another location:
+Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
 
 .. code-block:: python
 

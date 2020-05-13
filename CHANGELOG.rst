@@ -7,10 +7,9 @@ Changelog
 
 * TODO typing
 * TODO optimise imports
-* TODO some data files as JSON! instead of binary. small simple ones
-* TODO directly included the most common timezone of each shortcut
-* TODO option to only use shortcut, function?,
-* TODO make publish script reusable! specify package name globally
+* read hole registry directly from a json file
+* directly included the most common timezone of each shortcut ("shortcuts_direct_id.bin")
+* TODO option to only use shortcut, function?
 * TODO private repo, without the actual data. for data files! but regular upload to pypI,
 * TODO describe loading priority
 * TODO added bash script for download latest data in, document usage, keep it in this repo, not data repo! to keep documentation etc. in one place

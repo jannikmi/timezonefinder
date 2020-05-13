@@ -57,6 +57,8 @@ Getting a location's time zone offset
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 
+.. _parse_data:
+
 Use other data
 --------------
 
@@ -64,12 +66,16 @@ In some cases it might be useful to use other data (e.g. the releases of the `ti
 This package includes the script ``file_converter.py`` to parse the data file of this specific .json format.
 
 Instructions:
-Download the latest ``timezones.geojson.zip`` data set file from `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__, unzip and
-place the ``combined.json`` inside the ``timezonefinder`` folder. Now run the ``file_converter.py`` until the compilation of the binary files is completed.
+
+* download a ``timezones.geojson.zip`` data set file from `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__
+* unzip and place the ``combined.json`` inside the ``timezonefinder`` folder
+* now run the ``file_converter.py`` until the compilation of the binary files is completed
 
 If you want to use your own data set, create a ``combined.json`` file with the same format .json as the timezone-boundary-builder and follow the above instructions.
 
 You can also use data files from another location as described :ref:`HERE <init>`
+
+.. TODO script
 
 
 

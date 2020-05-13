@@ -4,6 +4,7 @@ from io import SEEK_CUR, BytesIO
 from math import radians
 from os.path import abspath, join, pardir
 from struct import unpack
+from typing import Optional, List, Tuple
 
 import numpy as np
 from numpy import array, dtype, empty, fromfile
@@ -33,23 +34,23 @@ def fromfile_memory(file, **kwargs):
 
 
 class TimezoneFinder:
-    # TODO docstring
+    """ Class for quickly finding the timezone of a point on earth offline.
+
+    Opens the required data in binary files to enable fast access.
+    Currently per half degree of latitude and per degree of longitude the set of all candidate polygons are stored.
+    Because of these so called 'shortcuts' not all timezone polygons have to be tested during a query.
+
+    :var:
+
+    :param bin_file_location: path to the binary data files to use
+    :param in_memory: whether to completely read and keep the binary files in memory
+    """
+
     # TODO document attributes
     # TODO rename DATA Attributes
-    # __slots__ = DATA_ATTRIBUTES + ['__dict__']  # allows dynamic assignment of new variables
     __slots__ = DATA_ATTRIBUTES + ['in_memory', 'hole_registry', 'fromfile', 'timezone_names']
 
-    def __init__(self, bin_file_location=None, in_memory=False):
-        """
-        Class for quickly finding the timezone of a point on earth offline.
-        Opens the required data in binary files to enable fast access.
-        currently per half degree of latitude and per degree of longitude a set of candidate polygons are stored
-        this gives a SHORTCUT to which of the 27k+ polygons should be tested
-        (tests evaluated this to be the fastest setup when being used with Numba)
-
-        :param bin_file_location: path to the binary data files to use
-        :param in_memory: whether to completely read and keep the binary files in memory
-        """
+    def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
         self.in_memory = in_memory
 
         if self.in_memory:
@@ -86,14 +87,14 @@ class TimezoneFinder:
 
     @staticmethod
     def using_numba():
-        """
-        for testing if Numba is being used or not
+        """ tests if Numba is being used or not
+
         :return: True if the import of the JIT compiled algorithms worked. False otherwise
         """
         return numba is not None
 
-    def id_of(self, line=0):
-        self.poly_zone_ids.seek(NR_BYTES_H * line)
+    def id_of(self, polygon_nr: int = 0):
+        self.poly_zone_ids.seek(NR_BYTES_H * polygon_nr)
         return unpack(DTYPE_FORMAT_H, self.poly_zone_ids.read(NR_BYTES_H))[0]
 
     def ids_of(self, iterable):
@@ -105,7 +106,7 @@ class TimezoneFinder:
 
         return id_array
 
-    def polygon_ids_of_shortcut(self, x=0, y=0):
+    def polygon_ids_of_shortcut(self, x: int = 0, y: int = 0):
         # get the address of the first entry in this shortcut
         # offset: 180 * number of shortcuts per lat degree * 2bytes = entries per column of x shortcuts
         # shortcuts are stored: (0,0) (0,1) (0,2)... (1,0)...
@@ -116,22 +117,22 @@ class TimezoneFinder:
         self.shortcuts_data.seek(unpack(DTYPE_FORMAT_I, self.shortcuts_adr2data.read(NR_BYTES_I))[0])
         return self.fromfile(self.shortcuts_data, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_of_entries)
 
-    def coords_of(self, line=0):
+    def coords_of(self, polygon_nr: int = 0):
         # how many coordinates are stored in this polygon
-        self.poly_coord_amount.seek(NR_BYTES_I * line)
+        self.poly_coord_amount.seek(NR_BYTES_I * polygon_nr)
         nr_of_values = unpack(DTYPE_FORMAT_I, self.poly_coord_amount.read(NR_BYTES_I))[0]
         if nr_of_values == 0:
             raise ValueError
 
-        self.poly_adr2data.seek(NR_BYTES_I * line)
+        self.poly_adr2data.seek(NR_BYTES_I * polygon_nr)
         self.poly_data.seek(unpack(DTYPE_FORMAT_I, self.poly_adr2data.read(NR_BYTES_I))[0])
 
         return array([self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
                       self.fromfile(self.poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)])
 
-    def _holes_of_line(self, line=0):
+    def _holes_of_poly(self, polygon_nr: int = 0):
         try:
-            amount_of_holes, hole_id = self.hole_registry[line]  # json keys are strings
+            amount_of_holes, hole_id = self.hole_registry[polygon_nr]  # json keys are strings
 
             for i in range(amount_of_holes):
                 self.hole_coord_amount.seek(NR_BYTES_H * hole_id)
@@ -147,30 +148,31 @@ class TimezoneFinder:
         except KeyError:
             return
 
-    def get_polygon(self, polygon_nr, coords_as_pairs=False):
+    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False):
         list_of_converted_polygons = []
         if coords_as_pairs:
             conversion_method = convert2coord_pairs
         else:
             conversion_method = convert2coords
-        list_of_converted_polygons.append(conversion_method(self.coords_of(line=polygon_nr)))
+        list_of_converted_polygons.append(conversion_method(self.coords_of(polygon_nr=polygon_nr)))
 
-        for hole in self._holes_of_line(polygon_nr):
+        for hole in self._holes_of_poly(polygon_nr):
             list_of_converted_polygons.append(conversion_method(hole))
 
         return list_of_converted_polygons
 
     def get_geometry(self, tz_name='', tz_id=0, use_id=False, coords_as_pairs=False):
-        '''
-        :param tz_name: one of the names in timezone_names
-        :param tz_id: the id of the timezone (=index in timezone_names)
-        :param use_id: determines whether id or name should be used
+        """ retrieves the geometry of a timezone polygon
+
+        :param tz_name: one of the names in ``self.timezone_names``
+        :param tz_id: the id of the timezone (=index in ``self.timezone_names``)
+        :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
         :param coords_as_pairs: determines the structure of the polygon representation
         :return: a data structure representing the multipolygon of this timezone
-        output format: [ [polygon1, hole1, hole2...], [polygon2, ...], ...]
-         and each polygon and hole is itself formated like: ([longitudes], [latitudes])
-         or [(lng1,lat1), (lng2,lat2),...] if ``coords_as_pairs=True``.
-        '''
+            output format: ``[ [polygon1, hole1, hole2...], [polygon2, ...], ...]``
+            and each polygon and hole is itself formatted like: ``([longitudes], [latitudes])``
+            or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
+        """
 
         if use_id:
             zone_id = tz_id
@@ -201,17 +203,18 @@ class TimezoneFinder:
 
         return zone_id_list
 
-    def compile_id_list(self, polygon_id_list, nr_of_polygons):
-        """
-        sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
+    def compile_id_list(self, polygon_id_list, nr_of_polygons) -> Tuple[List[int], List[int], bool]:
+        """ sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
+
         only 4.8% of all shortcuts include polygons from more than one zone
         but only for about 0.4% sorting would be beneficial (zones have different frequencies)
         in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
-         has only one entry.
-         the polygon lists of all single shortcut are already sorted (during compilation of the binary files)
+        has only one entry.
+        the polygon lists of all single shortcut are already sorted (during compilation of the binary files)
         sorting should be used for closest_timezone_at(), because only in
-         that use case the polygon lists are quite long (multiple shortcuts are being checked simultaneously).
-        :param polygon_id_list:
+        that use case the polygon lists are quite long (multiple shortcuts are being checked simultaneously).
+
+        :param polygon_id_list: input list of polygon
         :param nr_of_polygons: length of polygon_id_list
         :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
         """
@@ -266,28 +269,31 @@ class TimezoneFinder:
 
         return sorted_polygon_id_list, sorted_zone_id_list, False
 
-    def closest_timezone_at(self, *, lat, lng, delta_degree=1, exact_computation=False, return_distances=False,
-                            force_evaluation=False):
-        """
-        This function searches for the closest polygon in the surrounding shortcuts.
-        Make sure that the point does not lie within a polygon (for that case the algorithm is simply wrong!)
-        Note that the algorithm won't find the closest polygon when it's on the 'other end of earth'
-        (it can't search beyond the 180 deg lng border yet)
-        This checks all the polygons within [delta_degree] degree lng and lat/
-        Keep in mind that x degrees lat are not the same distance apart than x degree lng!
-        This is also the reason why there could still be a closer polygon even though you got a result already.
-        In order to make sure to get the closest polygon, you should increase the search radius
-        until you get a result and then increase it once more (and take that result).
-        This should only make a difference in really rare cases however.
-        :param lng: longitude of the point in degree
+    def closest_timezone_at(self, *, lng: float, lat: float, delta_degree: int = 1, exact_computation: bool = False,
+                            return_distances: bool = False, force_evaluation: bool = False):
+        """ Searches for the closest polygon in the surrounding shortcuts
+
+        Computes the (approximate) distance to all the polygons within ``delta_degree`` degree lng and lat
+        Make sure that the point does not lie within a polygon
+
+        .. note:: the algorithm won't find the closest polygon when it's on the 'other end of earth'
+            (it can't search beyond the 180 deg lng border!)
+
+        .. note:: x degrees lat are not the same distance apart than x degree lng!
+            This is also the reason why there could still be a closer polygon even though you got a result already.
+            In order to make sure to get the closest polygon, you should increase the search radius
+            until you get a result and then increase it once more (and take that result).
+            This should however only make a difference in rare cases.
+
+        :param lng: longitude in degree
         :param lat: latitude in degree
-        :param delta_degree: the 'search radius' in degree
-        :param exact_computation: when enabled the distance to every polygon edge is computed (way more complicated),
-        instead of only evaluating the distances to all the vertices (=default).
-        This only makes a real difference when polygons are very close.
+        :param delta_degree: the 'search radius' in degree. determines the polygons to be checked (shortcuts to include)
+        :param exact_computation: when enabled the distance to every polygon edge is computed
+            (=computationally more expensive!), instead of only evaluating the distances to all the vertices.
+            NOTE: This only makes a real difference when polygons are very close.
         :param return_distances: when enabled the output looks like this:
-        ( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])
-        :param force_evaluation:
+            ``( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])``
+        :param force_evaluation: whether all distances should be computed in any case
         :return: the timezone name of the closest found polygon, the list of distances or None
         """
 
@@ -389,16 +395,17 @@ class TimezoneFinder:
             return self.timezone_names[current_closest_id], distances, [self.timezone_names[x] for x in ids]
         return self.timezone_names[current_closest_id]
 
-    def timezone_at(self, *, lng, lat):
-        """
-        this function looks up in which polygons the point could be included in
+    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+        """ looks up in which polygons the point could be included in
+
         to speed things up there are shortcuts being used (stored in a binary file)
         especially for large polygons it is expensive to check if a point is really included,
         so certain simplifications are made and even when you get a hit the point might actually
         not be inside the polygon (for example when there is only one timezone nearby)
-        if you want to make sure a point is really inside a timezone use 'certain_timezone_at'
-        :param lng: longitude of the point in degree (-180 to 180)
-        :param lat: latitude in degree (90 to -90)
+        if you want to make sure a point is really inside a timezone use ``certain_timezone_at()``
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of a matching polygon or None
         """
         lng, lat = rectify_coordinates(lng, lat)
@@ -443,13 +450,13 @@ class TimezoneFinder:
 
                     outside_all_holes = True
                     # when the point is within a hole of the polygon, this timezone must not be returned
-                    for hole_coordinates in self._holes_of_line(polygon_nr):
+                    for hole_coordinates in self._holes_of_poly(polygon_nr):
                         if inside_polygon(x, y, hole_coordinates):
                             outside_all_holes = False
                             break
 
                     if outside_all_holes:
-                        if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
+                        if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
                             # the point is included in this polygon. return its timezone name without further checks
                             return self.timezone_names[ids[i]]
 
@@ -457,10 +464,11 @@ class TimezoneFinder:
             # if no other polygon has been matched beforehand.
             raise ValueError('BUG: this statement should never be reached. Please open up an issue on Github!')
 
-    def certain_timezone_at(self, *, lng, lat):
-        """
-        this function looks up in which polygon the point certainly is included
-        this is much slower than 'timezone_at'!
+    def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+        """ looks up in which polygon the point certainly is included in
+
+        .. note:: this is much slower than 'timezone_at'!
+
         :param lng: longitude of the point in degree
         :param lat: latitude in degree
         :return: the timezone name of the polygon the point is included in or None
@@ -484,13 +492,13 @@ class TimezoneFinder:
 
                 outside_all_holes = True
                 # when the point is within a hole of the polygon this timezone doesn't need to be checked
-                for hole_coordinates in self._holes_of_line(polygon_nr):
+                for hole_coordinates in self._holes_of_poly(polygon_nr):
                     if inside_polygon(x, y, hole_coordinates):
                         outside_all_holes = False
                         break
 
                 if outside_all_holes:
-                    if inside_polygon(x, y, self.coords_of(line=polygon_nr)):
+                    if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
                         return self.timezone_names[self.id_of(polygon_nr)]
 
         # no polygon has been matched

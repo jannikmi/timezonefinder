@@ -101,8 +101,7 @@ Ready to contribute? Here's how to set up this package for local development.
        $ git commit -m "Your detailed description of your changes."
        $ git push origin name-of-your-bugfix-or-feature
 
-* Submit a pull request through the GitHub website. This will trigger the
-   Travis CI build which runs the tests against all supported versions of Python.
+* Submit a pull request through the GitHub website. This will trigger the Travis CI build which runs the tests against all supported versions of Python.
 
 
 
