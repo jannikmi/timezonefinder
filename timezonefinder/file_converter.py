@@ -8,22 +8,20 @@ from struct import pack
 
 import path_modification  # to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
-    DEBUG, DEBUG_POLY_STOP, INPUT_JSON_FILE_NAME, THRES_DTYPE_H, NR_BYTES_H,
-    NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, DTYPE_FORMAT_H, SHORTCUTS_DIRECT_ID,
-    SHORTCUTS_UNIQUE_ID, BINARY_FILE_ENDING, THRES_DTYPE_I, DTYPE_FORMAT_I, INVALID_VALUE_DTYPE_H, POLY_NR2ZONE_ID,
-    POLY_ZONE_IDS, POLY_ADR2DATA, POLY_COORD_AMOUNT, POLY_DATA, DTYPE_FORMAT_SIGNED_I, POLY_MAX_VALUES,
-    SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_DATA, SHORTCUTS_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_POLY_IDS, HOLE_ADR2DATA,
-    THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, HOLE_DATA, HOLE_REGISTRY_FILE,
+    BINARY_FILE_ENDING, DEBUG, DEBUG_POLY_STOP, DTYPE_FORMAT_H, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I,
+    HOLE_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_POLY_IDS, HOLE_REGISTRY_FILE, INPUT_JSON_FILE_NAME,
+    INVALID_VALUE_DTYPE_H, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, POLY_ADR2DATA,
+    POLY_COORD_AMOUNT, POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA,
+    SHORTCUTS_DATA, SHORTCUTS_DIRECT_ID, SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_UNIQUE_ID, THRES_DTYPE_H,
+    THRES_DTYPE_I, THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, TIMEZONE_NAMES_FILE,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
 from timezonefinder.helpers import coord2int, inside_polygon, int2coord
 
-path_modification.dummy_fct()  # simply to use import
+path_modification.dummy_fct()  # only to use import
 """
-TODO write tests
-
-USE INSTRUCTIONS:
+USAGE:
 
 - download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder/releases
 - unzip and place the combined.json inside this timezonefinder folder
@@ -62,8 +60,8 @@ they can therefore be used to drastically reduce the amount of polygons which ne
 decide which timezone a point is located in.
 
 the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
+the polygons of the least frequent zone come first
 this is critical for ruling out zones faster (as soon as just polygons of one zone are left this zone can be returned)
-NOTE:
 
 shortcuts_entry_amount: the amount of polygons for every shortcut ('<H')
 shortcuts_adr2data: address in shortcut_data.bin where data for every shortcut starts ('<I')
@@ -169,14 +167,14 @@ shortcuts = {}
 
 
 def x_shortcut(lng):
-    # higher (=lng) means higher x shortcut!!! 0 (-180deg lng) -> 360 (180deg)
+    # higher (=lng) means higher x shortcut: 0 (-180deg lng) -> 360 (180deg)
     # if lng < -180 or lng >= 180:
     # raise ValueError('longitude out of bounds', lng)
     return floor((lng + 180) * NR_SHORTCUTS_PER_LNG)
 
 
 def y_shortcut(lat):
-    # lower y (=lat) means higher y shortcut!!! 0 (90deg lat) -> 180 (-90deg)
+    # lower y (=lat) means higher y shortcut: 0 (90deg lat) -> 180 (-90deg)
     # if lat < -90 or lat >= 90:
     # raise ValueError('this latitude is out of bounds', lat)
     return floor((90 - lat) * NR_SHORTCUTS_PER_LAT)
@@ -314,7 +312,7 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
 
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
-                print(f'{nr_of_holes}: polygon #{polygon_counter}({hole_nr}) zone: {tz_name}')
+                print(f'#{nr_of_holes}: polygon #{polygon_counter}({hole_nr}) zone: {tz_name}')
                 nr_of_holes += 1  # keep track of how many holes there are
                 polynrs_of_holes.append(polygon_counter)
                 x_coords, y_coords = extract_coords(hole)
@@ -334,32 +332,29 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
     assert polygon_counter == nr_of_polygons, \
         f'polygon counter {polygon_counter} and entry amount in all_length {nr_of_polygons} are different.'
 
-    max_poly_length = max(polygon_lengths)
     if 0 in polygon_lengths:
         raise ValueError()
 
-    # binary file value range tests:
     # TODO
+    # binary file value range tests:
+    assert nr_of_polygons < THRES_DTYPE_H, \
+        f'address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!'
+    assert nr_of_zones < THRES_DTYPE_H, \
+        f'address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!'
+    max_poly_length = max(polygon_lengths)
     assert max_poly_length < THRES_DTYPE_I, \
         f'address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
-
     max_hole_poly_length = max(all_hole_lengths)
     assert max_hole_poly_length < THRES_DTYPE_H, \
         f'address overflow: the maximal amount of coords in hole polygons ' \
         f'{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
 
-    assert nr_of_polygons < THRES_DTYPE_H, \
-        f'address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!'
-
-    assert nr_of_zones < THRES_DTYPE_H, \
-        f'address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!'
-
-    print('... parsing done.')
-    print('amount of polygons:', nr_of_polygons)
-    print('maximal amount of coordinates in one polygon:', max_poly_length)
-    print('amount of holes:', nr_of_holes)
-    print('maximal amount of coordinates in a hole polygon:', max_hole_poly_length)
-    print('amount of time zones:', nr_of_zones)
+    print('... parsing done. found:')
+    print(f'{nr_of_polygons:,} polygons from')
+    print(f'{nr_of_zones:,} timezones with')
+    print(f'{nr_of_holes:,} holes')
+    print(f'{max_poly_length:,} maximal amount of coordinates in one polygon')
+    print(f'{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon')
     print('\n')
 
 
@@ -799,6 +794,7 @@ def compile_binaries():
     def sort_poly_shortcut(poly_nrs):
         # TODO write test
         # the list of polygon ids in each shortcut is sorted after freq. of appearance of their zone id
+        # polygons of the least frequent zone should come first!
         # this is critical for ruling out zones faster
         # (as soon as just polygons of one zone are left this zone can be returned)
         # only around 5% of all shortcuts include polygons from more than one zone
@@ -827,12 +823,14 @@ def compile_binaries():
             try:
                 shortcuts_this_entry = shortcuts[(x, y)]
                 shortcuts_sorted, zone_ids, zone_id_freqs = sort_poly_shortcut(shortcuts_this_entry)
+                # polygons of the least common zone must come first
+                # -> this zone can be ruled out faster
+                assert zone_id_freqs[-1] >= zone_id_freqs[0]
                 shortcut_entries.append(shortcuts_sorted)
                 amount_filled_shortcuts += 1
                 nr_of_entries_in_shortcut.append(len(shortcuts_this_entry))
-                # print((x,y,this_lines_shortcuts))
-                direct_id = zone_ids[0]  # most common zone id
-                if direct_id == zone_ids[-1]:  # equal to least common zone id
+                direct_id = zone_ids[-1]  # most common zone id
+                if direct_id == zone_ids[0]:  # equal to least common zone id
                     unique_id = direct_id
                 else:
                     # there is a polygon from a different zone (hence an invalid id should be written)

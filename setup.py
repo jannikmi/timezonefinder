@@ -1,12 +1,12 @@
 # -*- coding:utf-8 -*-
 from setuptools import setup
 
-from timezonefinder.global_settings import DATA_FILES
+from timezonefinder.global_settings import DATA_FILES, PACKAGE_NAME
 
 setup(
-    name='timezonefinder',
-    packages=['timezonefinder'],
-    package_data={'timezonefinder': DATA_FILES},
+    name=PACKAGE_NAME,
+    packages=[PACKAGE_NAME],
+    package_data={PACKAGE_NAME: DATA_FILES},
     description='fast python package for finding the timezone of any point on earth (coordinates) offline',
     # version: in VERSION file https://packaging.python.org/guides/single-sourcing-package-version/
     # With this approach you must make sure that the VERSION file is included in all your source

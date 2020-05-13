@@ -4,16 +4,16 @@ from io import SEEK_CUR, BytesIO
 from math import radians
 from os.path import abspath, join, pardir
 from struct import unpack
-from typing import Optional, List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from numpy import array, dtype, empty, fromfile
 
 from timezonefinder.global_settings import (
-    DATA_ATTRIBUTE_NAMES, BINARY_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
-    DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
-    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE,
-    BINARY_DATA_ATTRIBUTES,
+    BINARY_DATA_ATTRIBUTES, BINARY_FILE_ENDING, DATA_ATTRIBUTE_NAMES, DTYPE_FORMAT_B_NUMPY,
+    DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I,
+    DTYPE_FORMAT_SIGNED_I_NUMPY, HOLE_REGISTRY_FILE, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
+    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
 )
 
 try:
@@ -40,8 +40,8 @@ class TimezoneFinder:
     Opens the required data in binary files to enable fast access.
     Currently per half degree of latitude and per degree of longitude the set of all candidate polygons are stored.
     Because of these so called 'shortcuts' not all timezone polygons have to be tested during a query.
-
-    :var:
+    For a detailed documentation of data management please refer to the code documentation of
+    `file_converter.py <https://github.com/MrMinimal64/timezonefinder/blob/master/timezonefinder/file_converter.py>`__
 
     :param bin_file_location: path to the binary data files to use
     :param in_memory: whether to completely read and keep the binary files in memory

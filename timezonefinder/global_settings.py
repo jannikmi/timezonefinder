@@ -4,9 +4,6 @@
 
 PACKAGE_NAME = 'timezonefinder'
 # TODO
-DATA_PACKAGE_NAME = 'timezonefinder_data'
-OCEAN_DATA_PACKAGE_NAME = 'timezonefinder_data_oceans'
-# TODO
 DEBUG = False
 # DEBUG = True
 INPUT_JSON_FILE_NAME = 'combined.json'
@@ -28,21 +25,25 @@ NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
 
 # BINARY
 BINARY_FILE_ENDING = '.bin'
+
 POLY_ZONE_IDS = 'poly_zone_ids'
 POLY_COORD_AMOUNT = 'poly_coord_amount'
 POLY_ADR2DATA = 'poly_adr2data'
 POLY_MAX_VALUES = 'poly_max_values'
 POLY_DATA = 'poly_data'
 POLY_NR2ZONE_ID = 'poly_nr2zone_id'
+
 HOLE_POLY_IDS = 'hole_poly_ids'
 HOLE_COORD_AMOUNT = 'hole_coord_amount'
 HOLE_ADR2DATA = 'hole_adr2data'
 HOLE_DATA = 'hole_data'
+
 SHORTCUTS_ENTRY_AMOUNT = 'shortcuts_entry_amount'
 SHORTCUTS_ADR2DATA = 'shortcuts_adr2data'
 SHORTCUTS_DATA = 'shortcuts_data'
 SHORTCUTS_DIRECT_ID = 'shortcuts_direct_id'
 SHORTCUTS_UNIQUE_ID = 'shortcuts_unique_id'
+
 BINARY_DATA_ATTRIBUTES = [
     POLY_ZONE_IDS,
     POLY_COORD_AMOUNT,
@@ -74,7 +75,7 @@ JSON_FILES = [TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE]
 DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + JSON_DATA_ATTRIBUTES
 DATA_FILES = BINARY_FILES + JSON_FILES
 
-# TODO create variables for used dtype for each  type of data (polygon address, coordinate...)
+# TODO create variables for used dtype for each type of data (polygon address, coordinate...)
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
 DTYPE_FORMAT_B_NUMPY = '<i1'
