@@ -10,9 +10,10 @@ import numpy as np
 from numpy import array, dtype, empty, fromfile
 
 from timezonefinder.global_settings import (
-    DATA_ATTRIBUTES, BINARY_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
+    DATA_ATTRIBUTE_NAMES, BINARY_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
     NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE,
+    BINARY_DATA_ATTRIBUTES,
 )
 
 try:
@@ -47,8 +48,7 @@ class TimezoneFinder:
     """
 
     # TODO document attributes
-    # TODO rename DATA Attributes
-    __slots__ = DATA_ATTRIBUTES + ['in_memory', 'hole_registry', 'fromfile', 'timezone_names']
+    __slots__ = DATA_ATTRIBUTE_NAMES + ['in_memory', 'fromfile']
 
     def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
         self.in_memory = in_memory
@@ -63,7 +63,7 @@ class TimezoneFinder:
         if bin_file_location is None:
             bin_file_location = abspath(join(__file__, pardir))
 
-        for attribute_name in DATA_ATTRIBUTES:
+        for attribute_name in BINARY_DATA_ATTRIBUTES:
             bin_file = open(join(bin_file_location, attribute_name + BINARY_FILE_ENDING), mode='rb')
             if self.in_memory:
                 bf_in_mem = BytesIO(bin_file.read())
@@ -82,7 +82,7 @@ class TimezoneFinder:
             self.hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
 
     def __del__(self):
-        for attribute_name in DATA_ATTRIBUTES:
+        for attribute_name in BINARY_DATA_ATTRIBUTES:
             getattr(self, attribute_name).close()
 
     @staticmethod
