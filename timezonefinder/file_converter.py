@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 import json
 from datetime import datetime
-from math import ceil, floor, inf
+from math import ceil, floor
 from os.path import abspath, join, pardir
 from struct import pack
 
@@ -13,7 +13,7 @@ from timezonefinder.global_settings import (
     UNIQUE_SHORTCUT_NAME, BINARY_FILE_ENDING, THRES_DTYPE_I, DTYPE_FORMAT_I, INVALID_VALUE_DTYPE_H, POLY_NR2ZONE_ID,
     POLY_ZONE_IDS, POLY_ADR2DATA, POLY_COORD_AMOUNT, POLY_DATA, DTYPE_FORMAT_SIGNED_I, POLY_MAX_VALUES,
     SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_DATA, SHORTCUTS_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_POLY_IDS, HOLE_ADR2DATA,
-    THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, HOLE_DATA,
+    THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, HOLE_DATA, HOLE_REGISTRY_FILE,
 )
 # keep in mind: the faster numba optimized helper fct. cannot be used here,
 # because numpy classes are not being used at this stage yet!
@@ -314,7 +314,7 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
 
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
-                print(f'{nr_of_holes}: polygon #{polygon_counter} ({hole_nr}) zone: {tz_name}')
+                print(f'{nr_of_holes}: polygon #{polygon_counter}({hole_nr}) zone: {tz_name}')
                 nr_of_holes += 1  # keep track of how many holes there are
                 polynrs_of_holes.append(polygon_counter)
                 x_coords, y_coords = extract_coords(hole)
@@ -373,8 +373,8 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
     global nr_of_zones
     print('updating the zone names in {} now...'.format(path))
     # pickle the zone names (python array)
-    with open(abspath(path), 'w') as f:
-        f.write(json.dumps(all_tz_names, indent=4))
+    with open(abspath(path), 'w') as json_file:
+        json.dump(all_tz_names, json_file, indent=4)
     print('...Done.\n\nComputing where zones start and end...')
     i = 0
     last_id = -1
@@ -873,23 +873,6 @@ def compile_binaries():
             addresses.append(adr)
         return addresses
 
-    # # TODO json
-    # # store for which polygons (how many) holes exits and the id of the first of those holes
-    # # since there are very few (~22) it is feasible to keep them in the memory
-    # self.hole_registry = {}
-    # # read the polygon ids for all the holes
-    # for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
-    #     poly_id = unpack(DTYPE_FORMAT_H, block)[0]
-    #     try:
-    #         amount_of_holes, hole_id = self.hole_registry[poly_id]
-    #         self.hole_registry.update({
-    #             poly_id: (amount_of_holes + 1, hole_id),
-    #         })
-    #     except KeyError:
-    #         self.hole_registry.update({
-    #             poly_id: (1, i),
-    #         })
-
     write_binary(POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons)
     write_binary(POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
     write_boundary_data(POLY_MAX_VALUES, poly_boundaries)
@@ -928,6 +911,30 @@ def compile_binaries():
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
 
+    # TODO
+    # store for which polygons (how many) holes exits and the id of the first of those holes
+    # since there are very few it is feasible to keep them in memory
+    # -> export and import as json
+    hole_registry = {}
+    # read the polygon ids for all the holes
+    for i, poly_id in enumerate(polynrs_of_holes):
+        try:
+            amount_of_holes, hole_id = hole_registry[poly_id]
+            hole_registry.update({
+                poly_id: (amount_of_holes + 1, hole_id),
+            })
+        except KeyError:
+            hole_registry.update({
+                poly_id: (1, i),
+            })
+
+    # print(hole_registry)
+    # raise ValueError
+
+    with open(HOLE_REGISTRY_FILE, 'w') as json_file:
+        json.dump(hole_registry, json_file, indent=4)
+
+    # TODO required?!
     # '<H' for every hole store the related line
     assert len(polynrs_of_holes) == nr_of_holes
     used_space = write_binary(HOLE_POLY_IDS, polynrs_of_holes, upper_value_limit=nr_of_polygons)

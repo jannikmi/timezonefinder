@@ -11,7 +11,7 @@ from numpy import array, dtype, empty, fromfile
 from timezonefinder.global_settings import (
     DATA_ATTRIBUTES, BINARY_FILE_ENDING, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
-    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE,
+    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE,
 )
 
 try:
@@ -71,24 +71,14 @@ class TimezoneFinder:
                 bin_file = bf_in_mem
             setattr(self, attribute_name, bin_file)
 
-        with open(join(bin_file_location, TIMEZONE_NAMES_FILE), 'r') as f:
-            self.timezone_names = json.loads(f.read())
+        with open(join(bin_file_location, TIMEZONE_NAMES_FILE), 'r') as json_file:
+            self.timezone_names = json.loads(json_file.read())
 
-        # store for which polygons (how many) holes exits and the id of the first of those holes
+        # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few (~22) it is feasible to keep them in the memory
-        self.hole_registry = {}
-        # read the polygon ids for all the holes
-        for i, block in enumerate(iter(lambda: self.hole_poly_ids.read(NR_BYTES_H), b'')):
-            poly_id = unpack(DTYPE_FORMAT_H, block)[0]
-            try:
-                amount_of_holes, hole_id = self.hole_registry[poly_id]
-                self.hole_registry.update({
-                    poly_id: (amount_of_holes + 1, hole_id),
-                })
-            except KeyError:
-                self.hole_registry.update({
-                    poly_id: (1, i),
-                })
+        with open(join(bin_file_location, HOLE_REGISTRY_FILE), 'r') as json_file:
+            hole_registry_tmp = json.loads(json_file.read())
+            self.hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
 
     def __del__(self):
         for attribute_name in DATA_ATTRIBUTES:
@@ -141,7 +131,7 @@ class TimezoneFinder:
 
     def _holes_of_line(self, line=0):
         try:
-            amount_of_holes, hole_id = self.hole_registry[line]
+            amount_of_holes, hole_id = self.hole_registry[line]  # json keys are strings
 
             for i in range(amount_of_holes):
                 self.hole_coord_amount.seek(NR_BYTES_H * hole_id)
@@ -415,7 +405,7 @@ class TimezoneFinder:
 
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
         self.shortcuts_unique_id.seek(
-            (180 * NR_SHORTCUTS_PER_LAT * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
+            (NR_LAT_SHORTCUTS * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y))
         try:
             # if there is just one possible zone in this shortcut instantly return its name
             return self.timezone_names[unpack(DTYPE_FORMAT_H, self.shortcuts_unique_id.read(NR_BYTES_H))[0]]
