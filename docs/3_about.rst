@@ -10,22 +10,22 @@ A few tweaks help to keep the computational requirements low and make this packa
 For example precomputed, so called "shortcuts" reduce the amount of timezone polygons to be checked (a kind of index for the polygons).
 See the documentation of the code itself for further explanation.
 
-Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, 116MB, JSON)
+Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, (geo)JSON)
 
 .. note::
 
     The timezone polygons do NOT follow the shorelines. This makes the results of ``closest_timezone_at()`` and ``certain_timezone_at()`` somewhat meaningless.
 
-If memory usage and speed matter more to you than accuracy, use `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__ which just uses the precomputed shortcuts instead of timezone polygons.
 
 Also see:
 `GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
 `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
-`timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__,
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of an older ``timezonefinderL`` version
 
+.. TODO
+
+`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of an older ``timezonefinderL`` version
 
 
 License

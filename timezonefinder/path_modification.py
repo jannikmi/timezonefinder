@@ -1,11 +1,8 @@
 # -*- coding:utf-8 -*-
-"""modify pythonpath to make parent package discoverable."""
+"""modify PYTHONPATH to make parent package discoverable."""
 
 import sys
-from os.path import pardir
+from os.path import abspath, join, pardir
 
-sys.path.insert(0, pardir)
-
-
-def dummy_fct():
-    pass
+package_path = abspath(join(__file__, pardir, pardir))
+sys.path.insert(0, package_path)

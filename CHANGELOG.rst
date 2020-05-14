@@ -5,7 +5,6 @@ Changelog
 5.0.0 (TBA)
 -----------
 
-
 * TODO removed data files
 * TODO added "extra" simplifying the installation of TODO external data
     TODO document! also in minimal example in readme!
@@ -14,31 +13,32 @@ Changelog
 * TODO private repo, without the actual data. for data files! but regular upload to pypI,
 * TODO importlib_resources dependency
 
-* TODO added bash script for downloading the latest data
-TODO document, option w. oceans?!
-https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones.geojson.zip
-https://github.com/evansiroky/timezone-boundary-builder/releases/latest/timezones-with-oceans.geojson.zip
-
 TODO document class attributes
 TODO create variables for used dtype for each type of data (polygon address, coordinate...)
+    more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
-4.3.1 (2020-05-13)
+4.4.0 (2020-05-14)
 ------------------
 
-* added new class TimezonefinderL for using JUST shortcuts (no timezone polygon data)
-* therefore included the most common timezone of each shortcut stored in the binary file
+* added new class TimezonefinderL for using JUST shortcuts (without timezone polygon data)
+* therefore included the most common timezone of each shortcut stored in the binary file ``shortcuts_direct_id.bin``
 * introduced typing
 * included API documentation
-* read hole registry directly from json, "hole_poly_ids.bin" not required any more
+* read hole registry directly from json, ``hole_poly_ids.bin`` not required any more
+* added the ``parse_data.sh`` shell script for downloading the latest timezone data, also with oceans
 
 
 improvements of file_converter.py:
 
-* read binary names from config
-* read data types from config
+* added command line arguments for specifying the input and output directories
+* read binary names from ``global_settings.py``
+* read data types from ``global_settings.py``
 * use with statement for writing binaries
 * automatically detect overflow for each data type in use
+* cleanup code, remove redundancies, improve codestyle
+* fixing #101: make imports work for local and remote execution
+
 
 
 

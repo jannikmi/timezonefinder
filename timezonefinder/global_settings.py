@@ -4,7 +4,8 @@
 
 PACKAGE_NAME = 'timezonefinder'
 
-INPUT_JSON_FILE_NAME = 'combined.json'
+DEFAULT_INPUT_PATH = 'combined.json'
+DEFAULT_OUTPUT_PATH = '.'  # store parsed data in same directory as default
 
 DEBUG = False
 # DEBUG = True

@@ -6,7 +6,7 @@ tmp.py
 
 *.DS_Store
 *.pytest_cache
-
+*.zip
 
 # Sphinx
 docs/_build

@@ -7,8 +7,7 @@ from os.path import abspath, join, pardir
 from struct import unpack
 from typing import List, Optional
 
-import numpy as np
-from numpy import array, dtype, empty, fromfile
+from numpy import array, dtype, empty, frombuffer, fromfile
 
 from timezonefinder.global_settings import (
     BINARY_DATA_ATTRIBUTES, BINARY_FILE_ENDING, DATA_ATTRIBUTE_NAMES, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY,
@@ -30,9 +29,9 @@ except ImportError:
 
 
 def fromfile_memory(file, **kwargs):
-    # res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
+    # res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
     # faster:
-    res = np.frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
+    res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
     file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
     return res
 
@@ -585,15 +584,14 @@ if __name__ == '__main__':
     # TODO test
     import argparse
 
-    parser = argparse.ArgumentParser(description='parse training parameters')
+    parser = argparse.ArgumentParser(description='parse TimezoneFinder parameters')
     parser.add_argument('lng', type=float, help='longitude to be queried')
     parser.add_argument('lat', type=float, help='latitude to be queried')
     parser.add_argument('-v', action='store_true', help='verbosity flag')
     parser.add_argument('-f', '--function', type=int, choices=[0, 1], default=0,
                         help='function to be called. 0: timezone_at(...) 1: certain_timezone_at(...)')
 
-    # takes input from sys.argv
-    parsed_args = parser.parse_args()
+    parsed_args = parser.parse_args()  # takes input from sys.argv
     tf = TimezoneFinder()
     functions = [tf.timezone_at, tf.certain_timezone_at]
     tz = functions[parsed_args.function](lng=parsed_args.lng, lat=parsed_args.lat)

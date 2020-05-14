@@ -57,28 +57,6 @@ Getting a location's time zone offset
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 
-.. _parse_data:
-
-Use other data
---------------
-
-In some cases it might be useful to use other data (e.g. the releases of the `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__ with sea timezones).
-This package includes the script ``file_converter.py`` to parse the data file of this specific .json format.
-
-Instructions:
-
-* download a ``timezones.geojson.zip`` data set file from `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__
-* unzip and place the ``combined.json`` inside the ``timezonefinder`` folder
-* now run the ``file_converter.py`` until the compilation of the binary files is completed
-
-If you want to use your own data set, create a ``combined.json`` file with the same format .json as the timezone-boundary-builder and follow the above instructions.
-
-You can also use data files from another location as described :ref:`HERE <init>`
-
-.. TODO script
-
-
-
 Django
 ------
 
@@ -99,5 +77,55 @@ Maximising the chances of getting a result in a ``Django`` view:
             # the coordinates were out of bounds
             pass # {handle error}
         # ... do something with timezone_name ...
+
+
+
+
+
+.. _parse_data:
+
+Use other data
+--------------
+
+
+File converter script
+*********************
+
+
+This package includes the ``file_converter.py`` script to parse timezone data and compile the binary data files required
+by the ``timezonefinder`` package.
+This script is built for processing the specific ``geojson`` format of the default data: `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__.
+Any other data in this format can also be parsed:
+
+::
+
+    python /path/to/timezonefinder/timezonefinder/file_converter.py [-inp /path/to/input.json] [-out /path/to/output_folder]
+
+
+
+.. note::
+
+    this script requires python3.6+ (as timezonefinder in general)
+
+
+Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.
+How to use the ``timezonefinder`` package with data files from another location is described :ref:`HERE <init>`.
+
+
+
+
+Data parsing shell script
+*************************
+
+The included ``parse_data.sh`` shell script simplifies downloading the latest version of
+`timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__
+data and parsing in with ``file_converter.py``.
+It supports downloading the ``timezone-boundary-builder`` version with ocean timezones.
+
+
+::
+
+    /bin/bash  /path/to/timezonefinder/parse_data.sh
+
 
 

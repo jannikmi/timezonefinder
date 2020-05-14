@@ -3,13 +3,13 @@
 import json
 from datetime import datetime
 from math import ceil, floor
-from os.path import abspath, join, pardir
+from os.path import abspath, join
 from struct import pack
 
-import path_modification  # to make timezonefinder package discoverable
+import path_modification  # noqa. to make timezonefinder package discoverable
 from timezonefinder.global_settings import (
-    BINARY_FILE_ENDING, DEBUG, DEBUG_POLY_STOP, DTYPE_FORMAT_H, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I,
-    HOLE_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_POLY_IDS, HOLE_REGISTRY_FILE, INPUT_JSON_FILE_NAME,
+    BINARY_FILE_ENDING, DEBUG, DEBUG_POLY_STOP, DEFAULT_INPUT_PATH, DEFAULT_OUTPUT_PATH, DTYPE_FORMAT_H,
+    DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I, HOLE_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_REGISTRY_FILE,
     INVALID_VALUE_DTYPE_H, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, POLY_ADR2DATA,
     POLY_COORD_AMOUNT, POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA,
     SHORTCUTS_DATA, SHORTCUTS_DIRECT_ID, SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_UNIQUE_ID, THRES_DTYPE_H,
@@ -19,7 +19,6 @@ from timezonefinder.global_settings import (
 # because numpy classes are not being used at this stage yet!
 from timezonefinder.helpers import coord2int, inside_polygon, int2coord
 
-path_modification.dummy_fct()  # only to use import
 """
 USAGE:
 
@@ -241,7 +240,7 @@ def not_empty(iterable):
 
 
 def polys_of_one_zone():
-    for i in range(len(timezone_names)):
+    for i in range(nr_of_zones):
         start = poly_nr2zone_id[i]
         end = poly_nr2zone_id[i + 1]
         yield list(range(start, end))
@@ -277,11 +276,11 @@ def extract_coords(polygon):
     return x_coords, y_coords
 
 
-def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
+def parse_polygons_from_json(input_path):
     global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids
 
-    print(f'parsing {path}\n...\n')
-    with open(path) as json_file:
+    print(f'parsing input file: {input_path}\n...\n')
+    with open(input_path) as json_file:
         tz_list = json.loads(json_file.read()).get('features')
 
     polygon_counter = 0  # this counter just counts polygons, not holes!
@@ -357,7 +356,7 @@ def parse_polygons_from_json(path=INPUT_JSON_FILE_NAME):
     print('\n')
 
 
-def update_zone_names(path=TIMEZONE_NAMES_FILE):
+def update_zone_names(output_path):
     global poly_zone_ids
     global list_of_pointers
     global poly_boundaries
@@ -365,9 +364,10 @@ def update_zone_names(path=TIMEZONE_NAMES_FILE):
     global polygon_lengths
     global polynrs_of_holes
     global nr_of_zones
-    print('updating the zone names in {} now...'.format(path))
+    file_path = abspath(join(output_path, TIMEZONE_NAMES_FILE))
+    print(f'updating the zone names in {file_path} now.')
     # pickle the zone names (python array)
-    with open(abspath(path), 'w') as json_file:
+    with open(abspath(file_path), 'w') as json_file:
         json.dump(all_tz_names, json_file, indent=4)
     print('...Done.\n\nComputing where zones start and end...')
     i = 0
@@ -416,9 +416,9 @@ def write_boundaries(output_file, data, *args, **kwargs):
             write_coordinate_value(output_file, boundary)
 
 
-def write_binary(bin_file_name, data, data_format=DTYPE_FORMAT_H, lower_value_limit=-1,
+def write_binary(output_path, bin_file_name, data, data_format=DTYPE_FORMAT_H, lower_value_limit=-1,
                  upper_value_limit=THRES_DTYPE_H, writing_fct=write_regular):
-    path = bin_file_name + BINARY_FILE_ENDING
+    path = abspath(join(output_path, bin_file_name + BINARY_FILE_ENDING))
     print(f'writing {path}')
     with open(path, 'wb') as output_file:
         writing_fct(output_file, data, data_format, lower_value_limit, upper_value_limit)
@@ -426,15 +426,15 @@ def write_binary(bin_file_name, data, data_format=DTYPE_FORMAT_H, lower_value_li
     return file_length
 
 
-def write_coordinate_data(bin_file_name, data):
-    return write_binary(bin_file_name, data, writing_fct=write_coordinates)
+def write_coordinate_data(output_path, bin_file_name, data):
+    return write_binary(output_path, bin_file_name, data, writing_fct=write_coordinates)
 
 
-def write_boundary_data(bin_file_name, data):
-    return write_binary(bin_file_name, data, writing_fct=write_boundaries)
+def write_boundary_data(output_path, bin_file_name, data):
+    return write_binary(output_path, bin_file_name, data, writing_fct=write_boundaries)
 
 
-def compile_binaries():
+def compile_binaries(output_path):
     global nr_of_polygons
     global shortcuts
 
@@ -864,18 +864,20 @@ def compile_binaries():
             addresses.append(adr)
         return addresses
 
-    write_binary(POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons)
-    write_binary(POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
-    write_boundary_data(POLY_MAX_VALUES, poly_boundaries)
-    write_coordinate_data(POLY_DATA, polygons)
-    write_binary(POLY_COORD_AMOUNT, polygon_lengths, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons)
+    write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
+    write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
+    write_coordinate_data(output_path, POLY_DATA, polygons)
+    write_binary(output_path, POLY_COORD_AMOUNT, polygon_lengths, data_format=DTYPE_FORMAT_I,
+                 upper_value_limit=THRES_DTYPE_I)
 
     # 2 entries per coordinate
     poly_addresses = compile_addresses(polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
-    write_binary(POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+    write_binary(output_path, POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I,
+                 upper_value_limit=THRES_DTYPE_I)
 
     # [SHORTCUT AREA]
-    write_binary(SHORTCUTS_ENTRY_AMOUNT, nr_of_entries_in_shortcut, upper_value_limit=nr_of_polygons)
+    write_binary(output_path, SHORTCUTS_ENTRY_AMOUNT, nr_of_entries_in_shortcut, upper_value_limit=nr_of_polygons)
 
     # write address of first "shortcut" (=polygon number) in shortcut field (x,y)
     adr = 0
@@ -895,9 +897,9 @@ def compile_binaries():
         return [item for sublist in l for item in sublist]
 
     shortcut_data = flatten(shortcut_entries)
-    write_binary(SHORTCUTS_DATA, shortcut_data, upper_value_limit=nr_of_polygons)
-    write_binary(SHORTCUTS_UNIQUE_ID, unique_ids)
-    write_binary(SHORTCUTS_DIRECT_ID, direct_ids)
+    write_binary(output_path, SHORTCUTS_DATA, shortcut_data, upper_value_limit=nr_of_polygons)
+    write_binary(output_path, SHORTCUTS_UNIQUE_ID, unique_ids)
+    write_binary(output_path, SHORTCUTS_DIRECT_ID, direct_ids)
 
     # [HOLE AREA, Y = number of holes (very few: around 22)]
     hole_space = 0
@@ -923,19 +925,21 @@ def compile_binaries():
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
     assert len(all_hole_lengths) == nr_of_holes
-    used_space = write_binary(HOLE_COORD_AMOUNT, all_hole_lengths)
+    used_space = write_binary(output_path, HOLE_COORD_AMOUNT, all_hole_lengths)
     hole_space += used_space
 
     # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
-    write_binary(POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+    write_binary(output_path, POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I,
+                 upper_value_limit=THRES_DTYPE_I)
 
     # 2 entries per coordinate
     hole_adr2data = compile_addresses(all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
-    used_space = write_binary(HOLE_ADR2DATA, hole_adr2data, data_format=DTYPE_FORMAT_I, upper_value_limit=THRES_DTYPE_I)
+    used_space = write_binary(output_path, HOLE_ADR2DATA, hole_adr2data, data_format=DTYPE_FORMAT_I,
+                              upper_value_limit=THRES_DTYPE_I)
     hole_space += used_space
 
     # Y times [ 2x i signed ints for every hole: x coords, y coords ]
-    used_space = write_coordinate_data(HOLE_DATA, holes)
+    used_space = write_coordinate_data(output_path, HOLE_DATA, holes)
     hole_space += used_space
 
     polygon_space = nr_of_floats * NR_BYTES_I
@@ -948,18 +952,30 @@ def compile_binaries():
     return
 
 
-if __name__ == '__main__':
-    # TODO add option to modify expected input file name
+def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
     # parsing the data from the .json into RAM
-    parse_polygons_from_json(path=INPUT_JSON_FILE_NAME)
+    parse_polygons_from_json(input_path)
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
     # sort data according to zone_id
-    update_zone_names(path=TIMEZONE_NAMES_FILE)
+    update_zone_names(output_path)
 
+    # TODO
     # IMPORTANT: import the newly compiled timezone_names pickle!
     # the compilation process needs the new version of the timezone names
-    with open(abspath(join(__file__, pardir, TIMEZONE_NAMES_FILE)), 'r') as f:
-        timezone_names = json.loads(f.read())
+    # with open(path2timezone_names, 'r') as f:
+    #     timezone_names = json.loads(f.read())
 
     # compute shortcuts and write everything into the binaries
-    compile_binaries()
+    compile_binaries(output_path)
+
+
+if __name__ == '__main__':
+    import argparse
+
+    # TODO document
+    parser = argparse.ArgumentParser(description='parse data directories')
+    parser.add_argument('-inp', help='path to input JSON file', default=DEFAULT_INPUT_PATH)
+    parser.add_argument('-out', help='path to output folder for storing the parsed data files',
+                        default=DEFAULT_OUTPUT_PATH)
+    parsed_args = parser.parse_args()  # takes input from sys.argv
+    parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)
