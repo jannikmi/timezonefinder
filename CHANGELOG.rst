@@ -15,7 +15,7 @@ Changelog
 
 TODO document class attributes
 TODO create variables for used dtype for each type of data (polygon address, coordinate...)
-    more "intelligent" binary file creation settings: name, dtype etc. combined
+more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
 4.4.0 (2020-05-14)

@@ -181,7 +181,6 @@ if __name__ == "__main__":
 
     # TODO data could contain errors, test before upload
     routine(None, 'Remember to properly specify all supported python versions in publish.py and setup.py')
-    routine(None, 'Remember to uploaded new EXTERNAL data and pin the version in setup.py (under extras)')
     routine(None, 'Remember to list all LOCAL data files in global_settings.py')
     routine(None, 'Remember to list all relevant importable objects in __all__ variable in __init__.py')
     routine(None, 'Remember to keep helpers.py and helpers_numba.py consistent')
