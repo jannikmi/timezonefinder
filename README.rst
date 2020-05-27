@@ -56,3 +56,17 @@ Quick Guide:
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
 
+Also check:
+
+`GitHub <https://github.com/MrMinimal64/timezonefinder>`__
+
+`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+
+`online GUI and API<http://timezonefinder.michelfe.it>`__
+
+`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+
+ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
+
+`download stats <https://pepy.tech/project/timezonefinder>`__
+

@@ -15,7 +15,7 @@ Initialisation
 --------------
 
 
-Create a new instance of the TimezoneFinder :ref:`TimezoneFinder class <api_finder>` to allow fast consequent timezone queries:
+Create a new instance of the :ref:`TimezoneFinder class <api_finder>` to allow fast consequent timezone queries:
 
 .. code-block:: python
 

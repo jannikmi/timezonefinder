@@ -1,0 +1,4 @@
+# basic dependencies:
+# python3.6+
+numpy>=1.16
+sphinx_rtd_theme

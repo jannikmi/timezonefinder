@@ -18,14 +18,18 @@ Current **data set** in use: precompiled `timezone-boundary-builder <https://git
 
 
 Also see:
-`GitHub <https://github.com/MrMinimal64/timezonefinder>`__,
-`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__,
-`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__,
-`timezone_finder <https://github.com/gunyarakun/timezone_finder>`__: ruby port,
 
-.. TODO
+`GitHub <https://github.com/MrMinimal64/timezonefinder>`__
 
-`timezonefinderL GUI <http://timezonefinder.michelfe.it/gui>`__: demo and online API of an older ``timezonefinderL`` version
+`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+
+`online GUI and API<http://timezonefinder.michelfe.it>`__
+
+`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+
+ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
+
+`download stats <https://pepy.tech/project/timezonefinder>`__
 
 
 License
@@ -167,6 +171,17 @@ This package uses at most 40MB (= encountered memory consumption of the python p
     all other cross tests are not meaningful because tz_where is still using the outdated tz_world data set
 
 
+Contact
+--------
+
+
+Tell me if and how your are using this package. This encourages me to develop and test it further.
+
+Most certainly there is stuff I missed, things I could have optimized even further or explained more clearly, etc.
+I would be really glad to get some feedback.
+
+If you encounter any bugs, have suggestions etc. do not hesitate to **open an Issue** or **add a Pull Requests** on Git.
+Please refer to the :ref:`contribution guidelines <contributing>`
 
 
 Acknowledgements

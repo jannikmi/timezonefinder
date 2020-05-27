@@ -246,8 +246,8 @@ if __name__ == "__main__":
     # new twine publishing routine:
     # https://packaging.python.org/tutorials/packaging-projects/
     # delete the build folder before to get a fresh build
-    routine(f"rm -r -f build; python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}", 'building the package now.'
-                                                                                            'build done. check the included files! test uploading.')
+    routine(f"rm -r -f build; python setup.py sdist bdist_wheel --python-tag {PYTHON_TAG}",
+            'building the package now.', 'build done. check the included files! test uploading.')
 
     path = abspath(join(__file__, pardir, 'dist'))
     all_archives_this_version = [f for f in os.listdir(path) if isfile(join(path, f)) and version_str in f]
@@ -262,15 +262,5 @@ if __name__ == "__main__":
 
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
-
-    routine(f"git tag -a v{version} -m 'Version {version}'", 'Creating tag', 'Continue')
-
-    routine(None, 'Do you want to push the git release tag?', 'Yes', 'No')
-    # in den master pushen
-    os.system("git push --tags")
-
-    print('______________')
-    print('Publishing Done.')
-    print('now run:')
-    print("only when the upload didn't work: python3 setup.py bdist_wheel upload")
-    print(f'sudo -H pip install {PACKAGE} --upgrade')
+    routine(f"git tag -a v{version} -m 'Version {version}'; git push --tags", 'Creating tag')
+    print(f'______________\nCongrats! Published version {version}.')
