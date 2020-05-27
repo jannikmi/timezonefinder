@@ -62,7 +62,7 @@ Also check:
 
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
 
-`online GUI and API <http://timezonefinder.michelfe.it>`__
+`online GUI and API <https://timezonefinder.michelfe.it>`__
 
 `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
