@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://img.shields.io/travis/MrMinimal64/timezonefinder/master.svg
+.. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
@@ -57,8 +57,6 @@ Quick Guide:
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
 
 Also check:
-
-`GitHub <https://github.com/MrMinimal64/timezonefinder>`__
 
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
 

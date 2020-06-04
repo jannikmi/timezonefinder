@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKING_FOLDER_NAME=tmp_data_downloaded
+WORKING_FOLDER_NAME=tmp
 ARCHIVE_NAME=data_downloaded.zip
 ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
 DATA_FILE_NAME=combined.json
@@ -16,6 +16,7 @@ parent_path=$(
     pwd -P
 )
 cd "$parent_path" || exit 1
+mkdir "$WORKING_FOLDER_NAME"
 
 if [ -f $ZIP_SOURCE_PATH ]; then
     echo "skip unpacking: $ZIP_SOURCE_PATH already exists."
