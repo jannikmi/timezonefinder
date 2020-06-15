@@ -2,7 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
+.. image:: https://api.travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
     :target: https://travis-ci.org/MrMinimal64/timezonefinder
 
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
