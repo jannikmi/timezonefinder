@@ -18,6 +18,13 @@ TODO create variables for used dtype for each type of data (polygon address, coo
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
+
+4.4.1 (2020-08-04)
+------------------
+
+BUGFIX: a longitude of 180 equals -180 (not 0.0 as previously implemented)
+
+
 4.4.0 (2020-05-14)
 ------------------
 
