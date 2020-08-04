@@ -54,6 +54,7 @@ EASY_TEST_LOCATIONS = [
     (42.439370, -71.0700416, 'Boston', 'America/New_York'),
 ]
 
+# certain algorithm should give the same results for all normal test cases
 TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (41.84937, -87.6611995, 'Chicago', 'America/Chicago'),
     (28.626873, -81.7584514, 'Orlando', 'America/New_York'),
@@ -74,6 +75,14 @@ TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (50.26, -5.051, 'Truro', 'Europe/London'),
     (37.81, -122.35, 'San Francisco Bay', 'America/Los_Angeles'),
 
+    (65.2, 179.9999, 'lng 180', 'Asia/Anadyr'),
+    # lng 180 == -180
+    # disabled because they fail for certain_timezone_at()
+    # <- right on the timezone boundary polygon edge, return value uncertain (None in this case)
+    # being tested in test_helpers.py
+    # (65.2, 180.0, 'lng 180', 'Asia/Anadyr'),
+    # (65.2, -180.0, 'lng -180', 'Asia/Anadyr'),
+
     # test cases for hole handling:
     (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Yerevan'),
     (39.8417402, 70.6020068, 'Tajikistani Enklave', 'Asia/Dushanbe'),
@@ -91,8 +100,6 @@ TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     # Not sure about the right result:
     # (68.3597987,-133.745786, 'America', 'America/Inuvik'),
 ]
-
-# certain algorithm should give the same results for all normal test cases
 TEST_LOCATIONS_CERTAIN = TEST_LOCATIONS + [
     # add some test cases for testing if None is being returned outside of timezone polygons
     # the polygons in the new data do not follow the coastlines any more

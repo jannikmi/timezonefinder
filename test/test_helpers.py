@@ -3,6 +3,7 @@ import unittest
 from math import degrees, radians, sqrt
 
 import numpy as np
+import pytest
 
 from auxiliaries import proto_test_case, random_point
 from timezonefinder.global_settings import (
@@ -268,6 +269,31 @@ class HelperTest(unittest.TestCase):
             print('\n')
 
         assert no_mistakes_made
+
+    def test_rectify_coords(self):
+        rectify_coordinates = self.fct_dict['rectify_coordinates']
+        if rectify_coordinates is None:
+            print('test rectify_coordinates() skipped.')
+            return
+
+        with pytest.raises(ValueError):  # coords out of bounds
+            rectify_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
+            rectify_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
+            rectify_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
+            rectify_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
+            rectify_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
+            rectify_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
+            rectify_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
+
+        test_cases = [
+            # input (lng, lat), expected output
+            ((180.0, 30.0), (-180.0, 30.0)),
+            ((100.0, -90), (100.0, -90 + INT2COORD_FACTOR)),
+        ]
+
+        for i, (inp, expected_output) in enumerate(test_cases):
+            output = rectify_coordinates(*inp)
+            assert output == expected_output, f'results do not match: {output} != {expected_output}'
 
     def test_all_the_same(self):
 

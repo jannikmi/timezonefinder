@@ -265,8 +265,8 @@ def rectify_coordinates(lng, lat):
     if lng == 180.0:
         # a longitude of 180.0 is not allowed, because the right border of a shortcut
         # is already considered to lie within the next shortcut
-        # it however equals lng=0.0 (earth is a sphere)
-        lng = 0.0
+        # it however equals lng=-180 (earth is a sphere)
+        lng = -180.0
 
     if lat == -90.0:
         # a latitude of -90.0 (=exact south pole) corresponds to just one single point on earth

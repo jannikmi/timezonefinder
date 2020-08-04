@@ -91,6 +91,11 @@ are being checked until one polygon is matched. ``None`` is being returned in th
     The timezone polygons do NOT follow the shoreline.
     Consequently even if certain_timezone_at() does not return ``None``, a query point could be at sea.
 
+.. note::
+
+    Due to the "point-in-polygon-test" algorithm being used, the state of a point on the edge of a (timezone) polygon is undefined.
+    For those kind of points the return values is hence uncertain and might be ``None``.
+    This applies for example for all points with lng=+-180.0, because the timezone polygons in the data set are being cropped at the 180 longitude border.
 
 
 
