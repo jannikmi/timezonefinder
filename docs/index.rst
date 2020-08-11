@@ -17,10 +17,6 @@ timezonefinder
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
-.. image:: https://img.shields.io/pypi/dd/timezonefinder.svg
-    :alt: daily PyPI downloads
-    :target: https://pepy.tech/project/timezonefinder
-
 .. image:: https://pepy.tech/badge/timezonefinder
     :alt: total PyPI downloads
     :target: https://pepy.tech/project/timezonefinder
