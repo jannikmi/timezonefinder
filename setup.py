@@ -11,15 +11,15 @@ setup(
     # version: in VERSION file https://packaging.python.org/guides/single-sourcing-package-version/
     # With this approach you must make sure that the VERSION file is included in all your source
     # and binary distributions (e.g. add include VERSION to your MANIFEST.in).
-    author='J. Michelfeit',
+    author='Jannik Michelfeit',
     author_email='python@michelfe.it',
     license='MIT licence',
-    url='https://github.com/MrMinimal64/timezonefinder',  # use the URL to the github repo
+    url=f'https://github.com/MrMinimal64/{PACKAGE_NAME}',  # use the URL to the github repo
     project_urls={
-        "Source Code": "https://github.com/MrMinimal64/timezonefinder",
-        "Documentation": "https://timezonefinder.readthedocs.io/en/latest/",
-        "Changelog": "https://github.com/MrMinimal64/timezonefinder/blob/master/CHANGELOG.rst",
-        "License": "https://github.com/MrMinimal64/timezonefinder/blob/master/LICENSE",
+        "Source Code": f"https://github.com/MrMinimal64/{PACKAGE_NAME}",
+        "Documentation": f"https://{PACKAGE_NAME}.readthedocs.io/en/latest/",
+        "Changelog": f"https://github.com/MrMinimal64/{PACKAGE_NAME}/blob/master/CHANGELOG.rst",
+        "License": f"https://github.com/MrMinimal64/{PACKAGE_NAME}/blob/master/LICENSE",
     },
     keywords='timezone coordinates latitude longitude location pytzwhere tzwhere',
     classifiers=[
