@@ -881,7 +881,7 @@ def compile_binaries(output_path):
 
     # write address of first "shortcut" (=polygon number) in shortcut field (x,y)
     adr = 0
-    path = SHORTCUTS_ADR2DATA + BINARY_FILE_ENDING
+    path = join(output_path, SHORTCUTS_ADR2DATA + BINARY_FILE_ENDING)
     print(f'writing {path}')
     with open(path, 'wb') as output_file:
         for nr in nr_of_entries_in_shortcut:
@@ -920,7 +920,7 @@ def compile_binaries(output_path):
                 poly_id: (1, i),
             })
 
-    with open(HOLE_REGISTRY_FILE, 'w') as json_file:
+    with open(join(output_path, HOLE_REGISTRY_FILE), 'w') as json_file:
         json.dump(hole_registry, json_file, indent=4)
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]

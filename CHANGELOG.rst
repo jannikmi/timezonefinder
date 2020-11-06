@@ -5,6 +5,8 @@ Changelog
 5.0.0 (TBA)
 -----------
 
+POSTPONED:
+
 * TODO removed data files
 * TODO added "extra" simplifying the installation of TODO external data
     TODO document! also in minimal example in readme!
@@ -17,6 +19,15 @@ TODO document class attributes
 TODO create variables for used dtype for each type of data (polygon address, coordinate...)
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
+
+4.5.0 (2020-11-06)
+------------------
+
+BUGFIX: handle output destination for data files correctly in file_converter.py (FIX #107)
+
+* updated the data to `2020d <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2020d>`__
+* disable a test case for an Uzbek enclave. tests fail at this coordinate, possibly a bug. issue filed here: https://github.com/evansiroky/timezone-boundary-builder/issues/94
+* update parse_data.sh script to properly handle new data format
 
 
 4.4.1 (2020-08-04)

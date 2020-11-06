@@ -3,6 +3,7 @@ timezonefinder/combined.json
 scrapyard.py
 playground.py
 tmp.py
+tmp/
 
 *.DS_Store
 *.pytest_cache
