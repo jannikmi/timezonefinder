@@ -8,18 +8,17 @@ import pytest
 
 from auxiliaries import list_of_random_points, random_point
 from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME
-from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL, is_ocean_timezone
 
-# number of points to test (in each test, realistic and random ones)
+# number of points to test (in each test, on land and random ones)
 N = int(1e2)
-
-# mistakes in these zones don't count as mistakes
-excluded_zones_timezonefinder = []
 
 tf = None
 point_list = []
 in_memory_mode = False
 class_under_test = TimezoneFinder
+
+RESULT_TEMPLATE = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
 
 
 def eval_time_fct():
@@ -35,8 +34,9 @@ def time_preprocess(time):
     return str(round(time, digits_to_print)) + 's'
 
 
-EASY_TEST_LOCATIONS = [
-    # lat, lng, description, correct output
+# for TimezoneFinderL:
+BASIC_TEST_LOCATIONS = [
+    # lat, lng, description, expected
     (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
     (35.1322601, -90.0902499, 'Memphis, TN', 'America/Chicago'),
     (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
@@ -49,13 +49,17 @@ EASY_TEST_LOCATIONS = [
     (50.438114, 30.5179595, 'Kiev', 'Europe/Kiev'),
     (12.936873, 77.6909136, 'Jogupalya', 'Asia/Kolkata'),
     (38.889144, -77.0398235, 'Washington DC', 'America/New_York'),
+    (19, -135, 'pacific ocean', 'Etc/GMT+9'),
+    (30, -33, 'atlantic ocean', 'Etc/GMT+2'),
+    (-24, 79, 'indian ocean', 'Etc/GMT-5'),
+]
+
+# for TimezoneFinder:
+# certain algorithm should give the same results for all normal test cases
+TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
     (59.932490, 30.3164291, 'St Petersburg', 'Europe/Moscow'),
     (50.300624, 127.559166, 'Blagoveshchensk', 'Asia/Yakutsk'),
     (42.439370, -71.0700416, 'Boston', 'America/New_York'),
-]
-
-# certain algorithm should give the same results for all normal test cases
-TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (41.84937, -87.6611995, 'Chicago', 'America/Chicago'),
     (28.626873, -81.7584514, 'Orlando', 'America/New_York'),
     (47.610615, -122.3324847, 'Seattle', 'America/Los_Angeles'),
@@ -73,15 +77,15 @@ TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (37.466666, 126.6166667, 'Inchon seaport', 'Asia/Seoul'),
     (42.8, 132.8833333, 'Nakhodka seaport', 'Asia/Vladivostok'),
     (50.26, -5.051, 'Truro', 'Europe/London'),
+    (37.790792, -122.389980, 'San Francisco', 'America/Los_Angeles'),
     (37.81, -122.35, 'San Francisco Bay', 'America/Los_Angeles'),
+    (68.3597987, -133.745786, 'America', 'America/Inuvik'),
 
-    (65.2, 179.9999, 'lng 180', 'Asia/Anadyr'),
     # lng 180 == -180
-    # disabled because they fail for certain_timezone_at()
-    # <- right on the timezone boundary polygon edge, return value uncertain (None in this case)
+    # 180.0: right on the timezone boundary polygon edge, the return value is uncertain (None in this case)
     # being tested in test_helpers.py
-    # (65.2, 180.0, 'lng 180', 'Asia/Anadyr'),
-    # (65.2, -180.0, 'lng -180', 'Asia/Anadyr'),
+    (65.2, 179.9999, 'lng 180', 'Asia/Anadyr'),
+    (65.2, -179.9999, 'lng -180', 'Asia/Anadyr'),
 
     # test cases for hole handling:
     (41.0702284, 45.0036352, 'Aserbaid. Enklave', 'Asia/Yerevan'),
@@ -96,36 +100,32 @@ TEST_LOCATIONS = EASY_TEST_LOCATIONS + [
     (36.4091869, -110.7520236, 'Arizona Desert 2', 'America/Phoenix'),
     (36.10230848, -111.1882385, 'Arizona Desert 3', 'America/Phoenix'),
 
-    (50.26, -9.051, 'Far off Cornwall', None),
-
-    # Not sure about the right result:
-    # (68.3597987,-133.745786, 'America', 'America/Inuvik'),
-]
-TEST_LOCATIONS_CERTAIN = TEST_LOCATIONS + [
-    # add some test cases for testing if None is being returned outside of timezone polygons
-    # the polygons in the new data do not follow the coastlines any more
-    # these tests are not meaningful at the moment
-    #
-    # (40.7271, -73.98, 'Shore Lake Michigan', None),
-    # (51.032593, 1.4082031, 'English Channel1',  None),
-    # (50.9623651, 1.5732592, 'English Channel2',  None),
-    # (55.5609615, 12.850585, 'Oresund Bridge1',  None),
-    # (55.6056074, 12.7128568, 'Oresund Bridge2',  None),
+    # ocean:
+    (37.81, -123.5, 'Far off San Fran.', 'Etc/GMT+8'),
+    (50.26, -9.0, 'Far off Cornwall', 'Etc/GMT+1'),
+    (50.5, 1, 'English Channel1', 'Etc/GMT'),
+    (56.218, 19.4787, 'baltic sea', 'Etc/GMT-1'),
 ]
 
 TEST_LOCATIONS_PROXIMITY = [
-    # the polygons in the new data do not follow the coastlines any more
-    # proximity tests are not meaningful at the moment
-
-    (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
-    (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
-    (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
-    (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
+    # TODO the data now contains ocean timezones, every point lies within a zone!
+    #  -> proximity tests are not meaningful at the moment
+    # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
+    # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
+    # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
+    # (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
+    # (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
     # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
-    (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
+    # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
     # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
 ]
+
+
+def ocean2land(test_locations):
+    for lat, lng, description, expected in test_locations:
+        if is_ocean_timezone(expected):
+            expected = None
+        yield lat, lng, description, expected
 
 
 # tests for TimezonefinderL class
@@ -133,8 +133,8 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     in_memory_mode = False
     bin_file_dir = None
     class_under_test = TimezoneFinderL
-    realistic_pt_fct_name = 'timezone_at'
-    test_locations = EASY_TEST_LOCATIONS
+    on_land_pt_fct_name = 'timezone_at'
+    test_locations = BASIC_TEST_LOCATIONS
 
     def print_tf_class_props(self):
         print('\n\ntest properties:')
@@ -159,20 +159,19 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
 
         cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
 
-        # create an array of points where timezone_finder finds something (realistic queries)
-        print('collecting and storing', N, 'realistic points for the tests...')
-        cls.realistic_points = []
+        # create an array of points where timezone_finder finds something (on_land queries)
+        print('collecting and storing', N, 'on land points for the tests...')
+        cls.on_land_points = []
         ps_for_10percent = int(N / 10)
         percent_done = 0
 
         i = 0
-        realistic_pt_fct = getattr(cls.test_instance, cls.realistic_pt_fct_name)
+        on_land_pt_fct = getattr(cls.test_instance, cls.on_land_pt_fct_name)
         while i < N:
             lng, lat = random_point()
-            # a realistic point is a point where certain_timezone_at() finds something
-            if realistic_pt_fct(lng=lng, lat=lat):
+            if on_land_pt_fct(lng=lng, lat=lat):
                 i += 1
-                cls.realistic_points.append((lng, lat))
+                cls.on_land_points.append((lng, lat))
                 if i % ps_for_10percent == 0:
                     percent_done += 10
                     print(percent_done, '%')
@@ -180,7 +179,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         print("Done.\n")
 
     def test_speed(self):
-        print('\n\nSpeed Tests:\n-------------\n"realistic points": points included in a timezone\n')
+        print('\n\nSpeed Tests:\n-------------\n"on land points": points included in a timezone\n')
         self.print_tf_class_props()
 
         def print_speed_test(type_of_points, list_of_points):
@@ -195,13 +194,13 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             pts_p_sec = round(pts_p_sec / 10 ** exp, 1)  # normalize
             print('avg. points per second: {} * 10^{}'.format(pts_p_sec, exp))
 
-        print_speed_test('realistic points', self.realistic_points)
+        print_speed_test('on land points', self.on_land_points)
         print_speed_test('random points', list_of_random_points(length=N))
 
     def test_shortcut_boundary(self):
         # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
-        assert self.test_instance.timezone_at(lng=-180.0, lat=90.0) is None
-        assert self.test_instance.timezone_at(lng=180.0, lat=90.0) is None
+        assert self.test_instance.timezone_at(lng=-180.0, lat=90.0) == 'Etc/GMT+12'
+        assert self.test_instance.timezone_at(lng=180.0, lat=90.0) == 'Etc/GMT+12'
         assert self.test_instance.timezone_at(lng=180.0, lat=-90.0) == 'Antarctica/McMurdo'
         assert self.test_instance.timezone_at(lng=-180.0, lat=-90.0) == 'Antarctica/McMurdo'
 
@@ -221,27 +220,32 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             self.test_instance.timezone_at(23.0, lng=42.0)
             self.test_instance.timezone_at(23.0, lat=42.0)
 
-    def test_correctness(self):
+            self.test_instance.timezone_at_land(23.0, 42.0)
+            self.test_instance.timezone_at_land(23.0, lng=42.0)
+            self.test_instance.timezone_at_land(23.0, lat=42.0)
+
+    def run_location_tests(self, test_fct, test_data):
         no_mistakes_made = True
-        template = '{0:20s} | {1:20s} | {2:20s} | {3:2s}'
-
-        print('\nresults timezone_at()')
-        print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', '=='))
+        print(RESULT_TEMPLATE.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
         print('====================================================================')
-        for (lat, lng, loc, expected) in self.test_locations:
-            computed = self.test_instance.timezone_at(lng=lng, lat=lat)
-
+        for (lat, lng, loc, expected) in test_data:
+            computed = test_fct(lng=lng, lat=lat)
             if computed == expected:
                 ok = 'OK'
             else:
                 print(lat, lng)
                 ok = 'XX'
                 no_mistakes_made = False
-            print(template.format(loc, str(expected), str(computed), ok))
-
+            print(RESULT_TEMPLATE.format(loc, str(expected), str(computed), ok))
         assert no_mistakes_made
 
-        return no_mistakes_made, template
+    def test_timezone_at(self):
+        print('\ntesting timezone_at():')
+        self.run_location_tests(self.test_instance.timezone_at, self.test_locations)
+
+    def test_timezone_at_land(self):
+        print('\ntesting timezone_at_land():')
+        self.run_location_tests(self.test_instance.timezone_at_land, ocean2land(self.test_locations))
 
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
@@ -264,7 +268,7 @@ class BaseClassTestMEMDIR(BaseTimezoneFinderClassTest):
 # tests for Timezonefinder class
 class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
     class_under_test = TimezoneFinder
-    realistic_pt_fct_name = 'certain_timezone_at'
+    on_land_pt_fct_name = 'timezone_at_land'
     test_locations = TEST_LOCATIONS
 
     def test_kwargs_only(self):
@@ -279,37 +283,13 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.closest_timezone_at(23.0, lng=42.0)
             self.test_instance.closest_timezone_at(23.0, lat=42.0)
 
-    def test_correctness(self):
-        no_mistakes_made, template = super(TimezonefinderClassTest, self).test_correctness()
+    def test_certain_timezone_at(self):
+        print('\ntestin certain_timezone_at():')  # expected equal results to timezone_at(), is just slower
+        self.run_location_tests(self.test_instance.certain_timezone_at, self.test_locations)
 
-        print('\ncertain_timezone_at():')
-        print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
-        print('====================================================================')
-        for (lat, lng, loc, expected) in TEST_LOCATIONS_CERTAIN:
-            computed = self.test_instance.certain_timezone_at(lng=lng, lat=lat)
-            if computed == expected:
-                ok = 'OK'
-            else:
-                print(lat, lng)
-                ok = 'XX'
-                no_mistakes_made = False
-            print(template.format(loc, str(expected), str(computed), ok))
-
-        print('\nclosest_timezone_at():')
-        print(template.format('LOCATION', 'EXPECTED', 'COMPUTED', 'Status'))
-        print('====================================================================')
-        print('testing this function does not make sense any more, because the tz polygons do not follow the shoreline')
-        for (lat, lng, loc, expected) in TEST_LOCATIONS_PROXIMITY:
-            computed = self.test_instance.closest_timezone_at(lng=lng, lat=lat)
-            if computed == expected:
-                ok = 'OK'
-            else:
-                print(lat, lng)
-                ok = 'XX'
-                no_mistakes_made = False
-            print(template.format(loc, str(expected), str(computed), ok))
-
-        assert no_mistakes_made
+    def test_closest_timezone_at(self):
+        print('\ntestin closest_timezone_at():')
+        self.run_location_tests(self.test_instance.closest_timezone_at, TEST_LOCATIONS_PROXIMITY)
 
     def test_overflow(self):
         longitude = -123.2

@@ -4,7 +4,7 @@
 
 PACKAGE_NAME = 'timezonefinder'
 
-DEFAULT_INPUT_PATH = 'combined.json'
+DEFAULT_INPUT_PATH = 'combined-with-oceans.json'
 DEFAULT_OUTPUT_PATH = '.'  # store parsed data in same directory as default
 
 DEBUG = False
@@ -20,6 +20,8 @@ NR_SHORTCUTS_PER_LNG = 1
 # shortcuts per latitude
 NR_SHORTCUTS_PER_LAT = 2
 NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
+
+OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
 # DATA FILES
 # BINARY

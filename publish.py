@@ -196,12 +196,10 @@ if __name__ == "__main__":
     # routine(VIRT_ENV_COMMAND + "pip-compile requirements_numba.in;pip-sync",
     #      'pinning the requirements.txt and bringing virtualEnv to exactly the specified state:', 'next: build check')
 
-    routine(f'{VIRT_ENV_COMMAND} rstcheck *.rst', 'checking syntax of all .rst files:', 'next: build check')
+    routine(f'{VIRT_ENV_COMMAND} rstcheck *.rst', 'checking syntax of all .rst files:',
+            'checking documentation generation')
 
-    print('generating documentation now...')
-    os.system('(cd ./docs && exec make html)')
-    print('done.')
-    # TODO test
+    routine('(cd ./docs && exec make html)', f'checking documentation generation', '')
 
     # IMPORTANT: -r flag to rebuild tox virtual env
     # only when dependencies have changed!
@@ -263,4 +261,4 @@ if __name__ == "__main__":
     # tag erstellen
     routine(None, 'Do you want to create a git release tag?', 'Yes', 'No')
     routine(f"git tag -a v{version} -m 'Version {version}'; git push --tags", 'Creating tag')
-    print(f'______________\nCongrats! Published version {version}.')
+    print(f'______________\nCongrats! Published version {version}.\nremember to update the GUI to the new version!')

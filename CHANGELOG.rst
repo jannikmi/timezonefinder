@@ -2,22 +2,25 @@ Changelog
 =========
 
 
-5.0.0 (TBA)
------------
-
-POSTPONED:
-
-* TODO removed data files
-* TODO added "extra" simplifying the installation of TODO external data
-    TODO document! also in minimal example in readme!
-* TODO specify minimal version of data extra! ('pin')
-* TODO describe loading priority
-* TODO private repo, without the actual data. for data files! but regular upload to pypI,
-* TODO importlib_resources dependency
-
-TODO document class attributes
-TODO create variables for used dtype for each type of data (polygon address, coordinate...)
+TODOs:
+document class attributes
+create variables for used dtype for each type of data (polygon address, coordinate...)
 more "intelligent" binary file creation settings: name, dtype etc. combined
+
+
+5.0.0 (2020-12-23)
+------------------
+
+MAJOR CHANGES:
+
+Due to multiple user requests the ocean timezones ("Etc/GMT+-XX") are now included in the data files per default. fix #88. Since ocean timezones span the whole globe, now every point lies within a timezone!
+
+API changes:
+* added ``timezone_at_land()``: replaces the previous ``timezone_at()`` and returns ``None`` in case of a matched ocean timezone.
+
+* deprecated ``certain_timezone_at()``. only meaningful in the case of timezone data WITHOUT oceans. Has equal results as  ``timezone_at()``, but is more expensive to use.
+* also looking a single closest timezone boundary with ``closest_timezone_at()`` is not really meaningful, since every point lies within a zone!
+* refactored tests. new test cases for ocean timezones
 
 
 4.5.0 (2020-11-06)

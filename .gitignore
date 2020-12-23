@@ -2,6 +2,7 @@ MANIFEST
 timezonefinder/combined.json
 scrapyard.py
 playground.py
+build_n_install.py
 tmp.py
 tmp/
 

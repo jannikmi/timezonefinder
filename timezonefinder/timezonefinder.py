@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 import json
+import re
 from abc import ABC, abstractmethod
 from io import SEEK_CUR, BytesIO
 from math import radians
@@ -12,9 +13,9 @@ from numpy import array, dtype, empty, frombuffer, fromfile
 from timezonefinder.global_settings import (
     BINARY_DATA_ATTRIBUTES, BINARY_FILE_ENDING, DATA_ATTRIBUTE_NAMES, DTYPE_FORMAT_B_NUMPY, DTYPE_FORMAT_F_NUMPY,
     DTYPE_FORMAT_H, DTYPE_FORMAT_H_NUMPY, DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I_NUMPY, HOLE_ADR2DATA,
-    HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_REGISTRY, HOLE_REGISTRY_FILE, MAX_HAVERSINE_DISTANCE, NR_BYTES_H,
-    NR_BYTES_I, NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, POLY_ADR2DATA, POLY_COORD_AMOUNT,
-    POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA, SHORTCUTS_DATA,
+    HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_REGISTRY, HOLE_REGISTRY_FILE, MAX_HAVERSINE_DISTANCE, NR_BYTES_H, NR_BYTES_I,
+    NR_LAT_SHORTCUTS, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, OCEAN_TIMEZONE_PREFIX, POLY_ADR2DATA,
+    POLY_COORD_AMOUNT, POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA, SHORTCUTS_DATA,
     SHORTCUTS_DIRECT_ID, SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_UNIQUE_ID, TIMEZONE_NAMES, TIMEZONE_NAMES_FILE,
 )
 
@@ -34,6 +35,12 @@ def fromfile_memory(file, **kwargs):
     res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
     file.seek(dtype(kwargs['dtype']).itemsize * kwargs['count'], SEEK_CUR)
     return res
+
+
+def is_ocean_timezone(timezone_name: str) -> bool:
+    if re.match(OCEAN_TIMEZONE_PREFIX, timezone_name) is None:
+        return False
+    return True
 
 
 class AbstractTimezoneFinder(ABC):
@@ -92,11 +99,28 @@ class AbstractTimezoneFinder(ABC):
         """
         pass
 
+    def timezone_at_land(self, *, lng: float, lat: float) -> Optional[str]:
+        """ computes in which land timezone a point is included in
+
+        Especially for large polygons it is expensive to check if a point is really included.
+        To speed things up there are "shortcuts" being used (stored in a binary file),
+        which have been precomputed and store which timezone polygons have to be checked.
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the timezone name of a matching polygon or
+            ``None`` when an ocean timezone ("Etc/GMT+-XX") has been matched.
+        """
+        tz_name = self.timezone_at(lng=lng, lat=lat)
+        if is_ocean_timezone(tz_name):
+            return None
+        return tz_name
+
 
 class TimezoneFinderL(AbstractTimezoneFinder):
     """ a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
 
-    Instead of using timezone polygon data like TimezoneFinder,
+    Instead of using timezone polygon data like ``TimezoneFinder``,
     this class only uses a precomputed 'shortcut' to suggest a probable result:
     the most common zone in a rectangle of a half degree of latitude and one degree of longitude
     """
@@ -106,7 +130,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     __slots__ = [SHORTCUTS_DIRECT_ID]
     binary_data_attributes = [SHORTCUTS_DIRECT_ID]
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str:
         """ instantly returns the name of the most common zone within a shortcut
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
@@ -122,7 +146,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
             return getattr(self, TIMEZONE_NAMES)[
                 unpack(DTYPE_FORMAT_H, shortcut_direct_id.read(NR_BYTES_H))[0]]
         except IndexError:
-            return None
+            raise ValueError('timezone could not be found. index error.')
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -342,12 +366,18 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         return sorted_polygon_id_list, sorted_zone_id_list, False
 
+    # TODO split up in different functions
+    # TODO any point is included in some zone,
+    #  -> shared boundaries, ambiguous results, not meaningful to search for the closest boundary!
     def closest_timezone_at(self, *, lng: float, lat: float, delta_degree: int = 1, exact_computation: bool = False,
                             return_distances: bool = False, force_evaluation: bool = False):
-        """ Searches for the closest polygon in the surrounding shortcuts
+        """ Computes the (approximate) minimal distance to the polygon boundaries in the surrounding shortcuts.
 
-        Computes the (approximate) distance to all the polygons within ``delta_degree`` degree lng and lat
-        Make sure that the point does not lie within a polygon
+        .. note::  Since ocean timezones span the whole globe, any point will be included in some zone!
+            Hence there will often be shared boundaries and the results are ambiguous. -> It is not meaningful
+            to search just for the closest time zoned (<-> boundary)!
+
+        All polygons within ``delta_degree`` degree lng and lat will be considered.
 
         .. note:: the algorithm won't find the closest polygon when it's on the 'other end of earth'
             (it can't search beyond the 180 deg lng border!)
@@ -367,7 +397,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param return_distances: when enabled the output looks like this:
             ``( 'tz_name_of_the_closest_polygon',[ distances to all polygons in km], [tz_names of all polygons])``
         :param force_evaluation: whether all distances should be computed in any case
-        :return: the timezone name of the closest found polygon, the list of distances or None
+        :return: the timezone name of the polygon with the closest boundary, the list of distances or None
         """
 
         def exact_routine(polygon_nr):
@@ -470,18 +500,20 @@ class TimezoneFinder(AbstractTimezoneFinder):
                                                                    in ids]
         return timezone_names[current_closest_id]
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
-        """ looks up in which timezone the given coordinate is possibly included in
+    def timezone_at(self, *, lng: float, lat: float) -> str:
+        """ computes in which ocean OR land timezone a point is included in
 
-        to speed things up there are shortcuts being used (stored in a binary file)
-        especially for large polygons it is expensive to check if a point is really included,
-        so certain simplifications are made and even when you get a hit the point might actually
-        not be inside the polygon (for example when there is only one timezone nearby)
-        if you want to make sure a point is really inside a timezone use ``certain_timezone_at()``
+        Especially for large polygons it is expensive to check if a point is really included.
+        To speed things up there are "shortcuts" being used (stored in a binary file),
+        which have been precomputed and store which timezone polygons have to be checked.
+        In case there is only one possible zone this zone will instantly be returned without actually checking
+        if the query point is included in this polygon -> speed up
+
+        Since ocean timezones span the whole globe, some timezone will always be matched!
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
-        :return: the timezone name of a matching polygon or None
+        :return: the timezone name of the matched timezone polygon. possibly "Etc/GMT+-XX" in case of an ocean timezone.
         """
         lng, lat = rectify_coordinates(lng, lat)
 
@@ -496,7 +528,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
             nr_possible_polygons = len(possible_polygons)
             if nr_possible_polygons == 0:
-                return None
+                raise ValueError('some timezone polygon should be present (ocean timezones exist everywhere)!')
             if nr_possible_polygons == 1:
                 # there is only one polygon in that area. return its timezone name without further checks
                 return getattr(self, TIMEZONE_NAMES)[self.id_of(possible_polygons[0])]
@@ -541,7 +573,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
             raise ValueError('BUG: this statement should never be reached. Please open up an issue on Github!')
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
-        """ looks up in which polygon the point certainly is included in
+        """ checks in which timezone polygon the point is certainly included in
+
+        .. note:: this is only meaningful when you use timezone data WITHOUT oceans!
+            Otherwise some timezone will always be matched, since ocean timezones span the whole globe.
+            -> useless to actually test all polygons.
 
         .. note:: this is much slower than 'timezone_at'!
 
@@ -576,7 +612,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 if outside_all_holes:
                     if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
                         return getattr(self, TIMEZONE_NAMES)[self.id_of(polygon_nr)]
-
         return None  # no polygon has been matched
 
 

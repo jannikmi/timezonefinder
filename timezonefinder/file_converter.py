@@ -77,76 +77,44 @@ shortcuts_unique_id: the zone id if only polygons from one zone are present,
 
 
 
-statistics: (data version 2020a)
+statistics:
+DATA WITH OCEANS (2020d):
 
-maximal amount of coordinates in one polygon: 148063
-amount_of_holes: 255
-amount of polygons: 1201
+... parsing done. found:
+1,403 polygons from
+451 timezones with
+805 holes
+151,050 maximal amount of coordinates in one polygon
+21,495 maximal amount of coordinates in a hole polygon
 
-
-updating the zone names in timezone_names.json now...
-...Done.
-
-Computing where zones start and end...
-...Done.
-
-building shortucts...
-currently at polygon nr:
-0
-100
-200
-300
-400
-500
-600
-700
-800
-900
-1000
-1100
-1200
-calculating the shortcuts took: 0:01:03.713896
+calculating the shortcuts took: 0:01:21.594385
 
 shortcut statistics:
 highest entry amount is 49
 frequencies of entry amounts (from 0 to max entries):
-[76352, 45110, 7294, 734, 79, 15, 5, 1, 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0,
- 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+[0, 109402, 18113, 1828, 187, 35, 14, 6, 5, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
 relative accumulated frequencies [%]:
-[58.91, 93.72, 99.35, 99.92, 99.98, 99.99, 99.99, 99.99, ...]
-[41.09, 6.28, 0.65, 0.08, 0.02, 0.01, 0.01, 0.01, 0.0, ...]
-58.91 % of all shortcuts are empty
+[0.0, 84.42, 98.39, 99.8, 99.95, 99.97, 99.98, 99.99, 99.99, 99.99, 100.0, ...
+         100.0]
+[100.0, 15.58, 1.61, 0.2, 0.05, 0.03, 0.02, 0.01, 0.01, 0.01, 0.0, ... 0.0]
+0.0 % of all shortcuts are empty
 
 highest amount of different zones in one shortcut is 7
 frequencies of entry amounts (from 0 to max):
-[76352, 45454, 7048, 695, 43, 6, 1, 1]
+[0, 109403, 18489, 1572, 120, 13, 1, 2]
 relative accumulated frequencies [%]:
-[58.91, 93.99, 99.42, 99.96, 99.99, 100.0, 100.0, 100.0]
-[41.09, 6.01, 0.58, 0.04, 0.01, 0.0, 0.0, 0.0]
+[0.0, 84.42, 98.68, 99.9, 99.99, 100.0, 100.0, 100.0]
+[100.0, 15.58, 1.32, 0.1, 0.01, 0.0, 0.0, 0.0]
 --------------------------------
 
-The number of filled shortcut zones are: 53248 (= 41.09 % of all shortcuts)
-The number of polygons is: 1201
-The number of floats in all the polygons is (2 per point): 11882442
-creating output files:
-writing file poly_nr2zone_id.bin
-writing file " poly_zone_ids.bin "
-writing file " poly_max_values.bin "
-writing file " poly_data.bin "
-writing file " poly_adr2data.bin "
-writing file " poly_coord_amount.bin "
-writing file " shortcuts_entry_amount.bin "
-writing file " shortcuts_adr2data.bin "
-writing file " shortcuts_data.bin "
-writing file " shortcuts_unique_id.bin "
-writing file " hole_poly_ids.bin "
-writing file " hole_coord_amount.bin "
-writing file " hole_adr2data.bin "
-writing file " hole_data.bin "
-the polygon data makes up 97.15 % of the data
-the shortcuts make up 1.84 % of the data
-holes make up 1.01 % of the data
-Success!
+The number of filled shortcut zones are:  129600 (= 100.0 % of all shortcuts)
+number of polygons: 1403
+number of floats in all the polygons: 12,644,038 (2 per point)
+
+the polygon data makes up 94.67 % of the data
+the shortcuts make up 2.03 % of the data
+holes make up 3.31 % of the data
 """
 
 nr_of_polygons = -1
