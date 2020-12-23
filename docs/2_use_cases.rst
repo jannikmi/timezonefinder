@@ -120,8 +120,8 @@ Data parsing shell script
 The included ``parse_data.sh`` shell script simplifies downloading the latest version of
 `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__
 data and parsing in with ``file_converter.py``.
-It supports downloading the ``timezone-boundary-builder`` version with ocean timezones.
-
+It supports downloading and parsing the ``timezone-boundary-builder`` version WITHOUT ocean timezones.
+This is useful if you do not require ocean timezones and want to have smaller data files.
 
 ::
 
