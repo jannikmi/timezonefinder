@@ -2,12 +2,12 @@
 
 WORKING_FOLDER_NAME=tmp
 ARCHIVE_NAME=data_downloaded.zip
-ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
-DATA_FILE_NAME=combined.json
-ZIP_SOURCE_PATH=./$WORKING_FOLDER_NAME/$DATA_FILE_NAME
+ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
+JSON_PREFIX=combined
+JSON_SUFFIX=.json
 DESTINATION_PATH=./timezonefinder
-SOURCE_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
-SOURCE_SUFFIX=.geojson.zip
+URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
+URL_SUFFIX=.geojson.zip
 
 echo "TIME ZONE DATA PARSING SCRIPT"
 
@@ -19,32 +19,37 @@ parent_path=$(
 cd "$parent_path" || exit 1
 mkdir "$WORKING_FOLDER_NAME"
 
-if [ -f $ZIP_SOURCE_PATH ]; then
-    echo "skip unpacking: $ZIP_SOURCE_PATH already exists."
+read -r -p "use timezone data with oceans (0: No, 1: Yes)? " WITH_OCEANS
+if [ "$WITH_OCEANS" -eq 1 ]; then
+    INTERFIX=-with-oceans
 else
-    if [ -f $ARCHIVE_PATH ]; then
-        echo "skipping download: $ARCHIVE_PATH already exists."
+    INTERFIX=""
+fi
+JSON_FILE_NAME=$JSON_PREFIX$INTERFIX$JSON_SUFFIX
+JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_FILE_NAME
+
+if [ -f $JSON_PATH ]; then
+    echo "skip unpacking: $JSON_PATH already exists."
+else
+    if [ -f $ZIP_ARCHIVE_PATH ]; then
+        echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
     else
         echo "DOWNLOAD..."
-        read -r -p "download time zone data with oceans (0: No, 1: Yes)? " with_oceans
-        if [ "$with_oceans" -eq 1 ]; then
-            SOURCE_INTERFIX=-with-oceans
-        else
-            SOURCE_INTERFIX=""
-        fi
-        SOURCE=$SOURCE_PREFIX$SOURCE_INTERFIX$SOURCE_SUFFIX
+
+
+        URL=$URL_PREFIX$INTERFIX$URL_SUFFIX
         # install command mac:
         # brew install wget
-        wget -O $ARCHIVE_PATH $SOURCE --tries=3
+        wget -O $ZIP_ARCHIVE_PATH $URL --tries=3
     fi
     echo "UNPACKING..."
-    unzip $ARCHIVE_PATH -d $WORKING_FOLDER_NAME
+    unzip $ZIP_ARCHIVE_PATH -d $WORKING_FOLDER_NAME
 fi
 
 echo "START PARSING..."
 SCRIPT_PATH=./timezonefinder/file_converter.py
 echo "calling $SCRIPT_PATH:"
-python "$SCRIPT_PATH" -inp "$ZIP_SOURCE_PATH" -out "$DESTINATION_PATH"
+python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 echo "...PARSING DONE."
 
 # TODO
