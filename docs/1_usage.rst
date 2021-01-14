@@ -197,30 +197,6 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
 
 
-Using vectorized input
-----------------------
-
-Check `numpy.vectorize <https://docs.scipy.org/doc/numpy/reference/generated/numpy.vectorize.html>`__
-and `pandas.DataFrame.apply <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html>`__
-
-
-
-Calling timezonefinder from the command line
----------------------------------------------
-
-
-**Syntax**:
-
-::
-
-    python timezonefinder.py [-h] [-v] [-f {0,1}] lng lat
-
-
-With ``-v`` you get verbose output, without it only the timezone name is being printed.
-Choose between functions ``0: timezone_at()`` and ``1: certain_timezone_at()`` with flag ``-f`` (default: timezone_at()).
-Please note that this is much slower than keeping a ``TimezoneFinder`` class directly in Python, because here all binary files are being opened again for each query.
-
-
 .. _usage_finderL:
 
 TimezoneFinderL
@@ -244,3 +220,41 @@ TimezoneFinderL only offers the function ``timezone_at()`` (:ref:`API documentat
 .. note::
 
     If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json`` and ``shortcuts_direct_id.bin`` to obtain a truly lightweight installation.
+
+
+
+
+Using vectorized input
+----------------------
+
+Check `numpy.vectorize <https://docs.scipy.org/doc/numpy/reference/generated/numpy.vectorize.html>`__
+and `pandas.DataFrame.apply <https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html>`__
+
+
+
+Calling timezonefinder from the command line
+---------------------------------------------
+
+A command line script is being included with this package.
+
+**Command Line Syntax**:
+
+::
+
+    timezonefinder [-h] [-v] [-f {0,1,2,3,4,5}] lng lat
+
+
+With ``-v`` you get verbose output, without it only the timezone name is being printed.
+With the argument of the flag ``-f`` one can choose between the different functions to be called:
+
+::
+
+    0: TimezoneFinder.timezone_at() = default
+    1: TimezoneFinder.certain_timezone_at()
+    2: TimezoneFinder.closest_timezone_at()
+    3: TimezoneFinderL.timezone_at()
+    4: TimezoneFinderL.timezone_at_land()
+    5: TimezoneFinder.timezone_at_land()
+
+
+Please note that this will be orders of magnitude slower than using the package directly from within python.

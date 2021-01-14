@@ -7,6 +7,7 @@ setup(
     name=PACKAGE_NAME,
     packages=[PACKAGE_NAME],
     package_data={PACKAGE_NAME: PACKAGE_DATA_FILES},
+    include_package_data=True,
     description='fast python package for finding the timezone of any point on earth (coordinates) offline',
     # version: in VERSION file https://packaging.python.org/guides/single-sourcing-package-version/
     # With this approach you must make sure that the VERSION file is included in all your source
@@ -40,8 +41,12 @@ setup(
     install_requires=['numpy>=1.16'],
     python_requires='>=3.6',
     # TODO http://peak.telecommunity.com/DevCenter/setuptools#setting-the-zip-safe-flag
-    #  if the project uses pkg_resources for all its data file access
+    #  safe if the project uses pkg_resources for all its data file access
     # http://peak.telecommunity.com/DevCenter/setuptools#accessing-data-files-at-runtime
-    # zip_safe=False,
+    #  not possible, because the location of bin files can be specified! -> path has to be variable!
+    zip_safe=False,
     extras_require={'numba': ["numba>=0.48"]},
+    entry_points={
+        'console_scripts': ['timezonefinder=timezonefinder.command_line:main'],
+    },
 )
