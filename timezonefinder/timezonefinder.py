@@ -613,26 +613,3 @@ class TimezoneFinder(AbstractTimezoneFinder):
                     if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
                         return getattr(self, TIMEZONE_NAMES)[self.id_of(polygon_nr)]
         return None  # no polygon has been matched
-
-
-if __name__ == '__main__':
-    # TODO test
-    import argparse
-
-    parser = argparse.ArgumentParser(description='parse TimezoneFinder parameters')
-    parser.add_argument('lng', type=float, help='longitude to be queried')
-    parser.add_argument('lat', type=float, help='latitude to be queried')
-    parser.add_argument('-v', action='store_true', help='verbosity flag')
-    parser.add_argument('-f', '--function', type=int, choices=[0, 1], default=0,
-                        help='function to be called. 0: timezone_at(...) 1: certain_timezone_at(...)')
-
-    parsed_args = parser.parse_args()  # takes input from sys.argv
-    tf = TimezoneFinder()
-    functions = [tf.timezone_at, tf.certain_timezone_at]
-    tz = functions[parsed_args.function](lng=parsed_args.lng, lat=parsed_args.lat)
-    if parsed_args.v:
-        print('Looking for TZ at lat=', parsed_args.lat, ' lng=', parsed_args.lng)
-        print('Function:', ['timezone_at()', 'certain_timezone_at()'][parsed_args.function])
-        print('Timezone=', tz)
-    else:
-        print(tz)

@@ -8,6 +8,13 @@ create variables for used dtype for each type of data (polygon address, coordina
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
+5.1.0 (2021-01-14)
+------------------
+
+* update the command line interface. the package can now directly be called with ``timezonefinder``
+* added the new query functions to the command line interface (to match the online API)
+
+
 5.0.0 (2020-12-23)
 ------------------
 
