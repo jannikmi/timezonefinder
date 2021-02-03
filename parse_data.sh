@@ -17,9 +17,10 @@ parent_path=$(
     pwd -P
 )
 cd "$parent_path" || exit 1
-mkdir "$WORKING_FOLDER_NAME"
+mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 
-read -r -p "use timezone data with oceans (0: No, 1: Yes)? " WITH_OCEANS
+echo "use timezone data with oceans (0: No, 1: Yes)? "
+read -r WITH_OCEANS
 if [ "$WITH_OCEANS" -eq 1 ]; then
     INTERFIX=-with-oceans
 else
