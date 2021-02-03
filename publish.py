@@ -168,6 +168,7 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
+    os.system("pre-commit autoupdate")
     routine("pre-commit run --all-files", "running all pre-commit hooks")
 
     old_version = get_version()
@@ -306,5 +307,5 @@ if __name__ == "__main__":
         f"git tag -a v{version} -m 'Version {version}'; git push --tags", "Creating tag"
     )
     print(
-        f"______________\nCongrats! Published version {version}.\nremember to update the GUI to the new version!"
+        f"Congrats! Published version {version}.\nremember to update the GUI to the new version!"
     )
