@@ -4,6 +4,8 @@ scrapyard.py
 playground.py
 tmp.py
 tmp/
+.coveragerc
+
 
 *.DS_Store
 *.pytest_cache
@@ -119,4 +121,3 @@ target/
 ## File-based project format:
 *.ipr
 *.iws
-
