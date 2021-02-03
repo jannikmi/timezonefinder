@@ -239,11 +239,6 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    routine(
-        f"{VIRT_ENV_COMMAND} tox {rebuild_flag} -e codestyle",
-        "checking syntax, codestyle and imports",
-        "run tests",
-    )
     routine(f"{VIRT_ENV_COMMAND} tox {rebuild_flag} -e py37", "run tests")
     routine(
         f"{VIRT_ENV_COMMAND} tox {rebuild_flag} -e py37-numba",
