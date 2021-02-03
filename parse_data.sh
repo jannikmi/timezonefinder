@@ -51,7 +51,6 @@ echo "START PARSING..."
 SCRIPT_PATH=./timezonefinder/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
-echo "...PARSING DONE."
 
 # TODO
 #read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion

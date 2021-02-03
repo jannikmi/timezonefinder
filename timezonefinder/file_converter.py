@@ -332,29 +332,34 @@ def update_zone_names(output_path):
     global polygon_lengths
     global polynrs_of_holes
     global nr_of_zones
+    global nr_of_polygons
     file_path = abspath(join(output_path, TIMEZONE_NAMES_FILE))
     print(f'updating the zone names in {file_path} now.')
     # pickle the zone names (python array)
     with open(abspath(file_path), 'w') as json_file:
         json.dump(all_tz_names, json_file, indent=4)
     print('...Done.\n\nComputing where zones start and end...')
-    i = 0
     last_id = -1
-    for zone_id in poly_zone_ids:
+    for poly_nr, zone_id in enumerate(poly_zone_ids):
         if zone_id != last_id:
-            poly_nr2zone_id.append(i)
+            poly_nr2zone_id.append(poly_nr)
             assert zone_id >= last_id
             last_id = zone_id
-        i += 1
-    assert zone_id == nr_of_zones - 1
+    assert zone_id == nr_of_zones - 1, f'not pointing to the last zone with id {nr_of_zones - 1}'
+    assert nr_of_polygons == len(poly_zone_ids)
+    assert poly_nr == nr_of_polygons - 1, f'not pointing to the last polygon with id {nr_of_polygons - 1}'
+    # ATTENTION: add one more entry for knowing where the last zone ends!
+    # ATTENTION: the last entry is one higher than the last polygon id (to be consistant with the
+    poly_nr2zone_id.append(nr_of_polygons)
+    assert len(poly_nr2zone_id) == nr_of_zones + 1
     print('...Done.\n')
 
 
 def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
     assert value > lower_value_limit, \
-        f'trying to write value {value} subceeding limit {lower_value_limit} (data type {data_format})'
+        f'trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})'
     assert value < upper_value_limit, \
-        f'trying to write value {value} exceeding limit {upper_value_limit} (data type {data_format})'
+        f'trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})'
     output_file.write(pack(data_format, value))
 
 
@@ -832,7 +837,8 @@ def compile_binaries(output_path):
             addresses.append(adr)
         return addresses
 
-    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons)
+    # NOTE: last entry is nr_of_polygons -> allow +1
+    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons+1)
     write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_coordinate_data(output_path, POLY_DATA, polygons)
@@ -916,8 +922,7 @@ def compile_binaries(output_path):
     print('the polygon data makes up', percent(polygon_space, total_space), '% of the data')
     print('the shortcuts make up', percent(shortcut_space, total_space), '% of the data')
     print('holes make up', percent(hole_space, total_space), '% of the data')
-    print('Success!')
-    return
+    print(f'Success!')
 
 
 def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
