@@ -4,6 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from io import SEEK_CUR, BytesIO
 from math import radians
+from os import fstat
 from os.path import abspath, join, pardir
 from struct import unpack
 from typing import List, Optional
@@ -285,7 +286,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # read poly_nr of the first polygon of that zone
         first_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
         # read poly_nr of the first polygon of the next zone
-        last_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
+        if poly_nr2zone_id.tell() == fstat(poly_nr2zone_id.fileno()).st_size:
+            last_polygon_nr = first_polygon_nr + 1
+        else:
+            last_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
         poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
         return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
 
