@@ -2,32 +2,7 @@
 timezonefinder
 ==============
 
-.. image:: https://api.travis-ci.org/jannikmi/timezonefinder.svg?branch=master
-    :target: https://travis-ci.org/jannikmi/timezonefinder
-
-.. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
-    :alt: documentation status
-    :target: https://timezonefinder.readthedocs.io/en/latest/?badge=latest
-
-.. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
-    :target: https://circleci.com/gh/conda-forge/timezonefinder-feedstock
-
-.. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
-    :target: https://pypi.python.org/pypi/timezonefinder
-
-.. image:: https://pepy.tech/badge/timezonefinder
-    :alt: total PyPI downloads
-    :target: https://pepy.tech/project/timezonefinder
-
-.. image:: https://img.shields.io/pypi/v/timezonefinder.svg
-    :alt: latest version on PyPI
-    :target: https://pypi.python.org/pypi/timezonefinder
-
-.. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg
-    :alt: latest version on Conda
-    :target: https://anaconda.org/conda-forge/timezonefinder
-
-
+.. include:: ./badges.rst
 
 
 This is a fast and lightweight python package for looking up the corresponding
