@@ -4,7 +4,7 @@ About
 =====
 
 
-.. include:: ../badges.rst
+.. include:: ./badges.rst
 
 
 

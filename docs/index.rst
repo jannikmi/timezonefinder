@@ -4,7 +4,7 @@ timezonefinder
 ============================
 
 
-.. include:: ../badges.rst
+.. include:: ./badges.rst
 
 
 
