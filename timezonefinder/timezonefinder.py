@@ -82,6 +82,10 @@ class AbstractTimezoneFinder(ABC):
         for attribute_name in self.binary_data_attributes:
             getattr(self, attribute_name).close()
 
+    @property
+    def nr_of_zones(self):
+        return len(getattr(self, TIMEZONE_NAMES))
+
     @staticmethod
     def using_numba():
         """ tests if Numba is being used or not
@@ -274,24 +278,24 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
 
         if use_id:
-            zone_id = tz_id
+            if not isinstance(tz_id,int):
+                raise TypeError('the zone id must be given as int.')
+            if tz_id < 0 or tz_id >= self.nr_of_zones:
+                raise ValueError(f'the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones-1}.')
         else:
             try:
-                zone_id = getattr(self, TIMEZONE_NAMES).index(tz_name)
+                tz_id = getattr(self, TIMEZONE_NAMES).index(tz_name)
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
-
         poly_nr2zone_id = getattr(self, POLY_NR2ZONE_ID)
-        poly_nr2zone_id.seek(NR_BYTES_H * zone_id)
+        poly_nr2zone_id.seek(NR_BYTES_H * tz_id)
         # read poly_nr of the first polygon of that zone
-        first_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
-        # read poly_nr of the first polygon of the next zone
-        if poly_nr2zone_id.tell() == fstat(poly_nr2zone_id.fileno()).st_size:
-            last_polygon_nr = first_polygon_nr + 1
-        else:
-            last_polygon_nr = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
-        poly_nrs = list(range(first_polygon_nr, last_polygon_nr))
-        return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in poly_nrs]
+        this_zone_poly_id = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
+        # read poly_nr of the first polygon of the consequent zone
+        # (also exists for the last zone, cf. file_converter.py)
+        next_zone_poly_id = unpack(DTYPE_FORMAT_H, poly_nr2zone_id.read(NR_BYTES_H))[0]
+        # read and return all polygons from this zone:
+        return [self.get_polygon(poly_nr, coords_as_pairs) for poly_nr in range(this_zone_poly_id, next_zone_poly_id)]
 
     def id_list(self, polygon_id_list, nr_of_polygons):
         """
