@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+import json
 import timeit
 import unittest
 from math import floor, log10
@@ -6,8 +7,8 @@ from os.path import abspath, join, pardir
 
 import pytest
 
-from auxiliaries import list_of_random_points, random_point
-from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME
+from auxiliaries import list_of_random_points, random_point, list_equal
+from timezonefinder.global_settings import INT2COORD_FACTOR, PACKAGE_NAME, TIMEZONE_NAMES, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL, is_ocean_timezone
 
 # number of points to test (in each test, on land and random ones)
@@ -247,6 +248,13 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         print('\ntesting timezone_at_land():')
         self.run_location_tests(self.test_instance.timezone_at_land, ocean2land(self.test_locations))
 
+    def test_timezone_name_attribute(self):
+        timezone_names_stored = getattr(self.test_instance, TIMEZONE_NAMES)
+        with open(join(abs_default_path, TIMEZONE_NAMES_FILE), 'r') as json_file:
+            timezone_names_json = json.loads(json_file.read())
+        assert list_equal(timezone_names_stored, timezone_names_json), \
+            f'the content of the {TIMEZONE_NAMES_FILE} and the attribute {TIMEZONE_NAMES} are different.'
+
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
     in_memory_mode = True
@@ -301,6 +309,36 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
         warnings.filterwarnings('error')
         # must not raise a warning
         self.test_instance.certain_timezone_at(lat=float(latitude), lng=float(longitude))
+
+    def test_get_geometry(self):
+        print('testing get_geometry():')
+        timezone_names_stored = getattr(self.test_instance, TIMEZONE_NAMES)
+        nr_timezones = len(timezone_names_stored)
+        for zone_id, zone_name in enumerate(timezone_names_stored):
+            print(zone_id, zone_name)
+            geometry_from_name = self.test_instance.get_geometry(tz_name=zone_name, tz_id=None, use_id=False,
+                                                                 coords_as_pairs=False)
+            geometry_from_id = self.test_instance.get_geometry(tz_name=zone_name, tz_id=zone_id, use_id=False,
+                                                               coords_as_pairs=False)
+            # not necessary:
+            # assert nested_list_equal(geometry_from_id, geometry_from_name), \
+            assert len(geometry_from_name) == len(geometry_from_id), \
+                'the results for querying the geometry for a zone with zone name or zone id are NOT equal.'
+            geometry_from_name = self.test_instance.get_geometry(tz_name=zone_name, tz_id=None, use_id=False,
+                                                                 coords_as_pairs=True)
+            geometry_from_id = self.test_instance.get_geometry(tz_name=zone_name, tz_id=zone_id, use_id=False,
+                                                               coords_as_pairs=True)
+            assert len(geometry_from_name) == len(geometry_from_id), \
+                'the results for querying the geometry for a zone with zone name or zone id are NOT equal.'
+
+        with pytest.raises(ValueError):
+            self.test_instance.get_geometry(tz_name='', tz_id=None, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name='', tz_id=0, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name='wrong_tz_name', tz_id=None, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name='wrong_tz_name', tz_id=0, use_id=False, coords_as_pairs=False)
+            # id does not exist
+            self.test_instance.get_geometry(tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name='', tz_id=-1, use_id=True, coords_as_pairs=False)
 
 
 class TimezonefinderClassTestMEM(TimezonefinderClassTest):
