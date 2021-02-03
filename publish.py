@@ -168,8 +168,9 @@ if __name__ == "__main__":
     except ValueError:
         pass
 
-    old_version = get_version()
+    routine("pre-commit run --all-files", "running all pre-commit hooks")
 
+    old_version = get_version()
     print("The actual version number is:", old_version)
     print("Enter new version number:")
     version_input = None
@@ -224,7 +225,7 @@ if __name__ == "__main__":
         "checking documentation generation",
     )
 
-    routine("(cd ./docs && exec make html)", "checking documentation generation", "")
+    routine("(cd ./docs && exec make html)", "checking documentation generation", "run tests")
 
     # IMPORTANT: -r flag to rebuild tox virtual env
     # only when dependencies have changed!
