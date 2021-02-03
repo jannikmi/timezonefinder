@@ -5,12 +5,5 @@
 numba>=0.48
 numpy>=1.16
 
-docutils
-flake8
-flake8-commas
-isort
-multilint
-pygments
 pytest
 pytest-cov
-rstcheck>=3.3.1
