@@ -16,3 +16,25 @@ def random_point():
 
 def list_of_random_points(length):
     return [random_point() for i in range(length)]
+
+
+def list_equal(l1, l2):
+    if len(l1) != len(l2):
+        return False
+    for i1, i2 in zip(l1, l2):
+        if i1 != i2:
+            return False
+    return True
+
+
+def nested_list_equal(l1, l2):
+    if len(l1) != len(l2):
+        return False
+    first_entry = l1[0]
+    if isinstance(first_entry, list):
+        for i1, i2 in zip(l1, l2):
+            if not nested_list_equal(i1, i2):
+                return False
+        return True
+    else:
+        return list_equal(l1, l2)
