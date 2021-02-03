@@ -838,7 +838,7 @@ def compile_binaries(output_path):
         return addresses
 
     # NOTE: last entry is nr_of_polygons -> allow +1
-    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons+1)
+    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons + 1)
     write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_coordinate_data(output_path, POLY_DATA, polygons)
@@ -922,7 +922,7 @@ def compile_binaries(output_path):
     print('the polygon data makes up', percent(polygon_space, total_space), '% of the data')
     print('the shortcuts make up', percent(shortcut_space, total_space), '% of the data')
     print('holes make up', percent(hole_space, total_space), '% of the data')
-    print(f'Success!')
+    print('Success!')
 
 
 def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
