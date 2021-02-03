@@ -258,10 +258,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         return list_of_converted_polygons
 
-    def get_geometry(self, tz_name='', tz_id=0, use_id=False, coords_as_pairs=False):
+    def get_geometry(self, tz_name: Optional[str] = '', tz_id: Optional[int] = 0,
+                     use_id: bool = False, coords_as_pairs: bool = False):
         """ retrieves the geometry of a timezone polygon
 
-        :param tz_name: one of the names in ``getattr(self, TIMEZONE_NAMES)``
+        :param tz_name: one of the names in ``timezone_names.json`` or ``getattr(self, TIMEZONE_NAMES)``
         :param tz_id: the id of the timezone (=index in ``getattr(self, TIMEZONE_NAMES)``)
         :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
         :param coords_as_pairs: determines the structure of the polygon representation
