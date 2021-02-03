@@ -6,6 +6,14 @@ include LICENSE
 include README.rst
 include VERSION
 include parse_data.sh
+include .editorconfig
+include .coveragerc
+include tox.ini
+include requirements*
+include runtests.py
+
+recursive-include timezonefinder *.bin
+recursive-include timezonefinder *.json
 
 recursive-include test *.py
 

@@ -20,8 +20,3 @@ TimezoneFinderL
 TimezoneFinder
 --------------
 .. autoclass:: TimezoneFinder
-
-
-
-
-

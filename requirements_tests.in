@@ -13,4 +13,3 @@ pygments
 pytest
 pytest-cov
 rstcheck>=3.3.1
-

@@ -36,7 +36,7 @@ Use the argument ``bin_file_location`` to use data files from another location (
 
 .. code-block:: python
 
-    tf = TimezoneFinder(bin_file_location='path/to/files')
+    tf = TimezoneFinder(bin_file_location="path/to/files")
 
 
 
@@ -47,7 +47,7 @@ For testing if the import of the JIT compiled algorithms worked:
 
 .. code-block:: python
 
-    TimezoneFinder.using_numba()   # returns True or False
+    TimezoneFinder.using_numba()  # returns True or False
 
 
 
@@ -62,7 +62,7 @@ If no timezone has been matched, ``None`` is being returned.
 .. code-block:: python
 
     latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 .. note::
     * to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
@@ -82,7 +82,7 @@ are being checked until one polygon is matched. ``None`` is being returned in th
 
 .. code-block:: python
 
-    tf.certain_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+    tf.certain_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
 
@@ -112,7 +112,7 @@ By default the function returns the closest timezone of all polygons within +-1 
 
     longitude = 12.773955
     latitude = 55.578595
-    tf.closest_timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Copenhagen'
+    tf.closest_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Copenhagen'
 
 
 
@@ -169,13 +169,19 @@ A single timezone might be represented by multiple polygons and the distance to 
 
     longitude = 42.1052479
     latitude = -16.622686
-    tf.closest_timezone_at(lng=longitude, lat=latitude, delta_degree=2,
-                                        exact_computation=True, return_distances=True, force_evaluation=True)
-    '''
+    tf.closest_timezone_at(
+        lng=longitude,
+        lat=latitude,
+        delta_degree=2,
+        exact_computation=True,
+        return_distances=True,
+        force_evaluation=True,
+    )
+    """
     returns ('uninhabited',
     [80.66907784731714, 217.10924866254518, 293.5467252349301, 304.5274937839159, 238.18462606485667, 267.918674688949, 207.43831938964408, 209.6790144988553, 228.42135641542546],
     ['uninhabited', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo'])
-    '''
+    """
 
 
 
@@ -191,7 +197,7 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
 .. code-block:: python
 
-    tf.get_geometry(tz_name='Africa/Addis_Ababa', coords_as_pairs=True)
+    tf.get_geometry(tz_name="Africa/Addis_Ababa", coords_as_pairs=True)
     tf.get_geometry(tz_id=400, use_id=True)
 
 
@@ -214,7 +220,7 @@ TimezoneFinderL only offers the function ``timezone_at()`` (:ref:`API documentat
 
     tf = TimezoneFinderL(in_memory=True)
     latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
 .. note::

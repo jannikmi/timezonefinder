@@ -1,23 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
-import json
-from datetime import datetime
-from math import ceil, floor
-from os.path import abspath, join
-from struct import pack
 
-import path_modification  # noqa. to make timezonefinder package discoverable
-from timezonefinder.global_settings import (
-    BINARY_FILE_ENDING, DEBUG, DEBUG_POLY_STOP, DEFAULT_INPUT_PATH, DEFAULT_OUTPUT_PATH, DTYPE_FORMAT_H,
-    DTYPE_FORMAT_I, DTYPE_FORMAT_SIGNED_I, HOLE_ADR2DATA, HOLE_COORD_AMOUNT, HOLE_DATA, HOLE_REGISTRY_FILE,
-    INVALID_VALUE_DTYPE_H, NR_BYTES_H, NR_BYTES_I, NR_SHORTCUTS_PER_LAT, NR_SHORTCUTS_PER_LNG, POLY_ADR2DATA,
-    POLY_COORD_AMOUNT, POLY_DATA, POLY_MAX_VALUES, POLY_NR2ZONE_ID, POLY_ZONE_IDS, SHORTCUTS_ADR2DATA,
-    SHORTCUTS_DATA, SHORTCUTS_DIRECT_ID, SHORTCUTS_ENTRY_AMOUNT, SHORTCUTS_UNIQUE_ID, THRES_DTYPE_H,
-    THRES_DTYPE_I, THRES_DTYPE_SIGNED_I_LOWER, THRES_DTYPE_SIGNED_I_UPPER, TIMEZONE_NAMES_FILE,
-)
-# keep in mind: the faster numba optimized helper fct. cannot be used here,
-# because numpy classes are not being used at this stage yet!
-from timezonefinder.helpers import coord2int, inside_polygon, int2coord
 
 """
 USAGE:
@@ -117,6 +100,54 @@ the shortcuts make up 2.03 % of the data
 holes make up 3.31 % of the data
 """
 
+import json
+from datetime import datetime
+from math import ceil, floor
+from os.path import abspath, join
+from struct import pack
+
+import path_modification  # noqa. to make timezonefinder package discoverable
+
+from timezonefinder.global_settings import (
+    BINARY_FILE_ENDING,
+    DEBUG,
+    DEBUG_POLY_STOP,
+    DEFAULT_INPUT_PATH,
+    DEFAULT_OUTPUT_PATH,
+    DTYPE_FORMAT_H,
+    DTYPE_FORMAT_I,
+    DTYPE_FORMAT_SIGNED_I,
+    HOLE_ADR2DATA,
+    HOLE_COORD_AMOUNT,
+    HOLE_DATA,
+    HOLE_REGISTRY_FILE,
+    INVALID_VALUE_DTYPE_H,
+    NR_BYTES_H,
+    NR_BYTES_I,
+    NR_SHORTCUTS_PER_LAT,
+    NR_SHORTCUTS_PER_LNG,
+    POLY_ADR2DATA,
+    POLY_COORD_AMOUNT,
+    POLY_DATA,
+    POLY_MAX_VALUES,
+    POLY_NR2ZONE_ID,
+    POLY_ZONE_IDS,
+    SHORTCUTS_ADR2DATA,
+    SHORTCUTS_DATA,
+    SHORTCUTS_DIRECT_ID,
+    SHORTCUTS_ENTRY_AMOUNT,
+    SHORTCUTS_UNIQUE_ID,
+    THRES_DTYPE_H,
+    THRES_DTYPE_I,
+    THRES_DTYPE_SIGNED_I_LOWER,
+    THRES_DTYPE_SIGNED_I_UPPER,
+    TIMEZONE_NAMES_FILE,
+)
+
+# keep in mind: the faster numba optimized helper fct. cannot be used here,
+# because numpy classes are not being used at this stage yet!
+from timezonefinder.helpers import coord2int, inside_polygon, int2coord
+
 nr_of_polygons = -1
 nr_of_zones = -1
 all_tz_names = []
@@ -149,7 +180,10 @@ def y_shortcut(lat):
 
 def big_zone(xmax, xmin, ymax, ymin):
     # returns True if a zone with those boundaries could have more than 4 shortcuts
-    return xmax - xmin > 2 / NR_SHORTCUTS_PER_LNG and ymax - ymin > 2 / NR_SHORTCUTS_PER_LAT
+    return (
+        xmax - xmin > 2 / NR_SHORTCUTS_PER_LNG
+        and ymax - ymin > 2 / NR_SHORTCUTS_PER_LAT
+    )
 
 
 def percent(numerator, denominator):
@@ -202,7 +236,7 @@ def _polygons(id_list):
 
 
 def not_empty(iterable):
-    for i in iterable:
+    for _ in iterable:
         return True
     return False
 
@@ -247,21 +281,21 @@ def extract_coords(polygon):
 def parse_polygons_from_json(input_path):
     global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids
 
-    print(f'parsing input file: {input_path}\n...\n')
+    print(f"parsing input file: {input_path}\n...\n")
     with open(input_path) as json_file:
-        tz_list = json.loads(json_file.read()).get('features')
+        tz_list = json.loads(json_file.read()).get("features")
 
     polygon_counter = 0  # this counter just counts polygons, not holes!
     current_zone_id = 0
-    print('extracting data.\nfound holes:')
+    print("extracting data.\nfound holes:")
     for tz_dict in tz_list:
         if DEBUG and polygon_counter > DEBUG_POLY_STOP:
             break
 
-        tz_name = tz_dict.get('properties').get("tzid")
+        tz_name = tz_dict.get("properties").get("tzid")
         all_tz_names.append(tz_name)
         geometry = tz_dict.get("geometry")
-        if geometry.get('type') == 'MultiPolygon':
+        if geometry.get("type") == "MultiPolygon":
             # depth is 4
             multipolygon = geometry.get("coordinates")
         else:
@@ -274,12 +308,16 @@ def parse_polygons_from_json(input_path):
             x_coords, y_coords = extract_coords(poly_with_hole.pop(0))
             polygons.append((x_coords, y_coords))
             polygon_lengths.append(len(x_coords))
-            poly_boundaries.append((max(x_coords), min(x_coords), max(y_coords), min(y_coords)))
+            poly_boundaries.append(
+                (max(x_coords), min(x_coords), max(y_coords), min(y_coords))
+            )
             poly_zone_ids.append(current_zone_id)
 
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
-                print(f'#{nr_of_holes}: polygon #{polygon_counter}({hole_nr}) zone: {tz_name}')
+                print(
+                    f"#{nr_of_holes}: polygon #{polygon_counter}({hole_nr}) zone: {tz_name}"
+                )
                 nr_of_holes += 1  # keep track of how many holes there are
                 polynrs_of_holes.append(polygon_counter)
                 x_coords, y_coords = extract_coords(hole)
@@ -296,32 +334,37 @@ def parse_polygons_from_json(input_path):
     assert current_zone_id == nr_of_zones
     assert nr_of_polygons >= nr_of_zones
 
-    assert polygon_counter == nr_of_polygons, \
-        f'polygon counter {polygon_counter} and entry amount in all_length {nr_of_polygons} are different.'
+    assert (
+        polygon_counter == nr_of_polygons
+    ), f"polygon counter {polygon_counter} and entry amount in all_length {nr_of_polygons} are different."
 
     if 0 in polygon_lengths:
         raise ValueError()
 
     # binary file value range tests:
-    assert nr_of_polygons < THRES_DTYPE_H, \
-        f'address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!'
-    assert nr_of_zones < THRES_DTYPE_H, \
-        f'address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!'
+    assert (
+        nr_of_polygons < THRES_DTYPE_H
+    ), f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    assert (
+        nr_of_zones < THRES_DTYPE_H
+    ), f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
     max_poly_length = max(polygon_lengths)
-    assert max_poly_length < THRES_DTYPE_I, \
-        f'address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
+    assert (
+        max_poly_length < THRES_DTYPE_I
+    ), f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
     max_hole_poly_length = max(all_hole_lengths)
-    assert max_hole_poly_length < THRES_DTYPE_H, \
-        f'address overflow: the maximal amount of coords in hole polygons ' \
-        f'{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}'
+    assert max_hole_poly_length < THRES_DTYPE_H, (
+        f"address overflow: the maximal amount of coords in hole polygons "
+        f"{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
+    )
 
-    print('... parsing done. found:')
-    print(f'{nr_of_polygons:,} polygons from')
-    print(f'{nr_of_zones:,} timezones with')
-    print(f'{nr_of_holes:,} holes')
-    print(f'{max_poly_length:,} maximal amount of coordinates in one polygon')
-    print(f'{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon')
-    print('\n')
+    print("... parsing done. found:")
+    print(f"{nr_of_polygons:,} polygons from")
+    print(f"{nr_of_zones:,} timezones with")
+    print(f"{nr_of_holes:,} holes")
+    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon")
+    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon")
+    print("\n")
 
 
 def update_zone_names(output_path):
@@ -334,39 +377,50 @@ def update_zone_names(output_path):
     global nr_of_zones
     global nr_of_polygons
     file_path = abspath(join(output_path, TIMEZONE_NAMES_FILE))
-    print(f'updating the zone names in {file_path} now.')
+    print(f"updating the zone names in {file_path} now.")
     # pickle the zone names (python array)
-    with open(abspath(file_path), 'w') as json_file:
+    with open(abspath(file_path), "w") as json_file:
         json.dump(all_tz_names, json_file, indent=4)
-    print('...Done.\n\nComputing where zones start and end...')
+    print("...Done.\n\nComputing where zones start and end...")
     last_id = -1
     for poly_nr, zone_id in enumerate(poly_zone_ids):
         if zone_id != last_id:
             poly_nr2zone_id.append(poly_nr)
             assert zone_id >= last_id
             last_id = zone_id
-    assert zone_id == nr_of_zones - 1, f'not pointing to the last zone with id {nr_of_zones - 1}'
+    assert (
+        zone_id == nr_of_zones - 1
+    ), f"not pointing to the last zone with id {nr_of_zones - 1}"
     assert nr_of_polygons == len(poly_zone_ids)
-    assert poly_nr == nr_of_polygons - 1, f'not pointing to the last polygon with id {nr_of_polygons - 1}'
+    assert (
+        poly_nr == nr_of_polygons - 1
+    ), f"not pointing to the last polygon with id {nr_of_polygons - 1}"
     # ATTENTION: add one more entry for knowing where the last zone ends!
     # ATTENTION: the last entry is one higher than the last polygon id (to be consistant with the
     poly_nr2zone_id.append(nr_of_polygons)
     assert len(poly_nr2zone_id) == nr_of_zones + 1
-    print('...Done.\n')
+    print("...Done.\n")
 
 
 def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
-    assert value > lower_value_limit, \
-        f'trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})'
-    assert value < upper_value_limit, \
-        f'trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})'
+    assert (
+        value > lower_value_limit
+    ), f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
+    assert (
+        value < upper_value_limit
+    ), f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
     output_file.write(pack(data_format, value))
 
 
 def write_coordinate_value(output_file, coord):
     value = coord2int(coord)
-    write_value(output_file, value, data_format=DTYPE_FORMAT_SIGNED_I, lower_value_limit=THRES_DTYPE_SIGNED_I_LOWER,
-                upper_value_limit=THRES_DTYPE_SIGNED_I_UPPER)
+    write_value(
+        output_file,
+        value,
+        data_format=DTYPE_FORMAT_SIGNED_I,
+        lower_value_limit=THRES_DTYPE_SIGNED_I_LOWER,
+        upper_value_limit=THRES_DTYPE_SIGNED_I_UPPER,
+    )
 
 
 def write_regular(output_file, data, *args, **kwargs):
@@ -389,12 +443,21 @@ def write_boundaries(output_file, data, *args, **kwargs):
             write_coordinate_value(output_file, boundary)
 
 
-def write_binary(output_path, bin_file_name, data, data_format=DTYPE_FORMAT_H, lower_value_limit=-1,
-                 upper_value_limit=THRES_DTYPE_H, writing_fct=write_regular):
+def write_binary(
+    output_path,
+    bin_file_name,
+    data,
+    data_format=DTYPE_FORMAT_H,
+    lower_value_limit=-1,
+    upper_value_limit=THRES_DTYPE_H,
+    writing_fct=write_regular,
+):
     path = abspath(join(output_path, bin_file_name + BINARY_FILE_ENDING))
-    print(f'writing {path}')
-    with open(path, 'wb') as output_file:
-        writing_fct(output_file, data, data_format, lower_value_limit, upper_value_limit)
+    print(f"writing {path}")
+    with open(path, "wb") as output_file:
+        writing_fct(
+            output_file, data, data_format, lower_value_limit, upper_value_limit
+        )
         file_length = output_file.tell()
     return file_length
 
@@ -414,21 +477,24 @@ def compile_binaries(output_path):
     def print_shortcut_statistics():
         frequencies = []
         max_val = max(*nr_of_entries_in_shortcut)
-        print('shortcut statistics:')
-        print('highest entry amount is', max_val)
+        print("shortcut statistics:")
+        print("highest entry amount is", max_val)
         while max_val >= 0:
             frequencies.append(nr_of_entries_in_shortcut.count(max_val))
             max_val -= 1
 
         frequencies.reverse()
-        print('frequencies of entry amounts (from 0 to max entries):')
+        print("frequencies of entry amounts (from 0 to max entries):")
         print(frequencies)
         empty_shortcuts = frequencies[0]
-        print('relative accumulated frequencies [%]:')
+        print("relative accumulated frequencies [%]:")
         acc = accumulated_frequency(frequencies)
         print(acc)
         print([round(100 - x, 2) for x in acc])
-        print(percent(empty_shortcuts, amount_of_shortcuts), '% of all shortcuts are empty\n')
+        print(
+            percent(empty_shortcuts, amount_of_shortcuts),
+            "% of all shortcuts are empty\n",
+        )
 
         amount_of_different_zones = []
         for entry in shortcut_entries:
@@ -442,20 +508,20 @@ def compile_binaries(output_path):
 
         frequencies = []
         max_val = max(*amount_of_different_zones)
-        print('highest amount of different zones in one shortcut is', max_val)
+        print("highest amount of different zones in one shortcut is", max_val)
         while max_val >= 1:
             frequencies.append(amount_of_different_zones.count(max_val))
             max_val -= 1
         # show the proper amount of shortcuts with 0 zones (=nr of empty shortcuts)
         frequencies.append(empty_shortcuts)
         frequencies.reverse()
-        print('frequencies of entry amounts (from 0 to max):')
+        print("frequencies of entry amounts (from 0 to max):")
         print(frequencies)
-        print('relative accumulated frequencies [%]:')
+        print("relative accumulated frequencies [%]:")
         acc = accumulated_frequency(frequencies)
         print(acc)
         print([round(100 - x, 2) for x in acc])
-        print('--------------------------------\n')
+        print("--------------------------------\n")
 
     def included_shortcut_row_nrs(max_lat, min_lat):
         return list(range(y_shortcut(max_lat), y_shortcut(min_lat) + 1))
@@ -488,16 +554,14 @@ def compile_binaries(output_path):
         return output_list
 
     def compute_x_intersection(y, x1, x2, y1, y2):
-        """returns the x intersection from a horizontal line in y with the line from x1,y1 to x1,y2
-        """
+        """returns the x intersection from a horizontal line in y with the line from x1,y1 to x1,y2"""
         delta_y = y2 - y1
         if delta_y == 0:
             return x1
         return ((y - y1) * (x2 - x1) / delta_y) + x1
 
     def compute_y_intersection(x, x1, x2, y1, y2):
-        """returns the y intersection from a vertical line in x with the line from x1,y1 to x1,y2
-        """
+        """returns the y intersection from a vertical line in x with the line from x1,y1 to x1,y2"""
         delta_x = x2 - x1
         if delta_x == 0:
             return x1
@@ -513,14 +577,28 @@ def compile_binaries(output_path):
                     # this was a crossing. compute the intersect
                     # print('Y2>y')
                     intersects.append(
-                        compute_x_intersection(y, x_coords[i], x_coords[iplus1], y_coords[i], y_coords[iplus1]))
+                        compute_x_intersection(
+                            y,
+                            x_coords[i],
+                            x_coords[iplus1],
+                            y_coords[i],
+                            y_coords[iplus1],
+                        )
+                    )
             else:
                 # print('Y1>y')
                 if y_coords[iplus1] <= y:
                     # this was a crossing. compute the intersect
                     # print('Y2<=y')
-                    intersects.append(compute_x_intersection(y, x_coords[i], x_coords[iplus1], y_coords[i],
-                                                             y_coords[iplus1]))
+                    intersects.append(
+                        compute_x_intersection(
+                            y,
+                            x_coords[i],
+                            x_coords[iplus1],
+                            y_coords[i],
+                            y_coords[iplus1],
+                        )
+                    )
         return intersects
 
     def y_intersections(x, x_coords, y_coords):
@@ -532,12 +610,26 @@ def compile_binaries(output_path):
                 if x_coords[iplus1] > x:
                     # this was a crossing. compute the intersect
                     intersects.append(
-                        compute_y_intersection(x, x_coords[i], x_coords[iplus1], y_coords[i], y_coords[iplus1]))
+                        compute_y_intersection(
+                            x,
+                            x_coords[i],
+                            x_coords[iplus1],
+                            y_coords[i],
+                            y_coords[iplus1],
+                        )
+                    )
             else:
                 if x_coords[iplus1] <= x:
                     # this was a crossing. compute the intersect
-                    intersects.append(compute_y_intersection(x, x_coords[i], x_coords[iplus1], y_coords[i],
-                                                             y_coords[iplus1]))
+                    intersects.append(
+                        compute_y_intersection(
+                            x,
+                            x_coords[i],
+                            x_coords[iplus1],
+                            y_coords[i],
+                            y_coords[iplus1],
+                        )
+                    )
         return intersects
 
     def compute_exact_shortcuts(xmax, xmin, ymax, ymin, line):
@@ -558,13 +650,14 @@ def compile_binaries(output_path):
             # print(y_longs)
             # print(x_intersections(coordinate_to_longlong(lat), x_longs, y_longs))
             # raise ValueError
-            intersects = sorted([int2coord(x) for x in
-                                 x_intersections(coord2int(lat), x_longs, y_longs)])
+            intersects = sorted(
+                int2coord(x) for x in x_intersections(coord2int(lat), x_longs, y_longs)
+            )
             # print(intersects)
 
             nr_of_intersects = len(intersects)
             if nr_of_intersects % 2 != 0:
-                raise ValueError('an uneven number of intersections has been accounted')
+                raise ValueError("an uneven number of intersections has been accounted")
 
             for i in range(0, nr_of_intersects, 2):
                 possible_longitudes = []
@@ -575,11 +668,16 @@ def compile_binaries(output_path):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut zone here!
                     # only select the top shortcut if it is actually inside the polygon (point a little up is inside)
-                    if contained(coord2int(intersection_in), coord2int(lat) + 1, x_longs,
-                                 y_longs):
-                        shortcuts_for_line.add((x_shortcut(intersection_in), y_shortcut(lat) - 1))
+                    if contained(
+                        coord2int(intersection_in), coord2int(lat) + 1, x_longs, y_longs
+                    ):
+                        shortcuts_for_line.add(
+                            (x_shortcut(intersection_in), y_shortcut(lat) - 1)
+                        )
                     # the bottom shortcut is always selected
-                    shortcuts_for_line.add((x_shortcut(intersection_in), y_shortcut(lat)))
+                    shortcuts_for_line.add(
+                        (x_shortcut(intersection_in), y_shortcut(lat))
+                    )
 
                 else:
                     # add all the shortcuts for the whole found area of intersection
@@ -587,8 +685,9 @@ def compile_binaries(output_path):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if contained(coord2int(middle), coord2int(lat) + 1, x_longs,
-                                 y_longs):
+                    if contained(
+                        coord2int(middle), coord2int(lat) + 1, x_longs, y_longs
+                    ):
                         while intersection_in < intersection_out:
                             possible_longitudes.append(intersection_in)
                             intersection_in += step
@@ -598,8 +697,12 @@ def compile_binaries(output_path):
                         # the shortcut above and below of the intersection should be selected!
                         possible_y_shortcut_min1 = possible_y_shortcut - 1
                         for possible_x_coord in possible_longitudes:
-                            shortcuts_for_line.add((x_shortcut(possible_x_coord), possible_y_shortcut))
-                            shortcuts_for_line.add((x_shortcut(possible_x_coord), possible_y_shortcut_min1))
+                            shortcuts_for_line.add(
+                                (x_shortcut(possible_x_coord), possible_y_shortcut)
+                            )
+                            shortcuts_for_line.add(
+                                (x_shortcut(possible_x_coord), possible_y_shortcut_min1)
+                            )
                     else:
                         # polygon does not cross the border!
                         while intersection_in < intersection_out:
@@ -610,7 +713,9 @@ def compile_binaries(output_path):
 
                         # only the shortcut above of the intersection should be selected!
                         for possible_x_coord in possible_longitudes:
-                            shortcuts_for_line.add((x_shortcut(possible_x_coord), possible_y_shortcut))
+                            shortcuts_for_line.add(
+                                (x_shortcut(possible_x_coord), possible_y_shortcut)
+                            )
 
         # print('now all the longitudes to check')
         # same procedure horizontally
@@ -620,13 +725,14 @@ def compile_binaries(output_path):
             # print(coordinate_to_longlong(lng))
             # print(x_longs)
             # print(x_intersections(coordinate_to_longlong(lng), x_longs, y_longs))
-            intersects = sorted([int2coord(y) for y in
-                                 y_intersections(coord2int(lng), x_longs, y_longs)])
+            intersects = sorted(
+                int2coord(y) for y in y_intersections(coord2int(lng), x_longs, y_longs)
+            )
             # print(intersects)
 
             nr_of_intersects = len(intersects)
             if nr_of_intersects % 2 != 0:
-                raise ValueError('an uneven number of intersections has been accounted')
+                raise ValueError("an uneven number of intersections has been accounted")
 
             possible_latitudes = []
             for i in range(0, nr_of_intersects, 2):
@@ -637,11 +743,16 @@ def compile_binaries(output_path):
                 if intersection_in == intersection_out:
                     # the polygon has a point exactly on the border of a shortcut here!
                     # only select the left shortcut if it is actually inside the polygon (point a little left is inside)
-                    if contained(coord2int(lng) - 1, coord2int(intersection_in), x_longs,
-                                 y_longs):
-                        shortcuts_for_line.add((x_shortcut(lng) - 1, y_shortcut(intersection_in)))
+                    if contained(
+                        coord2int(lng) - 1, coord2int(intersection_in), x_longs, y_longs
+                    ):
+                        shortcuts_for_line.add(
+                            (x_shortcut(lng) - 1, y_shortcut(intersection_in))
+                        )
                     # the right shortcut is always selected
-                    shortcuts_for_line.add((x_shortcut(lng), y_shortcut(intersection_in)))
+                    shortcuts_for_line.add(
+                        (x_shortcut(lng), y_shortcut(intersection_in))
+                    )
 
                 else:
                     # add all the shortcuts for the whole found area of intersection
@@ -649,8 +760,9 @@ def compile_binaries(output_path):
 
                     # both shortcuts should only be selected when the polygon doesnt stays on the border
                     middle = intersection_in + (intersection_out - intersection_in) / 2
-                    if contained(coord2int(lng) - 1, coord2int(middle), x_longs,
-                                 y_longs):
+                    if contained(
+                        coord2int(lng) - 1, coord2int(middle), x_longs, y_longs
+                    ):
                         while intersection_in < intersection_out:
                             possible_latitudes.append(intersection_in)
                             intersection_in += step
@@ -660,8 +772,15 @@ def compile_binaries(output_path):
                         # both shortcuts right and left of the intersection should be selected!
                         possible_x_shortcut_min1 = possible_x_shortcut - 1
                         for possible_latitude in possible_latitudes:
-                            shortcuts_for_line.add((possible_x_shortcut, y_shortcut(possible_latitude)))
-                            shortcuts_for_line.add((possible_x_shortcut_min1, y_shortcut(possible_latitude)))
+                            shortcuts_for_line.add(
+                                (possible_x_shortcut, y_shortcut(possible_latitude))
+                            )
+                            shortcuts_for_line.add(
+                                (
+                                    possible_x_shortcut_min1,
+                                    y_shortcut(possible_latitude),
+                                )
+                            )
 
                     else:
                         while intersection_in < intersection_out:
@@ -671,13 +790,15 @@ def compile_binaries(output_path):
                         possible_latitudes.append(intersection_out)
 
                         for possible_latitude in possible_latitudes:
-                            shortcuts_for_line.add((possible_x_shortcut, y_shortcut(possible_latitude)))
+                            shortcuts_for_line.add(
+                                (possible_x_shortcut, y_shortcut(possible_latitude))
+                            )
 
         return shortcuts_for_line
 
     def construct_shortcuts():
-        print('building shortucts...')
-        print('currently at polygon nr:')
+        print("building shortucts...")
+        print("currently at polygon nr:")
         line = 0
         for xmax, xmin, ymax, ymin in poly_boundaries:
             # xmax, xmin, ymax, ymin = boundaries_of(line=line)
@@ -700,7 +821,9 @@ def compile_binaries(output_path):
                 # print(ints_of(line))
 
                 # This is a big zone! compute exact shortcuts with the whole polygon points
-                shortcuts_for_line = compute_exact_shortcuts(xmax, xmin, ymax, ymin, line)
+                shortcuts_for_line = compute_exact_shortcuts(
+                    xmax, xmin, ymax, ymin, line
+                )
                 # n += len(shortcuts_for_line)
 
                 min_x_shortcut = column_nrs[0]
@@ -711,7 +834,12 @@ def compile_binaries(output_path):
 
                 # remove shortcuts from outside the possible/valid area
                 for x, y in shortcuts_for_line:
-                    if x < min_x_shortcut or x > max_x_shortcut or y < min_y_shortcut or y > max_y_shortcut:
+                    if (
+                        x < min_x_shortcut
+                        or x > max_x_shortcut
+                        or y < min_y_shortcut
+                        or y > max_y_shortcut
+                    ):
                         shortcuts_to_remove.append((x, y))
 
                 for s in shortcuts_to_remove:
@@ -731,9 +859,12 @@ def compile_binaries(output_path):
 
                 if len(shortcuts_for_line) > len(column_nrs) * len(row_nrs):
                     raise ValueError(
-                        'there are more shortcuts than before now. there is something wrong with the algorithm!')
+                        "there are more shortcuts than before now. there is something wrong with the algorithm!"
+                    )
                 if len(shortcuts_for_line) < 3:
-                    raise ValueError('algorithm not valid! less than 3 zones detected (should be at least 3)')
+                    raise ValueError(
+                        "algorithm not valid! less than 3 zones detected (should be at least 3)"
+                    )
 
             else:
                 shortcuts_for_line = []
@@ -752,7 +883,7 @@ def compile_binaries(output_path):
     start_time = datetime.now()
     construct_shortcuts()
     end_time = datetime.now()
-    print('calculating the shortcuts took:', end_time - start_time, '\n')
+    print("calculating the shortcuts took:", end_time - start_time, "\n")
 
     # there are two floats per coordinate (lng, lat)
     nr_of_floats = 2 * sum(polygon_lengths)
@@ -776,7 +907,7 @@ def compile_binaries(output_path):
         zipped = list(zip(poly_nrs, zone_ids, zone_id_freq))
         # also make sure polygons with the same zone freq. are ordered after their zone id
         # (polygons from different zones should not get mixed up)
-        zipped_sorted = sorted((sorted(zipped, key=lambda x: x[1])), key=lambda x: x[2])
+        zipped_sorted = sorted(zipped, key=lambda x: (x[1], x[2]))
         # [x[0] for x in zipped_sorted]  # take only the polygon nrs
         return zip(*zipped_sorted)
 
@@ -788,7 +919,9 @@ def compile_binaries(output_path):
         for y in range(180 * NR_SHORTCUTS_PER_LAT):
             try:
                 shortcuts_this_entry = shortcuts[(x, y)]
-                shortcuts_sorted, zone_ids, zone_id_freqs = sort_poly_shortcut(shortcuts_this_entry)
+                shortcuts_sorted, zone_ids, zone_id_freqs = sort_poly_shortcut(
+                    shortcuts_this_entry
+                )
                 # polygons of the least common zone must come first
                 # -> this zone can be ruled out faster
                 assert zone_id_freqs[-1] >= zone_id_freqs[0]
@@ -815,19 +948,30 @@ def compile_binaries(output_path):
     print_shortcut_statistics()
 
     if amount_of_shortcuts != 360 * 180 * NR_SHORTCUTS_PER_LNG * NR_SHORTCUTS_PER_LAT:
-        raise ValueError('this number of shortcut zones is wrong:', amount_of_shortcuts)
+        raise ValueError("this number of shortcut zones is wrong:", amount_of_shortcuts)
 
-    print('The number of filled shortcut zones are: ', amount_filled_shortcuts, '(=',
-          round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2), '% of all shortcuts)')
+    print(
+        "The number of filled shortcut zones are: ",
+        amount_filled_shortcuts,
+        "(=",
+        round((amount_filled_shortcuts / amount_of_shortcuts) * 100, 2),
+        "% of all shortcuts)",
+    )
 
     # for every shortcut <H and <I is written (nr of entries and address)
-    shortcut_space = 360 * NR_SHORTCUTS_PER_LNG * 180 * NR_SHORTCUTS_PER_LAT * (NR_BYTES_H + NR_BYTES_I)
+    shortcut_space = (
+        360
+        * NR_SHORTCUTS_PER_LNG
+        * 180
+        * NR_SHORTCUTS_PER_LAT
+        * (NR_BYTES_H + NR_BYTES_I)
+    )
     for nr in nr_of_entries_in_shortcut:
         # every line in every shortcut takes up 2bytes
         shortcut_space += NR_BYTES_H * nr
 
-    print('number of polygons:', nr_of_polygons)
-    print(f'number of floats in all the polygons: {nr_of_floats:,} (2 per point)')
+    print("number of polygons:", nr_of_polygons)
+    print(f"number of floats in all the polygons: {nr_of_floats:,} (2 per point)")
 
     def compile_addresses(length_list, multiplier=1, byte_amount_per_entry=1):
         adr = 0
@@ -838,26 +982,50 @@ def compile_binaries(output_path):
         return addresses
 
     # NOTE: last entry is nr_of_polygons -> allow +1
-    write_binary(output_path, POLY_NR2ZONE_ID, poly_nr2zone_id, upper_value_limit=nr_of_polygons + 1)
-    write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
+    write_binary(
+        output_path,
+        POLY_NR2ZONE_ID,
+        poly_nr2zone_id,
+        upper_value_limit=nr_of_polygons + 1,
+    )
+    write_binary(
+        output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
+    )
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_coordinate_data(output_path, POLY_DATA, polygons)
-    write_binary(output_path, POLY_COORD_AMOUNT, polygon_lengths, data_format=DTYPE_FORMAT_I,
-                 upper_value_limit=THRES_DTYPE_I)
+    write_binary(
+        output_path,
+        POLY_COORD_AMOUNT,
+        polygon_lengths,
+        data_format=DTYPE_FORMAT_I,
+        upper_value_limit=THRES_DTYPE_I,
+    )
 
     # 2 entries per coordinate
-    poly_addresses = compile_addresses(polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
-    write_binary(output_path, POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I,
-                 upper_value_limit=THRES_DTYPE_I)
+    poly_addresses = compile_addresses(
+        polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
+    write_binary(
+        output_path,
+        POLY_ADR2DATA,
+        poly_addresses,
+        data_format=DTYPE_FORMAT_I,
+        upper_value_limit=THRES_DTYPE_I,
+    )
 
     # [SHORTCUT AREA]
-    write_binary(output_path, SHORTCUTS_ENTRY_AMOUNT, nr_of_entries_in_shortcut, upper_value_limit=nr_of_polygons)
+    write_binary(
+        output_path,
+        SHORTCUTS_ENTRY_AMOUNT,
+        nr_of_entries_in_shortcut,
+        upper_value_limit=nr_of_polygons,
+    )
 
     # write address of first "shortcut" (=polygon number) in shortcut field (x,y)
     adr = 0
     path = join(output_path, SHORTCUTS_ADR2DATA + BINARY_FILE_ENDING)
-    print(f'writing {path}')
-    with open(path, 'wb') as output_file:
+    print(f"writing {path}")
+    with open(path, "wb") as output_file:
         for nr in nr_of_entries_in_shortcut:
             if nr == 0:
                 # ATTENTION: write 0 when there are no entries in this shortcut
@@ -867,11 +1035,13 @@ def compile_binaries(output_path):
                 # each line_nr takes up x bytes of space
                 adr += NR_BYTES_H * nr
 
-    def flatten(l):  # only one level!
-        return [item for sublist in l for item in sublist]
+    def flatten(list):  # only one level!
+        return [item for sublist in list for item in sublist]
 
     shortcut_data = flatten(shortcut_entries)
-    write_binary(output_path, SHORTCUTS_DATA, shortcut_data, upper_value_limit=nr_of_polygons)
+    write_binary(
+        output_path, SHORTCUTS_DATA, shortcut_data, upper_value_limit=nr_of_polygons
+    )
     write_binary(output_path, SHORTCUTS_UNIQUE_ID, unique_ids)
     write_binary(output_path, SHORTCUTS_DIRECT_ID, direct_ids)
 
@@ -886,15 +1056,19 @@ def compile_binaries(output_path):
     for i, poly_id in enumerate(polynrs_of_holes):
         try:
             amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry.update({
-                poly_id: (amount_of_holes + 1, hole_id),
-            })
+            hole_registry.update(
+                {
+                    poly_id: (amount_of_holes + 1, hole_id),
+                }
+            )
         except KeyError:
-            hole_registry.update({
-                poly_id: (1, i),
-            })
+            hole_registry.update(
+                {
+                    poly_id: (1, i),
+                }
+            )
 
-    with open(join(output_path, HOLE_REGISTRY_FILE), 'w') as json_file:
+    with open(join(output_path, HOLE_REGISTRY_FILE), "w") as json_file:
         json.dump(hole_registry, json_file, indent=4)
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
@@ -903,13 +1077,25 @@ def compile_binaries(output_path):
     hole_space += used_space
 
     # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
-    write_binary(output_path, POLY_ADR2DATA, poly_addresses, data_format=DTYPE_FORMAT_I,
-                 upper_value_limit=THRES_DTYPE_I)
+    write_binary(
+        output_path,
+        POLY_ADR2DATA,
+        poly_addresses,
+        data_format=DTYPE_FORMAT_I,
+        upper_value_limit=THRES_DTYPE_I,
+    )
 
     # 2 entries per coordinate
-    hole_adr2data = compile_addresses(all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
-    used_space = write_binary(output_path, HOLE_ADR2DATA, hole_adr2data, data_format=DTYPE_FORMAT_I,
-                              upper_value_limit=THRES_DTYPE_I)
+    hole_adr2data = compile_addresses(
+        all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
+    used_space = write_binary(
+        output_path,
+        HOLE_ADR2DATA,
+        hole_adr2data,
+        data_format=DTYPE_FORMAT_I,
+        upper_value_limit=THRES_DTYPE_I,
+    )
     hole_space += used_space
 
     # Y times [ 2x i signed ints for every hole: x coords, y coords ]
@@ -919,10 +1105,16 @@ def compile_binaries(output_path):
     polygon_space = nr_of_floats * NR_BYTES_I
     total_space = polygon_space + hole_space + shortcut_space
 
-    print('the polygon data makes up', percent(polygon_space, total_space), '% of the data')
-    print('the shortcuts make up', percent(shortcut_space, total_space), '% of the data')
-    print('holes make up', percent(hole_space, total_space), '% of the data')
-    print('Success!')
+    print(
+        "the polygon data makes up",
+        percent(polygon_space, total_space),
+        "% of the data",
+    )
+    print(
+        "the shortcuts make up", percent(shortcut_space, total_space), "% of the data"
+    )
+    print("holes make up", percent(hole_space, total_space), "% of the data")
+    print("Success!")
 
 
 def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
@@ -942,13 +1134,18 @@ def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
     compile_binaries(output_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
 
     # TODO document
-    parser = argparse.ArgumentParser(description='parse data directories')
-    parser.add_argument('-inp', help='path to input JSON file', default=DEFAULT_INPUT_PATH)
-    parser.add_argument('-out', help='path to output folder for storing the parsed data files',
-                        default=DEFAULT_OUTPUT_PATH)
+    parser = argparse.ArgumentParser(description="parse data directories")
+    parser.add_argument(
+        "-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH
+    )
+    parser.add_argument(
+        "-out",
+        help="path to output folder for storing the parsed data files",
+        default=DEFAULT_OUTPUT_PATH,
+    )
     parsed_args = parser.parse_args()  # takes input from sys.argv
     parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)

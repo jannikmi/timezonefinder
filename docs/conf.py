@@ -31,13 +31,13 @@ import timezonefinder  # needed for auto document, ATTENTION: must then be insta
 
 # -- Project information -----------------------------------------------------
 
-project = 'timezonefinder'
-copyright = '2016, Jannik Michelfeit'
-author = 'Jannik Michelfeit'
+project = "timezonefinder"
+copyright = "2016, Jannik Michelfeit"
+author = "Jannik Michelfeit"
 
 
 def get_version():
-    return open(os.path.join(project_root, 'VERSION')).read()
+    return open(os.path.join(project_root, "VERSION")).read()
 
 
 # The full version, including alpha/beta/rc tags.
@@ -49,37 +49,37 @@ release = get_version()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',  # automatically document with docstring
-    'sphinx.ext.viewcode',
+    "sphinx.ext.autodoc",  # automatically document with docstring
+    "sphinx.ext.viewcode",
     # 'sphinx.ext.intersphinx', # to auto  link to other online documentations
 ]
 
 autodoc_default_options = {
-    'members': '__all__',
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__',
-    'show-inheritance': True,
-    'inherited-members': True,
+    "members": "__all__",
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
+    "show-inheritance": True,
+    "inherited-members": True,
 }
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -113,7 +113,7 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # TODO https://github.com/adamchainz/django-mysql/blob/master/docs/conf.py
 # -- Options for LaTeX output ------------------------------------------

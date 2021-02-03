@@ -22,7 +22,7 @@ Quick Guide:
 
     tf = TimezoneFinder()
     latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
@@ -38,4 +38,3 @@ Also check:
 ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
 
 `download stats <https://pepy.tech/project/timezonefinder>`__
-

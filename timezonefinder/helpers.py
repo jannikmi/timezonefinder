@@ -3,7 +3,11 @@ from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
 
-from timezonefinder.global_settings import COORD2INT_FACTOR, INT2COORD_FACTOR, MAX_HAVERSINE_DISTANCE
+from timezonefinder.global_settings import (
+    COORD2INT_FACTOR,
+    INT2COORD_FACTOR,
+    MAX_HAVERSINE_DISTANCE,
+)
 
 
 def inside_polygon(x, y, coordinates):
@@ -56,9 +60,11 @@ def inside_polygon(x, y, coordinates):
                 # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
                 # ( dy/dx > a  ==  dy > a * dx )
                 # int64 accuracy needed here!
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (
-                    int64(y2) - int64(y)) * (int64(x2) - int64(x1)) <= (
-                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
+                if (x1GEx and x2GEx) or (
+                    (x1GEx or x2GEx)
+                    and (int64(y2) - int64(y)) * (int64(x2) - int64(x1))
+                    <= (int64(y2) - int64(y1)) * (int64(x2) - int64(x))
+                ):
                     contained = not contained
 
         else:
@@ -68,9 +74,11 @@ def inside_polygon(x, y, coordinates):
                 # only crossings "right" of the point should be counted
                 x1GEx = x <= x1
                 x2GEx = x <= x2
-                if (x1GEx and x2GEx) or ((x1GEx or x2GEx) and (
-                    int64(y2) - int64(y)) * (int64(x2) - int64(x1)) >= (
-                                             int64(y2) - int64(y1)) * (int64(x2) - int64(x))):
+                if (x1GEx and x2GEx) or (
+                    (x1GEx or x2GEx)
+                    and (int64(y2) - int64(y)) * (int64(x2) - int64(x1))
+                    >= (int64(y2) - int64(y1)) * (int64(x2) - int64(x))
+                ):
                     contained = not contained
 
         y1 = y2
@@ -110,7 +118,11 @@ def x_rotate(rad, point):
     # x stays the same
     sin_rad = sin(rad)
     cos_rad = cos(rad)
-    return point[0], point[1] * cos_rad + point[2] * sin_rad, point[2] * cos_rad - point[1] * sin_rad
+    return (
+        point[0],
+        point[1] * cos_rad + point[2] * sin_rad,
+        point[2] * cos_rad - point[1] * sin_rad,
+    )
 
 
 def y_rotate(rad, point):
@@ -118,7 +130,11 @@ def y_rotate(rad, point):
     # this is actually a rotation with -rad (use symmetry of sin/cos)
     sin_rad = sin(rad)
     cos_rad = cos(rad)
-    return point[0] * cos_rad + point[2] * sin_rad, point[1], point[2] * cos_rad - point[0] * sin_rad
+    return (
+        point[0] * cos_rad + point[2] * sin_rad,
+        point[1],
+        point[2] * cos_rad - point[0] * sin_rad,
+    )
 
 
 def coords2cartesian(lng_rad, lat_rad):
@@ -135,7 +151,12 @@ def distance_to_point_on_equator(lng_rad, lat_rad, lng_rad_p1):
     this is only an approximation since the earth is not a real sphere
     """
     # 2* for the distance in rad and * 12742 (mean diameter of earth) for the distance in km
-    return 12742 * asin(sqrt(((sin(lat_rad / 2)) ** 2 + cos(lat_rad) * (sin((lng_rad - lng_rad_p1) / 2)) ** 2)))
+    return 12742 * asin(
+        sqrt(
+            (sin(lat_rad / 2)) ** 2
+            + cos(lat_rad) * (sin((lng_rad - lng_rad_p1) / 2)) ** 2
+        )
+    )
 
 
 def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
@@ -149,10 +170,16 @@ def haversine(lng_p1, lat_p1, lng_p2, lat_p2):
     """
     # 2* for the distance in rad and * 12742(mean diameter of earth) for the distance in km
     return 12742 * asin(
-        sqrt(((sin((lat_p1 - lat_p2) / 2)) ** 2 + cos(lat_p2) * cos(lat_p1) * (sin((lng_p1 - lng_p2) / 2)) ** 2)))
+        sqrt(
+            (sin((lat_p1 - lat_p2) / 2)) ** 2
+            + cos(lat_p2) * cos(lat_p1) * (sin((lng_p1 - lng_p2) / 2)) ** 2
+        )
+    )
 
 
-def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat):
+def compute_min_distance(
+    lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_lng, p1_lat
+):
     """
     :param lng_rad: lng of px in radians
     :param lat_rad: lat of px in radians
@@ -188,8 +215,9 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
     # the distance between point x and the 'equator' is the shortest
     # if the point is not between p0 and p1 the distance to the closest of the two points should be used
     # so clamp/clip the lng_rad of px to the interval of [0; lng_rad p1] and compute the distance with it
-    temp_distance = distance_to_point_on_equator(px_retrans_rad[0], px_retrans_rad[1],
-                                                 max(min(px_retrans_rad[0], lng_p1_rad), 0))
+    temp_distance = distance_to_point_on_equator(
+        px_retrans_rad[0], px_retrans_rad[1], max(min(px_retrans_rad[0], lng_p1_rad), 0)
+    )
 
     # ATTENTION: vars are being reused. p1 is actually pm1 here!
     rotation_rad = atan2(pm1_cartesian[2], pm1_cartesian[1])
@@ -197,8 +225,14 @@ def compute_min_distance(lng_rad, lat_rad, p0_lng, p0_lat, pm1_lng, pm1_lat, p1_
     lng_p1_rad = atan2(p1_cartesian[1], p1_cartesian[0])
     px_retrans_rad = cartesian2rad(*x_rotate(rotation_rad, px_cartesian))
 
-    return min(temp_distance, distance_to_point_on_equator(px_retrans_rad[0], px_retrans_rad[1],
-                                                           max(min(px_retrans_rad[0], lng_p1_rad), 0)))
+    return min(
+        temp_distance,
+        distance_to_point_on_equator(
+            px_retrans_rad[0],
+            px_retrans_rad[1],
+            max(min(px_retrans_rad[0], lng_p1_rad), 0),
+        ),
+    )
 
 
 def int2coord(i4):
@@ -221,17 +255,35 @@ def distance_to_polygon_exact(lng_rad, lat_rad, nr_points, points, trans_points)
 
     p1_lng = trans_points[0][-2]
     p1_lat = trans_points[1][-2]
-    min_distance = compute_min_distance(lng_rad, lat_rad, trans_points[0][-1], trans_points[1][-1], pm1_lng, pm1_lat,
-                                        p1_lng, p1_lat)
+    min_distance = compute_min_distance(
+        lng_rad,
+        lat_rad,
+        trans_points[0][-1],
+        trans_points[1][-1],
+        pm1_lng,
+        pm1_lat,
+        p1_lng,
+        p1_lat,
+    )
 
     index_p0 = 1
     index_p1 = 2
-    for i in range(int(ceil((nr_points / 2) - 1))):
+    for _ in range(int(ceil((nr_points / 2) - 1))):
         p1_lng = trans_points[0][index_p1]
         p1_lat = trans_points[1][index_p1]
-        min_distance = min(min_distance,
-                           compute_min_distance(lng_rad, lat_rad, trans_points[0][index_p0], trans_points[1][index_p0],
-                                                pm1_lng, pm1_lat, p1_lng, p1_lat))
+        min_distance = min(
+            min_distance,
+            compute_min_distance(
+                lng_rad,
+                lat_rad,
+                trans_points[0][index_p0],
+                trans_points[1][index_p0],
+                pm1_lng,
+                pm1_lat,
+                p1_lng,
+                p1_lat,
+            ),
+        )
 
         index_p0 += 2
         index_p1 += 2
@@ -245,19 +297,28 @@ def distance_to_polygon(lng_rad, lat_rad, nr_points, points):
     min_distance = MAX_HAVERSINE_DISTANCE
 
     for i in range(nr_points):
-        min_distance = min(min_distance, haversine(lng_rad, lat_rad, radians(int2coord(points[0][i])),
-                                                   radians(int2coord(points[1][i]))))
+        min_distance = min(
+            min_distance,
+            haversine(
+                lng_rad,
+                lat_rad,
+                radians(int2coord(points[0][i])),
+                radians(int2coord(points[1][i])),
+            ),
+        )
 
     return min_distance
 
 
 def coord2shortcut(lng, lat):
-    return int(floor((lng + 180))), int(floor((90 - lat) * 2))
+    return int(floor(lng + 180)), int(floor((90 - lat) * 2))
 
 
 def rectify_coordinates(lng, lat):
     if lng > 180.0 or lng < -180.0 or lat > 90.0 or lat < -90.0:
-        raise ValueError(b'The coordinates should be given in degrees. They are out of bounds.')
+        raise ValueError(
+            b"The coordinates should be given in degrees. They are out of bounds."
+        )
 
     # coordinates on the rightmost (lng=180) or lowest (lat=-90) border of the coordinate system
     # are not included in the shortcut lookup system
@@ -279,7 +340,10 @@ def rectify_coordinates(lng, lat):
 
 def convert2coords(polygon_data):
     # return a tuple of coordinate lists
-    return [[int2coord(x) for x in polygon_data[0]], [int2coord(y) for y in polygon_data[1]]]
+    return [
+        [int2coord(x) for x in polygon_data[0]],
+        [int2coord(y) for y in polygon_data[1]],
+    ]
 
 
 def convert2coord_pairs(polygon_data):

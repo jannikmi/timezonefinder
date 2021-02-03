@@ -25,7 +25,7 @@ Creating aware datetime objects
         naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
 
     except UnknownTimeZoneError:
-        pass # {handle error}
+        pass  # {handle error}
 
 
 
@@ -36,6 +36,7 @@ Getting a location's time zone offset
 
     from datetime import datetime
     from pytz import timezone, utc
+
 
     def get_offset(*, lat, lng):
         """
@@ -50,7 +51,7 @@ Getting a location's time zone offset
         return (today_utc - today_target).total_seconds() / 60
 
 
-    bergamo = {'lat': 45.69, 'lng': 9.67}
+    bergamo = {"lat": 45.69, "lng": 9.67}
     minute_offset = get_offset(**bergamo)
 
 
@@ -75,7 +76,7 @@ Maximising the chances of getting a result in a ``Django`` view:
                 # maybe even increase the search radius when it is still None
         except ValueError:
             # the coordinates were out of bounds
-            pass # {handle error}
+            pass  # {handle error}
         # ... do something with timezone_name ...
 
 
@@ -126,6 +127,3 @@ This is useful if you do not require ocean timezones and want to have smaller da
 ::
 
     /bin/bash  /path/to/timezonefinder/parse_data.sh
-
-
-

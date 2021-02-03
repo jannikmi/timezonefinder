@@ -7,6 +7,12 @@ document class attributes
 create variables for used dtype for each type of data (polygon address, coordinate...)
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
+5.1.1 (2021-02-03)
+------------------
+
+* BUGFIX: get_geometry() now also works for the last zone
+* TODO black code style
+* TODO pre-commit checks
 
 5.1.0 (2021-01-14)
 ------------------

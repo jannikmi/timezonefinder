@@ -48,7 +48,7 @@ Basics
 
     tf = TimezoneFinder()
     latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude) # returns 'Europe/Berlin'
+    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
 All available features of this package are explained :ref:`HERE <usage>`.
