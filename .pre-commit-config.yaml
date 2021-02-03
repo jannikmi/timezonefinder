@@ -9,7 +9,6 @@ repos:
             -   id: check-yaml
             -   id: check-added-large-files
             -   id: check-case-conflict
-            #            -   id: check-executables-have-shebangs
             -   id: check-json
             -   id: pretty-format-json
                 args: [ "--autofix" ]
@@ -17,8 +16,10 @@ repos:
             -   id: name-tests-test
             -   id: check-docstring-first
             -   id: requirements-txt-fixer
-            #            -   id: detect-aws-credentials
             -   id: detect-private-key
+    #            -   id: detect-aws-credentials
+    #            -   id: check-executables-have-shebangs
+
 
 
     -   repo: https://github.com/pycqa/isort
@@ -59,8 +60,8 @@ repos:
         rev: "0.46"
         hooks:
             -   id: check-manifest
-                args: [ "--no-build-isolation", "--ignore", "*.png,.travis/*,docs/*,build_n_install.py,publish.py,badges.rst,readthedocs.yml" ]
-                additional_dependencies: [numpy]
+                args: [ "--no-build-isolation", "--ignore", "*.png,.travis/*,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
+                additional_dependencies: [ numpy ]
 
     # TODO sphinx check
     #    -   repo: https://github.com/myint/rstcheck
