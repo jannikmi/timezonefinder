@@ -15,12 +15,12 @@ setup(
     author='Jannik Michelfeit',
     author_email='python@michelfe.it',
     license='MIT licence',
-    url=f'https://github.com/MrMinimal64/{PACKAGE_NAME}',  # use the URL to the github repo
+    url=f'https://github.com/jannikmi/{PACKAGE_NAME}',  # use the URL to the github repo
     project_urls={
-        "Source Code": f"https://github.com/MrMinimal64/{PACKAGE_NAME}",
+        "Source Code": f"https://github.com/jannikmi/{PACKAGE_NAME}",
         "Documentation": f"https://{PACKAGE_NAME}.readthedocs.io/en/latest/",
-        "Changelog": f"https://github.com/MrMinimal64/{PACKAGE_NAME}/blob/master/CHANGELOG.rst",
-        "License": f"https://github.com/MrMinimal64/{PACKAGE_NAME}/blob/master/LICENSE",
+        "Changelog": f"https://github.com/jannikmi/{PACKAGE_NAME}/blob/master/CHANGELOG.rst",
+        "License": f"https://github.com/jannikmi/{PACKAGE_NAME}/blob/master/LICENSE",
     },
     keywords='timezone coordinates latitude longitude location pytzwhere tzwhere',
     classifiers=[

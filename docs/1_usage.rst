@@ -235,13 +235,20 @@ and `pandas.DataFrame.apply <https://pandas.pydata.org/pandas-docs/stable/refere
 Calling timezonefinder from the command line
 ---------------------------------------------
 
-A command line script is being included with this package.
+A command line script is being installed as part of this package.
 
 **Command Line Syntax**:
 
 ::
 
     timezonefinder [-h] [-v] [-f {0,1,2,3,4,5}] lng lat
+
+
+**Example**:
+
+::
+
+    timezonefinder -f 4 40.5 11.7
 
 
 With ``-v`` you get verbose output, without it only the timezone name is being printed.

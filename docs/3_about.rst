@@ -4,8 +4,8 @@ About
 =====
 
 
-.. image:: https://api.travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
-    :target: https://travis-ci.org/MrMinimal64/timezonefinder
+.. image:: https://api.travis-ci.org/jannikmi/timezonefinder.svg?branch=master
+    :target: https://travis-ci.org/jannikmi/timezonefinder
 
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
     :alt: documentation status
@@ -47,7 +47,7 @@ Current **data set** in use: precompiled `timezone-boundary-builder <https://git
 
 Also see:
 
-`GitHub <https://github.com/MrMinimal64/timezonefinder>`__
+`GitHub <https://github.com/jannikmi/timezonefinder>`__
 
 `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
 
@@ -64,7 +64,7 @@ License
 -------
 
 ``timezonefinder`` is distributed under the terms of the MIT license
-(see `LICENSE <https://github.com/MrMinimal64/timezonefinder/blob/master/LICENSE>`__).
+(see `LICENSE <https://github.com/jannikmi/timezonefinder/blob/master/LICENSE>`__).
 
 
 .. _speed-tests:

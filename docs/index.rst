@@ -4,8 +4,8 @@ timezonefinder
 ============================
 
 
-.. image:: https://api.travis-ci.org/MrMinimal64/timezonefinder.svg?branch=master
-    :target: https://travis-ci.org/MrMinimal64/timezonefinder
+.. image:: https://api.travis-ci.org/jannikmi/timezonefinder.svg?branch=master
+    :target: https://travis-ci.org/jannikmi/timezonefinder
 
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
     :alt: documentation status
