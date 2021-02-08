@@ -9,10 +9,11 @@ import pytest
 from auxiliaries import list_equal, list_of_random_points, random_point
 
 from timezonefinder.global_settings import (
+    DEBUG,
     INT2COORD_FACTOR,
     PACKAGE_NAME,
     TIMEZONE_NAMES,
-    TIMEZONE_NAMES_FILE, DEBUG,
+    TIMEZONE_NAMES_FILE,
 )
 from timezonefinder.timezonefinder import (
     TimezoneFinder,
@@ -271,6 +272,12 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             self.test_instance.timezone_at_land, ocean2land(self.test_locations)
         )
 
+    def test_unambiguous_timezone_at(self):
+        print("\ntesting unambiguous_timezone_at():")
+        self.run_location_tests(
+            self.test_instance.unique_timezone_at, BASIC_TEST_LOCATIONS
+        )
+
     def test_timezone_name_attribute(self):
         timezone_names_stored = getattr(self.test_instance, TIMEZONE_NAMES)
         with open(join(abs_default_path, TIMEZONE_NAMES_FILE), "r") as json_file:
@@ -364,9 +371,12 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
                 len(poly1[1]) > 2
             ), "a polygon must consist of more than 2 coordinates"
 
-            if DEBUG: # only with active debugging conduct extensive testing (requ
+            if DEBUG:  # only with active debugging conduct extensive testing (requ
                 geometry_from_id = self.test_instance.get_geometry(
-                    tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=False
+                    tz_name=zone_name,
+                    tz_id=zone_id,
+                    use_id=False,
+                    coords_as_pairs=False,
                 )
                 # not necessary:
                 # assert nested_list_equal(geometry_from_id, geometry_from_name), \
@@ -396,14 +406,22 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
 
                 # first polygon, first coord pair
                 poly1 = geometry_from_id[0][0]
-                assert len(poly1) > 2, "a polygon must consist of more than 2 coordinates"
-                assert len(poly1) > 2, "a polygon must consist of more than 2 coordinates"
+                assert (
+                    len(poly1) > 2
+                ), "a polygon must consist of more than 2 coordinates"
+                assert (
+                    len(poly1) > 2
+                ), "a polygon must consist of more than 2 coordinates"
                 assert (
                     len(poly1[0]) == 2
                 ), "the polygon does not consist of coordinate pairs as expected."
                 poly1 = geometry_from_name[0][0]
-                assert len(poly1) > 2, "a polygon must consist of more than 2 coordinates"
-                assert len(poly1) > 2, "a polygon must consist of more than 2 coordinates"
+                assert (
+                    len(poly1) > 2
+                ), "a polygon must consist of more than 2 coordinates"
+                assert (
+                    len(poly1) > 2
+                ), "a polygon must consist of more than 2 coordinates"
                 assert (
                     len(poly1[0]) == 2
                 ), "the polygon does not consist of coordinate pairs as expected."
