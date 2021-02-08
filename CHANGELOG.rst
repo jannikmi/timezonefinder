@@ -8,6 +8,13 @@ create variables for used dtype for each type of data (polygon address, coordina
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
+
+5.2.0 (2021-02-09)
+------------------
+
+* added function ``unique_timezone_at()`` (based on the request in issue #112). Allows querying for the unique zone within the corresponding shortcut.
+
+
 5.1.1 (2021-02-03)
 ------------------
 
