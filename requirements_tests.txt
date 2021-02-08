@@ -11,6 +11,6 @@ more-itertools==6.0.0     # via pytest
 numpy==1.16.2
 pluggy==0.9.0             # via pytest
 py==1.8.0                 # via pytest
-pytest-cov==2.6.1
 pytest==4.3.0
+pytest-cov==2.6.1
 six==1.12.0               # via pytest
