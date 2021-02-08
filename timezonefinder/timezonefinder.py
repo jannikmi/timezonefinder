@@ -172,6 +172,32 @@ class AbstractTimezoneFinder(ABC):
             return None
         return tz_name
 
+    def _get_unique_zone(self, shortcut_id_x, shortcut_id_y):
+        shortcut_unique_id = getattr(self, SHORTCUTS_UNIQUE_ID)
+        shortcut_unique_id.seek(
+            NR_LAT_SHORTCUTS * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y
+        )
+        try:
+            # if there is just one possible zone in this shortcut instantly return its name
+            return getattr(self, TIMEZONE_NAMES)[
+                unpack(
+                    DTYPE_FORMAT_H, getattr(self, SHORTCUTS_UNIQUE_ID).read(NR_BYTES_H)
+                )[0]
+            ]
+        except IndexError:  # no zone matched
+            return None
+
+    def unique_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+        """instantly returns the name of a unique zone within the corresponding shortcut
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the timezone name of the unique zone or None if there are no or multiple zones in this shortcut
+        """
+        lng, lat = rectify_coordinates(lng, lat)
+        shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
+        return self._get_unique_zone(shortcut_id_x, shortcut_id_y)
+
 
 class TimezoneFinderL(AbstractTimezoneFinder):
     """a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
@@ -183,11 +209,11 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
     # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__
     # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
-    __slots__ = [SHORTCUTS_DIRECT_ID]
-    binary_data_attributes = [SHORTCUTS_DIRECT_ID]
+    __slots__ = [SHORTCUTS_DIRECT_ID, SHORTCUTS_UNIQUE_ID]
+    binary_data_attributes = [SHORTCUTS_DIRECT_ID, SHORTCUTS_UNIQUE_ID]
 
     def timezone_at(self, *, lng: float, lat: float) -> str:
-        """instantly returns the name of the most common zone within a shortcut
+        """instantly returns the name of the most common zone within the corresponding shortcut
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
@@ -633,80 +659,71 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lng, lat = rectify_coordinates(lng, lat)
 
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
-        getattr(self, SHORTCUTS_UNIQUE_ID).seek(
-            NR_LAT_SHORTCUTS * NR_BYTES_H * shortcut_id_x + NR_BYTES_H * shortcut_id_y
-        )
-        try:
-            # if there is just one possible zone in this shortcut instantly return its name
-            return getattr(self, TIMEZONE_NAMES)[
-                unpack(
-                    DTYPE_FORMAT_H, getattr(self, SHORTCUTS_UNIQUE_ID).read(NR_BYTES_H)
-                )[0]
-            ]
-        except IndexError:
-            possible_polygons = self.polygon_ids_of_shortcut(
-                shortcut_id_x, shortcut_id_y
-            )
-            nr_possible_polygons = len(possible_polygons)
-            if nr_possible_polygons == 0:
-                raise ValueError(
-                    "some timezone polygon should be present (ocean timezones exist everywhere)!"
-                )
-            if nr_possible_polygons == 1:
-                # there is only one polygon in that area. return its timezone name without further checks
-                return getattr(self, TIMEZONE_NAMES)[self.id_of(possible_polygons[0])]
-
-            # create a list of all the timezone ids of all possible polygons
-            ids = self.id_list(possible_polygons, nr_possible_polygons)
-            # x = longitude  y = latitude  both converted to 8byte int
-            x = coord2int(lng)
-            y = coord2int(lat)
-
-            # check until the point is included in one of the possible polygons
-            for i in range(nr_possible_polygons):
-
-                # when including the current polygon only polygons from the same zone remain,
-                same_element = all_the_same(
-                    pointer=i, length=nr_possible_polygons, id_list=ids
-                )
-                if same_element != -1:
-                    # return the name of that zone
-                    return getattr(self, TIMEZONE_NAMES)[same_element]
-
-                polygon_nr = possible_polygons[i]
-
-                # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
-                getattr(self, POLY_MAX_VALUES).seek(4 * NR_BYTES_I * polygon_nr)
-                boundaries = self._fromfile(
-                    getattr(self, POLY_MAX_VALUES),
-                    dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
-                    count=4,
-                )
-                # only run the expensive algorithm if the point is withing the boundaries
-                if not (
-                    x > boundaries[0]
-                    or x < boundaries[1]
-                    or y > boundaries[2]
-                    or y < boundaries[3]
-                ):
-
-                    outside_all_holes = True
-                    # when the point is within a hole of the polygon, this timezone must not be returned
-                    for hole_coordinates in self._holes_of_poly(polygon_nr):
-                        if inside_polygon(x, y, hole_coordinates):
-                            outside_all_holes = False
-                            break
-
-                    if outside_all_holes:
-                        if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
-                            # the point is included in this polygon. return its timezone name without further checks
-                            return getattr(self, TIMEZONE_NAMES)[ids[i]]
-
-            # the timezone name of the last polygon should always be returned
-            # if no other polygon has been matched beforehand.
+        timezone = self._get_unique_zone(shortcut_id_x, shortcut_id_y)
+        if timezone is not None:  # found perfect and fast match
+            return timezone
+        # more thorough testing required:
+        possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
+        nr_possible_polygons = len(possible_polygons)
+        if nr_possible_polygons == 0:
             raise ValueError(
-                "BUG: this statement should never be reached. Please open up an issue on Github!"
+                "some timezone polygon should be present (ocean timezones exist everywhere)!"
             )
+        if nr_possible_polygons == 1:
+            # there is only one polygon in that area. return its timezone name without further checks
+            return getattr(self, TIMEZONE_NAMES)[self.id_of(possible_polygons[0])]
+
+        # create a list of all the timezone ids of all possible polygons
+        ids = self.id_list(possible_polygons, nr_possible_polygons)
+        # x = longitude  y = latitude  both converted to 8byte int
+        x = coord2int(lng)
+        y = coord2int(lat)
+
+        # check until the point is included in one of the possible polygons
+        for i in range(nr_possible_polygons):
+
+            # when including the current polygon only polygons from the same zone remain,
+            same_element = all_the_same(
+                pointer=i, length=nr_possible_polygons, id_list=ids
+            )
+            if same_element != -1:
+                # return the name of that zone
+                return getattr(self, TIMEZONE_NAMES)[same_element]
+
+            polygon_nr = possible_polygons[i]
+
+            # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min)
+            getattr(self, POLY_MAX_VALUES).seek(4 * NR_BYTES_I * polygon_nr)
+            boundaries = self._fromfile(
+                getattr(self, POLY_MAX_VALUES),
+                dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
+                count=4,
+            )
+            # only run the expensive algorithm if the point is withing the boundaries
+            if not (
+                x > boundaries[0]
+                or x < boundaries[1]
+                or y > boundaries[2]
+                or y < boundaries[3]
+            ):
+
+                outside_all_holes = True
+                # when the point is within a hole of the polygon, this timezone must not be returned
+                for hole_coordinates in self._holes_of_poly(polygon_nr):
+                    if inside_polygon(x, y, hole_coordinates):
+                        outside_all_holes = False
+                        break
+
+                if outside_all_holes:
+                    if inside_polygon(x, y, self.coords_of(polygon_nr=polygon_nr)):
+                        # the point is included in this polygon. return its timezone name without further checks
+                        return getattr(self, TIMEZONE_NAMES)[ids[i]]
+
+        # the timezone name of the last polygon should always be returned
+        # if no other polygon has been matched beforehand.
+        raise ValueError(
+            "BUG: this statement should never be reached. Please open up an issue on Github!"
+        )
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """checks in which timezone polygon the point is certainly included in
@@ -724,6 +741,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         lng, lat = rectify_coordinates(lng, lat)
         shortcut_id_x, shortcut_id_y = coord2shortcut(lng, lat)
+        timezone = self._get_unique_zone(shortcut_id_x, shortcut_id_y)
+        if timezone is not None:  # found perfect and fast match
+            return timezone
         possible_polygons = self.polygon_ids_of_shortcut(shortcut_id_x, shortcut_id_y)
 
         # x = longitude  y = latitude  both converted to 8byte int
