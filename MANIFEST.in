@@ -11,6 +11,7 @@ include .coveragerc
 include tox.ini
 include requirements*
 include runtests.py
+include .pre-commit-config.yaml
 
 recursive-include timezonefinder *.bin
 recursive-include timezonefinder *.json
