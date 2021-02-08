@@ -69,15 +69,47 @@ If no timezone has been matched, ``None`` is being returned.
     * this function is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
 
 
-For even faster results use :ref:`TimezoneFinderL <usage_finderL>`.
+
+timezone_at_land()
+------------------
+
+This package includes ocean timezones (``Etc/GMT...``).
+If you want to explicitly receive only "land" timezones use
+
+.. code-block:: python
+
+    tf.timezone_at_land(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+
+
+
+unique_timezone_at()
+--------------------
+
+For fast execution ``timezonefinder`` internally uses precomputed "shortcuts" which store the possible zones in proximity.
+Call ``unique_timezone_at()`` if you want to ask for an exact result without actually performing "point-in-polygon" tests (<- computationally expensive).
+This function will return ``None`` when the correct zone cannot be uniquely determined without further computation.
+
+.. code-block:: python
+
+    tf.unique_timezone_at(lng=longitude, lat=latitude)
+
+
+
+.. note::
+    The "lightweight" class :ref:`TimezoneFinderL <usage_finderL>`, which is using only shortcuts, also supports just querying the most probable timezone.
 
 
 certain_timezone_at()
 ----------------------
 
+.. note::
+
+    DEPRECATED: Due to the included ocean timezones one zone will always be matched.
+    Use ``timezone_at()`` or ``timezone_at_land()`` instead.
+
+
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
-
 
 
 .. code-block:: python
@@ -85,11 +117,6 @@ are being checked until one polygon is matched. ``None`` is being returned in th
     tf.certain_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
-
-.. note::
-
-    The timezone polygons do NOT follow the shoreline.
-    Consequently even if certain_timezone_at() does not return ``None``, a query point could be at sea.
 
 .. note::
 
@@ -210,9 +237,11 @@ TimezoneFinderL
 
 :ref:`TimezoneFinderL <api_finderL>` is a light version of the :ref:`TimezoneFinder class <api_finder>`.
 It is useful for quickly suggesting probable timezones without using as many computational resources (cf. :ref:`speed tests <speed-tests>`).
-Instead of using timezone polygon data this class instantly returns the most common timezone in that area.
+Instead of using timezone polygon data this class instantly returns the timezone just based on precomputed "shortcuts".
 
-TimezoneFinderL only offers the function ``timezone_at()`` (:ref:`API documentation <api_finderL>`).
+Check the (:ref:`API documentation <api_finderL>`) of ``TimezoneFinderL``.
+
+The most probable zone in proximity can be retrieved with ``timezone_at()``:
 
 .. code-block:: python
 
@@ -223,9 +252,17 @@ TimezoneFinderL only offers the function ``timezone_at()`` (:ref:`API documentat
     tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
 
 
+
+Certain results can be retrieved with ``unique_timezone_at()``:
+
+.. code-block:: python
+
+    tf.unique_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+
+
 .. note::
 
-    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json`` and ``shortcuts_direct_id.bin`` to obtain a truly lightweight installation.
+    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json``, ``shortcuts_unique_id.bin`` and ``shortcuts_direct_id.bin`` to obtain a truly lightweight installation.
 
 
 
