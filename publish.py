@@ -226,7 +226,11 @@ if __name__ == "__main__":
         "checking documentation generation",
     )
 
-    routine("(cd ./docs && exec make html)", "checking documentation generation", "run tests")
+    routine(
+        "(cd ./docs && exec make html)",
+        "checking documentation generation",
+        "run tests",
+    )
 
     # IMPORTANT: -r flag to rebuild tox virtual env
     # only when dependencies have changed!
@@ -307,5 +311,7 @@ if __name__ == "__main__":
         f"git tag -a v{version} -m 'Version {version}'; git push --tags", "Creating tag"
     )
     print(
-        f"Congrats! Published version {version}.\nremember to update the GUI to the new version!"
+        f"Congrats! Published version {version}.\n"
+        "Remember to update the GUI to the new version:\n"
+        "(cd ~/Django/timezonefinderAPI && pip install timezonefinder --upgrade && supervisorctl restart uwsgi)"
     )
