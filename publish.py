@@ -4,6 +4,8 @@ numpy
 (numba)
 
 
+
+
 these packages have to be installed in virtual environment in use:
 
 right python version! (will influence the tox environments!)
@@ -14,6 +16,8 @@ conda install twine
 conda install -c conda-forge pre-commit
 
 PRE COMMIT COMMANDS
+# enable:
+pre-commit install
 pre-commit run --all-files
 pre-commit run <hook_id>
 # update all hook versions:
