@@ -1,0 +1,70 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # By default, GitHub will maximize the number of jobs run in parallel
+      # depending on the available runners on GitHub-hosted virtual machines.
+      # max-parallel: 8
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.6"
+          - "3.7"
+          - "3.8"
+        tox-env:
+          - "py36"
+          - "py36-numba"
+          - "py37"
+          - "py37-numba"
+          - "py38"
+          - "py38-numba"
+        exclude:
+          - python-version: "3.6"
+            tox-env: "py37"
+          - python-version: "3.6"
+            tox-env: "py37-numba"
+          - python-version: "3.6"
+            tox-env: "py38"
+          - python-version: "3.6"
+            tox-env: "py38-numba"
+          - python-version: "3.7"
+            tox-env: "py36"
+          - python-version: "3.7"
+            tox-env: "py36-numba"
+          - python-version: "3.7"
+            tox-env: "py38"
+          - python-version: "3.7"
+            tox-env: "py38-numba"
+          - python-version: "3.8"
+            tox-env: "py36"
+          - python-version: "3.8"
+            tox-env: "py36-numba"
+          - python-version: "3.8"
+            tox-env: "py37"
+          - python-version: "3.8"
+            tox-env: "py37-numba"
+    env:
+      TOXENV: ${{ matrix.tox-env }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip version
+        run: |
+          python -m pip install -U pip
+
+      - name: Install
+        run: |
+          ./.travis/install.sh
+      
+      - name: Run
+        run: |
+          ./.travis/run.sh tox
