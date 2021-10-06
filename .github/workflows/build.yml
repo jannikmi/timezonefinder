@@ -49,6 +49,7 @@ jobs:
             tox-env: "py37-numba"
     env:
       TOXENV: ${{ matrix.tox-env }}
+      TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
       - uses: actions/checkout@v2
 
@@ -61,10 +62,10 @@ jobs:
         run: |
           python -m pip install -U pip
 
-      - name: Install
+      - name: Install tox
         run: |
-          ./.travis/install.sh
+          python -m pip install tox
       
-      - name: Run
+      - name: Run tox
         run: |
-          ./.travis/run.sh tox
+          python -m tox
