@@ -1,62 +1,7 @@
 # -*- coding:utf-8 -*-
 from setuptools import setup
 
-PACKAGE_NAME = "timezonefinder"
-
-# DATA FILES
-# BINARY
-BINARY_FILE_ENDING = ".bin"
-
-POLY_ZONE_IDS = "poly_zone_ids"
-POLY_COORD_AMOUNT = "poly_coord_amount"
-POLY_ADR2DATA = "poly_adr2data"
-POLY_MAX_VALUES = "poly_max_values"
-POLY_DATA = "poly_data"
-POLY_NR2ZONE_ID = "poly_nr2zone_id"
-
-HOLE_COORD_AMOUNT = "hole_coord_amount"
-HOLE_ADR2DATA = "hole_adr2data"
-HOLE_DATA = "hole_data"
-
-SHORTCUTS_ENTRY_AMOUNT = "shortcuts_entry_amount"
-SHORTCUTS_ADR2DATA = "shortcuts_adr2data"
-SHORTCUTS_DATA = "shortcuts_data"
-SHORTCUTS_UNIQUE_ID = "shortcuts_unique_id"
-
-BINARY_DATA_ATTRIBUTES = [
-    POLY_ZONE_IDS,
-    POLY_COORD_AMOUNT,
-    POLY_ADR2DATA,
-    POLY_MAX_VALUES,
-    POLY_DATA,
-    POLY_NR2ZONE_ID,
-    HOLE_COORD_AMOUNT,
-    HOLE_ADR2DATA,
-    HOLE_DATA,
-    SHORTCUTS_ENTRY_AMOUNT,
-    SHORTCUTS_ADR2DATA,
-    SHORTCUTS_DATA,
-    SHORTCUTS_UNIQUE_ID,
-]
-
-SHORTCUTS_DIRECT_ID = "shortcuts_direct_id"  # for TimezoneFinderL only
-
-# JSON
-JSON_FILE_ENDING = ".json"
-TIMEZONE_NAMES = "timezone_names"
-HOLE_REGISTRY = "hole_registry"
-JSON_DATA_ATTRIBUTES = [TIMEZONE_NAMES]
-TIMEZONE_NAMES_FILE = TIMEZONE_NAMES + JSON_FILE_ENDING
-HOLE_REGISTRY_FILE = HOLE_REGISTRY + JSON_FILE_ENDING
-
-DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [HOLE_REGISTRY]
-
-# all data files that should be included in the build:
-ALL_BINARY_FILES = [
-    specifier + BINARY_FILE_ENDING for specifier in BINARY_DATA_ATTRIBUTES
-] + [SHORTCUTS_DIRECT_ID + BINARY_FILE_ENDING]
-ALL_JSON_FILES = [TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE]
-PACKAGE_DATA_FILES = ALL_BINARY_FILES + ALL_JSON_FILES
+from timezonefinder.global_settings import PACKAGE_DATA_FILES, PACKAGE_NAME
 
 setup(
     name=PACKAGE_NAME,
