@@ -31,14 +31,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Upgrade pip version
-        run: |
-          python -m pip install -U pip
+        run: python -m pip install -U pip
 
       - name: Install tox
-        run: |
-          python -m pip install tox tox-gh-actions
-      
+        run: python -m pip install tox tox-gh-actions
+
       - name: Run tox
-        run: |
-          tox
+        run: tox
 
