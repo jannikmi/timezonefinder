@@ -1,6 +1,8 @@
 name: build
 
-on: [push, pull_request]
+on:
+  - push
+  - pull_request
 
 jobs:
   test:
@@ -15,38 +17,6 @@ jobs:
           - "3.6"
           - "3.7"
           - "3.8"
-        tox-env:
-          - "py36"
-          - "py36-numba"
-          - "py37"
-          - "py37-numba"
-          - "py38"
-          - "py38-numba"
-        exclude:
-          - python-version: "3.6"
-            tox-env: "py37"
-          - python-version: "3.6"
-            tox-env: "py37-numba"
-          - python-version: "3.6"
-            tox-env: "py38"
-          - python-version: "3.6"
-            tox-env: "py38-numba"
-          - python-version: "3.7"
-            tox-env: "py36"
-          - python-version: "3.7"
-            tox-env: "py36-numba"
-          - python-version: "3.7"
-            tox-env: "py38"
-          - python-version: "3.7"
-            tox-env: "py38-numba"
-          - python-version: "3.8"
-            tox-env: "py36"
-          - python-version: "3.8"
-            tox-env: "py36-numba"
-          - python-version: "3.8"
-            tox-env: "py37"
-          - python-version: "3.8"
-            tox-env: "py37-numba"
     env:
       TOXENV: ${{ matrix.tox-env }}
       TOX_SKIP_MISSING_INTERPRETERS: False
@@ -69,3 +39,4 @@ jobs:
       - name: Run tox
         run: |
           tox
+
