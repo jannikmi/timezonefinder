@@ -4,8 +4,6 @@ numpy
 (numba)
 
 
-
-
 these packages have to be installed in virtual environment in use:
 
 right python version! (will influence the tox environments!)
