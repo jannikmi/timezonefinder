@@ -17,7 +17,6 @@ repos:
       - id: check-docstring-first
       - id: requirements-txt-fixer
       - id: detect-private-key
-      - id: check-executables-have-shebangs
 
   - repo: https://github.com/pycqa/isort
     rev: 5.9.3
@@ -48,12 +47,12 @@ repos:
           - flake8-comprehensions
           - flake8-tidy-imports
 
-  - repo: https://github.com/mgedmin/check-manifest
-    rev: "0.47"
-    hooks:
-      - id: check-manifest
-        args: [ "--no-build-isolation", "--ignore", "*.png,.travis/*,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
-        additional_dependencies: [ numpy ]
+#  - repo: https://github.com/mgedmin/check-manifest
+#    rev: "0.47"
+#    hooks:
+#      - id: check-manifest
+#        args: [ "--no-build-isolation", "--ignore", "*.png,.travis/*,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
+#        additional_dependencies: [ numpy ]
 
   # TODO sphinx check
   #    -   repo: https://github.com/myint/rstcheck
