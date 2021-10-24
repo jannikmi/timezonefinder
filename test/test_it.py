@@ -4,6 +4,7 @@ import timeit
 import unittest
 from math import floor, log10
 from os.path import abspath, join, pardir
+from typing import List
 
 import pytest
 from auxiliaries import list_equal, list_of_random_points, random_point
@@ -134,6 +135,30 @@ def ocean2land(test_locations):
         if is_ocean_timezone(expected):
             expected = None
         yield lat, lng, description, expected
+
+
+def check_geometry(geometry_obj: List):
+    coords = geometry_obj[0][0]
+    assert (
+        len(coords) == 2
+    ), "the polygon does not consist of two latitude longitude lists"
+    x_coords, y_coords = coords
+    nr_x_coords = len(x_coords)
+    nr_y_coords = len(y_coords)
+    assert nr_x_coords > 2, "a polygon must consist of more than 2 coordinates"
+    assert (
+        nr_x_coords == nr_y_coords
+    ), "the amount of x and y coordinates (lng, lat) must be equal"
+
+
+def check_pairwise_geometry(geometry_obj: List):
+    # list of all coord pairs of the first polygon
+    cord_pairs = geometry_obj[0][0]
+    assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
+    first_coord_pair = cord_pairs[0]
+    assert (
+        len(first_coord_pair) == 2
+    ), "the polygon does not consist of coordinate pairs as expected."
 
 
 # tests for TimezonefinderL class
@@ -360,16 +385,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             geometry_from_name = self.test_instance.get_geometry(
                 tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=False
             )
-            poly1 = geometry_from_name[0][0]
-            assert (
-                len(poly1) == 2
-            ), "the polygon does not consist of two latitude longitude lists"
-            assert (
-                len(poly1[0]) > 2
-            ), "a polygon must consist of more than 2 coordinates"
-            assert (
-                len(poly1[1]) > 2
-            ), "a polygon must consist of more than 2 coordinates"
+            check_geometry(geometry_from_name)
 
             if DEBUG:  # only with active debugging conduct extensive testing (requ
                 geometry_from_id = self.test_instance.get_geometry(
@@ -383,16 +399,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
                 assert len(geometry_from_name) == len(
                     geometry_from_id
                 ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-                poly1 = geometry_from_id[0][0]
-                assert (
-                    len(poly1) == 2
-                ), "the polygon does not consist of two latitude longitude lists"
-                assert (
-                    len(poly1[0]) > 2
-                ), "a polygon must consist of more than 2 coordinates"
-                assert (
-                    len(poly1[1]) > 2
-                ), "a polygon must consist of more than 2 coordinates"
+                check_geometry(geometry_from_id)
 
                 geometry_from_name = self.test_instance.get_geometry(
                     tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
@@ -404,27 +411,8 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
                     geometry_from_id
                 ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
 
-                # first polygon, first coord pair
-                poly1 = geometry_from_id[0][0]
-                assert (
-                    len(poly1) > 2
-                ), "a polygon must consist of more than 2 coordinates"
-                assert (
-                    len(poly1) > 2
-                ), "a polygon must consist of more than 2 coordinates"
-                assert (
-                    len(poly1[0]) == 2
-                ), "the polygon does not consist of coordinate pairs as expected."
-                poly1 = geometry_from_name[0][0]
-                assert (
-                    len(poly1) > 2
-                ), "a polygon must consist of more than 2 coordinates"
-                assert (
-                    len(poly1) > 2
-                ), "a polygon must consist of more than 2 coordinates"
-                assert (
-                    len(poly1[0]) == 2
-                ), "the polygon does not consist of coordinate pairs as expected."
+                check_pairwise_geometry(geometry_from_id)
+                check_pairwise_geometry(geometry_from_name)
 
         with pytest.raises(ValueError):
             self.test_instance.get_geometry(
