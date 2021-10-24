@@ -1,8 +1,0 @@
-# Test dependencies
-# will be pinned by pip-compile in 'requirements_tests.txt'
-# python3.6+
-
-numpy>=1.16
-
-pytest
-pytest-cov
