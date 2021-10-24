@@ -2,7 +2,7 @@
 name = "timezonefinder"
 version = "5.2.0"
 description = ""
-authors = ["MrMinimal64 <github@michelfe.it>"]
+authors = ["jannikmi <github@michelfe.it>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"

@@ -51,7 +51,7 @@ repos:
 #    rev: "0.47"
 #    hooks:
 #      - id: check-manifest
-#        args: [ "--no-build-isolation", "--ignore", "*.png,.travis/*,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
+#        args: [ "--no-build-isolation", "--ignore", "*.png,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
 #        additional_dependencies: [ numpy ]
 
   # TODO sphinx check

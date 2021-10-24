@@ -1,6 +1,6 @@
 
-.. image:: https://api.travis-ci.org/jannikmi/timezonefinder.svg?branch=master
-    :target: https://travis-ci.org/jannikmi/timezonefinder
+.. image:: https://github.com/jannikmi/timezonefinder/actions/workflows/build.yml/badge.svg?branch=master
+    :target: https://github.com/jannikmi/timezonefinder/actions?query=branch%3Amaster
 
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
     :alt: documentation status
