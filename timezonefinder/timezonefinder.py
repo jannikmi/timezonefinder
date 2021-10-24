@@ -94,7 +94,6 @@ class AbstractTimezoneFinder(ABC):
     # TODO document attributes in all classes
     # prevent dynamic attribute assignment (-> safe memory)
     __slots__ = ["bin_file_location", "in_memory", "_fromfile", TIMEZONE_NAMES]
-
     binary_data_attributes: List[str] = []
 
     def __init__(
@@ -168,7 +167,7 @@ class AbstractTimezoneFinder(ABC):
             ``None`` when an ocean timezone ("Etc/GMT+-XX") has been matched.
         """
         tz_name = self.timezone_at(lng=lng, lat=lat)
-        if is_ocean_timezone(tz_name):
+        if tz_name is not None and is_ocean_timezone(tz_name):
             return None
         return tz_name
 
@@ -411,6 +410,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 tz_id = getattr(self, TIMEZONE_NAMES).index(tz_name)
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
+        if tz_id is None:
+            raise ValueError("no timezone id given.")
         poly_nr2zone_id = getattr(self, POLY_NR2ZONE_ID)
         poly_nr2zone_id.seek(NR_BYTES_H * tz_id)
         # read poly_nr of the first polygon of that zone

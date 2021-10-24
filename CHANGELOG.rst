@@ -8,6 +8,19 @@ create variables for used dtype for each type of data (polygon address, coordina
 more "intelligent" binary file creation settings: name, dtype etc. combined
 
 
+TBA
+---
+
+breaking changes:
+
+* officially only supporting python>=3.7 (removed official support for python3.6, since the `numpy` dependency did so)
+* removed "v" from the github release/version tags
+
+internals:
+
+* using poetry for dependency management
+* using GitHub actions for CI instead of travis
+
 
 5.2.0 (2021-02-09)
 ------------------

@@ -14,6 +14,8 @@ conda install twine
 conda install -c conda-forge pre-commit
 
 PRE COMMIT COMMANDS
+# enable:
+pre-commit install
 pre-commit run --all-files
 pre-commit run <hook_id>
 # update all hook versions:
@@ -308,7 +310,7 @@ if __name__ == "__main__":
     # tag erstellen
     routine(None, "Do you want to create a git release tag?", "Yes", "No")
     routine(
-        f"git tag -a v{version} -m 'Version {version}'; git push --tags", "Creating tag"
+        f"git tag -a {version} -m 'Version {version}'; git push --tags", "Creating tag"
     )
     print(
         f"Congrats! Published version {version}.\n"
