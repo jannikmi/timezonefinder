@@ -18,6 +18,8 @@ breaking changes:
 
 internals:
 
+* some minor typing improvements
+* pre-commit hook improvements
 * using poetry for dependency management
 * using GitHub actions for CI instead of travis
 
