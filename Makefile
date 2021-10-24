@@ -14,6 +14,7 @@ test:
 	@python ./runtests.py
 
 hook:
+	@pre-commit install
 	@pre-commit run --all-files
 
 hook2:
