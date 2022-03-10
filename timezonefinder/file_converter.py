@@ -256,11 +256,9 @@ def replace_entry(iterable, entry, substitute):
 
 
 def _holes_in_poly(poly_nr):
-    i = 0
-    for nr in polynrs_of_holes:
+    for i, nr in enumerate(polynrs_of_holes):
         if nr == poly_nr:
             yield holes[i]
-        i += 1
 
 
 def extract_coords(polygon):
