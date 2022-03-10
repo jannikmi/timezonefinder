@@ -88,9 +88,9 @@ VIRT_ENV_COMMAND = (
     f". ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; "
 )
 PY_VERSION_IDS = [
-    "36",
     "37",
     "38",
+    "39",
 ]  # the supported python versions to create wheels for
 PYTHON_TAG = ".".join([f"py{v}" for v in PY_VERSION_IDS])
 
