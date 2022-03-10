@@ -75,4 +75,4 @@ repos:
     rev: v0.910-1
     hooks:
       - id: mypy
-        exclude: ^((test)/|timezonefinder/file_converter.py)
+        exclude: ^((test|scripts)/|timezonefinder/file_converter.py)
