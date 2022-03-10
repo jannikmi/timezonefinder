@@ -29,7 +29,11 @@ sphinx = "*"
 numba = ["numba"]
 
 
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
