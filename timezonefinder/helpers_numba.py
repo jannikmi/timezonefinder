@@ -4,7 +4,7 @@ from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 from numba import b1, f8, i2, i4, njit, typeof, u2, u8
 from numpy import int64
 
-from timezonefinder.global_settings import (
+from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     MAX_HAVERSINE_DISTANCE,
