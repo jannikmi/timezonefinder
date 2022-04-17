@@ -3,7 +3,7 @@ from math import asin, atan2, ceil, cos, degrees, floor, radians, sin, sqrt
 
 from numpy import int64
 
-from timezonefinder.global_settings import (
+from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     MAX_HAVERSINE_DISTANCE,
