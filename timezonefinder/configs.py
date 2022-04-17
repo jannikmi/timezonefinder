@@ -1,15 +1,15 @@
 # -*- coding:utf-8 -*-
 # NOTE: Changes in the global settings might not immediately affect
 # the precompiled (and cached) functions in helpers_numba.py!
+from pathlib import Path
 
 PACKAGE_NAME = "timezonefinder"
 
-DEFAULT_INPUT_PATH = "combined-with-oceans.json"
-DEFAULT_OUTPUT_PATH = "."  # store parsed data in same directory as default
-
-DEBUG = False
-# DEBUG = True
-DEBUG_POLY_STOP = 20  # parse only some polygons in debugging mode
+# SHORTCUT SETTINGS
+# h3 library
+MIN_RES = 1  # NOTE: res 0 has no mappings currently
+MAX_RES = 3
+SHORTCUT_FILE = "shortcuts_combined.bin"
 
 # no "magic numbers" import all as "constants" from this global settings file
 # ATTENTION: Don't change these settings or timezonefinder wont work!
@@ -63,10 +63,8 @@ SHORTCUTS_DIRECT_ID = "shortcuts_direct_id"  # for TimezoneFinderL only
 
 # JSON
 JSON_FILE_ENDING = ".json"
-TIMEZONE_NAMES = "timezone_names"
 HOLE_REGISTRY = "hole_registry"
-JSON_DATA_ATTRIBUTES = [TIMEZONE_NAMES]
-TIMEZONE_NAMES_FILE = TIMEZONE_NAMES + JSON_FILE_ENDING
+TIMEZONE_NAMES_FILE = "timezone_names" + JSON_FILE_ENDING
 HOLE_REGISTRY_FILE = HOLE_REGISTRY + JSON_FILE_ENDING
 
 DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [HOLE_REGISTRY]
@@ -103,6 +101,10 @@ THRES_DTYPE_SIGNED_I_LOWER = -THRES_DTYPE_SIGNED_I_UPPER
 # I = unsigned 4byte integer
 DTYPE_FORMAT_I = b"<I"
 THRES_DTYPE_I = 2 ** (NR_BYTES_I * 8)
+
+# Q = unsigned 8byte integer
+NR_BYTES_Q = 8
+DTYPE_FORMAT_Q = b"<Q"
 
 # f = 8byte signed float
 DTYPE_FORMAT_F_NUMPY = "<f8"
