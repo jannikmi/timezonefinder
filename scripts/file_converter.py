@@ -124,7 +124,7 @@ from scripts.utils import extract_coords, write_json, write_pickle
 from timezonefinder.configs import (
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
-    MAX_RES,
+    MAX_H3_RES,
     SHORTCUT_FILE,
     THRES_DTYPE_H,
     THRES_DTYPE_I,
@@ -623,7 +623,7 @@ def compile_h3_map(res: int, candidates: Set) -> Tuple[Set, Dict[int, Optional[i
     also store results separately to divide the output data files
     """
     print(f"\nresolution: {res}")
-    max_res_reached = res >= MAX_RES
+    max_res_reached = res >= MAX_H3_RES
     mapping, next_res_candidates = compile_main_coverage(candidates, max_res_reached)
     if not max_res_reached:
         # ATTENTION: at every level!
@@ -649,7 +649,7 @@ def compile_h3_maps() -> Dict[int, List[int]]:
     # start with the lowest resolution 0 cells
     candidates: Set = set(h3.get_res0_indexes())
     global_mapping = {}
-    for res in range(MAX_RES + 1):
+    for res in range(MAX_H3_RES + 1):
         candidates, res_mapping = compile_h3_map(res, candidates)
         global_mapping.update(res_mapping)
 

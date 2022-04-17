@@ -66,10 +66,10 @@ def test_resolutions():
     resolutions = map(lambda h: h3.h3_get_resolution(h), shortcut_hex_ids)
     min_resolution = min(resolutions)
     assert (
-        timezonefinder.configs.MIN_RES == min_resolution
-    ), f"minimum found resolution {min_resolution} does not match the setting {timezonefinder.configs.MIN_RES}"
+        timezonefinder.configs.MIN_H3_RES == min_resolution
+    ), f"minimum found resolution {min_resolution} does not match the setting {timezonefinder.configs.MIN_H3_RES}"
 
     max_resolution = max(resolutions)
     assert (
-        timezonefinder.configs.MAX_RES == max_resolution
-    ), f"minimum found resolution {max_resolution} does not match the setting {timezonefinder.configs.MAX_RES}"
+        timezonefinder.configs.MAX_H3_RES == max_resolution
+    ), f"minimum found resolution {max_resolution} does not match the setting {timezonefinder.configs.MAX_H3_RES}"

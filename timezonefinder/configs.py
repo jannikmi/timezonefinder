@@ -7,8 +7,8 @@ PACKAGE_NAME = "timezonefinder"
 
 # SHORTCUT SETTINGS
 # h3 library
-MIN_RES = 1  # NOTE: res 0 has no mappings currently
-MAX_RES = 3
+MIN_H3_RES = 1  # NOTE: res 0 has no mappings currently
+MAX_H3_RES = 12
 SHORTCUT_FILE = "shortcuts_combined.bin"
 
 # no "magic numbers" import all as "constants" from this global settings file

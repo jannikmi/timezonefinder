@@ -8,8 +8,8 @@ from timezonefinder.configs import (
     DTYPE_FORMAT_I,
     DTYPE_FORMAT_Q,
     DTYPE_FORMAT_SIGNED_I,
-    MAX_RES,
-    MIN_RES,
+    MAX_H3_RES,
+    MIN_H3_RES,
     NR_BYTES_I,
     NR_BYTES_Q,
 )
@@ -53,7 +53,7 @@ def read_shortcuts_binary(path2shortcuts: Path) -> Dict[int, List[int]]:
 def get_shortcut_polys(
     mapping: Dict[int, List[int]], lng: float, lat: float
 ) -> List[int]:
-    for res in range(MIN_RES, MAX_RES + 1):
+    for res in range(MIN_H3_RES, MAX_H3_RES + 1):
         hex_id = h3.geo_to_h3(lat, lng, res)
         try:
             polys = mapping[hex_id]
@@ -66,7 +66,7 @@ def get_shortcut_polys(
     raise ValueError(f"missing mapping for lng, lat {lng}, {lat}")
 
 
-def get_zone_id(lng: float, lat: float, up_to: int = MAX_RES) -> Optional[int]:
+def get_zone_id(lng: float, lat: float, up_to: int = MAX_H3_RES) -> Optional[int]:
     for res in range(up_to + 1):
         hex_id = h3.geo_to_h3(lat, lng, res)
         try:
@@ -86,7 +86,7 @@ def get_zone_id(lng: float, lat: float, up_to: int = MAX_RES) -> Optional[int]:
     raise ValueError(f"missing mapping for lng, lat {lng}, {lat}")
 
 
-def get_hex_cells_of_zone(zone_id: int, up_to: int = MAX_RES) -> List[int]:
+def get_hex_cells_of_zone(zone_id: int, up_to: int = MAX_H3_RES) -> List[int]:
     ids: List[int] = []
     for res in range(up_to + 1):
         mapping = mappings[res]
@@ -96,14 +96,14 @@ def get_hex_cells_of_zone(zone_id: int, up_to: int = MAX_RES) -> List[int]:
     return ids
 
 
-def get_zone(lng: float, lat: float, up_to: int = MAX_RES) -> Optional[str]:
+def get_zone(lng: float, lat: float, up_to: int = MAX_H3_RES) -> Optional[str]:
     zone_id = get_zone_id(lng, lat, up_to)
     if zone_id is None:
         return None
     return timezone_names[zone_id]
 
 
-def get_polygons_of_zone(zone_id: int, up_to: int = MAX_RES, **kwargs) -> List:
+def get_polygons_of_zone(zone_id: int, up_to: int = MAX_H3_RES, **kwargs) -> List:
     cells = get_hex_cells_of_zone(zone_id, up_to)
     polygons = h3.h3_set_to_multi_polygon(cells, **kwargs)
     return polygons
