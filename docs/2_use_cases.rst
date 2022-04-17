@@ -100,13 +100,13 @@ Any other data in this format can also be parsed:
 
 ::
 
-    python /path/to/timezonefinder/timezonefinder/file_converter.py [-inp /path/to/input.json] [-out /path/to/output_folder]
+    python /path/to/timezonefinder/scripts/file_converter.py [-inp /path/to/input.json] [-out /path/to/output_folder]
 
 
 
 .. note::
 
-    this script requires python3.6+ (as timezonefinder in general)
+    this script requires ``python3.6+`` and ``numba``
 
 
 Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.
