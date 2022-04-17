@@ -108,12 +108,9 @@ from struct import pack
 
 import path_modification  # noqa. to make timezonefinder package discoverable
 
-from timezonefinder.global_settings import (
+from scripts.configs import DEBUG, DEBUG_POLY_STOP
+from timezonefinder.configs import (
     BINARY_FILE_ENDING,
-    DEBUG,
-    DEBUG_POLY_STOP,
-    DEFAULT_INPUT_PATH,
-    DEFAULT_OUTPUT_PATH,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
     DTYPE_FORMAT_SIGNED_I,
