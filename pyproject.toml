@@ -23,6 +23,7 @@ isort = "*"
 twine = "*"
 rstcheck = "*"
 sphinx = "*"
+pydantic = "^1.9.0"
 
 
 [tool.poetry.extras]
