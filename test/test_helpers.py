@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from auxiliaries import proto_test_case, random_point
 
-from timezonefinder.global_settings import (
+from timezonefinder.configs import (
     COORD2INT_FACTOR,
     DECIMAL_PLACES_ACCURACY,
     DTYPE_FORMAT_F_NUMPY,
