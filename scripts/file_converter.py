@@ -95,13 +95,14 @@ the polygon data makes up 94.67 % of the data
 the shortcuts make up 2.03 % of the data
 holes make up 3.31 % of the data
 """
-import contextlib
 import functools
 import itertools
 import json
 from dataclasses import dataclass
+from os import path
 from os.path import abspath, join
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -109,9 +110,10 @@ import numpy as np
 from scripts.configs import (
     DEBUG,
     DEBUG_POLY_STOP,
+    DEFAULT_INPUT_PATH,
+    DEFAULT_OUTPUT_PATH,
     MAX_LAT,
     MAX_LNG,
-    MAX_RES,
     POLY_DTYPE,
     HexIdSet,
     PolyIdSet,
@@ -119,17 +121,16 @@ from scripts.configs import (
 )
 from scripts.numba_utils import any_pt_in_poly, fully_contained_in_hole
 from scripts.utils import extract_coords, write_json, write_pickle
-from timezonefinder.global_settings import (
-    DEFAULT_INPUT_PATH,
-    DEFAULT_OUTPUT_PATH,
+from timezonefinder.configs import (
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
+    MAX_RES,
+    SHORTCUT_FILE,
     THRES_DTYPE_H,
     THRES_DTYPE_I,
     TIMEZONE_NAMES_FILE,
 )
-
-# DEBUG = True
+from timezonefinder.hex_helpers import export_shortcuts_binary, read_shortcuts_binary
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -147,6 +148,13 @@ poly_nr2zone_id = []
 
 
 # id2hex: Dict[int, Hex] = {}
+
+
+def most_common_zone_id(polys: Iterable[int]) -> int:
+    zones = list(map(lambda p: poly_zone_ids[p], polys))
+    zones_unique, counts = np.unique(zones, return_counts=True)
+    most_common = zones_unique[np.argmax(counts)]
+    return most_common
 
 
 def _holes_in_poly(poly_nr):
@@ -305,39 +313,32 @@ def pts_not_in_cell(h: int, coords: np.ndarray) -> Iterable[np.ndarray]:
 
 
 def get_corrected_hex_boundaries(
-    y_coords, x_coords, surr_n_pole, surr_s_pole
+    x_coords, y_coords, surr_n_pole, surr_s_pole
 ) -> Tuple["Boundaries", bool]:
     # ATTENTION: a h3 polygon may cross the boundaries of the lat/lng coordinate plane (only in lng=x direction)
     # -> cannot use usual geometry assumptions (polygon algorithm, min max boundary check etc.)
-    # -> workaround by using h3 methods!
+    # -> rectify boundaries
     xmax0, xmin0, ymax0, ymin0 = (
         max(x_coords),
         min(x_coords),
         max(y_coords),
         min(y_coords),
     )
+    if surr_n_pole:
+        # clip to max lat
+        ymax0 = MAX_LAT
+    elif surr_s_pole:
+        # clip to min lat
+        ymin0 = -MAX_LAT
+
     # Observation: a h3 hexagon can only span a fraction of the globe (<< 360 degree)
     # use this property to clip the correct bounding boxes
-    x_overflow = (xmax0 - xmin0) > 180.0
+    x_overflow = abs(xmax0 - xmin0) > 150.0
     if x_overflow:
-        # a higher min-max difference than possible is found
-        # either hex crosses the lng plane or surrounds a pole
-        if surr_n_pole:
-            # clip to max lat
-            ymax0 = MAX_LAT
-        elif surr_s_pole:
-            # clip to min lat
-            ymin0 = -MAX_LAT
-
-        if surr_n_pole or surr_s_pole:
-            # search all lngs
-            xmin0 = -MAX_LNG
-            xmax0 = MAX_LNG
-        else:
-            # hex crosses the lng plane -> invert the lng min-max direction
-            tmp = xmax0
-            xmax0 = xmin0
-            xmin0 = tmp
+        # high longitude difference observed. could indicate crossing the 180 deg lng boundary
+        # -> search all lngs, to be save
+        xmin0 = -MAX_LNG
+        xmax0 = MAX_LNG
 
     return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
 
@@ -384,7 +385,7 @@ class Hex:
         if self._poly_candidates is not None:
             # avoid overwriting initialised values
             # NOTE: this allows setting the candidates with some custom set
-            #   as it is required when maximising the cell coverage!
+            #   as it is required when completing the cell coverage!
             return
         if self.res == 0:
             # at the highest level all polygons have to be tested
@@ -398,25 +399,26 @@ class Hex:
         parent = get_hex(parent_id)
         self._poly_candidates = parent.polys_in_cell
 
+    def is_poly_candidate(self, poly_id: int) -> bool:
+        cell_bounds = self.bounds
+        poly_bound = poly_boundaries[poly_id]
+        if poly_bound.xmin > cell_bounds.xmax:
+            return False
+        if poly_bound.xmax < cell_bounds.xmin:
+            return False
+        if poly_bound.ymin > cell_bounds.ymax:
+            return False
+        if poly_bound.ymax < cell_bounds.ymin:
+            return False
+        return True
+
     @property
     def poly_candidates(self) -> Set[int]:
         self._init_candidates()
-
-        out = set()
-        cell_bounds = self.bounds
-        for poly_id in self._poly_candidates:
-            poly_bound = poly_boundaries[poly_id]
-            if poly_bound.xmin > cell_bounds.xmax:
-                continue
-            if poly_bound.xmax < cell_bounds.xmin:
-                continue
-            if poly_bound.ymin > cell_bounds.ymax:
-                continue
-            if poly_bound.ymax < cell_bounds.ymin:
-                continue
-            out.add(poly_id)
-        self._poly_candidates = out
-        return out
+        self._poly_candidates = set(
+            filter(self.is_poly_candidate, self._poly_candidates)
+        )
+        return self._poly_candidates
 
     def lies_in_cell(self, poly_nr: int) -> bool:
         hex_coords = self.coords
@@ -566,8 +568,7 @@ def compile_main_coverage(candidates: HexIdSet, max_res_reached: bool):
         )
 
     print("compiling mapping...")
-    mapping: Dict[int, int] = {}
-    mapping_remaining: Dict[int, List[int]] = {}
+    mapping: Dict[int, Optional[int]] = {}
     if max_res_reached:
         print(
             "highest possible resolution reached.\n"
@@ -580,30 +581,29 @@ def compile_main_coverage(candidates: HexIdSet, max_res_reached: bool):
 
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
-        zones = cell.zones_in_cell
+        zones = list(cell.zones_in_cell)
         nr_zones = len(zones)
 
-        if nr_zones == 0:
-            # difference between no zone and single zone
-            # NOTE: valuable information to not search the child nodes!
-            mapping[hex_id] = None
-            continue
+        if nr_zones <= 1 or max_res_reached:
+            # special case: only 0 or 1 zone = valid "shortcut"
+            # special case: highest resolution -> always choose one!
+            # TODO shortcuts
+            # polys = list(cell.polys_in_cell)
+            # mapping[hex_id] = polys
 
-        if nr_zones == 1:
-            mapping[hex_id] = zones.pop()
+            polys = cell.polys_in_cell
+            if len(polys) == 0:
+                mapping[hex_id] = None
+            most_common = most_common_zone_id(polys)
+            mapping[hex_id] = most_common
             report_progress()
-            continue
-
-        if max_res_reached:
-            # lowest level. special case: always choose one!
-            # pick random
-            # TODO evaluate precision, visualise. more sophisticated method if required
-            mapping_remaining[hex_id] = list(zones)
+            # NOTE: do not search the child nodes!
             continue
 
         # recurse children
         children = cell.children
         next_res_candidates.update(children)
+        report_progress()
 
     report_progress()
     print("\n... done.")
@@ -612,33 +612,30 @@ def compile_main_coverage(candidates: HexIdSet, max_res_reached: bool):
         assert (
             len(next_res_candidates) == 0
         ), "expected no more candidates for the next level"
-        assert (
-            len(mapping) + len(mapping_remaining)
-        ) == total_candidates, (
-            "expected complete coverage: a mapping for every candidate"
-        )
-        export_mapping("mapping_remaining", mapping_remaining, MAX_RES)
 
     return mapping, next_res_candidates
 
 
-def compile_h3_map(res: int, candidates: Set) -> Set:
+def compile_h3_map(res: int, candidates: Set) -> Tuple[Set, Dict[int, Optional[int]]]:
     """
 
     operate on one hex resolution at a time
     also store results separately to divide the output data files
     """
+    print(f"\nresolution: {res}")
     max_res_reached = res >= MAX_RES
     mapping, next_res_candidates = compile_main_coverage(candidates, max_res_reached)
     if not max_res_reached:
+        # ATTENTION: at every level!
+        # NOTE: not on the last resolution level (all candidates will be added -> full coverage)
         complete_coverage(mapping, next_res_candidates)
 
     export_mapping("mapping", mapping, res)
     write_json([int(c) for c in next_res_candidates], f"next_candidates_res{res}.json")
-    return next_res_candidates
+    return next_res_candidates, mapping
 
 
-def compile_h3_maps(output_path):
+def compile_h3_maps() -> Dict[int, List[int]]:
     """
     property (assumption): the 7 children of a hex are almost fully contained in the parent
     cf. https://eng.uber.com/h3/
@@ -648,16 +645,17 @@ def compile_h3_maps(output_path):
 
     TODO use `uint64`
     TODO create all different binaries and upload them
-
-    :param output_path:
     """
     # start with the lowest resolution 0 cells
     candidates: Set = set(h3.get_res0_indexes())
+    global_mapping = {}
     for res in range(MAX_RES + 1):
-        print(f"\nresolution: {res}")
-        candidates = compile_h3_map(res, candidates)
+        candidates, res_mapping = compile_h3_map(res, candidates)
+        global_mapping.update(res_mapping)
 
         # free_up_memory(res)
+
+    return global_mapping
 
 
 # def free_up_memory(res):
@@ -677,7 +675,10 @@ def compile_h3_maps(output_path):
 #
 
 
-def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
+def parse_data(
+    input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
+    output_path: Union[Path, str] = DEFAULT_OUTPUT_PATH,
+):
     # # parsing the data from the .json into RAM
     # TODO re-arra
     parse_polygons_from_json(input_path)
@@ -685,6 +686,13 @@ def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
     # # sort data according to zone_id
     update_zone_names(output_path)
 
+    # lng, lat = 35.295953, -89.662186
+    # res = 0
+    # hex_id = h3.geo_to_h3(lat, lng, res)
+    # h = get_hex(hex_id)
+    # x = h.is_poly_candidate(84)
+    # polys = h.polys_in_cell
+    # x = 1
     # TODO
     # IMPORTANT: import the newly compiled timezone_names pickle!
     # the compilation process needs the new version of the timezone names
@@ -692,9 +700,13 @@ def parse_data(input_path=DEFAULT_INPUT_PATH, output_path=DEFAULT_OUTPUT_PATH):
     #     timezone_names = json.loads(f.read())
 
     # compute shortcuts and write everything into the binaries
-    with open("log.txt", "w") as f:
-        with contextlib.redirect_stdout(f):
-            compile_h3_maps(output_path)
+    # with open("log.txt", "w") as f:
+    #     with contextlib.redirect_stdout(f):
+    #         compile_h3_maps(output_path)
+
+    global_mapping = compile_h3_maps()
+    path2shortcut_file = Path(output_path) / SHORTCUT_FILE
+    export_shortcuts_binary(global_mapping, path2shortcut_file)
 
 
 if __name__ == "__main__":
