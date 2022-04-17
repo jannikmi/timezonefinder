@@ -5,20 +5,29 @@ from typing import List, Tuple
 
 
 def load_json(path):
+    print("loading json from ", path)
     with open(path, "r") as fp:
         obj = json.load(fp)
     return obj
 
 
 def load_pickle(path):
+    print("loading pickle from ", path)
     with open(path, "rb") as fp:
         obj = pickle.load(fp)
     return obj
 
 
 def write_pickle(obj, path):
+    print("writing pickle to ", path)
     with open(path, "wb") as fp:
         pickle.dump(obj, fp)
+
+
+def write_json(obj, path):
+    print("writing json to ", path)
+    with open(abspath(path), "w") as json_file:
+        json.dump(obj, json_file, indent=2)
 
 
 def percent(numerator, denominator):
@@ -37,8 +46,3 @@ def extract_coords(coord_pairs) -> Tuple[List, List]:
     assert len(x_coords) == len(y_coords)
     assert len(x_coords) >= 3
     return x_coords, y_coords
-
-
-def write_json(obj, path):
-    with open(abspath(path), "w") as json_file:
-        json.dump(obj, json_file, indent=2)
