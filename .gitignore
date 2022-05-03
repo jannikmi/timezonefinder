@@ -1,3 +1,4 @@
+*.env
 scripts/data
 scripts/*.bin
 scripts/*.json
@@ -7,6 +8,7 @@ scrapyard.py
 playground.py
 tmp.py
 tmp/
+test/*.bin
 
 *.DS_Store
 *.pytest_cache
