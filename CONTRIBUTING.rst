@@ -105,4 +105,4 @@ Ready to contribute? Here's how to set up this package for local development.
 
 
 
-.. _Github Issues: https://github.com/MrMinimal64/timezonefinder/issues
+.. _Github Issues: https://github.com/jannikmi/timezonefinder/issues

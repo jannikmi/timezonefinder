@@ -21,7 +21,7 @@ in your command line:
     pip install timezonefinder
 
 
-If the vanilla Python code is too slow for you, the time critical algorithms (in ``helpers_numba.py``) can be automatically JIT compiled by ``numba``.
+If the vanilla Python code is too slow for you, the time critical algorithms (in ``utils.py``) will be automatically JIT compiled if you have ``numba`` installed.
 This speeds things up by a factor of around 100 (cf. :ref:`speed test results <speed-tests>`).
 
 ::

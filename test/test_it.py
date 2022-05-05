@@ -271,10 +271,6 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.certain_timezone_at(23.0, lng=42.0)
             self.test_instance.certain_timezone_at(23.0, lat=42.0)
 
-            self.test_instance.closest_timezone_at(23.0, 42.0)
-            self.test_instance.closest_timezone_at(23.0, lng=42.0)
-            self.test_instance.closest_timezone_at(23.0, lat=42.0)
-
     def test_shortcut_boundary_result(self):
         for lng, lat, expected in BOUNDARY_TEST_CASES:
             # NOTE: for TimezoneFinder (using polygon data) the results must match!

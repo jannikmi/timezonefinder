@@ -6,7 +6,7 @@ Usage
 
 .. note::
 
-   Also check out the :ref:`API documentation <api>` or the `code <https://github.com/MrMinimal64/timezonefinder>`__.
+   Also check out the :ref:`API documentation <api>` or the `code <https://github.com/jannikmi/timezonefinder>`__.
 
 
 .. _init:
@@ -61,12 +61,14 @@ If no timezone has been matched, ``None`` is being returned.
 
 .. code-block:: python
 
-    latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tz = tf.timezone_at(lng=52.5061, lat=13.358)  # 'Europe/Berlin'
+    tz = tf.timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
 .. note::
-    * to avoid mixing up the arguments latitude and longitude have to be given as keyword arguments
-    * this function is optimized for speed and the common case to only query points within a timezone. The last possible timezone in proximity is always returned (without checking if the point is really included). So results might be misleading for points outside of any timezone.
+    To reduce the risk of mixing up the coordinates, the arguments ``lng`` and ``lat`` have to be given as keyword arguments
+
+.. note::
+    This function is optimized for speed: The last possible timezone in proximity is always returned (without checking if the point is really included).
 
 
 
@@ -78,7 +80,8 @@ If you want to explicitly receive only "land" timezones use
 
 .. code-block:: python
 
-    tf.timezone_at_land(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tz = tf.timezone_at_land(lng=52.5061, lat=13.358)  # 'Europe/Berlin'
+    tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
 
 
 
@@ -86,7 +89,7 @@ unique_timezone_at()
 --------------------
 
 For fast execution ``timezonefinder`` internally uses precomputed "shortcuts" which store the possible zones in proximity.
-Call ``unique_timezone_at()`` if you want to ask for an exact result without actually performing "point-in-polygon" tests (<- computationally expensive).
+Call ``unique_timezone_at()`` if you want to compute an exact result without actually performing "point-in-polygon" tests (<- computationally expensive).
 This function will return ``None`` when the correct zone cannot be uniquely determined without further computation.
 
 .. code-block:: python
@@ -129,87 +132,7 @@ are being checked until one polygon is matched. ``None`` is being returned in th
 closest_timezone_at()
 ----------------------
 
-
-This function computes and compares the distances to the timezone polygon boundaries (expensive!).
-By default the function returns the closest timezone of all polygons within +-1 degree lng and +-1 degree lat (or None).
-
-
-
-.. code-block:: python
-
-    longitude = 12.773955
-    latitude = 55.578595
-    tf.closest_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Copenhagen'
-
-
-
-.. note::
-
-    * This function does not check whether a point is included in a timezone polygon.
-    * The timezone polygons do NOT follow the shoreline. This causes the computed distance from a timezone polygon to be not really accurate!
-
-
-
-**Options:**
-
-
-To increase search radius even more, use the ``delta_degree``-option:
-
-.. code-block:: python
-
-    tf.closest_timezone_at(lng=longitude, lat=latitude, delta_degree=3)
-
-
-This checks all the polygons within +-3 degree lng and +-3 degree lat.
-I recommend only slowly increasing the search radius, since computation time increases quite quickly
-(with the amount of polygons which need to be evaluated). When you want to use this feature a lot,
-consider using ``Numba`` to save computing time.
-
-
-.. note::
-
-    x degrees lat are not the same distance apart than x degree lng (earth is a sphere)!
-    As a consequence getting a result does NOT mean that there is no closer timezone! It might just not be within the area (given in degree!) being queried.
-
-
-With ``exact_computation=True`` the distance to every polygon edge is computed (way more complicated), instead of just evaluating the distances to all the vertices.
-This only makes a real difference when the boundary of a polygon is very close to the query point.
-
-
-With ``return_distances=True`` the output looks like this:
-
-::
-
-    ( 'tz_name_of_the_closest_polygon',[ distances to every polygon in km], [tz_names of every polygon])
-
-
-.. note::
-
-    Some polygons might not be tested (for example when a zone is found to be the closest already).
-    To prevent this use ``force_evaluation=True``.
-
-
-A single timezone might be represented by multiple polygons and the distance to each of the candidate polygons is being computed and returned. Hence one may get multiple results for one timezone. Example:
-
-
-.. code-block:: python
-
-    longitude = 42.1052479
-    latitude = -16.622686
-    tf.closest_timezone_at(
-        lng=longitude,
-        lat=latitude,
-        delta_degree=2,
-        exact_computation=True,
-        return_distances=True,
-        force_evaluation=True,
-    )
-    """
-    returns ('uninhabited',
-    [80.66907784731714, 217.10924866254518, 293.5467252349301, 304.5274937839159, 238.18462606485667, 267.918674688949, 207.43831938964408, 209.6790144988553, 228.42135641542546],
-    ['uninhabited', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Indian/Antananarivo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo', 'Africa/Maputo'])
-    """
-
+removed in version ``6.0.0``
 
 
 get_geometry()
@@ -262,7 +185,7 @@ Certain results can be retrieved with ``unique_timezone_at()``:
 
 .. note::
 
-    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json``, ``shortcuts_unique_id.bin`` and ``shortcuts_direct_id.bin`` to obtain a truly lightweight installation.
+    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json``, ``shortcuts.bin`` to obtain a truly lightweight installation.
 
 
 
@@ -301,7 +224,7 @@ With the argument of the flag ``-f`` one can choose between the different functi
 
     0: TimezoneFinder.timezone_at() = default
     1: TimezoneFinder.certain_timezone_at()
-    2: TimezoneFinder.closest_timezone_at()
+    2: removed
     3: TimezoneFinderL.timezone_at()
     4: TimezoneFinderL.timezone_at_land()
     5: TimezoneFinder.timezone_at_land()

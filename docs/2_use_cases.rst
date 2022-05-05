@@ -61,7 +61,7 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 Django
 ------
 
-Maximising the chances of getting a result in a ``Django`` view:
+querying the timezone name in a ``Django`` view:
 
 
 .. code-block:: python
@@ -71,14 +71,15 @@ Maximising the chances of getting a result in a ``Django`` view:
         lng = float(lng)
         try:
             timezone_name = tf.timezone_at(lng=lng, lat=lat)
-            if timezone_name is None:
-                timezone_name = tf.closest_timezone_at(lng=lng, lat=lat)
-                # maybe even increase the search radius when it is still None
         except ValueError:
             # the coordinates were out of bounds
             pass  # {handle error}
-        # ... do something with timezone_name ...
+        if timezone_name is None:
+            # no timezone matched
+            ...
 
+        # do something with timezone_name
+        ...
 
 
 

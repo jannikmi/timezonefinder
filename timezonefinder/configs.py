@@ -10,16 +10,6 @@ import numpy as np
 SHORTCUT_H3_RES: int = 3
 SHORTCUT_FILE = "shortcuts.bin"
 
-# no "magic numbers" import all as "constants" from this global settings file
-# ATTENTION: Don't change these settings or timezonefinder wont work!
-# different setups of shortcuts are not supported, because then addresses in the .bin
-# need to be calculated depending on how many shortcuts are being used.
-# number of shortcuts per longitude
-NR_SHORTCUTS_PER_LNG = 1
-# shortcuts per latitude
-NR_SHORTCUTS_PER_LAT = 2
-NR_LAT_SHORTCUTS = 180 * NR_SHORTCUTS_PER_LAT
-
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
 # DATA FILES

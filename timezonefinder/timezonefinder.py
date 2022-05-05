@@ -238,11 +238,11 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 class TimezoneFinder(AbstractTimezoneFinder):
     """Class for quickly finding the timezone of a point on earth offline.
 
+    Because of indexing ("shortcuts"), not all timezone polygons have to be tested during a query.
+
     Opens the required timezone polygon data in binary files to enable fast access.
-    Currently per half degree of latitude and per degree of longitude the set of all candidate polygons are stored.
-    Because of these so called 'shortcuts' not all timezone polygons have to be tested during a query.
     For a detailed documentation of data management please refer to the code documentation of
-    `file_converter.py <https://github.com/MrMinimal64/timezonefinder/blob/master/timezonefinder/file_converter.py>`__
+    `file_converter.py <https://github.com/jannikmi/timezonefinder/blob/master/scripts/file_converter.py>`__
 
     :ivar binary_data_attributes: the names of all attributes which store the opened binary data files
 
@@ -384,76 +384,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
             for poly_id in range(this_zone_poly_id, next_zone_poly_id)
         ]
 
-    def id_list(self, polygon_id_list, nr_of_polygons):
-        """
-        :param polygon_id_list:
-        :param nr_of_polygons: length of polygon_id_list
-        :return: list of zone_ids
-        """
-        zone_id_list = np.empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
-        for pointer_local, polygon_id in enumerate(polygon_id_list):
-            zone_id = self.zone_id_of(polygon_id)
-            zone_id_list[pointer_local] = zone_id
-
-        return zone_id_list
-
-    def compile_id_list(self, polygon_id_list, nr_of_polygons):
-        """sorts the polygons_id list from least to most occurrences of the zone ids (->speed up)
-
-        only 4.8% of all shortcuts include polygons from more than one zone
-        but only for about 0.4% sorting would be beneficial (zones have different frequencies)
-        in most of those cases there are only two types of zones (= entries in counted_zones) and one of them
-        has only one entry.
-        the polygon lists of all single shortcut are already sorted (during compilation of the binary files)
-        sorting should be used for closest_timezone_at(), because only in
-        that use case the polygon lists are quite long (multiple shortcuts are being checked simultaneously).
-
-        :param polygon_id_list: input list of polygon
-        :param nr_of_polygons: length of polygon_id_list
-        :return: sorted list of polygon_ids, sorted list of zone_ids, boolean: do all entries belong to the same zone
-        """
-
-        zone_id_list = np.empty([nr_of_polygons], dtype=DTYPE_FORMAT_H_NUMPY)
-        counted_zones = {}
-        for pointer_local, polygon_id in enumerate(polygon_id_list):
-            zone_id = self.zone_id_of(polygon_id)
-            zone_id_list[pointer_local] = zone_id
-            try:
-                counted_zones[zone_id] += 1
-            except KeyError:
-                counted_zones[zone_id] = 1
-
-        if len(counted_zones) == 1:
-            # there is only one zone. no sorting needed.
-            return polygon_id_list, zone_id_list, True
-
-        if len(set(counted_zones.values())) == 1:
-            # all the zones have the same amount of polygons. no sorting needed.
-            return polygon_id_list, zone_id_list, False
-
-        counted_zones_sorted = sorted(counted_zones.items(), key=lambda zone: zone[1])
-        sorted_polygon_id_list = np.empty(nr_of_polygons, dtype=DTYPE_FORMAT_H_NUMPY)
-        sorted_zone_id_list = np.empty(nr_of_polygons, dtype=DTYPE_FORMAT_H_NUMPY)
-
-        pointer_output = 0
-        for zone_id, amount in counted_zones_sorted:
-            # write all polygons from this zone in the new list
-            pointer_local = 0
-            detected_polygons = 0
-            while detected_polygons < amount:
-                if zone_id_list[pointer_local] == zone_id:
-                    # the polygon at the pointer has the wanted zone_id
-                    detected_polygons += 1
-                    sorted_polygon_id_list[pointer_output] = polygon_id_list[
-                        pointer_local
-                    ]
-                    sorted_zone_id_list[pointer_output] = zone_id
-                    pointer_output += 1
-
-                pointer_local += 1
-
-        return sorted_polygon_id_list, sorted_zone_id_list, False
-
     def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32
         poly_max_values = getattr(self, POLY_MAX_VALUES)
@@ -486,11 +416,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """computes in which ocean OR land timezone a point is included in
 
         Especially for large polygons it is expensive to check if a point is really included.
-        In case there is only one possible zone (left) this zone will instantly be returned without actually checking
+        In case there is only one possible zone (left), this zone will instantly be returned without actually checking
         if the query point is included in this polygon.
 
-        To speed things up there are "shortcuts" being used,
-        which have been precomputed and store which timezone polygons have to be checked.
+        To speed things up there are "shortcuts" being used
+            which have been precomputed and store which timezone polygons have to be checked.
 
         .. note:: Since ocean timezones span the whole globe, some timezone will always be matched!
             `None` can only be returned when you have compiled timezone data without such "full coverage".
