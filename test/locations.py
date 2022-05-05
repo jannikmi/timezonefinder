@@ -4,7 +4,7 @@ BASIC_TEST_LOCATIONS = [
     (35.295953, -89.662186, "Arlington, TN", "America/Chicago"),
     (35.1322601, -90.0902499, "Memphis, TN", "America/Chicago"),
     (61.17, -150.02, "Anchorage, AK", "America/Anchorage"),
-    (44.12, -123.22, "Eugene, OR", "America/Los_Angeles"),
+    (40.2, -119.3, "California/Nevada border", "America/Los_Angeles"),
     (42.652647, -73.756371, "Albany, NY", "America/New_York"),
     (55.743749, 37.6207923, "Moscow", "Europe/Moscow"),
     (34.104255, -118.4055591, "Los Angeles", "America/Los_Angeles"),
@@ -67,15 +67,17 @@ TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
     (50.5, 1, "English Channel1", "Etc/GMT"),
     (56.218, 19.4787, "baltic sea", "Etc/GMT-1"),
 ]
-TEST_LOCATIONS_PROXIMITY = [
-    # TODO the data now contains ocean timezones, every point lies within a zone!
-    #  -> proximity tests are not meaningful at the moment
-    # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
-    # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
-    # (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
-    # (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
-    # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
-    # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
-    # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
+
+BOUNDARY_TEST_CASES = [
+    # directly at the poles and the 180deg longitude border the zone result is ambiguous
+    # the result should still be well defined
+    # zone_name="" is interpreted as "don't care"
+    (-180.0, 90.0, ""),
+    (-180.0, 0.0, ""),
+    (-180.0, -90.0, ""),
+    (180.0, 90.0, ""),
+    (180.0, 0.0, ""),
+    (180.0, -90.0, ""),
+    (179.999, 0.0, "Etc/GMT-12"),
+    (-179.999, 0.0, "Etc/GMT+12"),
 ]

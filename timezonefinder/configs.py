@@ -1,15 +1,14 @@
 # -*- coding:utf-8 -*-
 # NOTE: Changes in the global settings might not immediately affect
-# the precompiled (and cached) functions in helpers_numba.py!
-from pathlib import Path
+# the functions in utils.py due to numba compilation and caching!
+from typing import Dict
 
-PACKAGE_NAME = "timezonefinder"
+import numpy as np
 
 # SHORTCUT SETTINGS
 # h3 library
-MIN_H3_RES = 1  # NOTE: res 0 has no mappings currently
-MAX_H3_RES = 12
-SHORTCUT_FILE = "shortcuts_combined.bin"
+SHORTCUT_H3_RES: int = 3
+SHORTCUT_FILE = "shortcuts.bin"
 
 # no "magic numbers" import all as "constants" from this global settings file
 # ATTENTION: Don't change these settings or timezonefinder wont work!
@@ -30,18 +29,13 @@ BINARY_FILE_ENDING = ".bin"
 POLY_ZONE_IDS = "poly_zone_ids"
 POLY_COORD_AMOUNT = "poly_coord_amount"
 POLY_ADR2DATA = "poly_adr2data"
-POLY_MAX_VALUES = "poly_max_values"
+POLY_MAX_VALUES = "poly_bounds"
 POLY_DATA = "poly_data"
 POLY_NR2ZONE_ID = "poly_nr2zone_id"
 
 HOLE_COORD_AMOUNT = "hole_coord_amount"
 HOLE_ADR2DATA = "hole_adr2data"
 HOLE_DATA = "hole_data"
-
-SHORTCUTS_ENTRY_AMOUNT = "shortcuts_entry_amount"
-SHORTCUTS_ADR2DATA = "shortcuts_adr2data"
-SHORTCUTS_DATA = "shortcuts_data"
-SHORTCUTS_UNIQUE_ID = "shortcuts_unique_id"
 
 BINARY_DATA_ATTRIBUTES = [
     POLY_ZONE_IDS,
@@ -53,13 +47,7 @@ BINARY_DATA_ATTRIBUTES = [
     HOLE_COORD_AMOUNT,
     HOLE_ADR2DATA,
     HOLE_DATA,
-    SHORTCUTS_ENTRY_AMOUNT,
-    SHORTCUTS_ADR2DATA,
-    SHORTCUTS_DATA,
-    SHORTCUTS_UNIQUE_ID,
 ]
-
-SHORTCUTS_DIRECT_ID = "shortcuts_direct_id"  # for TimezoneFinderL only
 
 # JSON
 JSON_FILE_ENDING = ".json"
@@ -72,14 +60,16 @@ DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [HOLE_REGISTRY]
 # all data files that should be included in the build:
 ALL_BINARY_FILES = [
     specifier + BINARY_FILE_ENDING for specifier in BINARY_DATA_ATTRIBUTES
-] + [SHORTCUTS_DIRECT_ID + BINARY_FILE_ENDING]
+]
 ALL_JSON_FILES = [TIMEZONE_NAMES_FILE, HOLE_REGISTRY_FILE]
 PACKAGE_DATA_FILES = ALL_BINARY_FILES + ALL_JSON_FILES
 
 # TODO create variables for used dtype for each type of data (polygon address, coordinate...)
 # B = unsigned char (1byte = 8bit Integer)
 NR_BYTES_B = 1
+DTYPE_FORMAT_B = b"<B"
 DTYPE_FORMAT_B_NUMPY = "<i1"
+THRES_DTYPE_B = 2 ** (NR_BYTES_B * 8)
 
 # H = unsigned short (2 byte integer)
 NR_BYTES_H = 2
@@ -93,8 +83,8 @@ INVALID_VALUE_DTYPE_H = THRES_DTYPE_H - 1
 
 # i = signed 4byte integer
 NR_BYTES_I = 4
-DTYPE_FORMAT_SIGNED_I_NUMPY = "<i4"
 DTYPE_FORMAT_SIGNED_I = b"<i"
+DTYPE_FORMAT_SIGNED_I_NUMPY = "<i4"
 THRES_DTYPE_SIGNED_I_UPPER = 2 ** ((NR_BYTES_I * 8) - 1)
 THRES_DTYPE_SIGNED_I_LOWER = -THRES_DTYPE_SIGNED_I_UPPER
 
@@ -124,5 +114,5 @@ assert max_int_val < MAX_ALLOWED_COORD_VAL
 # the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
 MAX_HAVERSINE_DISTANCE = 40100
 
-# TESTS
-DECIMAL_PLACES_ACCURACY = 7
+# hexagon id to list of polygon ids
+ShortcutMapping = Dict[int, np.ndarray]

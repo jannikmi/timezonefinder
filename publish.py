@@ -203,7 +203,6 @@ if __name__ == "__main__":
         None,
         "Remember to list all relevant importable objects in __all__ variable in __init__.py",
     )
-    routine(None, "Remember to keep helpers.py and helpers_numba.py consistent")
     routine(
         None,
         "Maybe re-pin the test dependencies (requirements.txt) with pip-compile!"

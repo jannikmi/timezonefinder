@@ -5,34 +5,33 @@ import unittest
 from math import floor, log10
 from os.path import abspath, join, pardir
 from test.auxiliaries import list_equal, list_of_random_points, random_point
-from test.locations import (
-    BASIC_TEST_LOCATIONS,
-    TEST_LOCATIONS,
-    TEST_LOCATIONS_PROXIMITY,
-)
-from typing import List
+from test.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
+from typing import List, Optional
 
 import pytest
 
-from timezonefinder.configs import INT2COORD_FACTOR, PACKAGE_NAME, TIMEZONE_NAMES_FILE
+from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
+    AbstractTimezoneFinder,
     TimezoneFinder,
     TimezoneFinderL,
-    is_ocean_timezone,
 )
+from timezonefinder.utils import is_ocean_timezone
 
 # DEBUG = False
 DEBUG = True
 
-# number of points to test (in each test, on land and random ones)
-N = int(1e2)
+PACKAGE_NAME = "timezonefinder"
 
-tf = None
+# number of points to test (in each test, on land and random ones)
+N = int(1e1)
+
+class_under_test = TimezoneFinder
+tf: AbstractTimezoneFinder = class_under_test()
 point_list = []
 in_memory_mode = False
-class_under_test = TimezoneFinder
 
-RESULT_TEMPLATE = "{0:20s} | {1:20s} | {2:20s} | {3:2s}"
+RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
 
 def eval_time_fct():
@@ -154,28 +153,36 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         print_speed_test("on land points", self.on_land_points)
         print_speed_test("random points", list_of_random_points(length=N))
 
-    def test_shortcut_boundary(self):
-        # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
-        assert self.test_instance.timezone_at(lng=-180.0, lat=90.0) == "Etc/GMT+12"
-        assert self.test_instance.timezone_at(lng=180.0, lat=90.0) == "Etc/GMT+12"
-        assert (
-            self.test_instance.timezone_at(lng=180.0, lat=-90.0) == "Antarctica/McMurdo"
-        )
-        assert (
-            self.test_instance.timezone_at(lng=-180.0, lat=-90.0)
-            == "Antarctica/McMurdo"
+    def check_boundary(self, lng, lat, expected: Optional[str] = ""):
+        # at the boundaries of the coordinate system the algorithms should still be well defined!
+
+        print(
+            [
+                self.test_instance.zone_name_from_poly_id(p)
+                for p in self.test_instance.get_shortcut_polys(lng=lng, lat=lat)
+            ]
         )
 
+        result = self.test_instance.timezone_at(lng=lng, lat=lat)
+        if isinstance(expected, str) and len(expected) == 0:
+            # zone_name="" is interpreted as "don't care"
+            return
+        assert result == expected
+
+    def test_shortcut_boundary_validity(self):
+        for lng, lat, expected in BOUNDARY_TEST_CASES:
+            self.check_boundary(lng, lat)
+
         with pytest.raises(ValueError):
-            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.test_instance.timezone_at(
+            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
+            self.check_boundary(
                 lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
             )
-            self.test_instance.timezone_at(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.test_instance.timezone_at(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.test_instance.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.test_instance.timezone_at(
+            self.check_boundary(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
+            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
+            self.check_boundary(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
+            self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
+            self.check_boundary(
                 lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
             )
 
@@ -230,7 +237,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             timezone_names_json = json.loads(json_file.read())
         assert list_equal(
             timezone_names_stored, timezone_names_json
-        ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {TIMEZONE_NAMES} are different."
+        ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
 
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
@@ -268,18 +275,17 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.closest_timezone_at(23.0, lng=42.0)
             self.test_instance.closest_timezone_at(23.0, lat=42.0)
 
+    def test_shortcut_boundary_result(self):
+        for lng, lat, expected in BOUNDARY_TEST_CASES:
+            # NOTE: for TimezoneFinder (using polygon data) the results must match!
+            self.check_boundary(lng, lat, expected)
+
     def test_certain_timezone_at(self):
         print(
             "\ntestin certain_timezone_at():"
         )  # expected equal results to timezone_at(), is just slower
         self.run_location_tests(
             self.test_instance.certain_timezone_at, self.test_locations
-        )
-
-    def test_closest_timezone_at(self):
-        print("\ntestin closest_timezone_at():")
-        self.run_location_tests(
-            self.test_instance.closest_timezone_at, TEST_LOCATIONS_PROXIMITY
         )
 
     def test_overflow(self):

@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from scripts.file_converter import coords2polygon
 from scripts.numba_utils import inside_polygon
+from scripts.utils import coords2polygon
 
 
 def test_inside_polygon():
