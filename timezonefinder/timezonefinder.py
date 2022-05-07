@@ -90,13 +90,14 @@ class AbstractTimezoneFinder(ABC):
         for attribute_name in self.binary_data_attributes:
             file_name = attribute_name + BINARY_FILE_ENDING
             path2file = self.bin_file_location / file_name
-            bin_file = open(path2file, mode="rb")
             if self.in_memory:
-                bf_in_mem = BytesIO(bin_file.read())
-                bf_in_mem.seek(0)
-                bin_file.close()
-                bin_file = bf_in_mem
-            setattr(self, attribute_name, bin_file)
+                with open(path2file, mode="rb") as bin_file:
+                    bf_in_mem = BytesIO(bin_file.read())
+                    bf_in_mem.seek(0)
+                setattr(self, attribute_name, bf_in_mem)
+            else:
+                bin_file = open(path2file, mode="rb")
+                setattr(self, attribute_name, bin_file)
 
     def __del__(self):
         for attribute_name in self.binary_data_attributes:

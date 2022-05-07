@@ -147,7 +147,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             print("total time:", time_preprocess(t))
             pts_p_sec = len(list_of_points) / t
             exp = floor(log10(pts_p_sec))
-            pts_p_sec = round(pts_p_sec / 10 ** exp, 1)  # normalize
+            pts_p_sec = round(pts_p_sec / 10**exp, 1)  # normalize
             print("avg. points per second: {} * 10^{}".format(pts_p_sec, exp))
 
         print_speed_test("on land points", self.on_land_points)
