@@ -23,19 +23,19 @@ Future TODOs:
 breaking changes:
 
 * new dependency: using `h3 <https://uber.github.io/h3-py/intro.html>`__ for indexing the timezone polygons to check ("shortcuts) instead of the previous own indexing implementation. technical details: storing all 41,162 hex cells at resolution 3 and the corresponding timezone polygons which appear in them in the ``shortcuts.bin`` (~500 KB).
-* removed ``.closest_timezone_at()``: with the current data set with ocean zones in use, any point is included in some zone. it is therefore not meaningful to search for the closest boundary! Also the timezone polygons do NOT follow the shorelines. This makes the results of ``closest_timezone_at()`` somewhat less expressive. Maintaining the non-trivial distance computation algorithms is not really at the core responsibility of this package. Feel free to open an issue if you want to use this functionality.
+* removed ``.closest_timezone_at()``: with the current data set with ocean zones in use, any point is included in some zone. it is therefore not meaningful to search for the closest boundary! Also the timezone polygons do NOT follow the shorelines. This makes the results of ``closest_timezone_at()`` somewhat less expressive. Maintaining the non-trivial distance computation algorithms is not really at the core responsibility of this package.
 * officially only supporting ``python>=3.7`` (removed official support for ``python3.6``, since the ``numpy`` dependency did so)
 * removed ``v`` from the github release/version tags
 
 internals:
 
-* shortcuts: sorting according to size of polygons (amount of coordinates) instead of the count of zone ids. useful as optimisation: smaller polygons will be checked first and can hence be "ruled-out" faster
-* "most common": now meaning the zone with the largest polygons in the shortcut. please note that this does not necessarily mean the most area in the shortcut is covered by this zone. the polygon size is just an easier compute heuristic.
 * updated the data to `2021c <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2021c>`__. please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__) and that hence a query coordinate can actually match multiple time zones. ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
-* some minor typing improvements
-* pre-commit hook improvements
+* shortcuts: sorting according to size of polygons (amount of coordinates) instead of the count of zone ids. useful as optimisation: smaller polygons will be checked first and can hence be "ruled-out" faster
+* "most common": now meaning the zone with the largest polygons in the shortcut (last in the shortcut sorting). please note that this does not necessarily mean the most area in the shortcut is covered by this zone. the polygon size is just an easier to compute heuristic.
 * using poetry for dependency management
 * using GitHub actions for CI instead of travis
+* some minor typing improvements
+* pre-commit hook improvements
 
 In case you have criticism or feedback please reach out by creating an issue, discussion or PR on GitHub.
 
