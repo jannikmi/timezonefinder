@@ -51,13 +51,6 @@ jobs:
         id: fetch_version
         run: echo "::set-output name=version_nr::$(cat VERSION)"
 
-      - name: Install pypa/build
-        run: python -m pip install build --user
-
-      - name: Build a binary wheel and a source tarball
-        # TODO --python-tag py37.py38.py39.py310
-        run: python -m build --sdist --wheel --outdir dist/ .
-
       - name: Create GitHub Release
         id: create_gh_release
         uses: actions/create-release@v1
@@ -70,6 +63,16 @@ jobs:
           release_name: Release ${{env.VERSION}}
           draft: false
           prerelease: false
+
+      - name: Install build dependencies
+        # NOTE: taking version number from git tag
+        run: |
+          pip install poetry>=1.2
+          poetry plugin add poetry-version-plugin
+
+      - name: Build a binary wheel and a source tarball
+        # TODO --python-tag py37.py38.py39.py310
+        run: poetry build
 
       - name: Publish distribution to Test PyPI
         uses: pypa/gh-action-pypi-publish@master
