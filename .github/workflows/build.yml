@@ -51,6 +51,29 @@ jobs:
         id: fetch_version
         run: echo "::set-output name=version_nr::$(cat VERSION)"
 
+      - name: Create and push git tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.fetch_version.outputs.version_nr }}
+
+      - name: Install build dependencies
+        # NOTE: takes version number from git tag
+        run: |
+          pip install poetry>=1.2
+          poetry plugin add poetry-version-plugin
+
+      - name: Build a binary wheel and a source tarball
+        # TODO --python-tag py37.py38.py39.py310
+        run: poetry build
+
+      - name: Test PyPI Publishing
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+          repository_url: https://test.pypi.org/legacy/
+
       - name: Create GitHub Release
         id: create_gh_release
         uses: actions/create-release@v1
@@ -64,23 +87,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Install build dependencies
-        # NOTE: taking version number from git tag
-        run: |
-          pip install poetry>=1.2
-          poetry plugin add poetry-version-plugin
-
-      - name: Build a binary wheel and a source tarball
-        # TODO --python-tag py37.py38.py39.py310
-        run: poetry build
-
-      - name: Publish distribution to Test PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-          repository_url: https://test.pypi.org/legacy/
-
-      - name: Publish a distribution to PyPI
+      - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}
