@@ -35,4 +35,13 @@ clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
 
 
-.PHONY: clean test
+build:
+	rm -r -f build
+	pip install poetry>=1.2
+	poetry plugin add poetry-version-plugin
+	@# TODO cat not working
+	git tag $(cat ./VERSION)
+	poetry build
+
+
+.PHONY: clean test build
