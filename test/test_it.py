@@ -18,13 +18,14 @@ from timezonefinder.timezonefinder import (
 )
 from timezonefinder.utils import is_ocean_timezone
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
+# DEBUG = True
 
 PACKAGE_NAME = "timezonefinder"
 
 # number of points to test (in each test, on land and random ones)
-N = int(1e1)
+N = int(1e2)
 
 class_under_test = TimezoneFinder
 tf: AbstractTimezoneFinder = class_under_test()
@@ -85,6 +86,23 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     class_under_test = TimezoneFinderL
     on_land_pt_fct_name = "timezone_at"
     test_locations = BASIC_TEST_LOCATIONS
+
+    def test_using_numba(self):
+        numba_installed = False
+        try:
+            import numba
+
+            numba_installed = True
+        except ImportError:
+            pass
+
+        if numba_installed:
+            try:
+                from numba import b1, f8, i2, i4, njit, typeof, u2
+            except ImportError as exc:
+                raise ValueError("numba import failed:", exc) from exc
+
+        assert self.test_instance.using_numba() == numba_installed
 
     def print_tf_class_props(self):
         print("\n\ntest properties:")
@@ -310,32 +328,35 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             )
             check_geometry(geometry_from_name)
 
-            if DEBUG:  # only with active debugging conduct extensive testing (requ
-                geometry_from_id = self.test_instance.get_geometry(
-                    tz_name=zone_name,
-                    tz_id=zone_id,
-                    use_id=False,
-                    coords_as_pairs=False,
-                )
-                # not necessary:
-                # assert nested_list_equal(geometry_from_id, geometry_from_name), \
-                assert len(geometry_from_name) == len(
-                    geometry_from_id
-                ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-                check_geometry(geometry_from_id)
+            if not DEBUG:
+                continue
 
-                geometry_from_name = self.test_instance.get_geometry(
-                    tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
-                )
-                geometry_from_id = self.test_instance.get_geometry(
-                    tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
-                )
-                assert len(geometry_from_name) == len(
-                    geometry_from_id
-                ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            # conduct extensive testing only with active debugging
+            geometry_from_id = self.test_instance.get_geometry(
+                tz_name=zone_name,
+                tz_id=zone_id,
+                use_id=False,
+                coords_as_pairs=False,
+            )
+            # not necessary:
+            # assert nested_list_equal(geometry_from_id, geometry_from_name), \
+            assert len(geometry_from_name) == len(
+                geometry_from_id
+            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            check_geometry(geometry_from_id)
 
-                check_pairwise_geometry(geometry_from_id)
-                check_pairwise_geometry(geometry_from_name)
+            geometry_from_name = self.test_instance.get_geometry(
+                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
+            )
+            geometry_from_id = self.test_instance.get_geometry(
+                tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
+            )
+            assert len(geometry_from_name) == len(
+                geometry_from_id
+            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+
+            check_pairwise_geometry(geometry_from_id)
+            check_pairwise_geometry(geometry_from_name)
 
         with pytest.raises(ValueError):
             self.test_instance.get_geometry(

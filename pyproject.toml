@@ -6,12 +6,12 @@ authors = ["jannikmi <github@michelfe.it>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.11"
-numpy = "^1.21"
+numpy = "^1.20"
 h3 = "^3.7.3"
 numba = { version = "^0.55", optional = true }
 
 [tool.poetry.dev-dependencies]
-poetry = "^1.1.11"
+poetry = "^1.1.13"
 tox = "*"
 pytest = "*"
 pre-commit = "*"

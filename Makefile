@@ -7,7 +7,7 @@ SHELL=/bin/bash
 
 pin:
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@poetry update
+	@poetry update -vv
 
 req:
 	@echo "installing the development dependencies..."
@@ -18,7 +18,10 @@ req:
 update: pin req
 
 env:
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.7 poetry -y && conda activate timezonefinder && make req
+	# conda env remove -n timezonefinder
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.7 poetry -y
+	#	&& conda activate timezonefinder
+	# && make req
 
 
 test:
@@ -37,7 +40,7 @@ clean:
 
 build:
 	rm -r -f build
-	pip install poetry>=1.2
+	pip install poetry>=1.2.0b1
 	poetry plugin add poetry-version-plugin
 	@# TODO cat not working
 	git tag $(cat ./VERSION)
