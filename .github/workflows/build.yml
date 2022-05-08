@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - master
-      - dev
-
-
-
 
 jobs:
   test:
@@ -23,7 +19,7 @@ jobs:
           - "3.7"
           - "3.8"
           - "3.9"
-    #          - "3.10"
+          - "3.10"
     env:
       TOXENV: ${{ matrix.tox-env }}
       TOX_SKIP_MISSING_INTERPRETERS: False
@@ -43,3 +39,45 @@ jobs:
 
       - name: Run tox
         run: tox
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: endsWith(github.ref, '/master')
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Fetch version
+        id: fetch_version
+        run: echo "::set-output name=version_nr::$(cat VERSION)"
+
+      - name: Install pypa/build
+        run: python -m pip install build --user
+
+      - name: Build a binary wheel and a source tarball
+        # TODO --python-tag py37.py38.py39.py310
+        run: python -m build --sdist --wheel --outdir dist/ .
+
+      - name: Create GitHub Release
+        id: create_gh_release
+        uses: actions/create-release@v1
+        env:
+          # use token provided by Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.fetch_version.outputs.version_nr }}
+        with:
+          tag_name: ${{env.VERSION}}
+          release_name: Release ${{env.VERSION}}
+          draft: false
+          prerelease: false
+
+      - name: Publish distribution to Test PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+          repository_url: https://test.pypi.org/legacy/
+
+      - name: Publish a distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}
