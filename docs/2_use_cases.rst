@@ -105,11 +105,6 @@ Any other data in this format can also be parsed:
 
 
 
-.. note::
-
-    this script requires ``python3.6+`` and ``numba``
-
-
 Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.
 How to use the ``timezonefinder`` package with data files from another location is described :ref:`HERE <init>`.
 
