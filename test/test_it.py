@@ -170,7 +170,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         assert result == expected
 
     def test_shortcut_boundary_validity(self):
-        for lng, lat, expected in BOUNDARY_TEST_CASES:
+        for lng, lat, _expected in BOUNDARY_TEST_CASES:
             self.check_boundary(lng, lat)
 
         with pytest.raises(ValueError):

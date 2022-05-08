@@ -20,11 +20,11 @@ from numpy import dtype, frombuffer, int64
 
 using_numba = True
 try:
-    from numba import b1, f8, i2, i4, njit, typeof, u2, u8
+    from numba import b1, f8, i2, i4, njit, typeof, u2
 except ImportError:
     using_numba = False
     # replace numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, typeof, u2, u8
+    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, typeof, u2
 
 from timezonefinder.configs import (
     COORD2INT_FACTOR,

@@ -307,7 +307,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         hole_coord_amount.seek(NR_BYTES_H * first_hole_id)
         hole_adr2data.seek(NR_BYTES_I * first_hole_id)
 
-        for hole_id in range(first_hole_id, first_hole_id + amount_of_holes):
+        for _ in range(amount_of_holes):
             nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
             hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
 

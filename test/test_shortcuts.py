@@ -1,12 +1,9 @@
-import itertools
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import h3.api.numpy_int as h3
 import numpy as np
-import pydantic
 
-import timezonefinder.configs
 from scripts import file_converter
 from timezonefinder import configs, hex_helpers
 

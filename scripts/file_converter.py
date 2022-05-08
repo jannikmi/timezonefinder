@@ -142,7 +142,8 @@ def _holes_in_poly(poly_nr):
 
 
 def parse_polygons_from_json(input_path: Path) -> int:
-    global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids, polygons, polygon_lengths, poly_zone_ids, poly_boundaries
+    global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids
+    global polygons, polygon_lengths, poly_zone_ids, poly_boundaries
 
     print(f"parsing input file: {input_path}\n...\n")
     with open(input_path) as json_file:
@@ -501,7 +502,7 @@ class Hex:
         returns: the hex ids of all parent cells which any of the cell points belong
         """
         if self.res == 0:
-            raise ValueError(f"not defined for resolution 0")
+            raise ValueError("not defined for resolution 0")
         lower_res = self.res - 1
         # NOTE: (lat,lng) pairs!
         coord_pairs = h3.h3_to_geo_boundary(self.id)
@@ -609,7 +610,7 @@ def geo_to_h3(lng: float, lat: float) -> int:
 
 
 def validate_shortcut_completeness(mapping: ShortcutMapping):
-    print(f"validating shortcut completeness...")
+    print("validating shortcut completeness...")
 
     error = False
     for poly_id, poly in enumerate(polygons):
@@ -627,7 +628,6 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
                     f"(hexagon cell id {hex_id} missing in mapping)"
                 )
             if poly_id not in shortcut_entries:
-                hex = get_hex(hex_id)
                 print(
                     f"ERR: point #{i} ({lng}, {lat}) of polygon {poly_id} "
                     f"does not appear in shortcut entries {shortcut_entries} of cell {hex_id}"

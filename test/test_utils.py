@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-from test.auxiliaries import proto_test_case
 
 import numpy as np
 import pytest

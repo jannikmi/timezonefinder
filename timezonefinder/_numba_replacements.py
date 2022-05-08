@@ -48,9 +48,5 @@ class u2(SubscriptAndCallable):
     pass
 
 
-class u8(SubscriptAndCallable):
-    pass
-
-
 def typeof(*args):
     return b1
