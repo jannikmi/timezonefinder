@@ -9,6 +9,7 @@ playground.py
 tmp.py
 tmp/
 test/*.bin
+tmp_shortcut.bin
 
 *.DS_Store
 *.pytest_cache
