@@ -91,6 +91,7 @@ PY_VERSION_IDS = [
     "37",
     "38",
     "39",
+    "310",
 ]  # the supported python versions to create wheels for
 PYTHON_TAG = ".".join([f"py{v}" for v in PY_VERSION_IDS])
 
