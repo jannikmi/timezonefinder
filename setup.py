@@ -23,7 +23,7 @@ setup(
         "License": f"https://github.com/jannikmi/{PACKAGE_NAME}/blob/master/LICENSE",
     },
     keywords="timezone coordinates latitude longitude location pytzwhere tzwhere",
-    install_requires=["numpy>=1.20.3"],
+    install_requires=["numpy>=1.20.3", "h3>=3.7.3"],
     python_requires=">=3.7",
     # TODO http://peak.telecommunity.com/DevCenter/setuptools#setting-the-zip-safe-flag
     #  safe if the project uses pkg_resources for all its data file access

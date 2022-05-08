@@ -5,10 +5,6 @@ on:
   push:
     branches:
       - master
-      - dev
-
-
-
 
 jobs:
   test:
@@ -23,12 +19,17 @@ jobs:
           - "3.7"
           - "3.8"
           - "3.9"
-    #          - "3.10"
+          - "3.10"
     env:
       TOXENV: ${{ matrix.tox-env }}
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
       - uses: actions/checkout@v2
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v2.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -43,3 +44,55 @@ jobs:
 
       - name: Run tox
         run: tox
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: endsWith(github.ref, '/master')
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Fetch version
+        id: fetch_version
+        run: echo "::set-output name=version_nr::$(cat VERSION)"
+
+      - name: Create and push git tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.fetch_version.outputs.version_nr }}
+
+      - name: Install build dependencies
+        # NOTE: takes version number from git tag
+        run: |
+          pip install 'poetry>=1.2.0a1'
+          poetry plugin add poetry-version-plugin
+
+      - name: Build a binary wheel and a source tarball
+        # TODO --python-tag py37.py38.py39.py310
+        run: poetry build
+
+      - name: Test PyPI Publishing
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+          repository_url: https://test.pypi.org/legacy/
+
+      - name: Create GitHub Release
+        id: create_gh_release
+        uses: actions/create-release@v1
+        env:
+          # use token provided by Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.fetch_version.outputs.version_nr }}
+        with:
+          tag_name: ${{env.VERSION}}
+          release_name: Release ${{env.VERSION}}
+          draft: false
+          prerelease: false
+
+      - name: PyPI Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}

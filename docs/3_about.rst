@@ -7,7 +7,6 @@ About
 .. include:: ./badges.rst
 
 
-
 timezonefinder is a fast and lightweight python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by simple point in polygon tests.
@@ -15,14 +14,27 @@ A few tweaks help to keep the computational requirements low and make this packa
 For example precomputed, so called "shortcuts" reduce the amount of timezone polygons to be checked (a kind of index for the polygons).
 See the documentation of the code itself for further explanation.
 
-Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (without oceans, (geo)JSON)
+Data
+----
+
+Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (WITH oceans, geoJSON)
 
 .. note::
 
-    The timezone polygons do NOT follow the shorelines. This makes the results of ``closest_timezone_at()`` and ``certain_timezone_at()`` somewhat meaningless.
+    In the data set the timezone polygons often include territorial waters -> they do NOT follow the shorelines.
+    This makes the results of ``certain_timezone_at()`` less expressive:
+    from a timezone match one cannot distinguish whether a query point lies on land or in ocean.
+
+.. note::
+
+    Please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__)
+    and that hence a query coordinate can actually match multiple time zones.
+    ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
 
 
-Also see:
+
+References
+----------
 
 `GitHub <https://github.com/jannikmi/timezonefinder>`__
 
@@ -157,8 +169,6 @@ This package uses at most 40MB (= encountered memory consumption of the python p
 -  data is only being read on demand (not completely read into memory if not needed)
 
 -  precomputed shortcuts are included to quickly look up which polygons have to be checked
-
--  available proximity algorithm ``closest_timezone_at()``
 
 -  function ``get_geometry()`` enables querying timezones for their geometric shape (= multipolygon with holes)
 

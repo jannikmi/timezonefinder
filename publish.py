@@ -88,9 +88,10 @@ VIRT_ENV_COMMAND = (
     f". ~/miniconda3/etc/profile.d/conda.sh; conda activate {VIRT_ENV_NAME}; "
 )
 PY_VERSION_IDS = [
-    "36",
     "37",
     "38",
+    "39",
+    "310",
 ]  # the supported python versions to create wheels for
 PYTHON_TAG = ".".join([f"py{v}" for v in PY_VERSION_IDS])
 
@@ -203,7 +204,6 @@ if __name__ == "__main__":
         None,
         "Remember to list all relevant importable objects in __all__ variable in __init__.py",
     )
-    routine(None, "Remember to keep helpers.py and helpers_numba.py consistent")
     routine(
         None,
         "Maybe re-pin the test dependencies (requirements.txt) with pip-compile!"

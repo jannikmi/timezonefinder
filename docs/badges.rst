@@ -6,9 +6,6 @@
     :alt: documentation status
     :target: https://timezonefinder.readthedocs.io/en/latest/?badge=latest
 
-.. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
-    :target: https://circleci.com/gh/conda-forge/timezonefinder-feedstock
-
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
 
@@ -24,9 +21,9 @@
     :alt: latest version on PyPI
     :target: https://pypi.python.org/pypi/timezonefinder
 
-.. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg
-    :alt: latest version on Conda
-    :target: https://anaconda.org/conda-forge/timezonefinder
+.. image:: https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg
+   :target: https://anaconda.org/conda-forge/timezonefinder
+   :alt: latest version on conda-forge
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black

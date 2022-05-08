@@ -1,27 +1,44 @@
+=========
 Changelog
 =========
 
 
-TODOs:
-document class attributes
-create variables for used dtype for each type of data (polygon address, coordinate...)
-more "intelligent" binary file creation settings: name, dtype etc. combined
+Future TODOs:
+-------------
+
+* improve test locations, expected results for all different methods,
+* parameterised tests
+* write test cases for command line functionality
+* document class attributes
+* create variables for used dtype for each type of data (polygon address, coordinate...), write generic functions for reading binary files using the right data type, performance? many fct calls
+* enable Numba ahead of time compilation
+* convert all these todos into tickets in GitHub
+* enable strict typing
 
 
-TBA
----
+
+6.0.0 (2022-05-08)
+------------------
 
 breaking changes:
 
-* officially only supporting python>=3.7 (removed official support for python3.6, since the `numpy` dependency did so)
-* removed "v" from the github release/version tags
+* new dependency: using `h3 <https://uber.github.io/h3-py/intro.html>`__ for indexing the timezone polygons to check ("shortcuts) instead of the previous own indexing implementation. technical details: storing all 41,162 hex cells at resolution 3 and the corresponding timezone polygons which appear in them in the ``shortcuts.bin`` (~500 KB).
+* removed ``.closest_timezone_at()``: with the current data set with ocean zones in use, any point is included in some zone. it is therefore not meaningful to search for the closest boundary! Also the timezone polygons do NOT follow the shorelines. This makes the results of ``closest_timezone_at()`` somewhat less expressive. Maintaining the non-trivial distance computation algorithms is not really at the core responsibility of this package.
+* officially only supporting ``python>=3.7`` (removed official support for ``python3.6``, since the ``numpy`` dependency did so)
+* removed ``v`` from the github release/version tags
 
 internals:
 
-* some minor typing improvements
-* pre-commit hook improvements
+* updated the data to `2021c <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2021c>`__. please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__) and that hence a query coordinate can actually match multiple time zones. ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
+* shortcuts: sorting according to size of polygons (amount of coordinates) instead of the count of zone ids. useful as optimisation: smaller polygons will be checked first and can hence be "ruled-out" faster
+* "most common": now meaning the zone with the largest polygons in the shortcut (last in the shortcut sorting). please note that this does not necessarily mean the most area in the shortcut is covered by this zone. the polygon size is just an easier to compute heuristic.
+* officially supporting python versions >=3.7,<3.11 (like ``numba``)
 * using poetry for dependency management
 * using GitHub actions for CI instead of travis
+* some minor typing improvements
+* pre-commit hook improvements
+
+In case you have criticism or feedback please reach out by creating an issue, discussion or PR on GitHub.
 
 
 5.2.0 (2021-02-09)
@@ -296,7 +313,7 @@ improvements of file_converter.py:
 2.0.0 (2017-04-07)
 ------------------
 
-* ATTENTION: major change!: there is a second version of timezonefinder now: `timezonefinderL <https://github.com/MrMinimal64/timezonefinderL>`__. There the data has been simplified
+* ATTENTION: major change!: there is a second version of timezonefinder now: `timezonefinderL <https://github.com/jannikmi/timezonefinderL>`__. There the data has been simplified
     for increasing speed reducing data size. Around 56% of the coordinates of the timezone polygons have been deleted there. Around 60% of the polygons (mostly small islands) have been included in the simplified polygons.
     For any coordinate on landmass the results should stay the same, but accuracy at the shorelines is lost.
     This eradicates the usefulness of closest_timezone_at() and certain_timezone_at() but the main use case for this package (= determining the timezone of a point on landmass) is improved.

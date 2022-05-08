@@ -61,7 +61,7 @@ also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 Django
 ------
 
-Maximising the chances of getting a result in a ``Django`` view:
+querying the timezone name in a ``Django`` view:
 
 
 .. code-block:: python
@@ -71,14 +71,15 @@ Maximising the chances of getting a result in a ``Django`` view:
         lng = float(lng)
         try:
             timezone_name = tf.timezone_at(lng=lng, lat=lat)
-            if timezone_name is None:
-                timezone_name = tf.closest_timezone_at(lng=lng, lat=lat)
-                # maybe even increase the search radius when it is still None
         except ValueError:
             # the coordinates were out of bounds
             pass  # {handle error}
-        # ... do something with timezone_name ...
+        if timezone_name is None:
+            # no timezone matched
+            ...
 
+        # do something with timezone_name
+        ...
 
 
 
@@ -100,13 +101,8 @@ Any other data in this format can also be parsed:
 
 ::
 
-    python /path/to/timezonefinder/timezonefinder/file_converter.py [-inp /path/to/input.json] [-out /path/to/output_folder]
+    python /path/to/timezonefinder/scripts/file_converter.py [-inp /path/to/input.json] [-out /path/to/output_folder]
 
-
-
-.. note::
-
-    this script requires python3.6+ (as timezonefinder in general)
 
 
 Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.

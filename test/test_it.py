@@ -4,33 +4,35 @@ import timeit
 import unittest
 from math import floor, log10
 from os.path import abspath, join, pardir
-from typing import List
+from test.auxiliaries import list_equal, list_of_random_points, random_point
+from test.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
+from typing import List, Optional
 
 import pytest
-from auxiliaries import list_equal, list_of_random_points, random_point
 
-from timezonefinder.global_settings import (
-    DEBUG,
-    INT2COORD_FACTOR,
-    PACKAGE_NAME,
-    TIMEZONE_NAMES,
-    TIMEZONE_NAMES_FILE,
-)
+from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
+    AbstractTimezoneFinder,
     TimezoneFinder,
     TimezoneFinderL,
-    is_ocean_timezone,
 )
+from timezonefinder.utils import is_ocean_timezone
+
+DEBUG = False
+# more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
+# DEBUG = True
+
+PACKAGE_NAME = "timezonefinder"
 
 # number of points to test (in each test, on land and random ones)
 N = int(1e2)
 
-tf = None
+class_under_test = TimezoneFinder
+tf: AbstractTimezoneFinder = class_under_test()
 point_list = []
 in_memory_mode = False
-class_under_test = TimezoneFinder
 
-RESULT_TEMPLATE = "{0:20s} | {1:20s} | {2:20s} | {3:2s}"
+RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
 
 def eval_time_fct():
@@ -44,90 +46,6 @@ def time_preprocess(time):
     zero_digits = abs(min(0, int(log10(time))))
     digits_to_print = zero_digits + valid_digits
     return str(round(time, digits_to_print)) + "s"
-
-
-# for TimezoneFinderL:
-BASIC_TEST_LOCATIONS = [
-    # lat, lng, description, expected
-    (35.295953, -89.662186, "Arlington, TN", "America/Chicago"),
-    (35.1322601, -90.0902499, "Memphis, TN", "America/Chicago"),
-    (61.17, -150.02, "Anchorage, AK", "America/Anchorage"),
-    (44.12, -123.22, "Eugene, OR", "America/Los_Angeles"),
-    (42.652647, -73.756371, "Albany, NY", "America/New_York"),
-    (55.743749, 37.6207923, "Moscow", "Europe/Moscow"),
-    (34.104255, -118.4055591, "Los Angeles", "America/Los_Angeles"),
-    (55.743749, 37.6207923, "Moscow", "Europe/Moscow"),
-    (39.194991, -106.8294024, "Aspen, Colorado", "America/Denver"),
-    (50.438114, 30.5179595, "Kiev", "Europe/Kiev"),
-    (12.936873, 77.6909136, "Jogupalya", "Asia/Kolkata"),
-    (38.889144, -77.0398235, "Washington DC", "America/New_York"),
-    (19, -135, "pacific ocean", "Etc/GMT+9"),
-    (30, -33, "atlantic ocean", "Etc/GMT+2"),
-    (-24, 79, "indian ocean", "Etc/GMT-5"),
-]
-
-# for TimezoneFinder:
-# certain algorithm should give the same results for all normal test cases
-TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
-    (59.932490, 30.3164291, "St Petersburg", "Europe/Moscow"),
-    (50.300624, 127.559166, "Blagoveshchensk", "Asia/Yakutsk"),
-    (42.439370, -71.0700416, "Boston", "America/New_York"),
-    (41.84937, -87.6611995, "Chicago", "America/Chicago"),
-    (28.626873, -81.7584514, "Orlando", "America/New_York"),
-    (47.610615, -122.3324847, "Seattle", "America/Los_Angeles"),
-    (51.499990, -0.1353549, "London", "Europe/London"),
-    (51.256241, -0.8186531, "Church Crookham", "Europe/London"),
-    (51.292215, -0.8002638, "Fleet", "Europe/London"),
-    (48.868743, 2.3237586, "Paris", "Europe/Paris"),
-    (22.158114, 113.5504603, "Macau", "Asia/Macau"),
-    (56.833123, 60.6097054, "Russia", "Asia/Yekaterinburg"),
-    (60.887496, 26.6375756, "Salo", "Europe/Helsinki"),
-    (52.799992, -1.8524408, "Staffordshire", "Europe/London"),
-    (5.016666, 115.0666667, "Muara", "Asia/Brunei"),
-    (-41.466666, -72.95, "Puerto Montt seaport", "America/Santiago"),
-    (34.566666, 33.0333333, "Akrotiri seaport", "Asia/Nicosia"),
-    (37.466666, 126.6166667, "Inchon seaport", "Asia/Seoul"),
-    (42.8, 132.8833333, "Nakhodka seaport", "Asia/Vladivostok"),
-    (50.26, -5.051, "Truro", "Europe/London"),
-    (37.790792, -122.389980, "San Francisco", "America/Los_Angeles"),
-    (37.81, -122.35, "San Francisco Bay", "America/Los_Angeles"),
-    (68.3597987, -133.745786, "America", "America/Inuvik"),
-    # lng 180 == -180
-    # 180.0: right on the timezone boundary polygon edge, the return value is uncertain (None in this case)
-    # being tested in test_helpers.py
-    (65.2, 179.9999, "lng 180", "Asia/Anadyr"),
-    (65.2, -179.9999, "lng -180", "Asia/Anadyr"),
-    # test cases for hole handling:
-    (41.0702284, 45.0036352, "Aserbaid. Enklave", "Asia/Yerevan"),
-    (39.8417402, 70.6020068, "Tajikistani Enklave", "Asia/Dushanbe"),
-    (47.7024174, 8.6848462, "Busingen Ger", "Europe/Busingen"),
-    (46.2085101, 6.1246227, "Genf", "Europe/Zurich"),
-    (-29.391356857138753, 28.50989829115889, "Lesotho", "Africa/Maseru"),
-    (39.93143377877638, 71.08546583764965, "Uzbek enclave1", "Asia/Tashkent"),
-    (39.969915, 71.134060, "Uzbek enclave2", "Asia/Tashkent"),
-    (39.862402, 70.568449, "Tajik enclave", "Asia/Dushanbe"),
-    (35.7396116, -110.15029571, "Arizona Desert 1", "America/Denver"),
-    (36.4091869, -110.7520236, "Arizona Desert 2", "America/Phoenix"),
-    (36.10230848, -111.1882385, "Arizona Desert 3", "America/Phoenix"),
-    # ocean:
-    (37.81, -123.5, "Far off San Fran.", "Etc/GMT+8"),
-    (50.26, -9.0, "Far off Cornwall", "Etc/GMT+1"),
-    (50.5, 1, "English Channel1", "Etc/GMT"),
-    (56.218, 19.4787, "baltic sea", "Etc/GMT-1"),
-]
-
-TEST_LOCATIONS_PROXIMITY = [
-    # TODO the data now contains ocean timezones, every point lies within a zone!
-    #  -> proximity tests are not meaningful at the moment
-    # (35.295953, -89.662186, 'Arlington, TN', 'America/Chicago'),
-    # (33.58, -85.85, 'Memphis, TN', 'America/Chicago'),
-    # (61.17, -150.02, 'Anchorage, AK', 'America/Anchorage'),
-    # (40.7271, -73.98, 'Shore Lake Michigan', 'America/New_York'),
-    # (51.032593, 1.4082031, 'English Channel1', 'Europe/London'),
-    # (50.9623651, 1.5732592, 'English Channel2', 'Europe/Paris'),
-    # (55.5609615, 12.850585, 'Oresund Bridge1', 'Europe/Stockholm'),
-    # (55.6056074, 12.7128568, 'Oresund Bridge2', 'Europe/Copenhagen'),
-]
 
 
 def ocean2land(test_locations):
@@ -168,6 +86,23 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     class_under_test = TimezoneFinderL
     on_land_pt_fct_name = "timezone_at"
     test_locations = BASIC_TEST_LOCATIONS
+
+    def test_using_numba(self):
+        numba_installed = False
+        try:
+            import numba
+
+            numba_installed = True
+        except ImportError:
+            pass
+
+        if numba_installed:
+            try:
+                from numba import b1, f8, i2, i4, njit, typeof, u2
+            except ImportError as exc:
+                raise ValueError("numba import failed:", exc) from exc
+
+        assert self.test_instance.using_numba() == numba_installed
 
     def print_tf_class_props(self):
         print("\n\ntest properties:")
@@ -230,34 +165,42 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             print("total time:", time_preprocess(t))
             pts_p_sec = len(list_of_points) / t
             exp = floor(log10(pts_p_sec))
-            pts_p_sec = round(pts_p_sec / 10 ** exp, 1)  # normalize
+            pts_p_sec = round(pts_p_sec / 10**exp, 1)  # normalize
             print("avg. points per second: {} * 10^{}".format(pts_p_sec, exp))
 
         print_speed_test("on land points", self.on_land_points)
         print_speed_test("random points", list_of_random_points(length=N))
 
-    def test_shortcut_boundary(self):
-        # at the boundaries of the shortcut grid (coordinate system) the algorithms should still be well defined!
-        assert self.test_instance.timezone_at(lng=-180.0, lat=90.0) == "Etc/GMT+12"
-        assert self.test_instance.timezone_at(lng=180.0, lat=90.0) == "Etc/GMT+12"
-        assert (
-            self.test_instance.timezone_at(lng=180.0, lat=-90.0) == "Antarctica/McMurdo"
-        )
-        assert (
-            self.test_instance.timezone_at(lng=-180.0, lat=-90.0)
-            == "Antarctica/McMurdo"
+    def check_boundary(self, lng, lat, expected: Optional[str] = ""):
+        # at the boundaries of the coordinate system the algorithms should still be well defined!
+
+        print(
+            [
+                self.test_instance.zone_name_from_poly_id(p)
+                for p in self.test_instance.get_shortcut_polys(lng=lng, lat=lat)
+            ]
         )
 
+        result = self.test_instance.timezone_at(lng=lng, lat=lat)
+        if isinstance(expected, str) and len(expected) == 0:
+            # zone_name="" is interpreted as "don't care"
+            return
+        assert result == expected
+
+    def test_shortcut_boundary_validity(self):
+        for lng, lat, _expected in BOUNDARY_TEST_CASES:
+            self.check_boundary(lng, lat)
+
         with pytest.raises(ValueError):
-            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.test_instance.timezone_at(
+            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
+            self.check_boundary(
                 lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
             )
-            self.test_instance.timezone_at(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.test_instance.timezone_at(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.test_instance.timezone_at(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.test_instance.timezone_at(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.test_instance.timezone_at(
+            self.check_boundary(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
+            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
+            self.check_boundary(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
+            self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
+            self.check_boundary(
                 lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
             )
 
@@ -272,19 +215,22 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             self.test_instance.timezone_at_land(23.0, lng=42.0)
             self.test_instance.timezone_at_land(23.0, lat=42.0)
 
-    def run_location_tests(self, test_fct, test_data):
+    @staticmethod
+    def run_location_tests(test_fct, test_data):
         no_mistakes_made = True
         print(RESULT_TEMPLATE.format("LOCATION", "EXPECTED", "COMPUTED", "Status"))
         print("====================================================================")
         for (lat, lng, loc, expected) in test_data:
             computed = test_fct(lng=lng, lat=lat)
-            if computed == expected:
+            results_equal = computed == expected
+            if results_equal:
                 ok = "OK"
             else:
-                print(lat, lng)
                 ok = "XX"
                 no_mistakes_made = False
             print(RESULT_TEMPLATE.format(loc, str(expected), str(computed), ok))
+            if not results_equal:
+                print(f"different results. coords: {lat} lat, {lng} lng")
         assert no_mistakes_made
 
     def test_timezone_at(self):
@@ -304,12 +250,12 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         )
 
     def test_timezone_name_attribute(self):
-        timezone_names_stored = getattr(self.test_instance, TIMEZONE_NAMES)
+        timezone_names_stored = self.test_instance.timezone_names
         with open(join(abs_default_path, TIMEZONE_NAMES_FILE), "r") as json_file:
             timezone_names_json = json.loads(json_file.read())
         assert list_equal(
             timezone_names_stored, timezone_names_json
-        ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {TIMEZONE_NAMES} are different."
+        ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
 
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
@@ -343,9 +289,10 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.certain_timezone_at(23.0, lng=42.0)
             self.test_instance.certain_timezone_at(23.0, lat=42.0)
 
-            self.test_instance.closest_timezone_at(23.0, 42.0)
-            self.test_instance.closest_timezone_at(23.0, lng=42.0)
-            self.test_instance.closest_timezone_at(23.0, lat=42.0)
+    def test_shortcut_boundary_result(self):
+        for lng, lat, expected in BOUNDARY_TEST_CASES:
+            # NOTE: for TimezoneFinder (using polygon data) the results must match!
+            self.check_boundary(lng, lat, expected)
 
     def test_certain_timezone_at(self):
         print(
@@ -353,12 +300,6 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
         )  # expected equal results to timezone_at(), is just slower
         self.run_location_tests(
             self.test_instance.certain_timezone_at, self.test_locations
-        )
-
-    def test_closest_timezone_at(self):
-        print("\ntestin closest_timezone_at():")
-        self.run_location_tests(
-            self.test_instance.closest_timezone_at, TEST_LOCATIONS_PROXIMITY
         )
 
     def test_overflow(self):
@@ -378,7 +319,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
 
     def test_get_geometry(self):
         print("testing get_geometry():")
-        timezone_names_stored = getattr(self.test_instance, TIMEZONE_NAMES)
+        timezone_names_stored = self.test_instance.timezone_names
         nr_timezones = len(timezone_names_stored)
         for zone_id, zone_name in enumerate(timezone_names_stored):
             print(zone_id, zone_name)
@@ -387,32 +328,35 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             )
             check_geometry(geometry_from_name)
 
-            if DEBUG:  # only with active debugging conduct extensive testing (requ
-                geometry_from_id = self.test_instance.get_geometry(
-                    tz_name=zone_name,
-                    tz_id=zone_id,
-                    use_id=False,
-                    coords_as_pairs=False,
-                )
-                # not necessary:
-                # assert nested_list_equal(geometry_from_id, geometry_from_name), \
-                assert len(geometry_from_name) == len(
-                    geometry_from_id
-                ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-                check_geometry(geometry_from_id)
+            if not DEBUG:
+                continue
 
-                geometry_from_name = self.test_instance.get_geometry(
-                    tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
-                )
-                geometry_from_id = self.test_instance.get_geometry(
-                    tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
-                )
-                assert len(geometry_from_name) == len(
-                    geometry_from_id
-                ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            # conduct extensive testing only with active debugging
+            geometry_from_id = self.test_instance.get_geometry(
+                tz_name=zone_name,
+                tz_id=zone_id,
+                use_id=False,
+                coords_as_pairs=False,
+            )
+            # not necessary:
+            # assert nested_list_equal(geometry_from_id, geometry_from_name), \
+            assert len(geometry_from_name) == len(
+                geometry_from_id
+            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            check_geometry(geometry_from_id)
 
-                check_pairwise_geometry(geometry_from_id)
-                check_pairwise_geometry(geometry_from_name)
+            geometry_from_name = self.test_instance.get_geometry(
+                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
+            )
+            geometry_from_id = self.test_instance.get_geometry(
+                tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
+            )
+            assert len(geometry_from_name) == len(
+                geometry_from_id
+            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+
+            check_pairwise_geometry(geometry_from_id)
+            check_pairwise_geometry(geometry_from_name)
 
         with pytest.raises(ValueError):
             self.test_instance.get_geometry(

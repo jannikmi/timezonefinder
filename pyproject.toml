@@ -1,19 +1,19 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "5.2.0"
+version = "0"
 description = ""
 authors = ["jannikmi <github@michelfe.it>"]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.10"
-numpy = "^1.20.3"
-numba = { version = "^0.54.1", optional = true }
+python = ">=3.7,<3.11"
+numpy = "^1.20"
+h3 = "^3.7.3"
+numba = { version = "^0.55", optional = true }
 
 [tool.poetry.dev-dependencies]
-poetry = "^1.1.11"
+poetry = "^1.1.13"
 tox = "*"
 pytest = "*"
-pytest-cov = "*"
 pre-commit = "*"
 mypy = "*"
 pylint = "*"
@@ -22,13 +22,21 @@ isort = "*"
 twine = "*"
 rstcheck = "*"
 sphinx = "*"
+pydantic = "^1.9.0"
 
 
 [tool.poetry.extras]
 numba = ["numba"]
 
+[tool.poetry-version-plugin]
+source = "git-tag"
 
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3

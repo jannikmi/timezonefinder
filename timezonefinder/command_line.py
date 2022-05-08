@@ -7,14 +7,13 @@ tfL = TimezoneFinderL()
 functions = [
     tf.timezone_at,
     tf.certain_timezone_at,
-    tf.closest_timezone_at,
+    None,
     tfL.timezone_at,
     tfL.timezone_at_land,
     tf.timezone_at_land,
 ]
 
 
-# TODO write test case
 def main():
     parser = argparse.ArgumentParser(description="parse TimezoneFinder parameters")
     parser.add_argument("lng", type=float, help="longitude to be queried")
@@ -24,12 +23,12 @@ def main():
         "-f",
         "--function",
         type=int,
-        choices=[0, 1, 2, 3, 4, 5],
+        choices=[0, 1, 3, 4, 5],
         default=0,
         help="function to be called:"
         "0: TimezoneFinder.timezone_at(), "
         "1: TimezoneFinder.certain_timezone_at(), "
-        "2: TimezoneFinder.closest_timezone_at(), "
+        "2: removed, "
         "3: TimezoneFinderL.timezone_at(), "
         "4: TimezoneFinderL.timezone_at_land(), "
         "5: TimezoneFinder.timezone_at_land(), ",
