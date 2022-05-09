@@ -60,14 +60,10 @@ jobs:
         id: fetch_version
         run: echo "::set-output name=version_nr::$(python scripts/read_package_version.py)"
 
-      - name: Install build dependencies
-        # NOTE: takes version number from git tag
-        run: |
-          pip install poetry
-
       - name: Build a binary wheel and a source tarball
-        # TODO --python-tag py37.py38.py39.py310
-        run: poetry build
+        run: |
+          python -m pip install setuptools
+          python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master

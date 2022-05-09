@@ -14,7 +14,7 @@ Future TODOs:
 * enable Numba ahead of time compilation
 * convert all these todos into tickets in GitHub
 * enable strict typing
-
+* poetry only build process. use only pyproject.toml (includes single sourcing version number)
 
 
 6.0.0 (2022-05-08)

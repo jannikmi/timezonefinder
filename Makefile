@@ -41,11 +41,11 @@ clean:
 
 build:
 	rm -r -f build
-	pip install poetry>=1.2.0b1
-	poetry plugin add poetry-version-plugin
-	@# TODO cat not working
-	git tag $(cat ./VERSION)
-	poetry build
+	python -m pip install setuptools
+	python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
+	#python -m pip install build --user
+	#python -m build --sdist --wheel --outdir dist/ .
+	#poetry build
 
 
 .PHONY: clean test build
