@@ -60,7 +60,7 @@ jobs:
 
       - name: Fetch version
         id: fetch_version
-        run: echo "::set-output name=version_nr::$(python scripts/read_package_version.py)"
+        run: echo "::set-output name=version_nr::$(cat VERSION)"
 
       - name: Build a binary wheel and a source tarball
         run: |

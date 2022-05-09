@@ -4,6 +4,7 @@ include .pre-commit-config.yaml
 include CHANGELOG.rst
 include CONTRIBUTING.rst
 include LICENSE
+include VERSION
 include Makefile
 include README.rst
 include parse_data.sh
@@ -17,6 +18,7 @@ include runtests.py
 recursive-include timezonefinder *.bin
 recursive-include timezonefinder *.json
 
+recursive-include scripts *.py
 recursive-include test *.py
 
 recursive-exclude * __pycache__
