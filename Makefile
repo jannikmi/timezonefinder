@@ -41,7 +41,7 @@ clean:
 
 build:
 	rm -r -f build
-	python -m pip install setuptools
+	pip install setuptools wheel
 	python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 	#python -m pip install build --user
 	#python -m build --sdist --wheel --outdir dist/ .
