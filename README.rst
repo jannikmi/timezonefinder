@@ -4,7 +4,7 @@ timezonefinder
 
 
 ..
-    Note: do not include the badges file from the docs as it won't get rendered on PyPI
+    Note: can't include the badges file from the docs here, as it won't render on PyPI -> sync manually
 
 .. image:: https://github.com/jannikmi/timezonefinder/actions/workflows/build.yml/badge.svg?branch=master
     :target: https://github.com/jannikmi/timezonefinder/actions?query=branch%3Amaster
@@ -12,9 +12,6 @@ timezonefinder
 .. image:: https://readthedocs.org/projects/timezonefinder/badge/?version=latest
     :alt: documentation status
     :target: https://timezonefinder.readthedocs.io/en/latest/?badge=latest
-
-.. image:: https://img.shields.io/circleci/project/github/conda-forge/timezonefinder-feedstock/master.svg?label=noarch
-    :target: https://circleci.com/gh/conda-forge/timezonefinder-feedstock
 
 .. image:: https://img.shields.io/pypi/wheel/timezonefinder.svg
     :target: https://pypi.python.org/pypi/timezonefinder
@@ -31,9 +28,9 @@ timezonefinder
     :alt: latest version on PyPI
     :target: https://pypi.python.org/pypi/timezonefinder
 
-.. image:: https://anaconda.org/conda-forge/timezonefinder/badges/version.svg
-    :alt: latest version on Conda
-    :target: https://anaconda.org/conda-forge/timezonefinder
+.. image:: https://img.shields.io/conda/vn/conda-forge/timezonefinder.svg
+   :target: https://anaconda.org/conda-forge/timezonefinder
+   :alt: latest version on conda-forge
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
@@ -48,7 +45,7 @@ Quick Guide:
 
 ::
 
-    pip install timezonefinder[numba] # also installs numba -> x100 speedup
+    pip install timezonefinder[numba] # also installs optional dependencies for increased performance
 
 
 .. code-block:: python
@@ -56,8 +53,7 @@ Quick Guide:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # returns 'Europe/Berlin'
 
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
