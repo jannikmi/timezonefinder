@@ -63,7 +63,7 @@ jobs:
       - name: Build a binary wheel and a source tarball
         run: |
           python -m pip install setuptools
-          python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
+          python setup.py 'sdist' 'bdist_wheel' --python-tag 'py37.py38.py39.py310'
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master
