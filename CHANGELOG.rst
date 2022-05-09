@@ -17,7 +17,7 @@ Future TODOs:
 * poetry only build process. use only pyproject.toml (includes single sourcing version number)
 
 
-6.0.0 (2022-05-08)
+6.0.0 (2022-05-09)
 ------------------
 
 breaking changes:
