@@ -13,16 +13,15 @@ see instructions at `conda-forge feedstock <https://github.com/conda-forge/timez
 
 
 
-Installation with pip:
-in your command line:
+Minimal installation with pip:
 
 ::
 
     pip install timezonefinder
 
 
-If the vanilla Python code is too slow for you, the time critical algorithms (in ``utils.py``) will be automatically JIT compiled if you have ``numba`` installed.
-This speeds things up by a factor of around 100 (cf. :ref:`speed test results <speed-tests>`).
+It is highly recommended to also install ``numba`` for increased performance (cf. :ref:`speed test results <speed-tests>`).
+With ``numba`` installed, the time critical algorithms will be automatically JIT compiled (cf. ``utils.py``).
 
 ::
 
@@ -33,7 +32,7 @@ This speeds things up by a factor of around 100 (cf. :ref:`speed test results <s
 Dependencies
 ------------
 
-``python3.6+``, ``numpy``, (``numba``)
+``python3.7+``, ``numpy``, (``numba``)
 
 
 

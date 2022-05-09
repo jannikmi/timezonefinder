@@ -57,11 +57,12 @@ repos:
 #        args: [ "--no-build-isolation", "--ignore", "*.png,docs/*,build_n_install.py,publish.py,readthedocs.yml" ]
 #        additional_dependencies: [ numpy ]
 
-## TODO make compatible with sphinx check
-#  -   repo: https://github.com/myint/rstcheck
-#      rev: 'v5.0.0'
-#      hooks:
-#      -   id: rstcheck
+  # TODO also check docs/. make compatible with sphinx
+  -   repo: https://github.com/myint/rstcheck
+      rev: 'v5.0.0'
+      hooks:
+      -   id: rstcheck
+          exclude: ^(docs/)
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.32.1

@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   test:
@@ -52,26 +53,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
       - name: Fetch version
         id: fetch_version
         run: echo "::set-output name=version_nr::$(cat VERSION)"
 
-      - name: Create and push git tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{ steps.fetch_version.outputs.version_nr }}
-
-      - name: Install build dependencies
-        # NOTE: takes version number from git tag
-        run: |
-          pip install 'poetry>=1.2.0a1'
-          poetry plugin add poetry-version-plugin
-
       - name: Build a binary wheel and a source tarball
-        # TODO --python-tag py37.py38.py39.py310
-        run: poetry build
+        run: |
+          pip install setuptools wheel
+          python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master

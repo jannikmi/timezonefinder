@@ -8,6 +8,7 @@ SHELL=/bin/bash
 pin:
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
 	@poetry update -vv
+	#poetry export -f requirements.txt --output docs/requirements.txt --without-hashes
 
 req:
 	@echo "installing the development dependencies..."
@@ -40,11 +41,11 @@ clean:
 
 build:
 	rm -r -f build
-	pip install poetry>=1.2.0b1
-	poetry plugin add poetry-version-plugin
-	@# TODO cat not working
-	git tag $(cat ./VERSION)
-	poetry build
+	pip install setuptools wheel
+	python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
+	#python -m pip install build --user
+	#python -m build --sdist --wheel --outdir dist/ .
+	#poetry build
 
 
 .PHONY: clean test build
