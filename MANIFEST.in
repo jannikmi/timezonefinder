@@ -6,7 +6,6 @@ include CONTRIBUTING.rst
 include LICENSE
 include Makefile
 include README.rst
-include VERSION
 include parse_data.sh
 include .editorconfig
 include .coveragerc

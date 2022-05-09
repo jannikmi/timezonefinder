@@ -8,6 +8,7 @@ SHELL=/bin/bash
 pin:
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
 	@poetry update -vv
+	#poetry export -f requirements.txt --output docs/requirements.txt --without-hashes
 
 req:
 	@echo "installing the development dependencies..."
