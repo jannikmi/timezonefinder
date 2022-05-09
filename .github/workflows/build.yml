@@ -55,15 +55,15 @@ jobs:
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
 
       - name: Fetch version
         id: fetch_version
         run: echo "::set-output name=version_nr::$(python scripts/read_package_version.py)"
 
       - name: Build a binary wheel and a source tarball
-        run: |
-          python -m pip install setuptools
-          python setup.py 'sdist' 'bdist_wheel' --python-tag 'py37.py38.py39.py310'
+        run: python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master
