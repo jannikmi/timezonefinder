@@ -25,7 +25,7 @@ DEBUG = False
 PACKAGE_NAME = "timezonefinder"
 
 # number of points to test (in each test, on land and random ones)
-N = int(1e2)
+N = int(1e1)
 
 class_under_test = TimezoneFinder
 tf: AbstractTimezoneFinder = class_under_test()
