@@ -11,6 +11,7 @@ include parse_data.sh
 include .editorconfig
 include .coveragerc
 include tox.ini
+include py.typed
 include pyproject.toml
 include poetry.lock
 include runtests.py
