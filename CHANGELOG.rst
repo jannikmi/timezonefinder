@@ -17,6 +17,12 @@ Future TODOs:
 * poetry only build process. use only pyproject.toml (includes single sourcing version number)
 
 
+6.0.1 (2022-05-20)
+------------------
+
+* explicitly included `py.typed` in the package to allow mypy users to run static type checking
+
+
 6.0.0 (2022-05-09)
 ------------------
 
