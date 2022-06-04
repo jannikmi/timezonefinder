@@ -8,48 +8,47 @@ on:
   workflow_dispatch:
 
 jobs:
-# TODO enable
-#  test:
-#    runs-on: ubuntu-latest
-#    strategy:
-#      # By default, GitHub will maximize the number of jobs run in parallel
-#      # depending on the available runners on GitHub-hosted virtual machines.
-#      # max-parallel: 8
-#      fail-fast: false
-#      matrix:
-#        python-version:
-#          - "3.7"
-#          - "3.8"
-#          - "3.9"
-#          - "3.10"
-#    env:
-#      TOXENV: ${{ matrix.tox-env }}
-#      TOX_SKIP_MISSING_INTERPRETERS: False
-#    steps:
-#      - uses: actions/checkout@v2
-#
-#      - name: Run pre-commit hook
-#        uses: pre-commit/action@v2.0.3
-#        with:
-#          token: ${{ secrets.GITHUB_TOKEN }}
-#
-#      - name: Set up Python ${{ matrix.python-version }}
-#        uses: actions/setup-python@v2
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#
-#      - name: Upgrade pip version
-#        run: pip install -U pip
-#
-#      - name: Install test dependencies
-#        run: pip install tox tox-gh-actions poetry
-#
-#      - name: Run tox
-#        run: tox
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # By default, GitHub will maximize the number of jobs run in parallel
+      # depending on the available runners on GitHub-hosted virtual machines.
+      # max-parallel: 8
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10"
+    env:
+      TOXENV: ${{ matrix.tox-env }}
+      TOX_SKIP_MISSING_INTERPRETERS: False
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v2.0.3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Upgrade pip version
+        run: pip install -U pip
+
+      - name: Install test dependencies
+        run: pip install tox tox-gh-actions poetry
+
+      - name: Run tox
+        run: tox
 
   deploy:
     runs-on: ubuntu-latest
-#    needs: test
+    needs: test
     if: endsWith(github.ref, '/master')
     steps:
       - uses: actions/checkout@v2
