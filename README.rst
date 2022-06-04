@@ -53,7 +53,7 @@ Quick Guide:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # returns 'Europe/Berlin'
+    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.

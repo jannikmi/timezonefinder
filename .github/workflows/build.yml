@@ -67,12 +67,12 @@ jobs:
           pip install setuptools wheel
           python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 
-#        # TODO enable
-#      - name: Test PyPI Publishing
-#        uses: pypa/gh-action-pypi-publish@master
-#        with:
-#          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-#          repository_url: https://test.pypi.org/legacy/
+        # TODO enable
+      - name: Test PyPI Publishing
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+          repository_url: https://test.pypi.org/legacy/
 
       - name: Create GitHub Release
         id: create_gh_release
