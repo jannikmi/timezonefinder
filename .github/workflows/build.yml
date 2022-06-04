@@ -67,24 +67,24 @@ jobs:
           pip install setuptools wheel
           python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
 
-      - name: Test PyPI Publishing
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-          repository_url: https://test.pypi.org/legacy/
-
-      - name: Create GitHub Release
-        id: create_gh_release
-        uses: actions/create-release@v1
-        env:
-          # use token provided by Actions
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.fetch_version.outputs.version_nr }}
-        with:
-          tag_name: ${{env.VERSION}}
-          release_name: Release ${{env.VERSION}}
-          draft: false
-          prerelease: false
+#      - name: Test PyPI Publishing
+#        uses: pypa/gh-action-pypi-publish@master
+#        with:
+#          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+#          repository_url: https://test.pypi.org/legacy/
+#
+#      - name: Create GitHub Release
+#        id: create_gh_release
+#        uses: actions/create-release@v1
+#        env:
+#          # use token provided by Actions
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          VERSION: ${{ steps.fetch_version.outputs.version_nr }}
+#        with:
+#          tag_name: ${{env.VERSION}}
+#          release_name: Release ${{env.VERSION}}
+#          draft: false
+#          prerelease: false
 
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
