@@ -45,6 +45,12 @@ jobs:
       - name: Run tox
         run: tox
 
+      - name: test poetry build
+        run: poetry build
+
+      - name: test poetry publish
+        run: poetry publish --dry-run
+
   deploy:
     runs-on: ubuntu-latest
     needs: test
