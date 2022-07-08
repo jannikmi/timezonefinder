@@ -16,6 +16,13 @@ Future TODOs:
 * enable strict typing
 * poetry only build process. use only pyproject.toml (includes single sourcing version number)
 
+6.0.2 (2022-07-08)
+------------------
+
+* bump numpy dependency version to 1.22 (vulnerability fix)
+* officially supported python versions `>=3.8,<3.11` (due to numpy and numba constraints)
+* packaging now completely based on pyproject.toml (poetry)
+
 
 6.0.1 (2022-05-20)
 ------------------
