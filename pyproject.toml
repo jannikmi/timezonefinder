@@ -5,10 +5,10 @@ description = ""
 authors = ["jannikmi <github@michelfe.it>"]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.11"
-numpy = "^1.20"
+python = ">=3.8,<3.11"
+numpy = "^1.22"
 h3 = "^3.7.3"
-numba = { version = "^0.55", optional = true }
+numba = { version = "^0.55.2", optional = true }
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.13"
@@ -23,7 +23,7 @@ twine = "*"
 rstcheck = "*"
 sphinx = "*"
 pydantic = "^1.9.0"
-
+toml = "^0.10.2"
 
 [tool.poetry.extras]
 numba = ["numba"]
