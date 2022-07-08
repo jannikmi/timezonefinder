@@ -1,8 +1,47 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.0.1"
-description = ""
+version = "6.0.2"
+description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
+license = "MIT"
+readme = "README.rst"
+repository = "https://github.com/jannikmi/timezonefinder"
+homepage = "https://timezonefinder.michelfe.it/gui"
+documentation = "https://timezonefinder.readthedocs.io/en/latest/"
+keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Localization",
+]
+include = [
+    "timezonefinder/*.bin",
+    "timezonefinder/*.json",
+    "tests/*.py",
+    "scripts/*.py",
+    ".editorconfig",
+    ".pre-commit-config.yaml",
+    "CHANGELOG.rst",
+    "CONTRIBUTING.rst",
+    "LICENSE",
+    "Makefile",
+    "README.rst",
+    "runtests.py",
+    "tox.ini",
+    "py.typed",
+    "parse_data.sh",
+]
+#exclude = ["my_package/excluded.py"]
+
+[tool.poetry.scripts]
+timezonefinder = "timezonefinder.command_line:main"
+
+[options]
+zip_safe = "False"
+include_package_data = "True"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
@@ -28,14 +67,9 @@ toml = "^0.10.2"
 [tool.poetry.extras]
 numba = ["numba"]
 
-[tool.poetry-version-plugin]
-source = "git-tag"
-
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
 
 [tool.isort]
 profile = "black"
