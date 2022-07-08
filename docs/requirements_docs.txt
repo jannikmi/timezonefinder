@@ -1,5 +1,7 @@
-h3>=3.7.3
 # the minimal dependencies required to build the documentation
 # python3.6+
-numpy>=1.20.3
+h3
+numpy
+Sphinx
 sphinx_rtd_theme
+toml
