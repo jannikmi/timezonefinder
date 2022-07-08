@@ -19,9 +19,7 @@ from timezonefinder.configs import (
 )
 
 
-def export_shortcuts_binary(
-    global_mapping: Dict[int, List[int]], path2shortcuts: Path
-) -> int:
+def export_shortcuts_binary(global_mapping: Dict[int, List[int]], path2shortcuts: Path) -> int:
     """
     binary format:
         for every shortcut entry:

@@ -7,9 +7,7 @@ import numpy as np
 from scripts import file_converter
 from timezonefinder import configs, hex_helpers
 
-PATH2SHORTCUT_FILE = (
-    Path(__file__).parent.parent / "timezonefinder" / configs.SHORTCUT_FILE
-)
+PATH2SHORTCUT_FILE = Path(__file__).parent.parent / "timezonefinder" / configs.SHORTCUT_FILE
 
 shortcuts = hex_helpers.read_shortcuts_binary(PATH2SHORTCUT_FILE)
 
@@ -59,12 +57,8 @@ def test_unique_pole_cells():
         if hex.surr_n_pole:
             n_pole_ctr += 1
 
-    assert (
-        s_pole_ctr == 1
-    ), f"{s_pole_ctr} cells are considered to surround the south pole"
-    assert (
-        n_pole_ctr == 1
-    ), f"{n_pole_ctr} cells are considered to surround the north pole"
+    assert s_pole_ctr == 1, f"{s_pole_ctr} cells are considered to surround the south pole"
+    assert n_pole_ctr == 1, f"{n_pole_ctr} cells are considered to surround the north pole"
 
 
 def has_coherent_sequences(lst: List[int]) -> bool:
