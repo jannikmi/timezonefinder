@@ -6,8 +6,6 @@
 
 
 # ATTENTION: all required packages must be configured to be installed during the online build!
-# import timezonefinder  # needed for auto document
-
 
 # -- Path setup --------------------------------------------------------------
 
@@ -19,6 +17,9 @@ import os
 import sys
 
 # Get the project root dir, which is the parent dir of this
+from pathlib import Path
+
+import toml
 
 cwd = os.getcwd()
 project_root = os.path.dirname(cwd)
@@ -35,13 +36,14 @@ project = "timezonefinder"
 copyright = "2016, Jannik Michelfeit"
 author = "Jannik Michelfeit"
 
-
-def get_version():
-    return open(os.path.join(project_root, "VERSION")).read()
-
-
 # The full version, including alpha/beta/rc tags.
-release = get_version()
+# The full version, including alpha/beta/rc tags.
+path2proj_conf = Path(__file__).parent.parent / "pyproject.toml"
+project_config = toml.load(str(path2proj_conf))
+release = project_config["tool"]["poetry"]["version"]
+
+print("release version:", release)
+print(timezonefinder)
 
 # -- General configuration ---------------------------------------------------
 
