@@ -67,7 +67,7 @@ jobs:
 
       - name: Build a binary wheel and a source tarball
         run: |
-          python -m build
+          poetry build
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master
