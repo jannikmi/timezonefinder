@@ -66,6 +66,7 @@ jobs:
         run: echo "::set-output name=version_nr::$(poetry version -s)"
 
       - name: Build a binary wheel and a source tarball
+        # Note: poetry build required to support CLI script entrypoint in pyproject.toml?!
         run: |
           poetry build
 
