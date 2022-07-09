@@ -6,8 +6,6 @@
 
 
 # ATTENTION: all required packages must be configured to be installed during the online build!
-# import timezonefinder  # needed for auto document
-
 
 # -- Path setup --------------------------------------------------------------
 
@@ -16,6 +14,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
+import subprocess
 import sys
 
 # Get the project root dir, which is the parent dir of this
@@ -29,19 +28,17 @@ sys.path.insert(0, os.path.join(project_root))
 
 import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
 
+print(timezonefinder)
+
 # -- Project information -----------------------------------------------------
 
 project = "timezonefinder"
 copyright = "2016, Jannik Michelfeit"
 author = "Jannik Michelfeit"
 
-
-def get_version():
-    return open(os.path.join(project_root, "VERSION")).read()
-
-
 # The full version, including alpha/beta/rc tags.
-release = get_version()
+release = subprocess.getoutput("poetry version -s")
+print("release version:", release)
 
 # -- General configuration ---------------------------------------------------
 

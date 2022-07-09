@@ -257,9 +257,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     binary_data_attributes = BINARY_DATA_ATTRIBUTES
 
-    def __init__(
-        self, bin_file_location: Optional[str] = None, in_memory: bool = False
-    ):
+    def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
         super(TimezoneFinder, self).__init__(bin_file_location, in_memory)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
@@ -267,9 +265,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         with open(self.bin_file_location / HOLE_REGISTRY_FILE, "r") as json_file:
             hole_registry_tmp = json.loads(json_file.read())
             # convert the json string keys to int
-            setattr(
-                self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()}
-            )
+            setattr(self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()})
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
@@ -284,12 +280,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
         return np.array(
             [
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
+                self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
             ]
         )
 
@@ -311,12 +303,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
             nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
             hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
 
-            x_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-            )
-            y_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-            )
+            x_coords = self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)
+            y_coords = self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)
             yield np.array(
                 [
                     x_coords,
@@ -330,9 +318,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             conversion_method = convert2coord_pairs
         else:
             conversion_method = convert2coords
-        list_of_converted_polygons.append(
-            conversion_method(self.coords_of(polygon_nr=polygon_nr))
-        )
+        list_of_converted_polygons.append(conversion_method(self.coords_of(polygon_nr=polygon_nr)))
 
         for hole in self._holes_of_poly(polygon_nr):
             list_of_converted_polygons.append(conversion_method(hole))
@@ -362,9 +348,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             if not isinstance(tz_id, int):
                 raise TypeError("the zone id must be given as int.")
             if tz_id < 0 or tz_id >= self.nr_of_zones:
-                raise ValueError(
-                    f"the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones - 1}."
-                )
+                raise ValueError(f"the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones - 1}.")
         else:
             try:
                 tz_id = self.timezone_names.index(tz_name)
@@ -380,10 +364,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # (also exists for the last zone, cf. file_converter.py)
         next_zone_poly_id = unpack(DTYPE_FORMAT_H, poly_id2zone_id.read(NR_BYTES_H))[0]
         # read and return all polygons from this zone:
-        return [
-            self.get_polygon(poly_id, coords_as_pairs)
-            for poly_id in range(this_zone_poly_id, next_zone_poly_id)
-        ]
+        return [self.get_polygon(poly_id, coords_as_pairs) for poly_id in range(this_zone_poly_id, next_zone_poly_id)]
 
     def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
         # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32
@@ -405,9 +386,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             return False
 
         # when the point is within a hole of the polygon, this timezone must not be returned
-        if any(
-            iter(inside_polygon(x, y, hole) for hole in self._holes_of_poly(poly_id))
-        ):
+        if any(iter(inside_polygon(x, y, hole) for hole in self._holes_of_poly(poly_id))):
             return False
 
         # the query point is included in this polygon, but not any hole

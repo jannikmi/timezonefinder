@@ -4,12 +4,12 @@ import timeit
 import unittest
 from math import floor, log10
 from os.path import abspath, join, pardir
-from test.auxiliaries import list_equal, list_of_random_points, random_point
-from test.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from typing import List, Optional
 
 import pytest
 
+from tests.auxiliaries import list_equal, list_of_random_points, random_point
+from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
@@ -25,7 +25,7 @@ DEBUG = False
 PACKAGE_NAME = "timezonefinder"
 
 # number of points to test (in each test, on land and random ones)
-N = int(1e1)
+N = int(1e2)
 
 class_under_test = TimezoneFinder
 tf: AbstractTimezoneFinder = class_under_test()
@@ -57,16 +57,12 @@ def ocean2land(test_locations):
 
 def check_geometry(geometry_obj: List):
     coords = geometry_obj[0][0]
-    assert (
-        len(coords) == 2
-    ), "the polygon does not consist of two latitude longitude lists"
+    assert len(coords) == 2, "the polygon does not consist of two latitude longitude lists"
     x_coords, y_coords = coords
     nr_x_coords = len(x_coords)
     nr_y_coords = len(y_coords)
     assert nr_x_coords > 2, "a polygon must consist of more than 2 coordinates"
-    assert (
-        nr_x_coords == nr_y_coords
-    ), "the amount of x and y coordinates (lng, lat) must be equal"
+    assert nr_x_coords == nr_y_coords, "the amount of x and y coordinates (lng, lat) must be equal"
 
 
 def check_pairwise_geometry(geometry_obj: List):
@@ -74,9 +70,7 @@ def check_pairwise_geometry(geometry_obj: List):
     cord_pairs = geometry_obj[0][0]
     assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
     first_coord_pair = cord_pairs[0]
-    assert (
-        len(first_coord_pair) == 2
-    ), "the polygon does not consist of coordinate pairs as expected."
+    assert len(first_coord_pair) == 2, "the polygon does not consist of coordinate pairs as expected."
 
 
 # tests for TimezonefinderL class
@@ -105,7 +99,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         assert self.test_instance.using_numba() == numba_installed
 
     def print_tf_class_props(self):
-        print("\n\ntest properties:")
+        print("test properties:")
         print(f"testing class {self.class_under_test}")
         if self.class_under_test.using_numba():
             print("using_numba()==True (JIT compiled functions in use)")
@@ -122,14 +116,10 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         global in_memory_mode, class_under_test
         in_memory_mode = cls.in_memory_mode
         class_under_test = cls.class_under_test
-        t = timeit.timeit(
-            "class_under_test(in_memory=in_memory_mode)", globals=globals(), number=10
-        )
+        t = timeit.timeit("class_under_test(in_memory=in_memory_mode)", globals=globals(), number=10)
         print("startup time:", time_preprocess(t), "\n")
 
-        cls.test_instance = cls.class_under_test(
-            bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode
-        )
+        cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
 
         # create an array of points where timezone_finder finds something (on_land queries)
         print("collecting and storing", N, "on land points for the tests...")
@@ -151,9 +141,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         print("Done.\n")
 
     def test_speed(self):
-        print(
-            '\n\nSpeed Tests:\n-------------\n"on land points": points included in a timezone\n'
-        )
+        print('\n\nSpeed Tests:\n-------------\n"on land points": points included in a timezone')
         self.print_tf_class_props()
 
         def print_speed_test(type_of_points, list_of_points):
@@ -166,10 +154,15 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
             pts_p_sec = len(list_of_points) / t
             exp = floor(log10(pts_p_sec))
             pts_p_sec = round(pts_p_sec / 10**exp, 1)  # normalize
-            print("avg. points per second: {} * 10^{}".format(pts_p_sec, exp))
+            print(f"avg. points per second: {pts_p_sec} * 10^{exp}")
+            return exp
 
-        print_speed_test("on land points", self.on_land_points)
-        print_speed_test("random points", list_of_random_points(length=N))
+        exp = print_speed_test("on land points", self.on_land_points)
+        exp_rnd = print_speed_test("random points", list_of_random_points(length=N))
+
+        # assert exp >= 3
+        # assert exp_rnd >= 3
+        print("\n\n")
 
     def check_boundary(self, lng, lat, expected: Optional[str] = ""):
         # at the boundaries of the coordinate system the algorithms should still be well defined!
@@ -193,16 +186,12 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
 
         with pytest.raises(ValueError):
             self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.check_boundary(
-                lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-            )
+            self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
             self.check_boundary(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
             self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
             self.check_boundary(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
             self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.check_boundary(
-                lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-            )
+            self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
 
     def test_kwargs_only(self):
         # calling timezonefinder fcts without keyword arguments should raise an error
@@ -239,15 +228,11 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
 
     def test_timezone_at_land(self):
         print("\ntesting timezone_at_land():")
-        self.run_location_tests(
-            self.test_instance.timezone_at_land, ocean2land(self.test_locations)
-        )
+        self.run_location_tests(self.test_instance.timezone_at_land, ocean2land(self.test_locations))
 
     def test_unambiguous_timezone_at(self):
         print("\ntesting unambiguous_timezone_at():")
-        self.run_location_tests(
-            self.test_instance.unique_timezone_at, BASIC_TEST_LOCATIONS
-        )
+        self.run_location_tests(self.test_instance.unique_timezone_at, BASIC_TEST_LOCATIONS)
 
     def test_timezone_name_attribute(self):
         timezone_names_stored = self.test_instance.timezone_names
@@ -295,12 +280,8 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.check_boundary(lng, lat, expected)
 
     def test_certain_timezone_at(self):
-        print(
-            "\ntestin certain_timezone_at():"
-        )  # expected equal results to timezone_at(), is just slower
-        self.run_location_tests(
-            self.test_instance.certain_timezone_at, self.test_locations
-        )
+        print("\ntestin certain_timezone_at():")  # expected equal results to timezone_at(), is just slower
+        self.run_location_tests(self.test_instance.certain_timezone_at, self.test_locations)
 
     def test_overflow(self):
         longitude = -123.2
@@ -313,9 +294,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
 
         warnings.filterwarnings("error")
         # must not raise a warning
-        self.test_instance.certain_timezone_at(
-            lat=float(latitude), lng=float(longitude)
-        )
+        self.test_instance.certain_timezone_at(lat=float(latitude), lng=float(longitude))
 
     def test_get_geometry(self):
         print("testing get_geometry():")
@@ -359,25 +338,13 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             check_pairwise_geometry(geometry_from_name)
 
         with pytest.raises(ValueError):
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=0, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False
-            )
+            self.test_instance.get_geometry(tz_name="", tz_id=None, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name="", tz_id=0, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False)
             # id does not exist
-            self.test_instance.get_geometry(
-                tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
-            )
+            self.test_instance.get_geometry(tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False)
+            self.test_instance.get_geometry(tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False)
 
 
 class TimezonefinderClassTestMEM(TimezonefinderClassTest):

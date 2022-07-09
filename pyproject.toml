@@ -1,14 +1,49 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.0.1"
-description = ""
+version = "6.0.2"
+description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
+license = "MIT"
+readme = "README.rst"
+repository = "https://github.com/jannikmi/timezonefinder"
+homepage = "https://timezonefinder.michelfe.it/gui"
+documentation = "https://timezonefinder.readthedocs.io/en/latest/"
+keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Localization",
+]
+include = [
+    "timezonefinder/*.bin",
+    "timezonefinder/*.json",
+    "tests/*.py",
+    "scripts/*.py",
+    ".editorconfig",
+    ".pre-commit-config.yaml",
+    "CHANGELOG.rst",
+    "CONTRIBUTING.rst",
+    "LICENSE",
+    "Makefile",
+    "README.rst",
+    "runtests.py",
+    "tox.ini",
+    "py.typed",
+    "parse_data.sh",
+]
+#exclude = ["my_package/excluded.py"]
+
+[tool.poetry.scripts]
+timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.11"
-numpy = "^1.20"
+python = ">=3.8,<3.11"
+numpy = "^1.22"
 h3 = "^3.7.3"
-numba = { version = "^0.55", optional = true }
+numba = { version = "^0.55.2", optional = true }
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.13"
@@ -21,21 +56,17 @@ flake8 = "*"
 isort = "*"
 twine = "*"
 rstcheck = "*"
-sphinx = "*"
 pydantic = "^1.9.0"
+Sphinx = "^5.0.2"
+sphinx-rtd-theme = "^1.0.0"
 
 
 [tool.poetry.extras]
 numba = ["numba"]
 
-[tool.poetry-version-plugin]
-source = "git-tag"
-
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
 
 [tool.isort]
 profile = "black"

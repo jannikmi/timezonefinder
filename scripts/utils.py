@@ -187,9 +187,7 @@ def write_binary(
     path = abspath(join(output_path, bin_file_name + configs.BINARY_FILE_ENDING))
     print(f"writing {path}")
     with open(path, "wb") as output_file:
-        writing_fct(
-            output_file, data, data_format, lower_value_limit, upper_value_limit
-        )
+        writing_fct(output_file, data, data_format, lower_value_limit, upper_value_limit)
         file_length = output_file.tell()
     return file_length
 

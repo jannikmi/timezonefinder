@@ -8,13 +8,18 @@ Future TODOs:
 
 * improve test locations, expected results for all different methods,
 * parameterised tests
-* write test cases for command line functionality
 * document class attributes
 * create variables for used dtype for each type of data (polygon address, coordinate...), write generic functions for reading binary files using the right data type, performance? many fct calls
 * enable Numba ahead of time compilation
 * convert all these todos into tickets in GitHub
-* enable strict typing
-* poetry only build process. use only pyproject.toml (includes single sourcing version number)
+
+
+6.0.2 (2022-07-08)
+------------------
+
+* bump numpy dependency version to 1.22 (vulnerability fix)
+* officially supported python versions `>=3.8,<3.11` (due to numpy and numba constraints)
+* packaging now completely based on pyproject.toml (poetry)
 
 
 6.0.1 (2022-05-20)

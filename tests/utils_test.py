@@ -39,9 +39,7 @@ def test_convert2coord_pairs():
     coord_values = [float(x) for x in range(-2, 3, 1)]
     coord_polygon = (coord_values, coord_values)
     polygon_int = poly_conversion_fct(coord_polygon)
-    assert utils.convert2coord_pairs(polygon_int) == list(
-        zip(coord_values, coord_values)
-    )
+    assert utils.convert2coord_pairs(polygon_int) == list(zip(coord_values, coord_values))
 
 
 def test_convert2coords():
@@ -173,11 +171,7 @@ def test_inside_polygon():
                 print(coords)
                 ok = "XX"
                 no_mistakes_made = False
-            print(
-                template.format(
-                    str(n), str(i), str(expected_result), str(actual_result), ok
-                )
-            )
+            print(template.format(str(n), str(i), str(expected_result), str(actual_result), ok))
 
         print("\n")
 
@@ -196,16 +190,12 @@ def test_rectify_coords():
 
     with pytest.raises(ValueError):  # coords out of bounds
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-        )
+        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
         utils.validate_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
         utils.validate_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
         utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-        )
+        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
 
 
 @pytest.mark.parametrize(

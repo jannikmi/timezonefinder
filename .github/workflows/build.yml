@@ -17,7 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.7"
           - "3.8"
           - "3.9"
           - "3.10"
@@ -56,16 +55,20 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.8
+
+      - name: Install build dependencies
+        run: |
+          pip install poetry
 
       - name: Fetch version
         id: fetch_version
-        run: echo "::set-output name=version_nr::$(cat VERSION)"
+        run: echo "::set-output name=version_nr::$(poetry version -s)"
 
       - name: Build a binary wheel and a source tarball
+        # Note: poetry build required to support CLI script entrypoint in pyproject.toml?!
         run: |
-          pip install setuptools wheel
-          python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
+          poetry build
 
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@master
