@@ -39,10 +39,6 @@ include = [
 [tool.poetry.scripts]
 timezonefinder = "timezonefinder.command_line:main"
 
-[options]
-zip_safe = "False"
-include_package_data = "True"
-
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 numpy = "^1.22"
