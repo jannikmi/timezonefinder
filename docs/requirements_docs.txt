@@ -4,4 +4,3 @@ h3
 numpy
 Sphinx
 sphinx_rtd_theme
-toml

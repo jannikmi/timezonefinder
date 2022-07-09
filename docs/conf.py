@@ -14,12 +14,10 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
+import subprocess
 import sys
 
 # Get the project root dir, which is the parent dir of this
-from pathlib import Path
-
-import toml
 
 cwd = os.getcwd()
 project_root = os.path.dirname(cwd)
@@ -30,6 +28,8 @@ sys.path.insert(0, os.path.join(project_root))
 
 import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
 
+print(timezonefinder)
+
 # -- Project information -----------------------------------------------------
 
 project = "timezonefinder"
@@ -37,13 +37,8 @@ copyright = "2016, Jannik Michelfeit"
 author = "Jannik Michelfeit"
 
 # The full version, including alpha/beta/rc tags.
-# The full version, including alpha/beta/rc tags.
-path2proj_conf = Path(__file__).parent.parent / "pyproject.toml"
-project_config = toml.load(str(path2proj_conf))
-release = project_config["tool"]["poetry"]["version"]
-
+release = subprocess.getoutput("poetry version -s")
 print("release version:", release)
-print(timezonefinder)
 
 # -- General configuration ---------------------------------------------------
 
