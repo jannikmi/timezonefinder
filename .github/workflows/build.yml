@@ -59,7 +59,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          pip install poetry build
+          pip install poetry
 
       - name: Fetch version
         id: fetch_version
