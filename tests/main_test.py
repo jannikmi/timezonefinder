@@ -4,12 +4,12 @@ import timeit
 import unittest
 from math import floor, log10
 from os.path import abspath, join, pardir
-from test.auxiliaries import list_equal, list_of_random_points, random_point
-from test.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from typing import List, Optional
 
 import pytest
 
+from tests.auxiliaries import list_equal, list_of_random_points, random_point
+from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,

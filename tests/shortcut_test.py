@@ -34,10 +34,9 @@ def test_import_export():
 
 def test_resolutions():
     shortcut_hex_ids = shortcuts.keys()
-    resolutions = map(lambda h: h3.h3_get_resolution(h), shortcut_hex_ids)
-    assert all(
-        map(lambda res: res == configs.SHORTCUT_H3_RES, resolutions)
-    ), f"not all shortcut resolutions match the expected resolution {configs.SHORTCUT_H3_RES}"
+    resolutions = [h3.h3_get_resolution(h) for h in shortcut_hex_ids]
+    res_matched = [res == configs.SHORTCUT_H3_RES for res in resolutions]
+    assert all(res_matched), f"not all shortcut resolutions match the expected resolution {configs.SHORTCUT_H3_RES}"
 
 
 def test_empty_shortcut():

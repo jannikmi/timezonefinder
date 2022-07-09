@@ -13,7 +13,6 @@ repos:
       - id: pretty-format-json
         args: [ "--autofix" ]
       - id: check-merge-conflict
-      - id: name-tests-test
       - id: check-docstring-first
       - id: requirements-txt-fixer
       - id: detect-private-key
@@ -42,7 +41,7 @@ repos:
     rev: 3.9.2
     hooks:
       - id: flake8
-        exclude: ^(docs|scripts|test)/
+        exclude: ^(docs|scripts|tests)/
         args:
           - --ignore=E402 # E402 module level import not at top of file
           - --max-line-length=120
@@ -74,7 +73,7 @@ repos:
     rev: v0.961
     hooks:
       - id: mypy
-        exclude: ^((test|scripts)/)
+        exclude: ^((tests|scripts)/)
         additional_dependencies: [types-toml]
 #
 #  - repo: https://github.com/mgedmin/check-manifest
