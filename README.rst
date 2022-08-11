@@ -43,9 +43,9 @@ timezone for given coordinates on earth entirely offline.
 
 Quick Guide:
 
-::
+.. code-block:: console
 
-    pip install timezonefinder[numba] # also installs optional dependencies for increased performance
+    pip install timezonefinder[numba] # + optional dependencies for increased performance
 
 
 .. code-block:: python

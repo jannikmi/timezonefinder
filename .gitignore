@@ -18,6 +18,8 @@ tmp_shortcut.bin
 # Sphinx
 docs/_build
 
+# C extensions
+*.o
 
 
 

@@ -15,7 +15,8 @@ see instructions at `conda-forge feedstock <https://github.com/conda-forge/timez
 
 Minimal installation with pip:
 
-::
+
+.. code-block:: console
 
     pip install timezonefinder
 
@@ -23,7 +24,8 @@ Minimal installation with pip:
 It is highly recommended to also install ``numba`` for increased performance (cf. :ref:`speed test results <speed-tests>`).
 With ``numba`` installed, the time critical algorithms will be automatically JIT compiled (cf. ``utils.py``).
 
-::
+
+.. code-block:: console
 
     pip install timezonefinder[numba]
 

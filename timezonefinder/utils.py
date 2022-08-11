@@ -15,16 +15,22 @@ if __name__ == "__main__":
 import re
 from io import SEEK_CUR
 
+import cffi
 import numpy as np
 from numpy import dtype, frombuffer, int64
 
+# TODO remove
 using_numba = True
 try:
-    from numba import b1, f8, i2, i4, njit, typeof, u2
+    from numba import f8, i2, i4, njit, typeof, u2
 except ImportError:
     using_numba = False
     # replace numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, typeof, u2
+    from timezonefinder._numba_replacements import f8, i2, i4, njit, typeof, u2
+
+# Note: IDE might complain as this import comes from a cffi C extension
+# TODO rename
+import cffi_example
 
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
@@ -32,14 +38,18 @@ from timezonefinder.configs import (
     OCEAN_TIMEZONE_PREFIX,
 )
 
+ffi = cffi.FFI()
+
 dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
 dtype_2float_tuple = typeof((1.0, 1.0))
 dtype_2int_tuple = typeof((1, 1))
 
 
+# TODO switch implementation
+# TODO test both implementations
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-@njit(b1(i4, i4, i4[:, :]), cache=True)
-def inside_polygon(x, y, coordinates):
+# @njit(b1(i4, i4, i4[:, :]), cache=True)
+def inside(x, y, nr_coords, x_coords, y_coords):
     """
     Implementing the ray casting point in polygon test algorithm
     cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
@@ -68,7 +78,93 @@ def inside_polygon(x, y, coordinates):
      (cf. https://www.python.org/dev/peps/pep-0237/),
      but here the data types are numpy internal static data types. The data is stored as int32
      -> use int64 when comparing slopes!
+
+    inside = False
+    j = nr_coords - 1
+    for i in range(nr_coords):
+        if ((y_coords[i] > y) != (y_coords[j] > y)) and (
+            x
+            < (int64(x_coords[j]) - int64(x_coords[i]))
+            * (int64(y) - int64(y_coords[i]))
+            / (int64(y_coords[j]) - int64(y_coords[i]))
+            + int64(x_coords[i])
+        ):
+            inside = not inside
+        j = i
+        i += 1
+
+    return inside
+
     """
+
+    contained = False
+    # the edge from the last to the first point is checked first
+    i = -1
+    y1 = y_coords[i]
+    y_gt_y1 = y > y1
+    for i in range(nr_coords):
+        y2 = y_coords[i]
+        y_gt_y2 = y > y2
+        if y_gt_y1 ^ y_gt_y2:  # XOR
+            # [p1-p2] crosses horizontal line in p
+            x1 = x_coords[i - 1]
+            x2 = x_coords[i]
+            # only count crossings "right" of the point ( >= x)
+            x_le_x1 = x <= x1
+            x_le_x2 = x <= x2
+            if x_le_x1 or x_le_x2:
+                if x_le_x1 and x_le_x2:
+                    # p1 and p2 are both to the right -> valid crossing
+                    contained = not contained
+                else:
+                    # compare the slope of the line [p1-p2] and [p-p2]
+                    # depending on the position of p2 this determines whether
+                    # the polygon edge is right or left of the point
+                    # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
+                    # ( dy/dx > a  ==  dy > a * dx )
+                    # only one of the points is to the right
+                    # NOTE: int64 precision required to prevent overflow
+                    y_64 = int64(y)
+                    y1_64 = int64(y1)
+                    y2_64 = int64(y2)
+                    x_64 = int64(x)
+                    x1_64 = int64(x1)
+                    x2_64 = int64(x2)
+                    slope1 = (y2_64 - y_64) * (x2_64 - x1_64)
+                    slope2 = (y2_64 - y1_64) * (x2_64 - x_64)
+                    # NOTE: accept slope equality to also detect if p lies directly on an edge
+                    if y_gt_y1:
+                        if slope1 <= slope2:
+                            contained = not contained
+                    elif slope1 >= slope2:  # NOT y_gt_y1
+                        contained = not contained
+
+        # next point
+        y1 = y2
+        y_gt_y1 = y_gt_y2
+        i += 1
+
+    return contained
+
+
+def inside_polygon(x, y, coordinates):
+    x_coords = coordinates[0]
+    y_coords = coordinates[1]
+    return inside(x, y, len(x_coords), x_coords, y_coords)
+
+    # TODO numpy.ascontiguousarray before passing it to the buffer if there
+    #  is a chance the array does not have a C_CONTIGUOUS memory layout.
+    # https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
+    INT_DTYPE = np.int64
+    # TODO move to data reading
+    x_coords = np.ascontiguousarray(coordinates[0], dtype=INT_DTYPE)
+    y_coords = np.ascontiguousarray(coordinates[1], dtype=INT_DTYPE)
+    x_coords_ffi = ffi.from_buffer("long []", x_coords)
+    y_coords_ffi = ffi.from_buffer("long []", y_coords)
+
+    contained = cffi_example.lib.cmult(x, y, len(x_coords), x_coords_ffi, y_coords_ffi)
+    return contained
+
     contained = False
     # the edge from the last to the first point is checked first
     i = -1

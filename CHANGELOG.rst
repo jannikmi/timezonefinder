@@ -17,15 +17,15 @@ Future TODOs:
 6.0.2 (2022-07-08)
 ------------------
 
-* bump numpy dependency version to 1.22 (vulnerability fix)
-* officially supported python versions `>=3.8,<3.11` (due to numpy and numba constraints)
+* bump numpy dependency version to ``1.22`` (vulnerability fix)
+* officially supported python versions ``>=3.8,<3.11`` (due to numpy and numba constraints)
 * packaging now completely based on pyproject.toml (poetry)
 
 
 6.0.1 (2022-05-20)
 ------------------
 
-* explicitly included `py.typed` in the package to allow mypy users to run static type checking
+* explicitly included ``py.typed`` in the package to allow mypy users to run static type checking
 
 
 6.0.0 (2022-05-09)

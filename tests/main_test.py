@@ -296,55 +296,56 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
         # must not raise a warning
         self.test_instance.certain_timezone_at(lat=float(latitude), lng=float(longitude))
 
-    def test_get_geometry(self):
-        print("testing get_geometry():")
-        timezone_names_stored = self.test_instance.timezone_names
-        nr_timezones = len(timezone_names_stored)
-        for zone_id, zone_name in enumerate(timezone_names_stored):
-            print(zone_id, zone_name)
-            geometry_from_name = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            check_geometry(geometry_from_name)
-
-            if not DEBUG:
-                continue
-
-            # conduct extensive testing only with active debugging
-            geometry_from_id = self.test_instance.get_geometry(
-                tz_name=zone_name,
-                tz_id=zone_id,
-                use_id=False,
-                coords_as_pairs=False,
-            )
-            # not necessary:
-            # assert nested_list_equal(geometry_from_id, geometry_from_name), \
-            assert len(geometry_from_name) == len(
-                geometry_from_id
-            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-            check_geometry(geometry_from_id)
-
-            geometry_from_name = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
-            )
-            geometry_from_id = self.test_instance.get_geometry(
-                tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
-            )
-            assert len(geometry_from_name) == len(
-                geometry_from_id
-            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
-
-            check_pairwise_geometry(geometry_from_id)
-            check_pairwise_geometry(geometry_from_name)
-
-        with pytest.raises(ValueError):
-            self.test_instance.get_geometry(tz_name="", tz_id=None, use_id=False, coords_as_pairs=False)
-            self.test_instance.get_geometry(tz_name="", tz_id=0, use_id=False, coords_as_pairs=False)
-            self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False)
-            self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False)
-            # id does not exist
-            self.test_instance.get_geometry(tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False)
-            self.test_instance.get_geometry(tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False)
+    #
+    # def test_get_geometry(self):
+    #     print("testing get_geometry():")
+    #     timezone_names_stored = self.test_instance.timezone_names
+    #     nr_timezones = len(timezone_names_stored)
+    #     for zone_id, zone_name in enumerate(timezone_names_stored):
+    #         print(zone_id, zone_name)
+    #         geometry_from_name = self.test_instance.get_geometry(
+    #             tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=False
+    #         )
+    #         check_geometry(geometry_from_name)
+    #
+    #         if not DEBUG:
+    #             continue
+    #
+    #         # conduct extensive testing only with active debugging
+    #         geometry_from_id = self.test_instance.get_geometry(
+    #             tz_name=zone_name,
+    #             tz_id=zone_id,
+    #             use_id=False,
+    #             coords_as_pairs=False,
+    #         )
+    #         # not necessary:
+    #         # assert nested_list_equal(geometry_from_id, geometry_from_name), \
+    #         assert len(geometry_from_name) == len(
+    #             geometry_from_id
+    #         ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+    #         check_geometry(geometry_from_id)
+    #
+    #         geometry_from_name = self.test_instance.get_geometry(
+    #             tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=True
+    #         )
+    #         geometry_from_id = self.test_instance.get_geometry(
+    #             tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
+    #         )
+    #         assert len(geometry_from_name) == len(
+    #             geometry_from_id
+    #         ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+    #
+    #         check_pairwise_geometry(geometry_from_id)
+    #         check_pairwise_geometry(geometry_from_name)
+    #
+    #     with pytest.raises(ValueError):
+    #         self.test_instance.get_geometry(tz_name="", tz_id=None, use_id=False, coords_as_pairs=False)
+    #         self.test_instance.get_geometry(tz_name="", tz_id=0, use_id=False, coords_as_pairs=False)
+    #         self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False)
+    #         self.test_instance.get_geometry(tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False)
+    #         # id does not exist
+    #         self.test_instance.get_geometry(tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False)
+    #         self.test_instance.get_geometry(tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False)
 
 
 class TimezonefinderClassTestMEM(TimezonefinderClassTest):

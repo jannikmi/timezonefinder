@@ -44,6 +44,7 @@ python = ">=3.8,<3.11"
 numpy = "^1.22"
 h3 = "^3.7.3"
 numba = { version = "^0.55.2", optional = true }
+cffi = "^1.15.1"
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.13"
@@ -59,6 +60,7 @@ rstcheck = "*"
 pydantic = "^1.9.0"
 Sphinx = "^5.0.2"
 sphinx-rtd-theme = "^1.0.0"
+invoke = "^1.7.1"
 
 
 [tool.poetry.extras]

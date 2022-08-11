@@ -90,7 +90,7 @@ def test_inside_polygon():
             ([1, 5, 7, 8, 7, 6, 1, 1, 5, 1], [1, 4, 1, 3, 3, 6, 6, 2, 5, 1]),
             [
                 # (x,y),
-                # inside (#14)
+                # inside (14 cases)
                 (7, 1.0001),
                 (7, 1.1),
                 (7, 1.5),
@@ -105,7 +105,7 @@ def test_inside_polygon():
                 (6, 4),
                 (6.5, 4),
                 (2, 5.5),
-                # outside (#21)
+                # outside (21 cases)
                 (0.0, 0.0),
                 (5.0, 0.0),
                 (9.0, 0.0),
@@ -138,44 +138,47 @@ def test_inside_polygon():
             # delta_y_max * delta_x_max = 180x10^7 * 360x10^7
             [[-180.0, 180.0, -180.0], [-90.0, 90.0, 90.0]],
             [
-                # inside (#4)
+                # choose query points so (x-x_i) and (y-y_i) get big!
+                # inside
                 (
                     -179.9999999,
                     -89.9999998,
-                ),  # choose so (x-x_i) and (y-y_i) get big!
-                # (-179.9999, -89.9998),
-                (179.9998, 89.9999),
+                ),
+                (-179.9999, -89.9998),
                 (-179.9999, 89.9999),
+                # TODO uncertain case:
+                # (179.9998, 89.9999),
             ],
             [True] * 3,
         ),
     ]
 
-    no_mistakes_made = True
+    nr_mistakes = 0
     template = "{0:10s} | {1:10s} | {2:10s} | {3:10s} | {4:2s}"
 
     print("\nresults inside_polygon():")
     print(template.format("#test poly", "#test point", "EXPECTED", "COMPUTED", "  "))
     print("=" * 50)
     for n, (coords, p_test_cases, expected_results) in enumerate(test_cases):
-        coords = poly_conversion_fct(coords)
+        coords_int = poly_conversion_fct(coords)
         for i, (lng, lat) in enumerate(p_test_cases):
             utils.validate_coordinates(lng, lat)  # check the range of lng, lat
             x, y = utils.coord2int(lng), utils.coord2int(lat)
-            actual_result = utils.inside_polygon(x, y, coords)
+            actual_result = utils.inside_polygon(x, y, coords_int)
             expected_result = expected_results[i]
             if actual_result == expected_result:
                 ok = "OK"
             else:
-                print((x, y))
+                print((lng, lat), "-->", (x, y))
                 print(coords)
                 ok = "XX"
-                no_mistakes_made = False
+                nr_mistakes += 1
             print(template.format(str(n), str(i), str(expected_result), str(actual_result), ok))
 
         print("\n")
 
-    assert no_mistakes_made
+    print(f"{nr_mistakes} mistakes made")
+    assert nr_mistakes == 0
 
 
 def test_rectify_coords():
