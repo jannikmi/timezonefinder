@@ -15,7 +15,7 @@ Initialisation
 --------------
 
 
-Create a new instance of the :ref:`TimezoneFinder class <api_finder>` to allow fast consequent timezone queries:
+Create a new instance of the :ref:`TimezoneFinder class <api_finder>` to be reused for multiple consequent timezone queries:
 
 .. code-block:: python
 
@@ -42,7 +42,7 @@ Use the argument ``bin_file_location`` to use data files from another location (
 
 
 
-For testing if the import of the JIT compiled algorithms worked:
+For testing if Numba is being used to JIT compile helper functions:
 
 
 .. code-block:: python

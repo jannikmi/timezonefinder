@@ -47,9 +47,11 @@ Basics
 
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tf = TimezoneFinder()  # reuse
+
+    query_points = [(13.358, 52.5061), ...]
+    for lng, lat in query_points:
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
 
 
 All available features of this package are explained :ref:`HERE <usage>`.
