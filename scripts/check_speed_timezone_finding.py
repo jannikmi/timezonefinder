@@ -1,4 +1,3 @@
-from math import floor, log10
 from typing import Callable, Iterable, List, Tuple
 
 import pytest
@@ -6,15 +5,8 @@ from auxiliaries import get_rnd_query_pt, timefunc
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
 
-tf_instance = TimezoneFinder()
-tfL_instance = TimezoneFinderL()
 N = int(1e4)
-classes_and_function_names = [
-    (tf_instance, "timezone_at"),
-    (tf_instance, "timezone_at_land"),
-    (tfL_instance, "timezone_at"),
-    (tfL_instance, "timezone_at_land"),
-]
+tf_instance = TimezoneFinder()
 
 
 def get_on_land_pts(length: int):
@@ -52,21 +44,42 @@ def eval_time_fct():
         tf.timezone_at(lng=point[0], lat=point[1])
 
 
+points_and_descr = [
+    (test_points_land, "'on land points' (points included in a land timezone)"),
+    (test_points_rnd, "random points (anywhere on earth)"),
+]
+
+
 @pytest.mark.parametrize(
     "test_points, points_descr",
+    points_and_descr,
+)
+@pytest.mark.parametrize(
+    "in_memory_mode",
     [
-        (test_points_land, "'on land points' (points included in a land timezone)"),
-        (test_points_rnd, "random points (anywhere on earth)"),
+        False,
+        True,
     ],
 )
 def test_timezone_finding_speed(
     test_points,
     points_descr: str,
+    in_memory_mode: bool,
 ):
-    print("\n\nSpeed Tests:")
-    print(f"{N} {points_descr}")
     print(f"using C implementation: {tf_instance.using_clang_pip()}")
     print(f"using Numba: {tf_instance.using_numba()}")
+
+    tf = TimezoneFinder(in_memory=in_memory_mode)
+    tfL = TimezoneFinderL(in_memory=in_memory_mode)
+    classes_and_function_names = [
+        (tf, "timezone_at"),
+        (tf, "timezone_at_land"),
+        (tfL, "timezone_at"),
+        (tfL, "timezone_at_land"),
+    ]
+    print(f"\n{N} {points_descr}")
+
+    print(f"in memory mode: {in_memory_mode}")
     print()
 
     def time_all_runs(func2time: Callable, test_inputs: Iterable):
@@ -87,7 +100,6 @@ def test_timezone_finding_speed(
                 f"{pts_p_sec:.1e}",
             )
         )
-        return t_avg
 
     RESULT_TEMPLATE = "{:35s} | {:10s} | {:10s}"
     print(
@@ -98,12 +110,6 @@ def test_timezone_finding_speed(
         )
     )
     print("-" * 50)
-
     for test_instance, test_func_name in classes_and_function_names:
         time_func(test_instance, test_func_name)
-
-    print("\n\n")
-
-
-if __name__ == "__main__":
-    test_timezone_finding_speed(test_points_land, "'on land points' (points included in a land timezone)")
+    print()
