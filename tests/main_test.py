@@ -9,7 +9,7 @@ import pytest
 
 from tests.auxiliaries import time_preprocess
 from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
-from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
+from timezonefinder.configs import INT2COORD_FACTOR, THRES_DTYPE_H, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
     TimezoneFinder,
@@ -218,6 +218,12 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.certain_timezone_at(23.0, 42.0)
             self.test_instance.certain_timezone_at(23.0, lng=42.0)
             self.test_instance.certain_timezone_at(23.0, lat=42.0)
+
+    def test_nr_of_polygons(self):
+        res = self.test_instance.nr_of_polygons
+        assert isinstance(res, int)
+        assert res > 0
+        assert res < THRES_DTYPE_H
 
     def test_shortcut_boundary_result(self):
         for lng, lat, expected in BOUNDARY_TEST_CASES:
