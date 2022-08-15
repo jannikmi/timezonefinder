@@ -1,11 +1,11 @@
 import random
 import timeit
 from math import log10
-from typing import Callable, List, Tuple
+from typing import Callable, Iterable, List, Tuple
 
 import numpy as np
 
-from timezonefinder import utils
+from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
@@ -13,6 +13,11 @@ from timezonefinder.configs import (
     MAX_LAT_VAL,
     MAX_LNG_VAL,
 )
+
+# for reading coordinates
+from timezonefinder.utils import CoordLists, IntLists
+
+tf_instance = TimezoneFinder()
 
 
 def timefunc(function: Callable, *args):
@@ -46,39 +51,40 @@ def get_rnd_query_pt() -> Tuple[float, float]:
     return lng, lat
 
 
-def get_rnd_poly(nr_max_coords: int = 150000) -> Tuple[np.ndarray, np.ndarray]:
-    # maximal amount of coordinates in one polygon
-    nr_coords = random.randint(3, nr_max_coords)
-    x_coords = np.random.uniform(-MAX_LNG_VAL, MAX_LNG_VAL, nr_coords)
-    y_coords = np.random.uniform(-MAX_LAT_VAL, MAX_LAT_VAL, nr_coords)
-    return x_coords, y_coords
+def get_rnd_poly_int() -> np.ndarray:
+    max_poly_id = tf_instance.nr_of_polygons - 1
+    poly_id = random.randint(0, max_poly_id)
+    poly = tf_instance.coords_of(poly_id)
+    return poly
+
+
+def get_rnd_poly() -> np.ndarray:
+    poly = get_rnd_poly_int()
+    coords = utils.convert2coords(poly)
+    return np.array(coords)
+
+
+def poly_conversion_fct(coords: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    x_ints, y_ints = utils.convert2ints(coords)
+    dtype = DTYPE_FORMAT_SIGNED_I_NUMPY
+    x_ints = np.array(x_ints, dtype=dtype)
+    y_ints = np.array(y_ints, dtype=dtype)
+    assert not np.any(x_ints > MAX_ALLOWED_COORD_VAL)
+    assert not np.any(x_ints < -MAX_ALLOWED_COORD_VAL)
+    assert not np.any(y_ints > MAX_ALLOWED_COORD_VAL)
+    assert not np.any(y_ints < -MAX_ALLOWED_COORD_VAL)
+    return x_ints, y_ints
+
+
+def convert_inside_polygon_input(lng: float, lat: float, coords: np.ndarray):
+    x_ints, y_ints = poly_conversion_fct(coords)
+    x, y = utils.coord2int(lng), utils.coord2int(lat)
+    return x, y, x_ints, y_ints
 
 
 def gen_test_input():
     # one test polygon + one query point
-    longitudes, latitudes = get_rnd_poly()
     lng, lat = get_rnd_query_pt()
-    x, y, x_coords, y_coords = convert_inside_polygon_input(lng, lat, longitudes, latitudes)
-    return x, y, x_coords, y_coords
-
-
-def poly_conversion_fct(x_coords, y_coords):
-    x_coords = np.array(x_coords)
-    y_coords = np.array(y_coords)
-    x_coords *= COORD2INT_FACTOR
-    y_coords *= COORD2INT_FACTOR
-    dtype = DTYPE_FORMAT_SIGNED_I_NUMPY
-    x_coords = np.array(x_coords, dtype=dtype)
-    y_coords = np.array(y_coords, dtype=dtype)
-    y_coords = np.ascontiguousarray(y_coords, dtype=dtype)
-    assert not np.any(x_coords > MAX_ALLOWED_COORD_VAL)
-    assert not np.any(x_coords < -MAX_ALLOWED_COORD_VAL)
-    assert not np.any(y_coords > MAX_ALLOWED_COORD_VAL)
-    assert not np.any(y_coords < -MAX_ALLOWED_COORD_VAL)
-    return x_coords, y_coords
-
-
-def convert_inside_polygon_input(lng, lat, longitudes, latitudes):
-    x_coords, y_coords = poly_conversion_fct(longitudes, latitudes)
     x, y = utils.coord2int(lng), utils.coord2int(lat)
+    x_coords, y_coords = get_rnd_poly_int()
     return x, y, x_coords, y_coords
