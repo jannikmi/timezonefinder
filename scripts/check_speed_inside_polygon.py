@@ -17,8 +17,8 @@ nr_of_runs = int(1e3)
 
 
 def check_inside_polygon_speed():
-    print("testing the speed of the different point in polygon test algorithm implementations")
-    print(f"testing {nr_of_runs} random query points and timezone polygons")
+    print("testing the speed of the different point in polygon algorithm implementations")
+    print(f"testing {nr_of_runs} queries: random points and timezone polygons")
     print(f"Python implementation using Numba JIT compilation: {utils.using_numba}")
 
     # reuse the same inputs for comparable results
@@ -39,7 +39,7 @@ def check_inside_polygon_speed():
     print()
     t_clang = time_func(utils.inside_clang)
     t_python = time_func(utils.inside_python)
-    py_func_descr = f"Python implementation {'WITH' if utils.using_numba else ''} Numba"
+    py_func_descr = f"Python implementation {'WITH' if utils.using_numba else 'WITHOUT'} Numba"
     if t_clang < t_python:
         speedup = (t_python / t_clang) - 1
         print(f"C implementation is {speedup:.1f}x faster than the {py_func_descr}")
