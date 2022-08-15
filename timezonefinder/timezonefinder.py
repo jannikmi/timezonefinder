@@ -34,9 +34,11 @@ from timezonefinder.configs import (
     SHORTCUT_FILE,
     SHORTCUT_H3_RES,
     TIMEZONE_NAMES_FILE,
+    CoordLists,
+    CoordPairs,
 )
 from timezonefinder.hex_helpers import read_shortcuts_binary
-from timezonefinder.utils import CoordLists, CoordPairs, inside_polygon
+from timezonefinder.utils import inside_polygon
 
 
 class AbstractTimezoneFinder(ABC):

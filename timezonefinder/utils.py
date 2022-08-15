@@ -14,7 +14,7 @@ if __name__ == "__main__":
 """
 import io
 import re
-from typing import Callable, List, Tuple
+from typing import Callable, Tuple
 
 import cffi
 import numpy as np
@@ -24,6 +24,9 @@ from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     OCEAN_TIMEZONE_PREFIX,
+    CoordLists,
+    CoordPairs,
+    IntLists,
 )
 
 try:
@@ -197,19 +200,14 @@ def get_last_change_idx(lst: np.ndarray) -> int:
 
 # @cc.export('int2coord', f8(i4))
 @njit(f8(i4), cache=True)
-def int2coord(i4):
+def int2coord(i4: int) -> float:
     return float(i4 * INT2COORD_FACTOR)
 
 
 # @cc.export('coord2int', i4(f8))
 @njit(i4(f8), cache=True)
-def coord2int(double):
+def coord2int(double: float) -> int:
     return int(double * COORD2INT_FACTOR)
-
-
-CoordPairs = List[Tuple[float, float]]
-CoordLists = List[List[float]]
-IntLists = List[List[int]]
 
 
 @njit(cache=True)
@@ -241,7 +239,7 @@ def convert2ints(polygon_data: np.ndarray) -> IntLists:
 
 
 @njit(cache=True)
-def any_pt_in_poly(coords1, coords2):
+def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
     # pt = points[:, i]
     for pt in coords1.T:
         if pt_in_poly_python(pt[0], pt[1], coords2):
@@ -257,7 +255,7 @@ def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     return True
 
 
-def validate_coordinates(lng, lat) -> Tuple[float, float]:
+def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
     if not -180.0 <= lng <= 180.0:
         raise ValueError(f"The given longitude {lng} is out of bounds")
     if not -90.0 <= lat <= 90.0:
@@ -270,7 +268,7 @@ def get_file_size_byte(file) -> int:
     return file.tell()
 
 
-def fromfile_memory(file, dtype, count, **kwargs):
+def fromfile_memory(file, dtype: str, count: int, **kwargs):
     res = np.frombuffer(file.getbuffer(), offset=file.tell(), dtype=dtype, count=count, **kwargs)
     file.seek(np.dtype(dtype).itemsize * count, io.SEEK_CUR)
     return res

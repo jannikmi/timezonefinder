@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # NOTE: Changes in the global settings might not immediately affect
 # the functions in utils.py due to numba compilation and caching!
-from typing import Dict
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -101,5 +101,10 @@ MAX_LAT_VAL = 90.0
 MAX_INT_VAL = int(MAX_LNG_VAL * COORD2INT_FACTOR)
 assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 
+# TYPES
+
 # hexagon id to list of polygon ids
 ShortcutMapping = Dict[int, np.ndarray]
+CoordPairs = List[Tuple[float, float]]
+CoordLists = List[List[float]]
+IntLists = List[List[int]]
