@@ -51,6 +51,16 @@ For testing if Numba is being used to JIT compile helper functions:
 
 
 
+For testing if the compiled C implementation of the point in polygon algorithm is being used:
+
+
+.. code-block:: python
+
+    TimezoneFinder.using_clang_pip()  # returns True or False
+
+
+
+
 timezone_at()
 --------------
 
