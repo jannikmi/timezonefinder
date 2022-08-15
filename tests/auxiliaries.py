@@ -64,7 +64,7 @@ def get_rnd_poly() -> np.ndarray:
     return np.array(coords)
 
 
-def poly_conversion_fct(coords: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def poly_conversion_fct(coords: np.ndarray) -> np.ndarray:
     x_ints, y_ints = utils.convert2ints(coords)
     dtype = DTYPE_FORMAT_SIGNED_I_NUMPY
     x_ints = np.array(x_ints, dtype=dtype)
@@ -73,18 +73,18 @@ def poly_conversion_fct(coords: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     assert not np.any(x_ints < -MAX_ALLOWED_COORD_VAL)
     assert not np.any(y_ints > MAX_ALLOWED_COORD_VAL)
     assert not np.any(y_ints < -MAX_ALLOWED_COORD_VAL)
-    return x_ints, y_ints
+    return np.stack((x_ints, y_ints))
 
 
 def convert_inside_polygon_input(lng: float, lat: float, coords: np.ndarray):
-    x_ints, y_ints = poly_conversion_fct(coords)
+    coords_ints = poly_conversion_fct(coords)
     x, y = utils.coord2int(lng), utils.coord2int(lat)
-    return x, y, x_ints, y_ints
+    return x, y, coords_ints
 
 
-def gen_test_input():
+def get_pip_test_input() -> Tuple[int, int, np.ndarray]:
     # one test polygon + one query point
     lng, lat = get_rnd_query_pt()
     x, y = utils.coord2int(lng), utils.coord2int(lat)
-    x_coords, y_coords = get_rnd_poly_int()
-    return x, y, x_coords, y_coords
+    poly_int = get_rnd_poly_int()
+    return x, y, poly_int

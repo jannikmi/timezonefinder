@@ -52,8 +52,8 @@ dtype_2int_tuple = typeof((1, 1))
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-@njit(b1(i4, i4, i4[:], i4[:]), cache=True)
-def inside_python(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) -> bool:
+@njit(b1(i4, i4, i4[:, :]), cache=True)
+def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     """
     Implementing the ray casting point in polygon test algorithm
     cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
@@ -97,6 +97,8 @@ def inside_python(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) ->
         j = i
         i += 1
     """
+    x_coords = coords[0]
+    y_coords = coords[1]
     nr_coords = len(x_coords)
     inside = False
 
@@ -147,7 +149,9 @@ def inside_python(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) ->
     return inside
 
 
-def inside_clang(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) -> bool:
+def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
+    x_coords = coords[0]
+    y_coords = coords[1]
     nr_coords = len(x_coords)
     # ATTENTION: the array must have a C_CONTIGUOUS memory layout
     # https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
@@ -159,17 +163,13 @@ def inside_clang(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) -> 
     return contained
 
 
-# fix at import time which "point-in-polygon" implementation will be used
-if clang_extension_loaded:
-    inside_polygon_func = inside_clang
+# at import time fix which "point-in-polygon" implementation will be used
+if clang_extension_loaded and not using_numba:
+    # use the C implementation if Numba is not present
+    inside_polygon = pt_in_poly_clang
 else:
-    inside_polygon_func = inside_python
-
-
-def inside_polygon(x, y, coordinates):
-    x_coords = coordinates[0]
-    y_coords = coordinates[1]
-    return inside_polygon_func(x, y, x_coords, y_coords)
+    # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
+    inside_polygon = pt_in_poly_python
 
 
 @njit(i2(u2[:]), cache=True)
@@ -243,7 +243,7 @@ def convert2ints(polygon_data: np.ndarray) -> IntLists:
 def any_pt_in_poly(coords1, coords2):
     # pt = points[:, i]
     for pt in coords1.T:
-        if inside_polygon(pt[0], pt[1], coords2):
+        if pt_in_poly_python(pt[0], pt[1], coords2):
             return True
     return False
 
@@ -251,7 +251,7 @@ def any_pt_in_poly(coords1, coords2):
 @njit(cache=True)
 def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     for pt in poly.T:
-        if not inside_polygon(pt[0], pt[1], hole):
+        if not pt_in_poly_python(pt[0], pt[1], hole):
             return False
     return True
 

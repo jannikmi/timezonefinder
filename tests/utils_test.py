@@ -6,7 +6,7 @@ import pytest
 
 from tests.auxiliaries import (
     convert_inside_polygon_input,
-    gen_test_input,
+    get_pip_test_input,
     get_rnd_poly,
     get_rnd_poly_int,
     get_rnd_query_pt,
@@ -182,8 +182,8 @@ def test_convert2ints():
 @pytest.mark.parametrize(
     "inside_poly_func",
     [
-        utils.inside_python,
-        utils.inside_clang,
+        utils.pt_in_poly_python,
+        utils.pt_in_poly_clang,
     ],
 )
 @pytest.mark.parametrize(
@@ -208,13 +208,13 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     coords = np.array(coords)
     for i, ((lng, lat), expected_result) in enumerate(zip(query_points, expected_results)):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
-        x, y, x_coords, y_coords = convert_inside_polygon_input(lng, lat, coords)
-        actual_result = inside_poly_func(x, y, x_coords, y_coords)
+        x, y, coords_int = convert_inside_polygon_input(lng, lat, coords)
+        actual_result = inside_poly_func(x, y, coords_int)
         if actual_result == expected_result:
             ok = "OK"
         else:
             print((lng, lat), "-->", (x, y))
-            print((x_coords, y_coords))
+            print(coords)
             ok = "XX"
             nr_mistakes += 1
         print(template.format(str(i), str(expected_result), str(actual_result), ok))

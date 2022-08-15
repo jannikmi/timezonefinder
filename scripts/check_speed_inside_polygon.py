@@ -37,8 +37,8 @@ def check_inside_polygon_speed():
         return t_avg
 
     print()
-    t_clang = time_func(utils.inside_clang)
-    t_python = time_func(utils.inside_python)
+    t_clang = time_func(utils.pt_in_poly_clang)
+    t_python = time_func(utils.pt_in_poly_python)
     py_func_descr = f"Python implementation {'WITH' if utils.using_numba else 'WITHOUT'} Numba"
     if t_clang < t_python:
         speedup = (t_python / t_clang) - 1
