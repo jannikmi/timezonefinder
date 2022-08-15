@@ -11,7 +11,6 @@ from timezonefinder.configs import (
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_Q,
     NR_BYTES_B,
-    NR_BYTES_H,
     NR_BYTES_I,
     NR_BYTES_Q,
     THRES_DTYPE_B,
@@ -54,9 +53,7 @@ def read_shortcuts_binary(path2shortcuts: Path) -> ShortcutMapping:
                 # EOF: buffer not long enough to unpack
                 break
             nr_polys: int = struct.unpack(DTYPE_FORMAT_B, fp.read(NR_BYTES_B))[0]
-            poly_ids: np.ndarray = np.empty(shape=nr_polys, dtype=DTYPE_FORMAT_H_NUMPY)
-            for i in range(nr_polys):
-                poly_ids[i] = struct.unpack(DTYPE_FORMAT_H, fp.read(NR_BYTES_H))[0]
+            poly_ids: np.ndarray = np.fromfile(fp, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_polys)
             mapping[hex_id] = poly_ids
 
     return mapping
