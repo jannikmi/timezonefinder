@@ -258,11 +258,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         super(TimezoneFinder, self).__init__(bin_file_location, in_memory)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few (~22) it is feasible to keep them in the memory
+        # since there are very few it is feasible to keep them in the memory
         with open(self.bin_file_location / HOLE_REGISTRY_FILE, "r") as json_file:
             hole_registry_tmp = json.loads(json_file.read())
-            # convert the json string keys to int
-            setattr(self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()})
+
+        # convert the json string keys to int
+        hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
+        setattr(self, HOLE_REGISTRY, hole_registry)
 
     @property
     def nr_of_polygons(self) -> int:
