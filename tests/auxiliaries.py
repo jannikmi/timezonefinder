@@ -1,13 +1,12 @@
 import random
 import timeit
 from math import log10
-from typing import Callable, Iterable, List, Tuple
+from typing import Callable, Tuple
 
 import numpy as np
 
 from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import (
-    COORD2INT_FACTOR,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
     MAX_ALLOWED_COORD_VAL,
     MAX_LAT_VAL,
@@ -15,7 +14,6 @@ from timezonefinder.configs import (
 )
 
 # for reading coordinates
-from timezonefinder.utils import CoordLists, IntLists
 
 tf_instance = TimezoneFinder()
 
