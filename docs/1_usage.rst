@@ -240,4 +240,6 @@ With the argument of the flag ``-f`` one can choose between the different functi
     5: TimezoneFinder.timezone_at_land()
 
 
-Please note that this will be orders of magnitude slower than using the package directly from within python.
+.. note::
+
+    This will be orders of magnitude slower than using the package directly from within python as a separate Timezonefinder() instance is being
