@@ -41,7 +41,7 @@ repos:
     rev: 3.9.2
     hooks:
       - id: flake8
-        exclude: ^(docs|scripts|tests)/
+        exclude: ^(docs|scripts|tests)/|build.py
         args:
           - --ignore=E402 # E402 module level import not at top of file
           - --max-line-length=120

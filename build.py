@@ -7,6 +7,18 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 """
 import pathlib
 import re
+import subprocess
+
+# workaround to install build dependencies:
+try:
+    import setuptools
+except ImportError:
+    subprocess.run(["pip", "install", "setuptools"])
+
+try:
+    import cffi
+except ImportError:
+    subprocess.run(["pip", "install", "cffi"])
 
 import setuptools
 from cffi import FFI
