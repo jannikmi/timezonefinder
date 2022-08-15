@@ -5,8 +5,6 @@ https://github.com/FirefoxMetzger/mini-extension
 https://stackoverflow.com/questions/60073711/how-to-build-c-extensions-via-poetry
 https://github.com/libmbd/libmbd/blob/master/build.py
 """
-import distutils.errors
-import distutils.unixccompiler
 import pathlib
 import re
 
@@ -57,7 +55,8 @@ if __name__ == "__main__":
     cmd.ensure_finalized()
     try:
         cmd.run()
-    except distutils.errors.CompileError:
+    except Exception:
+        # distutils.errors.CompileError:
         # a build failure in the extension (e.g. C compile is not installed) must not abort the build process,
         # but instead simply not install the failing extension.
         pass
