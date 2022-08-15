@@ -103,14 +103,14 @@ class AbstractTimezoneFinder(ABC):
         """
         :return: True if Numba is being used to JIT compile helper functions
         """
-        return utils.using_numba
+        return utils.using_numba and utils.inside_polygon == utils.pt_in_poly_python
 
     @staticmethod
     def using_clang_pip() -> bool:
         """
         :return: True if the compiled C implementation of the point in polygon algorithm is being used
         """
-        return utils.clang_extension_loaded
+        return utils.inside_polygon == utils.pt_in_poly_clang
 
     def zone_id_of(self, poly_id: int) -> int:
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
