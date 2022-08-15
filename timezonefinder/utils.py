@@ -14,6 +14,7 @@ if __name__ == "__main__":
 """
 import io
 import re
+from typing import List, Tuple
 
 import cffi
 import numpy as np
@@ -205,8 +206,13 @@ def coord2int(double):
     return int(double * COORD2INT_FACTOR)
 
 
+CoordPairs = List[Tuple[float, float]]
+CoordLists = List[List[float]]
+IntLists = List[List[int]]
+
+
 @njit(cache=True)
-def convert2coords(polygon_data):
+def convert2coords(polygon_data: np.ndarray) -> CoordLists:
     # return a tuple of coordinate lists
     return [
         [int2coord(x) for x in polygon_data[0]],
@@ -215,13 +221,22 @@ def convert2coords(polygon_data):
 
 
 @njit(cache=True)
-def convert2coord_pairs(polygon_data):
+def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
     # return a list of coordinate tuples (x,y)
     x_coords = polygon_data[0]
     y_coords = polygon_data[1]
     nr_coords = len(x_coords)
     coodinate_list = [(int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)]
     return coodinate_list
+
+
+@njit(cache=True)
+def convert2ints(polygon_data: np.ndarray) -> IntLists:
+    # return a tuple of coordinate lists
+    return [
+        [coord2int(x) for x in polygon_data[0]],
+        [coord2int(y) for y in polygon_data[1]],
+    ]
 
 
 @njit(cache=True)
@@ -241,11 +256,17 @@ def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     return True
 
 
-def validate_coordinates(lng, lat):
+def validate_coordinates(lng, lat) -> Tuple[float, float]:
     if not -180.0 <= lng <= 180.0:
         raise ValueError(f"The given longitude {lng} is out of bounds")
     if not -90.0 <= lat <= 90.0:
         raise ValueError(f"The given latitude {lat} is out of bounds")
+    return float(lng), float(lat)
+
+
+def get_file_size_byte(file) -> int:
+    file.seek(0, io.SEEK_END)
+    return file.tell()
 
 
 def fromfile_memory(file, dtype, count, **kwargs):
