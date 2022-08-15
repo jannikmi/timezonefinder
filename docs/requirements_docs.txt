@@ -1,3 +1,4 @@
+cffi
 # the minimal dependencies required to build the documentation
 # python3.6+
 h3
