@@ -7,17 +7,8 @@ from timezonefinder.timezonefinder import AbstractTimezoneFinder
 
 def get_timezone_function(function_id: int) -> Callable:
     """
-     "0: TimezoneFinder.timezone_at(), "
-     "1: TimezoneFinder.certain_timezone_at(), "
-     "2: removed, "
-     "3: TimezoneFinderL.timezone_at(), "
-     "4: TimezoneFinderL.timezone_at_land(), "
-     "5: TimezoneFinder.timezone_at_land(), ",
-
-     Note: script is being called for each point individually. Caching TimezoneFinder() instances is useless.
-     -> avoid constructing unnecessary instances
-    :param function_id:
-    :return:
+    Note: script is being called for each point individually. Caching TimezoneFinder() instances is useless.
+    -> avoid constructing unnecessary instances
     """
     tf_instance: AbstractTimezoneFinder
     if function_id in [0, 1, 5]:
