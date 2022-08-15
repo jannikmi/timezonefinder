@@ -8,6 +8,7 @@ from tests.auxiliaries import (
     convert_inside_polygon_input,
     gen_test_input,
     get_rnd_poly,
+    get_rnd_poly_int,
     get_rnd_query_pt,
     poly_conversion_fct,
     timefunc,
@@ -123,22 +124,59 @@ def test_dtype_conversion():
 
 
 def test_convert2coord_pairs():
-    longitudes, latitudes = get_rnd_poly(nr_max_coords=50)
-    x_coords, y_coords = poly_conversion_fct(longitudes, latitudes)
-    polygon_int = np.array((x_coords, y_coords))
-    coord_pairs = utils.convert2coord_pairs(polygon_int)
-    coord_pair_array = np.array(coord_pairs)
-    zipped = np.array(list(zip(longitudes, latitudes)))
-    np.testing.assert_almost_equal(coord_pair_array, zipped)
+    x_ints, y_ints = get_rnd_poly_int()
+    polygon_int = np.array((x_ints, y_ints))
+    pairs = utils.convert2coord_pairs(polygon_int)
+    assert isinstance(pairs, list)
+    for pair in pairs:
+        assert isinstance(pair, tuple)
+        assert len(pair) == 2
+        lng, lat = pair
+        assert isinstance(lng, float)
+        assert isinstance(lat, float)
+        utils.validate_coordinates(lng, lat)
+
+    coords_converted = np.array(pairs).T
+    longitudes = [utils.int2coord(x) for x in x_ints]
+    latitudes = [utils.int2coord(y) for y in y_ints]
+    coords_true = np.array((longitudes, latitudes))
+    np.testing.assert_almost_equal(coords_converted, coords_true)
 
 
 def test_convert2coords():
-    longitudes, latitudes = get_rnd_poly(nr_max_coords=50)
-    poly_true = np.array([longitudes, latitudes])
-    x_coords, y_coords = poly_conversion_fct(longitudes, latitudes)
-    polygon_int = np.array((x_coords, y_coords))
-    polygon_coords = utils.convert2coords(polygon_int)
-    np.testing.assert_almost_equal(np.array(polygon_coords), poly_true)
+    x_ints, y_ints = get_rnd_poly_int()
+    polygon_int = np.array((x_ints, y_ints))
+    coord_lists = utils.convert2coords(polygon_int)
+    assert isinstance(coord_lists, list)
+    assert len(coord_lists) == 2
+    x_coords, y_coords = coord_lists
+    assert len(x_coords) == len(y_coords)
+    for lng, lat in zip(x_coords, y_coords):
+        assert isinstance(lng, float)
+        assert isinstance(lat, float)
+        utils.validate_coordinates(lng, lat)
+
+    coords_converted = np.array(coord_lists)
+    longitudes = [utils.int2coord(x) for x in x_ints]
+    latitudes = [utils.int2coord(y) for y in y_ints]
+    coords_true = np.array((longitudes, latitudes))
+    np.testing.assert_almost_equal(coords_converted, coords_true)
+
+
+def test_convert2ints():
+    coords_true = get_rnd_poly()
+    poly_int = utils.convert2ints(coords_true)
+    assert isinstance(poly_int, list)
+    assert len(poly_int) == 2
+    x_coords, y_coords = poly_int
+    assert len(x_coords) == len(y_coords)
+
+    ints_converted = np.array(poly_int)
+    longitudes, latitudes = coords_true
+    x_ints = [utils.coord2int(x) for x in longitudes]
+    y_ints = [utils.coord2int(y) for y in latitudes]
+    ints_true = np.array((x_ints, y_ints))
+    np.testing.assert_almost_equal(ints_converted, ints_true)
 
 
 @pytest.mark.parametrize(
@@ -166,10 +204,11 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     print()
     print(template.format("#test point", "EXPECTED", "COMPUTED", "  "))
     # print("=" * 50)
-    (longitudes, latitudes), query_points, expected_results = test_case
+    coords, query_points, expected_results = test_case
+    coords = np.array(coords)
     for i, ((lng, lat), expected_result) in enumerate(zip(query_points, expected_results)):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
-        x, y, x_coords, y_coords = convert_inside_polygon_input(lng, lat, longitudes, latitudes)
+        x, y, x_coords, y_coords = convert_inside_polygon_input(lng, lat, coords)
         actual_result = inside_poly_func(x, y, x_coords, y_coords)
         if actual_result == expected_result:
             ok = "OK"
