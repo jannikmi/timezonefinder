@@ -36,7 +36,7 @@ from timezonefinder.configs import (
     TIMEZONE_NAMES_FILE,
 )
 from timezonefinder.hex_helpers import read_shortcuts_binary
-from timezonefinder.utils import inside_polygon
+from timezonefinder.utils import CoordLists, CoordPairs, inside_polygon
 
 
 class AbstractTimezoneFinder(ABC):
@@ -201,7 +201,7 @@ class AbstractTimezoneFinder(ABC):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
         """
-        utils.validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         unique_id = self.unique_zone_id(lng=lng, lat=lat)
         if unique_id is None:
             return None
@@ -226,7 +226,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
         """
-        utils.validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         most_common_id = self.most_common_zone_id(lng=lng, lat=lat)
         if most_common_id is None:
             return None
@@ -264,6 +264,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # convert the json string keys to int
             setattr(self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()})
 
+    @property
+    def nr_of_polygons(self) -> int:
+        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
+        return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
+
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
         poly_adr2data = getattr(self, POLY_ADR2DATA)
@@ -275,11 +280,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         poly_adr2data.seek(NR_BYTES_I * polygon_nr)
         poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
-        return np.array(
-            [
+        return np.stack(
+            (
                 self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
                 self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-            ]
+            )
         )
 
     def _holes_of_poly(self, polygon_nr: int):
@@ -309,7 +314,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 ]
             )
 
-    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False):
+    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False) -> List[Union[CoordPairs, CoordLists]]:
         list_of_converted_polygons = []
         if coords_as_pairs:
             conversion_method = utils.convert2coord_pairs
@@ -407,7 +412,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the matched timezone polygon. possibly "Etc/GMT+-XX" in case of an ocean timezone.
         """
-        utils.validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_polygons)
         if nr_possible_polygons == 0:
@@ -460,7 +465,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param lat: latitude in degree
         :return: the timezone name of the polygon the point is included in or `None`
         """
-        utils.validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_polygons)
 
