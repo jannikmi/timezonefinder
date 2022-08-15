@@ -24,7 +24,7 @@ with open(TIMEZONE_FILE, "r") as json_file:
         "timezonefinder -f 5 40.5 11.7",
     ],
 )
-def test_main(cmd: List[str]):
-    res = subprocess.getoutput(cmd)
+def test_main(cmd: str):
+    res = subprocess.getoutput(cmd).rstrip("\n\x1b[0m")
     assert not res.endswith("command not found"), "package not installed"
     assert res == "None" or res in timezone_names

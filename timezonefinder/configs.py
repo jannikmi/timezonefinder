@@ -96,11 +96,10 @@ MAX_ALLOWED_COORD_VAL = 2 ** (8 * NR_BYTES_I - 1)
 DECIMAL_PLACES_SHIFT = 7
 INT2COORD_FACTOR = 10 ** (-DECIMAL_PLACES_SHIFT)
 COORD2INT_FACTOR = 10**DECIMAL_PLACES_SHIFT
-max_int_val = 180.0 * COORD2INT_FACTOR
-assert max_int_val < MAX_ALLOWED_COORD_VAL
-
-# the maximum possible distance is half the perimeter of earth pi * 12743km = 40,054.xxx km
-MAX_HAVERSINE_DISTANCE = 40100
+MAX_LNG_VAL = 180.0
+MAX_LAT_VAL = 90.0
+MAX_INT_VAL = int(MAX_LNG_VAL * COORD2INT_FACTOR)
+assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 
 # hexagon id to list of polygon ids
 ShortcutMapping = Dict[int, np.ndarray]

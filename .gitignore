@@ -11,6 +11,8 @@ tmp/
 test/*.bin
 tmp_shortcut.bin
 
+build/
+
 *.DS_Store
 *.pytest_cache
 *.zip

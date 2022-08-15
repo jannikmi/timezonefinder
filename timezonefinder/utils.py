@@ -12,31 +12,36 @@ cc.verbose = True
 if __name__ == "__main__":
     cc.compile()
 """
+import io
 import re
-from io import SEEK_CUR
 
 import cffi
 import numpy as np
-from numpy import dtype, frombuffer, int64
-
-# TODO remove
-using_numba = True
-try:
-    from numba import f8, i2, i4, njit, typeof, u2
-except ImportError:
-    using_numba = False
-    # replace numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import f8, i2, i4, njit, typeof, u2
-
-# Note: IDE might complain as this import comes from a cffi C extension
-# TODO rename
-import cffi_example
+from numpy import int64
 
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
     OCEAN_TIMEZONE_PREFIX,
 )
+
+try:
+    # Note: IDE might complain as this import comes from a cffi C extension
+    import inside_polygon_ext
+
+    clang_extension_loaded = True
+
+except ImportError:
+    clang_extension_loaded = False
+
+try:
+    from numba import b1, f8, i2, i4, njit, typeof, u2
+
+    using_numba = True
+except ImportError:
+    using_numba = False
+    # replace Numba functionality with "transparent" implementations
+    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, typeof, u2
 
 ffi = cffi.FFI()
 
@@ -45,11 +50,9 @@ dtype_2float_tuple = typeof((1.0, 1.0))
 dtype_2int_tuple = typeof((1, 1))
 
 
-# TODO switch implementation
-# TODO test both implementations
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-# @njit(b1(i4, i4, i4[:, :]), cache=True)
-def inside(x, y, nr_coords, x_coords, y_coords):
+@njit(b1(i4, i4, i4[:], i4[:]), cache=True)
+def inside_python(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) -> bool:
     """
     Implementing the ray casting point in polygon test algorithm
     cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
@@ -79,28 +82,25 @@ def inside(x, y, nr_coords, x_coords, y_coords):
      but here the data types are numpy internal static data types. The data is stored as int32
      -> use int64 when comparing slopes!
 
-    inside = False
+    naive implementation:
     j = nr_coords - 1
     for i in range(nr_coords):
         if ((y_coords[i] > y) != (y_coords[j] > y)) and (
-            x
-            < (int64(x_coords[j]) - int64(x_coords[i]))
-            * (int64(y) - int64(y_coords[i]))
-            / (int64(y_coords[j]) - int64(y_coords[i]))
-            + int64(x_coords[i])
+                x
+                < (int64(x_coords[j]) - int64(x_coords[i]))
+                * (int64(y) - int64(y_coords[i]))
+                / (int64(y_coords[j]) - int64(y_coords[i]))
+                + int64(x_coords[i])
         ):
             inside = not inside
         j = i
         i += 1
-
-    return inside
-
     """
+    nr_coords = len(x_coords)
+    inside = False
 
-    contained = False
     # the edge from the last to the first point is checked first
-    i = -1
-    y1 = y_coords[i]
+    y1 = y_coords[-1]
     y_gt_y1 = y > y1
     for i in range(nr_coords):
         y2 = y_coords[i]
@@ -115,7 +115,7 @@ def inside(x, y, nr_coords, x_coords, y_coords):
             if x_le_x1 or x_le_x2:
                 if x_le_x1 and x_le_x2:
                     # p1 and p2 are both to the right -> valid crossing
-                    contained = not contained
+                    inside = not inside
                 else:
                     # compare the slope of the line [p1-p2] and [p-p2]
                     # depending on the position of p2 this determines whether
@@ -135,83 +135,40 @@ def inside(x, y, nr_coords, x_coords, y_coords):
                     # NOTE: accept slope equality to also detect if p lies directly on an edge
                     if y_gt_y1:
                         if slope1 <= slope2:
-                            contained = not contained
+                            inside = not inside
                     elif slope1 >= slope2:  # NOT y_gt_y1
-                        contained = not contained
+                        inside = not inside
 
         # next point
         y1 = y2
         y_gt_y1 = y_gt_y2
-        i += 1
 
+    return inside
+
+
+def inside_clang(x: int, y: int, x_coords: np.ndarray, y_coords: np.ndarray) -> bool:
+    nr_coords = len(x_coords)
+    # ATTENTION: the array must have a C_CONTIGUOUS memory layout
+    # https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
+    y_coords = np.ascontiguousarray(y_coords)
+    x_coords = np.ascontiguousarray(x_coords)
+    x_coords_ffi = ffi.from_buffer("int []", x_coords)
+    y_coords_ffi = ffi.from_buffer("int []", y_coords)
+    contained = inside_polygon_ext.lib.inside_polygon_int(x, y, nr_coords, x_coords_ffi, y_coords_ffi)
     return contained
+
+
+# fix at import time which "point-in-polygon" implementation will be used
+if clang_extension_loaded:
+    inside_polygon_func = inside_clang
+else:
+    inside_polygon_func = inside_python
 
 
 def inside_polygon(x, y, coordinates):
     x_coords = coordinates[0]
     y_coords = coordinates[1]
-    return inside(x, y, len(x_coords), x_coords, y_coords)
-
-    # TODO numpy.ascontiguousarray before passing it to the buffer if there
-    #  is a chance the array does not have a C_CONTIGUOUS memory layout.
-    # https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
-    INT_DTYPE = np.int64
-    # TODO move to data reading
-    x_coords = np.ascontiguousarray(coordinates[0], dtype=INT_DTYPE)
-    y_coords = np.ascontiguousarray(coordinates[1], dtype=INT_DTYPE)
-    x_coords_ffi = ffi.from_buffer("long []", x_coords)
-    y_coords_ffi = ffi.from_buffer("long []", y_coords)
-
-    contained = cffi_example.lib.cmult(x, y, len(x_coords), x_coords_ffi, y_coords_ffi)
-    return contained
-
-    contained = False
-    # the edge from the last to the first point is checked first
-    i = -1
-    y1 = coordinates[1, -1]
-    y_gt_y1 = y > y1
-    for y2 in coordinates[1]:
-        y_gt_y2 = y > y2
-        if y_gt_y1 ^ y_gt_y2:  # XOR
-            # [p1-p2] crosses horizontal line in p
-            x1 = coordinates[0, i]
-            x2 = coordinates[0, i + 1]
-            # only count crossings "right" of the point ( >= x)
-            x_le_x1 = x <= x1
-            x_le_x2 = x <= x2
-            if x_le_x1 or x_le_x2:
-                if x_le_x1 and x_le_x2:
-                    # p1 and p2 are both to the right -> valid crossing
-                    contained = not contained
-                else:
-                    # compare the slope of the line [p1-p2] and [p-p2]
-                    # depending on the position of p2 this determines whether
-                    # the polygon edge is right or left of the point
-                    # to avoid expensive division the divisors (of the slope dy/dx) are brought to the other side
-                    # ( dy/dx > a  ==  dy > a * dx )
-                    # only one of the points is to the right
-                    # NOTE: int64 precision required to prevent overflow
-                    y_64 = int64(y)
-                    y1_64 = int64(y1)
-                    y2_64 = int64(y2)
-                    x_64 = int64(x)
-                    x1_64 = int64(x1)
-                    x2_64 = int64(x2)
-                    slope1 = (y2_64 - y_64) * (x2_64 - x1_64)
-                    slope2 = (y2_64 - y1_64) * (x2_64 - x_64)
-                    # NOTE: accept slope equality to also detect if p lies directly on an edge
-                    if y_gt_y1:
-                        if slope1 <= slope2:
-                            contained = not contained
-                    elif slope1 >= slope2:  # NOT y_gt_y1
-                        contained = not contained
-
-        # next point
-        y1 = y2
-        y_gt_y1 = y_gt_y2
-        i += 1
-
-    return contained
+    return inside_polygon_func(x, y, x_coords, y_coords)
 
 
 @njit(i2(u2[:]), cache=True)
@@ -260,11 +217,10 @@ def convert2coords(polygon_data):
 @njit(cache=True)
 def convert2coord_pairs(polygon_data):
     # return a list of coordinate tuples (x,y)
-    coodinate_list = []
-    i = 0
-    for x in polygon_data[0]:
-        coodinate_list.append((int2coord(x), int2coord(polygon_data[1][i])))
-        i += 1
+    x_coords = polygon_data[0]
+    y_coords = polygon_data[1]
+    nr_coords = len(x_coords)
+    coodinate_list = [(int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)]
     return coodinate_list
 
 
@@ -292,11 +248,9 @@ def validate_coordinates(lng, lat):
         raise ValueError(f"The given latitude {lat} is out of bounds")
 
 
-def fromfile_memory(file, **kwargs):
-    # res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
-    # faster:
-    res = frombuffer(file.getbuffer(), offset=file.tell(), **kwargs)
-    file.seek(dtype(kwargs["dtype"]).itemsize * kwargs["count"], SEEK_CUR)
+def fromfile_memory(file, dtype, count, **kwargs):
+    res = np.frombuffer(file.getbuffer(), offset=file.tell(), dtype=dtype, count=count, **kwargs)
+    file.seek(np.dtype(dtype).itemsize * count, io.SEEK_CUR)
     return res
 
 
