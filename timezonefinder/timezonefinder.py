@@ -9,6 +9,7 @@ from typing import List, Optional, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
+from timezonefinder import utils
 from timezonefinder.configs import (
     BINARY_DATA_ATTRIBUTES,
     BINARY_FILE_ENDING,
@@ -33,19 +34,11 @@ from timezonefinder.configs import (
     SHORTCUT_FILE,
     SHORTCUT_H3_RES,
     TIMEZONE_NAMES_FILE,
+    CoordLists,
+    CoordPairs,
 )
 from timezonefinder.hex_helpers import read_shortcuts_binary
-from timezonefinder.utils import (
-    convert2coord_pairs,
-    convert2coords,
-    coord2int,
-    fromfile_memory,
-    get_last_change_idx,
-    inside_polygon,
-    is_ocean_timezone,
-    using_numba,
-    validate_coordinates,
-)
+from timezonefinder.utils import inside_polygon
 
 
 class AbstractTimezoneFinder(ABC):
@@ -69,7 +62,7 @@ class AbstractTimezoneFinder(ABC):
         self.in_memory = in_memory
 
         if self.in_memory:
-            self._fromfile = fromfile_memory
+            self._fromfile = utils.fromfile_memory
         else:
             self._fromfile = np.fromfile
 
@@ -108,12 +101,18 @@ class AbstractTimezoneFinder(ABC):
         return len(self.timezone_names)
 
     @staticmethod
-    def using_numba():
-        """tests if Numba is being used or not
-
-        :return: True if the import of the JIT compiled algorithms worked. False otherwise
+    def using_numba() -> bool:
         """
-        return using_numba
+        :return: True if Numba is being used to JIT compile helper functions
+        """
+        return utils.using_numba
+
+    @staticmethod
+    def using_clang_pip() -> bool:
+        """
+        :return: True if the compiled C implementation of the point in polygon algorithm is being used
+        """
+        return utils.inside_polygon == utils.pt_in_poly_clang
 
     def zone_id_of(self, poly_id: int) -> int:
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
@@ -193,7 +192,7 @@ class AbstractTimezoneFinder(ABC):
             ``None`` when an ocean timezone ("Etc/GMT+-XX") has been matched.
         """
         tz_name = self.timezone_at(lng=lng, lat=lat)
-        if tz_name is not None and is_ocean_timezone(tz_name):
+        if tz_name is not None and utils.is_ocean_timezone(tz_name):
             return None
         return tz_name
 
@@ -204,7 +203,7 @@ class AbstractTimezoneFinder(ABC):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
         """
-        validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         unique_id = self.unique_zone_id(lng=lng, lat=lat)
         if unique_id is None:
             return None
@@ -229,7 +228,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
         """
-        validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         most_common_id = self.most_common_zone_id(lng=lng, lat=lat)
         if most_common_id is None:
             return None
@@ -261,11 +260,18 @@ class TimezoneFinder(AbstractTimezoneFinder):
         super(TimezoneFinder, self).__init__(bin_file_location, in_memory)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few (~22) it is feasible to keep them in the memory
+        # since there are very few it is feasible to keep them in the memory
         with open(self.bin_file_location / HOLE_REGISTRY_FILE, "r") as json_file:
             hole_registry_tmp = json.loads(json_file.read())
-            # convert the json string keys to int
-            setattr(self, HOLE_REGISTRY, {int(k): v for k, v in hole_registry_tmp.items()})
+
+        # convert the json string keys to int
+        hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
+        setattr(self, HOLE_REGISTRY, hole_registry)
+
+    @property
+    def nr_of_polygons(self) -> int:
+        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
+        return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
@@ -278,11 +284,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         poly_adr2data.seek(NR_BYTES_I * polygon_nr)
         poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
-        return np.array(
-            [
+        return np.stack(
+            (
                 self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
                 self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-            ]
+            )
         )
 
     def _holes_of_poly(self, polygon_nr: int):
@@ -312,12 +318,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 ]
             )
 
-    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False):
+    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False) -> List[Union[CoordPairs, CoordLists]]:
         list_of_converted_polygons = []
         if coords_as_pairs:
-            conversion_method = convert2coord_pairs
+            conversion_method = utils.convert2coord_pairs
         else:
-            conversion_method = convert2coords
+            conversion_method = utils.convert2coords
         list_of_converted_polygons.append(conversion_method(self.coords_of(polygon_nr=polygon_nr)))
 
         for hole in self._holes_of_poly(polygon_nr):
@@ -378,6 +384,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return x > xmax or x < xmin or y > ymax or y < ymin
 
     def inside_of_polygon(self, poly_id: int, x: int, y: int) -> bool:
+        # only read polygon (hole) data on demand
         # only run the expensive algorithm if the point is withing the boundaries
         if self.outside_the_boundaries_of(poly_id, x, y):
             return False
@@ -409,7 +416,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param lat: latitude in degree (90.0 to -90.0)
         :return: the timezone name of the matched timezone polygon. possibly "Etc/GMT+-XX" in case of an ocean timezone.
         """
-        validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_polygons)
         if nr_possible_polygons == 0:
@@ -423,15 +430,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # create a list of all the timezone ids of all possible polygons
         zone_ids = self.zone_ids_of(possible_polygons)
 
-        last_zone_change_idx = get_last_change_idx(zone_ids)
+        last_zone_change_idx = utils.get_last_change_idx(zone_ids)
         if last_zone_change_idx == 0:
             return self.zone_name_from_id(zone_ids[0])
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
         # x = longitude  y = latitude  both converted to 8byte int
-        x = coord2int(lng)
-        y = coord2int(lat)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
 
         # check until the point is included in one of the possible polygons
         for i, poly_id in enumerate(possible_polygons):
@@ -462,7 +469,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param lat: latitude in degree
         :return: the timezone name of the polygon the point is included in or `None`
         """
-        validate_coordinates(lng, lat)
+        lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
         nr_possible_polygons = len(possible_polygons)
 
@@ -473,8 +480,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
         # x = longitude  y = latitude  both converted to 8byte int
-        x = coord2int(lng)
-        y = coord2int(lat)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible polygons
         for poly_id in possible_polygons:

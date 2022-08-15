@@ -1,17 +1,30 @@
 import argparse
+from typing import Callable
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder.timezonefinder import AbstractTimezoneFinder
 
-tf = TimezoneFinder()
-tfL = TimezoneFinderL()
-functions = [
-    tf.timezone_at,
-    tf.certain_timezone_at,
-    None,
-    tfL.timezone_at,
-    tfL.timezone_at_land,
-    tf.timezone_at_land,
-]
+
+def get_timezone_function(function_id: int) -> Callable:
+    """
+    Note: script is being called for each point individually. Caching TimezoneFinder() instances is useless.
+    -> avoid constructing unnecessary instances
+    """
+    tf_instance: AbstractTimezoneFinder
+    if function_id in [0, 1, 5]:
+        tf_instance = TimezoneFinder()
+        functions = {
+            0: tf_instance.timezone_at,
+            1: tf_instance.certain_timezone_at,
+            5: tf_instance.timezone_at_land,
+        }
+    else:
+        tf_instance = TimezoneFinderL()
+        functions = {
+            3: tf_instance.timezone_at,
+            4: tf_instance.timezone_at_land,
+        }
+    return functions[function_id]
 
 
 def main():
@@ -34,7 +47,8 @@ def main():
         "5: TimezoneFinder.timezone_at_land(), ",
     )
     parsed_args = parser.parse_args()  # takes input from sys.argv
-    tz = functions[parsed_args.function](lng=parsed_args.lng, lat=parsed_args.lat)
+    timezone_function = get_timezone_function(parsed_args.function)
+    tz = timezone_function(lng=parsed_args.lng, lat=parsed_args.lat)
     if parsed_args.v:
         print("Looking for TZ at lat=", parsed_args.lat, " lng=", parsed_args.lng)
         print(

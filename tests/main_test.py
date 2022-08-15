@@ -2,15 +2,14 @@
 import json
 import timeit
 import unittest
-from math import floor, log10
 from os.path import abspath, join, pardir
 from typing import List, Optional
 
 import pytest
 
-from tests.auxiliaries import list_equal, list_of_random_points, random_point
+from tests.auxiliaries import time_preprocess
 from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
-from timezonefinder.configs import INT2COORD_FACTOR, TIMEZONE_NAMES_FILE
+from timezonefinder.configs import INT2COORD_FACTOR, THRES_DTYPE_H, TIMEZONE_NAMES_FILE
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
     TimezoneFinder,
@@ -29,23 +28,9 @@ N = int(1e2)
 
 class_under_test = TimezoneFinder
 tf: AbstractTimezoneFinder = class_under_test()
-point_list = []
 in_memory_mode = False
 
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
-
-
-def eval_time_fct():
-    global tf, point_list
-    for point in point_list:
-        tf.timezone_at(lng=point[0], lat=point[1])
-
-
-def time_preprocess(time):
-    valid_digits = 4
-    zero_digits = abs(min(0, int(log10(time))))
-    digits_to_print = zero_digits + valid_digits
-    return str(round(time, digits_to_print)) + "s"
 
 
 def ocean2land(test_locations):
@@ -82,21 +67,18 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     test_locations = BASIC_TEST_LOCATIONS
 
     def test_using_numba(self):
-        numba_installed = False
         try:
             import numba
 
             numba_installed = True
         except ImportError:
-            pass
-
-        if numba_installed:
-            try:
-                from numba import b1, f8, i2, i4, njit, typeof, u2
-            except ImportError as exc:
-                raise ValueError("numba import failed:", exc) from exc
+            numba_installed = False
 
         assert self.test_instance.using_numba() == numba_installed
+
+    def test_using_clang_pip(self):
+        res = self.test_instance.using_clang_pip()
+        assert isinstance(res, bool)
 
     def print_tf_class_props(self):
         print("test properties:")
@@ -120,49 +102,6 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         print("startup time:", time_preprocess(t), "\n")
 
         cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
-
-        # create an array of points where timezone_finder finds something (on_land queries)
-        print("collecting and storing", N, "on land points for the tests...")
-        cls.on_land_points = []
-        ps_for_10percent = int(N / 10)
-        percent_done = 0
-
-        i = 0
-        on_land_pt_fct = getattr(cls.test_instance, cls.on_land_pt_fct_name)
-        while i < N:
-            lng, lat = random_point()
-            if on_land_pt_fct(lng=lng, lat=lat):
-                i += 1
-                cls.on_land_points.append((lng, lat))
-                if i % ps_for_10percent == 0:
-                    percent_done += 10
-                    print(percent_done, "%")
-
-        print("Done.\n")
-
-    def test_speed(self):
-        print('\n\nSpeed Tests:\n-------------\n"on land points": points included in a timezone')
-        self.print_tf_class_props()
-
-        def print_speed_test(type_of_points, list_of_points):
-            global tf, point_list
-            tf = self.test_instance
-            point_list = list_of_points
-            t = timeit.timeit("eval_time_fct()", globals=globals(), number=1)
-            print("\ntesting", N, type_of_points)
-            print("total time:", time_preprocess(t))
-            pts_p_sec = len(list_of_points) / t
-            exp = floor(log10(pts_p_sec))
-            pts_p_sec = round(pts_p_sec / 10**exp, 1)  # normalize
-            print(f"avg. points per second: {pts_p_sec} * 10^{exp}")
-            return exp
-
-        exp = print_speed_test("on land points", self.on_land_points)
-        exp_rnd = print_speed_test("random points", list_of_random_points(length=N))
-
-        # assert exp >= 3
-        # assert exp_rnd >= 3
-        print("\n\n")
 
     def check_boundary(self, lng, lat, expected: Optional[str] = ""):
         # at the boundaries of the coordinate system the algorithms should still be well defined!
@@ -238,8 +177,8 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         timezone_names_stored = self.test_instance.timezone_names
         with open(join(abs_default_path, TIMEZONE_NAMES_FILE), "r") as json_file:
             timezone_names_json = json.loads(json_file.read())
-        assert list_equal(
-            timezone_names_stored, timezone_names_json
+        assert (
+            timezone_names_stored == timezone_names_json
         ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
 
 
@@ -273,6 +212,12 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.test_instance.certain_timezone_at(23.0, 42.0)
             self.test_instance.certain_timezone_at(23.0, lng=42.0)
             self.test_instance.certain_timezone_at(23.0, lat=42.0)
+
+    def test_nr_of_polygons(self):
+        res = self.test_instance.nr_of_polygons
+        assert isinstance(res, int)
+        assert res > 0
+        assert res < THRES_DTYPE_H
 
     def test_shortcut_boundary_result(self):
         for lng, lat, expected in BOUNDARY_TEST_CASES:

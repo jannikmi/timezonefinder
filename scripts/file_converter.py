@@ -72,7 +72,7 @@ import numpy as np
 
 from scripts.configs import (
     DEBUG,
-    DEBUG_POLY_STOP,
+    DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
     DEFAULT_OUTPUT_PATH,
     MAX_LAT,
@@ -167,8 +167,6 @@ def parse_polygons_from_json(input_path: Path) -> int:
         # assert depth_of_array(multipolygon) == 4
         for poly_with_hole in multipolygon:
 
-            if DEBUG and poly_id > DEBUG_POLY_STOP:
-                break
             # the first entry is the outer polygon
             # NOTE: starting from here, only coordinates converted into int32 will be considered!
             # this allows using the JIT util function already here
@@ -193,6 +191,9 @@ def parse_polygons_from_json(input_path: Path) -> int:
                 all_hole_lengths.append(nr_coords)
 
             poly_id += 1
+
+        if DEBUG and zone_id >= DEBUG_ZONE_CTR_STOP:
+            break
 
     nr_of_polygons = len(polygon_lengths)
     nr_of_zones = len(all_tz_names)
@@ -603,7 +604,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
 
     error = False
     for poly_id, poly in enumerate(polygons):
-        print(f"validating polygon {poly_id}")
+        print(f"\rvalidating polygon {poly_id}", end="")
         for i, pt in enumerate(poly.T):
             # ATTENTION: int to coord conversion required!
             lng = int2coord(pt[0])
@@ -631,11 +632,21 @@ def validate_shortcut_resolution(mapping: ShortcutMapping):
         assert h3.h3_get_resolution(hex_id) == SHORTCUT_H3_RES
 
 
+def validate_unused_polygons(shortcuts: ShortcutMapping):
+    used_polygons = set()
+    for poly_ids in shortcuts.values():
+        used_polygons.update(poly_ids)
+    all_polygon_ids = set(range(nr_of_polygons))
+    unused_poly_ids = all_polygon_ids - used_polygons
+    assert len(unused_poly_ids) == 0, f"there are unused polygons: {unused_poly_ids}"
+
+
 @time_execution
 def validate_shortcut_mapping(mapping: ShortcutMapping):
     print("validating shortcut mapping")
     validate_shortcut_resolution(mapping)
     validate_shortcut_completeness(mapping)
+    validate_unused_polygons(mapping)
 
 
 @time_execution

@@ -11,6 +11,8 @@ tmp/
 test/*.bin
 tmp_shortcut.bin
 
+build/
+
 *.DS_Store
 *.pytest_cache
 *.zip
@@ -18,6 +20,8 @@ tmp_shortcut.bin
 # Sphinx
 docs/_build
 
+# C extensions
+*.o
 
 
 

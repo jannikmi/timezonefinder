@@ -46,7 +46,3 @@ class i4(SubscriptAndCallable):
 
 class u2(SubscriptAndCallable):
     pass
-
-
-def typeof(*args):
-    return b1

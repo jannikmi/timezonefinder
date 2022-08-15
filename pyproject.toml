@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.0.2"
+version = "6.1.0"
 description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -20,6 +20,7 @@ classifiers = [
 include = [
     "timezonefinder/*.bin",
     "timezonefinder/*.json",
+    "inside_poly_extension/*",
     "tests/*.py",
     "scripts/*.py",
     ".editorconfig",
@@ -43,6 +44,7 @@ timezonefinder = "timezonefinder.command_line:main"
 python = ">=3.8,<3.11"
 numpy = "^1.22"
 h3 = "^3.7.3"
+cffi = "^1.15.1"
 numba = { version = "^0.55.2", optional = true }
 
 [tool.poetry.dev-dependencies]
@@ -59,14 +61,18 @@ rstcheck = "*"
 pydantic = "^1.9.0"
 Sphinx = "^5.0.2"
 sphinx-rtd-theme = "^1.0.0"
-
+invoke = "^1.7.1"
 
 [tool.poetry.extras]
 numba = ["numba"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.0.0", "cffi", "setuptools"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = false
 
 [tool.isort]
 profile = "black"

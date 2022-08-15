@@ -43,17 +43,20 @@ timezone for given coordinates on earth entirely offline.
 
 Quick Guide:
 
-::
+.. code-block:: console
 
-    pip install timezonefinder[numba] # also installs optional dependencies for increased performance
+    pip install timezonefinder[numba] # + optional dependencies for increased performance
 
 
 .. code-block:: python
 
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tf = TimezoneFinder()  # reuse
+
+    query_points = [(13.358, 52.5061), ...]
+    for lng, lat in query_points:
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
 
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.

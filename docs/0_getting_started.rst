@@ -1,6 +1,5 @@
 
 
-===============
 Getting started
 ===============
 
@@ -8,36 +7,29 @@ Getting started
 Installation
 ------------
 
-Installation with conda:
-see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
-
-
-Minimal installation with pip:
-
-::
+.. code-block:: console
 
     pip install timezonefinder
 
 
-It is highly recommended to also install ``numba`` for increased performance (cf. :ref:`speed test results <speed-tests>`).
-With ``numba`` installed, the time critical algorithms will be automatically JIT compiled (cf. ``utils.py``).
-
-::
-
-    pip install timezonefinder[numba]
-
+For installation within a Conda environment see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
 
 Dependencies
 ------------
 
-``python3.7+``, ``numpy``, (``numba``)
+
+``python3.8+``, ``numpy``, ``h3``, ``cffi``
+
+optional: ``numba``
+
+(cf. ``pyproject.toml``)
 
 
 
-Basics
-------
+Basic Usage
+-----------
 
 
 
@@ -45,9 +37,11 @@ Basics
 
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tf = TimezoneFinder()  # reuse
+
+    query_points = [(13.358, 52.5061), ...]
+    for lng, lat in query_points:
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
 
 
 All available features of this package are explained :ref:`HERE <usage>`.

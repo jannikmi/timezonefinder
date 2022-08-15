@@ -2,30 +2,48 @@
 Changelog
 =========
 
-
 Future TODOs:
 -------------
 
-* improve test locations, expected results for all different methods,
-* parameterised tests
 * document class attributes
 * create variables for used dtype for each type of data (polygon address, coordinate...), write generic functions for reading binary files using the right data type, performance? many fct calls
-* enable Numba ahead of time compilation
-* convert all these todos into tickets in GitHub
+* improve tests:
+    * locations, expected results for all different methods,
+    * parameterised tests
+
+
+6.1.0 (2022-08-15)
+------------------
+
+* included point-in-polygon implementation in C
+* included build script to (optionally) build C point-in-polygon extension automatically during installation
+* added ``cffi`` as a dependency to build and interact with the C extension
+* improved initialisation speed: read timezone polygon id index (h3 mapping) with ``np.fromfile``
+* improved CLI speed: construct TimezoneFinder() instances only on demand
+
+internals:
+
+* updated documentation: ``Numba`` installation is no longer recommended (it is a huge dependency and should be optional)
+* clarified documentation: TimezoneFinder() instances should be reused
+* added separate speed benchmark scripts for point in polygon algorithm implementations and the different timezone finding functions
+* added separate section in the documentation for performance including speed benchmark results
+* added checks if all timezone polygons are actually in use (appear in index) to the file conversion script
+* added and improved utility functions as well as tests
+* improved typing
 
 
 6.0.2 (2022-07-08)
 ------------------
 
-* bump numpy dependency version to 1.22 (vulnerability fix)
-* officially supported python versions `>=3.8,<3.11` (due to numpy and numba constraints)
+* bump numpy dependency version to ``1.22`` (vulnerability fix)
+* officially supported python versions ``>=3.8,<3.11`` (due to numpy and numba constraints)
 * packaging now completely based on pyproject.toml (poetry)
 
 
 6.0.1 (2022-05-20)
 ------------------
 
-* explicitly included `py.typed` in the package to allow mypy users to run static type checking
+* explicitly included ``py.typed`` in the package to allow mypy users to run static type checking
 
 
 6.0.0 (2022-05-09)
