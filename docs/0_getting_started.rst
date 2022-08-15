@@ -19,8 +19,12 @@ For installation within a Conda environment see instructions at `conda-forge fee
 Dependencies
 ------------
 
-``python3.7+``, ``numpy``
 
+``python3.8+``, ``numpy``, ``h3``, ``cffi``
+
+optional: ``numba``
+
+(cf. ``pyproject.toml``)
 
 
 
