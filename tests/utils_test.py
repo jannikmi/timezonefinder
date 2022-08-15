@@ -1,17 +1,14 @@
 # -*- coding:utf-8 -*-
-from typing import Callable, Iterable, Tuple
+from typing import Callable, Tuple
 
 import numpy as np
 import pytest
 
 from tests.auxiliaries import (
     convert_inside_polygon_input,
-    get_pip_test_input,
     get_rnd_poly,
     get_rnd_poly_int,
     get_rnd_query_pt,
-    poly_conversion_fct,
-    timefunc,
 )
 from timezonefinder import utils
 from timezonefinder.configs import DTYPE_FORMAT_H_NUMPY, INT2COORD_FACTOR
