@@ -24,9 +24,10 @@ def timefunc(function: Callable, *args):
     def wrap():
         function(*args)
 
-    t = timeit.Timer(wrap)
+    timer = timeit.Timer(wrap)
     nr_runs = 1
-    return t.timeit(nr_runs)
+    t_in_sec = timer.timeit(nr_runs)
+    return t_in_sec
 
 
 def proto_test_case(data, fct):
