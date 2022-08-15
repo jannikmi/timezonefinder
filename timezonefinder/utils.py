@@ -14,7 +14,7 @@ if __name__ == "__main__":
 """
 import io
 import re
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import cffi
 import numpy as np
@@ -36,19 +36,15 @@ except ImportError:
     clang_extension_loaded = False
 
 try:
-    from numba import b1, f8, i2, i4, njit, typeof, u2
+    from numba import b1, f8, i2, i4, njit, u2
 
     using_numba = True
 except ImportError:
     using_numba = False
     # replace Numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, typeof, u2
+    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
 
 ffi = cffi.FFI()
-
-dtype_3float_tuple = typeof((1.0, 1.0, 1.0))
-dtype_2float_tuple = typeof((1.0, 1.0))
-dtype_2int_tuple = typeof((1, 1))
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
@@ -59,7 +55,7 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     cf. https://en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm
     :param x:
     :param y:
-    :param coordinates: a polygon represented by a list containing two lists (x and y coordinates):
+    :param coords: a polygon represented by a list containing two lists (x and y coordinates):
         [ [x1,x2,x3...], [y1,y2,y3...]]
         those lists are actually numpy arrays which are being read directly from a binary file
     :return: true if the point (x,y) lies within the polygon
@@ -83,7 +79,7 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
      but here the data types are numpy internal static data types. The data is stored as int32
      -> use int64 when comparing slopes!
 
-    naive implementation:
+    slower naive implementation:
     j = nr_coords - 1
     for i in range(nr_coords):
         if ((y_coords[i] > y) != (y_coords[j] > y)) and (
@@ -150,11 +146,15 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
 
 
 def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
+    """wrapper of the point in polygon test algorithm C extension
+
+    ATTENTION: the input numpy arrays must have a C_CONTIGUOUS memory layout
+    https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
+    """
     x_coords = coords[0]
     y_coords = coords[1]
     nr_coords = len(x_coords)
-    # ATTENTION: the array must have a C_CONTIGUOUS memory layout
-    # https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
+
     y_coords = np.ascontiguousarray(y_coords)
     x_coords = np.ascontiguousarray(x_coords)
     x_coords_ffi = ffi.from_buffer("int []", x_coords)
@@ -163,6 +163,7 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     return contained
 
 
+inside_polygon: Callable[[int, int, np.ndarray], bool]
 # at import time fix which "point-in-polygon" implementation will be used
 if clang_extension_loaded and not using_numba:
     # use the C implementation if Numba is not present
