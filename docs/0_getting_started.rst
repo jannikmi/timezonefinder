@@ -1,6 +1,5 @@
 
 
-===============
 Getting started
 ===============
 
@@ -8,38 +7,25 @@ Getting started
 Installation
 ------------
 
-Installation with conda:
-see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
-
-
-
-Minimal installation with pip:
-
 
 .. code-block:: console
 
     pip install timezonefinder
 
 
-It is highly recommended to also install ``numba`` for increased performance (cf. :ref:`speed test results <speed-tests>`).
-With ``numba`` installed, the time critical algorithms will be automatically JIT compiled (cf. ``utils.py``).
-
-
-.. code-block:: console
-
-    pip install timezonefinder[numba]
-
+For installation within a Conda environment see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
 
 Dependencies
 ------------
 
-``python3.7+``, ``numpy``, (``numba``)
+``python3.7+``, ``numpy``
 
 
 
-Basics
-------
+
+Basic Usage
+-----------
 
 
 

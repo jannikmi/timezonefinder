@@ -21,15 +21,8 @@ Create a new instance of the :ref:`TimezoneFinder class <api_finder>` to be reus
 
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
+    tf = TimezoneFinder()  # reuse
 
-
-To save computing time at the cost of memory consumption and initialisation time pass ``in_memory=True``. This causes all binary files to be read into memory.
-See the :ref:`speed test results <speed-tests>`.
-
-.. code-block:: python
-
-    tf = TimezoneFinder(in_memory=True)
 
 
 Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
@@ -39,24 +32,6 @@ Use the argument ``bin_file_location`` to use data files from another location (
     tf = TimezoneFinder(bin_file_location="path/to/files")
 
 
-
-
-
-For testing if Numba is being used to JIT compile helper functions:
-
-
-.. code-block:: python
-
-    TimezoneFinder.using_numba()  # returns True or False
-
-
-
-For testing if the compiled C implementation of the point in polygon algorithm is being used:
-
-
-.. code-block:: python
-
-    TimezoneFinder.using_clang_pip()  # returns True or False
 
 
 
@@ -180,9 +155,13 @@ The most probable zone in proximity can be retrieved with ``timezone_at()``:
 
     from timezonefinder import TimezoneFinderL
 
-    tf = TimezoneFinderL(in_memory=True)
-    latitude, longitude = 52.5061, 13.358
-    tf.timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tf = TimezoneFinderL(in_memory=True)  # reuse
+
+    query_points = [(13.358, 52.5061), ...]
+    for lng, lat in query_points:
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+
+
 
 
 

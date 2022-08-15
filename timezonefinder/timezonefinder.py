@@ -103,7 +103,7 @@ class AbstractTimezoneFinder(ABC):
         """
         :return: True if Numba is being used to JIT compile helper functions
         """
-        return utils.using_numba and utils.inside_polygon == utils.pt_in_poly_python
+        return utils.using_numba
 
     @staticmethod
     def using_clang_pip() -> bool:

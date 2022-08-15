@@ -109,7 +109,7 @@ def test_timezone_finding_speed(
             "pts/s",
         )
     )
-    print("-" * 50)
+    print("-" * 60)
     for test_instance, test_func_name in classes_and_function_names:
         time_func(test_instance, test_func_name)
     print()
