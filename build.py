@@ -13,12 +13,12 @@ import subprocess
 try:
     import setuptools
 except ImportError:
-    subprocess.run(["pip", "install", "setuptools"])
+    subprocess.run(["poetry", "run", "pip", "install", "setuptools"])
 
 try:
     import cffi
 except ImportError:
-    subprocess.run(["pip", "install", "cffi"])
+    subprocess.run(["poetry", "run", "pip", "install", "cffi"])
 
 import setuptools
 from cffi import FFI
