@@ -53,10 +53,15 @@ repos:
 
   # TODO also check docs/. make compatible with sphinx
   -   repo: https://github.com/myint/rstcheck
-      rev: 'v6.0.0.post1'
+      rev: 'v6.1.0'
       hooks:
       -   id: rstcheck
           exclude: ^(docs/)
+
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.9
+    hooks:
+      - id: validate-pyproject
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.37.3

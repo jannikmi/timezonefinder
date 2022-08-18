@@ -45,7 +45,7 @@ Quick Guide:
 
 .. code-block:: console
 
-    pip install timezonefinder[numba] # + optional dependencies for increased performance
+    pip install timezonefinder
 
 
 .. code-block:: python

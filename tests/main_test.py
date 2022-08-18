@@ -23,8 +23,7 @@ DEBUG = False
 
 PACKAGE_NAME = "timezonefinder"
 
-# number of points to test (in each test, on land and random ones)
-N = int(1e2)
+NR_STARTUPS_PER_CLASS = 1
 
 class_under_test = TimezoneFinder
 tf: AbstractTimezoneFinder = class_under_test()
@@ -94,13 +93,6 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     def setUpClass(cls):
         # preparations which have to be made only once
         cls.print_tf_class_props(cls)
-
-        global in_memory_mode, class_under_test
-        in_memory_mode = cls.in_memory_mode
-        class_under_test = cls.class_under_test
-        t = timeit.timeit("class_under_test(in_memory=in_memory_mode)", globals=globals(), number=10)
-        print("startup time:", time_preprocess(t), "\n")
-
         cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode)
 
     def check_boundary(self, lng, lat, expected: Optional[str] = ""):
@@ -246,14 +238,14 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
         timezone_names_stored = self.test_instance.timezone_names
         nr_timezones = len(timezone_names_stored)
         for zone_id, zone_name in enumerate(timezone_names_stored):
+            if not DEBUG and zone_id > 5:
+                break
+
             print(zone_id, zone_name)
             geometry_from_name = self.test_instance.get_geometry(
                 tz_name=zone_name, tz_id=None, use_id=False, coords_as_pairs=False
             )
             check_geometry(geometry_from_name)
-
-            if not DEBUG:
-                continue
 
             # conduct extensive testing only with active debugging
             geometry_from_id = self.test_instance.get_geometry(

@@ -25,12 +25,12 @@ from cffi import FFI
 from cffi.setuptools_ext import cffi_modules
 
 EXTENSION_NAME = "inside_polygon_ext"
-EXTENSION_FOLDER = "inside_poly_extension"
 H_FILE_NAME = "inside_polygon_int.h"
 C_FILE_NAME = "inside_polygon_int.c"
-this_dir = pathlib.Path().resolve() / EXTENSION_FOLDER
-h_file_path = this_dir / H_FILE_NAME
-c_file_path = this_dir / C_FILE_NAME
+# stored in "timezonefinder" package folder for cleaner footprint
+EXTENSION_PATH = pathlib.Path().resolve() / "timezonefinder" / "inside_poly_extension"
+h_file_path = EXTENSION_PATH / H_FILE_NAME
+c_file_path = EXTENSION_PATH / C_FILE_NAME
 
 ffibuilder = FFI()
 
@@ -60,7 +60,8 @@ if __name__ == "__main__":
     # not required
     # ffibuilder.compile(verbose=True)
 
-    distribution = setuptools.Distribution({"package_dir": {"": ""}})
+    # Note: built into "timezonefinder" package folder
+    distribution = setuptools.Distribution({"package_dir": {"": "timezonefinder"}})
     cffi_modules(distribution, "cffi_modules", ["build.py:ffibuilder"])
     cmd = distribution.cmdclass["build_ext"](distribution)
     cmd.inplace = 1
