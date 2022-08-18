@@ -203,3 +203,21 @@ With Numba:
     inside_clang: 2.2e-05 s/query, 4.5e+04 queries/s
     inside_python: 1.8e-05 s/query, 5.5e+04 queries/s
     Python implementation WITH Numba is 0.2x faster than the C implementation
+
+
+Initialisation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    testing initialiation: TimezoneFinder(in_memory=True)
+    avg. startup time: 7.01e-01 (10 runs)
+
+    testing initialiation: TimezoneFinder(in_memory=False)
+    avg. startup time: 7.85e-01 (10 runs)
+
+    testing initialiation: TimezoneFinderL(in_memory=True)
+    avg. startup time: 6.66e-01 (10 runs)
+
+    testing initialiation: TimezoneFinderL(in_memory=False)
+    avg. startup time: 7.30e-01 (10 runs)

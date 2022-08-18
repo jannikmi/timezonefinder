@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.1.0"
+version = "6.1.1"
 description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -20,20 +20,9 @@ classifiers = [
 include = [
     "timezonefinder/*.bin",
     "timezonefinder/*.json",
+    "timezonefinder/py.typed",
     "inside_poly_extension/*",
-    "tests/*.py",
-    "scripts/*.py",
-    ".editorconfig",
-    ".pre-commit-config.yaml",
-    "CHANGELOG.rst",
-    "CONTRIBUTING.rst",
-    "LICENSE",
-    "Makefile",
-    "README.rst",
-    "runtests.py",
-    "tox.ini",
-    "py.typed",
-    "parse_data.sh",
+#    "build.py", # Note: auto included
 ]
 #exclude = ["my_package/excluded.py"]
 

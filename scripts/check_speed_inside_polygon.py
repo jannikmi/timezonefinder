@@ -2,8 +2,13 @@ import warnings
 from typing import Callable, Iterable
 
 import numpy as np
-from auxiliaries import gen_test_input, timefunc
 
+from tests.auxiliaries import (
+    convert_inside_polygon_input,
+    get_rnd_poly,
+    get_rnd_query_pt,
+    timefunc,
+)
 from timezonefinder import utils
 
 # test for overflow:
@@ -14,6 +19,12 @@ np.seterr(all="warn")
 warnings.filterwarnings("error")
 
 nr_of_runs = int(1e3)
+
+
+def gen_test_input():
+    lng, lat = get_rnd_query_pt()
+    coords = get_rnd_poly()
+    return convert_inside_polygon_input(lng, lat, coords)
 
 
 def check_inside_polygon_speed():

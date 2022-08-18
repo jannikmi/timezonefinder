@@ -12,6 +12,18 @@ Future TODOs:
     * parameterised tests
 
 
+
+6.1.1 (2022-08-18)
+------------------
+
+internals:
+
+* minimized and cleaned up installation footprint (addresses GitHub Issue #151):
+    * excluded script, changelog etc. files
+    * included C extension into the "timezonefinder" package folder
+* added initialisation speed benchmark
+
+
 6.1.0 (2022-08-15)
 ------------------
 

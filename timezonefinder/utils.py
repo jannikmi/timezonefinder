@@ -31,12 +31,13 @@ from timezonefinder.configs import (
 
 try:
     # Note: IDE might complain as this import comes from a cffi C extension
-    import inside_polygon_ext
+    from timezonefinder import inside_polygon_ext  # type: ignore
 
     clang_extension_loaded = True
 
 except ImportError:
     clang_extension_loaded = False
+    inside_polygon_ext = None
 
 try:
     from numba import b1, f8, i2, i4, njit, u2
