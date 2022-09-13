@@ -7,6 +7,7 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 """
 import pathlib
 import re
+
 import setuptools
 from cffi import FFI
 from cffi.setuptools_ext import cffi_modules
