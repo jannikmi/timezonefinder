@@ -12,6 +12,11 @@ Future TODOs:
     * parameterised tests
 
 
+6.1.2 (2022-09-13)
+------------------
+
+* bugfix potentially broken pip install due to a mismatch in ``cffi`` versions (GitHub issue #151)
+
 
 6.1.1 (2022-08-18)
 ------------------
