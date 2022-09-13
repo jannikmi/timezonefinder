@@ -7,18 +7,6 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 """
 import pathlib
 import re
-import subprocess
-
-# workaround to install build dependencies:
-try:
-    import setuptools
-except ImportError:
-    subprocess.run(["poetry", "run", "pip", "install", "setuptools"])
-
-try:
-    import cffi
-except ImportError:
-    subprocess.run(["poetry", "run", "pip", "install", "cffi"])
 
 import setuptools
 from cffi import FFI
@@ -33,6 +21,11 @@ h_file_path = EXTENSION_PATH / H_FILE_NAME
 c_file_path = EXTENSION_PATH / C_FILE_NAME
 
 ffibuilder = FFI()
+ffibuilder.set_source(
+    EXTENSION_NAME,  # name of the output C extension
+    f'#include "{h_file_path}"',
+    sources=[str(c_file_path)],
+)
 
 with open(h_file_path) as h_file:
     # cffi does not like our preprocessor directives, so we remove them
@@ -40,21 +33,9 @@ with open(h_file_path) as h_file:
     flt = filter(lambda ln: not re.match(r" *#", ln), lns)
 
 ffibuilder.cdef("\n".join(flt))
-
 with open(c_file_path) as c_file:
     # cffi does not like our preprocessor directives, so we remove them
     c_file_content = c_file.read()
-
-# ffibuilder.set_source(
-#     EXTENSION_NAME,  # name of the output C extension
-#     c_file_content
-# )
-
-ffibuilder.set_source(
-    EXTENSION_NAME,  # name of the output C extension
-    f'#include "{h_file_path}"',
-    sources=[str(c_file_path)],
-)
 
 if __name__ == "__main__":
     # not required
