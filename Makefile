@@ -1,5 +1,3 @@
-include .env
-
 # https://stackoverflow.com/questions/38878088/activate-anaconda-python-environment-from-makefile
 # By default make uses sh to execute commands, and sh doesn't know `source`
 SHELL=/bin/bash
