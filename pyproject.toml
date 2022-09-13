@@ -35,6 +35,8 @@ numpy = "^1.22"
 h3 = "^3.7.3"
 cffi = "^1.15.1"
 numba = { version = "^0.55.2", optional = true }
+# build dependencies. workaround to always have these installed
+setuptools = "^65.3.0"
 
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.13"
