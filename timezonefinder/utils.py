@@ -34,10 +34,12 @@ try:
     from timezonefinder import inside_polygon_ext  # type: ignore
 
     clang_extension_loaded = True
+    ffi = cffi.FFI()
 
 except ImportError:
     clang_extension_loaded = False
     inside_polygon_ext = None
+    ffi = None
 
 try:
     from numba import b1, f8, i2, i4, njit, u2
@@ -47,8 +49,6 @@ except ImportError:
     using_numba = False
     # replace Numba functionality with "transparent" implementations
     from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
-
-ffi = cffi.FFI()
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')

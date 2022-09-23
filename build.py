@@ -1,4 +1,4 @@
-""" builds inside polygon algorithm C extension
+""" optionally builds inside polygon algorithm C extension
 
 Resources:
 https://github.com/FirefoxMetzger/mini-extension
@@ -7,10 +7,11 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 """
 import pathlib
 import re
+import warnings
 
+import cffi
+import cffi.setuptools_ext
 import setuptools
-from cffi import FFI
-from cffi.setuptools_ext import cffi_modules
 
 EXTENSION_NAME = "inside_polygon_ext"
 H_FILE_NAME = "inside_polygon_int.h"
@@ -20,30 +21,43 @@ EXTENSION_PATH = pathlib.Path().resolve() / "timezonefinder" / "inside_poly_exte
 h_file_path = EXTENSION_PATH / H_FILE_NAME
 c_file_path = EXTENSION_PATH / C_FILE_NAME
 
-ffibuilder = FFI()
-ffibuilder.set_source(
-    EXTENSION_NAME,  # name of the output C extension
-    f'#include "{h_file_path}"',
-    sources=[str(c_file_path)],
-)
+try:
+    ffibuilder = cffi.FFI()
+except Exception as exc:
+    warnings.warn(f"C lang extension cannot be build, since cffi failed with this error: {exc}")
+    # Clang extension should be fully optional
+    ffibuilder = None
 
-with open(h_file_path) as h_file:
-    # cffi does not like our preprocessor directives, so we remove them
-    lns = h_file.read().splitlines()
-    flt = filter(lambda ln: not re.match(r" *#", ln), lns)
+if ffibuilder is not None:
+    ffibuilder.set_source(
+        EXTENSION_NAME,  # name of the output C extension
+        f'#include "{h_file_path}"',
+        sources=[str(c_file_path)],
+    )
 
-ffibuilder.cdef("\n".join(flt))
-with open(c_file_path) as c_file:
-    # cffi does not like our preprocessor directives, so we remove them
-    c_file_content = c_file.read()
+    with open(h_file_path) as h_file:
+        # cffi does not like our preprocessor directives, so we remove them
+        lns = h_file.read().splitlines()
+        flt = filter(lambda ln: not re.match(r" *#", ln), lns)
 
-if __name__ == "__main__":
+    ffibuilder.cdef("\n".join(flt))
+
+    # with open(c_file_path) as c_file:
+    #     # cffi does not like our preprocessor directives, so we remove them
+    #     c_file_content = c_file.read()
+
+
+def build_c_extension():
+    if ffibuilder is None:
+        """"""
+        return
+
     # not required
     # ffibuilder.compile(verbose=True)
 
     # Note: built into "timezonefinder" package folder
     distribution = setuptools.Distribution({"package_dir": {"": "timezonefinder"}})
-    cffi_modules(distribution, "cffi_modules", ["build.py:ffibuilder"])
+    cffi.setuptools_ext.cffi_modules(distribution, "cffi_modules", ["build.py:ffibuilder"])
     cmd = distribution.cmdclass["build_ext"](distribution)
     cmd.inplace = 1
     cmd.ensure_finalized()
@@ -54,3 +68,7 @@ if __name__ == "__main__":
         # a build failure in the extension (e.g. C compile is not installed) must not abort the build process,
         # but instead simply not install the failing extension.
         pass
+
+
+if __name__ == "__main__":
+    build_c_extension()
