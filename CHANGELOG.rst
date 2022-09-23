@@ -12,6 +12,12 @@ Future TODOs:
     * parameterised tests
 
 
+6.1.3 (2022-09-23)
+------------------
+
+* bugfix broken package build in the case of a broken ``cffi`` installation (GitHub issue #155). Skip build process if ``cffi`` fails. For performance reasons using the C extension should remain the default behavior. Hence the ``cffi`` dependency should not be optional.
+
+
 6.1.2 (2022-09-13)
 ------------------
 
