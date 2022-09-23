@@ -7,10 +7,11 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 """
 import pathlib
 import re
+import warnings
 
+import cffi
+import cffi.setuptools_ext
 import setuptools
-from cffi import FFI
-from cffi.setuptools_ext import cffi_modules
 
 EXTENSION_NAME = "inside_polygon_ext"
 H_FILE_NAME = "inside_polygon_int.h"
@@ -21,9 +22,10 @@ h_file_path = EXTENSION_PATH / H_FILE_NAME
 c_file_path = EXTENSION_PATH / C_FILE_NAME
 
 try:
-    ffibuilder = FFI()
-except Exception:
-    # fully optional Clang extension
+    ffibuilder = cffi.FFI()
+except Exception as exc:
+    warnings.warn(f"C lang extension cannot be build, since cffi failed with this error: {exc}")
+    # Clang extension should be fully optional
     ffibuilder = None
 
 if ffibuilder is not None:
@@ -47,6 +49,7 @@ if ffibuilder is not None:
 
 def build_c_extension():
     if ffibuilder is None:
+        """"""
         return
 
     # not required
@@ -54,7 +57,7 @@ def build_c_extension():
 
     # Note: built into "timezonefinder" package folder
     distribution = setuptools.Distribution({"package_dir": {"": "timezonefinder"}})
-    cffi_modules(distribution, "cffi_modules", ["build.py:ffibuilder"])
+    cffi.setuptools_ext.cffi_modules(distribution, "cffi_modules", ["build.py:ffibuilder"])
     cmd = distribution.cmdclass["build_ext"](distribution)
     cmd.inplace = 1
     cmd.ensure_finalized()

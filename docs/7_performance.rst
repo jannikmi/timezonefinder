@@ -6,10 +6,12 @@ Performance
 C extension
 -----------
 
-During installation ``timezonefinder`` tries to compile a C extension with an implementation of the time critical point in polygon check algorithm.
-If compilation fails ``timezonefinder`` will silently fall back to a pure Python implementation (~400x slower, cf. :ref:`speed test results <speed-tests>` below).
+During installation ``timezonefinder`` automatically tries to compile a C extension with an implementation of the time critical point in polygon check algorithm.
+In order for this to work, a Clang compiler has to be installed.
 
-Please make sure to have C compiler installed when speed matters to you.
+.. note::
+
+    If compilation fails (due to e.g. missing C compiler or broken ``cffi`` installation) ``timezonefinder`` will silently fall back to a pure Python implementation (~400x slower, cf. :ref:`speed test results <speed-tests>` below).
 
 
 For testing if the compiled C implementation of the point in polygon algorithm is being used:

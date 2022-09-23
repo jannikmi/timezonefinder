@@ -33,10 +33,11 @@ timezonefinder = "timezonefinder.command_line:main"
 python = ">=3.8,<3.11"
 numpy = "^1.22"
 h3 = "^3.7.3"
-cffi = { version = "^1.15.1", optional = true }
+cffi = "^1.15.1"
 numba = { version = "^0.55.2", optional = true }
 # build dependencies. workaround to always have these installed
 setuptools = "^65.3.0"
+
 [tool.poetry.dev-dependencies]
 poetry = "^1.1.13"
 tox = "*"
@@ -55,7 +56,6 @@ invoke = "^1.7.1"
 
 [tool.poetry.extras]
 numba = ["numba"]
-cffi = ["cffi"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "cffi", "setuptools"]
