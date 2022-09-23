@@ -48,7 +48,11 @@ except ImportError:
     # replace Numba functionality with "transparent" implementations
     from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
 
-ffi = cffi.FFI()
+try:
+    ffi = cffi.FFI()
+except Exception:
+    # fully optional Clang extension
+    ffi = None
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
