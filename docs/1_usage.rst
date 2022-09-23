@@ -50,9 +50,11 @@ If no timezone has been matched, ``None`` is being returned.
     tz = tf.timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
 .. note::
+
     To reduce the risk of mixing up the coordinates, the arguments ``lng`` and ``lat`` have to be given as keyword arguments
 
 .. note::
+
     This function is optimized for speed: The last possible timezone in proximity is always returned (without checking if the point is really included).
 
 
