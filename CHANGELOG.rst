@@ -12,6 +12,13 @@ Future TODOs:
     * parameterised tests
 
 
+6.1.4 (2022-10-23)
+------------------
+
+* more permissive optional ``Numba`` dependency specification (FIX #162, impossible using latest numpy version)
+* made all dependency specifications more permissive following the same rationale
+
+
 6.1.3 (2022-09-23)
 ------------------
 
