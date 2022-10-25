@@ -49,7 +49,7 @@ if ffibuilder is not None:
 
 def build_c_extension():
     if ffibuilder is None:
-        """"""
+        warnings.warn(f"missing ffibuilder. skipping build process")
         return
 
     # not required
@@ -63,11 +63,11 @@ def build_c_extension():
     cmd.ensure_finalized()
     try:
         cmd.run()
-    except Exception:
+    except Exception as exc:
         # distutils.errors.CompileError:
         # a build failure in the extension (e.g. C compile is not installed) must not abort the build process,
         # but instead simply not install the failing extension.
-        pass
+        warnings.warn(f"C lang extension cannot be build, since cmd.run() failed with this error: {exc}")
 
 
 if __name__ == "__main__":
