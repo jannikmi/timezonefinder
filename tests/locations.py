@@ -10,7 +10,7 @@ BASIC_TEST_LOCATIONS = [
     (34.104255, -118.4055591, "Los Angeles", "America/Los_Angeles"),
     (55.743749, 37.6207923, "Moscow", "Europe/Moscow"),
     (39.194991, -106.8294024, "Aspen, Colorado", "America/Denver"),
-    (50.438114, 30.5179595, "Kiev", "Europe/Kiev"),
+    (50.438114, 30.5179595, "Kiev", "Europe/Kyiv"),
     (12.936873, 77.6909136, "Jogupalya", "Asia/Kolkata"),
     (38.889144, -77.0398235, "Washington DC", "America/New_York"),
     (19, -135, "pacific ocean", "Etc/GMT+9"),
