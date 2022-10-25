@@ -12,6 +12,13 @@ Future TODOs:
     * parameterised tests
 
 
+6.1.5 (2022-10-25)
+------------------
+
+* updated the data to `2021c <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2021c>`__.
+* logging build failures with warnings
+
+
 6.1.4 (2022-10-23)
 ------------------
 
