@@ -46,7 +46,7 @@ If no timezone has been matched, ``None`` is being returned.
 
 .. code-block:: python
 
-    tz = tf.timezone_at(lng=52.5061, lat=13.358)  # 'Europe/Berlin'
+    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
 .. note::
@@ -67,10 +67,8 @@ If you want to explicitly receive only "land" timezones use
 
 .. code-block:: python
 
-    tz = tf.timezone_at_land(lng=52.5061, lat=13.358)  # 'Europe/Berlin'
+    tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
-
-
 
 unique_timezone_at()
 --------------------
@@ -104,7 +102,7 @@ are being checked until one polygon is matched. ``None`` is being returned in th
 
 .. code-block:: python
 
-    tf.certain_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tz = tf.certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
 
@@ -171,7 +169,7 @@ Certain results can be retrieved with ``unique_timezone_at()``:
 
 .. code-block:: python
 
-    tf.unique_timezone_at(lng=longitude, lat=latitude)  # returns 'Europe/Berlin'
+    tf.unique_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
 .. note::
