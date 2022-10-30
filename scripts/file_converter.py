@@ -151,9 +151,8 @@ def parse_polygons_from_json(input_path: Path) -> int:
 
     poly_id = 0
     zone_id = 0
-    print("extracting data.\nfound holes:")
+    print("parsing data...\nprocessing holes:")
     for zone_id, tz_dict in enumerate(tz_list):
-
         tz_name = tz_dict.get("properties").get("tzid")
         all_tz_names.append(tz_name)
         geometry = tz_dict.get("geometry")
@@ -181,8 +180,8 @@ def parse_polygons_from_json(input_path: Path) -> int:
 
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
-                print(f"#{nr_of_holes}: polygon #{poly_id}({hole_nr}) zone: {tz_name}")
                 nr_of_holes += 1  # keep track of how many holes there are
+                print(f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr+1} in polygon", end="")
                 polynrs_of_holes.append(poly_id)
                 hole_poly = to_numpy_polygon(hole)
                 holes.append(hole_poly)
@@ -195,6 +194,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
         if DEBUG and zone_id >= DEBUG_ZONE_CTR_STOP:
             break
 
+    print("\n")
     nr_of_polygons = len(polygon_lengths)
     nr_of_zones = len(all_tz_names)
     assert nr_of_polygons >= 0
