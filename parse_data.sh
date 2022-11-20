@@ -35,10 +35,9 @@ else
     if [ -f $ZIP_ARCHIVE_PATH ]; then
         echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
     else
-        echo "DOWNLOAD..."
-
-
         URL=$URL_PREFIX$INTERFIX$URL_SUFFIX
+        echo "DOWNLOADING $URL"
+
         # install command mac:
         # brew install wget
         wget -O $ZIP_ARCHIVE_PATH $URL --tries=3
@@ -48,12 +47,12 @@ else
 fi
 
 echo "START PARSING..."
-SCRIPT_PATH=./timezonefinder/file_converter.py
+SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
 # TODO
-#read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
-#if [ "$do_deletion" -eq 1 ]; then
-#    rm -r "$WORKING_FOLDER_NAME"
-#fi
+ read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
+ if [ "$do_deletion" -eq 1 ]; then
+    rm -r "$WORKING_FOLDER_NAME"
+fi
