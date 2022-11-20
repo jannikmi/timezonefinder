@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.1.6"
+version = "6.1.7"
 description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -31,10 +31,10 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
-numpy = "^1"
-h3 = "^3"
-cffi = "^1"
-numba = { version = "^0", optional = true }
+numpy = ">=1.18,<2"
+h3 = ">=3.7.4,<4"
+cffi = ">=1.15.1,<2"
+numba = { version = ">=0.56,<1", optional = true }
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"
 
