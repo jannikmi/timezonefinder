@@ -11,6 +11,13 @@ Future TODOs:
     * locations, expected results for all different methods,
     * parameterised tests
 
+6.1.8 (2022-11-25)
+------------------
+
+* pumped ``h3`` dependency to ``>=3.7.6,<4`` to support python 3.11 (FIX #170)
+* added python 3.11 tests (not yet supporting numba)
+
+
 6.1.7 (2022-11-20)
 ------------------
 
