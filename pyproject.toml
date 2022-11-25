@@ -32,7 +32,7 @@ timezonefinder = "timezonefinder.command_line:main"
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
 numpy = ">=1.18,<2"
-h3 = ">=3.7.4,<4"
+h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
 numba = { version = ">=0.56,<1", optional = true }
 # build dependencies. workaround to always have these installed
