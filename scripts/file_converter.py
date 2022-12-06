@@ -582,6 +582,7 @@ def compile_shortcut_mapping(output_path: Path) -> int:
 
     cf. https://eng.uber.com/h3/
     """
+    print("\n\ncomputing timezone polygon index ('shortcuts')...")
     candidates = all_res_candidates(SHORTCUT_H3_RES)
     print(
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
