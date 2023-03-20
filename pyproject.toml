@@ -35,6 +35,7 @@ numpy = ">=1.18,<2"
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
 numba = { version = ">=0.56,<1", optional = true }
+pytz = { version = ">=2022.7.1", optional = true }
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"
 
@@ -56,6 +57,7 @@ invoke = "^1"
 
 [tool.poetry.extras]
 numba = ["numba"]
+pytz = ["pytz"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "cffi", "setuptools"]
