@@ -7,12 +7,13 @@ About
 .. include:: ./badges.rst
 
 
-timezonefinder is a fast and lightweight python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
+``timezonefinder`` is a fast and lightweight python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
-Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by simple point in polygon tests.
-A few tweaks help to keep the computational requirements low and make this package fast.
-For example precomputed, so called "shortcuts" reduce the amount of timezone polygons to be checked (a kind of index for the polygons).
-See the documentation of the code itself for further explanation.
+Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by a point in polygon (PIP) check.
+In many cases an expensive PIP check can be avoided.
+This package currently uses a precomputed timezone polygon index based on the geospatial hexagon index of the `h3 library <https://github.com/uber/h3-py>`__.
+Among other tweaks this index makes ``timezonefinder`` efficient (also check the :ref:`performance chapter <performance>`).
+See the docstrings in the source code for further explanation.
 
 Data
 ----
