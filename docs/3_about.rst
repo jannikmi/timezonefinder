@@ -32,7 +32,8 @@ Current **data set** in use: precompiled `timezone-boundary-builder <https://git
     and that hence a query coordinate can actually match multiple time zones.
     ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
 
-
+- package size: ~46 MB
+- original data size: ~110 MB
 
 
 References
