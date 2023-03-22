@@ -37,8 +37,7 @@ timezonefinder
 
 
 
-This is a fast and lightweight python package for looking up the corresponding
-timezone for given coordinates on earth entirely offline.
+This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 
 Quick Guide:
