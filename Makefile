@@ -31,6 +31,9 @@ hook:
 hook2:
 	@pre-commit autoupdate
 
+hook3:
+	@pre-commit clean
+
 clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
 
