@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 # NOTE: Changes in the global settings might not immediately affect
 # the functions in utils.py due to numba compilation and caching!
 from typing import Dict, List, Tuple

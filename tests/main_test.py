@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 import json
 import timeit
 import unittest
@@ -140,7 +139,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         no_mistakes_made = True
         print(RESULT_TEMPLATE.format("LOCATION", "EXPECTED", "COMPUTED", "Status"))
         print("====================================================================")
-        for (lat, lng, loc, expected) in test_data:
+        for lat, lng, loc, expected in test_data:
             computed = test_fct(lng=lng, lat=lat)
             results_equal = computed == expected
             if results_equal:
@@ -167,7 +166,7 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
 
     def test_timezone_name_attribute(self):
         timezone_names_stored = self.test_instance.timezone_names
-        with open(join(abs_default_path, TIMEZONE_NAMES_FILE), "r") as json_file:
+        with open(join(abs_default_path, TIMEZONE_NAMES_FILE)) as json_file:
             timezone_names_json = json.loads(json_file.read())
         assert (
             timezone_names_stored == timezone_names_json
@@ -198,7 +197,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
     test_locations = TEST_LOCATIONS
 
     def test_kwargs_only(self):
-        super(TimezonefinderClassTest, self).test_kwargs_only()
+        super().test_kwargs_only()
 
         with pytest.raises(TypeError):
             self.test_instance.certain_timezone_at(23.0, 42.0)

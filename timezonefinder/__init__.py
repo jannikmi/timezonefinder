@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL
 
 # https://docs.python.org/3/tutorial/modules.html#importing-from-a-package

@@ -13,7 +13,7 @@ from timezonefinder.utils import coord2int
 
 def load_json(path):
     print("loading json from ", path)
-    with open(path, "r") as fp:
+    with open(path) as fp:
         obj = json.load(fp)
     return obj
 

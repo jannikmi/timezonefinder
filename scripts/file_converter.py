@@ -165,7 +165,6 @@ def parse_polygons_from_json(input_path: Path) -> int:
         # multipolygon has depth 4
         # assert depth_of_array(multipolygon) == 4
         for poly_with_hole in multipolygon:
-
             # the first entry is the outer polygon
             # NOTE: starting from here, only coordinates converted into int32 will be considered!
             # this allows using the JIT util function already here
