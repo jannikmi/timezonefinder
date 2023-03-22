@@ -8,7 +8,7 @@ from timezonefinder.configs import TIMEZONE_NAMES_FILE
 
 PROJECT_DIR = Path(__file__).parent.parent
 TIMEZONE_FILE = PROJECT_DIR / "timezonefinder" / TIMEZONE_NAMES_FILE
-with open(TIMEZONE_FILE, "r") as json_file:
+with open(TIMEZONE_FILE) as json_file:
     timezone_names = json.loads(json_file.read())
 
 

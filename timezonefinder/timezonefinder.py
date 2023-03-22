@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 import json
 from abc import ABC, abstractmethod
 from io import BytesIO
@@ -74,7 +73,7 @@ class AbstractTimezoneFinder(ABC):
             bin_file_location = Path(bin_file_location)
         self.bin_file_location: Path = bin_file_location
 
-        with open(self.bin_file_location / TIMEZONE_NAMES_FILE, "r") as json_file:
+        with open(self.bin_file_location / TIMEZONE_NAMES_FILE) as json_file:
             self.timezone_names = json.loads(json_file.read())
 
         path2shortcut_bin = self.bin_file_location / SHORTCUT_FILE
@@ -257,11 +256,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
     binary_data_attributes = BINARY_DATA_ATTRIBUTES
 
     def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
-        super(TimezoneFinder, self).__init__(bin_file_location, in_memory)
+        super().__init__(bin_file_location, in_memory)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few it is feasible to keep them in the memory
-        with open(self.bin_file_location / HOLE_REGISTRY_FILE, "r") as json_file:
+        with open(self.bin_file_location / HOLE_REGISTRY_FILE) as json_file:
             hole_registry_tmp = json.loads(json_file.read())
 
         # convert the json string keys to int
@@ -442,7 +441,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         # check until the point is included in one of the possible polygons
         for i, poly_id in enumerate(possible_polygons):
-
             if i >= last_zone_change_idx:
                 break
 

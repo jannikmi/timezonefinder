@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 """modify PYTHONPATH to make parent package discoverable."""
 
 import sys

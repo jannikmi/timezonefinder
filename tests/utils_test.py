@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 from typing import Callable, Tuple
 
 import numpy as np

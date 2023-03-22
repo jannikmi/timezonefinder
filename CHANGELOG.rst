@@ -2,14 +2,12 @@
 Changelog
 =========
 
-Future TODOs:
--------------
 
-* document class attributes
-* create variables for used dtype for each type of data (polygon address, coordinate...), write generic functions for reading binary files using the right data type, performance? many fct calls
-* improve tests:
-    * locations, expected results for all different methods,
-    * parameterised tests
+6.1.10 (2023-03-22)
+-------------------
+
+* added a `pytz` extra for easily maintaining compatibility
+* improved documentation
 
 
 6.1.9 (2022-12-06)

@@ -1,4 +1,3 @@
-# -*- coding:utf-8 -*-
 """ utility functions
 
 JIT compiled for efficiency in case `numba` is installed

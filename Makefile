@@ -3,18 +3,16 @@
 SHELL=/bin/bash
 
 
-pin:
+install:
+	@echo "installing the development dependencies..."
+	@#poetry install --no-dev
+	@poetry install --extras "numba" --no-root --sync
+
+update:
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
 	@poetry update -vv
 	#poetry export -f requirements.txt --output docs/requirements.txt --without-hashes
 
-req:
-	@echo "installing the development dependencies..."
-	@poetry install --extras "numba" --no-root
-	@#poetry install --no-dev
-
-
-update: pin req
 
 env:
 	# conda env remove -n timezonefinder
@@ -32,6 +30,9 @@ hook:
 
 hook2:
 	@pre-commit autoupdate
+
+hook3:
+	@pre-commit clean
 
 clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
