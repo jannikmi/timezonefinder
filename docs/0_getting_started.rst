@@ -20,6 +20,13 @@ in case you are using ``pytz``, also require it via its extra to avoid incompati
     pip install timezonefinder[pytz]
 
 
+for improved speed also install the optional dependency ``numba`` via its extra (also check the :ref:`performance chapter <performance>`):
+
+.. code-block:: console
+
+    pip install timezonefinder[numba]
+
+
 For installation within a Conda environment see instructions at `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 
 
