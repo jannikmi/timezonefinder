@@ -62,10 +62,23 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 import functools
 import itertools
 import json
+import multiprocessing
+import random
+import warnings
 from dataclasses import dataclass
 from os.path import abspath, join
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import (
+    Collection,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Sized,
+    Tuple,
+    Union,
+)
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -118,7 +131,7 @@ from timezonefinder.utils import (
     int2coord,
 )
 
-ShortcutMapping = Dict[int, List[int]]
+N_PROCESSES = None  # os.cpu_count()
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -133,6 +146,8 @@ holes = []
 all_hole_lengths = []
 list_of_pointers = []
 poly_nr2zone_id = []
+
+ShortcutMapping = Dict[int, List[int]]
 
 
 def _holes_in_poly(poly_nr):
@@ -180,7 +195,9 @@ def parse_polygons_from_json(input_path: Path) -> int:
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
                 nr_of_holes += 1  # keep track of how many holes there are
-                print(f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr+1} in polygon", end="")
+                print(
+                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon", end=""
+                )
                 polynrs_of_holes.append(poly_id)
                 hole_poly = to_numpy_polygon(hole)
                 holes.append(hole_poly)
@@ -508,7 +525,7 @@ def get_hex(hex_id: int) -> Hex:
     return Hex.from_id(hex_id)
 
 
-def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
+def optimise_shortcut_ordering(poly_ids: Collection[int]) -> List[int]:
     """optimises the order of polygon ids for faster timezone checks
 
     observation: as soon as just polygons of one zone are left, this zone can be returned
@@ -519,7 +536,7 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     -> sort the list of polygon ids in each shortcut after the size of the corresponding polygons
     """
     if len(poly_ids) <= 1:
-        return poly_ids
+        return list(poly_ids)
     global polygon_lengths
 
     poly_sizes = [polygon_lengths[i] for i in poly_ids]
@@ -538,29 +555,41 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
+def get_shortcut_entry(hex_id: int) -> List[int]:
+    # print(f"compiling shortcut for {hex_id=}")
+    cell = get_hex(hex_id)
+    poly_ids = optimise_shortcut_ordering(cell.polys_in_cell)
+    return poly_ids
+
+
 def compile_h3_map(candidates: Set) -> ShortcutMapping:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
     """
-    mapping: ShortcutMapping = {}
-    total_candidates = len(candidates)
 
-    def report_progress():
-        nr_candidates = len(candidates)
-        processed = total_candidates - nr_candidates
-        print(
-            f"\r{processed:,} processed\t{nr_candidates:,} remaining\t",
-            end="",
-        )
+    candidates = list(candidates)
+    # if DEBUG:
+    #     candidates = random.sample(candidates, 200)
 
-    while candidates:
-        hex_id = candidates.pop()
-        cell = get_hex(hex_id)
-        polys = list(cell.polys_in_cell)
-        mapping[hex_id] = optimise_shortcut_ordering(polys)
-        report_progress()
+    # total_candidates = len(candidates)
+    # def report_progress(nr_processed: int):
+    #     nr_candidates = total_candidates - nr_processed
+    #     print(
+    #         f"\r{nr_processed:,} processed\t{nr_candidates:,} remaining\t",
+    #         end="",
+    #     )
 
+    print("spawning multiple worker processes...")
+    with multiprocessing.Pool(processes=N_PROCESSES) as pool:
+        print("compiling shortcut mapping...")
+        shortcut_entries = pool.map(get_shortcut_entry, candidates)
+
+    lengths = map(len, shortcut_entries)
+    # FIXME: empty mappings!
+    max_lenght = max(lengths)
+    # combine into mapping dictionary: hex_id -> polygon ids
+    mapping = dict(zip(candidates, shortcut_entries))
     return mapping
 
 
@@ -581,6 +610,7 @@ def compile_shortcut_mapping(output_path: Path) -> int:
 
     cf. https://eng.uber.com/h3/
     """
+
     print("\n\ncomputing timezone polygon index ('shortcuts')...")
     candidates = all_res_candidates(SHORTCUT_H3_RES)
     print(
@@ -618,7 +648,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
                     f"(hexagon cell id {hex_id} missing in mapping)"
                 )
             if poly_id not in shortcut_entries:
-                print(
+                warnings.warn(
                     f"ERR: point #{i} ({lng}, {lat}) of polygon {poly_id} "
                     f"does not appear in shortcut entries {shortcut_entries} of cell {hex_id}"
                 )
