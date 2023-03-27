@@ -56,3 +56,20 @@ python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
  if [ "$do_deletion" -eq 1 ]; then
     rm -r "$WORKING_FOLDER_NAME"
 fi
+
+echo "runnings tests..."
+if ! tox; then
+    # assert that all tests are passing
+    echo "tests failed!"
+    exit 1
+fi
+
+# minor version bump
+poetry version minor
+
+# TODO add changelog entry: keep title, current date, parse data version
+# $(poetry version) (2022-12-06)
+#------------------
+#
+#* updated the data to `2022g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2022g>`__.
+#echo -e "DATA-Line-1\n$(cat input)" > input
