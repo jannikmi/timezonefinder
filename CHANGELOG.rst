@@ -3,12 +3,17 @@ Changelog
 =========
 
 
+6.2.0 (2023-03-26)
+------------------
+
+* updated the data to `2023b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2023b>`__.
+
+
 6.1.10 (2023-03-22)
 -------------------
 
 * added a `pytz` extra for easily maintaining compatibility
 * improved documentation
-
 
 6.1.9 (2022-12-06)
 ------------------
