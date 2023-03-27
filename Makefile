@@ -20,6 +20,11 @@ env:
 	#	&& conda activate timezonefinder
 	# && make req
 
+parse:
+	poetry run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
+
+data:
+	bash parse_data.sh
 
 test:
 	@python ./runtests.py
