@@ -51,12 +51,6 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
-# TODO
- read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
- if [ "$do_deletion" -eq 1 ]; then
-    rm -r "$WORKING_FOLDER_NAME"
-fi
-
 echo "runnings tests..."
 if ! tox; then
     # assert that all tests are passing
@@ -66,6 +60,12 @@ fi
 
 # minor version bump
 poetry version minor
+
+# TODO
+ read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
+ if [ "$do_deletion" -eq 1 ]; then
+    rm -r "$WORKING_FOLDER_NAME"
+fi
 
 # TODO add changelog entry: keep title, current date, parse data version
 # $(poetry version) (2022-12-06)
