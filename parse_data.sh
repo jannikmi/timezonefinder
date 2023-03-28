@@ -73,3 +73,5 @@ fi
 #
 #* updated the data to `2022g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2022g>`__.
 #echo -e "DATA-Line-1\n$(cat input)" > input
+
+echo "SUCCESS! the new package version $(poetry version) can now be released!"
