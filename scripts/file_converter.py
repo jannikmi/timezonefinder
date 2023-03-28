@@ -647,6 +647,7 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     validate_shortcut_resolution(mapping)
     validate_shortcut_completeness(mapping)
     validate_unused_polygons(mapping)
+    assert not DEBUG, "DEBUG mode is on"
 
 
 @time_execution

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.1.10"
+version = "6.2.0"
 description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -21,7 +21,7 @@ include = [
     "timezonefinder/*.bin",
     "timezonefinder/*.json",
     "timezonefinder/py.typed",
-    "inside_poly_extension/*",
+    "timezonefinder/inside_poly_extension/*",
     #    "build.py", # Note: auto included
 ]
 #exclude = ["my_package/excluded.py"]

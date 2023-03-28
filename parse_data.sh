@@ -51,8 +51,27 @@ SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
 python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
 
+echo "runnings tests..."
+if ! tox; then
+    # assert that all tests are passing
+    echo "tests failed!"
+    exit 1
+fi
+
+# minor version bump
+poetry version minor
+
 # TODO
  read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
  if [ "$do_deletion" -eq 1 ]; then
     rm -r "$WORKING_FOLDER_NAME"
 fi
+
+# TODO add changelog entry: keep title, current date, parse data version
+# $(poetry version) (2022-12-06)
+#------------------
+#
+#* updated the data to `2022g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2022g>`__.
+#echo -e "DATA-Line-1\n$(cat input)" > input
+
+echo "SUCCESS! the new package version $(poetry version) can now be released!"

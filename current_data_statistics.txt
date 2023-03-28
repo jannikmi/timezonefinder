@@ -1,36 +1,13 @@
 ... parsing done. found:
-1,287 polygons from
-445 timezones with
-729 holes
-152,210 maximal amount of coordinates in one polygon
-21,495 maximal amount of coordinates in a hole polygon
-13,557,486 floats in all the polygons (2 per point)
+1,276 polygons from
+444 timezones with
+713 holes
+155,395 maximal amount of coordinates in one polygon
+21,500 maximal amount of coordinates in a hole polygon
+13,787,196 floats in all the polygons (2 per point)
 updating the zone names in /Users/jcm/github/timezonefinder/timezonefinder/timezone_names.json now.
 writing json to  /Users/jcm/github/timezonefinder/timezonefinder/timezone_names.json
 ...Done.
-
-Computing where zones start and end...
-...Done.
-
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_nr2zone_id.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_zone_ids.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_bounds.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_data.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_coord_amount.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_adr2data.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/hole_coord_amount.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/poly_adr2data.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/hole_adr2data.bin
-writing /Users/jcm/github/timezonefinder/timezonefinder/hole_data.bin
-
-function compile_polygon_binaries(...) executed in 21.3s
-compiling hex candidates for resolution 3.
-compiling hex candidates for resolution 2.
-compiling hex candidates for resolution 1.
-compiling hex candidates for resolution 0.
-reached desired resolution 3.
-storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')
-41,162 processed31,163 r0 remainingggngg
 
 shortcut statistics:
 
@@ -39,18 +16,18 @@ highest amount in one shortcut is 59
 0.0 % of all shortcuts are empty
 frequencies of entry amounts:
 0: 0
-1: 30677
-2: 8776
-3: 1405
-4: 227
-5: 37
+1: 30674
+2: 8777
+3: 1408
+4: 226
+5: 40
 6: 15
-7: 9
+7: 7
 8: 5
 9: 5
 10: 1
 11: 0
-12: 1
+12: 0
 13: 0
 14: 0
 15: 0
@@ -99,9 +76,9 @@ frequencies of entry amounts:
 58: 0
 59: 1
 relative accumulated frequencies [%]:
-[0.0, 74.53, 95.85, 99.26, 99.81, 99.9, 99.94, 99.96, 99.97, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+[0.0, 74.52, 95.84, 99.26, 99.81, 99.91, 99.95, 99.96, 99.98, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
 missing relative accumulated frequencies [%]:
-[100.0, 25.47, 4.15, 0.74, 0.19, 0.1, 0.06, 0.04, 0.03, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[100.0, 25.48, 4.16, 0.74, 0.19, 0.09, 0.05, 0.04, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 --------------------------------
 
 amount of different timezones per shortcut
@@ -109,10 +86,10 @@ highest amount in one shortcut is 25
 0.0 % of all shortcuts are empty
 frequencies of entry amounts:
 0: 0
-1: 30683
-2: 9015
+1: 30680
+2: 9017
 3: 1291
-4: 151
+4: 152
 5: 17
 6: 3
 7: 1
@@ -135,17 +112,17 @@ frequencies of entry amounts:
 24: 0
 25: 1
 relative accumulated frequencies [%]:
-[0.0, 74.54, 96.44, 99.58, 99.95, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+[0.0, 74.53, 96.44, 99.58, 99.95, 99.99, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
 missing relative accumulated frequencies [%]:
-[100.0, 25.46, 3.56, 0.42, 0.05, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+[100.0, 25.47, 3.56, 0.42, 0.05, 0.01, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 --------------------------------
 
 validating shortcut mapping
 validating shortcut completeness...
-validating polygon 1286
-function validate_shortcut_mapping(...) executed in 175.3s
+validating polygon 1275
+function validate_shortcut_mapping(...) executed in 11.3s
 
-function compile_shortcut_mapping(...) executed in 1940.9s
-the polygon data makes up 95.68% of the data
-the shortcuts make up 1.03% of the data
-holes make up 3.28%  of the data
+function compile_shortcut_mapping(...) executed in 2088.4s
+the polygon data makes up 95.58% of the data
+the shortcuts make up 1.02% of the data
+holes make up 3.41%  of the data
