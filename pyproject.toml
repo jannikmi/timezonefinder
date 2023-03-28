@@ -21,7 +21,7 @@ include = [
     "timezonefinder/*.bin",
     "timezonefinder/*.json",
     "timezonefinder/py.typed",
-    "inside_poly_extension/*",
+    "timezonefinder/inside_poly_extension/*",
     #    "build.py", # Note: auto included
 ]
 #exclude = ["my_package/excluded.py"]
