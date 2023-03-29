@@ -64,7 +64,7 @@ jobs:
 
       - name: Fetch version
         id: fetch_version
-        run: echo "::set-output name=version_nr::$(poetry version -s)"
+        run: echo "version_nr=$(poetry version -s)" >> $GITHUB_OUTPUT
 
       - name: Build a binary wheel and a source tarball
         # Note: poetry build required to support CLI script entrypoint in pyproject.toml?!
