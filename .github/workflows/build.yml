@@ -41,7 +41,7 @@ jobs:
         run: pip install -U pip
 
       - name: Install test dependencies
-        run: pip install tox tox-gh-actions poetry==1.4.0
+        run: pip install tox tox-gh-actions poetry
 
       - name: Run tox
         run: tox
