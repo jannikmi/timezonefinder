@@ -40,7 +40,6 @@ pytz = { version = ">=2022.7.1", optional = true }
 setuptools = ">=65.5"
 
 [tool.poetry.dev-dependencies]
-poetry = "^1"
 tox = "*"
 pytest = "*"
 pre-commit = "*"
