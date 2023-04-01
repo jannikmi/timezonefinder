@@ -24,7 +24,7 @@ repos:
                 args: [ "--profile", "black", "--filter-files" ]
 
     -   repo: https://github.com/psf/black
-        rev: 23.1.0
+        rev: 23.3.0
         hooks:
             -   id: black
                 language_version: python3
@@ -58,7 +58,7 @@ repos:
                 exclude: ^(docs/)
 
     -   repo: https://github.com/abravalheri/validate-pyproject
-        rev: v0.12.1
+        rev: v0.12.2
         hooks:
             -   id: validate-pyproject
 
@@ -87,6 +87,6 @@ repos:
     #        additional_dependencies: [ numpy, poetry==1.1.11 ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v15.0.7
+        rev: v16.0.0
         hooks:
             -   id: clang-format
