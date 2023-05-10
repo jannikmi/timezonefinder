@@ -25,15 +25,13 @@ jobs:
       TOXENV: ${{ matrix.tox-env }}
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run pre-commit hook
-        uses: pre-commit/action@v2.0.3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: pre-commit/action@v3.0.0
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -51,10 +49,10 @@ jobs:
     needs: test
     if: endsWith(github.ref, '/master')
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
