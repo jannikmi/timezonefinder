@@ -89,6 +89,7 @@ jobs:
           prerelease: false
 
       - name: PyPI Publishing
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@release/v1.8.6
         with:
           password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}
+          skip-existing: true
