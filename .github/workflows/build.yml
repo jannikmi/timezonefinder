@@ -73,19 +73,20 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
           skip-existing: true
 
       - name: Create GitHub Release
         id: create_gh_release
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1
         env:
           VERSION: ${{ steps.fetch_version.outputs.version_nr }}
         with:
-          tag_name: ${{env.VERSION}}
+          tag: ${{env.VERSION}}
           name: Release ${{env.VERSION}}
           draft: false
           prerelease: false
+          skipIfReleaseExists: true
 
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
