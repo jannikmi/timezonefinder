@@ -1,5 +1,8 @@
 name: build
 
+permissions:
+  id-token: write
+
 on:
   pull_request:
   push:
@@ -47,7 +50,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: test
-#    if: endsWith(github.ref, '/master')
+    if: endsWith(github.ref, '/master')
     steps:
       - uses: actions/checkout@v3
 
