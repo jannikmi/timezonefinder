@@ -133,3 +133,4 @@ Thanks to:
 - `snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe.
 - `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
+- `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings

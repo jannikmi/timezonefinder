@@ -3,6 +3,15 @@ Changelog
 =========
 
 
+TBA (TBA)
+------------------
+
+internal:
+
+* added docstrings. Thanks to `Tyler Huntley <https://github.com/Ty1776>`__
+* automatically skip GitHub actions publishing when the version already exists. useful for minor improvements without publishing a version. build would always fail otherwise
+
+
 6.2.0 (2023-03-26)
 ------------------
 
