@@ -74,11 +74,11 @@ Comparison to tzfpy
 
 - ``tzfpy`` is a Python binding of the Rust package ``tzf-rs``
 - ``tzfpy`` has no startup time
-- ``tzfpy`` uses a hierarchical tree of rectangles as timezone polygons (data):
+- ``tzfpy`` uses simplified timezone polygons (data):
     - this reduces the memory requirements
     - this reduces the accuracy
     - this increases the lookup speed
-
+- ``tzfpy`` uses hierarchical tree of rectangles to speed up the lookup but auto fall back to polygon data if cache miss
 
 Comparison to pytzwhere
 -----------------------
