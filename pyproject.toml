@@ -41,6 +41,13 @@ setuptools = ">=65.5"
 numba = { version = ">=0.57,<1", optional = true }
 pytz = { version = ">=2022.7.1", optional = true }
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^5"
+sphinx-rtd-theme = "^1"
+
 [tool.poetry.group.dev.dependencies]
 tox = "*"
 pytest = "*"
@@ -52,8 +59,6 @@ isort = "*"
 twine = "*"
 rstcheck = "*"
 pydantic = "^1"
-Sphinx = "^5"
-sphinx-rtd-theme = "^1"
 invoke = "^1"
 
 [tool.poetry.extras]
@@ -78,7 +83,7 @@ legacy_tox_ini = """
     isolated_build = true
     # TODO numba python 3.12 support: https://github.com/numba/numba/issues/9197
     envlist =
-        py{38,39,310,311}{,-numba,-pytz},py312{,-pytz}
+        docs,py{38,39,310,311}{,-numba,-pytz},py312{,-pytz}
 
     [gh-actions]
     python =
@@ -89,6 +94,16 @@ legacy_tox_ini = """
         # TODO enable when supported ,-numba
         3.12: py312{,-pytz}
 
+
+    [testenv:docs]
+    description = build documentation
+    basepython = python3.8
+    allowlist_externals = poetry,sphinx-build
+    commands =
+      poetry install -v --with docs
+      sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
+      python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
+
     [testenv]
     allowlist_externals = poetry
     commands =
@@ -96,4 +111,5 @@ legacy_tox_ini = """
         numba:  poetry install -v --extras numba
         pytz:  poetry install -v --extras pytz
         poetry run pytest {posargs}
+
 """
