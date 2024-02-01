@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.2.0"
-description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
+version = "6.3.0"
+description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
 readme = "README.rst"
@@ -34,13 +34,21 @@ python = ">=3.8,<4"
 numpy = ">=1.18,<2"
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
-numba = { version = ">=0.56,<1", optional = true }
-pytz = { version = ">=2022.7.1", optional = true }
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"
 
-[tool.poetry.dev-dependencies]
-poetry = "^1"
+# optional dependencies (extras)
+numba = { version = ">=0.57,<1", optional = true }
+pytz = { version = ">=2022.7.1", optional = true }
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^5"
+sphinx-rtd-theme = "^1"
+
+[tool.poetry.group.dev.dependencies]
 tox = "*"
 pytest = "*"
 pre-commit = "*"
@@ -51,8 +59,6 @@ isort = "*"
 twine = "*"
 rstcheck = "*"
 pydantic = "^1"
-Sphinx = "^5"
-sphinx-rtd-theme = "^1"
 invoke = "^1"
 
 [tool.poetry.extras]
@@ -70,3 +76,40 @@ generate-setup-file = false
 [tool.isort]
 profile = "black"
 multi_line_output = 3
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    isolated_build = true
+    # TODO numba python 3.12 support: https://github.com/numba/numba/issues/9197
+    envlist =
+        docs,py{38,39,310,311}{,-numba,-pytz},py312{,-pytz}
+
+    [gh-actions]
+    python =
+        3.8: py38{,-numba,-pytz}
+        3.9: py39{,-numba,-pytz}
+        3.10: py310{,-numba,-pytz}
+        3.11: py311{,-numba,-pytz}
+        # TODO enable when supported ,-numba
+        3.12: py312{,-pytz}
+
+
+    [testenv:docs]
+    description = build documentation
+    basepython = python3.8
+    allowlist_externals = poetry,sphinx-build
+    commands =
+      poetry install -v --with docs
+      sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
+      python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
+
+    [testenv]
+    allowlist_externals = poetry
+    commands =
+        !numba: poetry install -v
+        numba:  poetry install -v --extras numba
+        pytz:  poetry install -v --extras pytz
+        poetry run pytest {posargs}
+
+"""

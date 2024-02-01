@@ -59,6 +59,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     than also storing the lower resolution shortcuts (when there is a unique or no timezone match).
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
+
 import functools
 import itertools
 import json

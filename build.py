@@ -5,6 +5,7 @@ https://github.com/FirefoxMetzger/mini-extension
 https://stackoverflow.com/questions/60073711/how-to-build-c-extensions-via-poetry
 https://github.com/libmbd/libmbd/blob/master/build.py
 """
+
 import pathlib
 import re
 import warnings

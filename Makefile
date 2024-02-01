@@ -6,12 +6,12 @@ SHELL=/bin/bash
 install:
 	@echo "installing the development dependencies..."
 	@#poetry install --no-dev
-	@poetry install --extras "numba" --no-root --sync
+	@poetry install --all-extras --no-root --sync
 
 update:
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@poetry update -vv
-	#poetry export -f requirements.txt --output docs/requirements.txt --without-hashes
+	@poetry update
+	#poetry export -f requirements.txt --output docs/requirements_docs.txt --without-hashes
 
 
 env:
@@ -27,7 +27,12 @@ data:
 	bash parse_data.sh
 
 test:
-	@python ./runtests.py
+	@pytest
+
+test1: test
+
+test2:
+	@tox --parallel auto
 
 hook:
 	@pre-commit install

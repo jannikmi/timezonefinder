@@ -6,10 +6,21 @@ Changelog
 TBA (TBA)
 ------------------
 
+--
+
+6.3.0 (2024-02-01)
+------------------
+
+* updated the data to `2023d <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2023d>`__.
+
 internal:
 
 * added docstrings. Thanks to `Tyler Huntley <https://github.com/Ty1776>`__
 * automatically skip GitHub actions publishing when the version already exists. useful for minor improvements without publishing a version. build would always fail otherwise
+* enable tests for python 3.11 with numba
+* enable tests for python 3.12
+* added tests for generating the documentation
+* use poetry dependency group specification (closing #199)
 
 
 6.2.0 (2023-03-26)
