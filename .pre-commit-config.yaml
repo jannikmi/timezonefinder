@@ -1,6 +1,6 @@
 repos:
     -   repo: https://github.com/pre-commit/pre-commit-hooks
-        rev: v4.4.0
+        rev: v4.5.0
         hooks:
             -   id: check-ast  # Is it valid Python?
             -   id: debug-statements # no debbuging statements used
@@ -18,13 +18,13 @@ repos:
             -   id: detect-private-key
 
     -   repo: https://github.com/pycqa/isort
-        rev: 5.12.0
+        rev: 5.13.2
         hooks:
             -   id: isort
                 args: [ "--profile", "black", "--filter-files" ]
 
     -   repo: https://github.com/psf/black
-        rev: 23.1.0
+        rev: 24.1.1
         hooks:
             -   id: black
                 language_version: python3
@@ -32,12 +32,12 @@ repos:
                     - --line-length=120
 
     -   repo: https://github.com/asottile/blacken-docs
-        rev: 1.13.0
+        rev: 1.16.0
         hooks:
             -   id: blacken-docs
 
     -   repo: https://github.com/pycqa/flake8
-        rev: 6.0.0
+        rev: 7.0.0
         hooks:
             -   id: flake8
                 exclude: ^(docs|scripts|tests)/|build.py
@@ -52,18 +52,18 @@ repos:
 
     # TODO also check docs/. make compatible with sphinx
     -   repo: https://github.com/myint/rstcheck
-        rev: 'v6.1.2'
+        rev: 'v6.2.0'
         hooks:
             -   id: rstcheck
                 exclude: ^(docs/)
 
     -   repo: https://github.com/abravalheri/validate-pyproject
-        rev: v0.12.1
+        rev: v0.16
         hooks:
             -   id: validate-pyproject
 
     -   repo: https://github.com/asottile/pyupgrade
-        rev: v3.3.1
+        rev: v3.15.0
         hooks:
             -   id: pyupgrade
 
@@ -74,7 +74,7 @@ repos:
     #          -   id: pylint
 
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v1.1.1
+        rev: v1.8.0
         hooks:
             -   id: mypy
                 exclude: ^((tests|scripts)/)
@@ -87,6 +87,6 @@ repos:
     #        additional_dependencies: [ numpy, poetry==1.1.11 ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v15.0.7
+        rev: v17.0.6
         hooks:
             -   id: clang-format
