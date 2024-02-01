@@ -75,17 +75,25 @@ multi_line_output = 3
 [tool.tox]
 legacy_tox_ini = """
     [tox]
-    min_version = 4.0
-    env_list =
-        py310
-        py39
-        type
+    isolated_build = true
+    # TODO numba python 3.12 support: https://github.com/numba/numba/issues/9197
+    envlist =
+        py{38,39,310,311}{,-numba,-pytz},py312{,-pytz}
+
+    [gh-actions]
+    python =
+        3.8: py38{,-numba,-pytz}
+        3.9: py39{,-numba,-pytz}
+        3.10: py310{,-numba,-pytz}
+        3.11: py311{,-numba,-pytz}
+        # TODO enable when supported ,-numba
+        3.12: py312{,-pytz}
 
     [testenv]
-    deps = pytest
-    commands = pytest tests
-
-    [testenv:type]
-    deps = mypy
-    commands = mypy src
+    allowlist_externals = poetry
+    commands =
+        !numba: poetry install -v
+        numba:  poetry install -v --extras numba
+        pytz:  poetry install -v --extras pytz
+        poetry run pytest {posargs}
 """
