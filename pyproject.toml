@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "timezonefinder"
 version = "6.2.0"
-description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
+description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
 readme = "README.rst"
@@ -34,13 +34,14 @@ python = ">=3.8,<4"
 numpy = ">=1.18,<2"
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
-numba = { version = ">=0.56,<1", optional = true }
-pytz = { version = ">=2022.7.1", optional = true }
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"
 
-[tool.poetry.dev-dependencies]
-poetry = "^1"
+# optional dependencies (extras)
+numba = { version = ">=0.57,<1", optional = true }
+pytz = { version = ">=2022.7.1", optional = true }
+
+[tool.poetry.group.dev.dependencies]
 tox = "*"
 pytest = "*"
 pre-commit = "*"
@@ -70,3 +71,21 @@ generate-setup-file = false
 [tool.isort]
 profile = "black"
 multi_line_output = 3
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    min_version = 4.0
+    env_list =
+        py310
+        py39
+        type
+
+    [testenv]
+    deps = pytest
+    commands = pytest tests
+
+    [testenv:type]
+    deps = mypy
+    commands = mypy src
+"""
