@@ -4,15 +4,20 @@ SHELL=/bin/bash
 
 
 install:
-	@echo "installing the development dependencies..."
+	pip install --upgrade pip
+	@echo "installing all specified dependencies..."
 	@#poetry install --no-dev
-	@poetry install --all-extras --no-root --sync
+	# NOTE: root package needs to be installed for CLI tests to work!
+	@poetry install --all-extras --sync
 
 update:
-	@echo "pinning the dependencies specified in 'pyproject.toml':"
+	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
 	@poetry update
 	#poetry export -f requirements.txt --output docs/requirements_docs.txt --without-hashes
 
+lock:
+	@echo "locking the dependencies specified in 'pyproject.toml':"
+	@poetry lock
 
 env:
 	# conda env remove -n timezonefinder
@@ -31,8 +36,10 @@ test:
 
 test1: test
 
-test2:
+tox:
 	@tox --parallel auto
+
+test2: tox
 
 hook:
 	@pre-commit install
