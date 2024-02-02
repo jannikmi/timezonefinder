@@ -37,7 +37,7 @@ test:
 test1: test
 
 tox:
-	@tox --parallel auto
+	@tox
 
 test2: tox
 
