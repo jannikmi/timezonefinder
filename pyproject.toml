@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.3.0"
+version = "6.4.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -30,7 +30,7 @@ include = [
 timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4"
+python = ">=3.9,<4"
 numpy = ">=1.18,<2"
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
@@ -38,7 +38,7 @@ cffi = ">=1.15.1,<2"
 setuptools = ">=65.5"
 
 # optional dependencies (extras)
-numba = { version = ">=0.57,<1", optional = true }
+numba = { version = ">=0.59,<1", optional = true } # python3.12 support since 0.59
 pytz = { version = ">=2022.7.1", optional = true }
 
 [tool.poetry.group.docs]
@@ -81,23 +81,20 @@ multi_line_output = 3
 legacy_tox_ini = """
     [tox]
     isolated_build = true
-    # TODO numba python 3.12 support: https://github.com/numba/numba/issues/9197
     envlist =
-        docs,py{38,39,310,311}{,-numba,-pytz},py312{,-pytz}
+        docs,py{39,310,311,312}{,-numba,-pytz}
 
     [gh-actions]
     python =
-        3.8: py38{,-numba,-pytz}
         3.9: py39{,-numba,-pytz}
         3.10: py310{,-numba,-pytz}
         3.11: py311{,-numba,-pytz}
-        # TODO enable when supported ,-numba
-        3.12: py312{,-pytz}
+        3.12: py312{,-numba,-pytz}
 
 
     [testenv:docs]
     description = build documentation
-    basepython = python3.8
+    basepython = python3.12
     allowlist_externals = poetry,sphinx-build
     commands =
       poetry install -v --with docs
@@ -111,5 +108,4 @@ legacy_tox_ini = """
         numba:  poetry install -v --extras numba
         pytz:  poetry install -v --extras pytz
         poetry run pytest {posargs}
-
 """
