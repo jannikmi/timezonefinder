@@ -1,8 +1,7 @@
 import argparse
-from typing import Callable
+from typing import Callable, Union
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
-from timezonefinder.timezonefinder import AbstractTimezoneFinder
 
 
 def get_timezone_function(function_id: int) -> Callable:
@@ -10,7 +9,7 @@ def get_timezone_function(function_id: int) -> Callable:
     Note: script is being called for each point individually. Caching TimezoneFinder() instances is useless.
     -> avoid constructing unnecessary instances
     """
-    tf_instance: AbstractTimezoneFinder
+    tf_instance: Union[TimezoneFinder, TimezoneFinderL]
     if function_id in [0, 1, 5]:
         tf_instance = TimezoneFinder()
         functions = {
