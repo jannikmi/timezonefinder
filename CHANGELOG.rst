@@ -3,10 +3,13 @@ Changelog
 =========
 
 
-TBA (TBA)
+
+6.4.0 (2024-02-02)
 ------------------
 
---
+* added python 3.12 support (supported by numba since release 0.59.0), Closes #208
+* dropped official support for python 3.8, because the optional dependency numba requires python 3.9. this package might still work with python 3.8, but it is not tested anymore.
+
 
 6.3.0 (2024-02-01)
 ------------------
