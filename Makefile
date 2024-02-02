@@ -36,8 +36,10 @@ test:
 
 test1: test
 
-test2:
+tox:
 	@tox --parallel auto
+
+test2: tox
 
 hook:
 	@pre-commit install
