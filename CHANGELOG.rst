@@ -2,6 +2,15 @@
 Changelog
 =========
 
+6.4.1 (2024-02-08)
+------------------
+
+* added official support for python 3.8 again, by specifying numba as multiple constraint dependency
+
+
+internal:
+
+* added unit tests for polygon boundary binary reading
 
 
 6.4.0 (2024-02-02)
