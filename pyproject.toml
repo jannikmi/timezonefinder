@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.4.0"
+version = "6.4.1"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -30,15 +30,21 @@ include = [
 timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4"
-numpy = ">=1.18,<2"
+python = ">=3.8,<4"
+numpy = [
+    { version = "<1.25",  python = "<3.9"},
+    { version = ">=1.25,<2",  python = ">=3.9"}
+]
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"
 
 # optional dependencies (extras)
-numba = { version = ">=0.59,<1", optional = true } # python3.12 support since 0.59
+numba = [
+    { version = "<0.59",  python = "<3.12", optional = true },
+    { version = ">=0.59,<1",  python = ">=3.12", optional = true }
+]
 pytz = { version = ">=2022.7.1", optional = true }
 
 [tool.poetry.group.docs]
@@ -82,10 +88,11 @@ legacy_tox_ini = """
     [tox]
     isolated_build = true
     envlist =
-        docs,py{39,310,311,312}{,-numba,-pytz}
+        docs,py{38,39,310,311,312}{,-numba,-pytz}
 
     [gh-actions]
     python =
+        3.8: py39{,-numba,-pytz}
         3.9: py39{,-numba,-pytz}
         3.10: py310{,-numba,-pytz}
         3.11: py311{,-numba,-pytz}
