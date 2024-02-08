@@ -92,7 +92,7 @@ legacy_tox_ini = """
 
     [gh-actions]
     python =
-        3.8: py39{,-numba,-pytz}
+        3.8: py38{,-numba,-pytz}
         3.9: py39{,-numba,-pytz}
         3.10: py310{,-numba,-pytz}
         3.11: py311{,-numba,-pytz}
