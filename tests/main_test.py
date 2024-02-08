@@ -8,7 +8,13 @@ import pytest
 
 from tests.auxiliaries import time_preprocess
 from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
-from timezonefinder.configs import INT2COORD_FACTOR, THRES_DTYPE_H, TIMEZONE_NAMES_FILE
+from timezonefinder.configs import (
+    INT2COORD_FACTOR,
+    MAX_LAT_VAL_INT,
+    MAX_LNG_VAL_INT,
+    THRES_DTYPE_H,
+    TIMEZONE_NAMES_FILE,
+)
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
     TimezoneFinder,
@@ -54,6 +60,14 @@ def check_pairwise_geometry(geometry_obj: List):
     assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
     first_coord_pair = cord_pairs[0]
     assert len(first_coord_pair) == 2, "the polygon does not consist of coordinate pairs as expected."
+
+
+def is_valid_lng_int(x: int) -> bool:
+    return -MAX_LNG_VAL_INT <= x <= MAX_LNG_VAL_INT
+
+
+def is_valid_lat_int(y: int) -> bool:
+    return -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT
 
 
 # tests for TimezonefinderL class
@@ -216,7 +230,7 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             self.check_boundary(lng, lat, expected)
 
     def test_certain_timezone_at(self):
-        print("\ntestin certain_timezone_at():")  # expected equal results to timezone_at(), is just slower
+        print("\ntesting certain_timezone_at():")  # expected equal results to timezone_at(), is just slower
         self.run_location_tests(self.test_instance.certain_timezone_at, self.test_locations)
 
     def test_overflow(self):
@@ -281,6 +295,24 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             # id does not exist
             self.test_instance.get_geometry(tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False)
             self.test_instance.get_geometry(tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False)
+
+    # TODO add unit tests for all other binary data reading functions (all possible inputs)
+    def test_get_polygon_boundaries(self):
+        # boundaries should be defined for each polygon
+        instance = self.test_instance
+        nr_of_polygons = instance.nr_of_polygons
+        for poly_id in range(nr_of_polygons):
+            boundaries = instance.get_polygon_boundaries(poly_id=poly_id)
+            assert isinstance(boundaries, tuple)
+            assert len(boundaries) == 4
+            xmax, xmin, ymax, ymin = boundaries
+            # test value range:
+            assert is_valid_lat_int(ymin)
+            assert is_valid_lat_int(ymax)
+            assert is_valid_lng_int(xmin)
+            assert is_valid_lng_int(xmax)
+            assert ymin < ymax
+            assert xmin < xmax
 
 
 class TimezonefinderClassTestMEM(TimezonefinderClassTest):

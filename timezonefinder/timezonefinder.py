@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from struct import unpack
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from h3.api import numpy_int as h3
@@ -464,6 +464,17 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # read and return all polygons from this zone:
         return [self.get_polygon(poly_id, coords_as_pairs) for poly_id in range(this_zone_poly_id, next_zone_poly_id)]
 
+    def get_polygon_boundaries(self, poly_id: int) -> Tuple[int, int, int, int]:
+        """returns the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32"""
+        poly_max_values = getattr(self, POLY_MAX_VALUES)
+        poly_max_values.seek(4 * NR_BYTES_I * poly_id)
+        xmax, xmin, ymax, ymin = self._fromfile(
+            poly_max_values,
+            dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
+            count=4,
+        )
+        return xmax, xmin, ymax, ymin
+
     def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
         """
         Check if a point is outside the boundaries of a polygon.
@@ -473,14 +484,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param y: Y-coordinate of the point
         :return: True if the point is outside the boundaries, False otherwise
         """
-        # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32
-        poly_max_values = getattr(self, POLY_MAX_VALUES)
-        poly_max_values.seek(4 * NR_BYTES_I * poly_id)
-        xmax, xmin, ymax, ymin = self._fromfile(
-            poly_max_values,
-            dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
-            count=4,
-        )
+        xmax, xmin, ymax, ymin = self.get_polygon_boundaries(poly_id)
         return x > xmax or x < xmin or y > ymax or y < ymin
 
     def inside_of_polygon(self, poly_id: int, x: int, y: int) -> bool:
@@ -567,7 +571,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         .. note:: this is only meaningful when you have compiled your own timezone data
             where there are areas without timezone polygon coverage.
-            Otherwise some timezone will always be matched and the functionality is equal to using `.timezone_at()`
+            Otherwise, some timezone will always be matched and the functionality is equal to using `.timezone_at()`
             -> useless to actually test all polygons.
 
         .. note:: using this function is less performant than `.timezone_at()`
