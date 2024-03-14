@@ -41,10 +41,7 @@ cffi = ">=1.15.1,<2"
 setuptools = ">=65.5"
 
 # optional dependencies (extras)
-numba = [
-    { version = "<0.59",  python = "<3.9", optional = true },
-    { version = ">=0.59,<1",  python = ">=3.9", optional = true }
-]
+numba = { version = ">=0.56",  optional = true }
 pytz = { version = ">=2022.7.1", optional = true }
 
 [tool.poetry.group.docs]
