@@ -1,4 +1,4 @@
-""" utility functions
+"""utility functions
 
 JIT compiled for efficiency in case `numba` is installed
 
@@ -163,7 +163,9 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     x_coords = np.ascontiguousarray(x_coords)
     x_coords_ffi = ffi.from_buffer("int []", x_coords)
     y_coords_ffi = ffi.from_buffer("int []", y_coords)
-    contained = inside_polygon_ext.lib.inside_polygon_int(x, y, nr_coords, x_coords_ffi, y_coords_ffi)
+    contained = inside_polygon_ext.lib.inside_polygon_int(
+        x, y, nr_coords, x_coords_ffi, y_coords_ffi
+    )
     return contained
 
 
@@ -226,7 +228,9 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
     x_coords = polygon_data[0]
     y_coords = polygon_data[1]
     nr_coords = len(x_coords)
-    coodinate_list = [(int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)]
+    coodinate_list = [
+        (int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)
+    ]
     return coodinate_list
 
 
@@ -270,7 +274,9 @@ def get_file_size_byte(file) -> int:
 
 
 def fromfile_memory(file, dtype: str, count: int, **kwargs):
-    res = np.frombuffer(file.getbuffer(), offset=file.tell(), dtype=dtype, count=count, **kwargs)
+    res = np.frombuffer(
+        file.getbuffer(), offset=file.tell(), dtype=dtype, count=count, **kwargs
+    )
     file.seek(np.dtype(dtype).itemsize * count, io.SEEK_CUR)
     return res
 

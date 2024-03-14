@@ -174,14 +174,19 @@ def parse_polygons_from_json(input_path: Path) -> int:
             x_coords = poly[0]
             y_coords = poly[1]
             polygon_lengths.append(len(x_coords))
-            bounds = Boundaries(np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords))
+            bounds = Boundaries(
+                np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
+            )
             poly_boundaries.append(bounds)
             poly_zone_ids.append(zone_id)
 
             # everything else is interpreted as a hole!
             for hole_nr, hole in enumerate(poly_with_hole):
                 nr_of_holes += 1  # keep track of how many holes there are
-                print(f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr+1} in polygon", end="")
+                print(
+                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr+1} in polygon",
+                    end="",
+                )
                 polynrs_of_holes.append(poly_id)
                 hole_poly = to_numpy_polygon(hole)
                 holes.append(hole_poly)
@@ -287,7 +292,9 @@ def any_pt_in_cell(h: int, poly_nr: int) -> bool:
     return any(map(pt_in_cell, poly.T))
 
 
-def get_corrected_hex_boundaries(x_coords, y_coords, surr_n_pole, surr_s_pole) -> Tuple["Boundaries", bool]:
+def get_corrected_hex_boundaries(
+    x_coords, y_coords, surr_n_pole, surr_s_pole
+) -> Tuple["Boundaries", bool]:
     """boundaries of a hex cell used for pre-filtering the polygons
         which have to be checked with expensive point-in-polygon algorithm
 
@@ -379,7 +386,9 @@ class Hex:
         x_coords, y_coords = coords[0], coords[1]
         surr_n_pole = lies_in_h3_cell(id, lng=0.0, lat=MAX_LAT)
         surr_s_pole = lies_in_h3_cell(id, lng=0.0, lat=-MAX_LAT)
-        bounds, x_overflow = get_corrected_hex_boundaries(x_coords, y_coords, surr_n_pole, surr_s_pole)
+        bounds, x_overflow = get_corrected_hex_boundaries(
+            x_coords, y_coords, surr_n_pole, surr_s_pole
+        )
         return cls(id, res, coords, bounds, x_overflow, surr_n_pole, surr_s_pole)
 
     @property
@@ -467,7 +476,9 @@ class Hex:
     def zones_in_cell(self) -> Set[int]:
         if self._zones_in_cell is None:
             # lazy evaluation, caching
-            self._zones_in_cell = set(map(lambda p: poly_zone_ids[p], self.polys_in_cell))
+            self._zones_in_cell = set(
+                map(lambda p: poly_zone_ids[p], self.polys_in_cell)
+            )
         return self._zones_in_cell
 
     @property
@@ -527,7 +538,10 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     zone_ids = [poly_zone_ids[i] for i in poly_ids]
     zone_ids_unique = list(set(zone_ids))
     zipped = list(zip(poly_ids, zone_ids, poly_sizes))
-    zone2size = {i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped))) for i in zone_ids_unique}
+    zone2size = {
+        i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped)))
+        for i in zone_ids_unique
+    }
     zone_ids_sorted = sorted(zone_ids_unique, key=lambda x: zone2size[x])
     poly_ids_sorted = []
     for zone_id in zone_ids_sorted:
@@ -655,7 +669,9 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
 
-    def compile_addresses(length_list: List[int], multiplier: int, byte_amount_per_entry: int):
+    def compile_addresses(
+        length_list: List[int], multiplier: int, byte_amount_per_entry: int
+    ):
         adr = 0
         addresses = [adr]
         for length in length_list:
@@ -670,7 +686,9 @@ def compile_polygon_binaries(output_path):
         poly_nr2zone_id,
         upper_value_limit=nr_of_polygons + 1,
     )
-    write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
+    write_binary(
+        output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
+    )
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_coordinate_data(output_path, POLY_DATA, polygons)
     write_binary(
@@ -682,7 +700,9 @@ def compile_polygon_binaries(output_path):
     )
 
     # 2 entries per coordinate
-    poly_addresses = compile_addresses(polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    poly_addresses = compile_addresses(
+        polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
     write_binary(
         output_path,
         POLY_ADR2DATA,
@@ -732,7 +752,9 @@ def compile_polygon_binaries(output_path):
     )
 
     # 2 entries per coordinate
-    hole_adr2data = compile_addresses(all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    hole_adr2data = compile_addresses(
+        all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
     used_space = write_binary(
         output_path,
         HOLE_ADR2DATA,
@@ -770,7 +792,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="parse data directories")
-    parser.add_argument("-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH)
+    parser.add_argument(
+        "-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH
+    )
     parser.add_argument(
         "-out",
         help="path to output folder for storing the parsed data files",

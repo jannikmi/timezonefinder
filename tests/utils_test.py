@@ -202,7 +202,9 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     # print("=" * 50)
     coords, query_points, expected_results = test_case
     coords = np.array(coords)
-    for i, ((lng, lat), expected_result) in enumerate(zip(query_points, expected_results)):
+    for i, ((lng, lat), expected_result) in enumerate(
+        zip(query_points, expected_results)
+    ):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
         x, y, coords_int = convert_inside_polygon_input(lng, lat, coords)
         actual_result = inside_poly_func(x, y, coords_int)
@@ -231,12 +233,16 @@ def test_rectify_coords():
 
     with pytest.raises(ValueError):  # coords out of bounds
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
+        utils.validate_coordinates(
+            lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
+        )
         utils.validate_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
         utils.validate_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
         utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
+        utils.validate_coordinates(
+            lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
+        )
 
 
 @pytest.mark.parametrize(

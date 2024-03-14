@@ -8,7 +8,7 @@ install:
 	@echo "installing all specified dependencies..."
 	@#poetry install --no-dev
 	# NOTE: root package needs to be installed for CLI tests to work!
-	@poetry install --all-extras --sync
+	@poetry install --all-extras --sync --no-root
 
 update:
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
@@ -19,9 +19,22 @@ lock:
 	@echo "locking the dependencies specified in 'pyproject.toml':"
 	@poetry lock
 
+
+# when poetry dependency resolving gets stuck:
+force_update:
+	@echo "force updating the requirements. removing lock file"
+	 poetry cache clear --all .
+	 rm poetry.lock
+	@echo "pinning the dependencies specified in 'pyproject.toml':"
+	poetry update -vvv
+
+outdated:
+	poetry show --outdated
+
+
 env:
 	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.7 poetry -y
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 poetry -y
 	#	&& conda activate timezonefinder
 	# && make req
 
@@ -45,7 +58,7 @@ hook:
 	@pre-commit install
 	@pre-commit run --all-files
 
-hook2:
+hookup:
 	@pre-commit autoupdate
 
 hook3:
