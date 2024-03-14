@@ -8,7 +8,7 @@ install:
 	@echo "installing all specified dependencies..."
 	@#poetry install --no-dev
 	# NOTE: root package needs to be installed for CLI tests to work!
-	@poetry install --all-extras --sync
+	@poetry install --all-extras --sync --no-root
 
 update:
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
