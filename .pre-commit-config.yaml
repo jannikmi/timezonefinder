@@ -17,38 +17,19 @@ repos:
             -   id: requirements-txt-fixer
             -   id: detect-private-key
 
-    -   repo: https://github.com/pycqa/isort
-        rev: 5.13.2
-        hooks:
-            -   id: isort
-                args: [ "--profile", "black", "--filter-files" ]
 
-    -   repo: https://github.com/psf/black
-        rev: 24.1.1
-        hooks:
-            -   id: black
-                language_version: python3
-                args:
-                    - --line-length=120
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.3.2
+      hooks:
+          # linter.
+          - id: ruff
+            args: [ --fix ]
+          - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
         rev: 1.16.0
         hooks:
             -   id: blacken-docs
-
-    -   repo: https://github.com/pycqa/flake8
-        rev: 7.0.0
-        hooks:
-            -   id: flake8
-                exclude: ^(docs|scripts|tests)/|build.py
-                args:
-                    - --ignore=E402 # E402 module level import not at top of file
-                    - --max-line-length=120
-
-                additional_dependencies:
-                    - flake8-bugbear
-                    - flake8-comprehensions
-                    - flake8-tidy-imports
 
     # TODO also check docs/. make compatible with sphinx
     -   repo: https://github.com/myint/rstcheck
@@ -63,22 +44,16 @@ repos:
             -   id: validate-pyproject
 
     -   repo: https://github.com/asottile/pyupgrade
-        rev: v3.15.0
+        rev: v3.15.1
         hooks:
             -   id: pyupgrade
 
-    #  # TODO very detailed linting:
-    #  -   repo: https://github.com/pycqa/pylint
-    #      rev: v2.13.8
-    #      hooks:
-    #          -   id: pylint
-
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v1.8.0
+        rev: v1.9.0
         hooks:
             -   id: mypy
                 exclude: ^((tests|scripts)/)
-    #
+
     #  - repo: https://github.com/mgedmin/check-manifest
     #    rev: "0.48"
     #    hooks:
@@ -87,6 +62,6 @@ repos:
     #        additional_dependencies: [ numpy, poetry==1.1.11 ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v17.0.6
+        rev: v18.1.1
         hooks:
             -   id: clang-format

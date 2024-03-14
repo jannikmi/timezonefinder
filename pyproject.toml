@@ -79,9 +79,14 @@ build-backend = "poetry.core.masonry.api"
 script = "build.py"
 generate-setup-file = false
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
+
+[tool.ruff]
+target-version = "py38"
+src = ["timezonefinder", "tests", "build.py"]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["timezonefinder"]
+
 
 [tool.tox]
 legacy_tox_ini = """
