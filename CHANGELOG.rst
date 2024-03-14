@@ -10,6 +10,7 @@ Changelog
 internal:
 
 * use ruff linter in pre-commit hook
+* make dependency specifications less strict
 
 
 6.4.1 (2024-02-08)
