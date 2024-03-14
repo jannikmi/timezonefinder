@@ -31,9 +31,10 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
+# https://numpy.org/neps/nep-0029-deprecation_policy.html
 numpy = [
-    { version = "<1.25",  python = "<3.9"},
-    { version = ">=1.25,<2",  python = ">=3.9"}
+    { version = ">=1.21,<2", python = "<3.9" },
+    { version = ">=1.23,<2", python = ">=3.9" }
 ]
 h3 = ">=3.7.6,<4" # python3.11 support
 cffi = ">=1.15.1,<2"
@@ -41,7 +42,10 @@ cffi = ">=1.15.1,<2"
 setuptools = ">=65.5"
 
 # optional dependencies (extras)
-numba = { version = ">=0.56",  optional = true }
+numba = [
+    { version = ">=0.56,<1", python = "<3.12", optional = true },
+    { version = ">=0.59,<1", python = ">=3.12", optional = true }
+]
 pytz = { version = ">=2022.7.1", optional = true }
 
 [tool.poetry.group.docs]
