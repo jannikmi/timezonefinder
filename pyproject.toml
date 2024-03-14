@@ -42,8 +42,8 @@ setuptools = ">=65.5"
 
 # optional dependencies (extras)
 numba = [
-    { version = "<0.59",  python = "<3.12", optional = true },
-    { version = ">=0.59,<1",  python = ">=3.12", optional = true }
+    { version = "<0.59",  python = "<3.9", optional = true },
+    { version = ">=0.59,<1",  python = ">=3.9", optional = true }
 ]
 pytz = { version = ">=2022.7.1", optional = true }
 
@@ -59,13 +59,9 @@ tox = "*"
 pytest = "*"
 pre-commit = "*"
 mypy = "*"
-pylint = "*"
-flake8 = "*"
-isort = "*"
-twine = "*"
 rstcheck = "*"
-pydantic = "^1"
-invoke = "^1"
+isort = "*"
+ruff = "^0.3.2"
 
 [tool.poetry.extras]
 numba = ["numba"]
