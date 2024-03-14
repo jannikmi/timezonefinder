@@ -19,9 +19,22 @@ lock:
 	@echo "locking the dependencies specified in 'pyproject.toml':"
 	@poetry lock
 
+
+# when poetry dependency resolving gets stuck:
+force_update:
+	@echo "force updating the requirements. removing lock file"
+	 poetry cache clear --all .
+	 rm poetry.lock
+	@echo "pinning the dependencies specified in 'pyproject.toml':"
+	poetry update -vvv
+
+outdated:
+	poetry show --outdated
+
+
 env:
 	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.7 poetry -y
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 poetry -y
 	#	&& conda activate timezonefinder
 	# && make req
 
