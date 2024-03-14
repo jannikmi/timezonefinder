@@ -84,13 +84,8 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     test_locations = BASIC_TEST_LOCATIONS
 
     def test_using_numba(self):
-        try:
-            find_spec("numba")
-
-            numba_installed = True
-        except ImportError:
-            numba_installed = False
-
+        spec = find_spec("numba")
+        numba_installed = spec is not None
         assert self.test_instance.using_numba() == numba_installed
 
     def test_using_clang_pip(self):
