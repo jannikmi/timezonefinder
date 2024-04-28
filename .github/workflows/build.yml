@@ -73,6 +73,12 @@ jobs:
         run: |
           poetry build --no-interaction
 
+      - name: Audit wheel for manylinux compatibility
+        run: |
+          find dist -name '*.whl' -exec unzip -l {} \;
+          pip install auditwheel
+          auditwheel show dist/*whl
+
       - name: Test PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
