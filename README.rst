@@ -37,6 +37,11 @@ timezonefinder
 
 
 
+
+Notice: Looking for maintainers. Reach out if you want to contribute!
+---------------------------------------------------------------------
+
+
 This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 
