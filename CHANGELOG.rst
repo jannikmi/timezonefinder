@@ -2,6 +2,14 @@
 Changelog
 =========
 
+
+6.5.1 (2024-06-14)
+------------------
+
+* added support for cibuildwheel: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to @theirix
+
+
+
 6.5.0 (2024-03-14)
 ------------------
 
