@@ -134,7 +134,8 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [test, make-wheels, make-sdist]
+    # Note: only runs, when test publishing worked
+    needs: [test, make-wheels, make-sdist, test-publish]
     if: endsWith(github.ref, '/master')
     permissions:
         id-token: write
