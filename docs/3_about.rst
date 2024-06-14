@@ -130,6 +130,7 @@ Thanks to:
 
 - `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
 - `ringsaturn <https://github.com/ringsaturn>`__ for valuable feedback, sponsoring this project, creating the ``tzfpy`` package and adding the ``pytz`` compatibility extra
+- `theirix  <https://github.com/theirix>`__ for adding support for cibuildwheel
 - `snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe.
 - `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
