@@ -98,10 +98,14 @@ jobs:
         path: "./**/dist/*.tar.gz"
 
 
-  verify:
-    name: Temporary step to verify artifacts
+  test-publish:
+    name: Test PyPI Publishing
     runs-on: ubuntu-latest
     needs: [test, make-wheels, make-sdist]
+    # only run jobs if the feature branch is the base repo (not in a fork)
+    # TODO fails PRs from forks due to: "missing or insufficient OIDC token permissions,
+    #  the ACTIONS_ID_TOKEN_REQUEST_TOKEN environment variable was unset"
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
         id-token: write
         contents: write
@@ -128,7 +132,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
 
-  deploy:
+  publish:
     runs-on: ubuntu-latest
     needs: [test, make-wheels, make-sdist]
     if: endsWith(github.ref, '/master')
@@ -150,13 +154,6 @@ jobs:
           find . -name '*.tar.gz' -exec mv '{}' dist/ \;
           find . -name '*.whl' -exec mv '{}' dist/ \;
           ls -lR dist/
-
-      - name: Test PyPI Publishing
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
 
       - name: Create GitHub Release
         id: create_gh_release
