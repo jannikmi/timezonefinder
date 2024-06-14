@@ -109,10 +109,6 @@ jobs:
 #        id-token: write
 #        contents: write
 #    steps:
-#      - name: Fetch version
-#        id: fetch_version
-#        run: echo "version_nr=$(poetry version -s)" >> $GITHUB_OUTPUT
-#
 #      - name: Download all artifacts
 #        uses: actions/download-artifact@v4
 #
@@ -140,6 +136,8 @@ jobs:
         id-token: write
         contents: write
     steps:
+      - name: Install poetry
+        run: pip install poetry
       - name: Fetch version
         id: fetch_version
         run: echo "version_nr=$(poetry version -s)" >> $GITHUB_OUTPUT
