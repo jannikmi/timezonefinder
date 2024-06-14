@@ -136,6 +136,10 @@ jobs:
         id-token: write
         contents: write
     steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+      - name: Upgrade pip version
+        run: pip install -U pip
       - name: Install poetry
         run: pip install poetry
       - name: Fetch version
