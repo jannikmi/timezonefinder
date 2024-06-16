@@ -136,6 +136,8 @@ jobs:
         id-token: write
         contents: write
     steps:
+      - name: "Checkout repo"
+        uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Upgrade pip version
