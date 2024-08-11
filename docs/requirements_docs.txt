@@ -5,4 +5,4 @@ h3
 numpy
 Sphinx
 sphinx_rtd_theme
-urllib3<2
+urllib3<3
