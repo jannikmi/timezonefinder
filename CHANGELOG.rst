@@ -2,6 +2,13 @@
 Changelog
 =========
 
+
+6.5.3 (2024-09-16)
+------------------
+
+* updated the data to `2024b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2024b>`__.
+
+
 6.5.2 (2024-06-17)
 ------------------
 
@@ -18,7 +25,7 @@ Changelog
 6.5.0 (2024-03-14)
 ------------------
 
-* updated the data to `2024a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2023a>`__.
+* updated the data to `2024a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2024a>`__.
 
 internal:
 
