@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
-from timezonefinder import utils
+from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     BINARY_DATA_ATTRIBUTES,
     BINARY_FILE_ENDING,
@@ -131,7 +131,7 @@ class AbstractTimezoneFinder(ABC):
         """
         :return: True if the compiled C implementation of the point in polygon algorithm is being used
         """
-        return utils.inside_polygon == utils.pt_in_poly_clang
+        return utils.inside_polygon == utils_clang.pt_in_poly_clang
 
     def zone_id_of(self, poly_id: int) -> int:
         """

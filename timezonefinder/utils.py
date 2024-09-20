@@ -16,7 +16,6 @@ import io
 import re
 from typing import Callable, Tuple
 
-import cffi
 import numpy as np
 from numpy import int64
 
@@ -28,18 +27,6 @@ from timezonefinder.configs import (
     CoordPairs,
     IntLists,
 )
-
-try:
-    # Note: IDE might complain as this import comes from a cffi C extension
-    from timezonefinder import inside_polygon_ext  # type: ignore
-
-    clang_extension_loaded = True
-    ffi = cffi.FFI()
-
-except ImportError:
-    clang_extension_loaded = False
-    inside_polygon_ext = None
-    ffi = None
 
 try:
     from numba import b1, f8, i2, i4, njit, u2
@@ -149,31 +136,16 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     return inside
 
 
-def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
-    """wrapper of the point in polygon test algorithm C extension
-
-    ATTENTION: the input numpy arrays must have a C_CONTIGUOUS memory layout
-    https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
-    """
-    x_coords = coords[0]
-    y_coords = coords[1]
-    nr_coords = len(x_coords)
-
-    y_coords = np.ascontiguousarray(y_coords)
-    x_coords = np.ascontiguousarray(x_coords)
-    x_coords_ffi = ffi.from_buffer("int []", x_coords)
-    y_coords_ffi = ffi.from_buffer("int []", y_coords)
-    contained = inside_polygon_ext.lib.inside_polygon_int(
-        x, y, nr_coords, x_coords_ffi, y_coords_ffi
-    )
-    return contained
-
-
 inside_polygon: Callable[[int, int, np.ndarray], bool]
 # at import time fix which "point-in-polygon" implementation will be used
-if clang_extension_loaded and not using_numba:
+if not using_numba:
     # use the C implementation if Numba is not present
-    inside_polygon = pt_in_poly_clang
+    try:
+        from utils_clang import pt_in_poly_clang
+
+        inside_polygon = pt_in_poly_clang
+    except ImportError:
+        inside_polygon = pt_in_poly_python
 else:
     # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
     inside_polygon = pt_in_poly_python

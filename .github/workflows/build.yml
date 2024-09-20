@@ -8,6 +8,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  pre-commit-hooks:
+    name: run pre-commit hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run pre-commit hook
+        uses: pre-commit/action@v3.0.1
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -27,9 +36,6 @@ jobs:
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run pre-commit hook
-        uses: pre-commit/action@v3.0.1
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

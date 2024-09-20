@@ -1,6 +1,6 @@
 repos:
     -   repo: https://github.com/pre-commit/pre-commit-hooks
-        rev: v4.5.0
+        rev: v4.6.0
         hooks:
             -   id: check-ast  # Is it valid Python?
             -   id: debug-statements # no debbuging statements used
@@ -19,7 +19,7 @@ repos:
 
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.3.2
+      rev: v0.6.6
       hooks:
           # linter.
           - id: ruff
@@ -27,29 +27,29 @@ repos:
           - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
-        rev: 1.16.0
+        rev: 1.18.0
         hooks:
             -   id: blacken-docs
 
     # TODO also check docs/. make compatible with sphinx
     -   repo: https://github.com/myint/rstcheck
-        rev: 'v6.2.0'
+        rev: 'v6.2.4'
         hooks:
             -   id: rstcheck
                 exclude: ^(docs/)
 
     -   repo: https://github.com/abravalheri/validate-pyproject
-        rev: v0.16
+        rev: v0.19
         hooks:
             -   id: validate-pyproject
 
     -   repo: https://github.com/asottile/pyupgrade
-        rev: v3.15.1
+        rev: v3.17.0
         hooks:
             -   id: pyupgrade
 
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v1.9.0
+        rev: v1.11.2
         hooks:
             -   id: mypy
                 exclude: ^((tests|scripts)/)
@@ -62,6 +62,6 @@ repos:
     #        additional_dependencies: [ numpy, poetry==1.1.11 ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v18.1.1
+        rev: v18.1.8
         hooks:
             -   id: clang-format

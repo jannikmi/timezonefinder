@@ -2,13 +2,12 @@
 # By default make uses sh to execute commands, and sh doesn't know `source`
 SHELL=/bin/bash
 
-
 install:
 	pip install --upgrade pip
 	@echo "installing all specified dependencies..."
 	@#poetry install --no-dev
 	# NOTE: root package needs to be installed for CLI tests to work!
-	@poetry install --all-extras --sync --no-root
+	@poetry install --all-extras --sync
 
 update:
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
