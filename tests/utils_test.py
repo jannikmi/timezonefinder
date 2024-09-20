@@ -177,6 +177,7 @@ def test_convert2ints():
 
 
 def test_clang_extension_loaded():
+    # testing the Clang version of the Point in Polygon algorithm requires the C extension to be loaded
     assert clang_extension_loaded, "the clang extension not loaded, "
 
 
