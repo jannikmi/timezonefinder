@@ -64,7 +64,7 @@ pre-commit = "*"
 mypy = "*"
 rstcheck = "*"
 isort = "*"
-ruff = "^0.3.2"
+ruff = "*"
 
 [tool.poetry.extras]
 numba = ["numba"]
