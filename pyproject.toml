@@ -38,7 +38,7 @@ numpy = [
     { version = ">=1.21,<3", python = "<3.9" },
     { version = ">=1.23,<3", python = ">=3.9" }
 ]
-h3 = ">=3.7.6,<4" # python3.11 support
+h3 = ">4"
 cffi = ">=1.15.1,<2"
 # build dependencies. workaround to always have these installed
 setuptools = ">=65.5"

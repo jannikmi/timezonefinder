@@ -36,7 +36,7 @@ def test_import_export():
 
 def test_resolutions():
     shortcut_hex_ids = shortcuts.keys()
-    resolutions = [h3.h3_get_resolution(h) for h in shortcut_hex_ids]
+    resolutions = [h3.get_resolution(h) for h in shortcut_hex_ids]
     res_matched = [res == configs.SHORTCUT_H3_RES for res in resolutions]
     assert all(
         res_matched
