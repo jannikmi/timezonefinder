@@ -192,7 +192,7 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: An array of polygon IDs.
         """
-        hex_id = h3.geo_to_h3(lat, lng, SHORTCUT_H3_RES)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_poly_ids = self.shortcut_mapping[hex_id]
         return shortcut_poly_ids
 

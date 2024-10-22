@@ -379,8 +379,8 @@ class Hex:
 
     @classmethod
     def from_id(cls, id: int):
-        res = h3.h3_get_resolution(id)
-        coord_pairs = h3.h3_to_geo_boundary(id)
+        res = h3.get_resolution(id)
+        coord_pairs = h3.cell_to_boundary(id)
         # ATTENTION: (lat, lng)! pairs
         coords = to_numpy_polygon(coord_pairs, flipped=True)
         x_coords, y_coords = coords[0], coords[1]
@@ -510,7 +510,7 @@ class Hex:
         lower_res = self.res - 1
         # NOTE: (lat,lng) pairs!
         coord_pairs = h3.h3_to_geo_boundary(self.id)
-        return {h3.geo_to_h3(pt[0], pt[1], lower_res) for pt in coord_pairs}
+        return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
 @functools.lru_cache(maxsize=int(1e6))
@@ -610,8 +610,8 @@ def compile_shortcut_mapping(output_path: Path) -> int:
     return shortcut_space
 
 
-def geo_to_h3(lng: float, lat: float) -> int:
-    return h3.geo_to_h3(lat, lng, SHORTCUT_H3_RES)
+def latlng_to_cell(lng: float, lat: float) -> int:
+    return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
 def validate_shortcut_completeness(mapping: ShortcutMapping):
@@ -624,7 +624,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
             # ATTENTION: int to coord conversion required!
             lng = int2coord(pt[0])
             lat = int2coord(pt[1])
-            hex_id = geo_to_h3(lng, lat)
+            hex_id = latlng_to_cell(lng, lat)
             try:
                 shortcut_entries = mapping[hex_id]
             except KeyError:
@@ -644,7 +644,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
 
 def validate_shortcut_resolution(mapping: ShortcutMapping):
     for hex_id in mapping.keys():
-        assert h3.h3_get_resolution(hex_id) == SHORTCUT_H3_RES
+        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
 
 
 def validate_unused_polygons(shortcuts: ShortcutMapping):

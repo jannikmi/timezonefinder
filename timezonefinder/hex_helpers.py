@@ -64,5 +64,5 @@ def read_shortcuts_binary(path2shortcuts: Path) -> ShortcutMapping:
 
 
 def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
-    res = h3.h3_get_resolution(h)
-    return h3.geo_to_h3(lat, lng, res) == h
+    res = h3.get_resolution(h)
+    return h3.latlng_to_cell(lat, lng, res) == h
