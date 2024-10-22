@@ -19,6 +19,7 @@ from typing import Callable, Tuple
 import numpy as np
 from numpy import int64
 
+from timezonefinder.utils_clang import pt_in_poly_clang, clang_extension_loaded
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
@@ -138,14 +139,9 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]
 # at import time fix which "point-in-polygon" implementation will be used
-if not using_numba:
-    # use the C implementation if Numba is not present
-    try:
-        from utils_clang import pt_in_poly_clang
-
-        inside_polygon = pt_in_poly_clang
-    except ImportError:
-        inside_polygon = pt_in_poly_python
+if clang_extension_loaded and not using_numba:
+    # use the C implementation only if Numba is not present
+    inside_polygon = pt_in_poly_clang
 else:
     # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
     inside_polygon = pt_in_poly_python

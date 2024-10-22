@@ -135,3 +135,4 @@ Thanks to:
 - `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
 - `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
+- `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4

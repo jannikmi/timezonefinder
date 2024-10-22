@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.5.3"
+version = "6.5.4"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -92,7 +92,8 @@ legacy_tox_ini = """
     [tox]
     isolated_build = true
     envlist =
-        docs,py{38,39,310,311,312}{,-numba,-pytz}
+        # TODO python 3.13 with numba
+        docs,py{38,39,310,311,312}{,-numba,-pytz},py313{,-pytz}
 
     [gh-actions]
     python =
@@ -101,7 +102,8 @@ legacy_tox_ini = """
         3.10: py310{,-numba,-pytz}
         3.11: py311{,-numba,-pytz}
         3.12: py312{,-numba,-pytz}
-
+        # TODO also -numba
+        3.13: py313{,-pytz}
 
     [testenv:docs]
     description = build documentation

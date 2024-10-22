@@ -31,6 +31,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13"
     env:
       TOXENV: ${{ matrix.tox-env }}
       TOX_SKIP_MISSING_INTERPRETERS: False
@@ -58,7 +59,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         cibw_arch: ["native"]
-        cibw_build: ["cp38-* cp39-* cp310-* cp311-* cp312-*"]
+        cibw_build: ["cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"]
       fail-fast: false
 
     steps:
