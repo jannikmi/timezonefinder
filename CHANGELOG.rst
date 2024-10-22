@@ -3,16 +3,22 @@ Changelog
 =========
 
 
+6.5.4 (2024-10-22)
+------------------
+
+* using the dependency ``h3>4``. Thanks to `Greg Meyer <https://github.com/gmmeyer>`__
+
+
 6.5.3 (2024-09-16)
 ------------------
 
 * updated the data to `2024b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2024b>`__.
-
+* refactored C lang point in polygon utils
 
 6.5.2 (2024-06-17)
 ------------------
 
-* added support for numpy>=2.0 (fixes issue #234)
+* added support for ``numpy>=2.0`` (fixes issue #234)
 
 
 6.5.1 (2024-06-14)
