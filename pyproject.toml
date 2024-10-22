@@ -92,7 +92,7 @@ legacy_tox_ini = """
     [tox]
     isolated_build = true
     envlist =
-        docs,py{38,39,310,311,312}{,-numba,-pytz}
+        docs,py{38,39,310,311,312,313}{,-numba,-pytz}
 
     [gh-actions]
     python =
@@ -101,7 +101,7 @@ legacy_tox_ini = """
         3.10: py310{,-numba,-pytz}
         3.11: py311{,-numba,-pytz}
         3.12: py312{,-numba,-pytz}
-
+        3.13: py313{,-numba,-pytz}
 
     [testenv:docs]
     description = build documentation
