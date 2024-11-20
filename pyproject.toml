@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.5.4"
+version = "6.5.5"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -40,8 +40,6 @@ numpy = [
 ]
 h3 = ">4"
 cffi = ">=1.15.1,<2"
-# build dependencies. workaround to always have these installed
-setuptools = ">=65.5"
 
 # optional dependencies (extras)
 numba = [
@@ -71,7 +69,7 @@ numba = ["numba"]
 pytz = ["pytz"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "cffi", "setuptools"]
+requires = ["poetry-core>=1.0.0", "cffi", "setuptools>=65.5"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.build]

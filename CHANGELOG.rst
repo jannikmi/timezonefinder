@@ -2,6 +2,11 @@
 Changelog
 =========
 
+6.5.5 (2024-11-20)
+------------------
+
+* using ``setuptools`` only as a build dependency. Thanks to `Kristian Sloth Lauszus <https://github.com/Lauszus >`__
+
 
 6.5.4 (2024-10-22)
 ------------------
