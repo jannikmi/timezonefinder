@@ -66,17 +66,17 @@ docker run --rm -v "$(dirname "$WHEEL_PATH"):/wheels" alpine:latest sh -c "
 #   Downloading h3-4.1.2-cp312-cp312-musllinux_1_2_x86_64.whl.metadata (18 kB)
 # Collecting numpy<3,>=1.23 (from timezonefinder==6.5.5)
 #   Downloading numpy-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl.metadata (62 kB)
-#      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.0/62.0 kB 2.5 MB/s eta 0:00:00
+#      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.0/62.0 kB 1.5 MB/s eta 0:00:00
 # Collecting pycparser (from cffi<2,>=1.15.1->timezonefinder==6.5.5)
 #   Downloading pycparser-2.22-py3-none-any.whl.metadata (943 bytes)
 # Downloading cffi-1.17.1-cp312-cp312-musllinux_1_1_x86_64.whl (488 kB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 488.7/488.7 kB 10.2 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 488.7/488.7 kB 5.1 MB/s eta 0:00:00
 # Downloading h3-4.1.2-cp312-cp312-musllinux_1_2_x86_64.whl (1.0 MB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 15.3 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 13.8 MB/s eta 0:00:00
 # Downloading numpy-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl (16.4 MB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.4/16.4 MB 18.9 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.4/16.4 MB 13.8 MB/s eta 0:00:00
 # Downloading pycparser-2.22-py3-none-any.whl (117 kB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 117.6/117.6 kB 8.9 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 117.6/117.6 kB 6.9 MB/s eta 0:00:00
 # Installing collected packages: pycparser, numpy, h3, cffi, timezonefinder
 # Successfully installed cffi-1.17.1 h3-4.1.2 numpy-2.1.3 pycparser-2.22 timezonefinder-6.5.5
 # WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
