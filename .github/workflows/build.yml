@@ -7,6 +7,10 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  # Define supported Python versions globally
+  CIBW_BUILD_VERSIONS: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+
 jobs:
   pre-commit-hooks:
     name: run pre-commit hooks
@@ -59,7 +63,6 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         cibw_arch: ["native"]
-        cibw_build: ["cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"]
       fail-fast: false
 
     steps:
@@ -75,8 +78,9 @@ jobs:
           output-dir: dist
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_SKIP: "*musllinux*"
+          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
+          CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
+          CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: pip
           CIBW_BEFORE_ALL_LINUX: yum install -y libffi-devel clang make
@@ -87,39 +91,7 @@ jobs:
         with:
           name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
           path: "./**/dist/*.whl"
-
-  make-musllinux-wheels:
-    name: Make musllinux wheels
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        cibw_arch: ["x86_64"]
-        cibw_build: ["cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"]
-    steps:
-      - name: "Checkout repo"
-        uses: actions/checkout@v4
-
-      - name: Install Poetry
-        run: pip install poetry==1.4.0
-
-      - name: Install cibuildwheel
-        run: pip install cibuildwheel
-
-      - name: Build musllinux wheels
-        run: cibuildwheel --platform linux --output-dir dist
-        env:
-          CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_ARCHS: ${{ matrix.cibw_arch }}
-          CIBW_SKIP: "cp36-*"
-          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
-          CIBW_BEFORE_ALL_LINUX: yum install -y gcc libffi-devel
-          CIBW_BUILD_FRONTEND: build
-      - name: Upload musllinux wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: musllinux-wheels
-          path: dist/
-
+        
   make-sdist:
     name: Make source distribution
     runs-on: ubuntu-latest
@@ -139,7 +111,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
-    needs: [test, make-wheels, make-musllinux-wheels, make-sdist]
+    needs: [test, make-wheels, make-sdist]
     if: endsWith(github.ref, '/master')
     permissions:
         id-token: write
@@ -150,7 +122,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Upgrade pip version
-        run: pip install -U pip
+        run: pip install --upgrade pip
       - name: Install poetry
         run: pip install poetry
       - name: Fetch version
