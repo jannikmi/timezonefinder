@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  # Define supported Python versions globally
+  # the supported Python versions for pre-built wheels
   CIBW_BUILD_VERSIONS: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
 
 jobs:
@@ -29,6 +29,8 @@ jobs:
       # max-parallel: 8
       fail-fast: false
       matrix:
+        # all officially supported Python versions should be tested
+        # NOTE: need to match the versions in pyproject.toml > tox.ini
         python-version:
           - "3.8"
           - "3.9"
