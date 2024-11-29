@@ -85,7 +85,8 @@ jobs:
           CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: pip
-          CIBW_BEFORE_ALL_LINUX: yum install -y libffi-devel clang make
+          CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
+          CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
 
       - name: "Upload wheel as artifact"
