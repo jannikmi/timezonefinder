@@ -29,7 +29,7 @@ docker run --rm -v "$(dirname "$WHEEL_PATH"):/wheels" alpine:latest sh -c "
 
 # here is the output of the script i got:
 
-# ./test_musllinux_wheel.sh wheelhouse/timezonefinder-6.5.5-cp312-cp312-musllinux_1_2_x86_64.whl
+# ./test_musllinux_wheel.sh dist/timezonefinder-6.5.5-cp312-cp312-musllinux_1_2_x86_64.whl
 # fetch https://dl-cdn.alpinelinux.org/alpine/v3.20/main/x86_64/APKINDEX.tar.gz
 # fetch https://dl-cdn.alpinelinux.org/alpine/v3.20/community/x86_64/APKINDEX.tar.gz
 # (1/25) Installing libbz2 (1.0.8-r6)
@@ -66,17 +66,17 @@ docker run --rm -v "$(dirname "$WHEEL_PATH"):/wheels" alpine:latest sh -c "
 #   Downloading h3-4.1.2-cp312-cp312-musllinux_1_2_x86_64.whl.metadata (18 kB)
 # Collecting numpy<3,>=1.23 (from timezonefinder==6.5.5)
 #   Downloading numpy-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl.metadata (62 kB)
-#      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.0/62.0 kB 1.5 MB/s eta 0:00:00
+#      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.0/62.0 kB 2.4 MB/s eta 0:00:00
 # Collecting pycparser (from cffi<2,>=1.15.1->timezonefinder==6.5.5)
 #   Downloading pycparser-2.22-py3-none-any.whl.metadata (943 bytes)
 # Downloading cffi-1.17.1-cp312-cp312-musllinux_1_1_x86_64.whl (488 kB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 488.7/488.7 kB 5.1 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 488.7/488.7 kB 9.6 MB/s eta 0:00:00
 # Downloading h3-4.1.2-cp312-cp312-musllinux_1_2_x86_64.whl (1.0 MB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 13.8 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 21.3 MB/s eta 0:00:00
 # Downloading numpy-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl (16.4 MB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.4/16.4 MB 13.8 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.4/16.4 MB 21.6 MB/s eta 0:00:00
 # Downloading pycparser-2.22-py3-none-any.whl (117 kB)
-#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 117.6/117.6 kB 6.9 MB/s eta 0:00:00
+#    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 117.6/117.6 kB 7.8 MB/s eta 0:00:00
 # Installing collected packages: pycparser, numpy, h3, cffi, timezonefinder
 # Successfully installed cffi-1.17.1 h3-4.1.2 numpy-2.1.3 pycparser-2.22 timezonefinder-6.5.5
 # WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
