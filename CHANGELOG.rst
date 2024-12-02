@@ -2,17 +2,22 @@
 Changelog
 =========
 
-
-6.5.6 (2024-11-25)
+6.5.7 (2024-12-02)
 ------------------
 
-* add musllinux Wheels for Linux. Thanks to `Pxli9130 <https://github.com/Pxli9130 >`__
+* improved error handling to catch ``ValueError: not enough values to unpack`` (`Issue #209 <https://github.com/jannikmi/timezonefinder/issues/209>`__)
+
+
+6.5.6 (2024-12-02)
+------------------
+
+* add musllinux Wheels for Linux. Thanks to `Pxli9130 <https://github.com/Pxli9130>`__
 
 
 6.5.5 (2024-11-20)
 ------------------
 
-* using ``setuptools`` only as a build dependency. Thanks to `Kristian Sloth Lauszus <https://github.com/Lauszus >`__
+* using ``setuptools`` only as a build dependency. Thanks to `Kristian Sloth Lauszus <https://github.com/Lauszus>`__
 
 
 6.5.4 (2024-10-22)

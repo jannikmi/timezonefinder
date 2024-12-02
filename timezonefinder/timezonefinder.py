@@ -1,10 +1,10 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from struct import unpack
 from typing import List, Optional, Tuple, Union
-
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -488,11 +488,17 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """returns the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32"""
         poly_max_values = getattr(self, POLY_MAX_VALUES)
         poly_max_values.seek(4 * NR_BYTES_I * poly_id)
-        xmax, xmin, ymax, ymin = self._fromfile(
+        file_result = self._fromfile(
             poly_max_values,
             dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
             count=4,
         )
+        try:
+            xmax, xmin, ymax, ymin = file_result
+        except ValueError as e:
+            msg = f"error reading boundaries of polygon #{poly_id}, got {file_result}"
+            logging.error(msg)
+            raise ValueError(msg) from e
         return xmax, xmin, ymax, ymin
 
     def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
