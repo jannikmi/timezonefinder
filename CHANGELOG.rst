@@ -2,6 +2,13 @@
 Changelog
 =========
 
+
+6.5.6 (2024-11-25)
+------------------
+
+* add musllinux Wheels for Linux. Thanks to `Pxli9130 <https://github.com/Pxli9130 >`__
+
+
 6.5.5 (2024-11-20)
 ------------------
 

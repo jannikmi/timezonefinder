@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.5.5"
+version = "6.5.6"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
@@ -63,6 +63,7 @@ mypy = "*"
 rstcheck = "*"
 isort = "*"
 ruff = "*"
+cibuildwheel = "*"
 
 [tool.poetry.extras]
 numba = ["numba"]

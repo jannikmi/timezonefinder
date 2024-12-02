@@ -7,6 +7,10 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  # the supported Python versions for pre-built wheels
+  CIBW_BUILD_VERSIONS: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+
 jobs:
   pre-commit-hooks:
     name: run pre-commit hooks
@@ -25,6 +29,8 @@ jobs:
       # max-parallel: 8
       fail-fast: false
       matrix:
+        # all officially supported Python versions should be tested
+        # NOTE: need to match the versions in pyproject.toml > tox.ini
         python-version:
           - "3.8"
           - "3.9"
@@ -59,7 +65,6 @@ jobs:
       matrix:
         os: ["ubuntu-latest"]
         cibw_arch: ["native"]
-        cibw_build: ["cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"]
       fail-fast: false
 
     steps:
@@ -75,11 +80,13 @@ jobs:
           output-dir: dist
         env:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_SKIP: "*musllinux*"
+          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
+          CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
+          CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: pip
-          CIBW_BEFORE_ALL_LINUX: yum install -y libffi-devel clang make
+          CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
+          CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
 
       - name: "Upload wheel as artifact"
@@ -118,7 +125,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
       - name: Upgrade pip version
-        run: pip install -U pip
+        run: pip install --upgrade pip
       - name: Install poetry
         run: pip install poetry
       - name: Fetch version
