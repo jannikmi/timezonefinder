@@ -26,7 +26,8 @@ project_root = os.path.dirname(cwd)
 # This ensures that the source package is importable
 sys.path.insert(0, os.path.join(project_root))
 
-import timezonefinder  # needed for auto document, ATTENTION: must then be installed during online build!
+# needed for auto document, ATTENTION: must then be installed during online build!
+import timezonefinder  # noqa: E402 Module level import not at top of file
 
 print(timezonefinder)
 

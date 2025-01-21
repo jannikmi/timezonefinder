@@ -1,4 +1,4 @@
-""" 'transparent' numba functionality replacements
+"""'transparent' numba functionality replacements
 
 njit decorator
 data types

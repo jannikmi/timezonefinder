@@ -1,14 +1,14 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from struct import unpack
-from typing import List, Optional, Union
-
+from typing import List, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
-from timezonefinder import utils
+from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     BINARY_DATA_ATTRIBUTES,
     BINARY_FILE_ENDING,
@@ -43,6 +43,10 @@ from timezonefinder.utils import inside_polygon
 class AbstractTimezoneFinder(ABC):
     # TODO document attributes in all classes
     # prevent dynamic attribute assignment (-> safe memory)
+    """
+    Abstract base class for a timezone finder.
+    """
+
     __slots__ = [
         "bin_file_location",
         "shortcut_mapping",
@@ -52,12 +56,20 @@ class AbstractTimezoneFinder(ABC):
         POLY_ZONE_IDS,
     ]
     binary_data_attributes: List[str] = [POLY_ZONE_IDS]
+    """
+    List of attribute names that store opened binary data files.
+    """
 
     def __init__(
         self,
         bin_file_location: Optional[Union[str, Path]] = None,
         in_memory: bool = False,
     ):
+        """
+        Initialize the AbstractTimezoneFinder.
+        :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
+        :param in_memory: Whether to completely read and keep the binary files in memory.
+        """
         self.in_memory = in_memory
 
         if self.in_memory:
@@ -97,11 +109,19 @@ class AbstractTimezoneFinder(ABC):
 
     @property
     def nr_of_zones(self):
+        """
+        Get the number of timezones.
+
+        :rtype: int
+        """
         return len(self.timezone_names)
 
     @staticmethod
     def using_numba() -> bool:
         """
+        Check if Numba is being used.
+
+        :rtype: bool
         :return: True if Numba is being used to JIT compile helper functions
         """
         return utils.using_numba
@@ -111,14 +131,27 @@ class AbstractTimezoneFinder(ABC):
         """
         :return: True if the compiled C implementation of the point in polygon algorithm is being used
         """
-        return utils.inside_polygon == utils.pt_in_poly_clang
+        return utils.inside_polygon == utils_clang.pt_in_poly_clang
 
     def zone_id_of(self, poly_id: int) -> int:
+        """
+        Get the zone ID of a polygon.
+
+        :param poly_id: The ID of the polygon.
+        :type poly_id: int
+        :rtype: int
+        """
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
         poly_zone_ids.seek(NR_BYTES_H * poly_id)
         return unpack(DTYPE_FORMAT_H, poly_zone_ids.read(NR_BYTES_H))[0]
 
     def zone_ids_of(self, poly_ids: np.ndarray) -> np.ndarray:
+        """
+        Get the zone IDs of multiple polygons.
+
+        :param poly_ids: An array of polygon IDs.
+        :return: An array of zone IDs corresponding to the given polygon IDs.
+        """
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
         id_array = np.empty(shape=len(poly_ids), dtype=DTYPE_FORMAT_H_NUMPY)
 
@@ -129,21 +162,48 @@ class AbstractTimezoneFinder(ABC):
         return id_array
 
     def zone_name_from_id(self, zone_id: int) -> str:
+        """
+        Get the zone name from a zone ID.
+
+        :param zone_id: The ID of the zone.
+        :return: The name of the zone.
+        :raises ValueError: If the timezone could not be found.
+        """
         try:
             return self.timezone_names[zone_id]
         except IndexError:
             raise ValueError("timezone could not be found. index error.")
 
     def zone_name_from_poly_id(self, poly_id: int) -> str:
+        """
+        Get the zone name from a polygon ID.
+
+        :param poly_id: The ID of the polygon.
+        :return: The name of the zone.
+        """
         zone_id = self.zone_id_of(poly_id)
         return self.zone_name_from_id(zone_id)
 
     def get_shortcut_polys(self, *, lng: float, lat: float) -> np.ndarray:
-        hex_id = h3.geo_to_h3(lat, lng, SHORTCUT_H3_RES)
+        """
+        Get the polygon IDs in the shortcut corresponding to the given coordinates.
+
+        :param lng: The longitude of the point in degrees (-180.0 to 180.0).
+        :param lat: The latitude of the point in degrees (90.0 to -90.0).
+        :return: An array of polygon IDs.
+        """
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_poly_ids = self.shortcut_mapping[hex_id]
         return shortcut_poly_ids
 
     def most_common_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
+        """
+        Get the most common zone ID in the shortcut corresponding to the given coordinates.
+
+        :param lng: The longitude of the point in degrees (-180.0 to 180.0).
+        :param lat: The latitude of the point in degrees (90.0 to -90.0).
+        :return: The most common zone ID or None if no polygons exist in the shortcut.
+        """
         polys = self.get_shortcut_polys(lng=lng, lat=lat)
         if len(polys) == 0:
             return None
@@ -154,7 +214,11 @@ class AbstractTimezoneFinder(ABC):
 
     def unique_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
         """
-        :return: the zone id at the coordinate if there is exactly one possible zone, else `None`
+        Get the unique zone ID in the shortcut corresponding to the given coordinates.
+
+        :param lng: The longitude of the point in degrees (-180.0 to 180.0).
+        :param lat: The latitude of the point in degrees (90.0 to -90.0).
+        :return: The unique zone ID or None if no polygons exist in the shortcut.
         """
         polys = self.get_shortcut_polys(lng=lng, lat=lat)
         if len(polys) == 0:
@@ -255,8 +319,16 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     binary_data_attributes = BINARY_DATA_ATTRIBUTES
 
-    def __init__(self, bin_file_location: Optional[str] = None, in_memory: bool = False):
+    def __init__(
+        self, bin_file_location: Optional[str] = None, in_memory: bool = False
+    ):
         super().__init__(bin_file_location, in_memory)
+        """
+        Initialize the TimezoneFinder.
+
+        :param bin_file_location: Path to the binary data files to use. If None, native package data will be used.
+        :param in_memory: Whether to completely read and keep the binary files in memory.
+        """
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few it is feasible to keep them in the memory
@@ -269,10 +341,21 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     @property
     def nr_of_polygons(self) -> int:
+        """
+        Get the number of polygons.
+
+        :return: The number of polygons.
+        """
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
         return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
+        """
+        Get the coordinates of a polygon.
+
+        :param polygon_nr: The index of the polygon.
+        :return: Array of coordinates.
+        """
         poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
         poly_adr2data = getattr(self, POLY_ADR2DATA)
         poly_data = getattr(self, POLY_DATA)
@@ -285,12 +368,22 @@ class TimezoneFinder(AbstractTimezoneFinder):
         poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
         return np.stack(
             (
-                self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
-                self._fromfile(poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values),
+                self._fromfile(
+                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
+                ),
+                self._fromfile(
+                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
+                ),
             )
         )
 
     def _holes_of_poly(self, polygon_nr: int):
+        """
+        Get the holes of a polygon.
+
+        :param polygon_nr: Number of the polygon
+        :yield: Generator of hole coordinates
+        """
         hole_coord_amount = getattr(self, HOLE_COORD_AMOUNT)
         hole_adr2data = getattr(self, HOLE_ADR2DATA)
         hole_data = getattr(self, HOLE_DATA)
@@ -308,8 +401,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
             nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
             hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
 
-            x_coords = self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)
-            y_coords = self._fromfile(hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values)
+            x_coords = self._fromfile(
+                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
+            )
+            y_coords = self._fromfile(
+                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
+            )
             yield np.array(
                 [
                     x_coords,
@@ -317,13 +414,24 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 ]
             )
 
-    def get_polygon(self, polygon_nr: int, coords_as_pairs: bool = False) -> List[Union[CoordPairs, CoordLists]]:
+    def get_polygon(
+        self, polygon_nr: int, coords_as_pairs: bool = False
+    ) -> List[Union[CoordPairs, CoordLists]]:
+        """
+        Get the polygon coordinates of a given polygon number.
+
+        :param polygon_nr: Polygon number
+        :param coords_as_pairs: Determines the structure of the polygon representation
+        :return: List of polygon coordinates
+        """
         list_of_converted_polygons = []
         if coords_as_pairs:
             conversion_method = utils.convert2coord_pairs
         else:
             conversion_method = utils.convert2coords
-        list_of_converted_polygons.append(conversion_method(self.coords_of(polygon_nr=polygon_nr)))
+        list_of_converted_polygons.append(
+            conversion_method(self.coords_of(polygon_nr=polygon_nr))
+        )
 
         for hole in self._holes_of_poly(polygon_nr):
             list_of_converted_polygons.append(conversion_method(hole))
@@ -353,7 +461,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
             if not isinstance(tz_id, int):
                 raise TypeError("the zone id must be given as int.")
             if tz_id < 0 or tz_id >= self.nr_of_zones:
-                raise ValueError(f"the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones - 1}.")
+                raise ValueError(
+                    f"the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones - 1}."
+                )
         else:
             try:
                 tz_id = self.timezone_names.index(tz_name)
@@ -369,20 +479,49 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # (also exists for the last zone, cf. file_converter.py)
         next_zone_poly_id = unpack(DTYPE_FORMAT_H, poly_id2zone_id.read(NR_BYTES_H))[0]
         # read and return all polygons from this zone:
-        return [self.get_polygon(poly_id, coords_as_pairs) for poly_id in range(this_zone_poly_id, next_zone_poly_id)]
+        return [
+            self.get_polygon(poly_id, coords_as_pairs)
+            for poly_id in range(this_zone_poly_id, next_zone_poly_id)
+        ]
 
-    def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
-        # get the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32
+    def get_polygon_boundaries(self, poly_id: int) -> Tuple[int, int, int, int]:
+        """returns the boundaries of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32"""
         poly_max_values = getattr(self, POLY_MAX_VALUES)
         poly_max_values.seek(4 * NR_BYTES_I * poly_id)
-        xmax, xmin, ymax, ymin = self._fromfile(
+        file_result = self._fromfile(
             poly_max_values,
             dtype=DTYPE_FORMAT_SIGNED_I_NUMPY,
             count=4,
         )
+        try:
+            xmax, xmin, ymax, ymin = file_result
+        except ValueError as e:
+            msg = f"error reading boundaries of polygon #{poly_id}, got {file_result}"
+            logging.error(msg)
+            raise ValueError(msg) from e
+        return xmax, xmin, ymax, ymin
+
+    def outside_the_boundaries_of(self, poly_id: int, x: int, y: int) -> bool:
+        """
+        Check if a point is outside the boundaries of a polygon.
+
+        :param poly_id: Polygon ID
+        :param x: X-coordinate of the point
+        :param y: Y-coordinate of the point
+        :return: True if the point is outside the boundaries, False otherwise
+        """
+        xmax, xmin, ymax, ymin = self.get_polygon_boundaries(poly_id)
         return x > xmax or x < xmin or y > ymax or y < ymin
 
     def inside_of_polygon(self, poly_id: int, x: int, y: int) -> bool:
+        """
+        Check if a point is inside a polygon.
+
+        :param poly_id: Polygon ID
+        :param x: X-coordinate of the point
+        :param y: Y-coordinate of the point
+        :return: True if the point is inside the polygon, False otherwise
+        """
         # only read polygon (hole) data on demand
         # only run the expensive algorithm if the point is withing the boundaries
         if self.outside_the_boundaries_of(poly_id, x, y):
@@ -392,7 +531,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
             return False
 
         # when the point is within a hole of the polygon, this timezone must not be returned
-        if any(iter(inside_polygon(x, y, hole) for hole in self._holes_of_poly(poly_id))):
+        if any(
+            iter(inside_polygon(x, y, hole) for hole in self._holes_of_poly(poly_id))
+        ):
             return False
 
         # the query point is included in this polygon, but not any hole
@@ -458,7 +599,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         .. note:: this is only meaningful when you have compiled your own timezone data
             where there are areas without timezone polygon coverage.
-            Otherwise some timezone will always be matched and the functionality is equal to using `.timezone_at()`
+            Otherwise, some timezone will always be matched and the functionality is equal to using `.timezone_at()`
             -> useless to actually test all polygons.
 
         .. note:: using this function is less performant than `.timezone_at()`

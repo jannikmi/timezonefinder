@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "timezonefinder"
-version = "6.1.10"
-description = "fast python package for finding the timezone of any point on earth (coordinates) offline"
+version = "6.5.8"
+description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = ["jannikmi <github@michelfe.it>"]
 license = "MIT"
 readme = "README.rst"
@@ -21,7 +21,8 @@ include = [
     "timezonefinder/*.bin",
     "timezonefinder/*.json",
     "timezonefinder/py.typed",
-    "inside_poly_extension/*",
+    "timezonefinder/inside_poly_extension/*",
+    "timezonefinder/inside_polygon_ext*so",
     #    "build.py", # Note: auto included
 ]
 #exclude = ["my_package/excluded.py"]
@@ -31,42 +32,92 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
-numpy = ">=1.18,<2"
-h3 = ">=3.7.6,<4" # python3.11 support
+# https://numpy.org/neps/nep-0029-deprecation_policy.html
+# numpy 1.21+ required for python 3.8
+numpy = [
+    { version = ">=1.21,<3", python = "<3.9" },
+    { version = ">=1.23,<3", python = ">=3.9" }
+]
+h3 = ">4"
 cffi = ">=1.15.1,<2"
-numba = { version = ">=0.56,<1", optional = true }
-pytz = { version = ">=2022.7.1", optional = true }
-# build dependencies. workaround to always have these installed
-setuptools = ">=65.5"
 
-[tool.poetry.dev-dependencies]
-poetry = "^1"
+# optional dependencies (extras)
+numba = [
+    { version = ">=0.56,<1", python = "<3.12", optional = true },
+    { version = ">=0.59,<1", python = ">=3.12", optional = true }
+]
+pytz = { version = ">=2022.7.1", optional = true }
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^5"
+sphinx-rtd-theme = "^1"
+
+[tool.poetry.group.dev.dependencies]
 tox = "*"
 pytest = "*"
 pre-commit = "*"
 mypy = "*"
-pylint = "*"
-flake8 = "*"
-isort = "*"
-twine = "*"
 rstcheck = "*"
-pydantic = "^1"
-Sphinx = "^5"
-sphinx-rtd-theme = "^1"
-invoke = "^1"
+isort = "*"
+ruff = "*"
+cibuildwheel = "*"
 
 [tool.poetry.extras]
 numba = ["numba"]
 pytz = ["pytz"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "cffi", "setuptools"]
+requires = ["poetry-core>=1.0.0", "cffi", "setuptools>=65.5"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.build]
 script = "build.py"
 generate-setup-file = false
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
+
+[tool.ruff]
+target-version = "py38"
+src = ["timezonefinder", "tests", "build.py"]
+
+[tool.ruff.lint.isort]
+known-local-folder = ["timezonefinder"]
+
+
+[tool.tox]
+legacy_tox_ini = """
+    [tox]
+    isolated_build = true
+    envlist =
+        # TODO python 3.13 with numba
+        docs,py{38,39,310,311,312}{,-numba,-pytz},py313{,-pytz}
+
+    [gh-actions]
+    python =
+        3.8: py38{,-numba,-pytz}
+        3.9: py39{,-numba,-pytz}
+        3.10: py310{,-numba,-pytz}
+        3.11: py311{,-numba,-pytz}
+        3.12: py312{,-numba,-pytz}
+        # TODO also -numba
+        3.13: py313{,-pytz}
+
+    [testenv:docs]
+    description = build documentation
+    basepython = python3.12
+    allowlist_externals = poetry,sphinx-build
+    commands =
+      poetry install -v --with docs
+      sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
+      python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
+
+    [testenv]
+    allowlist_externals = poetry
+    commands =
+        !numba: poetry install -v
+        numba:  poetry install -v --extras numba
+        pytz:  poetry install -v --extras pytz
+        poetry run pytest {posargs}
+"""

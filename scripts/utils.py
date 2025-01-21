@@ -35,6 +35,8 @@ def write_json(obj, path):
     print("writing json to ", path)
     with open(abspath(path), "w") as json_file:
         json.dump(obj, json_file, indent=2)
+        # write a newline at the end of the file
+        json_file.write("\n")
 
 
 def time_execution(func):
@@ -133,12 +135,12 @@ def export_mapping(file_name: str, obj: Dict, res: int):
 
 
 def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
-    assert (
-        value > lower_value_limit
-    ), f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
-    assert (
-        value < upper_value_limit
-    ), f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
+    assert value > lower_value_limit, (
+        f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
+    )
+    assert value < upper_value_limit, (
+        f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
+    )
     output_file.write(struct.pack(data_format, value))
 
 
@@ -187,7 +189,9 @@ def write_binary(
     path = abspath(join(output_path, bin_file_name + configs.BINARY_FILE_ENDING))
     print(f"writing {path}")
     with open(path, "wb") as output_file:
-        writing_fct(output_file, data, data_format, lower_value_limit, upper_value_limit)
+        writing_fct(
+            output_file, data, data_format, lower_value_limit, upper_value_limit
+        )
         file_length = output_file.tell()
     return file_length
 

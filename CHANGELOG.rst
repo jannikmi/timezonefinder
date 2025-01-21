@@ -3,12 +3,111 @@ Changelog
 =========
 
 
+6.5.8 (2025-01-21)
+------------------
+
+* updated the data to `2025a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2025a>`__
+* internal: updated ``file_converter.py`` for ``h3>=4``
+
+
+6.5.7 (2024-12-02)
+------------------
+
+* improved error handling to catch ``ValueError: not enough values to unpack`` (`Issue #209 <https://github.com/jannikmi/timezonefinder/issues/209>`__)
+
+
+6.5.6 (2024-12-02)
+------------------
+
+* add musllinux Wheels for Linux. Thanks to `Pxli9130 <https://github.com/Pxli9130>`__
+
+
+6.5.5 (2024-11-20)
+------------------
+
+* using ``setuptools`` only as a build dependency. Thanks to `Kristian Sloth Lauszus <https://github.com/Lauszus>`__
+
+
+6.5.4 (2024-10-22)
+------------------
+
+* using the dependency ``h3>4``. Thanks to `Greg Meyer <https://github.com/gmmeyer>`__
+
+
+6.5.3 (2024-09-16)
+------------------
+
+* updated the data to `2024b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2024b>`__.
+* refactored C lang point in polygon utils
+
+6.5.2 (2024-06-17)
+------------------
+
+* added support for ``numpy>=2.0`` (fixes issue #234)
+
+
+6.5.1 (2024-06-14)
+------------------
+
+* added support for cibuildwheel: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to @theirix
+
+
+
+6.5.0 (2024-03-14)
+------------------
+
+* updated the data to `2024a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2024a>`__.
+
+internal:
+
+* use ruff linter in pre-commit hook
+* make dependency specifications less strict
+
+
+6.4.1 (2024-02-08)
+------------------
+
+* added official support for python 3.8 again, by specifying numba as multiple constraint dependency
+
+
+internal:
+
+* added unit tests for polygon boundary binary reading
+
+
+6.4.0 (2024-02-02)
+------------------
+
+* added python 3.12 support (supported by numba since release 0.59.0), Closes #208
+* dropped official support for python 3.8, because the optional dependency numba requires python 3.9. this package might still work with python 3.8, but it is not tested anymore.
+
+
+6.3.0 (2024-02-01)
+------------------
+
+* updated the data to `2023d <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2023d>`__.
+
+internal:
+
+* added docstrings. Thanks to `Tyler Huntley <https://github.com/Ty1776>`__
+* automatically skip GitHub actions publishing when the version already exists. useful for minor improvements without publishing a version. build would always fail otherwise
+* enable tests for python 3.11 with numba
+* enable tests for python 3.12
+* added tests for generating the documentation
+* use poetry dependency group specification (closing #199)
+
+
+6.2.0 (2023-03-26)
+------------------
+
+* updated the data to `2023b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2023b>`__.
+
+
 6.1.10 (2023-03-22)
 -------------------
 
 * added a `pytz` extra for easily maintaining compatibility
 * improved documentation
-
 
 6.1.9 (2022-12-06)
 ------------------

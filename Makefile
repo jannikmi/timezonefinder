@@ -2,33 +2,62 @@
 # By default make uses sh to execute commands, and sh doesn't know `source`
 SHELL=/bin/bash
 
-
 install:
-	@echo "installing the development dependencies..."
+	pip install --upgrade pip
+	@echo "installing all specified dependencies..."
 	@#poetry install --no-dev
-	@poetry install --extras "numba" --no-root --sync
+	# NOTE: root package needs to be installed for CLI tests to work!
+	@poetry install --all-extras --sync
 
 update:
+	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
+	@poetry update
+	#poetry export -f requirements.txt --output docs/requirements_docs.txt --without-hashes
+
+lock:
+	@echo "locking the dependencies specified in 'pyproject.toml':"
+	@poetry lock
+
+
+# when poetry dependency resolving gets stuck:
+force_update:
+	@echo "force updating the requirements. removing lock file"
+	 poetry cache clear --all .
+	 rm poetry.lock
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@poetry update -vv
-	#poetry export -f requirements.txt --output docs/requirements.txt --without-hashes
+	poetry update -vvv
+
+outdated:
+	poetry show --outdated
 
 
 env:
 	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.7 poetry -y
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 poetry -y
 	#	&& conda activate timezonefinder
 	# && make req
 
+parse:
+	poetry run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
+
+data:
+	bash parse_data.sh
 
 test:
-	@python ./runtests.py
+	@pytest
+
+test1: test
+
+tox:
+	@tox
+
+test2: tox
 
 hook:
 	@pre-commit install
 	@pre-commit run --all-files
 
-hook2:
+hookup:
 	@pre-commit autoupdate
 
 hook3:

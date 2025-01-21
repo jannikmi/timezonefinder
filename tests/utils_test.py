@@ -9,8 +9,9 @@ from tests.auxiliaries import (
     get_rnd_poly_int,
     get_rnd_query_pt,
 )
-from timezonefinder import utils
+from timezonefinder import utils, utils_clang
 from timezonefinder.configs import DTYPE_FORMAT_H_NUMPY, INT2COORD_FACTOR
+from timezonefinder.utils_clang import clang_extension_loaded
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -175,11 +176,18 @@ def test_convert2ints():
     np.testing.assert_almost_equal(ints_converted, ints_true)
 
 
+def test_clang_extension_loaded():
+    # testing the Clang version of the Point in Polygon algorithm requires the C extension to be loaded
+    assert clang_extension_loaded, "the clang extension not loaded, "
+
+
+# TODO parametrize the test cases
+# TODO test equal results of both implementation
 @pytest.mark.parametrize(
     "inside_poly_func",
     [
         utils.pt_in_poly_python,
-        utils.pt_in_poly_clang,
+        utils_clang.pt_in_poly_clang,
     ],
 )
 @pytest.mark.parametrize(
@@ -202,7 +210,9 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     # print("=" * 50)
     coords, query_points, expected_results = test_case
     coords = np.array(coords)
-    for i, ((lng, lat), expected_result) in enumerate(zip(query_points, expected_results)):
+    for i, ((lng, lat), expected_result) in enumerate(
+        zip(query_points, expected_results)
+    ):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
         x, y, coords_int = convert_inside_polygon_input(lng, lat, coords)
         actual_result = inside_poly_func(x, y, coords_int)
@@ -219,6 +229,7 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     assert nr_mistakes == 0
 
 
+# TODO @pytest.mark.parametrize(
 def test_rectify_coords():
     # within bounds -> no exception
     utils.validate_coordinates(lng=180.0, lat=90.0)
@@ -231,12 +242,16 @@ def test_rectify_coords():
 
     with pytest.raises(ValueError):  # coords out of bounds
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR)
+        utils.validate_coordinates(
+            lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
+        )
         utils.validate_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
         utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
         utils.validate_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
         utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR)
+        utils.validate_coordinates(
+            lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
+        )
 
 
 @pytest.mark.parametrize(

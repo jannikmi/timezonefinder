@@ -59,14 +59,13 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     than also storing the lower resolution shortcuts (when there is a unique or no timezone match).
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
+
 import functools
 import itertools
 import json
 import multiprocessing
-import random
 import warnings
 from dataclasses import dataclass
-from os.path import abspath, join
 from pathlib import Path
 from typing import (
     Collection,
@@ -75,7 +74,6 @@ from typing import (
     NamedTuple,
     Optional,
     Set,
-    Sized,
     Tuple,
     Union,
 )
@@ -188,7 +186,9 @@ def parse_polygons_from_json(input_path: Path) -> int:
             x_coords = poly[0]
             y_coords = poly[1]
             polygon_lengths.append(len(x_coords))
-            bounds = Boundaries(np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords))
+            bounds = Boundaries(
+                np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
+            )
             poly_boundaries.append(bounds)
             poly_zone_ids.append(zone_id)
 
@@ -196,7 +196,8 @@ def parse_polygons_from_json(input_path: Path) -> int:
             for hole_nr, hole in enumerate(poly_with_hole):
                 nr_of_holes += 1  # keep track of how many holes there are
                 print(
-                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon", end=""
+                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon",
+                    end="",
                 )
                 polynrs_of_holes.append(poly_id)
                 hole_poly = to_numpy_polygon(hole)
@@ -216,24 +217,24 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert nr_of_polygons >= 0
     assert nr_of_polygons >= nr_of_zones
     assert zone_id == nr_of_zones - 1
-    assert (
-        poly_id == nr_of_polygons
-    ), f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
+    assert poly_id == nr_of_polygons, (
+        f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
+    )
 
     if 0 in polygon_lengths:
         raise ValueError()
 
     # binary file value range tests:
-    assert (
-        nr_of_polygons < THRES_DTYPE_H
-    ), f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
-    assert (
-        nr_of_zones < THRES_DTYPE_H
-    ), f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    assert nr_of_polygons < THRES_DTYPE_H, (
+        f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    )
+    assert nr_of_zones < THRES_DTYPE_H, (
+        f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    )
     max_poly_length = max(polygon_lengths)
-    assert (
-        max_poly_length < THRES_DTYPE_I
-    ), f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
+    assert max_poly_length < THRES_DTYPE_I, (
+        f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
+    )
     max_hole_poly_length = max(all_hole_lengths)
     assert max_hole_poly_length < THRES_DTYPE_H, (
         f"address overflow: the maximal amount of coords in hole polygons "
@@ -253,7 +254,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     return polygon_space
 
 
-def update_zone_names(output_path):
+def update_zone_names(output_path: Path):
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
     global poly_zone_ids
     global list_of_pointers
@@ -263,7 +264,7 @@ def update_zone_names(output_path):
     global polynrs_of_holes
     global nr_of_zones
     global nr_of_polygons
-    file_path = abspath(join(output_path, TIMEZONE_NAMES_FILE))
+    file_path = output_path / TIMEZONE_NAMES_FILE
     print(f"updating the zone names in {file_path} now.")
     # pickle the zone names (python array)
     write_json(all_tz_names, file_path)
@@ -303,7 +304,9 @@ def any_pt_in_cell(h: int, poly_nr: int) -> bool:
     return any(map(pt_in_cell, poly.T))
 
 
-def get_corrected_hex_boundaries(x_coords, y_coords, surr_n_pole, surr_s_pole) -> Tuple["Boundaries", bool]:
+def get_corrected_hex_boundaries(
+    x_coords, y_coords, surr_n_pole, surr_s_pole
+) -> Tuple["Boundaries", bool]:
     """boundaries of a hex cell used for pre-filtering the polygons
         which have to be checked with expensive point-in-polygon algorithm
 
@@ -388,14 +391,16 @@ class Hex:
 
     @classmethod
     def from_id(cls, id: int):
-        res = h3.h3_get_resolution(id)
-        coord_pairs = h3.h3_to_geo_boundary(id)
+        res = h3.get_resolution(id)
+        coord_pairs = h3.cell_to_boundary(id)
         # ATTENTION: (lat, lng)! pairs
         coords = to_numpy_polygon(coord_pairs, flipped=True)
         x_coords, y_coords = coords[0], coords[1]
         surr_n_pole = lies_in_h3_cell(id, lng=0.0, lat=MAX_LAT)
         surr_s_pole = lies_in_h3_cell(id, lng=0.0, lat=-MAX_LAT)
-        bounds, x_overflow = get_corrected_hex_boundaries(x_coords, y_coords, surr_n_pole, surr_s_pole)
+        bounds, x_overflow = get_corrected_hex_boundaries(
+            x_coords, y_coords, surr_n_pole, surr_s_pole
+        )
         return cls(id, res, coords, bounds, x_overflow, surr_n_pole, surr_s_pole)
 
     @property
@@ -483,23 +488,25 @@ class Hex:
     def zones_in_cell(self) -> Set[int]:
         if self._zones_in_cell is None:
             # lazy evaluation, caching
-            self._zones_in_cell = set(map(lambda p: poly_zone_ids[p], self.polys_in_cell))
+            self._zones_in_cell = set(
+                map(lambda p: poly_zone_ids[p], self.polys_in_cell)
+            )
         return self._zones_in_cell
 
     @property
     def children(self) -> Set[int]:
-        return set(h3.h3_to_children(self.id))
+        return set(h3.cell_to_children(self.id))
 
     @property
     def outer_children(self) -> Set[int]:
         child_set = self.children
-        center_child = h3.h3_to_center_child(self.id)
+        center_child = h3.cell_to_center_child(self.id)
         child_set.remove(center_child)
         return child_set
 
     @property
     def neighbours(self) -> HexIdSet:
-        return set(h3.k_ring(self.id, k=1))
+        return set(h3.grid_ring(self.id, k=1))
 
     @property
     def true_parents(self) -> HexIdSet:
@@ -514,8 +521,8 @@ class Hex:
             raise ValueError("not defined for resolution 0")
         lower_res = self.res - 1
         # NOTE: (lat,lng) pairs!
-        coord_pairs = h3.h3_to_geo_boundary(self.id)
-        return {h3.geo_to_h3(pt[0], pt[1], lower_res) for pt in coord_pairs}
+        coord_pairs = h3.cell_to_boundary(self.id)
+        return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
 @functools.lru_cache(maxsize=int(1e6))
@@ -543,7 +550,10 @@ def optimise_shortcut_ordering(poly_ids: Collection[int]) -> List[int]:
     zone_ids = [poly_zone_ids[i] for i in poly_ids]
     zone_ids_unique = list(set(zone_ids))
     zipped = list(zip(poly_ids, zone_ids, poly_sizes))
-    zone2size = {i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped))) for i in zone_ids_unique}
+    zone2size = {
+        i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped)))
+        for i in zone_ids_unique
+    }
     zone_ids_sorted = sorted(zone_ids_unique, key=lambda x: zone2size[x])
     poly_ids_sorted = []
     for zone_id in zone_ids_sorted:
@@ -586,8 +596,9 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         shortcut_entries = pool.map(get_shortcut_entry, candidates)
 
     lengths = map(len, shortcut_entries)
-    # FIXME: empty mappings!
     max_lenght = max(lengths)
+    # FIXME: empty mappings!
+    assert max_lenght > 0, "empty mappings!"
     # combine into mapping dictionary: hex_id -> polygon ids
     mapping = dict(zip(candidates, shortcut_entries))
     return mapping
@@ -596,9 +607,9 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
 def all_res_candidates(res: int) -> HexIdSet:
     print(f"compiling hex candidates for resolution {res}.")
     if res == 0:
-        return set(h3.get_res0_indexes())
+        return set(h3.get_res0_cells())
     parent_res_candidates = all_res_candidates(res - 1)
-    child_iter = (h3.h3_to_children(h) for h in parent_res_candidates)
+    child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
     return set(itertools.chain.from_iterable(child_iter))
 
 
@@ -625,8 +636,8 @@ def compile_shortcut_mapping(output_path: Path) -> int:
     return shortcut_space
 
 
-def geo_to_h3(lng: float, lat: float) -> int:
-    return h3.geo_to_h3(lat, lng, SHORTCUT_H3_RES)
+def latlng_to_cell(lng: float, lat: float) -> int:
+    return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
 def validate_shortcut_completeness(mapping: ShortcutMapping):
@@ -639,7 +650,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
             # ATTENTION: int to coord conversion required!
             lng = int2coord(pt[0])
             lat = int2coord(pt[1])
-            hex_id = geo_to_h3(lng, lat)
+            hex_id = latlng_to_cell(lng, lat)
             try:
                 shortcut_entries = mapping[hex_id]
             except KeyError:
@@ -659,7 +670,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
 
 def validate_shortcut_resolution(mapping: ShortcutMapping):
     for hex_id in mapping.keys():
-        assert h3.h3_get_resolution(hex_id) == SHORTCUT_H3_RES
+        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
 
 
 def validate_unused_polygons(shortcuts: ShortcutMapping):
@@ -677,13 +688,16 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     validate_shortcut_resolution(mapping)
     validate_shortcut_completeness(mapping)
     validate_unused_polygons(mapping)
+    assert not DEBUG, "DEBUG mode is on"
 
 
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
 
-    def compile_addresses(length_list: List[int], multiplier: int, byte_amount_per_entry: int):
+    def compile_addresses(
+        length_list: List[int], multiplier: int, byte_amount_per_entry: int
+    ):
         adr = 0
         addresses = [adr]
         for length in length_list:
@@ -698,7 +712,9 @@ def compile_polygon_binaries(output_path):
         poly_nr2zone_id,
         upper_value_limit=nr_of_polygons + 1,
     )
-    write_binary(output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones)
+    write_binary(
+        output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
+    )
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_coordinate_data(output_path, POLY_DATA, polygons)
     write_binary(
@@ -710,7 +726,9 @@ def compile_polygon_binaries(output_path):
     )
 
     # 2 entries per coordinate
-    poly_addresses = compile_addresses(polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    poly_addresses = compile_addresses(
+        polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
     write_binary(
         output_path,
         POLY_ADR2DATA,
@@ -742,7 +760,8 @@ def compile_polygon_binaries(output_path):
                 }
             )
 
-    with open(join(output_path, HOLE_REGISTRY_FILE), "w") as json_file:
+    path = output_path / HOLE_REGISTRY_FILE
+    with open(path, "w") as json_file:
         json.dump(hole_registry, json_file, indent=4)
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
@@ -760,7 +779,9 @@ def compile_polygon_binaries(output_path):
     )
 
     # 2 entries per coordinate
-    hole_adr2data = compile_addresses(all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I)
+    hole_adr2data = compile_addresses(
+        all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
+    )
     used_space = write_binary(
         output_path,
         HOLE_ADR2DATA,
@@ -781,6 +802,10 @@ def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_OUTPUT_PATH,
 ):
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+
     polygon_space = parse_polygons_from_json(input_path)
     update_zone_names(output_path)
     hole_space = compile_polygon_binaries(output_path)
@@ -798,7 +823,9 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="parse data directories")
-    parser.add_argument("-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH)
+    parser.add_argument(
+        "-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH
+    )
     parser.add_argument(
         "-out",
         help="path to output folder for storing the parsed data files",

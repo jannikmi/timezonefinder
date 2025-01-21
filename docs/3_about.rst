@@ -74,11 +74,11 @@ Comparison to tzfpy
 
 - ``tzfpy`` is a Python binding of the Rust package ``tzf-rs``
 - ``tzfpy`` has no startup time
-- ``tzfpy`` uses a hierarchical tree of rectangles as timezone polygons (data):
+- ``tzfpy`` uses simplified timezone polygons (data):
     - this reduces the memory requirements
     - this reduces the accuracy
     - this increases the lookup speed
-
+- ``tzfpy`` uses hierarchical tree of rectangles to speed up the lookup but auto fall back to polygon data if cache miss
 
 Comparison to pytzwhere
 -----------------------
@@ -130,6 +130,9 @@ Thanks to:
 
 - `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
 - `ringsaturn <https://github.com/ringsaturn>`__ for valuable feedback, sponsoring this project, creating the ``tzfpy`` package and adding the ``pytz`` compatibility extra
+- `theirix  <https://github.com/theirix>`__ for adding support for cibuildwheel
 - `snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe.
 - `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
+- `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
+- `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4

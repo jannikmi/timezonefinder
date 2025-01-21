@@ -18,7 +18,9 @@ from timezonefinder.configs import (
 )
 
 
-def export_shortcuts_binary(global_mapping: Dict[int, List[int]], path2shortcuts: Path) -> int:
+def export_shortcuts_binary(
+    global_mapping: Dict[int, List[int]], path2shortcuts: Path
+) -> int:
     """
     binary format:
         for every shortcut entry:
@@ -53,12 +55,14 @@ def read_shortcuts_binary(path2shortcuts: Path) -> ShortcutMapping:
                 # EOF: buffer not long enough to unpack
                 break
             nr_polys: int = struct.unpack(DTYPE_FORMAT_B, fp.read(NR_BYTES_B))[0]
-            poly_ids: np.ndarray = np.fromfile(fp, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_polys)
+            poly_ids: np.ndarray = np.fromfile(
+                fp, dtype=DTYPE_FORMAT_H_NUMPY, count=nr_polys
+            )
             mapping[hex_id] = poly_ids
 
     return mapping
 
 
 def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
-    res = h3.h3_get_resolution(h)
-    return h3.geo_to_h3(lat, lng, res) == h
+    res = h3.get_resolution(h)
+    return h3.latlng_to_cell(lat, lng, res) == h
