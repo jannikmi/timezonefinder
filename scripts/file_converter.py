@@ -62,7 +62,6 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 
 import functools
 import itertools
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
@@ -89,6 +88,7 @@ from scripts.utils import (
     write_boundary_data,
     write_coordinate_data,
     write_json,
+    load_json,
 )
 from timezonefinder.configs import (
     DTYPE_FORMAT_H,
@@ -146,8 +146,8 @@ def parse_polygons_from_json(input_path: Path) -> int:
     global polygons, polygon_lengths, poly_zone_ids, poly_boundaries
 
     print(f"parsing input file: {input_path}\n...\n")
-    with open(input_path) as json_file:
-        tz_list = json.loads(json_file.read()).get("features")
+    input_json = load_json(input_path)
+    tz_list = input_json["features"]
 
     poly_id = 0
     zone_id = 0
@@ -734,8 +734,7 @@ def compile_polygon_binaries(output_path):
             )
 
     path = output_path / HOLE_REGISTRY_FILE
-    with open(path, "w") as json_file:
-        json.dump(hole_registry, json_file, indent=4)
+    write_json(hole_registry, path)
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
     assert len(all_hole_lengths) == nr_of_holes
