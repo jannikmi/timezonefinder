@@ -596,9 +596,9 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         shortcut_entries = pool.map(get_shortcut_entry, candidates)
 
     lengths = map(len, shortcut_entries)
-    max_lenght = max(lengths)
+    max_length = max(lengths)
     # FIXME: empty mappings!
-    assert max_lenght > 0, "empty mappings!"
+    assert max_length > 0, "empty mappings!"
     # combine into mapping dictionary: hex_id -> polygon ids
     mapping = dict(zip(candidates, shortcut_entries))
     return mapping
