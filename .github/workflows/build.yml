@@ -71,9 +71,6 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pip install poetry
-
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v2.22.0
         with:
@@ -85,7 +82,7 @@ jobs:
           CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_BUILD_FRONTEND: pip
-          CIBW_BEFORE_BUILD: poetry install --only build
+          CIBW_BEFORE_BUILD: "pip install poetry && poetry install --only build"
           CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
           CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
