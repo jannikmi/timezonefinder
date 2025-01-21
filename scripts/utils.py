@@ -133,12 +133,12 @@ def export_mapping(file_name: str, obj: Dict, res: int):
 
 
 def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
-    assert (
-        value > lower_value_limit
-    ), f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
-    assert (
-        value < upper_value_limit
-    ), f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
+    assert value > lower_value_limit, (
+        f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
+    )
+    assert value < upper_value_limit, (
+        f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
+    )
     output_file.write(struct.pack(data_format, value))
 
 
