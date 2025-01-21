@@ -45,16 +45,16 @@ def ocean2land(test_locations):
 
 def check_geometry(geometry_obj: List):
     coords = geometry_obj[0][0]
-    assert (
-        len(coords) == 2
-    ), "the polygon does not consist of two latitude longitude lists"
+    assert len(coords) == 2, (
+        "the polygon does not consist of two latitude longitude lists"
+    )
     x_coords, y_coords = coords
     nr_x_coords = len(x_coords)
     nr_y_coords = len(y_coords)
     assert nr_x_coords > 2, "a polygon must consist of more than 2 coordinates"
-    assert (
-        nr_x_coords == nr_y_coords
-    ), "the amount of x and y coordinates (lng, lat) must be equal"
+    assert nr_x_coords == nr_y_coords, (
+        "the amount of x and y coordinates (lng, lat) must be equal"
+    )
 
 
 def check_pairwise_geometry(geometry_obj: List):
@@ -62,9 +62,9 @@ def check_pairwise_geometry(geometry_obj: List):
     cord_pairs = geometry_obj[0][0]
     assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
     first_coord_pair = cord_pairs[0]
-    assert (
-        len(first_coord_pair) == 2
-    ), "the polygon does not consist of coordinate pairs as expected."
+    assert len(first_coord_pair) == 2, (
+        "the polygon does not consist of coordinate pairs as expected."
+    )
 
 
 def is_valid_lng_int(x: int) -> bool:
@@ -192,9 +192,9 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
         timezone_names_stored = self.test_instance.timezone_names
         with open(join(abs_default_path, TIMEZONE_NAMES_FILE)) as json_file:
             timezone_names_json = json.loads(json_file.read())
-        assert (
-            timezone_names_stored == timezone_names_json
-        ), f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
+        assert timezone_names_stored == timezone_names_json, (
+            f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
+        )
 
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
@@ -285,9 +285,9 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             )
             # not necessary:
             # assert nested_list_equal(geometry_from_id, geometry_from_name), \
-            assert (
-                len(geometry_from_name) == len(geometry_from_id)
-            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            assert len(geometry_from_name) == len(geometry_from_id), (
+                "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            )
             check_geometry(geometry_from_id)
 
             geometry_from_name = self.test_instance.get_geometry(
@@ -296,9 +296,9 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
             geometry_from_id = self.test_instance.get_geometry(
                 tz_name=zone_name, tz_id=zone_id, use_id=False, coords_as_pairs=True
             )
-            assert (
-                len(geometry_from_name) == len(geometry_from_id)
-            ), "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            assert len(geometry_from_name) == len(geometry_from_id), (
+                "the results for querying the geometry for a zone with zone name or zone id are NOT equal."
+            )
 
             check_pairwise_geometry(geometry_from_id)
             check_pairwise_geometry(geometry_from_name)

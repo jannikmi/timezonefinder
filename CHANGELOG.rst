@@ -2,6 +2,14 @@
 Changelog
 =========
 
+
+6.5.8 (2025-01-21)
+------------------
+
+* updated the data to `2025a <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2025a>`__
+* internal: updated ``file_converter.py`` for ``h3>=4``
+
+
 6.5.7 (2024-12-02)
 ------------------
 

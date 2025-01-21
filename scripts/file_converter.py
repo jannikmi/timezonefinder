@@ -63,10 +63,20 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 import functools
 import itertools
 import json
+import multiprocessing
+import warnings
 from dataclasses import dataclass
-from os.path import abspath, join
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import (
+    Collection,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -119,7 +129,7 @@ from timezonefinder.utils import (
     int2coord,
 )
 
-ShortcutMapping = Dict[int, List[int]]
+N_PROCESSES = None  # os.cpu_count()
 
 nr_of_polygons = -1
 nr_of_zones = -1
@@ -134,6 +144,8 @@ holes = []
 all_hole_lengths = []
 list_of_pointers = []
 poly_nr2zone_id = []
+
+ShortcutMapping = Dict[int, List[int]]
 
 
 def _holes_in_poly(poly_nr):
@@ -184,7 +196,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
             for hole_nr, hole in enumerate(poly_with_hole):
                 nr_of_holes += 1  # keep track of how many holes there are
                 print(
-                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr+1} in polygon",
+                    f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon",
                     end="",
                 )
                 polynrs_of_holes.append(poly_id)
@@ -205,24 +217,24 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert nr_of_polygons >= 0
     assert nr_of_polygons >= nr_of_zones
     assert zone_id == nr_of_zones - 1
-    assert (
-        poly_id == nr_of_polygons
-    ), f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
+    assert poly_id == nr_of_polygons, (
+        f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
+    )
 
     if 0 in polygon_lengths:
         raise ValueError()
 
     # binary file value range tests:
-    assert (
-        nr_of_polygons < THRES_DTYPE_H
-    ), f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
-    assert (
-        nr_of_zones < THRES_DTYPE_H
-    ), f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    assert nr_of_polygons < THRES_DTYPE_H, (
+        f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    )
+    assert nr_of_zones < THRES_DTYPE_H, (
+        f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
+    )
     max_poly_length = max(polygon_lengths)
-    assert (
-        max_poly_length < THRES_DTYPE_I
-    ), f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
+    assert max_poly_length < THRES_DTYPE_I, (
+        f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
+    )
     max_hole_poly_length = max(all_hole_lengths)
     assert max_hole_poly_length < THRES_DTYPE_H, (
         f"address overflow: the maximal amount of coords in hole polygons "
@@ -242,7 +254,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     return polygon_space
 
 
-def update_zone_names(output_path):
+def update_zone_names(output_path: Path):
     # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
     global poly_zone_ids
     global list_of_pointers
@@ -252,7 +264,7 @@ def update_zone_names(output_path):
     global polynrs_of_holes
     global nr_of_zones
     global nr_of_polygons
-    file_path = abspath(join(output_path, TIMEZONE_NAMES_FILE))
+    file_path = output_path / TIMEZONE_NAMES_FILE
     print(f"updating the zone names in {file_path} now.")
     # pickle the zone names (python array)
     write_json(all_tz_names, file_path)
@@ -483,18 +495,18 @@ class Hex:
 
     @property
     def children(self) -> Set[int]:
-        return set(h3.h3_to_children(self.id))
+        return set(h3.cell_to_children(self.id))
 
     @property
     def outer_children(self) -> Set[int]:
         child_set = self.children
-        center_child = h3.h3_to_center_child(self.id)
+        center_child = h3.cell_to_center_child(self.id)
         child_set.remove(center_child)
         return child_set
 
     @property
     def neighbours(self) -> HexIdSet:
-        return set(h3.k_ring(self.id, k=1))
+        return set(h3.grid_ring(self.id, k=1))
 
     @property
     def true_parents(self) -> HexIdSet:
@@ -509,7 +521,7 @@ class Hex:
             raise ValueError("not defined for resolution 0")
         lower_res = self.res - 1
         # NOTE: (lat,lng) pairs!
-        coord_pairs = h3.h3_to_geo_boundary(self.id)
+        coord_pairs = h3.cell_to_boundary(self.id)
         return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
@@ -520,7 +532,7 @@ def get_hex(hex_id: int) -> Hex:
     return Hex.from_id(hex_id)
 
 
-def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
+def optimise_shortcut_ordering(poly_ids: Collection[int]) -> List[int]:
     """optimises the order of polygon ids for faster timezone checks
 
     observation: as soon as just polygons of one zone are left, this zone can be returned
@@ -531,7 +543,7 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     -> sort the list of polygon ids in each shortcut after the size of the corresponding polygons
     """
     if len(poly_ids) <= 1:
-        return poly_ids
+        return list(poly_ids)
     global polygon_lengths
 
     poly_sizes = [polygon_lengths[i] for i in poly_ids]
@@ -553,38 +565,54 @@ def optimise_shortcut_ordering(poly_ids: List[int]) -> List[int]:
     return poly_ids_sorted
 
 
+def get_shortcut_entry(hex_id: int) -> List[int]:
+    # print(f"compiling shortcut for {hex_id=}")
+    cell = get_hex(hex_id)
+    poly_ids = optimise_shortcut_ordering(cell.polys_in_cell)
+    return poly_ids
+
+
 def compile_h3_map(candidates: Set) -> ShortcutMapping:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
     """
-    mapping: ShortcutMapping = {}
-    total_candidates = len(candidates)
 
-    def report_progress():
-        nr_candidates = len(candidates)
-        processed = total_candidates - nr_candidates
-        print(
-            f"\r{processed:,} processed\t{nr_candidates:,} remaining\t",
-            end="",
-        )
+    candidates = list(candidates)
+    # if DEBUG:
+    #     candidates = random.sample(candidates, 200)
 
-    while candidates:
-        hex_id = candidates.pop()
-        cell = get_hex(hex_id)
-        polys = list(cell.polys_in_cell)
-        mapping[hex_id] = optimise_shortcut_ordering(polys)
-        report_progress()
+    # total_candidates = len(candidates)
+    # def report_progress(nr_processed: int):
+    #     nr_candidates = total_candidates - nr_processed
+    #     print(
+    #         f"\r{nr_processed:,} processed\t{nr_candidates:,} remaining\t",
+    #         end="",
+    #     )
+    # entry = get_shortcut_entry(candidates[0])
 
+    print("spawning multiple worker processes...")
+    with multiprocessing.Pool(processes=N_PROCESSES) as pool:
+        print("compiling shortcut mapping...")
+        shortcut_entries = pool.map(get_shortcut_entry, candidates)
+
+    print(shortcut_entries)
+    lengths = map(len, shortcut_entries)
+    max_length = max(lengths)
+    # FIXME: empty mappings!
+    # TODO probably the used data structures (Hex objects) does not support parallel computation
+    assert max_length > 0, "empty mappings!"
+    # combine into mapping dictionary: hex_id -> polygon ids
+    mapping = dict(zip(candidates, shortcut_entries))
     return mapping
 
 
 def all_res_candidates(res: int) -> HexIdSet:
     print(f"compiling hex candidates for resolution {res}.")
     if res == 0:
-        return set(h3.get_res0_indexes())
+        return set(h3.get_res0_cells())
     parent_res_candidates = all_res_candidates(res - 1)
-    child_iter = (h3.h3_to_children(h) for h in parent_res_candidates)
+    child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
     return set(itertools.chain.from_iterable(child_iter))
 
 
@@ -596,6 +624,7 @@ def compile_shortcut_mapping(output_path: Path) -> int:
 
     cf. https://eng.uber.com/h3/
     """
+
     print("\n\ncomputing timezone polygon index ('shortcuts')...")
     candidates = all_res_candidates(SHORTCUT_H3_RES)
     print(
@@ -633,7 +662,7 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
                     f"(hexagon cell id {hex_id} missing in mapping)"
                 )
             if poly_id not in shortcut_entries:
-                print(
+                warnings.warn(
                     f"ERR: point #{i} ({lng}, {lat}) of polygon {poly_id} "
                     f"does not appear in shortcut entries {shortcut_entries} of cell {hex_id}"
                 )
@@ -734,7 +763,8 @@ def compile_polygon_binaries(output_path):
                 }
             )
 
-    with open(join(output_path, HOLE_REGISTRY_FILE), "w") as json_file:
+    path = output_path / HOLE_REGISTRY_FILE
+    with open(path, "w") as json_file:
         json.dump(hole_registry, json_file, indent=4)
 
     # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
@@ -775,6 +805,10 @@ def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_OUTPUT_PATH,
 ):
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+
     polygon_space = parse_polygons_from_json(input_path)
     update_zone_names(output_path)
     hole_space = compile_polygon_binaries(output_path)
