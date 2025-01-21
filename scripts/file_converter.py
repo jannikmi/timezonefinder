@@ -589,15 +589,18 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     #         f"\r{nr_processed:,} processed\t{nr_candidates:,} remaining\t",
     #         end="",
     #     )
+    # entry = get_shortcut_entry(candidates[0])
 
     print("spawning multiple worker processes...")
     with multiprocessing.Pool(processes=N_PROCESSES) as pool:
         print("compiling shortcut mapping...")
         shortcut_entries = pool.map(get_shortcut_entry, candidates)
 
+    print(shortcut_entries)
     lengths = map(len, shortcut_entries)
     max_length = max(lengths)
     # FIXME: empty mappings!
+    # TODO probably the used data structures (Hex objects) does not support parallel computation
     assert max_length > 0, "empty mappings!"
     # combine into mapping dictionary: hex_id -> polygon ids
     mapping = dict(zip(candidates, shortcut_entries))
