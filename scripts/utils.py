@@ -35,6 +35,8 @@ def write_json(obj, path):
     print("writing json to ", path)
     with open(abspath(path), "w") as json_file:
         json.dump(obj, json_file, indent=2)
+        # write a newline at the end of the file
+        json_file.write("\n")
 
 
 def time_execution(func):
