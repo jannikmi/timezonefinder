@@ -71,9 +71,6 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: pip install poetry
-
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v2.22.0
         with:
