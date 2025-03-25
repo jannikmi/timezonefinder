@@ -2,7 +2,7 @@
 Changelog
 =========
 
-6.5.9 (2025-01-21)
+6.5.9 (2025-03-25)
 ------------------
 
 * updated the timezone boundary data to version `2025b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2025b>`__. Thanks to `WestonReed <https://github.com/WestonReed>`__
