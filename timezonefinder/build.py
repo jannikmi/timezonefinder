@@ -33,7 +33,7 @@ if ffibuilder is not None:
         "timezonefinder." + EXTENSION_NAME,
         source='#include "inside_polygon_int.h"',
         sources=[str(c_file_path)],
-        include_dirs=[str(EXTENSION_PATH)]
+        include_dirs=[str(EXTENSION_PATH)],
     )
     with open(h_file_path) as h_file:
         # cffi does not like our preprocessor directives, so we remove them
