@@ -98,7 +98,7 @@ legacy_tox_ini = """
     basepython = python3.12
     allowlist_externals = uv,sphinx-build
     commands =
-      uv run -v --extras docs python3 --version
+      uv run -v --group docs python3 --version
       sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
       python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
 
@@ -106,6 +106,6 @@ legacy_tox_ini = """
     allowlist_externals = uv
     commands =
         !numba: uv run -v pytest {posargs}
-        numba:  uv run -v --extras numba pytest {posargs}
-        pytz:   uv run -v --extras pytz pytest {posargs}
+        numba:  uv run -v --group numba pytest {posargs}
+        pytz:   uv run -v --group pytz pytest {posargs}
 """
