@@ -38,7 +38,7 @@ copyright = "2016, Jannik Michelfeit"
 author = "Jannik Michelfeit"
 
 # The full version, including alpha/beta/rc tags.
-release = subprocess.getoutput("poetry version -s")
+release = subprocess.getoutput("uv version --short")
 print("release version:", release)
 
 # -- General configuration ---------------------------------------------------

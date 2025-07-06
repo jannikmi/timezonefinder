@@ -96,17 +96,16 @@ legacy_tox_ini = """
     [testenv:docs]
     description = build documentation
     basepython = python3.12
-    allowlist_externals = poetry,sphinx-build
+    allowlist_externals = uv,sphinx-build
     commands =
-      poetry install -v --with docs
+      uv run -v --extras docs python3 --version
       sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
       python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
 
     [testenv]
-    allowlist_externals = poetry
+    allowlist_externals = uv
     commands =
-        !numba: poetry install -v
-        numba:  poetry install -v --extras numba
-        pytz:  poetry install -v --extras pytz
-        poetry run pytest {posargs}
+        !numba: uv run -v pytest {posargs}
+        numba:  uv run -v --extras numba pytest {posargs}
+        pytz:   uv run -v --extras pytz pytest {posargs}
 """
