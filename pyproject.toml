@@ -1,13 +1,10 @@
-[tool.poetry]
+[project]
 name = "timezonefinder"
 version = "6.5.9"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
-authors = ["jannikmi <github@michelfe.it>"]
-license = "MIT"
+authors = [{name = "jannikmi", email = "github@michelfe.it"}]
+license = { text="MIT" }
 readme = "README.rst"
-repository = "https://github.com/jannikmi/timezonefinder"
-homepage = "https://timezonefinder.michelfe.it/gui"
-documentation = "https://timezonefinder.readthedocs.io/en/latest/"
 keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
