@@ -59,7 +59,7 @@ if ! tox; then
 fi
 
 # minor version bump
-poetry version minor
+uv run --bump minor
 
 # TODO
  read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
@@ -68,10 +68,10 @@ poetry version minor
 fi
 
 # TODO add changelog entry: keep title, current date, parse data version
-# $(poetry version) (2022-12-06)
+# $(uv version) (2022-12-06)
 #------------------
 #
 #* updated the data to `2022g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2022g>`__.
 #echo -e "DATA-Line-1\n$(cat input)" > input
 
-echo "SUCCESS! the new package version $(poetry version) can now be released!"
+echo "SUCCESS! the new package version $(uv version) can now be released!"
