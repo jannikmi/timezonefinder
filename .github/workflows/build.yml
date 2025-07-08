@@ -79,8 +79,8 @@ jobs:
         with:
           output-dir: dist
         env:
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
+          CIBW_MANYLINUX_X86_64_IMAGE: docker.io/library/manylinux2014:latest
+          CIBW_MUSLLINUX_X86_64_IMAGE: docker.io/library/musllinux_1_1:latest
           CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
           CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
