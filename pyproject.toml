@@ -1,9 +1,9 @@
 [project]
 name = "timezonefinder"
-version = "6.5.9"
+version = "6.5.9rc1"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
-license = { text="MIT" }
+license = "MIT"
 readme = "README.rst"
 keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
 classifiers = [
@@ -61,8 +61,8 @@ requires = ["setuptools>=42", "cffi"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-# Can remove this default option since setuptools 61
 include-package-data = true
+packages = ["timezonefinder"]
 
 [tool.setuptools.package-data]
 timezonefinder = ["*.bin", "*.json", "inside_poly_extension/*"]
