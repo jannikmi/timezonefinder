@@ -79,8 +79,9 @@ jobs:
         with:
           output-dir: dist
         env:
-          CIBW_MANYLINUX_X86_64_IMAGE: docker.io/library/manylinux2014:latest
-          CIBW_MUSLLINUX_X86_64_IMAGE: docker.io/library/musllinux_1_1:latest
+          # https://github.com/pypa/cibuildwheel/blob/v2.23.1/cibuildwheel/resources/pinned_docker_images.cfg
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64:2025.03.09-1
+          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024.10.26-1
           CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
           CIBW_SKIP: "cp36-* cp37-*"
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
