@@ -5,40 +5,38 @@ SHELL=/bin/bash
 install:
 	pip install --upgrade pip
 	@echo "installing all specified dependencies..."
-	@#poetry install --no-dev
 	# NOTE: root package needs to be installed for CLI tests to work!
-	@poetry install --all-extras --sync
+	@uv sync --all-groups
 
 update:
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
-	@poetry update
-	#poetry export -f requirements.txt --output docs/requirements_docs.txt --without-hashes
+	@uv lock --upgrade
 
 lock:
 	@echo "locking the dependencies specified in 'pyproject.toml':"
-	@poetry lock
+	@uv lock
 
 
-# when poetry dependency resolving gets stuck:
+# when dependency resolving gets stuck:
 force_update:
 	@echo "force updating the requirements. removing lock file"
-	 poetry cache clear --all .
-	 rm poetry.lock
+	@uv cache clean
+	@rm -f uv.lock
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	poetry update -vvv
+	@uv sync --refresh
 
 outdated:
-	poetry show --outdated
+	@uv pip list --outdated
 
 
 env:
 	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 poetry -y
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 uv -y
 	#	&& conda activate timezonefinder
 	# && make req
 
 parse:
-	poetry run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
+	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
 
 data:
 	bash parse_data.sh
@@ -68,12 +66,13 @@ clean:
 
 
 build:
-	rm -r -f build
-	pip install setuptools wheel
-	python setup.py sdist bdist_wheel --python-tag py37.py38.py39.py310
-	#python -m pip install build --user
-	#python -m build --sdist --wheel --outdir dist/ .
-	#poetry build
+	rm -rf build dist
+	uv build --python cp38
+	uv build --python cp38
+	uv build --python cp310
+	uv build --python cp311
+	uv build --python cp312
+	uv build --python cp313
 
 # documentation generation:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
