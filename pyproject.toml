@@ -1,9 +1,10 @@
 [project]
 name = "timezonefinder"
-version = "6.5.9"
+version = "6.5.9rc1"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
-license = { text="MIT" }
+# Replace with license="MIT" with setuptools>=71
+license = {file="LICENSE"}
 readme = "README.rst"
 keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
 classifiers = [
@@ -56,13 +57,12 @@ pytz = [
 ]
 
 [build-system]
-requires = ["setuptools>=42", "cffi"]
+requires = ["setuptools>=61", "cffi"]
 # Use setuptools build backend to build CFFI extensions via setup.py
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-# Can remove this default option since setuptools 61
-include-package-data = true
+packages = ["timezonefinder", "timezonefinder.inside_poly_extension"]
 
 [tool.setuptools.package-data]
 timezonefinder = ["*.bin", "*.json", "inside_poly_extension/*"]
