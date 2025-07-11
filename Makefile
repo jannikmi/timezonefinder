@@ -52,14 +52,14 @@ tox:
 test2: tox
 
 hook:
-	@pre-commit install
-	@pre-commit run --all-files
+	@uv run pre-commit install
+	@uv run pre-commit run --all-files
 
 hookup:
-	@pre-commit autoupdate
+	@uv run pre-commit autoupdate
 
 hook3:
-	@pre-commit clean
+	@uv run pre-commit clean
 
 clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox

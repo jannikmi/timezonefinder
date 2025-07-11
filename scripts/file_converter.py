@@ -86,21 +86,15 @@ from scripts.utils import (
     to_numpy_polygon,
     write_binary,
     write_boundary_data,
-    write_coordinate_data,
     write_json,
     load_json,
 )
 from timezonefinder.configs import (
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
-    HOLE_ADR2DATA,
-    HOLE_COORD_AMOUNT,
-    HOLE_DATA,
     HOLE_REGISTRY_FILE,
     NR_BYTES_I,
-    POLY_ADR2DATA,
     POLY_COORD_AMOUNT,
-    POLY_DATA,
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
@@ -121,8 +115,10 @@ from timezonefinder.utils import (
 BYTEORDER = "little"
 SIGNED = True
 
+
 def int32_to_bytes(val: int) -> bytes:
     return int(val).to_bytes(NR_BYTES_I, byteorder=BYTEORDER, signed=SIGNED)
+
 
 ShortcutMapping = Dict[int, List[int]]
 
