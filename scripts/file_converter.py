@@ -676,21 +676,29 @@ def write_timezone_or_hole_bin(file_path, coords):
     assert file_path.exists(), f"Binary file {file_path} was not created."
 
 
+def write_polygons_to_files(polygons, *, dir):
+    total_space = 0
+    for i, poly in enumerate(polygons):
+        if DEBUG and i >= DEBUG_ZONE_CTR_STOP:
+            break
+        if not isinstance(poly, np.ndarray):
+            raise TypeError(
+                f"polygon {i} is not a numpy array, but {type(poly)}. "
+                "This should not happen, please report this bug."
+            )
+        # group in subfolders of 10 polygon binary files
+        sub_folder = i // 10
+        folder = dir / f"{sub_folder}"
+        folder.mkdir(parents=True, exist_ok=True)
+        poly_file = folder / f"{i}.bin"
+        write_timezone_or_hole_bin(poly_file, poly)
+        total_space += poly_file.stat().st_size
+    return total_space
+
+
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
-
-    def write_polygons_to_files(polygons, *, dir):
-        total_space = 0
-        for i, poly in enumerate(polygons):
-            # Always create subfolders (e.g., 0, 1, 2, ...) for every 10 polygons
-            sub_folder = i // 10
-            folder = dir / f"{sub_folder}"
-            folder.mkdir(parents=True, exist_ok=True)
-            poly_file = folder / f"{i}.bin"
-            write_timezone_or_hole_bin(poly_file, poly)
-            total_space += poly_file.stat().st_size
-        return total_space
 
     boundary_space = write_polygons_to_files(polygons, dir=output_path / "boundaries")
     hole_space = write_polygons_to_files(holes, dir=output_path / "holes")
