@@ -271,3 +271,7 @@ def test_rectify_coords():
 def test_get_last_change_idx(entry_list, expected):
     array = np.array(entry_list, dtype=DTYPE_FORMAT_H_NUMPY)
     assert utils.get_last_change_idx(array) == expected
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -1,6 +1,9 @@
 {
   "makefile.configureOnOpen": false,
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/scripts"
-  ]
+    "${workspaceFolder}"
+  ],
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}"
+  }
 }
