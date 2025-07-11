@@ -676,34 +676,24 @@ def write_timezone_or_hole_bin(file_path, coords):
     assert file_path.exists(), f"Binary file {file_path} was not created."
 
 
-def write_polygons_to_files(polygons, *, dir):
-    total_space = 0
-    for i, poly in enumerate(polygons):
-        if DEBUG and i >= DEBUG_ZONE_CTR_STOP:
-            break
-        if not isinstance(poly, np.ndarray):
-            raise TypeError(
-                f"polygon {i} is not a numpy array, but {type(poly)}. "
-                "This should not happen, please report this bug."
-            )
-        # group in subfolders of 10 polygon binary files
-        sub_folder = i // 10
-        folder = dir / f"{sub_folder}"
-        folder.mkdir(parents=True, exist_ok=True)
-        poly_file = folder / f"{i}.bin"
-        write_timezone_or_hole_bin(poly_file, poly)
-        total_space += poly_file.stat().st_size
-    return total_space
+def write_all_polygons_flatbuffers(output_path, polygons, holes):
+    from scripts.flatbuffers_utils import write_polygon_collection_flatbuffer
+
+    boundaries_file = output_path / "boundaries.fbs"
+    holes_file = output_path / "holes.fbs"
+    write_polygon_collection_flatbuffer(boundaries_file, polygons)
+    write_polygon_collection_flatbuffer(holes_file, holes)
+    return boundaries_file.stat().st_size, holes_file.stat().st_size
 
 
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
-
-    boundary_space = write_polygons_to_files(polygons, dir=output_path / "boundaries")
-    hole_space = write_polygons_to_files(holes, dir=output_path / "holes")
-    print(f"the binaries of the polygons take up {boundary_space / (1024**2):.2f} MB")
-    print(f"the binaries of the holes take up {hole_space / (1024**2):.2f} MB")
+    boundary_space, hole_space = write_all_polygons_flatbuffers(
+        output_path, polygons, holes
+    )
+    print(f"the boundaries.fbs file takes up {boundary_space / (1024**2):.2f} MB")
+    print(f"the holes.fbs file takes up {hole_space / (1024**2):.2f} MB")
 
     # Write registry for holes (which polygon each hole belongs to)
     hole_registry = {}

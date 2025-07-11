@@ -479,6 +479,15 @@ wheels = [
 ]
 
 [[package]]
+name = "flatbuffers"
+version = "25.2.10"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/30/eb5dce7994fc71a2f685d98ec33cc660c0a5887db5610137e60d8cbc4489/flatbuffers-25.2.10.tar.gz", hash = "sha256:97e451377a41262f8d9bd4295cc836133415cc03d8cb966410a4af92eb00d26e", size = 22170, upload-time = "2025-02-11T04:26:46.257Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/25/155f9f080d5e4bc0082edfda032ea2bc2b8fab3f4d25d46c1e9dd22a1a89/flatbuffers-25.2.10-py2.py3-none-any.whl", hash = "sha256:ebba5f4d5ea615af3f7fd70fc310636fbb2bbd1f566ac0a23d98dd412de50051", size = 30953, upload-time = "2025-02-11T04:26:44.484Z" },
+]
+
+[[package]]
 name = "h3"
 version = "4.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2192,6 +2201,7 @@ version = "6.5.9rc1"
 source = { editable = "." }
 dependencies = [
     { name = "cffi" },
+    { name = "flatbuffers" },
     { name = "h3" },
     { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
@@ -2232,6 +2242,7 @@ pytz = [
 [package.metadata]
 requires-dist = [
     { name = "cffi", specifier = ">=1.15.1,<2" },
+    { name = "flatbuffers", specifier = ">=25.2.10" },
     { name = "h3", specifier = ">4" },
     { name = "numpy", marker = "python_full_version < '3.9'", specifier = ">=1.21,<3" },
     { name = "numpy", marker = "python_full_version >= '3.9'", specifier = ">=1.23,<3" },

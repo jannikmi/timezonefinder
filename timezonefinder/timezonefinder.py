@@ -29,6 +29,7 @@ from timezonefinder.configs import (
     CoordLists,
     CoordPairs,
 )
+from timezonefinder.flatbuffers_utils import read_polygon_collection_flatbuffer
 from timezonefinder.hex_helpers import read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
 
@@ -316,12 +317,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        """
-        Initialize the TimezoneFinder.
-
-        :param bin_file_location: Path to the binary data files to use. If None, native package data will be used.
-        :param in_memory: Whether to completely read and keep the binary files in memory.
-        """
+        # Load all polygons and holes from FlatBuffers collections
+        boundaries_path = self.bin_file_location / "boundaries.fbs"
+        holes_path = self.bin_file_location / "holes.fbs"
+        self.nr_of_polygons, self._get_polygon = read_polygon_collection_flatbuffer(
+            boundaries_path
+        )
+        self.nr_of_holes, self._get_hole = read_polygon_collection_flatbuffer(
+            holes_path
+        )
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few it is feasible to keep them in the memory
@@ -332,46 +336,18 @@ class TimezoneFinder(AbstractTimezoneFinder):
         hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
         setattr(self, HOLE_REGISTRY, hole_registry)
 
-    @property
-    def nr_of_polygons(self) -> int:
-        """
-        Get the number of polygons.
-
-        :return: The number of polygons.
-        """
-        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
-        return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
-
-    def _read_polygon_bin(self, file_path) -> np.ndarray:
-        """
-        Read a polygon binary file and return coordinates as a (2, n_coords) numpy array.
-        """
-        with open(file_path, "rb") as f:
-            data = f.read()
-            arr = np.frombuffer(data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
-            return arr.reshape(2, -1)
-
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         """
-        Get the coordinates of a polygon from the per-polygon binary file structure.
+        Get the coordinates of a polygon from the FlatBuffers collection.
 
         :param polygon_nr: The index of the polygon.
         :return: Array of coordinates.
         """
-        # New per-polygon file structure: boundaries/{subfolder}/{polygon_id}.bin
-        subfolder = polygon_nr // 10
-        poly_file = (
-            self.bin_file_location
-            / "data"
-            / "boundaries"
-            / f"{subfolder}"
-            / f"{polygon_nr}.bin"
-        )
-        return self._read_polygon_bin(poly_file)
+        return self._get_polygon(polygon_nr)
 
     def _holes_of_poly(self, polygon_nr: int):
         """
-        Get the holes of a polygon from the per-hole binary file structure.
+        Get the holes of a polygon from the FlatBuffers collection.
 
         :param polygon_nr: Number of the polygon
         :yield: Generator of hole coordinates
@@ -383,15 +359,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             return
         for i in range(amount_of_holes):
             hole_id = first_hole_id + i
-            subfolder = hole_id // 10
-            hole_file = (
-                self.bin_file_location
-                / "data"
-                / "holes"
-                / f"{subfolder}"
-                / f"{hole_id}.bin"
-            )
-            yield self._read_polygon_bin(hole_file)
+            yield self._get_hole(hole_id)
 
     def get_polygon(
         self, polygon_nr: int, coords_as_pairs: bool = False

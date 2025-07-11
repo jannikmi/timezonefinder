@@ -1,0 +1,12 @@
+namespace timezonefinder;
+
+table Polygon {
+  x_coords:[uint];
+  y_coords:[uint];
+}
+
+table PolygonCollection {
+  polygons:[Polygon];
+}
+
+root_type PolygonCollection;
