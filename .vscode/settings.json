@@ -1,4 +1,5 @@
 {
+  "makefile.configureOnOpen": false,
   "python.analysis.extraPaths": [
     "${workspaceFolder}/scripts"
   ]

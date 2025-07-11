@@ -1,8 +1,7 @@
-namespace timezonefinder;
+namespace timezonefinder.flatbuf;
 
 table Polygon {
-  x_coords:[uint];
-  y_coords:[uint];
+  coords:[uint]; // Combined x and y coordinates stored as a single vector
 }
 
 table PolygonCollection {

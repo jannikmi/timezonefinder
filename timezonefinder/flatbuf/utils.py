@@ -10,10 +10,8 @@ from typing import List, Tuple, Callable
 from timezonefinder.flatbuf.Polygon import (
     PolygonStart,
     PolygonEnd,
-    PolygonAddXCoords,
-    PolygonAddYCoords,
-    PolygonStartXCoordsVector,
-    PolygonStartYCoordsVector,
+    PolygonAddCoords,
+    PolygonStartCoordsVector,
 )
 from timezonefinder.flatbuf.PolygonCollection import (
     PolygonCollection,
@@ -27,7 +25,7 @@ from timezonefinder.flatbuf.PolygonCollection import (
 def write_polygon_collection_flatbuffer(
     file_path: Path, polygons: List[np.ndarray]
 ) -> int:
-    """Write a collection of polygons to a flatbuffer file.
+    """Write a collection of polygons to a flatbuffer file using a single coordinate vector.
 
     Args:
         file_path: Path to save the flatbuffer file
@@ -41,24 +39,17 @@ def write_polygon_collection_flatbuffer(
 
     # Create each polygon and store its offset
     for polygon in polygons:
-        x_coords, y_coords = polygon
+        coords = polygon.ravel()  # Flatten x and y coordinates into a single vector
 
-        # Create x_coords vector
-        PolygonStartXCoordsVector(builder, len(x_coords))
-        for x in reversed(x_coords):
-            builder.PrependUint32(int(x))
-        x_coords_offset = builder.EndVector()
-
-        # Create y_coords vector
-        PolygonStartYCoordsVector(builder, len(y_coords))
-        for y in reversed(y_coords):
-            builder.PrependUint32(int(y))
-        y_coords_offset = builder.EndVector()
+        # Create coords vector
+        PolygonStartCoordsVector(builder, len(coords))
+        for coord in reversed(coords):
+            builder.PrependUint32(int(coord))
+        coords_offset = builder.EndVector()
 
         # Create polygon
         PolygonStart(builder)
-        PolygonAddXCoords(builder, x_coords_offset)
-        PolygonAddYCoords(builder, y_coords_offset)
+        PolygonAddCoords(builder, coords_offset)  # Use Coords for combined vector
         polygon_offsets.append(PolygonEnd(builder))
 
     # Create polygon vector
@@ -84,7 +75,7 @@ def write_polygon_collection_flatbuffer(
 
 
 def read_polygon_collection_flatbuffer(file_path: Path) -> Tuple[int, Callable]:
-    """Read a collection of polygons from a flatbuffer file.
+    """Read a collection of polygons from a flatbuffer file using a single coordinate vector.
 
     Args:
         file_path: Path to the flatbuffer file
@@ -99,15 +90,8 @@ def read_polygon_collection_flatbuffer(file_path: Path) -> Tuple[int, Callable]:
 
     def get_poly(idx):
         poly = collection.Polygons(idx)
-        m = poly.XCoordsLength()
-        # Use more efficient NumPy array access when available
-        if hasattr(poly, "XCoordsAsNumpy"):
-            x_coords = poly.XCoordsAsNumpy()
-            y_coords = poly.YCoordsAsNumpy()
-        else:
-            x_coords = np.array([poly.XCoords(i) for i in range(m)], dtype=np.uint32)
-            y_coords = np.array([poly.YCoords(i) for i in range(m)], dtype=np.uint32)
-        return np.stack([x_coords, y_coords])
+        coords = poly.CoordsAsNumpy()
+        return coords.reshape(2, -1)  # Reshape into (2, n) format for x and y
 
     return n, get_poly
 
