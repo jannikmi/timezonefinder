@@ -5,7 +5,7 @@ Centralized utility functions for working with FlatBuffers in the timezonefinder
 import flatbuffers
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Callable
+from typing import List, Tuple
 
 from timezonefinder.flatbuf.Polygon import (
     PolygonStart,
@@ -74,28 +74,6 @@ def write_polygon_collection_flatbuffer(
     return file_path.stat().st_size
 
 
-def read_polygon_collection_flatbuffer(file_path: Path) -> Tuple[int, Callable]:
-    """Read a collection of polygons from a flatbuffer file using a single coordinate vector.
-
-    Args:
-        file_path: Path to the flatbuffer file
-
-    Returns:
-        A tuple with the number of polygons and a function to retrieve a polygon by index
-    """
-    with open(file_path, "rb") as f:
-        buf = f.read()
-    collection = PolygonCollection.GetRootAs(buf, 0)
-    n = collection.PolygonsLength()
-
-    def get_poly(idx):
-        poly = collection.Polygons(idx)
-        coords = poly.CoordsAsNumpy()
-        return coords.reshape(2, -1)  # Reshape into (2, n) format for x and y
-
-    return n, get_poly
-
-
 def write_all_polygons_flatbuffers(
     output_path: Path, polygons: List[np.ndarray], holes: List[np.ndarray]
 ) -> Tuple[int, int]:
@@ -119,3 +97,23 @@ def write_all_polygons_flatbuffers(
     holes_size = write_polygon_collection_flatbuffer(holes_file, holes)
 
     return boundary_size, holes_size
+
+
+def get_collection_data(file):
+    """Load boundary or hole polygons from FlatBuffers collections."""
+    file.seek(0)
+    buf = file.read()
+    return PolygonCollection.GetRootAs(buf, 0)
+
+
+def get_collection_length(file):
+    """Get the number of polygons in a FlatBuffers collection."""
+    collection = get_collection_data(file)
+    return collection.PolygonsLength()
+
+
+def read_polygon_array_from_binary(file, idx):
+    """Read a polygon's coordinates from a FlatBuffers collection."""
+    collection = get_collection_data(file)
+    poly = collection.Polygons(idx)
+    return poly.CoordsAsNumpy().reshape(2, -1)

@@ -35,8 +35,12 @@ try:
     using_numba = True
 except ImportError:
     using_numba = False
-    # replace Numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
+# TODO
+#     # replace Numba functionality with "transparent" implementations
+#     from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
+
+# replace Numba functionality with "transparent" implementations
+from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from struct import unpack
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -17,6 +17,7 @@ from timezonefinder.configs import (
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
     HOLE_REGISTRY,
+    HOLE_REGISTRY_FILE,
     NR_BYTES_H,
     NR_BYTES_I,
     POLY_MAX_VALUES,
@@ -28,7 +29,10 @@ from timezonefinder.configs import (
     CoordLists,
     CoordPairs,
 )
-from timezonefinder.flatbuf.PolygonCollection import PolygonCollection
+from timezonefinder.flatbuf.utils import (
+    get_collection_length,
+    read_polygon_array_from_binary,
+)
 from timezonefinder.hex_helpers import read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
 
@@ -327,39 +331,40 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        # Load all polygons and holes from FlatBuffers collections
         boundaries_path = self.bin_file_location / "data" / "boundaries.fbs"
         holes_path = self.bin_file_location / "data" / "holes.fbs"
         self._boundaries_file = self._open_binary(boundaries_path)
         self._holes_file = self._open_binary(holes_path)
 
-    def _get_collection_data(self, file):
-        file.seek(0)
-        buf = file.read()
-        return PolygonCollection.GetRootAs(buf, 0)
+        # stores for which polygons (how many) holes exits and the id of the first of those holes
+        # since there are very few it is feasible to keep them in the memory
+        hole_registry = self._load_hole_registry()
+        setattr(self, HOLE_REGISTRY, hole_registry)
 
-    def _get_collection_length(self, file):
-        collection = self._get_collection_data(file)
-        return collection.PolygonsLength()
-
-    def _read_polygon_array_from_binary(self, file, idx):
-        collection = self._get_collection_data(file)
-        poly = collection.Polygons(idx)
-        return poly.CoordsAsNumpy().reshape(2, -1)
+    def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
+        """
+        Load and convert the hole registry from JSON file, converting keys to int.
+        """
+        with open(
+            self.bin_file_location / HOLE_REGISTRY_FILE, encoding="utf-8"
+        ) as json_file:
+            hole_registry_tmp = json.loads(json_file.read())
+        # convert the json string keys to int
+        return {int(k): v for k, v in hole_registry_tmp.items()}
 
     @property
     def nr_of_polygons(self):
-        return self._get_collection_length(self._boundaries_file)
+        return get_collection_length(self._boundaries_file)
 
     @property
     def nr_of_holes(self):
-        return self._get_collection_length(self._holes_file)
+        return get_collection_length(self._holes_file)
 
     def _get_polygon(self, idx):
-        return self._read_polygon_array_from_binary(self._boundaries_file, idx)
+        return read_polygon_array_from_binary(self._boundaries_file, idx)
 
     def _get_hole(self, idx):
-        return self._read_polygon_array_from_binary(self._holes_file, idx)
+        return read_polygon_array_from_binary(self._holes_file, idx)
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         """
