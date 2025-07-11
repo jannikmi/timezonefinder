@@ -29,7 +29,7 @@ from timezonefinder.configs import (
     CoordLists,
     CoordPairs,
 )
-from timezonefinder.flatbuffers_utils import read_polygon_collection_flatbuffer
+from timezonefinder.flatbuf.utils import read_polygon_collection_flatbuffer
 from timezonefinder.hex_helpers import read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
 

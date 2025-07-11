@@ -69,7 +69,6 @@ from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 import h3.api.numpy_int as h3
 import numpy as np
 
-from flatbuffers_utils import write_polygon_collection_flatbuffer
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
@@ -90,6 +89,7 @@ from scripts.utils import (
     write_json,
     load_json,
 )
+from timezonefinder.flatbuf.utils import write_all_polygons_flatbuffers
 from timezonefinder.configs import (
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
@@ -675,14 +675,6 @@ def write_timezone_or_hole_bin(file_path, coords):
         for y in y_coords:
             f.write(int32_to_bytes(y))
     assert file_path.exists(), f"Binary file {file_path} was not created."
-
-
-def write_all_polygons_flatbuffers(output_path, polygons, holes):
-    boundaries_file = output_path / "boundaries.fbs"
-    holes_file = output_path / "holes.fbs"
-    write_polygon_collection_flatbuffer(boundaries_file, polygons)
-    write_polygon_collection_flatbuffer(holes_file, holes)
-    return boundaries_file.stat().st_size, holes_file.stat().st_size
 
 
 @time_execution
