@@ -39,7 +39,9 @@ def write_polygon_collection_flatbuffer(
 
     # Create each polygon and store its offset
     for polygon in polygons:
-        coords = polygon.ravel()  # Flatten x and y coordinates into a single vector
+        coords = polygon.ravel(
+            order="F"
+        )  # Flatten x and y coordinates in column-major order
 
         # Create coords vector
         PolygonStartCoordsVector(builder, len(coords))
@@ -116,4 +118,6 @@ def read_polygon_array_from_binary(file, idx):
     """Read a polygon's coordinates from a FlatBuffers collection."""
     collection = get_collection_data(file)
     poly = collection.Polygons(idx)
-    return poly.CoordsAsNumpy().reshape(2, -1)
+    return (
+        poly.CoordsAsNumpy().reshape(-1, 2).T
+    )  # Ensure the shape matches the original polygon
