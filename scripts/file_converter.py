@@ -69,6 +69,7 @@ from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 import h3.api.numpy_int as h3
 import numpy as np
 
+from flatbuffers_utils import write_polygon_collection_flatbuffer
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
@@ -677,8 +678,6 @@ def write_timezone_or_hole_bin(file_path, coords):
 
 
 def write_all_polygons_flatbuffers(output_path, polygons, holes):
-    from scripts.flatbuffers_utils import write_polygon_collection_flatbuffer
-
     boundaries_file = output_path / "boundaries.fbs"
     holes_file = output_path / "holes.fbs"
     write_polygon_collection_flatbuffer(boundaries_file, polygons)
