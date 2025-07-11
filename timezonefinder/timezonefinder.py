@@ -512,21 +512,19 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return True
 
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
-        """computes in which ocean OR land timezone a point is included in
+        """
+        Find the timezone for a given point, considering both land and ocean timezones.
 
-        Especially for large polygons it is expensive to check if a point is really included.
-        In case there is only one possible zone (left), this zone will instantly be returned without actually checking
-        if the query point is included in this polygon.
+        Uses precomputed shortcuts to reduce the number of polygons checked. Returns the timezone name
+        of the matched polygon, which may be an ocean timezone ("Etc/GMT+-XX") if applicable.
 
-        To speed things up there are "shortcuts" being used
-            which have been precomputed and store which timezone polygons have to be checked.
+        Since ocean timezones span the whole globe, some timezone will always be matched!
+        `None` can only be returned when using custom timezone data without such ocean timezones.
 
-        .. note:: Since ocean timezones span the whole globe, some timezone will always be matched!
-            `None` can only be returned when you have compiled timezone data without such "full coverage".
 
-        :param lng: longitude of the point in degree (-180.0 to 180.0)
-        :param lat: latitude in degree (90.0 to -90.0)
-        :return: the timezone name of the matched timezone polygon. possibly "Etc/GMT+-XX" in case of an ocean timezone.
+        :param lng: longitude of the point in degrees (-180.0 to 180.0)
+        :param lat: latitude of the point in degrees (90.0 to -90.0)
+        :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
