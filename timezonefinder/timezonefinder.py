@@ -361,7 +361,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # New per-polygon file structure: boundaries/{subfolder}/{polygon_id}.bin
         subfolder = polygon_nr // 10
         poly_file = (
-            self.bin_file_location / "boundaries" / f"{subfolder}" / f"{polygon_nr}.bin"
+            self.bin_file_location
+            / "data"
+            / "boundaries"
+            / f"{subfolder}"
+            / f"{polygon_nr}.bin"
         )
         return self._read_polygon_bin(poly_file)
 
@@ -381,7 +385,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
             hole_id = first_hole_id + i
             subfolder = hole_id // 10
             hole_file = (
-                self.bin_file_location / "holes" / f"{subfolder}" / f"{hole_id}.bin"
+                self.bin_file_location
+                / "data"
+                / "holes"
+                / f"{subfolder}"
+                / f"{hole_id}.bin"
             )
             yield self._read_polygon_bin(hole_file)
 
