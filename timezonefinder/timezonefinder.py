@@ -15,18 +15,11 @@ from timezonefinder.configs import (
     DATA_ATTRIBUTE_NAMES,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY,
-    DTYPE_FORMAT_I,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
-    HOLE_ADR2DATA,
-    HOLE_COORD_AMOUNT,
-    HOLE_DATA,
     HOLE_REGISTRY,
     HOLE_REGISTRY_FILE,
     NR_BYTES_H,
     NR_BYTES_I,
-    POLY_ADR2DATA,
-    POLY_COORD_AMOUNT,
-    POLY_DATA,
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
@@ -349,70 +342,48 @@ class TimezoneFinder(AbstractTimezoneFinder):
         poly_zone_ids = getattr(self, POLY_ZONE_IDS)
         return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
 
+    def _read_polygon_bin(self, file_path) -> np.ndarray:
+        """
+        Read a polygon binary file and return coordinates as a (2, n_coords) numpy array.
+        """
+        with open(file_path, "rb") as f:
+            data = f.read()
+            arr = np.frombuffer(data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
+            return arr.reshape(2, -1)
+
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         """
-        Get the coordinates of a polygon.
+        Get the coordinates of a polygon from the per-polygon binary file structure.
 
         :param polygon_nr: The index of the polygon.
         :return: Array of coordinates.
         """
-        poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
-        poly_adr2data = getattr(self, POLY_ADR2DATA)
-        poly_data = getattr(self, POLY_DATA)
-
-        # how many coordinates are stored in this polygon
-        poly_coord_amount.seek(NR_BYTES_I * polygon_nr)
-        nr_of_values = unpack(DTYPE_FORMAT_I, poly_coord_amount.read(NR_BYTES_I))[0]
-
-        poly_adr2data.seek(NR_BYTES_I * polygon_nr)
-        poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
-        return np.stack(
-            (
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
-            )
+        # New per-polygon file structure: boundaries/{subfolder}/{polygon_id}.bin
+        subfolder = polygon_nr // 10
+        poly_file = (
+            self.bin_file_location / "boundaries" / f"{subfolder}" / f"{polygon_nr}.bin"
         )
+        return self._read_polygon_bin(poly_file)
 
     def _holes_of_poly(self, polygon_nr: int):
         """
-        Get the holes of a polygon.
+        Get the holes of a polygon from the per-hole binary file structure.
 
         :param polygon_nr: Number of the polygon
         :yield: Generator of hole coordinates
         """
-        hole_coord_amount = getattr(self, HOLE_COORD_AMOUNT)
-        hole_adr2data = getattr(self, HOLE_ADR2DATA)
-        hole_data = getattr(self, HOLE_DATA)
         hole_registry = getattr(self, HOLE_REGISTRY)
-
         try:
             amount_of_holes, first_hole_id = hole_registry[polygon_nr]
         except KeyError:
             return
-
-        hole_coord_amount.seek(NR_BYTES_H * first_hole_id)
-        hole_adr2data.seek(NR_BYTES_I * first_hole_id)
-
-        for _ in range(amount_of_holes):
-            nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
-            hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
-
-            x_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
+        for i in range(amount_of_holes):
+            hole_id = first_hole_id + i
+            subfolder = hole_id // 10
+            hole_file = (
+                self.bin_file_location / "holes" / f"{subfolder}" / f"{hole_id}.bin"
             )
-            y_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-            )
-            yield np.array(
-                [
-                    x_coords,
-                    y_coords,
-                ]
-            )
+            yield self._read_polygon_bin(hole_file)
 
     def get_polygon(
         self, polygon_nr: int, coords_as_pairs: bool = False
