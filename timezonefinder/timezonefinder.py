@@ -53,6 +53,23 @@ class AbstractTimezoneFinder(ABC):
     List of attribute names that store opened binary data files.
     """
 
+    def _open_binary(self, path2file):
+        """Open a binary file, either in memory or as a file handle.
+
+        Args:
+            path2file: Path to the binary file
+
+        Returns:
+            Either a BytesIO object (if in_memory=True) or a file handle
+        """
+        if self.in_memory:
+            with open(path2file, mode="rb") as fp:
+                opened = BytesIO(fp.read())
+                opened.seek(0)
+        else:
+            opened = open(path2file, mode="rb")
+        return opened
+
     def __init__(
         self,
         bin_file_location: Optional[Union[str, Path]] = None,
@@ -87,14 +104,8 @@ class AbstractTimezoneFinder(ABC):
         for attribute_name in self.binary_data_attributes:
             file_name = attribute_name + BINARY_FILE_ENDING
             path2file = self.bin_file_location / file_name
-            if self.in_memory:
-                with open(path2file, mode="rb") as bin_file:
-                    bf_in_mem = BytesIO(bin_file.read())
-                    bf_in_mem.seek(0)
-                setattr(self, attribute_name, bf_in_mem)
-            else:
-                bin_file = open(path2file, mode="rb")
-                setattr(self, attribute_name, bin_file)
+            opened = self._open_binary(path2file)
+            setattr(self, attribute_name, opened)
 
     def __del__(self):
         for attribute_name in self.binary_data_attributes:
@@ -317,11 +328,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
     ):
         super().__init__(bin_file_location, in_memory)
         # Load all polygons and holes from FlatBuffers collections
-        # TODO move
         boundaries_path = self.bin_file_location / "data" / "boundaries.fbs"
         holes_path = self.bin_file_location / "data" / "holes.fbs"
-        self._boundaries_file = open(boundaries_path, "rb")
-        self._holes_file = open(holes_path, "rb")
+        self._boundaries_file = self._open_binary(boundaries_path)
+        self._holes_file = self._open_binary(holes_path)
 
     def _get_collection_data(self, file):
         file.seek(0)
