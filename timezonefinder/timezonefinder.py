@@ -17,7 +17,6 @@ from timezonefinder.configs import (
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
     HOLE_REGISTRY,
-    HOLE_REGISTRY_FILE,
     NR_BYTES_H,
     NR_BYTES_I,
     POLY_MAX_VALUES,
@@ -29,7 +28,7 @@ from timezonefinder.configs import (
     CoordLists,
     CoordPairs,
 )
-from timezonefinder.flatbuf.utils import read_polygon_collection_flatbuffer
+from timezonefinder.flatbuf.PolygonCollection import PolygonCollection
 from timezonefinder.hex_helpers import read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
 
@@ -318,23 +317,39 @@ class TimezoneFinder(AbstractTimezoneFinder):
     ):
         super().__init__(bin_file_location, in_memory)
         # Load all polygons and holes from FlatBuffers collections
-        boundaries_path = self.bin_file_location / "boundaries.fbs"
-        holes_path = self.bin_file_location / "holes.fbs"
-        self.nr_of_polygons, self._get_polygon = read_polygon_collection_flatbuffer(
-            boundaries_path
-        )
-        self.nr_of_holes, self._get_hole = read_polygon_collection_flatbuffer(
-            holes_path
-        )
+        # TODO move
+        boundaries_path = self.bin_file_location / "data" / "boundaries.fbs"
+        holes_path = self.bin_file_location / "data" / "holes.fbs"
+        self._boundaries_file = open(boundaries_path, "rb")
+        self._holes_file = open(holes_path, "rb")
 
-        # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few it is feasible to keep them in the memory
-        with open(self.bin_file_location / HOLE_REGISTRY_FILE) as json_file:
-            hole_registry_tmp = json.loads(json_file.read())
+    def _get_collection_data(self, file):
+        file.seek(0)
+        buf = file.read()
+        return PolygonCollection.GetRootAs(buf, 0)
 
-        # convert the json string keys to int
-        hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
-        setattr(self, HOLE_REGISTRY, hole_registry)
+    def _get_collection_length(self, file):
+        collection = self._get_collection_data(file)
+        return collection.PolygonsLength()
+
+    def _read_polygon_array_from_binary(self, file, idx):
+        collection = self._get_collection_data(file)
+        poly = collection.Polygons(idx)
+        return poly.CoordsAsNumpy().reshape(2, -1)
+
+    @property
+    def nr_of_polygons(self):
+        return self._get_collection_length(self._boundaries_file)
+
+    @property
+    def nr_of_holes(self):
+        return self._get_collection_length(self._holes_file)
+
+    def _get_polygon(self, idx):
+        return self._read_polygon_array_from_binary(self._boundaries_file, idx)
+
+    def _get_hole(self, idx):
+        return self._read_polygon_array_from_binary(self._holes_file, idx)
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         """
@@ -552,7 +567,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         .. note:: using this function is less performant than `.timezone_at()`
 
         :param lng: longitude of the point in degree
-        :param lat: latitude in degree
+        :param lat: latitude of the point in degree
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)

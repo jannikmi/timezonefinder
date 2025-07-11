@@ -113,13 +113,6 @@ from timezonefinder.utils import (
     int2coord,
 )
 
-BYTEORDER = "little"
-SIGNED = True
-
-
-def int32_to_bytes(val: int) -> bytes:
-    return int(val).to_bytes(NR_BYTES_I, byteorder=BYTEORDER, signed=SIGNED)
-
 
 ShortcutMapping = Dict[int, List[int]]
 
@@ -225,7 +218,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert max_poly_length < THRES_DTYPE_I, (
         f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
     )
-    max_hole_poly_length = max(all_hole_lengths)
+    max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
     assert max_hole_poly_length < THRES_DTYPE_H, (
         f"address overflow: the maximal amount of coords in hole polygons "
         f"{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
@@ -665,16 +658,6 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     validate_shortcut_completeness(mapping)
     validate_unused_polygons(mapping)
     assert not DEBUG, "DEBUG mode is on"
-
-
-def write_timezone_or_hole_bin(file_path, coords):
-    x_coords, y_coords = coords
-    with open(file_path, "wb") as f:
-        for x in x_coords:
-            f.write(int32_to_bytes(x))
-        for y in y_coords:
-            f.write(int32_to_bytes(y))
-    assert file_path.exists(), f"Binary file {file_path} was not created."
 
 
 @time_execution

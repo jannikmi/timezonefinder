@@ -44,7 +44,7 @@ def write_polygon_collection_flatbuffer(
         # Create coords vector
         PolygonStartCoordsVector(builder, len(coords))
         for coord in reversed(coords):
-            builder.PrependUint32(int(coord))
+            builder.PrependInt32(int(coord))  # Use signed 32-bit integer
         coords_offset = builder.EndVector()
 
         # Create polygon

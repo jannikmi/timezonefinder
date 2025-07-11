@@ -42,7 +42,7 @@ data:
 	bash parse_data.sh
 
 test:
-	@pytest
+	@uv run pytest
 
 test1: test
 
