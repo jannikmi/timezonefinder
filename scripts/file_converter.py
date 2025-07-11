@@ -666,7 +666,7 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     assert not DEBUG, "DEBUG mode is on"
 
 
-def write_polygon_or_hole_bin(file_path, coords):
+def write_timezone_or_hole_bin(file_path, coords):
     x_coords, y_coords = coords
     with open(file_path, "wb") as f:
         for x in x_coords:
@@ -680,26 +680,31 @@ def write_polygon_or_hole_bin(file_path, coords):
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
 
-    # Write each polygon to its own file
-    for poly_id, poly in enumerate(polygons):
-        poly_file = output_path / f"polygon_{poly_id}.bin"
-        write_polygon_or_hole_bin(poly_file, poly)
+    def write_polygons_to_files(polygons, *, dir):
+        total_space = 0
+        for i, poly in enumerate(polygons):
+            # Always create subfolders (e.g., 0, 1, 2, ...) for every 10 polygons
+            sub_folder = i // 10
+            folder = dir / f"{sub_folder}"
+            folder.mkdir(parents=True, exist_ok=True)
+            poly_file = folder / f"{i}.bin"
+            write_timezone_or_hole_bin(poly_file, poly)
+            total_space += poly_file.stat().st_size
+        return total_space
 
-    # Write each hole to its own file and accumulate total space used
-    hole_space = 0
-    for hole_id, hole in enumerate(holes):
-        hole_file = output_path / f"hole_{hole_id}.bin"
-        write_polygon_or_hole_bin(hole_file, hole)
-        hole_space += hole_file.stat().st_size
+    boundary_space = write_polygons_to_files(polygons, dir=output_path / "boundaries")
+    hole_space = write_polygons_to_files(holes, dir=output_path / "holes")
+    print(f"the binaries of the polygons take up {boundary_space / (1024**2):.2f} MB")
+    print(f"the binaries of the holes take up {hole_space / (1024**2):.2f} MB")
 
     # Write registry for holes (which polygon each hole belongs to)
     hole_registry = {}
-    for i, poly_id in enumerate(polynrs_of_holes):
+    for i, i in enumerate(polynrs_of_holes):
         try:
-            amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry.update({poly_id: (amount_of_holes + 1, hole_id)})
+            amount_of_holes, hole_id = hole_registry[i]
+            hole_registry.update({i: (amount_of_holes + 1, hole_id)})
         except KeyError:
-            hole_registry.update({poly_id: (1, i)})
+            hole_registry.update({i: (1, i)})
     path = output_path / HOLE_REGISTRY_FILE
     write_json(hole_registry, path)
 
