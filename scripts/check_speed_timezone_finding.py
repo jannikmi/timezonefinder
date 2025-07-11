@@ -1,7 +1,7 @@
 from typing import Callable, Iterable, List, Tuple
 
 import pytest
-from auxiliaries import get_rnd_query_pt, timefunc
+from tests.auxiliaries import get_rnd_query_pt, timefunc
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
 
@@ -11,7 +11,7 @@ tf_instance = TimezoneFinder()
 
 def get_on_land_pts(length: int):
     # create an array of points where timezone_finder finds something (on_land queries)
-    print(f"collecting and storing {N} on land points for the tests...")
+    print(f"collecting and storing {N:,} on land points for the tests...")
     on_land_points = []
     ps_for_10percent = int(N / 10)
     percent_done = 0

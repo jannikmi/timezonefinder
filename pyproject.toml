@@ -22,7 +22,8 @@ dependencies = [
     "numpy<3,>=1.21; python_version < '3.9'",
     "numpy<3,>=1.23; python_version >= '3.9'",
     "h3>4",
-    "cffi<2,>=1.15.1"
+    "cffi<2,>=1.15.1",
+    "flatbuffers>=25.2.10",
 ]
 
 [project.urls]

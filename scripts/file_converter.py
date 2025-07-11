@@ -86,21 +86,16 @@ from scripts.utils import (
     to_numpy_polygon,
     write_binary,
     write_boundary_data,
-    write_coordinate_data,
     write_json,
     load_json,
 )
+from timezonefinder.flatbuf.utils import write_all_polygons_flatbuffers
 from timezonefinder.configs import (
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
-    HOLE_ADR2DATA,
-    HOLE_COORD_AMOUNT,
-    HOLE_DATA,
     HOLE_REGISTRY_FILE,
     NR_BYTES_I,
-    POLY_ADR2DATA,
     POLY_COORD_AMOUNT,
-    POLY_DATA,
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
@@ -117,6 +112,7 @@ from timezonefinder.utils import (
     fully_contained_in_hole,
     int2coord,
 )
+
 
 ShortcutMapping = Dict[int, List[int]]
 
@@ -222,7 +218,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert max_poly_length < THRES_DTYPE_I, (
         f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
     )
-    max_hole_poly_length = max(all_hole_lengths)
+    max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
     assert max_hole_poly_length < THRES_DTYPE_H, (
         f"address overflow: the maximal amount of coords in hole polygons "
         f"{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
@@ -667,18 +663,24 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
+    boundary_space, hole_space = write_all_polygons_flatbuffers(
+        output_path, polygons, holes
+    )
+    print(f"the boundaries.fbs file takes up {boundary_space / (1024**2):.2f} MB")
+    print(f"the holes.fbs file takes up {hole_space / (1024**2):.2f} MB")
 
-    def compile_addresses(
-        length_list: List[int], multiplier: int, byte_amount_per_entry: int
-    ):
-        adr = 0
-        addresses = [adr]
-        for length in length_list:
-            adr += multiplier * byte_amount_per_entry * length
-            addresses.append(adr)
-        return addresses
+    # Write registry for holes (which polygon each hole belongs to)
+    hole_registry = {}
+    for i, i in enumerate(polynrs_of_holes):
+        try:
+            amount_of_holes, hole_id = hole_registry[i]
+            hole_registry.update({i: (amount_of_holes + 1, hole_id)})
+        except KeyError:
+            hole_registry.update({i: (1, i)})
+    path = output_path / HOLE_REGISTRY_FILE
+    write_json(hole_registry, path)
 
-    # NOTE: last entry is nr_of_polygons -> allow +1
+    # Write other metadata as before (zone ids, boundaries, etc.)
     write_binary(
         output_path,
         POLY_NR2ZONE_ID,
@@ -689,7 +691,6 @@ def compile_polygon_binaries(output_path):
         output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
     )
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
-    write_coordinate_data(output_path, POLY_DATA, polygons)
     write_binary(
         output_path,
         POLY_COORD_AMOUNT,
@@ -697,75 +698,8 @@ def compile_polygon_binaries(output_path):
         data_format=DTYPE_FORMAT_I,
         upper_value_limit=THRES_DTYPE_I,
     )
-
-    # 2 entries per coordinate
-    poly_addresses = compile_addresses(
-        polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
-    )
-    write_binary(
-        output_path,
-        POLY_ADR2DATA,
-        poly_addresses,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-
-    # [HOLE AREA, Y = number of holes (very few: around 22)]
-    hole_space = 0
-
-    # store for which polygons (how many) holes exits and the id of the first of those holes
-    # since there are very few it is feasible to keep them in memory
-    # -> export and import as json
-    hole_registry = {}
-    # read the polygon ids for all the holes
-    for i, poly_id in enumerate(polynrs_of_holes):
-        try:
-            amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry.update(
-                {
-                    poly_id: (amount_of_holes + 1, hole_id),
-                }
-            )
-        except KeyError:
-            hole_registry.update(
-                {
-                    poly_id: (1, i),
-                }
-            )
-
-    path = output_path / HOLE_REGISTRY_FILE
-    write_json(hole_registry, path)
-
-    # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
-    assert len(all_hole_lengths) == nr_of_holes
-    used_space = write_binary(output_path, HOLE_COORD_AMOUNT, all_hole_lengths)
-    hole_space += used_space
-
-    # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
-    write_binary(
-        output_path,
-        POLY_ADR2DATA,
-        poly_addresses,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-
-    # 2 entries per coordinate
-    hole_adr2data = compile_addresses(
-        all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
-    )
-    used_space = write_binary(
-        output_path,
-        HOLE_ADR2DATA,
-        hole_adr2data,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-    hole_space += used_space
-
-    # Y times [ 2x i signed ints for every hole: x coords, y coords ]
-    used_space = write_coordinate_data(output_path, HOLE_DATA, holes)
-    hole_space += used_space
+    # No longer writing POLY_DATA, POLY_ADR2DATA, HOLE_DATA, HOLE_ADR2DATA, HOLE_COORD_AMOUNT as monolithic files
+    # Return the total space used by all hole polygon binary files
     return hole_space
 
 

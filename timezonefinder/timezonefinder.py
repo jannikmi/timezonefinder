@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
 from struct import unpack
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -15,18 +15,11 @@ from timezonefinder.configs import (
     DATA_ATTRIBUTE_NAMES,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY,
-    DTYPE_FORMAT_I,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
-    HOLE_ADR2DATA,
-    HOLE_COORD_AMOUNT,
-    HOLE_DATA,
     HOLE_REGISTRY,
     HOLE_REGISTRY_FILE,
     NR_BYTES_H,
     NR_BYTES_I,
-    POLY_ADR2DATA,
-    POLY_COORD_AMOUNT,
-    POLY_DATA,
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
@@ -35,6 +28,10 @@ from timezonefinder.configs import (
     TIMEZONE_NAMES_FILE,
     CoordLists,
     CoordPairs,
+)
+from timezonefinder.flatbuf.utils import (
+    get_collection_length,
+    read_polygon_array_from_binary,
 )
 from timezonefinder.hex_helpers import read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
@@ -59,6 +56,23 @@ class AbstractTimezoneFinder(ABC):
     """
     List of attribute names that store opened binary data files.
     """
+
+    def _open_binary(self, path2file):
+        """Open a binary file, either in memory or as a file handle.
+
+        Args:
+            path2file: Path to the binary file
+
+        Returns:
+            Either a BytesIO object (if in_memory=True) or a file handle
+        """
+        if self.in_memory:
+            with open(path2file, mode="rb") as fp:
+                opened = BytesIO(fp.read())
+                opened.seek(0)
+        else:
+            opened = open(path2file, mode="rb")
+        return opened
 
     def __init__(
         self,
@@ -94,14 +108,8 @@ class AbstractTimezoneFinder(ABC):
         for attribute_name in self.binary_data_attributes:
             file_name = attribute_name + BINARY_FILE_ENDING
             path2file = self.bin_file_location / file_name
-            if self.in_memory:
-                with open(path2file, mode="rb") as bin_file:
-                    bf_in_mem = BytesIO(bin_file.read())
-                    bf_in_mem.seek(0)
-                setattr(self, attribute_name, bf_in_mem)
-            else:
-                bin_file = open(path2file, mode="rb")
-                setattr(self, attribute_name, bin_file)
+            opened = self._open_binary(path2file)
+            setattr(self, attribute_name, opened)
 
     def __del__(self):
         for attribute_name in self.binary_data_attributes:
@@ -323,96 +331,65 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        """
-        Initialize the TimezoneFinder.
-
-        :param bin_file_location: Path to the binary data files to use. If None, native package data will be used.
-        :param in_memory: Whether to completely read and keep the binary files in memory.
-        """
+        boundaries_path = self.bin_file_location / "data" / "boundaries.fbs"
+        holes_path = self.bin_file_location / "data" / "holes.fbs"
+        self._boundaries_file = self._open_binary(boundaries_path)
+        self._holes_file = self._open_binary(holes_path)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few it is feasible to keep them in the memory
-        with open(self.bin_file_location / HOLE_REGISTRY_FILE) as json_file:
-            hole_registry_tmp = json.loads(json_file.read())
-
-        # convert the json string keys to int
-        hole_registry = {int(k): v for k, v in hole_registry_tmp.items()}
+        hole_registry = self._load_hole_registry()
         setattr(self, HOLE_REGISTRY, hole_registry)
 
-    @property
-    def nr_of_polygons(self) -> int:
+    def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
         """
-        Get the number of polygons.
+        Load and convert the hole registry from JSON file, converting keys to int.
+        """
+        with open(
+            self.bin_file_location / HOLE_REGISTRY_FILE, encoding="utf-8"
+        ) as json_file:
+            hole_registry_tmp = json.loads(json_file.read())
+        # convert the json string keys to int
+        return {int(k): v for k, v in hole_registry_tmp.items()}
 
-        :return: The number of polygons.
-        """
-        poly_zone_ids = getattr(self, POLY_ZONE_IDS)
-        return utils.get_file_size_byte(poly_zone_ids) // NR_BYTES_H
+    @property
+    def nr_of_polygons(self):
+        return get_collection_length(self._boundaries_file)
+
+    @property
+    def nr_of_holes(self):
+        return get_collection_length(self._holes_file)
+
+    def _get_polygon(self, idx):
+        return read_polygon_array_from_binary(self._boundaries_file, idx)
+
+    def _get_hole(self, idx):
+        return read_polygon_array_from_binary(self._holes_file, idx)
 
     def coords_of(self, polygon_nr: int = 0) -> np.ndarray:
         """
-        Get the coordinates of a polygon.
+        Get the coordinates of a polygon from the FlatBuffers collection.
 
         :param polygon_nr: The index of the polygon.
         :return: Array of coordinates.
         """
-        poly_coord_amount = getattr(self, POLY_COORD_AMOUNT)
-        poly_adr2data = getattr(self, POLY_ADR2DATA)
-        poly_data = getattr(self, POLY_DATA)
-
-        # how many coordinates are stored in this polygon
-        poly_coord_amount.seek(NR_BYTES_I * polygon_nr)
-        nr_of_values = unpack(DTYPE_FORMAT_I, poly_coord_amount.read(NR_BYTES_I))[0]
-
-        poly_adr2data.seek(NR_BYTES_I * polygon_nr)
-        poly_data.seek(unpack(DTYPE_FORMAT_I, poly_adr2data.read(NR_BYTES_I))[0])
-        return np.stack(
-            (
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
-                self._fromfile(
-                    poly_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-                ),
-            )
-        )
+        return self._get_polygon(polygon_nr)
 
     def _holes_of_poly(self, polygon_nr: int):
         """
-        Get the holes of a polygon.
+        Get the holes of a polygon from the FlatBuffers collection.
 
         :param polygon_nr: Number of the polygon
         :yield: Generator of hole coordinates
         """
-        hole_coord_amount = getattr(self, HOLE_COORD_AMOUNT)
-        hole_adr2data = getattr(self, HOLE_ADR2DATA)
-        hole_data = getattr(self, HOLE_DATA)
         hole_registry = getattr(self, HOLE_REGISTRY)
-
         try:
             amount_of_holes, first_hole_id = hole_registry[polygon_nr]
         except KeyError:
             return
-
-        hole_coord_amount.seek(NR_BYTES_H * first_hole_id)
-        hole_adr2data.seek(NR_BYTES_I * first_hole_id)
-
-        for _ in range(amount_of_holes):
-            nr_of_values = unpack(DTYPE_FORMAT_H, hole_coord_amount.read(NR_BYTES_H))[0]
-            hole_data.seek(unpack(DTYPE_FORMAT_I, hole_adr2data.read(NR_BYTES_I))[0])
-
-            x_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-            )
-            y_coords = self._fromfile(
-                hole_data, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, count=nr_of_values
-            )
-            yield np.array(
-                [
-                    x_coords,
-                    y_coords,
-                ]
-            )
+        for i in range(amount_of_holes):
+            hole_id = first_hole_id + i
+            yield self._get_hole(hole_id)
 
     def get_polygon(
         self, polygon_nr: int, coords_as_pairs: bool = False
@@ -540,21 +517,19 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return True
 
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
-        """computes in which ocean OR land timezone a point is included in
+        """
+        Find the timezone for a given point, considering both land and ocean timezones.
 
-        Especially for large polygons it is expensive to check if a point is really included.
-        In case there is only one possible zone (left), this zone will instantly be returned without actually checking
-        if the query point is included in this polygon.
+        Uses precomputed shortcuts to reduce the number of polygons checked. Returns the timezone name
+        of the matched polygon, which may be an ocean timezone ("Etc/GMT+-XX") if applicable.
 
-        To speed things up there are "shortcuts" being used
-            which have been precomputed and store which timezone polygons have to be checked.
+        Since ocean timezones span the whole globe, some timezone will always be matched!
+        `None` can only be returned when using custom timezone data without such ocean timezones.
 
-        .. note:: Since ocean timezones span the whole globe, some timezone will always be matched!
-            `None` can only be returned when you have compiled timezone data without such "full coverage".
 
-        :param lng: longitude of the point in degree (-180.0 to 180.0)
-        :param lat: latitude in degree (90.0 to -90.0)
-        :return: the timezone name of the matched timezone polygon. possibly "Etc/GMT+-XX" in case of an ocean timezone.
+        :param lng: longitude of the point in degrees (-180.0 to 180.0)
+        :param lat: latitude of the point in degrees (90.0 to -90.0)
+        :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
         possible_polygons = self.get_shortcut_polys(lng=lng, lat=lat)
@@ -605,7 +580,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         .. note:: using this function is less performant than `.timezone_at()`
 
         :param lng: longitude of the point in degree
-        :param lat: latitude in degree
+        :param lat: latitude of the point in degree
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)

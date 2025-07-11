@@ -5,6 +5,7 @@ scripts/*.bin
 scripts/*.json
 MANIFEST
 timezonefinder/combined.json
+timezonefinder/data/
 scrapyard.py
 playground.py
 tmp.py

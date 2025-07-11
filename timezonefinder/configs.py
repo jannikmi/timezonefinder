@@ -44,7 +44,11 @@ HOLE_REGISTRY = "hole_registry"
 TIMEZONE_NAMES_FILE = "timezone_names" + JSON_FILE_ENDING
 HOLE_REGISTRY_FILE = HOLE_REGISTRY + JSON_FILE_ENDING
 
-DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [HOLE_REGISTRY]
+DATA_ATTRIBUTE_NAMES = BINARY_DATA_ATTRIBUTES + [
+    HOLE_REGISTRY,
+    "_boundaries_file",
+    "_holes_file",
+]
 
 # all data files that should be included in the build:
 ALL_BINARY_FILES = [
