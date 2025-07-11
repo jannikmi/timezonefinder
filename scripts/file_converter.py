@@ -118,6 +118,12 @@ from timezonefinder.utils import (
     int2coord,
 )
 
+BYTEORDER = "little"
+SIGNED = True
+
+def int32_to_bytes(val: int) -> bytes:
+    return int(val).to_bytes(NR_BYTES_I, byteorder=BYTEORDER, signed=SIGNED)
+
 ShortcutMapping = Dict[int, List[int]]
 
 nr_of_polygons = -1
@@ -664,21 +670,44 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     assert not DEBUG, "DEBUG mode is on"
 
 
+def write_polygon_or_hole_bin(file_path, coords):
+    x_coords, y_coords = coords
+    with open(file_path, "wb") as f:
+        for x in x_coords:
+            f.write(int32_to_bytes(x))
+        for y in y_coords:
+            f.write(int32_to_bytes(y))
+    assert file_path.exists(), f"Binary file {file_path} was not created."
+
+
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
 
-    def compile_addresses(
-        length_list: List[int], multiplier: int, byte_amount_per_entry: int
-    ):
-        adr = 0
-        addresses = [adr]
-        for length in length_list:
-            adr += multiplier * byte_amount_per_entry * length
-            addresses.append(adr)
-        return addresses
+    # Write each polygon to its own file
+    for poly_id, poly in enumerate(polygons):
+        poly_file = output_path / f"polygon_{poly_id}.bin"
+        write_polygon_or_hole_bin(poly_file, poly)
 
-    # NOTE: last entry is nr_of_polygons -> allow +1
+    # Write each hole to its own file and accumulate total space used
+    hole_space = 0
+    for hole_id, hole in enumerate(holes):
+        hole_file = output_path / f"hole_{hole_id}.bin"
+        write_polygon_or_hole_bin(hole_file, hole)
+        hole_space += hole_file.stat().st_size
+
+    # Write registry for holes (which polygon each hole belongs to)
+    hole_registry = {}
+    for i, poly_id in enumerate(polynrs_of_holes):
+        try:
+            amount_of_holes, hole_id = hole_registry[poly_id]
+            hole_registry.update({poly_id: (amount_of_holes + 1, hole_id)})
+        except KeyError:
+            hole_registry.update({poly_id: (1, i)})
+    path = output_path / HOLE_REGISTRY_FILE
+    write_json(hole_registry, path)
+
+    # Write other metadata as before (zone ids, boundaries, etc.)
     write_binary(
         output_path,
         POLY_NR2ZONE_ID,
@@ -689,7 +718,6 @@ def compile_polygon_binaries(output_path):
         output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
     )
     write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
-    write_coordinate_data(output_path, POLY_DATA, polygons)
     write_binary(
         output_path,
         POLY_COORD_AMOUNT,
@@ -697,75 +725,8 @@ def compile_polygon_binaries(output_path):
         data_format=DTYPE_FORMAT_I,
         upper_value_limit=THRES_DTYPE_I,
     )
-
-    # 2 entries per coordinate
-    poly_addresses = compile_addresses(
-        polygon_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
-    )
-    write_binary(
-        output_path,
-        POLY_ADR2DATA,
-        poly_addresses,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-
-    # [HOLE AREA, Y = number of holes (very few: around 22)]
-    hole_space = 0
-
-    # store for which polygons (how many) holes exits and the id of the first of those holes
-    # since there are very few it is feasible to keep them in memory
-    # -> export and import as json
-    hole_registry = {}
-    # read the polygon ids for all the holes
-    for i, poly_id in enumerate(polynrs_of_holes):
-        try:
-            amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry.update(
-                {
-                    poly_id: (amount_of_holes + 1, hole_id),
-                }
-            )
-        except KeyError:
-            hole_registry.update(
-                {
-                    poly_id: (1, i),
-                }
-            )
-
-    path = output_path / HOLE_REGISTRY_FILE
-    write_json(hole_registry, path)
-
-    # '<H'  Y times [H unsigned short: nr of values (coordinate PAIRS! x,y in int32 int32) in this hole]
-    assert len(all_hole_lengths) == nr_of_holes
-    used_space = write_binary(output_path, HOLE_COORD_AMOUNT, all_hole_lengths)
-    hole_space += used_space
-
-    # '<I' Y times [ I unsigned int: absolute address of the byte where the data of that hole starts]
-    write_binary(
-        output_path,
-        POLY_ADR2DATA,
-        poly_addresses,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-
-    # 2 entries per coordinate
-    hole_adr2data = compile_addresses(
-        all_hole_lengths, multiplier=2, byte_amount_per_entry=NR_BYTES_I
-    )
-    used_space = write_binary(
-        output_path,
-        HOLE_ADR2DATA,
-        hole_adr2data,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-    hole_space += used_space
-
-    # Y times [ 2x i signed ints for every hole: x coords, y coords ]
-    used_space = write_coordinate_data(output_path, HOLE_DATA, holes)
-    hole_space += used_space
+    # No longer writing POLY_DATA, POLY_ADR2DATA, HOLE_DATA, HOLE_ADR2DATA, HOLE_COORD_AMOUNT as monolithic files
+    # Return the total space used by all hole polygon binary files
     return hole_space
 
 
