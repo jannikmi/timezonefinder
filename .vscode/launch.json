@@ -1,0 +1,16 @@
+{
+  "configurations": [
+    {
+      "args": [],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "name": "Python: File Converter",
+      "program": "${workspaceFolder}/scripts/file_converter.py",
+      "request": "launch",
+      "type": "debugpy"
+    }
+  ],
+  "version": "0.2.0"
+}
