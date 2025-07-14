@@ -20,6 +20,8 @@ Q = unsigned 8byte integer
 
 Binaries being written:
 
+TODO update:
+
 [POLYGONS:]
 poly_zone_ids: the related zone_id for every polygon ('<H')
 poly_coord_amount: the amount of coordinates in every polygon ('<I')
