@@ -130,6 +130,12 @@ Both packages will likely coexist as they serve different use cases:
 
    * - Use Case / Priority
      - Recommended Package
+   * - Fastest possible lookup performance
+     - ``tzfpy``
+   * - No startup/initialization delay needed
+     - ``tzfpy``
+   * - Minimal distribution size
+     - ``tzfpy``
    * - Maximum data accuracy
      - ``timezonefinder``
    * - Compatibility with varied Python environments
@@ -138,15 +144,7 @@ Both packages will likely coexist as they serve different use cases:
      - ``timezonefinder``
    * - Access to timezone geometry data
      - ``timezonefinder``
-   * - Fastest possible lookup performance
-     - ``tzfpy``
-   * - No startup/initialization delay needed
-     - ``tzfpy``
-   * - Minimal distribution size
-     - ``tzfpy``
    * - Memory efficiency
-     - Tie
-   * - General purpose timezone lookups
      - Either
 
 
