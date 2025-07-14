@@ -128,21 +128,21 @@ Both packages will likely coexist as they serve different use cases:
    :header-rows: 1
    :widths: 60 40
 
-   * - Use Case / Priority
+   * - Use Case
      - Recommended Package
-   * - Fastest possible lookup performance
+   * - Lookup Performance
      - ``tzfpy``
-   * - No startup/initialization delay needed
+   * - Initialization Time
      - ``tzfpy``
-   * - Minimal distribution size
+   * - Minimal Distribution Size
      - ``tzfpy``
-   * - Maximum data accuracy
+   * - Data Accuracy
      - ``timezonefinder``
    * - Compatibility with varied Python environments
      - ``timezonefinder``
-   * - Maintainability and Contributions
-     - ``timezonefinder``
    * - Access to timezone geometry data
+     - ``timezonefinder``
+   * - Maintainability and Ease of Contribution
      - ``timezonefinder``
    * - Memory efficiency
      - Either
