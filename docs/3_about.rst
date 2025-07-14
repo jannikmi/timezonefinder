@@ -32,7 +32,7 @@ Current **data set** in use: precompiled `timezone-boundary-builder <https://git
     and that hence a query coordinate can actually match multiple time zones.
     ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
 
-- package size: ~46 MB
+- package size: ~51 MB
 - original data size: ~110 MB
 
 
@@ -70,15 +70,87 @@ Alternative python packages
 Comparison to tzfpy
 -----------------------
 
-**Differences:**
+``tzfpy`` is a Python binding of the Rust package ``tzf-rs``, which serves as an alternative to ``timezonefinder`` with different trade-offs.
 
-- ``tzfpy`` is a Python binding of the Rust package ``tzf-rs``
-- ``tzfpy`` has no startup time
-- ``tzfpy`` uses simplified timezone polygons (data):
-    - this reduces the memory requirements
-    - this reduces the accuracy
-    - this increases the lookup speed
-- ``tzfpy`` uses hierarchical tree of rectangles to speed up the lookup but auto fall back to polygon data if cache miss
+Both packages will likely coexist as they serve different use cases:
+
+**Comprehensive Comparison:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Feature
+     - timezonefinder
+     - tzfpy
+   * - Implementation
+     - Pure Python with optional C extensions and Numba compilation
+     - Python binding of Rust package ``tzf-rs``
+   * - Startup Time
+     - Requires initialization time
+     - No startup time (immediate)
+   * - Lookup Speed
+     - Fast, but slower than tzfpy
+     - Faster lookup speed
+   * - Data Representation
+     - Complete timezone polygons
+     - Simplified timezone polygons
+   * - Accuracy
+     - Higher accuracy with full polygon data
+     - Lower accuracy due to simplified polygons
+   * - Distribution Size
+     - ~50 MB
+     - ~6 MB
+   * - Memory Usage
+     - ~40MB
+     - similar (precise comparison TBD)
+   * - Spatial Index
+     - H3 hexagon-based index with ~40k cells
+     - Hierarchical tree of rectangles with fallback to polygon data
+   * - Build Complexity
+     - Easier to build when wheels are missing
+     - Requires Rust to build wheels for some platforms
+   * - Python Compatibility
+     - Better compatibility across Python versions
+     - Requires Rust to build wheels on certain platforms or Python versions
+   * - Additional Features
+     - ``get_geometry()`` for retrieving the timezone shapes
+     - None
+   * - Maintainability
+     - Single repository
+     - Downstream of multiple repositories (tzf, tzf-rel, tzf-rs) languages (Go, Rust, Python)
+
+
+
+**When to Choose Which Package:**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 60 40
+
+   * - Use Case / Priority
+     - Recommended Package
+   * - Maximum data accuracy
+     - ``timezonefinder``
+   * - Compatibility with varied Python environments
+     - ``timezonefinder``
+   * - Maintainability and Contributions
+     - ``timezonefinder``
+   * - Access to timezone geometry data
+     - ``timezonefinder``
+   * - Fastest possible lookup performance
+     - ``tzfpy``
+   * - No startup/initialization delay needed
+     - ``tzfpy``
+   * - Minimal distribution size
+     - ``tzfpy``
+   * - Memory efficiency
+     - Tie
+   * - General purpose timezone lookups
+     - Either
+
+
+
 
 Comparison to pytzwhere
 -----------------------
