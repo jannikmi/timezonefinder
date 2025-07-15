@@ -120,7 +120,7 @@ ShortcutMapping = Dict[int, List[int]]
 
 nr_of_polygons = -1
 nr_of_zones = -1
-all_tz_names = set()
+all_tz_names = []
 poly_zone_ids = []
 poly_boundaries = []
 polygons: List[np.ndarray] = []
@@ -152,7 +152,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     print("parsing data...\nprocessing holes:")
     for zone_id, tz_dict in enumerate(tz_list):
         tz_name = tz_dict.get("properties").get("tzid")
-        all_tz_names.add(tz_name)
+        all_tz_names.append(tz_name)
         geometry = tz_dict.get("geometry")
         if geometry.get("type") == "MultiPolygon":
             # depth is 4
