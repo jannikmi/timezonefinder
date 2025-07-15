@@ -1,5 +1,6 @@
 # NOTE: Changes in the global settings might not immediately affect
 # the functions in utils.py due to numba compilation and caching!
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -11,8 +12,16 @@ SHORTCUT_FILE = "shortcuts.bin"
 
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
+# PATHS
+DEFAULT_DATA_DIR = Path(__file__).parent / "data"
+
+
 # DATA FILES
 # BINARY
+BOUNDARIES_BINARY = "boundaries.fbs"
+HOLE_BINARY = "holes.fbs"
+
+
 BINARY_FILE_ENDING = ".bin"
 
 POLY_ZONE_IDS = "poly_zone_ids"

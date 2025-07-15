@@ -75,7 +75,6 @@ from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
-    DEFAULT_OUTPUT_PATH,
     MAX_LAT,
     MAX_LNG,
     HexIdSet,
@@ -91,8 +90,9 @@ from scripts.utils import (
     write_json,
     load_json,
 )
-from timezonefinder.flatbuf.utils import write_all_polygons_flatbuffers
+from timezonefinder.flatbuf.utils import write_polygon_flatbuffers
 from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_I,
     HOLE_REGISTRY_FILE,
@@ -105,7 +105,6 @@ from timezonefinder.configs import (
     SHORTCUT_H3_RES,
     THRES_DTYPE_H,
     THRES_DTYPE_I,
-    TIMEZONE_NAMES_FILE,
 )
 from timezonefinder.hex_helpers import export_shortcuts_binary, lies_in_h3_cell
 from timezonefinder.utils import (
@@ -114,13 +113,14 @@ from timezonefinder.utils import (
     fully_contained_in_hole,
     int2coord,
 )
+from timezonefinder.zone_names import write_zone_names
 
 
 ShortcutMapping = Dict[int, List[int]]
 
 nr_of_polygons = -1
 nr_of_zones = -1
-all_tz_names = []
+all_tz_names = set()
 poly_zone_ids = []
 poly_boundaries = []
 polygons: List[np.ndarray] = []
@@ -152,7 +152,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     print("parsing data...\nprocessing holes:")
     for zone_id, tz_dict in enumerate(tz_list):
         tz_name = tz_dict.get("properties").get("tzid")
-        all_tz_names.append(tz_name)
+        all_tz_names.add(tz_name)
         geometry = tz_dict.get("geometry")
         if geometry.get("type") == "MultiPolygon":
             # depth is 4
@@ -249,11 +249,10 @@ def update_zone_names(output_path: Path):
     global polynrs_of_holes
     global nr_of_zones
     global nr_of_polygons
-    file_path = output_path / TIMEZONE_NAMES_FILE
-    print(f"updating the zone names in {file_path} now.")
-    # pickle the zone names (python array)
-    write_json(all_tz_names, file_path)
-    print("...Done.\n\nComputing where zones start and end...")
+
+    write_zone_names(all_tz_names, output_path)
+
+    print("Computing where zones start and end...")
     last_id = -1
     zone_id = 0
     poly_nr = 0
@@ -665,11 +664,7 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
-    boundary_space, hole_space = write_all_polygons_flatbuffers(
-        output_path, polygons, holes
-    )
-    print(f"the boundaries.fbs file takes up {boundary_space / (1024**2):.2f} MB")
-    print(f"the holes.fbs file takes up {hole_space / (1024**2):.2f} MB")
+    _, hole_space = write_polygon_flatbuffers(output_path, polygons, holes)
 
     # Write registry for holes (which polygon each hole belongs to)
     hole_registry = {}
@@ -708,7 +703,7 @@ def compile_polygon_binaries(output_path):
 @time_execution
 def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
-    output_path: Union[Path, str] = DEFAULT_OUTPUT_PATH,
+    output_path: Union[Path, str] = DEFAULT_DATA_DIR,
 ):
     input_path = Path(input_path)
     output_path = Path(output_path)
@@ -737,7 +732,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-out",
         help="path to output folder for storing the parsed data files",
-        default=DEFAULT_OUTPUT_PATH,
+        default=DEFAULT_DATA_DIR,
     )
     parsed_args = parser.parse_args()  # takes input from sys.argv
     parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)

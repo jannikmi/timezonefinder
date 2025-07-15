@@ -7,6 +7,7 @@ import numpy as np
 from pathlib import Path
 from typing import List, Tuple
 
+from timezonefinder.configs import BOUNDARIES_BINARY, DEFAULT_DATA_DIR, HOLE_BINARY
 from timezonefinder.flatbuf.Polygon import (
     PolygonStart,
     PolygonEnd,
@@ -22,6 +23,16 @@ from timezonefinder.flatbuf.PolygonCollection import (
 )
 
 
+def get_boundaries_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the boundaries flatbuffer file."""
+    return data_dir / BOUNDARIES_BINARY
+
+
+def get_holes_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the holes flatbuffer file."""
+    return data_dir / HOLE_BINARY
+
+
 def write_polygon_collection_flatbuffer(
     file_path: Path, polygons: List[np.ndarray]
 ) -> int:
@@ -34,6 +45,7 @@ def write_polygon_collection_flatbuffer(
     Returns:
         The size of the written file in bytes
     """
+    print(f"writing {len(polygons)} polygons to binary file {file_path}")
     builder = flatbuffers.Builder(0)
     polygon_offsets = []
 
@@ -73,10 +85,13 @@ def write_polygon_collection_flatbuffer(
         buf = builder.Output()
         f.write(buf)
 
-    return file_path.stat().st_size
+    size_in_bytes = file_path.stat().st_size
+    size_in_mb = size_in_bytes / (1024**2)
+    print(f"the binary file takes up {size_in_mb:.2f} MB")
+    return size_in_bytes
 
 
-def write_all_polygons_flatbuffers(
+def write_polygon_flatbuffers(
     output_path: Path, polygons: List[np.ndarray], holes: List[np.ndarray]
 ) -> Tuple[int, int]:
     """Write boundary polygons and hole polygons to separate flatbuffer files.
@@ -89,15 +104,10 @@ def write_all_polygons_flatbuffers(
     Returns:
         Tuple of (boundaries_size, holes_size) in bytes
     """
-    boundaries_file = output_path / "boundaries.fbs"
-    holes_file = output_path / "holes.fbs"
-
-    print(f"Writing {len(polygons)} boundary polygons to {boundaries_file}")
+    boundaries_file = get_boundaries_path(output_path)
+    holes_file = get_holes_path(output_path)
     boundary_size = write_polygon_collection_flatbuffer(boundaries_file, polygons)
-
-    print(f"Writing {len(holes)} hole polygons to {holes_file}")
     holes_size = write_polygon_collection_flatbuffer(holes_file, holes)
-
     return boundary_size, holes_size
 
 

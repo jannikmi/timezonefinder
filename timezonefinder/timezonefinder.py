@@ -13,6 +13,7 @@ from timezonefinder.configs import (
     BINARY_DATA_ATTRIBUTES,
     BINARY_FILE_ENDING,
     DATA_ATTRIBUTE_NAMES,
+    DEFAULT_DATA_DIR,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
@@ -30,7 +31,9 @@ from timezonefinder.configs import (
     CoordPairs,
 )
 from timezonefinder.flatbuf.utils import (
+    get_boundaries_path,
     get_collection_length,
+    get_holes_path,
     read_polygon_array_from_binary,
 )
 from timezonefinder.hex_helpers import read_shortcuts_binary
@@ -94,7 +97,7 @@ class AbstractTimezoneFinder(ABC):
         # open all the files in binary reading mode
         # for more info on what is stored in which .bin file, please read the comments in file_converter.py
         if bin_file_location is None:
-            bin_file_location = Path(__file__).parent
+            bin_file_location = DEFAULT_DATA_DIR
         else:
             bin_file_location = Path(bin_file_location)
         self.bin_file_location: Path = bin_file_location
@@ -331,10 +334,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        boundaries_path = self.bin_file_location / "data" / "boundaries.fbs"
-        holes_path = self.bin_file_location / "data" / "holes.fbs"
-        self._boundaries_file = self._open_binary(boundaries_path)
-        self._holes_file = self._open_binary(holes_path)
+        boundaries_file = get_boundaries_path(self.bin_file_location)
+        holes_file = get_holes_path(self.bin_file_location)
+        self._boundaries_file = self._open_binary(boundaries_file)
+        self._holes_file = self._open_binary(holes_file)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few it is feasible to keep them in the memory
