@@ -661,21 +661,29 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     assert not DEBUG, "DEBUG mode is on"
 
 
+def create_and_write_hole_registry(polynrs_of_holes, output_path):
+    """
+    Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
+    and writes it as JSON to the output path.
+    """
+    hole_registry = {}
+    for i, poly_id in enumerate(polynrs_of_holes):
+        try:
+            amount_of_holes, hole_id = hole_registry[poly_id]
+            hole_registry[poly_id] = (amount_of_holes + 1, hole_id)
+        except KeyError:
+            hole_registry[poly_id] = (1, i)
+    path = output_path / HOLE_REGISTRY_FILE
+    write_json(hole_registry, path)
+
+
 @time_execution
 def compile_polygon_binaries(output_path):
     global nr_of_polygons
     _, hole_space = write_polygon_flatbuffers(output_path, polygons, holes)
 
     # Write registry for holes (which polygon each hole belongs to)
-    hole_registry = {}
-    for i, i in enumerate(polynrs_of_holes):
-        try:
-            amount_of_holes, hole_id = hole_registry[i]
-            hole_registry.update({i: (amount_of_holes + 1, hole_id)})
-        except KeyError:
-            hole_registry.update({i: (1, i)})
-    path = output_path / HOLE_REGISTRY_FILE
-    write_json(hole_registry, path)
+    create_and_write_hole_registry(polynrs_of_holes, output_path)
 
     # Write other metadata as before (zone ids, boundaries, etc.)
     write_binary(
@@ -695,6 +703,7 @@ def compile_polygon_binaries(output_path):
         data_format=DTYPE_FORMAT_I,
         upper_value_limit=THRES_DTYPE_I,
     )
+
     # No longer writing POLY_DATA, POLY_ADR2DATA, HOLE_DATA, HOLE_ADR2DATA, HOLE_COORD_AMOUNT as monolithic files
     # Return the total space used by all hole polygon binary files
     return hole_space
@@ -712,6 +721,8 @@ def parse_data(
     polygon_space = parse_polygons_from_json(input_path)
     update_zone_names(output_path)
     hole_space = compile_polygon_binaries(output_path)
+
+    raise ValueError()  # TODO remove this line after testing
 
     shortcut_space = compile_shortcut_mapping(output_path)
 
