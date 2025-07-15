@@ -23,6 +23,32 @@ from timezonefinder.flatbuf.PolygonCollection import (
 )
 
 
+def flatten_polygon_coords(polygon: np.ndarray) -> np.ndarray:
+    """Convert polygon coordinates from shape (2, N) to a flattened [x0, y0, x1, y1, ...] array.
+
+    Args:
+        polygon: Array of polygon coordinates with shape (2, N)
+                where the first row contains x coordinates and the second row contains y coordinates
+
+    Returns:
+        Flattened 1D array of coordinates in the format [x0, y0, x1, y1, ...]
+    """
+    return polygon.ravel(order="F")
+
+
+def reshape_to_polygon_coords(coords: np.ndarray) -> np.ndarray:
+    """Reshape flattened coordinates to the format (2, N).
+
+    Args:
+        coords: Flattened 1D array of coordinates in the format [x0, y0, x1, y1, ...]
+
+    Returns:
+        Array of polygon coordinates with shape (2, N)
+        where the first row contains x coordinates and the second row contains y coordinates
+    """
+    return coords.reshape(2, -1, order="F")
+
+
 def get_boundaries_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
     """Return the path to the boundaries flatbuffer file."""
     return data_dir / BOUNDARIES_BINARY
@@ -52,10 +78,8 @@ def write_polygon_collection_flatbuffer(
 
     # Create each polygon and store its offset
     for polygon in polygons:
-        # Expecting polygon in shape (2, N) where first row is x coords, second row is y coords
-        coords = polygon.ravel(
-            order="F"
-        )  # Flatten coordinates to [x0, y0, x1, y1, ...] format
+        # Flatten coordinates to [x0, y0, x1, y1, ...] format
+        coords = flatten_polygon_coords(polygon)
 
         # Create coords vector
         PolygonStartCoordsVector(builder, len(coords))
@@ -131,5 +155,5 @@ def read_polygon_array_from_binary(file, idx):
     collection = get_collection_data(file)
     poly = collection.Polygons(idx)
     coords = poly.CoordsAsNumpy()
-    # Reshape to (2, N) format where first row is x coords, second row is y coords
-    return coords.reshape(2, -1, order="F")
+    # Reshape to (2, N) format
+    return reshape_to_polygon_coords(coords)
