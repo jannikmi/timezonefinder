@@ -24,9 +24,7 @@ from timezonefinder.configs import (
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
-    SHORTCUT_FILE,
     SHORTCUT_H3_RES,
-    TIMEZONE_NAMES_FILE,
     CoordLists,
     CoordPairs,
 )
@@ -36,8 +34,9 @@ from timezonefinder.flatbuf.utils import (
     get_holes_path,
     read_polygon_array_from_binary,
 )
-from timezonefinder.hex_helpers import read_shortcuts_binary
+from timezonefinder.hex_helpers import get_shortcut_file_path, read_shortcuts_binary
 from timezonefinder.utils import inside_polygon
+from timezonefinder.zone_names import read_zone_names
 
 
 class AbstractTimezoneFinder(ABC):
@@ -102,10 +101,9 @@ class AbstractTimezoneFinder(ABC):
             bin_file_location = Path(bin_file_location)
         self.bin_file_location: Path = bin_file_location
 
-        with open(self.bin_file_location / TIMEZONE_NAMES_FILE) as json_file:
-            self.timezone_names = json.loads(json_file.read())
+        self.timezone_names = read_zone_names(output_path=self.bin_file_location)
 
-        path2shortcut_bin = self.bin_file_location / SHORTCUT_FILE
+        path2shortcut_bin = get_shortcut_file_path(self.bin_file_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
         for attribute_name in self.binary_data_attributes:
@@ -445,12 +443,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
                     f"the given zone id {tz_id} is invalid (value range: 0 - {self.nr_of_zones - 1}."
                 )
         else:
+            if tz_name is None:
+                raise ValueError("no timezone name given.")
             try:
                 tz_id = self.timezone_names.index(tz_name)
             except ValueError:
                 raise ValueError("The timezone '", tz_name, "' does not exist.")
         if tz_id is None:
             raise ValueError("no timezone id given.")
+
         poly_id2zone_id = getattr(self, POLY_NR2ZONE_ID)
         poly_id2zone_id.seek(NR_BYTES_H * tz_id)
         # read poly_id of the first polygon of that zone

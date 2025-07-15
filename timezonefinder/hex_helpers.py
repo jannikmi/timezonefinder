@@ -6,6 +6,7 @@ import numpy as np
 from h3.api import numpy_int as h3
 
 from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
     DTYPE_FORMAT_B,
     DTYPE_FORMAT_H,
     DTYPE_FORMAT_H_NUMPY,
@@ -15,7 +16,13 @@ from timezonefinder.configs import (
     NR_BYTES_Q,
     THRES_DTYPE_B,
     ShortcutMapping,
+    SHORTCUT_FILE,
 )
+
+
+def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
+    """Get the path to the shortcuts binary file."""
+    return output_path / SHORTCUT_FILE
 
 
 def export_shortcuts_binary(
