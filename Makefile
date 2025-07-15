@@ -64,6 +64,9 @@ hook3:
 clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
 
+# compile flatbuffers files:
+flatbuf:
+	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon.fbs
 
 build:
 	rm -rf build dist
