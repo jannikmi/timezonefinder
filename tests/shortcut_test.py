@@ -7,11 +7,8 @@ import numpy as np
 from scripts import file_converter
 from timezonefinder import configs, hex_helpers
 
-PATH2SHORTCUT_FILE = (
-    Path(__file__).parent.parent / "timezonefinder" / configs.SHORTCUT_FILE
-)
-
-shortcuts = hex_helpers.read_shortcuts_binary(PATH2SHORTCUT_FILE)
+shortcut_file_path = hex_helpers.get_shortcut_file_path()
+shortcuts = hex_helpers.read_shortcuts_binary(shortcut_file_path)
 
 
 def test_import_export():
