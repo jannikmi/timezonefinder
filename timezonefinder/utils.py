@@ -17,7 +17,6 @@ import re
 from typing import Callable, Tuple
 
 import numpy as np
-from numpy import int64
 
 from timezonefinder.utils_clang import pt_in_poly_clang, clang_extension_loaded
 from timezonefinder.configs import (
@@ -30,21 +29,23 @@ from timezonefinder.configs import (
 )
 
 try:
-    from numba import b1, f8, i2, i4, njit, u2
+    from numba import njit, int64, int32, boolean
+    from numba.types import Array
 
     using_numba = True
 except ImportError:
     using_numba = False
+    # replace Numba functionality with "transparent" implementations
+    from timezonefinder._numba_replacements import njit, int64, int32, boolean, Array
+
+
+# For Fortran-ordered arrays (F-contiguous), use the 'order="F"' in the Numba signature
+CoordType = Array(int32, 2, "F", True, aligned=True)
+
+
 # TODO
-#     # replace Numba functionality with "transparent" implementations
-#     from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
-
-# replace Numba functionality with "transparent" implementations
-from timezonefinder._numba_replacements import b1, f8, i2, i4, njit, u2
-
-
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-@njit(b1(i4, i4, i4[:, :]), cache=True)
+@njit(boolean(int64, int64, CoordType), cache=True)
 def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     """
     Implementing the ray casting point in polygon test algorithm
@@ -151,7 +152,7 @@ else:
     inside_polygon = pt_in_poly_python
 
 
-@njit(i2(u2[:]), cache=True)
+@njit("int16(uint16[:])", cache=True)
 def get_last_change_idx(lst: np.ndarray) -> int:
     """
     :param lst: list of entries
@@ -174,13 +175,13 @@ def get_last_change_idx(lst: np.ndarray) -> int:
 
 
 # @cc.export('int2coord', f8(i4))
-@njit(f8(i4), cache=True)
+@njit("float64(int32)", cache=True)
 def int2coord(i4: int) -> float:
     return float(i4 * INT2COORD_FACTOR)
 
 
 # @cc.export('coord2int', i4(f8))
-@njit(i4(f8), cache=True)
+@njit("int32(float64)", cache=True)
 def coord2int(double: float) -> int:
     return int(double * COORD2INT_FACTOR)
 
@@ -219,7 +220,7 @@ def convert2ints(polygon_data: np.ndarray) -> IntLists:
 def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
     # pt = points[:, i]
     for pt in coords1.T:
-        if pt_in_poly_python(pt[0], pt[1], coords2):
+        if pt_in_poly_python(int64(pt[0]), int64(pt[1]), coords2):
             return True
     return False
 

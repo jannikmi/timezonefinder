@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from tests.auxiliaries import (
-    convert_inside_polygon_input,
     get_rnd_poly,
     get_rnd_poly_int,
     get_rnd_query_pt,
@@ -210,11 +209,16 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     # print("=" * 50)
     coords, query_points, expected_results = test_case
     coords = np.array(coords)
+    # Convert coords to int32, 2D, Fortran order, aligned
+    coords_int = np.empty_like(coords, dtype=np.int32, order="F")
+    coords_int[0, :] = [utils.coord2int(x) for x in coords[0]]
+    coords_int[1, :] = [utils.coord2int(y) for y in coords[1]]
     for i, ((lng, lat), expected_result) in enumerate(
         zip(query_points, expected_results)
     ):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
-        x, y, coords_int = convert_inside_polygon_input(lng, lat, coords)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
         actual_result = inside_poly_func(x, y, coords_int)
         if actual_result == expected_result:
             ok = "OK"
