@@ -89,9 +89,9 @@ Both packages will likely coexist as they serve different use cases:
    * - Startup Time
      - Requires initialization time
      - No startup time (immediate)
-   * - Lookup Speed
-     - Fast, but slower than tzfpy
-     - Faster lookup speed
+   * - `Lookup Speed <https://github.com/ringsaturn/tz-benchmark>`__
+     - Median: ~160k Queries per second (QPS)
+     - Median: ~511k QPS
    * - Data Representation
      - Complete timezone polygons
      - Simplified timezone polygons
