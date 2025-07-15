@@ -44,6 +44,8 @@ Notice: Looking for maintainers. Reach out if you want to contribute!
 
 This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
+Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
+
 
 Quick Guide:
 
