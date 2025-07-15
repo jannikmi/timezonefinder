@@ -10,6 +10,21 @@
       "program": "${workspaceFolder}/scripts/file_converter.py",
       "request": "launch",
       "type": "debugpy"
+    },
+    {
+      "args": [
+        "tests/main_test.py::TestTimezonefinderClass::test_coords_of",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": false,
+      "module": "pytest",
+      "name": "Python: Test coords_of",
+      "request": "launch",
+      "type": "debugpy"
     }
   ],
   "version": "0.2.0"
