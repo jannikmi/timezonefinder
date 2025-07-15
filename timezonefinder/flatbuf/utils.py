@@ -40,7 +40,8 @@ def write_polygon_collection_flatbuffer(
 
     Args:
         file_path: Path to save the flatbuffer file
-        polygons: List of polygon coordinates as numpy arrays
+        polygons: List of polygon coordinates as numpy arrays with shape (2, N)
+                  where the first row contains x coordinates and the second row contains y coordinates
 
     Returns:
         The size of the written file in bytes
@@ -51,9 +52,10 @@ def write_polygon_collection_flatbuffer(
 
     # Create each polygon and store its offset
     for polygon in polygons:
+        # Expecting polygon in shape (2, N) where first row is x coords, second row is y coords
         coords = polygon.ravel(
             order="F"
-        )  # Flatten x and y coordinates in column-major order
+        )  # Flatten coordinates to [x0, y0, x1, y1, ...] format
 
         # Create coords vector
         PolygonStartCoordsVector(builder, len(coords))
@@ -128,6 +130,6 @@ def read_polygon_array_from_binary(file, idx):
     """Read a polygon's coordinates from a FlatBuffers collection."""
     collection = get_collection_data(file)
     poly = collection.Polygons(idx)
-    return (
-        poly.CoordsAsNumpy().reshape(-1, 2).T
-    )  # Ensure the shape matches the original polygon
+    coords = poly.CoordsAsNumpy()
+    # Reshape to (2, N) format where first row is x coords, second row is y coords
+    return coords.reshape(2, -1, order="F")
