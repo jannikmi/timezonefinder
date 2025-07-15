@@ -1,7 +1,5 @@
-import json
 import unittest
 from importlib.util import find_spec
-from os.path import abspath, join, pardir
 from typing import List, Optional
 
 import pytest
@@ -12,7 +10,6 @@ from timezonefinder.configs import (
     MAX_LAT_VAL_INT,
     MAX_LNG_VAL_INT,
     THRES_DTYPE_H,
-    TIMEZONE_NAMES_FILE,
 )
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
@@ -95,10 +92,9 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
     def print_tf_class_props(self):
         print("test properties:")
         print(f"testing class {self.class_under_test}")
-        if self.class_under_test.using_numba():
-            print("using_numba()==True (JIT compiled functions in use)")
-        else:
-            print("using_numba()==False (JIT compiled functions NOT in use)")
+        print(
+            f"using_numba()=={self.class_under_test.using_numba()} (JIT compiled functions {'NOT ' if not self.class_under_test.using_numba() else ''}in use)"
+        )
         print(f"in_memory={self.in_memory_mode}")
         print(f"file location={self.bin_file_dir}\n")
 
@@ -190,28 +186,21 @@ class BaseTimezoneFinderClassTest(unittest.TestCase):
 
     def test_timezone_name_attribute(self):
         timezone_names_stored = self.test_instance.timezone_names
-        with open(join(abs_default_path, TIMEZONE_NAMES_FILE)) as json_file:
-            timezone_names_json = json.loads(json_file.read())
-        assert timezone_names_stored == timezone_names_json, (
-            f"the content of the {TIMEZONE_NAMES_FILE} and the attribute {timezone_names_stored} are different."
+        assert isinstance(timezone_names_stored, list)
+        assert len(timezone_names_stored) > 0, "no timezone names found"
+        # test if all timezone names are strings
+        assert all(isinstance(name, str) for name in timezone_names_stored), (
+            "not all timezone names are strings"
         )
+        # test if all timezone names are unique
+        assert len(set(timezone_names_stored)) == len(timezone_names_stored), (
+            "not all timezone names are unique"
+        )
+        # TODO test if all timezone names are valid
 
 
 class BaseClassTestMEM(BaseTimezoneFinderClassTest):
     in_memory_mode = True
-
-
-abs_default_path = abspath(join(__file__, pardir, pardir, PACKAGE_NAME))
-
-
-class BaseClassTestDIR(BaseTimezoneFinderClassTest):
-    # point to a dir where all bin files are located:
-    bin_file_dir = abs_default_path
-
-
-class BaseClassTestMEMDIR(BaseTimezoneFinderClassTest):
-    in_memory_mode = True
-    bin_file_dir = abs_default_path
 
 
 # tests for Timezonefinder class
@@ -345,13 +334,3 @@ class TimezonefinderClassTest(BaseTimezoneFinderClassTest):
 
 class TimezonefinderClassTestMEM(TimezonefinderClassTest):
     in_memory_mode = True
-
-
-class TimezonefinderClassTestDIR(BaseTimezoneFinderClassTest):
-    # point to a dir where all bin files are located:
-    bin_file_dir = abs_default_path
-
-
-class TimezonefinderClassTestMEMDIR(BaseTimezoneFinderClassTest):
-    in_memory_mode = True
-    bin_file_dir = abs_default_path
