@@ -376,12 +376,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         return self._get_polygon(polygon_nr)
 
-    def _holes_of_poly(self, polygon_nr: int):
+    def _hole_ids_of_poly(self, polygon_nr: int):
         """
-        Get the holes of a polygon from the FlatBuffers collection.
+        Yield the hole IDs for a given polygon number.
 
         :param polygon_nr: Number of the polygon
-        :yield: Generator of hole coordinates
+        :yield: Hole IDs
         """
         hole_registry = getattr(self, HOLE_REGISTRY)
         try:
@@ -389,7 +389,16 @@ class TimezoneFinder(AbstractTimezoneFinder):
         except KeyError:
             return
         for i in range(amount_of_holes):
-            hole_id = first_hole_id + i
+            yield first_hole_id + i
+
+    def _holes_of_poly(self, polygon_nr: int):
+        """
+        Get the holes of a polygon from the FlatBuffers collection.
+
+        :param polygon_nr: Number of the polygon
+        :yield: Generator of hole coordinates
+        """
+        for hole_id in self._hole_ids_of_poly(polygon_nr):
             yield self._get_hole(hole_id)
 
     def get_polygon(
