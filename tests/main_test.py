@@ -21,7 +21,7 @@ from timezonefinder.flatbuf.utils import get_collection_length, get_boundaries_p
 
 DEBUG = False
 # more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
-DEBUG = True
+# DEBUG = True
 
 PACKAGE_NAME = "timezonefinder"
 
@@ -83,6 +83,28 @@ def is_valid_lng_int_vec(arr) -> bool:
 
 def is_valid_lat_int_vec(arr) -> bool:
     return np.all((-MAX_LAT_VAL_INT <= arr) & (arr <= MAX_LAT_VAL_INT))
+
+
+def validate_polygon_coordinates(coords: np.ndarray):
+    """Helper function to validate polygon coordinates format and values."""
+    assert isinstance(coords, np.ndarray)
+    assert coords.ndim == 2, "coords must be a 2D array"
+    assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
+    # all polygons must have at least 3 coordinates
+    assert coords.shape[1] >= 3, (
+        f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
+    )
+
+    # test whether the coordinates are within valid ranges
+    x_coords, y_coords = coords
+    # apply to every coordinate
+
+    if not DEBUG:
+        return
+
+    # testing all coordinates is expensive, so run only in DEBUG mode
+    assert is_valid_lng_int_vec(x_coords)
+    assert is_valid_lat_int_vec(y_coords)
 
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
@@ -163,20 +185,6 @@ class TestBaseTimezoneFinderClass:
             self.test_instance.timezone_at_land(23.0, lng=42.0)
             self.test_instance.timezone_at_land(23.0, lat=42.0)
 
-    # test if all polygon coordinates can be retrieved
-    # NOTE: too many polygons, so this test is not parametrized
-    def test_coords_of(self, poly_id):
-        nr_of_polyfons = self.test_instance.nr_of_polygons
-        for poly_id in range(nr_of_polyfons):
-            print(f"Testing polygon ID: {poly_id}")
-            coords = self.test_instance.coords_of(poly_id)
-            assert isinstance(coords, np.ndarray)
-            assert coords.ndim == 2, "coords must be a 2D array"
-            assert coords.shape[1] == 2, "coords must have two columns (lng, lat)"
-            # test whether the coordinates are within valid ranges
-            assert np.all(is_valid_lng_int(coords[0, :]))
-            assert np.all(is_valid_lat_int(coords[1, :]))
-
     # Common helper function for running parameterized tests
     def run_location_tests(self, test_fct, lat, lng, loc, expected):
         test_name = test_fct.__name__  # Get the name of the test function
@@ -198,15 +206,18 @@ class TestBaseTimezoneFinderClass:
         elif metafunc.function.__name__ == "test_unambiguous_timezone_at":
             metafunc.parametrize("lat, lng, loc, expected", BASIC_TEST_LOCATIONS)
 
-    # TODO
-    # def test_timezone_at(self, lat, lng, loc, expected):
-    #     self.run_location_tests(self.test_instance.timezone_at, lat, lng, loc, expected)
+    def test_timezone_at(self, lat, lng, loc, expected):
+        self.run_location_tests(self.test_instance.timezone_at, lat, lng, loc, expected)
 
-    # def test_timezone_at_land(self, lat, lng, loc, expected):
-    #     self.run_location_tests(self.test_instance.timezone_at_land, lat, lng, loc, expected)
+    def test_timezone_at_land(self, lat, lng, loc, expected):
+        self.run_location_tests(
+            self.test_instance.timezone_at_land, lat, lng, loc, expected
+        )
 
-    # def test_unambiguous_timezone_at(self, lat, lng, loc, expected):
-    #     self.run_location_tests(self.test_instance.unique_timezone_at, lat, lng, loc, expected)
+    def test_unambiguous_timezone_at(self, lat, lng, loc, expected):
+        self.run_location_tests(
+            self.test_instance.unique_timezone_at, lat, lng, loc, expected
+        )
 
     def test_timezone_names(self):
         timezone_names_stored = self.test_instance.timezone_names
@@ -254,33 +265,31 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         for poly_id in range(nr_of_polygons):
             print(f"Testing polygon ID: {poly_id}")
             coords = self.test_instance.coords_of(poly_id)
-            assert isinstance(coords, np.ndarray)
-            assert coords.ndim == 2, "coords must be a 2D array"
-            assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
-            # all polygons must have at least 3 coordinates
-            assert coords.shape[1] >= 3, (
-                f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
-            )
+            validate_polygon_coordinates(coords)
 
-            # test whether the coordinates are within valid ranges
-            x_coords, y_coords = coords
-            # apply to every coordinate
-
-            if not DEBUG:
-                continue
-
-            # testing all coordinates is expensive, so run only in DEBUG mode
-            assert is_valid_lng_int_vec(x_coords)
-            assert is_valid_lat_int_vec(y_coords)
+    def test_holes_of_poly(self):
+        print("test retrieving all holes for each polygon using _holes_of_poly:")
+        nr_of_polygons = self.test_instance.nr_of_polygons
+        for poly_id in range(nr_of_polygons):
+            print(f"polygon ID: {poly_id + 1}/{nr_of_polygons}", end="\r", flush=True)
+            for i, hole_coords in enumerate(self.test_instance._holes_of_poly(poly_id)):
+                print(
+                    f"polygon ID: {poly_id + 1}/{nr_of_polygons}, hole {i + 1}",
+                    end="\r",
+                    flush=True,
+                )
+                validate_polygon_coordinates(hole_coords)
+        print()  # move to next line after progress output
 
     def test_shortcut_boundary_result(self):
         for lng, lat, expected in BOUNDARY_TEST_CASES:
             # NOTE: for TimezoneFinder (using polygon data) the results must match!
             self.check_boundary(lng, lat, expected)
 
-    # TODO
-    # def test_certain_timezone_at(self, lat, lng, loc, expected):
-    #     self.run_location_tests(self.test_instance.certain_timezone_at, lat, lng, loc, expected)
+    def test_certain_timezone_at(self, lat, lng, loc, expected):
+        self.run_location_tests(
+            self.test_instance.certain_timezone_at, lat, lng, loc, expected
+        )
 
     @classmethod
     def pytest_generate_tests(cls, metafunc):
@@ -391,4 +400,5 @@ class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):
     in_memory_mode = True
 
 
+# TEST equality for all results. in_memory_mode = True/False must not change the results
 # TEST equality for all results. in_memory_mode = True/False must not change the results
