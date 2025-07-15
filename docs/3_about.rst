@@ -103,10 +103,10 @@ Both packages will likely coexist as they serve different use cases:
      - ~6 MB
    * - Memory Usage
      - ~40MB
-     - similar (precise comparison TBD)
+     - ~40MB
    * - Spatial Index
      - H3 hexagon-based index with ~40k cells
-     - Hierarchical tree of rectangles with fallback to polygon data
+     - Hierarchical tree of ~80k rectangles with fallback to polygon data
    * - Build Complexity
      - Easier to build when wheels are missing
      - Requires Rust to build wheels for some platforms
