@@ -84,13 +84,18 @@ from scripts.configs import (
 from scripts.utils import (
     print_shortcut_statistics,
     time_execution,
-    to_numpy_polygon,
+    to_numpy_polygon_repr,
     write_binary,
-    write_boundary_data,
+    write_bbox_data,
     write_json,
     load_json,
 )
-from timezonefinder.flatbuf.utils import write_polygon_flatbuffers
+from timezonefinder.flatbuf.polygon_utils import (
+    get_boundaries_path,
+    get_holes_path,
+    write_polygon_flatbuffers,
+)
+from timezonefinder.flatbuf.shortcut_utils import write_shortcuts_flatbuffers
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     DTYPE_FORMAT_H,
@@ -101,12 +106,11 @@ from timezonefinder.configs import (
     POLY_MAX_VALUES,
     POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
-    SHORTCUT_FILE,
     SHORTCUT_H3_RES,
     THRES_DTYPE_H,
     THRES_DTYPE_I,
 )
-from timezonefinder.hex_helpers import export_shortcuts_binary, lies_in_h3_cell
+from timezonefinder.hex_helpers import lies_in_h3_cell
 from timezonefinder.utils import (
     any_pt_in_poly,
     coord2int,
@@ -166,7 +170,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
             # the first entry is the outer polygon
             # NOTE: starting from here, only coordinates converted into int32 will be considered!
             # this allows using the JIT util function already here
-            poly = to_numpy_polygon(poly_with_hole.pop(0))
+            poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
             polygons.append(poly)
             x_coords = poly[0]
             y_coords = poly[1]
@@ -185,7 +189,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
                     end="",
                 )
                 polynrs_of_holes.append(poly_id)
-                hole_poly = to_numpy_polygon(hole)
+                hole_poly = to_numpy_polygon_repr(hole)
                 holes.append(hole_poly)
                 nr_coords = hole_poly.shape[1]
                 assert nr_coords >= 3
@@ -239,8 +243,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     return polygon_space
 
 
-def update_zone_names(output_path: Path):
-    # update all the zone names and set the right ids to be written in the poly_zone_ids.bin
+def compute_poly_nr2zone_id(output_path: Path):
     global poly_zone_ids
     global list_of_pointers
     global poly_boundaries
@@ -250,8 +253,7 @@ def update_zone_names(output_path: Path):
     global nr_of_zones
     global nr_of_polygons
 
-    write_zone_names(all_tz_names, output_path)
-
+    # TODO refactor. own function
     print("Computing where zones start and end...")
     last_id = -1
     zone_id = 0
@@ -378,7 +380,7 @@ class Hex:
         res = h3.get_resolution(id)
         coord_pairs = h3.cell_to_boundary(id)
         # ATTENTION: (lat, lng)! pairs
-        coords = to_numpy_polygon(coord_pairs, flipped=True)
+        coords = to_numpy_polygon_repr(coord_pairs, flipped=True)
         x_coords, y_coords = coords[0], coords[1]
         surr_n_pole = lies_in_h3_cell(id, lng=0.0, lat=MAX_LAT)
         surr_s_pole = lies_in_h3_cell(id, lng=0.0, lat=-MAX_LAT)
@@ -585,7 +587,7 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 
 @time_execution
-def compile_shortcut_mapping(output_path: Path) -> int:
+def compile_shortcut_mapping() -> ShortcutMapping:
     """compiles h3 hexagon shortcut mapping
 
     returns: mapping from hexagon id to list of polygon ids
@@ -598,12 +600,9 @@ def compile_shortcut_mapping(output_path: Path) -> int:
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    path2shortcut_file = Path(output_path) / SHORTCUT_FILE
     shortcuts = compile_h3_map(candidates=candidates)
     print_shortcut_statistics(shortcuts, poly_zone_ids)
-    shortcut_space = export_shortcuts_binary(shortcuts, path2shortcut_file)
-    validate_shortcut_mapping(shortcuts)
-    return shortcut_space
+    return shortcuts
 
 
 def latlng_to_cell(lng: float, lat: float) -> int:
@@ -658,7 +657,9 @@ def validate_shortcut_mapping(mapping: ShortcutMapping):
     validate_shortcut_resolution(mapping)
     validate_shortcut_completeness(mapping)
     validate_unused_polygons(mapping)
-    assert not DEBUG, "DEBUG mode is on"
+    assert not DEBUG, (
+        "DEBUG mode is on. shortcuts are invalid (not all polygons processed)"
+    )
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
@@ -677,13 +678,67 @@ def create_and_write_hole_registry(polynrs_of_holes, output_path):
     write_json(hole_registry, path)
 
 
+def write_binary_files(output_path: Path) -> None:
+    """
+    Write all binary files for the timezonefinder package.
+
+    This uses FlatBuffers for all data structures to ensure consistent formats.
+
+    Args:
+        output_path: Directory where binary files will be written
+    """
+    global polygons, poly_zone_ids, poly_boundaries, poly_nr2zone_id
+
+    print("Writing binary data to flatbuffer files...")
+
+    # Prepare polygon data for flatbuffers (coords, zone_id, bounds)
+    polygon_data = []
+    for i, poly_coords in enumerate(polygons):
+        zone_id = poly_zone_ids[i]
+        xmax, xmin, ymax, ymin = poly_boundaries[i]
+        bounds = (xmax, xmin, ymax, ymin)
+        polygon_data.append((poly_coords, zone_id, bounds))
+
+    # Write polygons to flatbuffer
+    file_path = get_boundaries_path(output_path)
+    _ = write_polygon_flatbuffers(polygon_data, file_path)
+
+    # Prepare hole data for flatbuffers (coords, zone_id, bounds)
+    hole_data = []
+    for i, hole_coords in enumerate(holes):
+        zone_id = 0  # TODO remove
+        x_coords, y_coords = hole_coords
+        xmax = np.max(x_coords)
+        xmin = np.min(x_coords)
+        ymax = np.max(y_coords)
+        ymin = np.min(y_coords)
+        bounds = (xmax, xmin, ymax, ymin)
+        hole_data.append((hole_coords, zone_id, bounds))
+
+    file_path = get_holes_path(output_path)
+    # Write holes to flatbuffer
+    hole_space = write_polygon_flatbuffers(hole_data, file_path)
+
+    # Write zone names as text file
+
+    print("Binary files written successfully")
+    return hole_space
+
+
 @time_execution
-def compile_polygon_binaries(output_path):
+def compile_data_files(output_path):
     global nr_of_polygons
-    _, hole_space = write_polygon_flatbuffers(output_path, polygons, holes)
+
+    write_zone_names(all_tz_names, output_path)
 
     # Write registry for holes (which polygon each hole belongs to)
     create_and_write_hole_registry(polynrs_of_holes, output_path)
+
+    # Write binary files
+    hole_space = write_binary_files(output_path)
+
+    # TODO remove outdated:
+    return hole_space
 
     # Write other metadata as before (zone ids, boundaries, etc.)
     write_binary(
@@ -695,7 +750,7 @@ def compile_polygon_binaries(output_path):
     write_binary(
         output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
     )
-    write_boundary_data(output_path, POLY_MAX_VALUES, poly_boundaries)
+    write_bbox_data(output_path, POLY_MAX_VALUES, poly_boundaries)
     write_binary(
         output_path,
         POLY_COORD_AMOUNT,
@@ -719,12 +774,16 @@ def parse_data(
     output_path.mkdir(parents=True, exist_ok=True)
 
     polygon_space = parse_polygons_from_json(input_path)
-    update_zone_names(output_path)
-    hole_space = compile_polygon_binaries(output_path)
+    compute_poly_nr2zone_id(output_path)
+    hole_space = compile_data_files(output_path)
 
     raise ValueError()  # TODO remove this line after testing
 
-    shortcut_space = compile_shortcut_mapping(output_path)
+    shortcut_mapping = compile_shortcut_mapping()
+    # TODO remov
+    # shortcut_space = export_shortcuts_binary(shortcuts, path2shortcut_file)
+    shortcut_space = write_shortcuts_flatbuffers(shortcut_mapping, output_path)
+    validate_shortcut_mapping(shortcut_mapping)
 
     total_space = polygon_space + hole_space + shortcut_space
     print(f"the polygon data makes up {polygon_space / total_space:.2%} of the data")
