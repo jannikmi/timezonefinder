@@ -1,14 +1,20 @@
 from importlib.util import find_spec
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import pytest
 
+from tests.auxiliaries import (
+    check_geometry,
+    check_pairwise_geometry,
+    is_valid_lat_int,
+    is_valid_lng_int,
+    ocean2land,
+    validate_polygon_coordinates,
+)
 from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
-    MAX_LAT_VAL_INT,
-    MAX_LNG_VAL_INT,
     THRES_DTYPE_H,
 )
 from timezonefinder.timezonefinder import (
@@ -16,8 +22,10 @@ from timezonefinder.timezonefinder import (
     TimezoneFinder,
     TimezoneFinderL,
 )
-from timezonefinder.utils import is_ocean_timezone
-from timezonefinder.flatbuf.utils import get_collection_length, get_boundaries_path
+from timezonefinder.flatbuf.polygon_utils import (
+    get_collection_length,
+    get_boundaries_path,
+)
 
 DEBUG = False
 # more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
@@ -36,75 +44,6 @@ tf: AbstractTimezoneFinder = class_under_test()
 in_memory_mode = False
 
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
-
-
-def ocean2land(test_locations):
-    for lat, lng, description, expected in test_locations:
-        if is_ocean_timezone(expected):
-            expected = None
-        yield lat, lng, description, expected
-
-
-def check_geometry(geometry_obj: List):
-    coords = geometry_obj[0][0]
-    assert len(coords) == 2, (
-        "the polygon does not consist of two latitude longitude lists"
-    )
-    x_coords, y_coords = coords
-    nr_x_coords = len(x_coords)
-    nr_y_coords = len(y_coords)
-    assert nr_x_coords > 2, "a polygon must consist of more than 2 coordinates"
-    assert nr_x_coords == nr_y_coords, (
-        "the amount of x and y coordinates (lng, lat) must be equal"
-    )
-
-
-def check_pairwise_geometry(geometry_obj: List):
-    # list of all coord pairs of the first polygon
-    cord_pairs = geometry_obj[0][0]
-    assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
-    first_coord_pair = cord_pairs[0]
-    assert len(first_coord_pair) == 2, (
-        "the polygon does not consist of coordinate pairs as expected."
-    )
-
-
-def is_valid_lng_int(x: int) -> bool:
-    return -MAX_LNG_VAL_INT <= x <= MAX_LNG_VAL_INT
-
-
-def is_valid_lat_int(y: int) -> bool:
-    return -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT
-
-
-def is_valid_lng_int_vec(arr) -> bool:
-    return np.all((-MAX_LNG_VAL_INT <= arr) & (arr <= MAX_LNG_VAL_INT))
-
-
-def is_valid_lat_int_vec(arr) -> bool:
-    return np.all((-MAX_LAT_VAL_INT <= arr) & (arr <= MAX_LAT_VAL_INT))
-
-
-def validate_polygon_coordinates(coords: np.ndarray):
-    """Helper function to validate polygon coordinates format and values."""
-    assert isinstance(coords, np.ndarray)
-    assert coords.ndim == 2, "coords must be a 2D array"
-    assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
-    # all polygons must have at least 3 coordinates
-    assert coords.shape[1] >= 3, (
-        f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
-    )
-
-    # test whether the coordinates are within valid ranges
-    x_coords, y_coords = coords
-    # apply to every coordinate
-
-    if not DEBUG:
-        return
-
-    # testing all coordinates is expensive, so run only in DEBUG mode
-    assert is_valid_lng_int_vec(x_coords)
-    assert is_valid_lat_int_vec(y_coords)
 
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
@@ -304,7 +243,6 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         longitude = -123.2
         latitude = 48.4
         # make numpy overflow runtime warning raise an error
-        import numpy as np
 
         np.seterr(all="warn")
         import warnings

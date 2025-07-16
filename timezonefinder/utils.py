@@ -40,6 +40,9 @@ except ImportError:
 
 
 # For Fortran-ordered arrays (F-contiguous), use the 'order="F"' in the Numba signature
+# F order is natural for the used coordinate schema:
+# coords = [x_coords, y_coords]
+# x_coords = coords[0]
 CoordType = Array(int32, 2, "F", True, aligned=True)
 
 
@@ -207,12 +210,12 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
     return coodinate_list
 
 
-@njit(cache=True)
-def convert2ints(polygon_data: np.ndarray) -> IntLists:
+# NOTE: no JIT compilation. slows down the execution
+def convert2ints(coordinates) -> IntLists:
     # return a tuple of coordinate lists
     return [
-        [coord2int(x) for x in polygon_data[0]],
-        [coord2int(y) for y in polygon_data[1]],
+        [coord2int(x) for x in coordinates[0]],
+        [coord2int(y) for y in coordinates[1]],
     ]
 
 
@@ -220,7 +223,7 @@ def convert2ints(polygon_data: np.ndarray) -> IntLists:
 def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
     # pt = points[:, i]
     for pt in coords1.T:
-        if pt_in_poly_python(int64(pt[0]), int64(pt[1]), coords2):
+        if pt_in_poly_python(np.int64(pt[0]), np.int64(pt[1]), coords2):
             return True
     return False
 
@@ -228,17 +231,52 @@ def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
 @njit(cache=True)
 def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     for pt in poly.T:
-        if not pt_in_poly_python(pt[0], pt[1], hole):
+        if not pt_in_poly_python(np.int64(pt[0]), np.int64(pt[1]), hole):
             return False
     return True
 
 
-def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
-    if not -180.0 <= lng <= 180.0:
-        raise ValueError(f"The given longitude {lng} is out of bounds")
-    if not -90.0 <= lat <= 90.0:
+@njit(cache=True)
+def is_valid_lat(lat: float) -> bool:
+    return -90.0 <= lat <= 90.0
+
+
+@njit(cache=True)
+def is_valid_lng(lng: float) -> bool:
+    return -180.0 <= lng <= 180.0
+
+
+@njit(cache=True)
+def is_valid_lat_vec(lats: np.ndarray) -> bool:
+    for lat in lats:
+        if not is_valid_lat(lat):
+            return False
+    return True
+
+
+@njit(cache=True)
+def is_valid_lng_vec(lngs: np.ndarray) -> bool:
+    for lng in lngs:
+        if not is_valid_lng(lng):
+            return False
+    return True
+
+
+def validate_lat(lat):
+    if not is_valid_lat(lat):
         raise ValueError(f"The given latitude {lat} is out of bounds")
-    return float(lng), float(lat)
+
+
+def validate_lng(lng: float) -> None:
+    if not is_valid_lng(lng):
+        raise ValueError(f"The given longitude {lng} is out of bounds")
+
+
+def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
+    lng, lat = float(lng), float(lat)
+    validate_lng(lng)
+    validate_lat(lat)
+    return lng, lat
 
 
 def get_file_size_byte(file) -> int:

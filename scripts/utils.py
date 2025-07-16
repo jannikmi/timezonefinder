@@ -7,8 +7,9 @@ from typing import Dict, List
 
 import numpy as np
 
+from scripts.configs import DEBUG
+from tests.auxiliaries import convert_polygon
 from timezonefinder import configs
-from timezonefinder.utils import coord2int
 
 
 def load_json(path):
@@ -56,22 +57,18 @@ def percent(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
 
-def to_numpy_polygon(coord_pairs, flipped: bool = False) -> np.ndarray:
+def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
     if flipped:
-        y_coords1, x_coords1 = zip(*coord_pairs)
+        # support the (lat, lng) format used by h3
+        y_coords, x_coords = zip(*coord_pairs)
     else:
-        x_coords1, y_coords1 = zip(*coord_pairs)
-    x_coords = list(map(coord2int, x_coords1))
-    y_coords = list(map(coord2int, y_coords1))
-    if x_coords[0] == x_coords[-1] and y_coords[0] == y_coords[-1]:
-        # IMPORTANT: polygon are represented without point repetition at the end
-        # -> do not use the last coordinate (only if equal to the first)!
-        x_coords.pop(-1)
-        y_coords.pop(-1)
-    assert len(x_coords) == len(y_coords)
-    assert len(x_coords) >= 3
-    poly = np.array((x_coords, y_coords), dtype=configs.DTYPE_FORMAT_SIGNED_I_NUMPY)
-    return poly
+        x_coords, y_coords = zip(*coord_pairs)
+    # Remove last coordinate if it repeats the first
+    if y_coords[0] == y_coords[-1] and x_coords[0] == x_coords[-1]:
+        x_coords = x_coords[:-1]
+        y_coords = y_coords[:-1]
+    # NOTE: skip expensive validation
+    return convert_polygon((x_coords, y_coords), validate=DEBUG)
 
 
 def accumulated_frequency(int_list):
@@ -169,7 +166,7 @@ def write_coordinates(output_file, data, *args, **kwargs):
             write_coordinate_value(output_file, y)
 
 
-def write_boundaries(output_file, boundaries: List, *args, **kwargs):
+def write_bboxes(output_file, boundaries: List, *args, **kwargs):
     for boundary in boundaries:
         write_coordinate_value(output_file, boundary.xmax)
         write_coordinate_value(output_file, boundary.xmin)
@@ -200,5 +197,5 @@ def write_coordinate_data(output_path, bin_file_name, data):
     return write_binary(output_path, bin_file_name, data, writing_fct=write_coordinates)
 
 
-def write_boundary_data(output_path, bin_file_name, data):
-    return write_binary(output_path, bin_file_name, data, writing_fct=write_boundaries)
+def write_bbox_data(output_path, bin_file_name, data):
+    return write_binary(output_path, bin_file_name, data, writing_fct=write_bboxes)
