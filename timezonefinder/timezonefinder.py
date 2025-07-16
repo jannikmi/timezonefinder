@@ -47,7 +47,7 @@ class AbstractTimezoneFinder(ABC):
     """
 
     __slots__ = [
-        "bin_file_location",
+        "data_location",
         "shortcut_mapping",
         "in_memory",
         "_fromfile",
@@ -99,16 +99,16 @@ class AbstractTimezoneFinder(ABC):
             bin_file_location = DEFAULT_DATA_DIR
         else:
             bin_file_location = Path(bin_file_location)
-        self.bin_file_location: Path = bin_file_location
+        self.data_location: Path = bin_file_location
 
-        self.timezone_names = read_zone_names(output_path=self.bin_file_location)
+        self.timezone_names = read_zone_names(self.data_location)
 
-        path2shortcut_bin = get_shortcut_file_path(self.bin_file_location)
+        path2shortcut_bin = get_shortcut_file_path(self.data_location)
         self.shortcut_mapping = read_shortcuts_binary(path2shortcut_bin)
 
         for attribute_name in self.binary_data_attributes:
             file_name = attribute_name + BINARY_FILE_ENDING
-            path2file = self.bin_file_location / file_name
+            path2file = self.data_location / file_name
             opened = self._open_binary(path2file)
             setattr(self, attribute_name, opened)
 
@@ -332,8 +332,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        boundaries_file = get_boundaries_path(self.bin_file_location)
-        holes_file = get_holes_path(self.bin_file_location)
+        boundaries_file = get_boundaries_path(self.data_location)
+        holes_file = get_holes_path(self.data_location)
         self._boundaries_file = self._open_binary(boundaries_file)
         self._holes_file = self._open_binary(holes_file)
 
@@ -347,7 +347,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         Load and convert the hole registry from JSON file, converting keys to int.
         """
         with open(
-            self.bin_file_location / HOLE_REGISTRY_FILE, encoding="utf-8"
+            self.data_location / HOLE_REGISTRY_FILE, encoding="utf-8"
         ) as json_file:
             hole_registry_tmp = json.loads(json_file.read())
         # convert the json string keys to int

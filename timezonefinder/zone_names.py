@@ -1,30 +1,40 @@
-import json
 from pathlib import Path
 from typing import List
-from timezonefinder.configs import DEFAULT_DATA_DIR, TIMEZONE_NAMES_FILE
+
+from timezonefinder.configs import DEFAULT_DATA_DIR
 
 
-def get_timezone_names_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
-    """Get the path to the timezone names JSON file."""
-    return output_path / TIMEZONE_NAMES_FILE
+def get_zone_names_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
+    """Get the path to the timezone names text file."""
+    return output_path / "timezone_names.txt"
 
 
-def write_json(obj, path: Path):
-    print("writing json to ", path)
-    with open(path, "w") as json_file:
-        json.dump(obj, json_file, indent=2)
-        # write a newline at the end of the file
-        json_file.write("\n")
+def write_zone_names(
+    zone_names: List[str], output_path: Path = DEFAULT_DATA_DIR
+) -> None:
+    """
+    Write timezone names to a text file.
+
+    Args:
+        zone_names: List of timezone names.
+        output_path: Directory where the output file will be written.
+    """
+    path = get_zone_names_path(output_path)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(zone_names))
 
 
-def write_zone_names(tz_names: List[str], output_path: Path = DEFAULT_DATA_DIR) -> None:
-    file_path = get_timezone_names_path(output_path)
-    print(f"updating the zone names in {file_path} now.")
-    write_json(tz_names, file_path)
+def read_zone_names(path: Path) -> List[str]:
+    """
+    Read timezone names from a text file.
 
+    Args:
+        path: Path to the timezone names text file.
+              If None, the default path will be used.
 
-def read_zone_names(output_path: Path = DEFAULT_DATA_DIR) -> List[str]:
-    """Read the timezone names from the JSON file."""
-    file_path = get_timezone_names_path(output_path)
-    with open(file_path) as json_file:
-        return json.load(json_file)
+    Returns:
+        List of timezone names.
+    """
+    file_path = get_zone_names_path(path)
+    with open(file_path, encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
