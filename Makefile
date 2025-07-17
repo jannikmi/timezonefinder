@@ -31,7 +31,7 @@ outdated:
 
 env:
 	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.8 uv -y
+	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.9 uv -y
 	#	&& conda activate timezonefinder
 	# && make req
 
