@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import pytest
 
+from scripts.configs import THRES_DTYPE_H
 from tests.auxiliaries import (
     check_geometry,
     check_pairwise_geometry,
@@ -15,7 +16,6 @@ from tests.auxiliaries import (
 from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
-    THRES_DTYPE_H,
 )
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder.timezonefinder import (
@@ -46,9 +46,10 @@ RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
 class TestBaseTimezoneFinderClass:
+    class_under_test = TimezoneFinderL
+    # NOTE: setting memory mode does not make a difference for TimezoneFinderL (relevant only for polygon data)
     in_memory_mode = False
     bin_file_dir = None
-    class_under_test = TimezoneFinderL
     on_land_pt_fct_name = "timezone_at"
     test_locations = BASIC_TEST_LOCATIONS
 
@@ -171,10 +172,6 @@ class TestBaseTimezoneFinderClass:
             "not all timezone names are unique"
         )
         # TODO test if all timezone names are valid
-
-
-class TestBaseClassTestMEM(TestBaseTimezoneFinderClass):
-    in_memory_mode = True
 
 
 # tests for Timezonefinder class

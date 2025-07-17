@@ -1,6 +1,5 @@
 import json
 from abc import ABC, abstractmethod
-from io import BytesIO
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 import numpy as np
@@ -14,18 +13,12 @@ from timezonefinder.np_binary_helpers import (
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
-    BINARY_DATA_ATTRIBUTES,
-    DATA_ATTRIBUTE_NAMES,
     DEFAULT_DATA_DIR,
-    HOLE_REGISTRY,
-    HOLE_REGISTRY_FILE,
     SHORTCUT_H3_RES,
     CoordLists,
     CoordPairs,
 )
 
-# TODO remove old import
-# from timezonefinder.hex_helpers import get_shortcut_file_path, read_shortcuts_binary
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
@@ -34,10 +27,9 @@ from timezonefinder.zone_names import read_zone_names
 
 
 class AbstractTimezoneFinder(ABC):
-    # TODO document attributes in all classes
     # prevent dynamic attribute assignment (-> safe memory)
     """
-    Abstract base class for a timezone finder.
+    Abstract base class for TimezoneFinder instances
     """
 
     __slots__ = [
@@ -58,23 +50,6 @@ class AbstractTimezoneFinder(ABC):
     List of attribute names that store opened binary data files.
     """
 
-    def _open_binary(self, path2file):
-        """Open a binary file, either in memory or as a file handle.
-
-        Args:
-            path2file: Path to the binary file
-
-        Returns:
-            Either a BytesIO object (if in_memory=True) or a file handle
-        """
-        if self.in_memory:
-            with open(path2file, mode="rb") as fp:
-                opened = BytesIO(fp.read())
-                opened.seek(0)
-        else:
-            opened = open(path2file, mode="rb")
-        return opened
-
     def __init__(
         self,
         bin_file_location: Optional[Union[str, Path]] = None,
@@ -83,22 +58,11 @@ class AbstractTimezoneFinder(ABC):
         """
         Initialize the AbstractTimezoneFinder.
         :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
-        :param in_memory: Whether to completely read and keep the binary files in memory.
+        :param in_memory: ignored. The binary files will be read into memory (few MB)
         """
-        self.in_memory = in_memory
-
-        if self.in_memory:
-            self._fromfile = utils.fromfile_memory
-        else:
-            self._fromfile = np.fromfile
-
-        # open all the files in binary reading mode
-        # for more info on what is stored in which .bin file, please read the comments in file_converter.py
         if bin_file_location is None:
             bin_file_location = DEFAULT_DATA_DIR
-        else:
-            bin_file_location = Path(bin_file_location)
-        self.data_location: Path = bin_file_location
+        self.data_location: Path = Path(bin_file_location)
 
         self.timezone_names = read_zone_names(self.data_location)
 
@@ -107,13 +71,6 @@ class AbstractTimezoneFinder(ABC):
 
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
-
-        # TODO
-        # for attribute_name in self.binary_data_attributes:
-        #     file_name = attribute_name + BINARY_FILE_ENDING
-        #     path2file = self.data_location / file_name
-        #     opened = self._open_binary(path2file)
-        #     setattr(self, attribute_name, opened)
 
     def __del__(self):
         pass
@@ -318,14 +275,16 @@ class TimezoneFinder(AbstractTimezoneFinder):
     :ivar binary_data_attributes: the names of all attributes which store the opened binary data files
 
     :param bin_file_location: path to the binary data files to use, None if native package data should be used
-    :param in_memory: whether to completely read and keep the binary files in memory
+    :param in_memory: whether to completely read and keep the timezone polygon binary files in memory
     """
 
     # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__
     # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
-    __slots__ = DATA_ATTRIBUTE_NAMES
-
-    binary_data_attributes = BINARY_DATA_ATTRIBUTES
+    __slots__ = [
+        "hole_registry",
+        "_boundaries_file",
+        "_holes_file",
+    ]
 
     def __init__(
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
@@ -339,17 +298,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self.holes = PolygonArray(data_location=self.holes_dir, in_memory=in_memory)
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few it is feasible to keep them in the memory
-        hole_registry = self._load_hole_registry()
-        setattr(self, HOLE_REGISTRY, hole_registry)
+        # since there are very few entries it is feasible to keep them in the memory
+        self.hole_registry = self._load_hole_registry()
 
     def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
         """
-        with open(
-            self.data_location / HOLE_REGISTRY_FILE, encoding="utf-8"
-        ) as json_file:
+        path = utils.get_hole_registry_path(self.data_location)
+        with open(path, encoding="utf-8") as json_file:
             hole_registry_tmp = json.loads(json_file.read())
         # convert the json string keys to int
         return {int(k): v for k, v in hole_registry_tmp.items()}
@@ -378,9 +335,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param polygon_nr: Number of the polygon
         :yield: Hole IDs
         """
-        hole_registry = getattr(self, HOLE_REGISTRY)
         try:
-            amount_of_holes, first_hole_id = hole_registry[polygon_nr]
+            amount_of_holes, first_hole_id = self.hole_registry[polygon_nr]
         except KeyError:
             return
         for i in range(amount_of_holes):

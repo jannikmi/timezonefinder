@@ -80,3 +80,8 @@ def get_boundaries_dir(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
 def get_holes_dir(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
     """Return the path to the holes directory."""
     return data_dir / "holes"
+
+
+def get_hole_registry_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the hole registry file."""
+    return data_dir / "hole_registry.json"

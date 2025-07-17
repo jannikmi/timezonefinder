@@ -1,13 +1,12 @@
 import json
 import pickle
-import struct
-from os.path import abspath, join
+from os.path import abspath
 from time import time
 from typing import Dict, List
 
 import numpy as np
 
-from scripts.configs import DEBUG
+from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
 from timezonefinder.utils_numba import coord2int
@@ -78,7 +77,7 @@ def convert2ints(coordinates: configs.CoordLists) -> configs.IntLists:
 
 
 def convert_polygon(coords, validate: bool = True) -> np.ndarray:
-    coord_array = np.array(coords, dtype="float64")
+    coord_array = np.array(coords, dtype=DTYPE_FORMAT_F_NUMPY)
     validate_coord_array_shape(coord_array)
     x_coords, y_coords = coord_array
     if validate:
@@ -87,9 +86,7 @@ def convert_polygon(coords, validate: bool = True) -> np.ndarray:
         assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
     x_ints, y_ints = convert2ints(coords)
     # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
-    poly = np.array(
-        (x_ints, y_ints), dtype=configs.DTYPE_FORMAT_SIGNED_I_NUMPY, order="F"
-    )
+    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="F")
     return poly
 
 
@@ -158,83 +155,6 @@ def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     acc_inverse = [round(100 - x, 2) for x in acc]
     print(acc_inverse)
     print("--------------------------------\n")
-
-
-def export_mapping(file_name: str, obj: Dict, res: int):
-    write_pickle(obj, f"{file_name}_res{res}.pickle")
-    # uint key type can't be JSON serialised
-    json_mapping = {str(k): v for k, v in obj.items()}
-    write_json(json_mapping, f"{file_name}_res{res}.json")
-
-
-def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
-    assert value > lower_value_limit, (
-        f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
-    )
-    assert value < upper_value_limit, (
-        f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
-    )
-    output_file.write(struct.pack(data_format, value))
-
-
-def write_coordinate_value(output_file, coord_as_int):
-    # NOTE: float coordinates are assumed to have been converted into int32 already
-    write_value(
-        output_file,
-        coord_as_int,
-        data_format=configs.DTYPE_FORMAT_SIGNED_I,
-        lower_value_limit=configs.THRES_DTYPE_SIGNED_I_LOWER,
-        upper_value_limit=configs.THRES_DTYPE_SIGNED_I_UPPER,
-    )
-
-
-def write_regular(output_file, data, *args, **kwargs):
-    for value in data:
-        write_value(output_file, value, *args, **kwargs)
-
-
-def write_coordinates(output_file, data, *args, **kwargs):
-    for x_coords, y_coords in data:
-        for x in x_coords:
-            write_coordinate_value(output_file, x)
-
-        for y in y_coords:
-            write_coordinate_value(output_file, y)
-
-
-def write_bboxes(output_file, boundaries: List, *args, **kwargs):
-    for boundary in boundaries:
-        write_coordinate_value(output_file, boundary.xmax)
-        write_coordinate_value(output_file, boundary.xmin)
-        write_coordinate_value(output_file, boundary.ymax)
-        write_coordinate_value(output_file, boundary.ymin)
-
-
-def write_binary(
-    output_path,
-    bin_file_name,
-    data,
-    data_format=configs.DTYPE_FORMAT_H,
-    lower_value_limit=-1,
-    upper_value_limit=configs.THRES_DTYPE_H,
-    writing_fct=write_regular,
-):
-    path = abspath(join(output_path, bin_file_name + configs.BINARY_FILE_ENDING))
-    print(f"writing {path}")
-    with open(path, "wb") as output_file:
-        writing_fct(
-            output_file, data, data_format, lower_value_limit, upper_value_limit
-        )
-        file_length = output_file.tell()
-    return file_length
-
-
-def write_coordinate_data(output_path, bin_file_name, data):
-    return write_binary(output_path, bin_file_name, data, writing_fct=write_coordinates)
-
-
-def write_bbox_data(output_path, bin_file_name, data):
-    return write_binary(output_path, bin_file_name, data, writing_fct=write_bboxes)
 
 
 def has_coherent_sequences(lst: List[int]) -> bool:

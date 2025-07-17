@@ -53,11 +53,6 @@ class PolygonArray:
         """
         self.in_memory = in_memory
 
-        if self.in_memory:
-            self._fromfile = utils.fromfile_memory
-        else:
-            self._fromfile = np.fromfile
-
         self.data_location: Path = Path(data_location)
 
         xmin_path = get_xmin_path(self.data_location)
@@ -72,6 +67,8 @@ class PolygonArray:
         self.ymax = read_per_polygon_vector(ymax_path)
 
         coordinate_file = get_coordinate_path(self.data_location)
+        # NOTE: this will read the file into memory if in_memory is True,
+        # otherwise it will open it as a file handle
         self.coordinate_file = self._open_binary(coordinate_file)
 
     def __del__(self):

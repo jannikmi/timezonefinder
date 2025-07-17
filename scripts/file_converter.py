@@ -1,6 +1,9 @@
 """
 script for parsing the timezone data from https://github.com/evansiroky/timezone-boundary-builder to the binary format required by `timezonefinder`
 
+the used data format is described in the documentation under docs/data_format.rst
+
+
 TODO refactor into multiple modules
 
 
@@ -16,44 +19,18 @@ This makes computations faster and it takes lot less space,
     without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
 
 
-https://docs.python.org/3/library/struct.html#format-characters
-B = unsigned char (1byte integer)
-H = unsigned short (2 byte integer)
-I = unsigned 4byte integer
-i = signed 4byte integer
-Q = unsigned 8byte integer
 
-Binaries being written:
-
-TODO update:
-
-[POLYGONS:]
-poly_zone_ids: the related zone_id for every polygon ('<H')
-poly_coord_amount: the amount of coordinates in every polygon ('<I')
-poly_adr2data: address in poly_data.bin where data for every polygon starts ('<I')
-poly_bounds: boundaries for every polygon ('<iiii': xmax, xmin, ymax, ymin)
-poly_data: coordinates for every polygon (N coordinates: 2N '<i'), first all x then all y values
-poly_nr2zone_id: the polygon number of the first polygon from every zone ('<H'),
-    used for reading all polygons of one zone
-
-[HOLES:]
-hole_poly_ids: the related polygon_nr (=id) for every hole ('<H')
-hole_coord_amount: the amount of coordinates in every hole ('<H')
-hole_adr2data: address in hole_data.bin where data for every hole starts ('<I')
-hole_data: coordinates for every hole (multiple times '<i')
-
-[SHORTCUTS:] coordinate to polygon id indexing
+[SHORTCUTS:] spacial index: coordinate to potential polygon id candidates
 shortcuts drastically reduce the amount of polygons which need to be checked in order to
     decide which timezone a point is located in.
 the surface of the world is split up into a grid of hexagons (h3 library)
 shortcut here means storing for every cell in a grid of the world map which polygons are located in that cell.
 
-shortcuts.bin: per entry : hex id "<Q", nr of entries "<B", poly ids of entry "<H".
 Note: the poly ids within one shortcut entry are sorted for optimal performance
 
 
 Uber H3 findings:
-replacing the polygon data with hexagon key mappings failed,
+replacing the polygon data with hexagon key mappings failed (filling up the polygon with hexagons of different resolutions),
     since the amount of required entries becomes too large in the resolutions required for sufficient accuracy.
     hypothesis: "boundary regions" where multiple zones meet and no unique shortcut can be found are very large.
     also: storing one single hexagon id takes 8 byte
@@ -85,14 +62,14 @@ from scripts.configs import (
     HexIdSet,
     PolyIdSet,
     ZoneIdSet,
+    DTYPE_FORMAT_H_NUMPY,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
 )
 from scripts.utils import (
     check_shortcut_sorting,
     print_shortcut_statistics,
     time_execution,
     to_numpy_polygon_repr,
-    write_binary,
-    write_bbox_data,
     write_json,
     load_json,
 )
@@ -105,18 +82,8 @@ from timezonefinder.flatbuf.polygon_utils import (
 from timezonefinder.flatbuf.shortcut_utils import write_shortcuts_flatbuffers
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
-    DTYPE_FORMAT_H,
-    DTYPE_FORMAT_H_NUMPY,
-    DTYPE_FORMAT_I,
-    DTYPE_FORMAT_SIGNED_I_NUMPY,
-    HOLE_REGISTRY_FILE,
     NR_BYTES_I,
-    POLY_COORD_AMOUNT,
-    POLY_MAX_VALUES,
-    POLY_ZONE_IDS,
     SHORTCUT_H3_RES,
-    THRES_DTYPE_H,
-    THRES_DTYPE_I,
 )
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -125,12 +92,14 @@ from timezonefinder.np_binary_helpers import (
     get_ymin_path,
     get_zone_ids_path,
     get_zone_positions_path,
+    store_per_polygon_vector,
 )
 from timezonefinder.utils_numba import (
     coord2int,
     int2coord,
 )
 from timezonefinder.utils import (
+    get_hole_registry_path,
     get_holes_dir,
     get_boundaries_dir,
 )
@@ -256,27 +225,11 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert poly_id == nr_of_polygons, (
         f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
     )
-
     if 0 in polygon_lengths:
         raise ValueError()
 
-    # binary file value range tests:
-    assert nr_of_polygons < THRES_DTYPE_H, (
-        f"address overflow: #{nr_of_polygons} polygon ids cannot be encoded as {DTYPE_FORMAT_H}!"
-    )
-    assert nr_of_zones < THRES_DTYPE_H, (
-        f"address overflow: #{nr_of_zones} zone ids cannot be encoded as {DTYPE_FORMAT_H}!"
-    )
     max_poly_length = max(polygon_lengths)
-    assert max_poly_length < THRES_DTYPE_I, (
-        f"address overflow: the maximal amount of coords {max_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
-    )
     max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
-    assert max_hole_poly_length < THRES_DTYPE_H, (
-        f"address overflow: the maximal amount of coords in hole polygons "
-        f"{max_hole_poly_length} cannot be represented by {DTYPE_FORMAT_I}"
-    )
-
     print("... parsing done. found:")
     print(f"{nr_of_polygons:,} polygons from")
     print(f"{nr_of_zones:,} timezones with")
@@ -707,7 +660,7 @@ def create_and_write_hole_registry(polynrs_of_holes, output_path):
             hole_registry[poly_id] = (amount_of_holes + 1, hole_id)
         except KeyError:
             hole_registry[poly_id] = (1, i)
-    path = output_path / HOLE_REGISTRY_FILE
+    path = get_hole_registry_path(output_path)
     write_json(hole_registry, path)
 
 
@@ -761,8 +714,7 @@ def write_numpy_binaries(output_path):
     zone_positions = compute_zone_positions()
     zone_positions_arr = to_numpy_array(zone_positions, dtype=DTYPE_FORMAT_H_NUMPY)
     zone_positions_path = get_zone_positions_path(output_path)
-    # TODO use store_per_polygon_vector(
-    np.save(zone_positions_path, zone_positions_arr)
+    store_per_polygon_vector(zone_positions_path, zone_positions_arr)
 
     # BOUNDARY_ZONE_IDS: the zone id for every polygon
     boundary_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
@@ -787,11 +739,11 @@ def write_numpy_binaries(output_path):
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
             convert_bboxes_to_numpy(bounds)
         )
-        # Save bounding box properties
-        np.save(get_xmax_path(dir), boundary_xmax)
-        np.save(get_xmin_path(dir), boundary_xmin)
-        np.save(get_ymax_path(dir), boundary_ymax)
-        np.save(get_ymin_path(dir), boundary_ymin)
+        # Save bounding box properties using store_per_polygon_vector
+        store_per_polygon_vector(get_xmax_path(dir), boundary_xmax)
+        store_per_polygon_vector(get_xmin_path(dir), boundary_xmin)
+        store_per_polygon_vector(get_ymax_path(dir), boundary_ymax)
+        store_per_polygon_vector(get_ymin_path(dir), boundary_ymin)
 
     print("Numpy binary files written successfully")
 
@@ -844,25 +796,6 @@ def compile_data_files(output_path):
     # Write binary files
     hole_space = write_binary_files(output_path)
 
-    # TODO remove outdated:
-    return hole_space
-
-    # Write other metadata as before (zone ids, boundaries, etc.)
-
-    write_binary(
-        output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
-    )
-    write_bbox_data(output_path, POLY_MAX_VALUES, poly_boundaries)
-    write_binary(
-        output_path,
-        POLY_COORD_AMOUNT,
-        polygon_lengths,
-        data_format=DTYPE_FORMAT_I,
-        upper_value_limit=THRES_DTYPE_I,
-    )
-
-    # No longer writing POLY_DATA, POLY_ADR2DATA, HOLE_DATA, HOLE_ADR2DATA, HOLE_COORD_AMOUNT as monolithic files
-    # Return the total space used by all hole polygon binary files
     return hole_space
 
 

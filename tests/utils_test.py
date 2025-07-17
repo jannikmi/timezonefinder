@@ -3,6 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 import pytest
 
+from scripts.configs import DTYPE_FORMAT_H_NUMPY
 from scripts.utils import convert2ints, convert_polygon
 from tests.auxiliaries import (
     convert_inside_polygon_input,
@@ -11,7 +12,7 @@ from tests.auxiliaries import (
     get_rnd_query_pt,
 )
 from timezonefinder import utils_clang, utils_numba, utils
-from timezonefinder.configs import DTYPE_FORMAT_H_NUMPY, INT2COORD_FACTOR
+from timezonefinder.configs import INT2COORD_FACTOR
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)

@@ -1,15 +1,11 @@
-import json
 import subprocess
-from pathlib import Path
 
 import pytest
 
-from timezonefinder.configs import TIMEZONE_NAMES_FILE
+from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.zone_names import read_zone_names
 
-PROJECT_DIR = Path(__file__).parent.parent
-TIMEZONE_FILE = PROJECT_DIR / "timezonefinder" / TIMEZONE_NAMES_FILE
-with open(TIMEZONE_FILE) as json_file:
-    timezone_names = json.loads(json_file.read())
+timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 
 
 @pytest.mark.parametrize(
