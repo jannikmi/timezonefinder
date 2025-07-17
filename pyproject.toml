@@ -48,6 +48,8 @@ dev = [
     "isort",
     "ruff",
     "cibuildwheel",
+    # used in example scripts
+    "pytz>=2022.7.1"
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",
