@@ -13,7 +13,8 @@
     },
     {
       "args": [
-        "tests/main_test.py::TestTimezonefinderClass::test_coords_of",
+        "-s",
+        "tests/utils_test.py::test_inside_polygon",
         "-v"
       ],
       "console": "integratedTerminal",
@@ -22,7 +23,7 @@
       },
       "justMyCode": false,
       "module": "pytest",
-      "name": "Python: Test coords_of",
+      "name": "Run unit test",
       "request": "launch",
       "type": "debugpy"
     }
