@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
     needs: [test, make-wheels, make-sdist]
-    if: endsWith(github.ref, '/master')
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     permissions:
         id-token: write
         contents: write
