@@ -1,25 +1,24 @@
 import subprocess
 import sys
+import pytest
 
 
-def test_aware_datetime_runs():
+@pytest.mark.parametrize(
+    "script_name",
+    [
+        "aware_datetime",
+        "get_offset",
+        "get_geometry",
+    ],
+)
+def test_example_script_runs(script_name):
+    module_name = f"examples.{script_name}"
+    print(f"Running {module_name} script:")
     result = subprocess.run(
-        [sys.executable, "-m", "examples.aware_datetime"],
+        [sys.executable, "-m", module_name],
         capture_output=True,
         text=True,
     )
+    print(result.stdout)
+    print(result.stderr)
     assert result.returncode == 0, f"Script failed: {result.stderr}"
-
-
-def test_get_offset_runs():
-    result = subprocess.run(
-        [sys.executable, "-m", "examples.get_offset"], capture_output=True, text=True
-    )
-    assert result.returncode == 0, f"Script failed: {result.stderr}"
-
-
-def test_get_geometry_runs():
-    result = subprocess.run(
-        [sys.executable, "-m", "examples.get_geometry"], capture_output=True, text=True
-    )
-    assert result.returncode == 0, f"get_geometry.py failed:\n{result.stderr}"
