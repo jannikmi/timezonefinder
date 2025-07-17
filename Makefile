@@ -76,11 +76,10 @@ build:
 
 # in order to release a new package version, the commit needs to be tagged with the version number
 release:
-	VERSION = v$(shell uv version)
 	@echo "tagging the current commit with the version number: $(VERSION)"
-	git tag -a $(VERSION) -m 'Release version $(VERSION)'
-	@echo "pushing the tag to the remote repository..."
-	git push origin $(VERSION)
+	git tag -a "Release $(VERSION)" -m "Release $(VERSION)"
+	@echo "pushing the changes to the remote repository"
+	git push origin "Release $(VERSION)"
 
 # documentation generation:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
