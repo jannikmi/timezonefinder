@@ -21,10 +21,9 @@ Changelog
 * separate binary data storage folders for polygon boundaries and holes. handling both with the PolygonArray class
 * parameterised location tests
 * improved CLI code quality suppressing any output. added nicer output in verbose mode
-
-.. * dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
-.. * added support for official for python 3.12
-.. * added usage example scripts
+* dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* added support for official for python 3.12
+* added usage example scripts
 
 
 6.5.9 (2025-03-25)
