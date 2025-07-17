@@ -3,6 +3,17 @@
 Performance
 ===========
 
+Binary Data Format
+-----------------
+
+TimezoneFinder uses an optimized binary format based on FlatBuffers for storing and accessing timezone data. This format provides several performance advantages:
+
+* **Zero-Copy Access**: FlatBuffers allows accessing serialized data without unpacking or parsing
+* **Spatial Indexing**: H3 hexagonal grid system efficiently narrows down polygon candidates
+* **Optimized Data Layout**: Compact storage with direct access to relevant data structures
+
+For detailed information about the data format in use, see :doc:`data_format`.
+
 
 C extension
 -----------

@@ -11,29 +11,10 @@ About
 
 Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by a point in polygon (PIP) check.
 In many cases an expensive PIP check can be avoided.
-This package currently uses a precomputed timezone polygon index based on the geospatial hexagon index of the `h3 library <https://github.com/uber/h3-py>`__.
+
+For detailed information about the data format in use, see :doc:`data_format`.
+
 Among other tweaks this index makes ``timezonefinder`` efficient (also check the :ref:`performance chapter <performance>`).
-See the docstrings in the source code for further explanation.
-
-Data
-----
-
-Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (WITH oceans, geoJSON)
-
-.. note::
-
-    In the data set the timezone polygons often include territorial waters -> they do NOT follow the shorelines.
-    This makes the results of ``certain_timezone_at()`` less expressive:
-    from a timezone match one cannot distinguish whether a query point lies on land or in ocean.
-
-.. note::
-
-    Please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__)
-    and that hence a query coordinate can actually match multiple time zones.
-    ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
-
-- package size: ~46 MB
-- original data size: ~110 MB
 
 
 References
@@ -136,3 +117,4 @@ Thanks to:
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
 - `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
 - `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4
+- `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for providing example scripts and updating python version support

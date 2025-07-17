@@ -174,7 +174,7 @@ Certain results can be retrieved with ``unique_timezone_at()``:
 
 .. note::
 
-    If you only use ``TimezoneFinderL``, you may delete all data files except ``timezone_names.json``, ``shortcuts.bin`` to obtain a truly lightweight installation.
+    If you only use ``TimezoneFinderL``, you may delete all unused timezone polygon data files in the folders ``data/boundaries`` and ``data/holes`` to obtain a truly lightweight installation (few MB).
 
 
 
