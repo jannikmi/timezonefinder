@@ -11,7 +11,7 @@ on:
 
 env:
   # the supported Python versions for pre-built wheels
-  CIBW_BUILD_VERSIONS: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+  CIBW_BUILD_VERSIONS: "cp39-* cp310-* cp311-* cp312-* cp313-*"
 
 jobs:
   pre-commit-hooks:
@@ -34,7 +34,6 @@ jobs:
         # all officially supported Python versions should be tested
         # NOTE: need to match the versions in pyproject.toml > tox.ini
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
