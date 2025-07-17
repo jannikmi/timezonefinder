@@ -2,6 +2,31 @@
 Changelog
 =========
 
+
+7.0.0 (WIP TBA)
+------------------
+
+* offer simple global functions internally reusing a global TimeZonefinder instance
+* API Change: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
+
+
+6.6.0 (2025-07-17)
+------------------
+
+* major internal refactoring without breaking API changes. improvements for performance and code quality
+* use `flatbuffer` binary files for storing the polygon coordinate data and the shorcuts (spatial h3 index) in binary format. removed any custom code for reading and writing binary files (e.g. seek operations)
+* documented the binary format in the documentation
+* grouping all data files into a single "data" folder
+* added a new class PolygonArray to abstract away handling binary data of multiple polygons
+* separate binary data storage folders for polygon boundaries and holes. handling both with the PolygonArray class
+* parameterised location tests
+* improved CLI code quality suppressing any output. added nicer output in verbose mode
+
+.. * dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+.. * added support for official for python 3.12
+.. * added usage example scripts
+
+
 6.5.9 (2025-03-25)
 ------------------
 
