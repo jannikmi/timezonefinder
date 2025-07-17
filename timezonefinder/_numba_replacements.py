@@ -9,6 +9,7 @@ dtype_2int_tuple = typeof((1, 1))
 """
 
 
+# decorator
 def njit(*args, **kwargs):
     def wrapper(f):
         return f
@@ -23,20 +24,19 @@ class SubscriptAndCallable:
     def __class_getitem__(cls, item):
         return None
 
+    def __call__(self, arg):
+        # for example int64(1) must work
+        return arg
+
 
 # DTYPES
-# @njit(b1(i4, i4, i4[:, :]), cache=True)
-
-
-class b1(SubscriptAndCallable):
-    pass
 
 
 class f8(SubscriptAndCallable):
     pass
 
 
-class i2(SubscriptAndCallable):
+class i8(SubscriptAndCallable):
     pass
 
 
@@ -44,5 +44,13 @@ class i4(SubscriptAndCallable):
     pass
 
 
-class u2(SubscriptAndCallable):
+class uint16(SubscriptAndCallable):
+    pass
+
+
+class boolean(SubscriptAndCallable):
+    pass
+
+
+class Array(SubscriptAndCallable):
     pass

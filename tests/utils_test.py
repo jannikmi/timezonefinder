@@ -3,15 +3,16 @@ from typing import Callable, Tuple
 import numpy as np
 import pytest
 
+from scripts.configs import DTYPE_FORMAT_H_NUMPY
+from scripts.utils import convert2ints, convert_polygon
 from tests.auxiliaries import (
     convert_inside_polygon_input,
     get_rnd_poly,
     get_rnd_poly_int,
     get_rnd_query_pt,
 )
-from timezonefinder import utils, utils_clang
-from timezonefinder.configs import DTYPE_FORMAT_H_NUMPY, INT2COORD_FACTOR
-from timezonefinder.utils_clang import clang_extension_loaded
+from timezonefinder import utils_clang, utils_numba, utils
+from timezonefinder.configs import INT2COORD_FACTOR
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -162,7 +163,7 @@ def test_convert2coords():
 
 def test_convert2ints():
     coords_true = get_rnd_poly()
-    poly_int = utils.convert2ints(coords_true)
+    poly_int = convert2ints(coords_true)
     assert isinstance(poly_int, list)
     assert len(poly_int) == 2
     x_coords, y_coords = poly_int
@@ -178,15 +179,14 @@ def test_convert2ints():
 
 def test_clang_extension_loaded():
     # testing the Clang version of the Point in Polygon algorithm requires the C extension to be loaded
-    assert clang_extension_loaded, "the clang extension not loaded, "
+    assert utils.clang_extension_loaded, "the clang extension not loaded, "
 
 
-# TODO parametrize the test cases
 # TODO test equal results of both implementation
 @pytest.mark.parametrize(
     "inside_poly_func",
     [
-        utils.pt_in_poly_python,
+        utils_numba.pt_in_poly_python,
         utils_clang.pt_in_poly_clang,
     ],
 )
@@ -209,12 +209,12 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     print(template.format("#test point", "EXPECTED", "COMPUTED", "  "))
     # print("=" * 50)
     coords, query_points, expected_results = test_case
-    coords = np.array(coords)
+    coords_int = convert_polygon(coords)
     for i, ((lng, lat), expected_result) in enumerate(
         zip(query_points, expected_results)
     ):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
-        x, y, coords_int = convert_inside_polygon_input(lng, lat, coords)
+        x, y = convert_inside_polygon_input(lng, lat)
         actual_result = inside_poly_func(x, y, coords_int)
         if actual_result == expected_result:
             ok = "OK"
@@ -229,29 +229,37 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     assert nr_mistakes == 0
 
 
-# TODO @pytest.mark.parametrize(
-def test_rectify_coords():
-    # within bounds -> no exception
-    utils.validate_coordinates(lng=180.0, lat=90.0)
-    utils.validate_coordinates(lng=-180.0, lat=90.0)
-    utils.validate_coordinates(lng=-180.0, lat=90.0)
-    utils.validate_coordinates(lng=180.0, lat=-90.0)
-    utils.validate_coordinates(lng=180.0, lat=-90.0)
-    utils.validate_coordinates(lng=-180.0, lat=-90.0)
-    utils.validate_coordinates(lng=-180.0, lat=-90.0)
+@pytest.mark.parametrize(
+    "lng, lat",
+    [
+        (180.0, 90.0),
+        (-180.0, 90.0),
+        (-180.0, 90.0),
+        (180.0, -90.0),
+        (180.0, -90.0),
+        (-180.0, -90.0),
+        (-180.0, -90.0),
+    ],
+)
+def test_rectify_coords_valid(lng, lat):
+    utils.validate_coordinates(lng=lng, lat=lat)
 
-    with pytest.raises(ValueError):  # coords out of bounds
-        utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-        )
-        utils.validate_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-        utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-        )
+
+@pytest.mark.parametrize(
+    "lng, lat",
+    [
+        (180.0 + INT2COORD_FACTOR, 90.0),
+        (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
+        (-180.0, 90.0 + INT2COORD_FACTOR),
+        (180.0 + INT2COORD_FACTOR, -90.0),
+        (180.0, -90.0 - INT2COORD_FACTOR),
+        (-180.0 - INT2COORD_FACTOR, -90.0),
+        (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
+    ],
+)
+def test_rectify_coords_invalid(lng, lat):
+    with pytest.raises(ValueError):
+        utils.validate_coordinates(lng=lng, lat=lat)
 
 
 @pytest.mark.parametrize(
@@ -271,3 +279,7 @@ def test_rectify_coords():
 def test_get_last_change_idx(entry_list, expected):
     array = np.array(entry_list, dtype=DTYPE_FORMAT_H_NUMPY)
     assert utils.get_last_change_idx(array) == expected
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

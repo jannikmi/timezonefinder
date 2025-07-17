@@ -1,14 +1,15 @@
 import json
 import pickle
-import struct
-from os.path import abspath, join
+from os.path import abspath
 from time import time
 from typing import Dict, List
 
 import numpy as np
 
+from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY
+from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
-from timezonefinder.utils import coord2int
+from timezonefinder.utils_numba import coord2int
 
 
 def load_json(path):
@@ -56,22 +57,51 @@ def percent(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
 
-def to_numpy_polygon(coord_pairs, flipped: bool = False) -> np.ndarray:
-    if flipped:
-        y_coords1, x_coords1 = zip(*coord_pairs)
-    else:
-        x_coords1, y_coords1 = zip(*coord_pairs)
-    x_coords = list(map(coord2int, x_coords1))
-    y_coords = list(map(coord2int, y_coords1))
-    if x_coords[0] == x_coords[-1] and y_coords[0] == y_coords[-1]:
-        # IMPORTANT: polygon are represented without point repetition at the end
-        # -> do not use the last coordinate (only if equal to the first)!
-        x_coords.pop(-1)
-        y_coords.pop(-1)
-    assert len(x_coords) == len(y_coords)
-    assert len(x_coords) >= 3
-    poly = np.array((x_coords, y_coords), dtype=configs.DTYPE_FORMAT_SIGNED_I_NUMPY)
+def validate_coord_array_shape(coords: np.ndarray):
+    assert isinstance(coords, np.ndarray)
+    assert coords.ndim == 2, "coords must be a 2D array"
+    assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
+    # all polygons must have at least 3 coordinates
+    assert coords.shape[1] >= 3, (
+        f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
+    )
+
+
+# NOTE: no JIT compilation. slows down the execution
+def convert2ints(coordinates: configs.CoordLists) -> configs.IntLists:
+    # return a tuple of coordinate lists
+    return [
+        [coord2int(x) for x in coordinates[0]],
+        [coord2int(y) for y in coordinates[1]],
+    ]
+
+
+def convert_polygon(coords, validate: bool = True) -> np.ndarray:
+    coord_array = np.array(coords, dtype=DTYPE_FORMAT_F_NUMPY)
+    validate_coord_array_shape(coord_array)
+    x_coords, y_coords = coord_array
+    if validate:
+        assert len(x_coords) >= 3, "Polygon must have at least 3 coordinates"
+        assert is_valid_lng_vec(x_coords), "encountered invalid longitude values."
+        assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
+    x_ints, y_ints = convert2ints(coords)
+    # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
+    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="F")
     return poly
+
+
+def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
+    if flipped:
+        # support the (lat, lng) format used by h3
+        y_coords, x_coords = zip(*coord_pairs)
+    else:
+        x_coords, y_coords = zip(*coord_pairs)
+    # Remove last coordinate if it repeats the first
+    if y_coords[0] == y_coords[-1] and x_coords[0] == x_coords[-1]:
+        x_coords = x_coords[:-1]
+        y_coords = y_coords[:-1]
+    # NOTE: skip expensive validation
+    return convert_polygon((x_coords, y_coords), validate=DEBUG)
 
 
 def accumulated_frequency(int_list):
@@ -127,78 +157,34 @@ def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     print("--------------------------------\n")
 
 
-def export_mapping(file_name: str, obj: Dict, res: int):
-    write_pickle(obj, f"{file_name}_res{res}.pickle")
-    # uint key type can't be JSON serialised
-    json_mapping = {str(k): v for k, v in obj.items()}
-    write_json(json_mapping, f"{file_name}_res{res}.json")
+def has_coherent_sequences(lst: List[int]) -> bool:
+    """
+    :return: True if equal entries in the list are not separated by entries of other values
+    """
+    if len(lst) <= 1:
+        return True
+    encountered = set()
+    # at least 2 entries
+    lst_iter = iter(lst)
+    prev = next(lst_iter)
+    for e in lst:
+        if e in encountered:
+            # the entry appeared earlier already
+            return False
+        if e != prev:
+            encountered.add(prev)
+            prev = e
+
+    return True
 
 
-def write_value(output_file, value, data_format, lower_value_limit, upper_value_limit):
-    assert value > lower_value_limit, (
-        f"trying to write value {value} subceeding lower limit {lower_value_limit} (data type {data_format})"
+def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
+    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
+    if len(polygon_ids) == 1:
+        # single polygon in the shortcut, no need to check
+        return
+    zone_ids = all_zone_ids[polygon_ids]
+    assert has_coherent_sequences(zone_ids), (
+        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
     )
-    assert value < upper_value_limit, (
-        f"trying to write value {value} exceeding upper limit {upper_value_limit} (data type {data_format})"
-    )
-    output_file.write(struct.pack(data_format, value))
-
-
-def write_coordinate_value(output_file, coord_as_int):
-    # NOTE: float coordinates are assumed to have been converted into int32 already
-    write_value(
-        output_file,
-        coord_as_int,
-        data_format=configs.DTYPE_FORMAT_SIGNED_I,
-        lower_value_limit=configs.THRES_DTYPE_SIGNED_I_LOWER,
-        upper_value_limit=configs.THRES_DTYPE_SIGNED_I_UPPER,
-    )
-
-
-def write_regular(output_file, data, *args, **kwargs):
-    for value in data:
-        write_value(output_file, value, *args, **kwargs)
-
-
-def write_coordinates(output_file, data, *args, **kwargs):
-    for x_coords, y_coords in data:
-        for x in x_coords:
-            write_coordinate_value(output_file, x)
-
-        for y in y_coords:
-            write_coordinate_value(output_file, y)
-
-
-def write_boundaries(output_file, boundaries: List, *args, **kwargs):
-    for boundary in boundaries:
-        write_coordinate_value(output_file, boundary.xmax)
-        write_coordinate_value(output_file, boundary.xmin)
-        write_coordinate_value(output_file, boundary.ymax)
-        write_coordinate_value(output_file, boundary.ymin)
-
-
-def write_binary(
-    output_path,
-    bin_file_name,
-    data,
-    data_format=configs.DTYPE_FORMAT_H,
-    lower_value_limit=-1,
-    upper_value_limit=configs.THRES_DTYPE_H,
-    writing_fct=write_regular,
-):
-    path = abspath(join(output_path, bin_file_name + configs.BINARY_FILE_ENDING))
-    print(f"writing {path}")
-    with open(path, "wb") as output_file:
-        writing_fct(
-            output_file, data, data_format, lower_value_limit, upper_value_limit
-        )
-        file_length = output_file.tell()
-    return file_length
-
-
-def write_coordinate_data(output_path, bin_file_name, data):
-    return write_binary(output_path, bin_file_name, data, writing_fct=write_coordinates)
-
-
-def write_boundary_data(output_path, bin_file_name, data):
-    return write_binary(output_path, bin_file_name, data, writing_fct=write_boundaries)
+    # TODO further check the ordering of the polygons

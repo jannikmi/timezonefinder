@@ -42,42 +42,53 @@ data:
 	bash parse_data.sh
 
 test:
-	@pytest
-
-test1: test
+	@uv run pytest
 
 tox:
-	@tox
-
-test2: tox
+	@uv run tox
 
 hook:
-	@pre-commit install
-	@pre-commit run --all-files
+	@uv run pre-commit install
+	@uv run pre-commit run --all-files
 
 hookup:
-	@pre-commit autoupdate
+	@uv run pre-commit autoupdate
 
 hook3:
-	@pre-commit clean
+	@uv run pre-commit clean
 
 clean:
 	rm -rf .pytest_cache .coverage coverage.xml tests/__pycache__ .mypyp_cache/ .tox
 
+# compile flatbuffers files:
+flatbuf:
+	@echo "Compiling FlatBuffer schemas..."
+	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
+	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
 build:
 	rm -rf build dist
-	uv build --python cp38
 	uv build --python cp38
 	uv build --python cp310
 	uv build --python cp311
 	uv build --python cp312
 	uv build --python cp313
 
+# in order to release a new package version, the commit needs to be tagged with the version number
+release:
+	@echo "tagging the current commit with the version number: $(VERSION)"
+	git tag -a "$(shell uv version --short)" -m "Release $(VERSION)"
+	@echo "pushing the changes to the remote repository"
+	git push origin "$(shell uv version --short)"
+
 # documentation generation:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
 docs:
 	(cd docs && make html)
+
+speedtest:
+	# pytest -s flag: output to console
+	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 
 
 .PHONY: clean test build docs

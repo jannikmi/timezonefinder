@@ -11,29 +11,10 @@ About
 
 Timezones internally are being represented by polygons and the timezone membership of a given point (= lat lng coordinate pair) is determined by a point in polygon (PIP) check.
 In many cases an expensive PIP check can be avoided.
-This package currently uses a precomputed timezone polygon index based on the geospatial hexagon index of the `h3 library <https://github.com/uber/h3-py>`__.
+
+For detailed information about the data format in use, see :doc:`data_format`.
+
 Among other tweaks this index makes ``timezonefinder`` efficient (also check the :ref:`performance chapter <performance>`).
-See the docstrings in the source code for further explanation.
-
-Data
-----
-
-Current **data set** in use: precompiled `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__ (WITH oceans, geoJSON)
-
-.. note::
-
-    In the data set the timezone polygons often include territorial waters -> they do NOT follow the shorelines.
-    This makes the results of ``certain_timezone_at()`` less expressive:
-    from a timezone match one cannot distinguish whether a query point lies on land or in ocean.
-
-.. note::
-
-    Please note that timezone polygons might be overlapping (cf. e.g. `timezone-boundary-builder/issue/105 <https://github.com/evansiroky/timezone-boundary-builder/issues/105>`__)
-    and that hence a query coordinate can actually match multiple time zones.
-    ``timezonefinder`` does currently NOT support such multiplicity and will always only return the first found match.
-
-- package size: ~51 MB
-- original data size: ~110 MB
 
 
 References
@@ -52,11 +33,12 @@ ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
 `download stats <https://pepy.tech/project/timezonefinder>`__
 
 
-License
+LICENSE
 -------
 
-``timezonefinder`` is distributed under the terms of the MIT license
-(see `LICENSE <https://github.com/jannikmi/timezonefinder/blob/master/LICENSE>`__).
+``timezonefinder``  is licensed under the `MIT license <https://github.com/jannikmi/timezonefinder/blob/master/LICENSE>`__.
+
+The data is licensed under the `ODbL license <https://github.com/jannikmi/timezonefinder/blob/master/DATA_LICENSE>`__, following the base dataset from `evansiroky/timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__.
 
 
 
@@ -90,7 +72,7 @@ Both packages will likely coexist as they serve different use cases:
      - Requires initialization time
      - No startup time (immediate)
    * - `Lookup Speed <https://github.com/ringsaturn/tz-benchmark>`__
-     - Median: ~160k Queries per second (QPS)
+     - Median: ~215k Queries per second (QPS). Up to 800k with less accurate TimezoneFinderL
      - Median: ~511k QPS
    * - Data Representation
      - Complete timezone polygons
@@ -206,3 +188,4 @@ Thanks to:
 - `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
 - `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
 - `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4
+- `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for providing example scripts and updating python version support

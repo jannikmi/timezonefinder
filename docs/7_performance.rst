@@ -3,6 +3,17 @@
 Performance
 ===========
 
+Binary Data Format
+------------------
+
+TimezoneFinder uses an optimized binary format based on FlatBuffers for storing and accessing timezone data. This format provides several performance advantages:
+
+* **Zero-Copy Access**: FlatBuffers allows accessing serialized data without unpacking or parsing
+* **Spatial Indexing**: H3 hexagonal grid system efficiently narrows down polygon candidates
+* **Optimized Data Layout**: Compact storage with direct access to relevant data structures
+
+For detailed information about the data format in use, see :doc:`data_format`.
+
 
 C extension
 -----------
@@ -77,102 +88,23 @@ Timezone finding
 ``scripts/check_speed_timezone_finding.py``
 
 
-
-Without Numba (using C extension):
-
-::
-
-    using C implementation: True
-    using Numba: False
-
-    10000 'on land points' (points included in a land timezone)
-    in memory mode: False
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 7.5e-05    | 1.3e+04
-    TimezoneFinder.timezone_at_land()   | 7.7e-05    | 1.3e+04
-    TimezoneFinderL.timezone_at()       | 7.3e-06    | 1.4e+05
-    TimezoneFinderL.timezone_at_land()  | 8.3e-06    | 1.2e+05
-
-    10000 random points (anywhere on earth)
-    in memory mode: False
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 8.8e-05    | 1.1e+04
-    TimezoneFinder.timezone_at_land()   | 8.9e-05    | 1.1e+04
-    TimezoneFinderL.timezone_at()       | 6.6e-06    | 1.5e+05
-    TimezoneFinderL.timezone_at_land()  | 9.5e-06    | 1.1e+05
-
-    10000 'on land points' (points included in a land timezone)
-    in memory mode: True
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 3.9e-05    | 2.6e+04
-    TimezoneFinder.timezone_at_land()   | 4.0e-05    | 2.5e+04
-    TimezoneFinderL.timezone_at()       | 6.3e-06    | 1.6e+05
-    TimezoneFinderL.timezone_at_land()  | 8.6e-06    | 1.2e+05
-
-    10000 random points (anywhere on earth)
-    in memory mode: True
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 3.5e-05    | 2.8e+04
-    TimezoneFinder.timezone_at_land()   | 3.9e-05    | 2.6e+04
-    TimezoneFinderL.timezone_at()       | 6.9e-06    | 1.5e+05
-    TimezoneFinderL.timezone_at_land()  | 9.0e-06    | 1.1e+05
-
-
-
-With Numba:
+Results from version 6.6.0:
 
 ::
-
     using C implementation: False
     using Numba: True
-
-    10000 'on land points' (points included in a land timezone)
-    in memory mode: False
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 7.1e-05    | 1.4e+04
-    TimezoneFinder.timezone_at_land()   | 7.4e-05    | 1.3e+04
-    TimezoneFinderL.timezone_at()       | 6.5e-06    | 1.5e+05
-    TimezoneFinderL.timezone_at_land()  | 9.1e-06    | 1.1e+05
-
-    10000 random points (anywhere on earth)
-    in memory mode: False
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 8.2e-05    | 1.2e+04
-    TimezoneFinder.timezone_at_land()   | 8.1e-05    | 1.2e+04
-    TimezoneFinderL.timezone_at()       | 6.9e-06    | 1.5e+05
-    TimezoneFinderL.timezone_at_land()  | 8.8e-06    | 1.1e+05
-
-    10000 'on land points' (points included in a land timezone)
     in memory mode: True
 
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 3.7e-05    | 2.7e+04
-    TimezoneFinder.timezone_at_land()   | 4.0e-05    | 2.5e+04
-    TimezoneFinderL.timezone_at()       | 6.9e-06    | 1.5e+05
-    TimezoneFinderL.timezone_at_land()  | 8.1e-06    | 1.2e+05
-
-    10000 random points (anywhere on earth)
-    in memory mode: True
-
-    function name                       | s/query    | pts/s
-    --------------------------------------------------
-    TimezoneFinder.timezone_at()        | 3.2e-05    | 3.1e+04
-    TimezoneFinder.timezone_at_land()   | 3.4e-05    | 2.9e+04
-    TimezoneFinderL.timezone_at()       | 6.4e-06    | 1.6e+05
-    TimezoneFinderL.timezone_at_land()  | 7.6e-06    | 1.3e+05
+    10,000 random points (anywhere on earth)
+    function name                          | s/query    | pts/s
+    ------------------------------------------------------------
+    TimezoneFinder.certain_timezone_at()   | 1.9e-05    | 52.2k
+    TimezoneFinder.timezone_at_land()      | 5.1e-06    | 195.3k
+    TimezoneFinder.timezone_at()           | 4.6e-06    | 215.1k
+    TimezoneFinder.unique_timezone_at()    | 2.4e-06    | 424.5k
+    TimezoneFinderL.timezone_at_land()     | 1.6e-06    | 615.1k
+    TimezoneFinderL.timezone_at()          | 1.4e-06    | 715.6k
+    TimezoneFinderL.unique_timezone_at()   | 2.4e-06    | 420.1k
 
 
 

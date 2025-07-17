@@ -1,0 +1,15 @@
+namespace timezonefinder.flatbuf;
+
+// mapping from shortcut id to a list of polygon ids
+table ShortcutEntry {
+  // H3 hexagon ID, uint64
+  hex_id:ulong;
+  // List of polygon IDs (uint16) in this hexagon
+  poly_ids:[ushort];
+}
+
+table ShortcutCollection {
+  entries:[ShortcutEntry];
+}
+
+root_type ShortcutCollection;

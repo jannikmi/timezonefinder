@@ -9,7 +9,7 @@ from tests.auxiliaries import (
     get_rnd_query_pt,
     timefunc,
 )
-from timezonefinder import utils
+from timezonefinder import utils, utils_clang, utils_numba
 
 # test for overflow:
 # make numpy overflow runtime warning raise an error
@@ -50,8 +50,8 @@ def check_inside_polygon_speed():
         return t_avg
 
     print()
-    t_clang = time_func(utils.pt_in_poly_clang)
-    t_python = time_func(utils.pt_in_poly_python)
+    t_clang = time_func(utils_clang.pt_in_poly_clang)
+    t_python = time_func(utils_numba.pt_in_poly_python)
     py_func_descr = (
         f"Python implementation {'WITH' if utils.using_numba else 'WITHOUT'} Numba"
     )

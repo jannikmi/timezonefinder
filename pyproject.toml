@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "6.5.9rc1"
+version = "6.6.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -26,7 +26,8 @@ dependencies = [
     # https://numpy.org/neps/nep-0029-deprecation_policy.html
     "numpy<3,>=1.23; python_version >= '3.9'",
     "h3>4",
-    "cffi<2,>=1.15.1"
+    "cffi<2,>=1.15.1",
+    "flatbuffers>=25.2.10",
 ]
 
 [project.urls]
@@ -71,7 +72,7 @@ build-backend = "setuptools.build_meta"
 packages = ["timezonefinder", "timezonefinder.inside_poly_extension"]
 
 [tool.setuptools.package-data]
-timezonefinder = ["*.bin", "*.json", "inside_poly_extension/*"]
+timezonefinder = ["data/*", "inside_poly_extension/*"]
 
 [tool.ruff]
 target-version = "py39"

@@ -19,6 +19,7 @@ a fast and lightweight python package for looking up the corresponding timezone 
     Usage <1_usage>
     Use Cases  <2_use_cases>
     Performance <7_performance>
+    Data Format <data_format>
     About <3_about>
     API <4_api>
     Contributing <5_contributing>

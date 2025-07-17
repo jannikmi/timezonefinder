@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "args": [],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "name": "Python: File Converter",
+      "program": "${workspaceFolder}/scripts/file_converter.py",
+      "request": "launch",
+      "type": "debugpy"
+    },
+    {
+      "args": [
+        "-s",
+        "tests/utils_test.py::test_inside_polygon",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": false,
+      "module": "pytest",
+      "name": "Run unit test",
+      "request": "launch",
+      "type": "debugpy"
+    }
+  ],
+  "version": "0.2.0"
+}
