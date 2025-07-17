@@ -137,6 +137,6 @@ def convert_inside_polygon_input(lng: float, lat: float):
 def get_pip_test_input() -> Tuple[int, int, np.ndarray]:
     # one test polygon + one query point
     lng, lat = get_rnd_query_pt()
-    x, y = utils.coord2int(lng), utils.coord2int(lat)
+    x, y = convert_inside_polygon_input(lng, lat)
     poly_int = get_rnd_poly_int()
     return x, y, poly_int

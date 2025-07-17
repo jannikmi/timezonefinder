@@ -30,7 +30,6 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
-from timezonefinder.utils import get_boundaries_dir, get_holes_dir
 from timezonefinder.zone_names import read_zone_names
 
 
@@ -332,8 +331,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self, bin_file_location: Optional[str] = None, in_memory: bool = False
     ):
         super().__init__(bin_file_location, in_memory)
-        self.holes_dir = get_holes_dir(self.data_location)
-        self.boundaries_dir = get_boundaries_dir(self.data_location)
+        self.holes_dir = utils.get_holes_dir(self.data_location)
+        self.boundaries_dir = utils.get_boundaries_dir(self.data_location)
         self.boundaries = PolygonArray(
             data_location=self.boundaries_dir, in_memory=in_memory
         )

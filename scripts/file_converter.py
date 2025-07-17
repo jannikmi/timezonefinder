@@ -120,13 +120,15 @@ from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
     get_zone_positions_path,
 )
-from timezonefinder.utils import (
+from timezonefinder.utils_numba import (
     any_pt_in_poly,
     coord2int,
     fully_contained_in_hole,
+    int2coord,
+)
+from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
-    int2coord,
 )
 from timezonefinder.zone_names import write_zone_names
 

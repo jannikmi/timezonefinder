@@ -10,9 +10,8 @@ from tests.auxiliaries import (
     get_rnd_poly_int,
     get_rnd_query_pt,
 )
-from timezonefinder import utils, utils_clang
+from timezonefinder import utils_clang, utils_numba, utils
 from timezonefinder.configs import DTYPE_FORMAT_H_NUMPY, INT2COORD_FACTOR
-from timezonefinder.utils_clang import clang_extension_loaded
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -179,7 +178,7 @@ def test_convert2ints():
 
 def test_clang_extension_loaded():
     # testing the Clang version of the Point in Polygon algorithm requires the C extension to be loaded
-    assert clang_extension_loaded, "the clang extension not loaded, "
+    assert utils.clang_extension_loaded, "the clang extension not loaded, "
 
 
 # TODO parametrize the test cases
@@ -187,7 +186,7 @@ def test_clang_extension_loaded():
 @pytest.mark.parametrize(
     "inside_poly_func",
     [
-        utils.pt_in_poly_python,
+        utils_numba.pt_in_poly_python,
         utils_clang.pt_in_poly_clang,
     ],
 )
