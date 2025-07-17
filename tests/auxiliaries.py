@@ -15,6 +15,7 @@ from timezonefinder.configs import (
     MAX_LNG_VAL_INT,
 )
 from timezonefinder.polygon_array import PolygonArray
+from timezonefinder.utils_numba import convert2coords
 
 # for reading coordinates
 boundaries_dir = utils.get_boundaries_dir()
@@ -125,7 +126,7 @@ def get_rnd_poly_int() -> np.ndarray:
 
 def get_rnd_poly() -> np.ndarray:
     poly = get_rnd_poly_int()
-    coords = utils.convert2coords(poly)
+    coords = convert2coords(poly)
     return np.array(coords)
 
 

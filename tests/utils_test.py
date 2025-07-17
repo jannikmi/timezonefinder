@@ -3,7 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 import pytest
 
-from scripts.utils import convert_polygon
+from scripts.utils import convert2ints, convert_polygon
 from tests.auxiliaries import (
     convert_inside_polygon_input,
     get_rnd_poly,
@@ -162,7 +162,7 @@ def test_convert2coords():
 
 def test_convert2ints():
     coords_true = get_rnd_poly()
-    poly_int = utils.convert2ints(coords_true)
+    poly_int = convert2ints(coords_true)
     assert isinstance(poly_int, list)
     assert len(poly_int) == 2
     x_coords, y_coords = poly_int

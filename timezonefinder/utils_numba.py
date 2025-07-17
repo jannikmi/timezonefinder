@@ -18,7 +18,6 @@ from timezonefinder.configs import (
     INT2COORD_FACTOR,
     CoordLists,
     CoordPairs,
-    IntLists,
 )
 
 try:
@@ -193,53 +192,11 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
     return coodinate_list
 
 
-# NOTE: no JIT compilation. slows down the execution
-def convert2ints(coordinates) -> IntLists:
-    # return a tuple of coordinate lists
-    return [
-        [coord2int(x) for x in coordinates[0]],
-        [coord2int(y) for y in coordinates[1]],
-    ]
-
-
-@njit(cache=True)
-def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
-    # pt = points[:, i]
-    for pt in coords1.T:
-        if pt_in_poly_python(pt[0], pt[1], coords2):
-            return True
-    return False
-
-
-@njit(cache=True)
-def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
-    for pt in poly.T:
-        if not pt_in_poly_python(pt[0], pt[1], hole):
-            return False
-    return True
-
-
-@njit(cache=True)
+@njit(boolean(f8), cache=True)
 def is_valid_lat(lat: float) -> bool:
     return -90.0 <= lat <= 90.0
 
 
-@njit(cache=True)
+@njit(boolean(f8), cache=True)
 def is_valid_lng(lng: float) -> bool:
     return -180.0 <= lng <= 180.0
-
-
-@njit(cache=True)
-def is_valid_lat_vec(lats: np.ndarray) -> bool:
-    for lat in lats:
-        if not is_valid_lat(lat):
-            return False
-    return True
-
-
-@njit(cache=True)
-def is_valid_lng_vec(lngs: np.ndarray) -> bool:
-    for lng in lngs:
-        if not is_valid_lng(lng):
-            return False
-    return True

@@ -91,6 +91,8 @@ from scripts.utils import (
     write_json,
     load_json,
 )
+
+from scripts.utils_numba import fully_contained_in_hole, any_pt_in_poly
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
@@ -121,9 +123,7 @@ from timezonefinder.np_binary_helpers import (
     get_zone_positions_path,
 )
 from timezonefinder.utils_numba import (
-    any_pt_in_poly,
     coord2int,
-    fully_contained_in_hole,
     int2coord,
 )
 from timezonefinder.utils import (

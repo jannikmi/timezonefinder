@@ -8,7 +8,9 @@ from typing import Dict, List
 import numpy as np
 
 from scripts.configs import DEBUG
-from timezonefinder import configs, utils
+from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
+from timezonefinder import configs
+from timezonefinder.utils_numba import coord2int
 
 
 def load_json(path):
@@ -66,15 +68,24 @@ def validate_coord_array_shape(coords: np.ndarray):
     )
 
 
+# NOTE: no JIT compilation. slows down the execution
+def convert2ints(coordinates: configs.CoordLists) -> configs.IntLists:
+    # return a tuple of coordinate lists
+    return [
+        [coord2int(x) for x in coordinates[0]],
+        [coord2int(y) for y in coordinates[1]],
+    ]
+
+
 def convert_polygon(coords, validate: bool = True) -> np.ndarray:
-    coord_array = np.array(coords)
+    coord_array = np.array(coords, dtype="float64")
     validate_coord_array_shape(coord_array)
     x_coords, y_coords = coord_array
     if validate:
         assert len(x_coords) >= 3, "Polygon must have at least 3 coordinates"
-        assert utils.is_valid_lng_vec(x_coords), "encountered invalid longitude values."
-        assert utils.is_valid_lat_vec(y_coords), "encountered invalid latitude values."
-    x_ints, y_ints = utils.convert2ints(coords)
+        assert is_valid_lng_vec(x_coords), "encountered invalid longitude values."
+        assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
+    x_ints, y_ints = convert2ints(coords)
     # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
     poly = np.array(
         (x_ints, y_ints), dtype=configs.DTYPE_FORMAT_SIGNED_I_NUMPY, order="F"

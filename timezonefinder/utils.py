@@ -19,12 +19,9 @@ using_numba = utils_numba.using_numba
 clang_extension_loaded = utils_clang.clang_extension_loaded
 is_valid_lat = utils_numba.is_valid_lat
 is_valid_lng = utils_numba.is_valid_lng
-is_valid_lng_vec = utils_numba.is_valid_lng_vec
-is_valid_lat_vec = utils_numba.is_valid_lat_vec
 coord2int = utils_numba.coord2int
 int2coord = utils_numba.int2coord
 convert2coords = utils_numba.convert2coords
-convert2ints = utils_numba.convert2ints
 convert2coord_pairs = utils_numba.convert2coord_pairs
 get_last_change_idx = utils_numba.get_last_change_idx
 
