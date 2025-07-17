@@ -32,11 +32,19 @@ class SubscriptAndCallable:
 # DTYPES
 
 
-class int64(SubscriptAndCallable):
+class f8(SubscriptAndCallable):
     pass
 
 
-class int32(SubscriptAndCallable):
+class i8(SubscriptAndCallable):
+    pass
+
+
+class i4(SubscriptAndCallable):
+    pass
+
+
+class uint16(SubscriptAndCallable):
     pass
 
 

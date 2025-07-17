@@ -31,26 +31,26 @@ from timezonefinder.configs import (
 )
 
 try:
-    from numba import njit, int64, int32, boolean
+    from numba import njit, boolean, i4, uint16, f8
     from numba.types import Array
 
     using_numba = True
 except ImportError:
     using_numba = False
     # replace Numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import njit, int64, int32, boolean, Array
+    from timezonefinder._numba_replacements import njit, boolean, Array, i4, uint16, f8
 
 
 # For Fortran-ordered arrays (F-contiguous), use the 'order="F"' in the Numba signature
 # F order is natural for the used coordinate schema:
 # coords = [x_coords, y_coords]
 # x_coords = coords[0]
-CoordType = Array(int32, 2, "F", True, aligned=True)
+CoordType = Array(i4, 2, "F", True, aligned=True)
 
 
 # TODO
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
-@njit(boolean(int64, int64, CoordType), cache=True)
+@njit(boolean(i4, i4, CoordType), cache=True)
 def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     """
     Implementing the ray casting point in polygon test algorithm
@@ -125,12 +125,12 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
                     # ( dy/dx > a  ==  dy > a * dx )
                     # only one of the points is to the right
                     # NOTE: int64 precision required to prevent overflow
-                    y_64 = int64(y)
-                    y1_64 = int64(y1)
-                    y2_64 = int64(y2)
-                    x_64 = int64(x)
-                    x1_64 = int64(x1)
-                    x2_64 = int64(x2)
+                    y_64 = np.int64(y)
+                    y1_64 = np.int64(y1)
+                    y2_64 = np.int64(y2)
+                    x_64 = np.int64(x)
+                    x1_64 = np.int64(x1)
+                    x2_64 = np.int64(x2)
                     slope1 = (y2_64 - y_64) * (x2_64 - x1_64)
                     slope2 = (y2_64 - y1_64) * (x2_64 - x_64)
                     # NOTE: accept slope equality to also detect if p lies directly on an edge
@@ -157,7 +157,7 @@ else:
     inside_polygon = pt_in_poly_python
 
 
-@njit("int16(uint16[:])", cache=True)
+@njit(uint16(uint16[:]), cache=True)
 def get_last_change_idx(lst: np.ndarray) -> int:
     """
     :param lst: list of entries
@@ -180,13 +180,13 @@ def get_last_change_idx(lst: np.ndarray) -> int:
 
 
 # @cc.export('int2coord', f8(i4))
-@njit("float64(int32)", cache=True)
+@njit(f8(i4), cache=True)
 def int2coord(i4: int) -> float:
     return float(i4 * INT2COORD_FACTOR)
 
 
 # @cc.export('coord2int', i4(f8))
-@njit("int32(float64)", cache=True)
+@njit(i4(f8), cache=True)
 def coord2int(double: float) -> int:
     return int(double * COORD2INT_FACTOR)
 
@@ -225,7 +225,7 @@ def convert2ints(coordinates) -> IntLists:
 def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
     # pt = points[:, i]
     for pt in coords1.T:
-        if pt_in_poly_python(np.int64(pt[0]), np.int64(pt[1]), coords2):
+        if pt_in_poly_python(pt[0], pt[1], coords2):
             return True
     return False
 
@@ -233,7 +233,7 @@ def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
 @njit(cache=True)
 def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     for pt in poly.T:
-        if not pt_in_poly_python(np.int64(pt[0]), np.int64(pt[1]), hole):
+        if not pt_in_poly_python(pt[0], pt[1], hole):
             return False
     return True
 
