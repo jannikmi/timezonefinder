@@ -34,11 +34,7 @@ Dependencies
 ------------
 
 
-``python3.8+``, ``numpy``, ``h3``, ``cffi``
-
-optional: ``numba``
-
-(cf. ``pyproject.toml``)
+please confer to the  ``pyproject.toml``
 
 
 
