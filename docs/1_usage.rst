@@ -136,6 +136,7 @@ or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
     tf.get_geometry(tz_id=400, use_id=True)
 
 
+check out the example script in ``examples/get_geometry.py`` for more details.
 
 
 .. _usage_finderL:

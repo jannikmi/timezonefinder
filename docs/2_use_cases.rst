@@ -8,51 +8,13 @@ Use Cases:
 Creating aware datetime objects
 -------------------------------
 
-.. code-block:: python
-
-    # first pip install pytz
-    from pytz import timezone, utc
-    from pytz.exceptions import UnknownTimeZoneError
-
-    # tzinfo has to be None (means naive)
-    naive_datetime = YOUR_NAIVE_DATETIME
-
-    try:
-        tz = timezone(timezone_name)
-        aware_datetime = naive_datetime.replace(tzinfo=tz)
-        aware_datetime_in_utc = aware_datetime.astimezone(utc)
-
-        naive_datetime_as_utc_converted_to_tz = tz.localize(naive_datetime)
-
-    except UnknownTimeZoneError:
-        pass  # {handle error}
-
+check out the example script in ``examples/aware_datetime.py``
 
 
 Getting a location's time zone offset
 --------------------------------------
 
-.. code-block:: python
-
-    from datetime import datetime
-    from pytz import timezone, utc
-
-
-    def get_offset(*, lat, lng):
-        """
-        returns a location's time zone offset from UTC in minutes.
-        """
-
-        today = datetime.now()
-        tz_target = timezone(tf.certain_timezone_at(lng=lng, lat=lat))
-        # ATTENTION: tz_target could be None! handle error case
-        today_target = tz_target.localize(today)
-        today_utc = utc.localize(today)
-        return (today_utc - today_target).total_seconds() / 60
-
-
-    bergamo = {"lat": 45.69, "lng": 9.67}
-    minute_offset = get_offset(**bergamo)
+check out the example script in ``examples/get_offset.py``
 
 
 also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
