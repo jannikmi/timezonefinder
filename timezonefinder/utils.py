@@ -13,6 +13,7 @@ if __name__ == "__main__":
 """
 
 import io
+from pathlib import Path
 import re
 from typing import Callable, Tuple
 
@@ -21,6 +22,7 @@ import numpy as np
 from timezonefinder.utils_clang import pt_in_poly_clang, clang_extension_loaded
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
+    DEFAULT_DATA_DIR,
     INT2COORD_FACTOR,
     OCEAN_TIMEZONE_PREFIX,
     CoordLists,
@@ -296,3 +298,13 @@ def is_ocean_timezone(timezone_name: str) -> bool:
     if re.match(OCEAN_TIMEZONE_PREFIX, timezone_name) is None:
         return False
     return True
+
+
+def get_boundaries_dir(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the boundaries directory."""
+    return data_dir / "boundaries"
+
+
+def get_holes_dir(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the holes directory."""
+    return data_dir / "holes"

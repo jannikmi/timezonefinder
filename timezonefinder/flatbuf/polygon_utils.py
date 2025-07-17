@@ -1,13 +1,9 @@
-"""
-Centralized utility functions for working with FlatBuffers in the timezonefinder project.
-"""
-
 import flatbuffers
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
-from timezonefinder.configs import BOUNDARIES_BINARY, DEFAULT_DATA_DIR, HOLE_BINARY
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.Polygon import (
     PolygonStart,
     PolygonEnd,
@@ -49,14 +45,9 @@ def reshape_to_polygon_coords(coords: np.ndarray) -> np.ndarray:
     return coords.reshape(2, -1, order="F")
 
 
-def get_boundaries_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
     """Return the path to the boundaries flatbuffer file."""
-    return data_dir / BOUNDARIES_BINARY
-
-
-def get_holes_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
-    """Return the path to the holes flatbuffer file."""
-    return data_dir / HOLE_BINARY
+    return data_dir / "coordinates.fbs"
 
 
 def write_polygon_collection_flatbuffer(
@@ -117,31 +108,11 @@ def write_polygon_collection_flatbuffer(
     return size_in_bytes
 
 
-def write_polygon_flatbuffers(
-    output_path: Path, polygons: List[np.ndarray], holes: List[np.ndarray]
-) -> Tuple[int, int]:
-    """Write boundary polygons and hole polygons to separate flatbuffer files.
-
-    Args:
-        output_path: Directory to save the flatbuffer files
-        polygons: List of boundary polygons
-        holes: List of hole polygons
-
-    Returns:
-        Tuple of (boundaries_size, holes_size) in bytes
-    """
-    boundaries_file = get_boundaries_path(output_path)
-    holes_file = get_holes_path(output_path)
-    boundary_size = write_polygon_collection_flatbuffer(boundaries_file, polygons)
-    holes_size = write_polygon_collection_flatbuffer(holes_file, holes)
-    return boundary_size, holes_size
-
-
 def get_collection_data(file):
     """Load boundary or hole polygons from FlatBuffers collections."""
     file.seek(0)
     buf = file.read()
-    return PolygonCollection.GetRootAs(buf, 0)
+    return PolygonCollection.GetRootAsPolygonCollection(buf, 0)
 
 
 def get_collection_length(file):
@@ -153,7 +124,18 @@ def get_collection_length(file):
 def read_polygon_array_from_binary(file, idx):
     """Read a polygon's coordinates from a FlatBuffers collection."""
     collection = get_collection_data(file)
+
+    # Check if index is out of bounds
+    nr_polygons = collection.PolygonsLength()
+    if idx >= nr_polygons:
+        raise IndexError(
+            f"Index {idx} out of bounds for collection with {nr_polygons} polygons."
+        )
+    if idx < 0:
+        raise IndexError(f"Negative index {idx} is not allowed.")
+
     poly = collection.Polygons(idx)
-    coords = poly.CoordsAsNumpy()
+
+    coords = poly.CoordsAsNumpy()  # flat 1D array of coordinates
     # Reshape to (2, N) format
     return reshape_to_polygon_coords(coords)
