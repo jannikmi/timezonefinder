@@ -23,7 +23,7 @@ from timezonefinder.timezonefinder import (
     TimezoneFinder,
     TimezoneFinderL,
 )
-from timezonefinder.utils import get_boundaries_dir
+from timezonefinder.utils import get_boundaries_dir, is_ocean_timezone
 
 DEBUG = False
 # more extensive testing (e.g. get geometry for every single zone), switch off for CI/CD
@@ -125,8 +125,6 @@ class TestBaseTimezoneFinderClass:
 
     # Common helper function for running parameterized tests
     def run_location_tests(self, test_fct, lat, lng, loc, expected):
-        # TODO
-        return
         test_name = test_fct.__name__  # Get the name of the test function
         print(f"\ntesting function {test_name} for location: {loc}")
         computed = test_fct(lng=lng, lat=lat)
@@ -171,7 +169,14 @@ class TestBaseTimezoneFinderClass:
         assert len(set(timezone_names_stored)) == len(timezone_names_stored), (
             "not all timezone names are unique"
         )
-        # TODO test if all timezone names are valid
+        # test if all timezone names are valid
+        for name in timezone_names_stored:
+            assert len(name) > 0, f"empty timezone name found: {name}"
+            assert "/" in name or is_ocean_timezone(name), (
+                f"invalid timezone name: {name}. It should contain a '/' or be an ocean timezone."
+            )
+
+            # TODO further checks for valid timezone names
 
 
 # tests for Timezonefinder class
@@ -312,7 +317,6 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
                 tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
             )
 
-    # TODO add unit tests for all other binary data reading functions (all possible inputs)
     def test_get_polygon_boundaries(self):
         # boundaries should be defined for each polygon
         instance = self.test_instance

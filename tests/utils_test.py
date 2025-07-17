@@ -182,7 +182,6 @@ def test_clang_extension_loaded():
     assert utils.clang_extension_loaded, "the clang extension not loaded, "
 
 
-# TODO parametrize the test cases
 # TODO test equal results of both implementation
 @pytest.mark.parametrize(
     "inside_poly_func",
@@ -230,7 +229,6 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     assert nr_mistakes == 0
 
 
-# TODO @pytest.mark.parametrize(
 def test_rectify_coords():
     # within bounds -> no exception
     utils.validate_coordinates(lng=180.0, lat=90.0)

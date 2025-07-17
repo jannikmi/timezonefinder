@@ -390,7 +390,6 @@ class Hex:
             return
         # self._poly_candidates = set(range(nr_of_polygons))
         # return
-        # TODO test once again
         if self.res == 0:
             # at the highest level all polygons should be tested
             self._poly_candidates = set(range(nr_of_polygons))
@@ -811,11 +810,7 @@ def parse_data(
     polygon_space = parse_polygons_from_json(input_path)
     hole_space = compile_data_files(output_path)
 
-    # raise ValueError()  # TODO remove this line after testing
-
     shortcut_mapping = compile_shortcut_mapping()
-    # TODO remov
-    # shortcut_space = export_shortcuts_binary(shortcuts, path2shortcut_file)
     shortcut_space = write_shortcuts_flatbuffers(shortcut_mapping, output_path)
     validate_shortcut_mapping(shortcut_mapping)
 
