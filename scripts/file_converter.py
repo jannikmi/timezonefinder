@@ -1,4 +1,9 @@
 """
+script for parsing the timezone data from https://github.com/evansiroky/timezone-boundary-builder to the binary format required by `timezonefinder`
+
+TODO refactor into multiple modules
+
+
 USAGE:
 
 - download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder/releases
@@ -113,7 +118,6 @@ from timezonefinder.configs import (
     THRES_DTYPE_H,
     THRES_DTYPE_I,
 )
-from timezonefinder.hex_helpers import lies_in_h3_cell
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
     get_xmin_path,
@@ -312,6 +316,12 @@ def compute_zone_positions() -> List[int]:
     # assert len(poly_nr2zone_id) == nr_of_zones + 1
     print("...Done.\n")
     return poly_nr2zone_id
+
+
+# TODO extract in own h3 utils module
+def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
+    res = h3.get_resolution(h)
+    return h3.latlng_to_cell(lat, lng, res) == h
 
 
 def any_pt_in_cell(h: int, poly_nr: int) -> bool:
