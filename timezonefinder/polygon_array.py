@@ -7,6 +7,7 @@ import numpy as np
 from timezonefinder import utils
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
+    get_polygon_collection,
     read_polygon_array_from_binary,
 )
 from timezonefinder.np_binary_helpers import (
@@ -52,6 +53,7 @@ class PolygonArray:
         :param in_memory: Whether to completely read and keep the binary files in memory.
         """
         self.in_memory = in_memory
+        self._file_handle = None
 
         self.data_location: Path = Path(data_location)
 
@@ -66,13 +68,17 @@ class PolygonArray:
         self.ymin = read_per_polygon_vector(ymin_path)
         self.ymax = read_per_polygon_vector(ymax_path)
 
-        coordinate_file = get_coordinate_path(self.data_location)
+        coordinate_file_path = get_coordinate_path(self.data_location)
         # NOTE: this will read the file into memory if in_memory is True,
         # otherwise it will open it as a file handle
-        self.coordinate_file = self._open_binary(coordinate_file)
+        self.coord_file, self.coord_buf = utils.load_buffer(
+            coordinate_file_path, in_memory=self.in_memory
+        )
+        self.polygon_collection = get_polygon_collection(self.coord_buf)
 
     def __del__(self):
-        pass  # TODO close all opened files
+        """Clean up resources when the object is destroyed."""
+        utils.close_ressources(self.coord_file, self.coord_buf)
 
     def __len__(self) -> int:
         """
@@ -101,7 +107,7 @@ class PolygonArray:
         return False
 
     def coords_of(self, idx: int) -> np.ndarray:
-        return read_polygon_array_from_binary(self.coordinate_file, idx)
+        return read_polygon_array_from_binary(self.polygon_collection, idx)
 
     def pip(self, poly_id: int, x: int, y: int) -> bool:
         """

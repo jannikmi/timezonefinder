@@ -1,9 +1,10 @@
 """utility functions"""
 
 import io
+import mmap
 from pathlib import Path
 import re
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
 import numpy as np
 
@@ -53,17 +54,34 @@ def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
     return lng, lat
 
 
-def get_file_size_byte(file) -> int:
-    file.seek(0, io.SEEK_END)
-    return file.tell()
+def load_buffer(
+    file: Path, in_memory: bool = True
+) -> Tuple[Union[io.BufferedReader, None], Union[mmap.mmap, bytes]]:
+    """Load a binary file into memory or as a memory-mapped file."""
+    buf: Union[mmap.mmap, bytes]
+    if in_memory:
+        # Read entire file into memory
+        with open(file, "rb") as f:
+            buf = f.read()
+    else:
+        # Use memory-mapped file for on-demand reading
+        file_obj = open(file, "rb")
+        # Create memory map
+        buf = mmap.mmap(file_obj.fileno(), 0, access=mmap.ACCESS_READ)
+    return None, buf
 
 
-def fromfile_memory(file, dtype: str, count: int, **kwargs):
-    res = np.frombuffer(
-        file.getbuffer(), offset=file.tell(), dtype=dtype, count=count, **kwargs
-    )
-    file.seek(np.dtype(dtype).itemsize * count, io.SEEK_CUR)
-    return res
+def _safe_close(obj):
+    try:
+        obj.close()
+    except Exception:
+        pass
+
+
+def close_ressources(file: io.BufferedReader, buf: mmap.mmap) -> None:
+    """Close the file and buffer resources."""
+    _safe_close(file)
+    _safe_close(buf)
 
 
 def is_ocean_timezone(timezone_name: str) -> bool:

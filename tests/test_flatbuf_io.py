@@ -1,13 +1,17 @@
+import struct
 import numpy as np
 import pytest
 from timezonefinder.flatbuf.polygon_utils import (
+    get_polygon_collection,
     write_polygon_collection_flatbuffer,
     read_polygon_array_from_binary,
     flatten_polygon_coords,
     reshape_to_polygon_coords,
 )
+from timezonefinder.utils import close_ressources, load_buffer
 
 
+@pytest.mark.parametrize("in_memory", [True, False])
 @pytest.mark.parametrize(
     "polygons",
     [
@@ -18,7 +22,7 @@ from timezonefinder.flatbuf.polygon_utils import (
         ],
     ],
 )
-def test_single_polygon_collection_round_trip(tmp_path, polygons):
+def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
     """Test that writing and reading a single polygon collection gives the same results."""
     # Define output path
     output_file = tmp_path / "polygons.fbs"
@@ -30,19 +34,19 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons):
     assert boundaries_size > 0, "File size should be greater than zero."
 
     # Read back the data
-    with open(output_file, "rb") as f:
-        for idx, original_polygon in enumerate(polygons):
-            read_polygon = read_polygon_array_from_binary(f, idx)
-            np.testing.assert_array_equal(
-                read_polygon, original_polygon, "Polygon mismatch."
-            )
+    file, buffer = load_buffer(output_file, in_memory=in_memory)
+    poly_collection = get_polygon_collection(buffer)
+    for idx, original_polygon in enumerate(polygons):
+        read_polygon = read_polygon_array_from_binary(poly_collection, idx)
+        np.testing.assert_array_equal(
+            read_polygon, original_polygon, "Polygon mismatch."
+        )
 
-        try:
-            read_polygon = read_polygon_array_from_binary(f, idx + 1)
-            assert read_polygon is None, "Expected None for out-of-bounds index."
-        except IndexError:
-            # If an IndexError is raised, it means we correctly reached the end of the file
-            pass
+    with pytest.raises(struct.error):
+        # Attempt to read a polygon with an out-of-bounds index
+        read_polygon = read_polygon_array_from_binary(poly_collection, idx + 1)
+
+    close_ressources(file, buffer)
 
 
 @pytest.mark.parametrize(

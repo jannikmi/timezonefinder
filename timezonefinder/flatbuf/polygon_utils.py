@@ -1,7 +1,8 @@
 import flatbuffers
+import mmap
 import numpy as np
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.Polygon import (
@@ -108,34 +109,29 @@ def write_polygon_collection_flatbuffer(
     return size_in_bytes
 
 
-def get_collection_data(file):
-    """Load boundary or hole polygons from FlatBuffers collections."""
-    file.seek(0)
-    buf = file.read()
-    return PolygonCollection.GetRootAsPolygonCollection(buf, 0)
+def get_polygon_collection(buf: Union[bytes, mmap.mmap]) -> PolygonCollection:
+    """Load a PolygonCollection from a file path.
+
+    Args:
+        buf: A binary stream or memory-mapped file containing the flatbuffer data.
+
+    Returns: PolygonCollection
+    """
+    return PolygonCollection.GetRootAs(buf, 0)
 
 
-def get_collection_length(file):
-    """Get the number of polygons in a FlatBuffers collection."""
-    collection = get_collection_data(file)
-    return collection.PolygonsLength()
-
-
-def read_polygon_array_from_binary(file, idx):
+def read_polygon_array_from_binary(
+    poly_collection: PolygonCollection, idx: int
+) -> np.ndarray:
     """Read a polygon's coordinates from a FlatBuffers collection."""
-    collection = get_collection_data(file)
-
-    # Check if index is out of bounds
-    nr_polygons = collection.PolygonsLength()
-    if idx >= nr_polygons:
-        raise IndexError(
-            f"Index {idx} out of bounds for collection with {nr_polygons} polygons."
-        )
-    if idx < 0:
-        raise IndexError(f"Negative index {idx} is not allowed.")
-
-    poly = collection.Polygons(idx)
-
+    # value checks not required as this is a private function
+    # processed polygon indices are expected to be in range
+    # nr_polygons = collection.PolygonsLength()
+    # if idx >= nr_polygons:
+    #     raise IndexError(
+    #         f"Index {idx} out of bounds for collection with {nr_polygons} polygons."
+    #     )
+    poly = poly_collection.Polygons(idx)
     coords = poly.CoordsAsNumpy()  # flat 1D array of coordinates
     # Reshape to (2, N) format
     return reshape_to_polygon_coords(coords)
