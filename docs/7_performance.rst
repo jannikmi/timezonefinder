@@ -4,7 +4,7 @@ Performance
 ===========
 
 Binary Data Format
------------------
+------------------
 
 TimezoneFinder uses an optimized binary format based on FlatBuffers for storing and accessing timezone data. This format provides several performance advantages:
 

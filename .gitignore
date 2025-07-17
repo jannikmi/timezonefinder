@@ -4,13 +4,8 @@ scripts/data
 scripts/*.bin
 scripts/*.json
 MANIFEST
-timezonefinder/combined.json
-scrapyard.py
-playground.py
 tmp.py
 tmp/
-test/*.bin
-tmp_shortcut.bin
 
 build/
 
