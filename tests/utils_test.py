@@ -229,28 +229,37 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
     assert nr_mistakes == 0
 
 
-def test_rectify_coords():
-    # within bounds -> no exception
-    utils.validate_coordinates(lng=180.0, lat=90.0)
-    utils.validate_coordinates(lng=-180.0, lat=90.0)
-    utils.validate_coordinates(lng=-180.0, lat=90.0)
-    utils.validate_coordinates(lng=180.0, lat=-90.0)
-    utils.validate_coordinates(lng=180.0, lat=-90.0)
-    utils.validate_coordinates(lng=-180.0, lat=-90.0)
-    utils.validate_coordinates(lng=-180.0, lat=-90.0)
+@pytest.mark.parametrize(
+    "lng, lat",
+    [
+        (180.0, 90.0),
+        (-180.0, 90.0),
+        (-180.0, 90.0),
+        (180.0, -90.0),
+        (180.0, -90.0),
+        (-180.0, -90.0),
+        (-180.0, -90.0),
+    ],
+)
+def test_rectify_coords_valid(lng, lat):
+    utils.validate_coordinates(lng=lng, lat=lat)
 
-    with pytest.raises(ValueError):  # coords out of bounds
-        utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-        )
-        utils.validate_coordinates(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-        utils.validate_coordinates(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-        utils.validate_coordinates(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-        utils.validate_coordinates(
-            lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-        )
+
+@pytest.mark.parametrize(
+    "lng, lat",
+    [
+        (180.0 + INT2COORD_FACTOR, 90.0),
+        (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
+        (-180.0, 90.0 + INT2COORD_FACTOR),
+        (180.0 + INT2COORD_FACTOR, -90.0),
+        (180.0, -90.0 - INT2COORD_FACTOR),
+        (-180.0 - INT2COORD_FACTOR, -90.0),
+        (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
+    ],
+)
+def test_rectify_coords_invalid(lng, lat):
+    with pytest.raises(ValueError):
+        utils.validate_coordinates(lng=lng, lat=lat)
 
 
 @pytest.mark.parametrize(
