@@ -6,6 +6,7 @@ scripts/*.json
 MANIFEST
 tmp.py
 tmp/
+.venv
 
 build/
 
