@@ -8,8 +8,7 @@ from typing import Dict, List
 import numpy as np
 
 from scripts.configs import DEBUG
-from tests.auxiliaries import convert_polygon
-from timezonefinder import configs
+from timezonefinder import configs, utils
 
 
 def load_json(path):
@@ -55,6 +54,32 @@ def time_execution(func):
 
 def percent(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
+
+
+def validate_coord_array_shape(coords: np.ndarray):
+    assert isinstance(coords, np.ndarray)
+    assert coords.ndim == 2, "coords must be a 2D array"
+    assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
+    # all polygons must have at least 3 coordinates
+    assert coords.shape[1] >= 3, (
+        f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
+    )
+
+
+def convert_polygon(coords, validate: bool = True) -> np.ndarray:
+    coord_array = np.array(coords)
+    validate_coord_array_shape(coord_array)
+    x_coords, y_coords = coord_array
+    if validate:
+        assert len(x_coords) >= 3, "Polygon must have at least 3 coordinates"
+        assert utils.is_valid_lng_vec(x_coords), "encountered invalid longitude values."
+        assert utils.is_valid_lat_vec(y_coords), "encountered invalid latitude values."
+    x_ints, y_ints = utils.convert2ints(coords)
+    # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
+    poly = np.array(
+        (x_ints, y_ints), dtype=configs.DTYPE_FORMAT_SIGNED_I_NUMPY, order="F"
+    )
+    return poly
 
 
 def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
@@ -199,3 +224,36 @@ def write_coordinate_data(output_path, bin_file_name, data):
 
 def write_bbox_data(output_path, bin_file_name, data):
     return write_binary(output_path, bin_file_name, data, writing_fct=write_bboxes)
+
+
+def has_coherent_sequences(lst: List[int]) -> bool:
+    """
+    :return: True if equal entries in the list are not separated by entries of other values
+    """
+    if len(lst) <= 1:
+        return True
+    encountered = set()
+    # at least 2 entries
+    lst_iter = iter(lst)
+    prev = next(lst_iter)
+    for e in lst:
+        if e in encountered:
+            # the entry appeared earlier already
+            return False
+        if e != prev:
+            encountered.add(prev)
+            prev = e
+
+    return True
+
+
+def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
+    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
+    if len(polygon_ids) == 1:
+        # single polygon in the shortcut, no need to check
+        return
+    zone_ids = all_zone_ids[polygon_ids]
+    assert has_coherent_sequences(zone_ids), (
+        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
+    )
+    # TODO check that the size of the polygons of that zones are descending

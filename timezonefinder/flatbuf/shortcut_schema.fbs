@@ -4,7 +4,7 @@ namespace timezonefinder.flatbuf;
 table ShortcutEntry {
   // H3 hexagon ID, uint64
   hex_id:ulong;
-  // List of polygon IDs in this hexagon
+  // List of polygon IDs (uint16) in this hexagon
   poly_ids:[ushort];
 }
 

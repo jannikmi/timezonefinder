@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
-from timezonefinder.flatbuf.utils import (
+from timezonefinder.flatbuf.polygon_utils import (
     write_polygon_collection_flatbuffer,
-    get_collection_length,
     read_polygon_array_from_binary,
     flatten_polygon_coords,
     reshape_to_polygon_coords,
@@ -32,14 +31,18 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons):
 
     # Read back the data
     with open(output_file, "rb") as f:
-        assert get_collection_length(f) == len(polygons), (
-            "Mismatch in number of polygons."
-        )
         for idx, original_polygon in enumerate(polygons):
             read_polygon = read_polygon_array_from_binary(f, idx)
             np.testing.assert_array_equal(
                 read_polygon, original_polygon, "Polygon mismatch."
             )
+
+        try:
+            read_polygon = read_polygon_array_from_binary(f, idx + 1)
+            assert read_polygon is None, "Expected None for out-of-bounds index."
+        except IndexError:
+            # If an IndexError is raised, it means we correctly reached the end of the file
+            pass
 
 
 @pytest.mark.parametrize(

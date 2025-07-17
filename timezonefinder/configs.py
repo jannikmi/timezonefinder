@@ -8,6 +8,7 @@ import numpy as np
 # SHORTCUT SETTINGS
 # h3 library
 SHORTCUT_H3_RES: int = 3
+# TODO remove
 SHORTCUT_FILE = "shortcuts.bin"
 
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
@@ -15,11 +16,11 @@ OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 # PATHS
 DEFAULT_DATA_DIR = Path(__file__).parent / "data"
 
-
+# TODO
 # DATA FILES
 # BINARY
-BOUNDARIES_BINARY = "boundaries.fbs"
-HOLE_BINARY = "holes.fbs"
+
+COORDINATES_BINARY = "coodinates.fbs"
 
 
 BINARY_FILE_ENDING = ".bin"

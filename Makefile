@@ -44,12 +44,8 @@ data:
 test:
 	@uv run pytest
 
-test1: test
-
 tox:
-	@tox
-
-test2: tox
+	@uv run tox
 
 hook:
 	@uv run pre-commit install
@@ -66,11 +62,12 @@ clean:
 
 # compile flatbuffers files:
 flatbuf:
-	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon.fbs
+	@echo "Compiling FlatBuffer schemas..."
+	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
+	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
 build:
 	rm -rf build dist
-	uv build --python cp38
 	uv build --python cp38
 	uv build --python cp310
 	uv build --python cp311
@@ -81,6 +78,10 @@ build:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
 docs:
 	(cd docs && make html)
+
+speedtest:
+	# pytest -s flag: output to console
+	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 
 
 .PHONY: clean test build docs

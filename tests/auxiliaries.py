@@ -6,18 +6,19 @@ from typing import Callable, Tuple
 
 import numpy as np
 
-from timezonefinder import TimezoneFinder, utils
+from scripts.utils import validate_coord_array_shape
+from timezonefinder import utils
 from timezonefinder.configs import (
-    DTYPE_FORMAT_SIGNED_I_NUMPY,
     MAX_LAT_VAL,
     MAX_LAT_VAL_INT,
     MAX_LNG_VAL,
     MAX_LNG_VAL_INT,
 )
+from timezonefinder.polygon_array import PolygonArray
 
 # for reading coordinates
-
-tf_instance = TimezoneFinder()
+boundaries_dir = utils.get_boundaries_dir()
+boundaries = PolygonArray(data_location=boundaries_dir, in_memory=True)
 
 
 def ocean2land(test_locations):
@@ -116,9 +117,9 @@ def get_rnd_query_pt() -> Tuple[float, float]:
 
 
 def get_rnd_poly_int() -> np.ndarray:
-    max_poly_id = tf_instance.nr_of_polygons - 1
+    max_poly_id = len(boundaries) - 1
     poly_id = random.randint(0, max_poly_id)
-    poly = tf_instance.coords_of(poly_id)
+    poly = boundaries.coords_of(poly_id)
     return poly
 
 
@@ -126,30 +127,6 @@ def get_rnd_poly() -> np.ndarray:
     poly = get_rnd_poly_int()
     coords = utils.convert2coords(poly)
     return np.array(coords)
-
-
-def validate_coord_array_shape(coords: np.ndarray):
-    assert isinstance(coords, np.ndarray)
-    assert coords.ndim == 2, "coords must be a 2D array"
-    assert coords.shape[0] == 2, "coords must have two columns (lng, lat)"
-    # all polygons must have at least 3 coordinates
-    assert coords.shape[1] >= 3, (
-        f"a polygon must consist of at least 3 coordinates, but has {coords.shape[1]} coordinates"
-    )
-
-
-def convert_polygon(coords, validate: bool = True) -> np.ndarray:
-    coord_array = np.array(coords)
-    validate_coord_array_shape(coord_array)
-    x_coords, y_coords = coord_array
-    if validate:
-        assert len(x_coords) >= 3, "Polygon must have at least 3 coordinates"
-        assert utils.is_valid_lng_vec(x_coords), "encountered invalid longitude values."
-        assert utils.is_valid_lat_vec(y_coords), "encountered invalid latitude values."
-    x_ints, y_ints = utils.convert2ints(coords)
-    # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
-    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="F")
-    return poly
 
 
 def convert_inside_polygon_input(lng: float, lat: float):

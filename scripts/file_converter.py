@@ -82,6 +82,7 @@ from scripts.configs import (
     ZoneIdSet,
 )
 from scripts.utils import (
+    check_shortcut_sorting,
     print_shortcut_statistics,
     time_execution,
     to_numpy_polygon_repr,
@@ -91,30 +92,40 @@ from scripts.utils import (
     load_json,
 )
 from timezonefinder.flatbuf.polygon_utils import (
-    get_boundaries_path,
-    get_holes_path,
-    write_polygon_flatbuffers,
+    get_coordinate_path,
+    write_polygon_collection_flatbuffer,
 )
 from timezonefinder.flatbuf.shortcut_utils import write_shortcuts_flatbuffers
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     DTYPE_FORMAT_H,
+    DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_I,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
     HOLE_REGISTRY_FILE,
     NR_BYTES_I,
     POLY_COORD_AMOUNT,
     POLY_MAX_VALUES,
-    POLY_NR2ZONE_ID,
     POLY_ZONE_IDS,
     SHORTCUT_H3_RES,
     THRES_DTYPE_H,
     THRES_DTYPE_I,
 )
 from timezonefinder.hex_helpers import lies_in_h3_cell
+from timezonefinder.np_binary_helpers import (
+    get_xmax_path,
+    get_xmin_path,
+    get_ymax_path,
+    get_ymin_path,
+    get_zone_ids_path,
+    get_zone_positions_path,
+)
 from timezonefinder.utils import (
     any_pt_in_poly,
     coord2int,
     fully_contained_in_hole,
+    get_holes_dir,
+    get_boundaries_dir,
     int2coord,
 )
 from timezonefinder.zone_names import write_zone_names
@@ -134,13 +145,45 @@ polynrs_of_holes = []
 holes = []
 all_hole_lengths = []
 list_of_pointers = []
-poly_nr2zone_id = []
 
 
 def _holes_in_poly(poly_nr):
     for i, nr in enumerate(polynrs_of_holes):
         if nr == poly_nr:
             yield holes[i]
+
+
+class Boundaries(NamedTuple):
+    xmax: float
+    xmin: float
+    ymax: float
+    ymin: float
+
+    def overlaps(self, other: "Boundaries") -> bool:
+        if not isinstance(other, Boundaries):
+            raise TypeError
+        if self.xmin > other.xmax:
+            return False
+        if self.xmax < other.xmin:
+            return False
+        if self.ymin > other.ymax:
+            return False
+        if self.ymax < other.ymin:
+            return False
+        return True
+
+
+def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
+    print("compiling the bounding boxes of the polygons from the coordinates...")
+    boundaries = []
+    for coords in coord_list:
+        x_coords, y_coords = coords
+        y_coords = coords[1]
+        bounds = Boundaries(
+            np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
+        )
+        boundaries.append(bounds)
+    return boundaries
 
 
 def parse_polygons_from_json(input_path: Path) -> int:
@@ -173,12 +216,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
             poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
             polygons.append(poly)
             x_coords = poly[0]
-            y_coords = poly[1]
             polygon_lengths.append(len(x_coords))
-            bounds = Boundaries(
-                np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
-            )
-            poly_boundaries.append(bounds)
             poly_zone_ids.append(zone_id)
 
             # everything else is interpreted as a hole!
@@ -201,6 +239,9 @@ def parse_polygons_from_json(input_path: Path) -> int:
             break
 
     print("\n")
+
+    poly_boundaries = compile_bboxes(polygons)
+
     nr_of_polygons = len(polygon_lengths)
     nr_of_zones = len(all_tz_names)
     assert nr_of_polygons >= 0
@@ -243,17 +284,8 @@ def parse_polygons_from_json(input_path: Path) -> int:
     return polygon_space
 
 
-def compute_poly_nr2zone_id(output_path: Path):
-    global poly_zone_ids
-    global list_of_pointers
-    global poly_boundaries
-    global polygons
-    global polygon_lengths
-    global polynrs_of_holes
-    global nr_of_zones
-    global nr_of_polygons
-
-    # TODO refactor. own function
+def compute_zone_positions() -> List[int]:
+    poly_nr2zone_id = []
     print("Computing where zones start and end...")
     last_id = -1
     zone_id = 0
@@ -277,6 +309,7 @@ def compute_poly_nr2zone_id(output_path: Path):
     poly_nr2zone_id.append(nr_of_polygons)
     # assert len(poly_nr2zone_id) == nr_of_zones + 1
     print("...Done.\n")
+    return poly_nr2zone_id
 
 
 def any_pt_in_cell(h: int, poly_nr: int) -> bool:
@@ -340,26 +373,6 @@ def get_corrected_hex_boundaries(
         xmax0 = max_longitude
 
     return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
-
-
-class Boundaries(NamedTuple):
-    xmax: float
-    xmin: float
-    ymax: float
-    ymin: float
-
-    def overlaps(self, other: "Boundaries") -> bool:
-        if not isinstance(other, Boundaries):
-            raise TypeError
-        if self.xmin > other.xmax:
-            return False
-        if self.xmax < other.xmin:
-            return False
-        if self.ymin > other.ymax:
-            return False
-        if self.ymax < other.ymin:
-            return False
-        return True
 
 
 @dataclass
@@ -556,6 +569,11 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
     operate on one hex resolution
     also store results separately to divide the output data files
     """
+    global poly_zone_ids
+
+    # convert to numpy array for advanced indexing
+    poly_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
+
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
@@ -571,7 +589,10 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         hex_id = candidates.pop()
         cell = get_hex(hex_id)
         polys = list(cell.polys_in_cell)
-        mapping[hex_id] = optimise_shortcut_ordering(polys)
+        # TODO separate optimisation into separate function
+        polys_optimised = optimise_shortcut_ordering(polys)
+        check_shortcut_sorting(polys_optimised, poly_zone_ids)
+        mapping[hex_id] = polys_optimised
         report_progress()
 
     return mapping
@@ -678,6 +699,111 @@ def create_and_write_hole_registry(polynrs_of_holes, output_path):
     write_json(hole_registry, path)
 
 
+def to_numpy_array(values: List, dtype: str) -> np.ndarray:
+    """
+    Converts a list of values to a numpy array with the specified dtype.
+    Args:
+        values: List of values to convert
+        dtype: Numpy dtype string (e.g., 'int32', 'float64')
+    Returns:
+        Numpy array with the specified dtype
+    """
+    return np.array(values, dtype=dtype)
+
+
+def to_bbox_vector(values: List[int]) -> np.ndarray:
+    return to_numpy_array(values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
+
+
+def convert_bboxes_to_numpy(
+    bboxes: List[Boundaries],
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Converts a list of Boundaries to numpy arrays for xmax, xmin, ymax, ymin.
+    Args:
+        bboxes: List of Boundaries objects
+    Returns:
+        Tuple of numpy arrays (xmax, xmin, ymax, ymin)
+    """
+    xmax_list = []
+    xmin_list = []
+    ymax_list = []
+    ymin_list = []
+    for bounds in bboxes:
+        xmax_list.append(bounds.xmax)
+        xmin_list.append(bounds.xmin)
+        ymax_list.append(bounds.ymax)
+        ymin_list.append(bounds.ymin)
+    xmax = to_bbox_vector(xmax_list)
+    xmin = to_bbox_vector(xmin_list)
+    ymax = to_bbox_vector(ymax_list)
+    ymin = to_bbox_vector(ymin_list)
+    return xmax, xmin, ymax, ymin
+
+
+def write_numpy_binaries(output_path):
+    print("Writing binary data to separate Numpy binary .npy files...")
+    # some properties are very small but essential for the performance of the package
+    # -> store them directly as numpy arrays (overhead is negligible) and read them into memory at runtime
+
+    # ZONE_POSITIONS: where each timezone starts and ends
+    zone_positions = compute_zone_positions()
+    zone_positions_arr = to_numpy_array(zone_positions, dtype=DTYPE_FORMAT_H_NUMPY)
+    zone_positions_path = get_zone_positions_path(output_path)
+    # TODO use store_per_polygon_vector(
+    np.save(zone_positions_path, zone_positions_arr)
+
+    # BOUNDARY_ZONE_IDS: the zone id for every polygon
+    boundary_zone_ids = np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY)
+    # NOTE: zone ids are stored idependently from boundaries or holes
+    zone_id_file = get_zone_ids_path(output_path)
+    np.save(zone_id_file, boundary_zone_ids)
+
+    # properties which are "per polygon" (boundary/hole) vectors
+    # separate output directories for holes and boundaries
+    holes_dir = get_holes_dir(output_path)
+    boundaries_dir = get_boundaries_dir(output_path)
+
+    holes_dir.mkdir(parents=True, exist_ok=True)
+    boundaries_dir.mkdir(parents=True, exist_ok=True)
+
+    hole_boundaries = compile_bboxes(holes)
+    # save 4 bbox vectors for holes and polygons to the respective directories
+    for dir, bounds in zip(
+        [holes_dir, boundaries_dir], [hole_boundaries, poly_boundaries]
+    ):
+        # Convert Boundaries to numpy arrays
+        boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
+            convert_bboxes_to_numpy(bounds)
+        )
+        # Save bounding box properties
+        np.save(get_xmax_path(dir), boundary_xmax)
+        np.save(get_xmin_path(dir), boundary_xmin)
+        np.save(get_ymax_path(dir), boundary_ymax)
+        np.save(get_ymin_path(dir), boundary_ymin)
+
+    print("Numpy binary files written successfully")
+
+
+def write_flatbuffer_files(output_path: Path):
+    # separate output directories for holes and boundaries
+    holes_dir = get_holes_dir(output_path)
+    boundaries_dir = get_boundaries_dir(output_path)
+
+    holes_dir.mkdir(parents=True, exist_ok=True)
+    boundaries_dir.mkdir(parents=True, exist_ok=True)
+
+    print("Writing binary data to flatbuffer files...")
+    # Write polygon boundary coordinates to flatbuffer
+    file_path = get_coordinate_path(boundaries_dir)
+    _ = write_polygon_collection_flatbuffer(file_path, polygons)
+
+    file_path = get_coordinate_path(holes_dir)
+    # Write holes coordinates to flatbuffer
+    hole_space = write_polygon_collection_flatbuffer(file_path, holes)
+    print("Flatbuffer files written successfully")
+    return hole_space
+
+
 def write_binary_files(output_path: Path) -> None:
     """
     Write all binary files for the timezonefinder package.
@@ -687,39 +813,8 @@ def write_binary_files(output_path: Path) -> None:
     Args:
         output_path: Directory where binary files will be written
     """
-    global polygons, poly_zone_ids, poly_boundaries, poly_nr2zone_id
-
-    print("Writing binary data to flatbuffer files...")
-
-    # Prepare polygon data for flatbuffers (coords, zone_id, bounds)
-    polygon_data = []
-    for i, poly_coords in enumerate(polygons):
-        zone_id = poly_zone_ids[i]
-        xmax, xmin, ymax, ymin = poly_boundaries[i]
-        bounds = (xmax, xmin, ymax, ymin)
-        polygon_data.append((poly_coords, zone_id, bounds))
-
-    # Write polygons to flatbuffer
-    file_path = get_boundaries_path(output_path)
-    _ = write_polygon_flatbuffers(polygon_data, file_path)
-
-    # Prepare hole data for flatbuffers (coords, zone_id, bounds)
-    hole_data = []
-    for i, hole_coords in enumerate(holes):
-        zone_id = 0  # TODO remove
-        x_coords, y_coords = hole_coords
-        xmax = np.max(x_coords)
-        xmin = np.min(x_coords)
-        ymax = np.max(y_coords)
-        ymin = np.min(y_coords)
-        bounds = (xmax, xmin, ymax, ymin)
-        hole_data.append((hole_coords, zone_id, bounds))
-
-    file_path = get_holes_path(output_path)
-    # Write holes to flatbuffer
-    hole_space = write_polygon_flatbuffers(hole_data, file_path)
-
-    # Write zone names as text file
+    write_numpy_binaries(output_path)
+    hole_space = write_flatbuffer_files(output_path)
 
     print("Binary files written successfully")
     return hole_space
@@ -741,12 +836,7 @@ def compile_data_files(output_path):
     return hole_space
 
     # Write other metadata as before (zone ids, boundaries, etc.)
-    write_binary(
-        output_path,
-        POLY_NR2ZONE_ID,
-        poly_nr2zone_id,
-        upper_value_limit=nr_of_polygons + 1,
-    )
+
     write_binary(
         output_path, POLY_ZONE_IDS, poly_zone_ids, upper_value_limit=nr_of_zones
     )
@@ -774,10 +864,9 @@ def parse_data(
     output_path.mkdir(parents=True, exist_ok=True)
 
     polygon_space = parse_polygons_from_json(input_path)
-    compute_poly_nr2zone_id(output_path)
     hole_space = compile_data_files(output_path)
 
-    raise ValueError()  # TODO remove this line after testing
+    # raise ValueError()  # TODO remove this line after testing
 
     shortcut_mapping = compile_shortcut_mapping()
     # TODO remov
