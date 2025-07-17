@@ -81,6 +81,12 @@ release:
 	@echo "pushing the changes to the remote repository"
 	git push origin "$(shell uv version --short)"
 
+rmtag:
+	@echo "removing the tag: $(VERSION)"
+	git tag -d "$(shell uv version --short)"
+	@echo "pushing the changes to the remote repository"
+	git push origin --delete "$(shell uv version --short)"
+
 # documentation generation:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html
 docs:
