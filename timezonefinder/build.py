@@ -8,6 +8,7 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 
 import pathlib
 import re
+from typing import Optional
 import warnings
 
 import cffi
@@ -19,14 +20,14 @@ EXTENSION_PATH = pathlib.Path("timezonefinder") / "inside_poly_extension"
 h_file_path = EXTENSION_PATH / H_FILE_NAME
 c_file_path = EXTENSION_PATH / C_FILE_NAME
 
+ffibuilder: Optional[cffi.FFI] = None
 try:
     ffibuilder = cffi.FFI()
 except Exception as exc:
+    # Clang extension should be fully optional
     warnings.warn(
         f"C lang extension cannot be build, since cffi failed with this error: {exc}"
     )
-    # Clang extension should be fully optional
-    ffibuilder = None
 
 if ffibuilder is not None:
     ffibuilder.set_source(

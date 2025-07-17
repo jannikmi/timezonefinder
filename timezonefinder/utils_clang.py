@@ -1,9 +1,10 @@
-from typing import Final
+from typing import Final, Optional
 
 import cffi
 
 import numpy as np
 
+ffi: Optional[cffi.FFI] = None
 try:
     # Note: IDE might complain as this import comes from a cffi C extension
     from timezonefinder import inside_polygon_ext  # type: ignore
@@ -14,7 +15,6 @@ try:
 except ImportError:
     clang_extension_loaded = False
     inside_polygon_ext = None
-    ffi = None
 
 INT_LIST_REP: Final[str] = "int []"
 
@@ -25,7 +25,7 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     ATTENTION: the input numpy arrays must have a C_CONTIGUOUS memory layout
     https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
     """
-    if not clang_extension_loaded:
+    if ffi is None:
         raise ValueError(
             "Trying to use the clang implementation of the point in polygon algorithm "
             "while the C extension in not loaded."

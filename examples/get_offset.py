@@ -2,6 +2,7 @@ from datetime import datetime
 from timezonefinder import TimezoneFinder
 from pytz import timezone, utc
 
+
 def get_offset(*, lat, lng):
     """
     Returns a location's time zone offset from UTC in minutes.
@@ -13,6 +14,7 @@ def get_offset(*, lat, lng):
     today_target = tz_target.localize(today)
     today_utc = utc.localize(today)
     return (today_utc - today_target).total_seconds() / 60
+
 
 bergamo = {"lat": 45.69, "lng": 9.67}
 minute_offset = get_offset(**bergamo)
