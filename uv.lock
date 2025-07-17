@@ -1392,7 +1392,7 @@ wheels = [
 
 [[package]]
 name = "timezonefinder"
-version = "6.5.9rc2"
+version = "6.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "cffi" },
