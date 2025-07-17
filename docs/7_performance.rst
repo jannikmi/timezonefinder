@@ -90,7 +90,8 @@ Timezone finding
 
 Results from version 6.6.0:
 
-::
+.. code-block:: text
+
     using C implementation: False
     using Numba: True
     in memory mode: True
