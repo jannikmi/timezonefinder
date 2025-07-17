@@ -19,7 +19,7 @@ repos:
 
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.11.2
+      rev: v0.12.3
       hooks:
           # linter.
           - id: ruff
@@ -33,7 +33,7 @@ repos:
 
     # TODO also check docs/. make compatible with sphinx
     -   repo: https://github.com/myint/rstcheck
-        rev: 'v6.2.4'
+        rev: 'v6.2.5'
         hooks:
             -   id: rstcheck
                 exclude: ^(docs/)
@@ -44,12 +44,12 @@ repos:
             -   id: validate-pyproject
 
     -   repo: https://github.com/asottile/pyupgrade
-        rev: v3.19.1
+        rev: v3.20.0
         hooks:
             -   id: pyupgrade
 
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v1.15.0
+        rev: v1.17.0
         hooks:
             -   id: mypy
                 exclude: ^((tests|scripts)/)
@@ -63,6 +63,6 @@ repos:
     #        additional_dependencies: [ numpy, poetry==1.1.11 ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v20.1.0
+        rev: v20.1.8
         hooks:
             -   id: clang-format
