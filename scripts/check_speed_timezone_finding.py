@@ -1,11 +1,12 @@
 from typing import Callable, Iterable, List, Tuple
 
 import pytest
+from scripts.configs import DEBUG
 from tests.auxiliaries import get_rnd_query_pt, timefunc
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
 
-N = int(1e4)
+N = 10 if DEBUG else int(1e4)
 tf_instance = TimezoneFinder()
 
 
@@ -66,42 +67,46 @@ def test_timezone_finding_speed(
     points_descr: str,
     in_memory_mode: bool,
 ):
+    print("\nSTATUS:")
     print(f"using C implementation: {tf_instance.using_clang_pip()}")
     print(f"using Numba: {tf_instance.using_numba()}")
+    print(f"in memory mode: {in_memory_mode}\n")
+    print(f"{N:,} {points_descr}")
 
     tf = TimezoneFinder(in_memory=in_memory_mode)
     tfL = TimezoneFinderL(in_memory=in_memory_mode)
-    classes_and_function_names = [
-        (tf, "timezone_at"),
-        (tf, "timezone_at_land"),
-        (tfL, "timezone_at"),
-        (tfL, "timezone_at_land"),
+    test_functions = [
+        # sorted by class then speed (increases readability)
+        tf.certain_timezone_at,
+        tf.timezone_at_land,
+        tf.timezone_at,
+        tf.unique_timezone_at,
+        tfL.timezone_at_land,
+        tfL.timezone_at,
+        tfL.unique_timezone_at,
     ]
-    print(f"\n{N} {points_descr}")
-
-    print(f"in memory mode: {in_memory_mode}")
-    print()
 
     def time_all_runs(func2time: Callable, test_inputs: Iterable):
         for lng, lat in test_inputs:
             _ = func2time(lng=lng, lat=lat)  # 'Europe/Berlin'
 
-    def time_func(test_instance, test_func_name):
-        test_func = test_instance.__getattribute__(test_func_name)
+    def time_func(test_func: Callable):
         t = timefunc(time_all_runs, test_func, test_points)
         t_avg = t / N
         # print("total time:", time_preprocess(t))
         pts_p_sec = t_avg**-1
-        class_name = test_instance.__class__.__name__
+        pts_p_sec_k = pts_p_sec / 1000  # convert to thousands
+        test_func_name = test_func.__name__
+        class_name = test_func.__self__.__class__.__name__
         print(
             RESULT_TEMPLATE.format(
                 f"{class_name}.{test_func_name}()",
                 f"{t_avg:.1e}",
-                f"{pts_p_sec:.1e}",
+                f"{pts_p_sec_k:.1f}k",
             )
         )
 
-    RESULT_TEMPLATE = "{:35s} | {:10s} | {:10s}"
+    RESULT_TEMPLATE = "{:38s} | {:10s} | {:10s}"
     print(
         RESULT_TEMPLATE.format(
             "function name",
@@ -110,6 +115,6 @@ def test_timezone_finding_speed(
         )
     )
     print("-" * 60)
-    for test_instance, test_func_name in classes_and_function_names:
-        time_func(test_instance, test_func_name)
+    for test_func in test_functions:
+        time_func(test_func)
     print()
