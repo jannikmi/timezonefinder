@@ -33,11 +33,12 @@ ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
 `download stats <https://pepy.tech/project/timezonefinder>`__
 
 
-License
+LICENSE
 -------
 
-``timezonefinder`` is distributed under the terms of the MIT license
-(see `LICENSE <https://github.com/jannikmi/timezonefinder/blob/master/LICENSE>`__).
+``timezonefinder``  is licensed under the `MIT license <https://github.com/jannikmi/timezonefinder/blob/master/LICENSE>`__.
+
+The data is licensed under the `ODbL license <https://github.com/jannikmi/timezonefinder/blob/master/DATA_LICENSE>`__, following the base dataset from `evansiroky/timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`__.
 
 
 
