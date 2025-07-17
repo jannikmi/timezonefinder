@@ -72,12 +72,6 @@ class AbstractTimezoneFinder(ABC):
         zone_ids_path = get_zone_ids_path(self.data_location)
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
 
-    def __del__(self):
-        pass
-        # TODO
-        # for attribute_name in self.binary_data_attributes:
-        #     getattr(self, attribute_name).close()
-
     @property
     def nr_of_zones(self):
         """
@@ -433,7 +427,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
             for poly_id in self._iter_poly_ids_of_zone(tz_id)
         ]
 
-    # TODO rename _get_bbox
     def get_polygon_boundaries(self, poly_id: int) -> Tuple[int, int, int, int]:
         """returns the bounding box of the polygon = (lng_max, lng_min, lat_max, lat_min) converted to int32"""
         xmax = self.boundaries.xmax[poly_id]
@@ -442,7 +435,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         ymin = self.boundaries.ymin[poly_id]
         return xmax, xmin, ymax, ymin
 
-    # TODO rename to _inside_of_boundary
     def inside_of_polygon(self, poly_id: int, x: int, y: int) -> bool:
         """
         Check if a point is inside a polygon.

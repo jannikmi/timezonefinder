@@ -38,7 +38,6 @@ except ImportError:
 CoordType = Array(i4, 2, "F", True, aligned=True)
 
 
-# TODO
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
 @njit(boolean(i4, i4, CoordType), cache=True)
 def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
