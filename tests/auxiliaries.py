@@ -82,20 +82,6 @@ def build_wheel() -> Path:
     # Clean up dist directory if it exists
     if DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
-    # Ensure build dependencies are installed
-    run_command(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "pip",
-            "uv",
-            "wheel",
-            "build",
-        ]
-    )
 
     # Build the wheel
     run_command(BUILD_WHEEL_CMD, cwd=str(PROJECT_ROOT))

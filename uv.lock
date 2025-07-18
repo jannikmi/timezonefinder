@@ -1409,8 +1409,10 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
+    { name = "pytest" },
     { name = "rstcheck" },
     { name = "ruff" },
+    { name = "tox" },
 ]
 docs = [
     { name = "sphinx" },
@@ -1443,8 +1445,10 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
+    { name = "pytest" },
     { name = "rstcheck" },
     { name = "ruff" },
+    { name = "tox" },
 ]
 docs = [
     { name = "sphinx", specifier = ">=5,<6" },
