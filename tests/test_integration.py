@@ -16,9 +16,14 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Tuple
+import pytest
 
 from scripts.configs import PROJECT_ROOT
+
 from tests.auxiliaries import build_sdist, build_wheel, run_command
+
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
 
 # Define additional path constants
 BIN_DIR = "Scripts" if sys.platform == "win32" else "bin"

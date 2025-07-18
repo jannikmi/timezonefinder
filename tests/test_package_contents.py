@@ -26,6 +26,9 @@ from tests.auxiliaries import (
     matches_pattern,
 )
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 GITIGNORE_PATH = PROJECT_ROOT / ".gitignore"
 
 
