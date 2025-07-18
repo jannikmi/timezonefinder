@@ -170,8 +170,8 @@ def extract_archive(archive_path: Path) -> List[Path]:
         # work in a temporary directory
         with tempfile.TemporaryDirectory() as tmpdir:
             extract_to = Path(tmpdir)
-            # Extract all files
-            tar.extractall(path=extract_to)
+            # Extract all files with the 'data' filter to allow all files but avoid the deprecation warning
+            tar.extractall(path=extract_to, filter="data")
 
             # Find the package directory (it should contain setup.py or pyproject.toml)
             pkg_dir = None
