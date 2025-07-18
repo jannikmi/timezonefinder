@@ -8,7 +8,7 @@ from timezonefinder.flatbuf.polygon_utils import (
     flatten_polygon_coords,
     reshape_to_polygon_coords,
 )
-from timezonefinder.utils import close_ressources, load_buffer
+from timezonefinder.utils import close_ressource, load_buffer
 
 
 @pytest.mark.parametrize("in_memory", [True, False])
@@ -46,7 +46,8 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
         # Attempt to read a polygon with an out-of-bounds index
         read_polygon = read_polygon_array_from_binary(poly_collection, idx + 1)
 
-    close_ressources(file, buffer)
+    close_ressource(buffer)
+    close_ressource(file)
 
 
 @pytest.mark.parametrize(

@@ -78,7 +78,8 @@ class PolygonArray:
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
-        utils.close_ressources(self.coord_file, self.coord_buf)
+        utils.close_ressource(self.coord_file)
+        utils.close_ressource(self.coord_buf)
 
     def __len__(self) -> int:
         """

@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "6.6.0"
+version = "6.6.1"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -43,6 +43,15 @@ docs = [
     "Sphinx<6,>=5",
     "sphinx-rtd-theme<2,>=1",
 ]
+test=[
+    "tox",
+    "pytest",
+    # used in example scripts
+    "pytz>=2022.7.1",
+    # setuptoosl required for integration tests: building sdist and wheel
+    "setuptools>=61",
+    "cffi",
+]
 dev = [
     "tox",
     "pytest",
@@ -52,8 +61,6 @@ dev = [
     "isort",
     "ruff",
     "cibuildwheel",
-    # used in example scripts
-    "pytz>=2022.7.1"
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",
@@ -69,10 +76,13 @@ requires = ["setuptools>=61", "cffi"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["timezonefinder", "timezonefinder.inside_poly_extension"]
+packages = ["tests", "timezonefinder", "timezonefinder.inside_poly_extension", "timezonefinder.flatbuf"]
 
 [tool.setuptools.package-data]
-timezonefinder = ["data/*", "inside_poly_extension/*"]
+timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.c", "**/*.h", "**/*.txt"]
+
+[tool.setuptools.data-files]
+"." = ["DATA_LICENSE"]
 
 [tool.ruff]
 target-version = "py39"
@@ -81,37 +91,8 @@ src = ["timezonefinder", "tests", "build.py"]
 [tool.ruff.lint.isort]
 known-local-folder = ["timezonefinder"]
 
-
-[tool.tox]
-legacy_tox_ini = """
-    [tox]
-    isolated_build = true
-    envlist =
-        # TODO python 3.13 with numba
-        docs,py{39,310,311,312}{,-numba,-pytz},py313{,-pytz}
-
-    [gh-actions]
-    python =
-        3.9: py39{,-numba,-pytz}
-        3.10: py310{,-numba,-pytz}
-        3.11: py311{,-numba,-pytz}
-        3.12: py312{,-numba,-pytz}
-        # TODO also -numba
-        3.13: py313{,-pytz}
-
-    [testenv:docs]
-    description = build documentation
-    basepython = python3.12
-    allowlist_externals = uv,sphinx-build
-    commands =
-      uv run -v --group docs python3 --version
-      sphinx-build -d "{envtmpdir}{/}doctree" docs "{toxworkdir}{/}docs_out" --color -b html
-      python -c 'print(r"documentation available under file://{toxworkdir}{/}docs_out{/}index.html")'
-
-    [testenv]
-    allowlist_externals = uv
-    commands =
-        !numba: uv run -v pytest {posargs}
-        numba:  uv run -v --group numba pytest {posargs}
-        pytz:   uv run -v --group pytz pytest {posargs}
-"""
+[tool.pytest.ini_options]
+markers = [
+    "unit: mark test as a unit test",
+    "integration: mark test as an integration test"
+]

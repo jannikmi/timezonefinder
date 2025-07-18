@@ -66,6 +66,10 @@ flatbuf:
 	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
+builsdist:
+	@echo "Building single tar.gz distribution..."
+	uv build -v --sdist
+
 build:
 	rm -rf build dist
 	uv build --python cp38
@@ -95,6 +99,5 @@ docs:
 speedtest:
 	# pytest -s flag: output to console
 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
-
 
 .PHONY: clean test build docs

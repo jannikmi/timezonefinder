@@ -4,7 +4,7 @@ import io
 import mmap
 from pathlib import Path
 import re
-from typing import Callable, Tuple, Union
+from typing import Any, Callable, Tuple, Union
 
 import numpy as np
 
@@ -71,17 +71,14 @@ def load_buffer(
     return None, buf
 
 
-def _safe_close(obj):
+def close_ressource(obj: Any) -> None:
+    """Safely close a resource, ignoring errors."""
+    if obj is None:
+        return
     try:
         obj.close()
     except Exception:
         pass
-
-
-def close_ressources(file: io.BufferedReader, buf: mmap.mmap) -> None:
-    """Close the file and buffer resources."""
-    _safe_close(file)
-    _safe_close(buf)
 
 
 def is_ocean_timezone(timezone_name: str) -> bool:
