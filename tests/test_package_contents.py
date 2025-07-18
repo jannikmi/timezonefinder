@@ -8,30 +8,22 @@ The module uses parameterized tests and global constants to minimize code
 duplication and make the tests more maintainable.
 """
 
-from collections.abc import Iterable
-import fnmatch
-import os
 from pathlib import Path
-import shutil
-import subprocess
 import tarfile
 import tempfile
-from typing import Iterator, Pattern, Set, Tuple, Union
-import re
+from typing import Iterator, List, Set
 
 import pytest
-from timezonefinder.configs import PACKAGE_DIR
+from tests.auxiliaries import (
+    PROJECT_ROOT,
+    any_filter_paths,
+    build_sdist,
+    file_path_iterator,
+    filter_paths,
+)
 
-#######################
-# PATH CONSTANTS
-#######################
-
-PROJECT_ROOT = PACKAGE_DIR.parent
-DIST_DIR = PROJECT_ROOT / "dist"
 GITIGNORE_PATH = PROJECT_ROOT / ".gitignore"
 
-# Command constants
-BUILD_CMD = ["make", "buildsingle"]
 
 #######################
 # FILE PATTERN CONSTANTS
@@ -99,38 +91,6 @@ ESSENTIAL_SOURCE_PATTERNS = {
 }
 
 
-#######################
-# UTILITY FUNCTIONS
-#######################
-
-
-def file_path_iterator(
-    path: Path = PROJECT_ROOT, relative: bool = False
-) -> Iterator[Path]:
-    """
-    Recursively iterate over all files in the given path.
-
-    Args:
-        path: The root path to start the iteration from (default: PROJECT_ROOT)
-
-    Yields:
-        Path objects for each file found
-    """
-    assert isinstance(path, Path), "path must be a Path object"
-    assert path.is_dir(), f"path must be a directory, got {path}"
-
-    # recursively walk through the directory
-    for root, _, files in os.walk(path):
-        for file in files:
-            # yield the full path to the file
-            # using Path to ensure compatibility with different OS path formats
-            file_path = Path(root) / file
-            if relative:
-                # yield relative to the project root
-                file_path = file_path.relative_to(path)
-            yield file_path
-
-
 def load_gitignore_patterns() -> Set[str]:
     """
     Load patterns from a .gitignore file.
@@ -149,103 +109,6 @@ def load_gitignore_patterns() -> Set[str]:
 # any file not under version control should not be included in the distribution
 NON_VERSION_CONTROL_PATTERNS = load_gitignore_patterns()
 IGNORED_PATTERNS = UNWANTED_DIST_PATTERNS | NON_VERSION_CONTROL_PATTERNS
-
-
-def matches_pattern(path: Path, pattern: Union[str, Pattern, None]) -> bool:
-    r"""
-    Check if a path matches a given pattern.
-
-    Args:
-        path: The path to check
-        pattern: A glob pattern string or compiled regex pattern to match against
-                 If None, always returns True (matches everything)
-                 you can use:
-                   - Simple filename patterns: '*.py' matches any Python file
-                   - Directory patterns: 'tests/*.py' matches Python files in tests directory
-                   - Path patterns: '*/data/*.json' matches JSON files in any data directory
-
-    Returns:
-        bool: True if the path matches the pattern, False otherwise
-
-    Examples:
-        # Check if file matches a glob pattern (filename only)
-        is_python_file = matches_pattern(Path('script.py'), '*.py')  # True
-
-        # Match against full path including directories
-        in_tests_dir = matches_pattern(Path('tests/test_data.py'), 'tests/*.py')  # True
-
-        # Match files in any data directory
-        data_file = matches_pattern(Path('src/data/config.json'), '*/data/*.json')  # True
-
-        # Check with regex pattern against full path
-        import re
-        is_test_file = matches_pattern(
-            Path('tests/unit/test_utils.py'),
-            re.compile(r'tests/.*\.py$')
-        )  # True
-
-        # Always matches when pattern is None
-        matches_all = matches_pattern(Path('any_file.txt'), None)  # True
-    """
-    if pattern is None:
-        return True
-    assert isinstance(path, Path), "path must be a Path object"
-    # Remove assert for is_file() to allow matching directories too
-    assert isinstance(pattern, (str, re.Pattern)), (
-        "pattern must be a string or a compiled regex pattern"
-    )
-
-    # Get the relative path as string for matching
-    path_str = str(path)
-    if isinstance(pattern, str):
-        if pattern.endswith("/"):
-            # pattern points to a directory
-            # all content should be matched
-            pattern = pattern + "*"
-
-        # For string patterns, check against both the full path
-        # Try matching against the full path first
-        return fnmatch.fnmatch(path_str, pattern)
-    elif isinstance(pattern, re.Pattern):
-        # For regex patterns, always match against the full path
-        return bool(pattern.search(path_str))
-
-
-def filter_paths(
-    paths: Iterator[Path],
-    pattern: Union[str, Pattern, None] = None,
-    include_matches: bool = True,
-) -> Iterator[Path]:
-    """
-    Filter paths based on a pattern, either keeping matches or non-matches.
-
-    Args:
-        paths: An iterator of Path objects to filter (can be files or directories)
-        pattern: A glob pattern string or compiled regex pattern to filter by
-                 If None, behavior depends on include_matches
-                 Patterns can include directory parts, e.g. 'tests/*.py'
-        include_matches: If True, yield paths that match the pattern
-                         If False, yield paths that don't match the pattern
-
-    Yields:
-        Path objects that match (or don't match) the pattern based on include_matches
-    """
-    for path in paths:
-        is_match = matches_pattern(path, pattern)
-        if (
-            is_match == include_matches
-        ):  # Yield when match status matches desired include status
-            yield path
-
-
-def any_filter_paths(
-    paths: Iterator[Path], patterns: Iterable[str], include_matches: bool = True
-) -> Iterator[Path]:
-    """Filter paths by multiple patterns, yielding paths that match any of the patterns."""
-    for path in paths:
-        is_match = any(matches_pattern(path, pattern) for pattern in patterns)
-        if is_match == include_matches:
-            yield path
 
 
 def filter_ignore_patterns(paths: Iterator[Path]) -> Iterator[Path]:
@@ -296,60 +159,35 @@ def iter_expected_distribution_files() -> Iterator[Path]:
     return any_filter_paths(all_files, ESSENTIAL_SOURCE_PATTERNS, include_matches=True)
 
 
-def build_distribution() -> Tuple[Path, Path]:
-    """Build the distribution using 'make buildsingle' and return the path to the archive."""
-    temp_dir = tempfile.mkdtemp()
-    try:
-        temp_path = Path(temp_dir)
-
-        # Clean up dist directory if it exists
-        if DIST_DIR.exists():
-            shutil.rmtree(DIST_DIR)
-
-        # Run make buildsingle
-        print(f"Building distribution with '{' '.join(BUILD_CMD)}'...")
-        subprocess.check_call(BUILD_CMD, cwd=str(PROJECT_ROOT))
-
-        dist_files = file_path_iterator(DIST_DIR, relative=False)
-        # Find the generated .tar.gz file in the dist directory
-        sdist_files = list(filter_paths(dist_files, "*.tar.gz"))
-        assert len(sdist_files) == 1, "Expected exactly one .tar.gz distribution file"
-        sdist = sdist_files[0]
-        print(f"Found distribution file: {sdist}")
-
-        # Copy the file to the temp directory
-        archive_path = temp_path / sdist.name
-        shutil.copy2(sdist, archive_path)
-
-        return archive_path, temp_path
-    except Exception as e:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise e
-
-
-def extract_archive(archive_path: Path, extract_to: Path) -> Path:
-    """Extract the tar.gz archive to the specified directory."""
+def extract_archive(archive_path: Path) -> List[Path]:
+    """Extract the tar.gz archive in the given path and return a list of the contained files."""
     with tarfile.open(archive_path, "r:gz") as tar:
         # Get the name of the top-level directory in the archive
         top_level_dirs = {member.name.split("/")[0] for member in tar.getmembers()}
+        if len(top_level_dirs) == 0:
+            raise ValueError("The archive does not contain any files.")
 
-        # Extract all files
-        tar.extractall(path=extract_to)
+        # work in a temporary directory
+        with tempfile.TemporaryDirectory() as tmpdir:
+            extract_to = Path(tmpdir)
+            # Extract all files
+            tar.extractall(path=extract_to)
 
-        # Return the path to the extracted package directory
-        if top_level_dirs:
             # Find the package directory (it should contain setup.py or pyproject.toml)
+            pkg_dir = None
             for dir_name in top_level_dirs:
                 pkg_dir = Path(extract_to) / dir_name
-                if (pkg_dir / "setup.py").exists() or (
-                    pkg_dir / "pyproject.toml"
-                ).exists():
-                    return pkg_dir
+                if (pkg_dir / "pyproject.toml").exists():
+                    break
 
-            # If no setup.py found, just return the first directory
-            return Path(extract_to) / list(top_level_dirs)[0]
-        else:
-            raise ValueError("No files found in the archive")
+            if pkg_dir is None:
+                raise ValueError("No package directory found in the archive.")
+
+            archive_files = file_path_iterator(pkg_dir, relative=True)
+            file_list = list(archive_files)
+
+    assert len(file_list) > 0, "The archive does not contain any files."
+    return file_list
 
 
 class DistributionFilesFixture:
@@ -375,33 +213,12 @@ class DistributionFilesFixture:
             return
 
         # Build the distribution
-        self.archive_path, self.temp_dir = build_distribution()
+        self.archive_path = build_sdist()
 
-        # Extract the archive
-        self.extract_dir = extract_archive(self.archive_path, self.temp_dir)
-
-        # Store the package name for pattern matching
-        self.package_name = Path(self.extract_dir).name
-
-        # Get the archive files
-        tmp_archive_files = file_path_iterator(self.extract_dir, relative=True)
-        # TODO created in tmp folder, so make relative to the extract_dir
-        # self.archive_files = [file.relative_to(self.extract_dir) for file in tmp_archive_files]
-        self.archive_files = list(tmp_archive_files)
-
-        # Get the project files (excluding those that should be ignored)
-        self.project_files = get_distributable_files()
+        self.archive_files = extract_archive(self.archive_path)
 
         self._initialized = True
         print(f"Built and extracted distribution with {len(self.archive_files)} files")
-
-    def cleanup(self):
-        """Clean up temporary files."""
-        if self.temp_dir is not None and Path(self.temp_dir).exists():
-            shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def __del__(self):
-        self.cleanup()
 
 
 # Create a singleton instance for the fixture

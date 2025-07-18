@@ -46,7 +46,8 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
         # Attempt to read a polygon with an out-of-bounds index
         read_polygon = read_polygon_array_from_binary(poly_collection, idx + 1)
 
-    close_ressource(file, buffer)
+    close_ressource(buffer)
+    close_ressource(file)
 
 
 @pytest.mark.parametrize(

@@ -1,83 +1,66 @@
-import subprocess
 import sys
 import tempfile
-import os
-import pytest
+from pathlib import Path
+from typing import Tuple
+
+from scripts.configs import PROJECT_ROOT
+from tests.auxiliaries import build_sdist, build_wheel, run_command
+
+# Define additional path constants
+BIN_DIR = "Scripts" if sys.platform == "win32" else "bin"
 
 
-def run_timezonefinder_test(python_bin):
-    code = "from timezonefinder import TimezoneFinder; tf = TimezoneFinder()"
-    subprocess.check_call([python_bin, "-c", code])
+def run_timezonefinder_test(python_bin: str) -> None:
+    """Test importing and instantiating TimezoneFinder."""
+    code = "from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); print(tf.timezone_at(lat=40.5, lng=11.7))"
+    run_command([python_bin, "-c", code])
 
 
-def build_wheel():
-    subprocess.check_call(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "pip",
-            "setuptools",
-            "wheel",
-        ]
-    )
-    subprocess.check_call([sys.executable, "setup.py", "bdist_wheel"])
-    wheel_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
-    wheels = [f for f in os.listdir(wheel_dir) if f.endswith(".whl")]
-    assert wheels, "No wheel file found in dist/"
-    return os.path.join(wheel_dir, wheels[0])
+def setup_venv(tempdir: str) -> Tuple[str, str]:
+    """Set up a virtual environment and return paths to python and pip binaries."""
+    venv_dir = Path(tempdir) / "venv"
+    run_command([sys.executable, "-m", "venv", str(venv_dir)])
+
+    python_bin = str(venv_dir / BIN_DIR / "python")
+    pip_bin = str(venv_dir / BIN_DIR / "pip")
+
+    # Upgrade pip
+    run_command([python_bin, "-m", "pip", "install", "--upgrade", "pip"])
+
+    return python_bin, pip_bin
 
 
-def build_sdist():
-    subprocess.check_call([sys.executable, "setup.py", "sdist"])
-    dist_dir = os.path.join(os.path.dirname(__file__), "..", "dist")
-    sdists = [f for f in os.listdir(dist_dir) if f.endswith(".tar.gz")]
-    assert sdists, "No sdist file found in dist/"
-    return os.path.join(dist_dir, sdists[0])
+def check_install_package(package_path: Path) -> None:
+    """
+    Generic test function for installing and testing timezonefinder.
+
+    Args:
+        package_path: path to project for direct installation
+    """
+    with tempfile.TemporaryDirectory() as tempdir:
+        temp_path = Path(tempdir)
+        # Setup virtual environment
+        python_bin, pip_bin = setup_venv(str(temp_path))
+
+        # Install the package
+        run_command([pip_bin, "install", str(package_path)])
+
+        run_timezonefinder_test(python_bin)
 
 
 def test_install_from_wheel():
-    wheel_path = build_wheel()
-    with tempfile.TemporaryDirectory() as tempdir:
-        venv_dir = os.path.join(tempdir, "venv")
-        subprocess.check_call([sys.executable, "-m", "venv", venv_dir])
-        python_bin = os.path.join(venv_dir, "bin", "python")
-        pip_bin = os.path.join(venv_dir, "bin", "pip")
-        subprocess.check_call([python_bin, "-m", "pip", "install", "--upgrade", "pip"])
-        subprocess.check_call([pip_bin, "install", wheel_path])
-        try:
-            run_timezonefinder_test(python_bin)
-        except subprocess.CalledProcessError:
-            pytest.fail("Failed to run TimezoneFinder from installed wheel")
+    package_path = build_wheel()
+    check_install_package(
+        package_path,
+    )
 
 
 def test_install_from_sdist():
-    sdist_path = build_sdist()
-    with tempfile.TemporaryDirectory() as tempdir:
-        venv_dir = os.path.join(tempdir, "venv")
-        subprocess.check_call([sys.executable, "-m", "venv", venv_dir])
-        python_bin = os.path.join(venv_dir, "bin", "python")
-        pip_bin = os.path.join(venv_dir, "bin", "pip")
-        subprocess.check_call([python_bin, "-m", "pip", "install", "--upgrade", "pip"])
-        subprocess.check_call([pip_bin, "install", sdist_path])
-        try:
-            run_timezonefinder_test(python_bin)
-        except subprocess.CalledProcessError:
-            pytest.fail("Failed to run TimezoneFinder from installed sdist")
+    package_path = build_sdist()
+    check_install_package(
+        package_path,
+    )
 
 
 def test_install_from_source():
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    with tempfile.TemporaryDirectory() as tempdir:
-        venv_dir = os.path.join(tempdir, "venv")
-        subprocess.check_call([sys.executable, "-m", "venv", venv_dir])
-        python_bin = os.path.join(venv_dir, "bin", "python")
-        pip_bin = os.path.join(venv_dir, "bin", "pip")
-        subprocess.check_call([python_bin, "-m", "pip", "install", "--upgrade", "pip"])
-        subprocess.check_call([pip_bin, "install", project_root])
-        try:
-            run_timezonefinder_test(python_bin)
-        except subprocess.CalledProcessError:
-            pytest.fail("Failed to run TimezoneFinder from pip install .")
+    check_install_package(project_path=PROJECT_ROOT)
