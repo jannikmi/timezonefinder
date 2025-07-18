@@ -47,7 +47,10 @@ test=[
     "tox",
     "pytest",
     # used in example scripts
-    "pytz>=2022.7.1"
+    "pytz>=2022.7.1",
+    # setuptoosl required for integration tests: building sdist and wheel
+    "setuptools>=61",
+    "cffi",
 ]
 dev = [
     "tox",
