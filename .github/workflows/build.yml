@@ -54,8 +54,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install test dependencies
-        # skip creating virtual environment
-        run: uv pip install --system --group test
+        run: uv sync --group test
 
       - name: Run tox
         run: uv run tox
