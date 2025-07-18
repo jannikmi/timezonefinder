@@ -14,7 +14,7 @@
     {
       "args": [
         "-s",
-        "tests/test_package_contents_2.py",
+        "tests/test_package_contents.py",
         "-v"
       ],
       "console": "integratedTerminal",
