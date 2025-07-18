@@ -96,5 +96,12 @@ speedtest:
 	# pytest -s flag: output to console
 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 
+integrtest:
+	@tox -e package_integrity
+# 	@uv run --active pytest  -s tests/test_integration.py -v
 
-.PHONY: clean test build docs
+disttest:
+	@echo "Testing package distribution installation..."
+	@uv run pytest -s tests/test_distributions.py -v
+
+.PHONY: clean test build docs disttest
