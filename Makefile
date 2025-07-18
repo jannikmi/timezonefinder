@@ -66,10 +66,9 @@ flatbuf:
 	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
-buildsingle:
+builsdist:
 	@echo "Building single tar.gz distribution..."
 	uv build -v --sdist
-
 
 build:
 	rm -rf build dist
@@ -100,17 +99,5 @@ docs:
 speedtest:
 	# pytest -s flag: output to console
 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
-
-integrtest:
-	@tox -e package_integrity
-# 	@uv run --active pytest  -s tests/test_integration.py -v
-
-disttest:
-	@echo "Testing package distribution installation..."
-	@uv run pytest -s tests/test_distributions.py -v
-
-contenttest:
-	@echo "Testing package distribution contents..."
-	@uv run pytest -s tests/test_package_contents.py -v
 
 .PHONY: clean test build docs disttest contenttest
