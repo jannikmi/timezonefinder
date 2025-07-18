@@ -1,3 +1,17 @@
+"""
+Integration tests for the timezonefinder package installation and functionality.
+
+This module contains tests that verify the correct installation and basic functionality
+of the package through different distribution methods:
+- Installation from a wheel package
+- Installation from a source distribution (sdist)
+- Installation directly from the source code
+
+Each test creates a fresh virtual environment, installs the package using the specified
+method, and then performs a basic test to ensure that the package can be imported and
+that its core functionality works properly.
+"""
+
 import sys
 import tempfile
 from pathlib import Path
@@ -63,4 +77,4 @@ def test_install_from_sdist():
 
 
 def test_install_from_source():
-    check_install_package(project_path=PROJECT_ROOT)
+    check_install_package(PROJECT_ROOT)
