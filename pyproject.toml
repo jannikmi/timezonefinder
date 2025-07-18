@@ -43,17 +43,19 @@ docs = [
     "Sphinx<6,>=5",
     "sphinx-rtd-theme<2,>=1",
 ]
-dev = [
+test=[
     "tox",
     "pytest",
+    # used in example scripts
+    "pytz>=2022.7.1"
+]
+dev = [
     "pre-commit",
     "mypy",
     "rstcheck",
     "isort",
     "ruff",
     "cibuildwheel",
-    # used in example scripts
-    "pytz>=2022.7.1"
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",

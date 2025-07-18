@@ -1409,11 +1409,8 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytz" },
     { name = "rstcheck" },
     { name = "ruff" },
-    { name = "tox" },
 ]
 docs = [
     { name = "sphinx" },
@@ -1425,6 +1422,11 @@ numba = [
 ]
 pytz = [
     { name = "pytz" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytz" },
+    { name = "tox" },
 ]
 
 [package.metadata]
@@ -1441,11 +1443,8 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytz", specifier = ">=2022.7.1" },
     { name = "rstcheck" },
     { name = "ruff" },
-    { name = "tox" },
 ]
 docs = [
     { name = "sphinx", specifier = ">=5,<6" },
@@ -1456,6 +1455,11 @@ numba = [
     { name = "numba", marker = "python_full_version >= '3.12'", specifier = ">=0.59,<1" },
 ]
 pytz = [{ name = "pytz", specifier = ">=2022.7.1" }]
+test = [
+    { name = "pytest" },
+    { name = "pytz", specifier = ">=2022.7.1" },
+    { name = "tox" },
+]
 
 [[package]]
 name = "tomli"
