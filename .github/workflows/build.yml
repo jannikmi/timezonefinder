@@ -33,15 +33,20 @@ jobs:
       matrix:
         # all officially supported Python versions should be tested
         # NOTE: need to match the versions in pyproject.toml > tox.ini
-        python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
-          - "3.12"
-          - "3.13"
+        include:
+          - python-version: "3.9"
+            tox-env: "py39,py39-numba,py39-pytz"
+          - python-version: "3.10"
+            tox-env: "py310,py310-numba,py310-pytz"
+          - python-version: "3.11"
+            tox-env: "py311,py311-numba,py311-pytz"
+          - python-version: "3.12"
+            tox-env: "py312,py312-numba,py312-pytz,docs"
+          - python-version: "3.13"
+            # TODO add numba as soon as it supports Python 3.13
+            tox-env: "py313,py313-pytz,integration"
     env:
-      TOXENV: ${{ matrix.tox-env }}
-      TOX_SKIP_MISSING_INTERPRETERS: True
+      TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
       - uses: actions/checkout@v4
 
@@ -57,7 +62,7 @@ jobs:
         run: uv sync --group test
 
       - name: Run tox
-        run: uv run tox
+        run: uv run tox -e ${{ matrix.tox-env }}
 
   make-wheels:
     name: Make ${{ matrix.os }} ${{ matrix.cibw_arch }} wheels
