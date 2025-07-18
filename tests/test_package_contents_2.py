@@ -12,7 +12,6 @@ from collections.abc import Iterable
 import fnmatch
 import os
 from pathlib import Path
-from pprint import pprint
 import shutil
 import subprocess
 import tarfile
@@ -54,6 +53,8 @@ UNWANTED_DIST_PATTERNS = {
     ".editorconfig",
     ".gitignore",
     ".pre-commit-config.yaml",
+    "CHANGELOG*",
+    "CONTRIBUTING.*",
     "Makefile",
     "parse_data.sh",
     "readthedocs.yaml",
@@ -61,7 +62,6 @@ UNWANTED_DIST_PATTERNS = {
     "tox.ini",
     "uv.lock",
 }
-
 
 ALLOWED_IGNORED_PATTERNS = {
     "*.egg-info/"
@@ -88,8 +88,6 @@ ESSENTIAL_SOURCE_PATTERNS = {
     "*py.typed",
     "README*",
     "*LICENSE*",
-    "CHANGELOG*",
-    "CONTRIBUTING.*",
     # FILE EXTENSIONS:
     "*.py",  # all Python source files
     "*.so",  # Compiled shared objects
@@ -283,7 +281,7 @@ def get_distributable_files() -> Iterator[Path]:
     return filter_ignore_patterns(all_files)
 
 
-def compile_expected_distribution_files() -> Iterator[Path]:
+def iter_expected_distribution_files() -> Iterator[Path]:
     """
     Get all essential source files that should be included in the distribution.
 
@@ -434,22 +432,19 @@ def test_no_unwanted_files_in_distribution(pattern: str):
 
 
 # parameterised pytest test case for testing that all essential source files are included in the distribution
-expected_distribution_files = compile_expected_distribution_files()
+@pytest.mark.parametrize("expected_file", iter_expected_distribution_files())
+def test_essential_files_in_distribution(expected_file: Path):
+    """Test that all essential source files are included in the distribution."""
+    pattern = str(expected_file)
+    # Get all files in the distribution
+    dist_files = distribution_fixture.archive_files
 
-tmp = list(expected_distribution_files)
-pprint(tmp)
-print(len(tmp))
-
-
-# @pytest.mark.parametrize("expected_file", expected_distribution_files)
-# def test_essential_files_in_distribution(expected_file: Path):
-#     """Test that all essential source files are included in the distribution."""
-#     pattern = str(expected_file.relative_to(PROJECT_ROOT))
-#     # Get all files in the distribution
-#     dist_files = distribution_fixture.archive_files
-
-#     matched_files = filter_paths(dist_files, pattern, include_matches=True)
-#     matched_file_repr = [str(f) for f in matched_files]
-#     nr_matched_files = len(matched_file_repr)
-#     assert nr_matched_files < 2, f"multiple files matched pattern '{pattern}': {', '.join(matched_file_repr)}"
-#     assert nr_matched_files ==1, f"Essential file '{pattern}' not found in distribution."
+    matched_files = filter_paths(dist_files, pattern, include_matches=True)
+    matched_file_repr = [str(f) for f in matched_files]
+    nr_matched_files = len(matched_file_repr)
+    assert nr_matched_files < 2, (
+        f"multiple files matched pattern '{pattern}': {', '.join(matched_file_repr)}"
+    )
+    assert nr_matched_files == 1, (
+        f"Essential file '{pattern}' not found in distribution."
+    )
