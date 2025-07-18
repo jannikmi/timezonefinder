@@ -37,10 +37,10 @@ DIST_DIR = PROJECT_ROOT / "dist"
 
 
 # Command constants
-# [sys.executable, "setup.py", "sdist"]
+# BUILD_SDIST_CMD = [sys.executable, "setup.py", "sdist"]
 BUILD_SDIST_CMD = ["uv", "build", "-v", "--sdist"]
-# [sys.executable, "setup.py", "bdist_wheel"]
-BUILD_WHEEL_CMD = ["uv", "build", "-v", "--wheel"]
+BUILD_WHEEL_CMD = [sys.executable, "setup.py", "bdist_wheel"]
+# BUILD_WHEEL_CMD = ["uv", "build", "-v", "--wheel"]
 
 
 # for reading coordinates
