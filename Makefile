@@ -100,4 +100,4 @@ speedtest:
 	# pytest -s flag: output to console
 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 
-.PHONY: clean test build docs disttest contenttest
+.PHONY: clean test build docs
