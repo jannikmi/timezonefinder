@@ -66,6 +66,11 @@ flatbuf:
 	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
 	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
 
+buildsingle:
+	@echo "Building single tar.gz distribution..."
+	uv build -v --sdist
+
+
 build:
 	rm -rf build dist
 	uv build --python cp38
@@ -104,4 +109,8 @@ disttest:
 	@echo "Testing package distribution installation..."
 	@uv run pytest -s tests/test_distributions.py -v
 
-.PHONY: clean test build docs disttest
+contenttest:
+	@echo "Testing package distribution contents..."
+	@uv run pytest -s tests/test_package_contents.py -v
+
+.PHONY: clean test build docs disttest contenttest

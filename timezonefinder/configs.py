@@ -10,7 +10,8 @@ SHORTCUT_H3_RES: int = 3
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
 # PATHS
-DEFAULT_DATA_DIR = Path(__file__).parent / "data"
+PACKAGE_DIR = Path(__file__).parent
+DEFAULT_DATA_DIR = PACKAGE_DIR / "data"
 
 
 # i = signed 4byte integer

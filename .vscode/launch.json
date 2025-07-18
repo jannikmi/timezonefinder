@@ -14,7 +14,7 @@
     {
       "args": [
         "-s",
-        "tests/utils_test.py::test_inside_polygon",
+        "tests/test_package_contents_2.py",
         "-v"
       ],
       "console": "integratedTerminal",
