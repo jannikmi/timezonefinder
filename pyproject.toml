@@ -50,6 +50,8 @@ test=[
     "pytz>=2022.7.1"
 ]
 dev = [
+    "tox",
+    "pytest",
     "pre-commit",
     "mypy",
     "rstcheck",
@@ -74,7 +76,7 @@ build-backend = "setuptools.build_meta"
 packages = ["tests", "timezonefinder", "timezonefinder.inside_poly_extension", "timezonefinder.flatbuf"]
 
 [tool.setuptools.package-data]
-timezonefinder = ["**/*.npy", "**/*.fbs"]
+timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.c", "**/*.h", "**/*.txt"]
 
 [tool.setuptools.data-files]
 "." = ["DATA_LICENSE"]
