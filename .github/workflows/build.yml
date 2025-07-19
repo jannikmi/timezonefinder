@@ -127,7 +127,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: "${{ matrix.uv-python-version }}"
+          python-version: "${{ matrix.uv-python-version }}"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
