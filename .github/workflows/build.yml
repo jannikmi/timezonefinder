@@ -134,7 +134,11 @@ jobs:
 
       - name: Copy artifacts to dist/ folder
         run: |
-          unzip artifact-*
+          find . -name 'artifact-*' -exec unzip '{}' \;
+          mkdir -p dist/
+          find . -name '*.tar.gz' -exec mv '{}' dist/ \;
+          find . -name '*.whl' -exec mv '{}' dist/ \;
+          ls -lR dist/
 
       - name: Run end-to-end test
         run: |
