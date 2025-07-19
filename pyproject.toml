@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "6.6.1"
+version = "6.6.2"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -79,7 +79,7 @@ build-backend = "setuptools.build_meta"
 packages = ["tests", "timezonefinder", "timezonefinder.inside_poly_extension", "timezonefinder.flatbuf"]
 
 [tool.setuptools.package-data]
-timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.c", "**/*.h", "**/*.txt"]
+timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.txt", "**/*.json", "**/*.c", "**/*.h", ]
 
 [tool.setuptools.data-files]
 "." = ["DATA_LICENSE"]
