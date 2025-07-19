@@ -116,6 +116,7 @@ jobs:
 
   end-to-end-test:
     runs-on: ubuntu-latest
+    needs: [make-wheels]
     strategy:
         fail-fast: false
         matrix:
