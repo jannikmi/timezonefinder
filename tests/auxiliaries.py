@@ -79,6 +79,7 @@ def run_command(
 
 def build_wheel() -> Path:
     """Build wheel distribution and return its path."""
+    # TODO reuse with DistributionFilesFixture (found in test_package_contents.py)
     # Clean up dist directory if it exists
     if DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)

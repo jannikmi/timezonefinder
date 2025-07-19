@@ -47,7 +47,7 @@ DIST_TYPES = [SDIST_TYPE, WHEEL_TYPE]
 UNWANTED_DIST_PATTERNS = {
     ".github",
     ".git",
-    ".vscode",
+    ".vscode/",
     "build/",
     "examples/",
     "docs/",
@@ -94,12 +94,16 @@ ESSENTIAL_SOURCE_PATTERNS = {
     "README*",
     "*LICENSE*",
     # FILE EXTENSIONS:
+    # source:
     "*.py",  # all Python source files
-    "*.so",  # Compiled shared objects
-    "*.npy",  # Numpy binary data files
-    "*.fbs",  # Flatbuffer schema files
     "*.c",  # C source files
     "*.h",  # C header files
+    "*.so",  # Compiled shared objects
+    # data files:
+    "*.npy",  # Numpy binary data files
+    "*.fbs",  # Flatbuffer schema files
+    # FIXME: does not catch missing hole_registry.json
+    "*.json",  # used for hole registry
     "*.txt",  # Text files (used for timezone names)
 }
 
