@@ -10,6 +10,13 @@ Changelog
 * API Change: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
 
 
+6.6.2 (2025-07-19)
+------------------
+
+* hotfix missing `hole_registry.json` in the distributions
+
+
+
 6.6.1 (2025-07-18)
 ------------------
 
