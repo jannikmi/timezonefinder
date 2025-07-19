@@ -114,6 +114,28 @@ jobs:
         name: artifact-source-dist
         path: "./**/dist/*.tar.gz"
 
+  end-to-end-test:
+    runs-on: ubuntu-latest
+    strategy:
+        fail-fast: false
+        matrix:
+            uv-python-version: ["cp39", "cp310", "cp311", "cp312", "cp313"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Run end-to-end test
+        run: |
+            uv init -p ${{ matrix.uv-python-version }} --bare
+            uv add ./timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
+            uv tree
+            uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1"'
+
   release:
     name: Create release and publish to TestPyPI
     runs-on: ubuntu-latest
