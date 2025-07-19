@@ -133,7 +133,7 @@ jobs:
 
       - name: Copy artifacts to dist/ folder
         run: |
-          find . -name 'artifact-*' -exec unzip '{}' \;
+          find . -name 'artifact-*.zip' -print -exec unzip '{}' \;
           mkdir -p dist/
           find . -name '*.tar.gz' -exec mv '{}' dist/ \;
           find . -name '*.whl' -exec mv '{}' dist/ \;
@@ -145,7 +145,7 @@ jobs:
             uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
             uv add ./dist/timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
             uv tree
-            uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1"'
+            uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
 
   release:
     name: Create release and publish to TestPyPI
@@ -178,7 +178,7 @@ jobs:
 
       - name: Copy artifacts to dist/ folder
         run: |
-          find . -name 'artifact-*' -exec unzip '{}' \;
+          find . -name 'artifact-*.zip' -print -exec unzip '{}' \;
           mkdir -p dist/
           find . -name '*.tar.gz' -exec mv '{}' dist/ \;
           find . -name '*.whl' -exec mv '{}' dist/ \;
