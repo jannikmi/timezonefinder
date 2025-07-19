@@ -49,8 +49,6 @@ import itertools
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
-from contextlib import redirect_stdout
-from io import StringIO
 
 
 import h3.api.numpy_int as h3
@@ -82,7 +80,6 @@ from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
-from timezonefinder.flatbuf.shortcut_utils import write_shortcuts_flatbuffers
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     NR_BYTES_I,
@@ -244,15 +241,14 @@ def parse_polygons_from_json(input_path: Path) -> int:
     print(f"{nr_of_floats:,} floats in all the polygons (2 per point)")
     polygon_space = nr_of_floats * NR_BYTES_I
     return {
-    "polygon_space": polygon_space,
-    "nr_of_zones": nr_of_zones,
-    "nr_of_polygons": nr_of_polygons,
-    "nr_of_holes": nr_of_holes,
-    "max_poly_length": max(polygon_lengths),
-    "max_hole_poly_length": max(all_hole_lengths) if all_hole_lengths else 0,
-    "nr_of_floats": nr_of_floats,
-}
-
+        "polygon_space": polygon_space,
+        "nr_of_zones": nr_of_zones,
+        "nr_of_polygons": nr_of_polygons,
+        "nr_of_holes": nr_of_holes,
+        "max_poly_length": max(polygon_lengths),
+        "max_hole_poly_length": max(all_hole_lengths) if all_hole_lengths else 0,
+        "nr_of_floats": nr_of_floats,
+    }
 
 
 def compute_zone_positions() -> List[int]:
@@ -559,6 +555,7 @@ def compile_h3_map(candidates: Set) -> ShortcutMapping:
         print(
             f"\r{processed:,} processed\t{nr_candidates:,} remaining\t",
             end="",
+            flush=True,
         )
 
     while candidates:
@@ -819,33 +816,6 @@ def parse_data(
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    from io import StringIO
-    from contextlib import redirect_stdout
-
-    report_output = StringIO()
-
-    with redirect_stdout(report_output):
-        stats = parse_polygons_from_json(input_path)
-        hole_space = compile_data_files(output_path)
-
-        shortcut_mapping = compile_shortcut_mapping()
-        shortcut_space = write_shortcuts_flatbuffers(shortcut_mapping, output_path)
-        validate_shortcut_mapping(shortcut_mapping)
-
-        total_space = stats["polygon_space"] + hole_space + shortcut_space
-        print(f"the polygon data makes up {stats['polygon_space'] / total_space:.2%} of the data")
-        print(f"the shortcuts make up {shortcut_space / total_space:.2%} of the data")
-        print(f"holes make up {hole_space / total_space:.2%}  of the data")
-
-
-    report_path = Path("docs") / "data_report.rst"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(report_path, "w", encoding="utf-8") as f:
-        f.write("Data Report\n===========\n\n")
-        f.write(report_output.getvalue())
-
-    print(f"\n\nfinished parsing timezonefinder data to {output_path}")
-
 
 def write_data_report(stats: dict, output_dir: Path):
     """
@@ -862,6 +832,7 @@ def write_data_report(stats: dict, output_dir: Path):
         f.write(f"- Max Polygon Coordinates: {stats['max_poly_length']:,}\n")
         f.write(f"- Max Hole Coordinates: {stats['max_hole_poly_length']:,}\n")
         f.write(f"- Total Floats: {stats['nr_of_floats']:,} (2 per coordinate)\n")
+
 
 if __name__ == "__main__":
     import argparse

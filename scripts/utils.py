@@ -13,10 +13,8 @@ from timezonefinder.utils_numba import coord2int
 
 
 def load_json(path):
-    print("loading json from ", path)
     with open(path) as fp:
-        obj = json.load(fp)
-    return obj
+        return json.load(fp)
 
 
 def load_pickle(path):
