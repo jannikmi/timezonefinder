@@ -79,7 +79,7 @@ build-backend = "setuptools.build_meta"
 packages = ["tests", "timezonefinder", "timezonefinder.inside_poly_extension", "timezonefinder.flatbuf"]
 
 [tool.setuptools.package-data]
-timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.c", "**/*.h", "**/*.txt"]
+timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.txt", "**/*.json", "**/*.c", "**/*.h", ]
 
 [tool.setuptools.data-files]
 "." = ["DATA_LICENSE"]
