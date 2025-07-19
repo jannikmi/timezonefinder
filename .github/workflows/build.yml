@@ -134,7 +134,8 @@ jobs:
 
       - name: Run end-to-end test
         run: |
-            uv add ./timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
+            find dist
+            uv add ./dist/timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1"'
 
