@@ -122,10 +122,11 @@ jobs:
         matrix:
             uv-python-version: ["cp39", "cp310", "cp311", "cp312", "cp313"]
     steps:
+      # Only install uv without creating a project
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          python-version: "${{ matrix.uv-python-version }}"
+          ignore-empty-workdir: true
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -141,6 +142,7 @@ jobs:
       - name: Run end-to-end test
         run: |
             find .
+            uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
             uv add ./dist/timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1"'
