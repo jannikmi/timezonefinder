@@ -14,6 +14,7 @@ Changelog
 ------------------
 
 * hotfix missing `hole_registry.json` in the distributions
+* added integration tests in CI/CD. Thanks to `theirix <https://github.com/theirix>`__
 
 
 
@@ -39,6 +40,7 @@ Changelog
 * dropped support for python 3.8 (reached the end of life). thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
 * added support for official for python 3.12
 * added usage example scripts
+* switched from `poetry` to `uv` for dependency management and packaging. Thanks to `theirix <https://github.com/theirix>`__
 
 
 6.5.9 (2025-03-25)
@@ -94,7 +96,7 @@ Changelog
 6.5.1 (2024-06-14)
 ------------------
 
-* added support for cibuildwheel: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to @theirix
+* added support for cibuildwheel: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to `theirix <https://github.com/theirix>`__
 
 
 
