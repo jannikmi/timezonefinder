@@ -44,11 +44,16 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
 
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 import functools
 import itertools
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from contextlib import redirect_stdout
 
 
 import h3.api.numpy_int as h3
@@ -817,21 +822,27 @@ def parse_data(
     output_path.mkdir(parents=True, exist_ok=True)
 
 
-def write_data_report(stats: dict, output_dir: Path):
-    """
-    Writes a data summary report in .rst format to the /docs folder.
-    """
-    report_path = Path("docs") / "data_report.rst"
+def write_data_report(stats: dict, shortcuts):
+    report_path = Path("docs/data_report.rst")
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
+    if report_path.exists():
+        report_path.unlink()
+
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write("Data Report\n===========\n\n")
-        f.write(f"- Total Timezones: {stats['nr_of_zones']:,}\n")
-        f.write(f"- Total Polygons: {stats['nr_of_polygons']:,}\n")
-        f.write(f"- Total Holes: {stats['nr_of_holes']:,}\n")
-        f.write(f"- Max Polygon Coordinates: {stats['max_poly_length']:,}\n")
-        f.write(f"- Max Hole Coordinates: {stats['max_hole_poly_length']:,}\n")
-        f.write(f"- Total Floats: {stats['nr_of_floats']:,} (2 per coordinate)\n")
+        with redirect_stdout(f):
+            print("TimezoneFinder Data Report")
+            print("==========================")
+            print()
+
+            print(f"Number of timezones: {len(stats['timezone_names'])}")
+            print(f"Polygons loaded: {stats['polygon_count']}")
+            print()
+
+            print("Shortcut Mapping Statistics")
+            print("===========================")
+            print()
+            print_shortcut_statistics(shortcuts, poly_zone_ids)
 
 
 if __name__ == "__main__":
@@ -846,5 +857,17 @@ if __name__ == "__main__":
         help="path to output folder for storing the parsed data files",
         default=DEFAULT_DATA_DIR,
     )
-    parsed_args = parser.parse_args()  # takes input from sys.argv
+    parsed_args = parser.parse_args()
+
     parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)
+
+    parse_polygons_from_json(Path(parsed_args.inp))
+
+    shortcuts = compile_shortcut_mapping()
+
+    real_stats = {
+        "timezone_names": all_tz_names,
+        "polygon_count": len(polygons),
+    }
+
+    write_data_report(real_stats, shortcuts)
