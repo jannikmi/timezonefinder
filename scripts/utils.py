@@ -44,7 +44,7 @@ def write_json(obj, path):
         json_file.write("\n")
 
 
-# DECORTAORS
+# DECORATORS
 
 
 def time_execution(func: Callable) -> Callable:

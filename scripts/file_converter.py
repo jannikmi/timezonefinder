@@ -584,11 +584,6 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
-def validate_shortcut_resolution(mapping: ShortcutMapping):
-    for hex_id in mapping.keys():
-        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
-
-
 def validate_shortcut_completeness(mapping: ShortcutMapping):
     print("validating shortcut completeness...")
 
@@ -615,6 +610,11 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
                 error = True
 
     assert not error
+
+
+def validate_shortcut_resolution(mapping: ShortcutMapping):
+    for hex_id in mapping.keys():
+        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
 
 
 def validate_unused_polygons(shortcuts: ShortcutMapping):
