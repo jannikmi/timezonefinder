@@ -3,19 +3,20 @@ Changelog
 =========
 
 
-7.0.0 (WIP TBA)
+7.0.0 (2025-07-21)
 ------------------
 
+* Simplified API for end-users, reducing redundant code
 * Added global functions that use a shared TimezoneFinder instance:
     * ``timezone_at``
     * ``timezone_at_land``
     * ``unique_timezone_at``
     * ``certain_timezone_at``
     * ``get_geometry``
-* Simplified API for end-users, reducing redundant code
+
 * Documented thread safety considerations for global functions
 * Updated command line interface to use global functions where appropriate
-* API Change: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
+* breaking API Changes: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
 
 
 
