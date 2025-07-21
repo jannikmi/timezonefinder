@@ -45,6 +45,7 @@ from pathlib import Path
 
 import functools
 import itertools
+from collections import Counter
 from dataclasses import dataclass
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
@@ -876,12 +877,66 @@ def report_data_statistics():
     hole_rows = generate_metrics_rows("hole", hole_metrics)
     generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
 
-    {
+    # Add timezone statistics table
+    print(rst_title("Timezone Statistics", level=2))
+
+    # Count polygons per timezone
+    polygons_per_timezone = Counter(poly_zone_ids)
+
+    # Calculate statistics about timezones
+    timezone_metrics = {
+        "Total timezones": nr_of_zones,
         "Average boundary polygons per timezone": round(nr_of_polygons / nr_of_zones, 2)
         if nr_of_zones > 0
         else 0,
-        "Total timezones": nr_of_zones,
+        "Maximum polygons in one timezone": max(polygons_per_timezone.values())
+        if polygons_per_timezone
+        else 0,
+        "Minimum polygons in one timezone": min(polygons_per_timezone.values())
+        if polygons_per_timezone
+        else 0,
+        "Median polygons per timezone": sorted(list(polygons_per_timezone.values()))[
+            len(polygons_per_timezone) // 2
+        ]
+        if polygons_per_timezone
+        else 0,
+        "Timezones with single polygon": sum(
+            1 for count in polygons_per_timezone.values() if count == 1
+        ),
+        "Percentage of single-polygon timezones": round(
+            (
+                sum(1 for count in polygons_per_timezone.values() if count == 1)
+                / nr_of_zones
+            )
+            * 100,
+            2,
+        )
+        if nr_of_zones > 0
+        else 0,
+        "Timezones with 10+ polygons": sum(
+            1 for count in polygons_per_timezone.values() if count >= 10
+        ),
+        "Percentage of timezones with 10+ polygons": round(
+            (
+                sum(1 for count in polygons_per_timezone.values() if count >= 10)
+                / nr_of_zones
+            )
+            * 100,
+            2,
+        )
+        if nr_of_zones > 0
+        else 0,
+        "Most complex timezone (polygons)": f"{all_tz_names[max(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({max(polygons_per_timezone.values())} polygons)"
+        if polygons_per_timezone
+        else "None",
+        "Least complex timezone (polygons)": f"{all_tz_names[min(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({min(polygons_per_timezone.values())} polygons)"
+        if polygons_per_timezone
+        else "None",
     }
+
+    # Print timezone statistics table
+    timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
+    print_rst_table(["Timezone Metric", "Value"], timezone_rows)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
