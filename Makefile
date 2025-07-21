@@ -43,6 +43,8 @@ data:
 
 test:
 	@uv run pytest
+# 	@uv run pytest -m "integration"
+# 	@uv run pytest -m "not integration"
 
 tox:
 	@uv run tox

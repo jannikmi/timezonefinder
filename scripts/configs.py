@@ -3,6 +3,8 @@ from typing import Set
 
 SCRIPT_FOLDER = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_FOLDER.parent
+DOC_ROOT = PROJECT_ROOT / "docs"
+DATA_REPORT_FILE = DOC_ROOT / "data_report.rst"
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 
 DEBUG = False

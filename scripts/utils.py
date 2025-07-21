@@ -1,46 +1,61 @@
 import json
+from pathlib import Path
 import pickle
 from os.path import abspath
 from time import time
-from typing import Dict, List
+from typing import List, Callable
 
 import numpy as np
 
-from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY
+from scripts.configs import (
+    DEBUG,
+    DTYPE_FORMAT_F_NUMPY,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
+)
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
 from timezonefinder.utils_numba import coord2int
 
 
-def load_json(path):
-    print("loading json from ", path)
+def load_json(path: Path):
+    print(
+        f"loading json from {repr(path)}",
+    )
     with open(path) as fp:
-        obj = json.load(fp)
-    return obj
+        return json.load(fp)
 
 
-def load_pickle(path):
-    print("loading pickle from ", path)
+def load_pickle(path: Path):
+    print(
+        f"loading pickle from {repr(path)}",
+    )
     with open(path, "rb") as fp:
         obj = pickle.load(fp)
     return obj
 
 
-def write_pickle(obj, path):
-    print("writing pickle to ", path)
+def write_pickle(obj, path: Path):
+    print(
+        f"writing pickle to {repr(path)}",
+    )
     with open(path, "wb") as fp:
         pickle.dump(obj, fp)
 
 
-def write_json(obj, path):
-    print("writing json to ", path)
+def write_json(obj, path: Path):
+    print(
+        f"writing json to {repr(path)}",
+    )
     with open(abspath(path), "w") as json_file:
         json.dump(obj, json_file, indent=2)
         # write a newline at the end of the file
         json_file.write("\n")
 
 
-def time_execution(func):
+# DECORATORS
+
+
+def time_execution(func: Callable) -> Callable:
     """decorator showing the execution time of a function"""
 
     def wrap_func(*args, **kwargs):
@@ -102,59 +117,6 @@ def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
         y_coords = y_coords[:-1]
     # NOTE: skip expensive validation
     return convert_polygon((x_coords, y_coords), validate=DEBUG)
-
-
-def accumulated_frequency(int_list):
-    out = []
-    total = sum(int_list)
-    acc = 0
-    for e in int_list:
-        acc += e
-        out.append(percent(acc, total))
-
-    return out
-
-
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
-    print("\n\nshortcut statistics:")
-    amount_of_shortcuts = len(mapping)
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
-    print("\namount of timezone polygons per shortcut")
-    print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
-
-    amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
-        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-        distinct_zones = set(zone_ids)
-        amount_of_distinct_zones = len(distinct_zones)
-        amount_of_different_zones.append(amount_of_distinct_zones)
-
-    print("amount of different timezones per shortcut")
-    print_frequencies(amount_of_different_zones, amount_of_shortcuts)
-
-
-def print_frequencies(counts: List[int], amount_of_shortcuts: int):
-    max_val = max(*counts)
-    print("highest amount in one shortcut is", max_val)
-    frequencies = [counts.count(i) for i in range(max_val + 1)]
-    nr_empty_shortcuts = frequencies[0]
-    print(
-        percent(nr_empty_shortcuts, amount_of_shortcuts),
-        "% of all shortcuts are empty",
-    )
-    # show the proper amount of shortcuts with 0 zones (=nr of empty shortcuts)
-    # frequencies.append(nr_empty_shortcuts)
-    print("frequencies of entry amounts:")
-    for i, amount in enumerate(frequencies):
-        print(f"{i}: {amount}")
-    print("relative accumulated frequencies [%]:")
-    acc = accumulated_frequency(frequencies)
-    print(acc)
-    print("missing relative accumulated frequencies [%]:")
-    acc_inverse = [round(100 - x, 2) for x in acc]
-    print(acc_inverse)
-    print("--------------------------------\n")
 
 
 def has_coherent_sequences(lst: List[int]) -> bool:
