@@ -26,9 +26,6 @@ docs/_build
 
 
 # PYTHON
-# Local virtual environment and generated data
-venv/
-data/
 
 
 
