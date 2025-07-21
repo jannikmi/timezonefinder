@@ -54,8 +54,23 @@ Quick Guide:
     pip install timezonefinder
 
 
+Quick Guide:
+
+.. code-block:: console
+
+    pip install timezonefinder
+
+
 .. code-block:: python
 
+    # Simple usage with global functions
+    from timezonefinder import timezone_at
+
+    # No need to initialize TimezoneFinder
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+
+
+    # For more control or thread safety, use an instance
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()  # reuse

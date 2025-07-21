@@ -9,21 +9,38 @@ Usage
    Also check out the :ref:`API documentation <api>` or the `code <https://github.com/jannikmi/timezonefinder>`__.
 
 
+.. _global_functions:
+
+Global Functions
+---------------
+
+Starting with version 7.0.0, timezonefinder provides global functions that use a pre-initialized TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import timezone_at
+
+    # No need to initialize TimezoneFinder
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+
+.. note::
+
+   These global functions are not thread-safe. For multi-threaded applications, create separate
+   TimezoneFinder instances for each thread.
+
 .. _init:
 
-Initialisation
---------------
+Instance Initialisation
+----------------------
 
-
-Create a new instance of the :ref:`TimezoneFinder class <api_finder>` to be reused for multiple consequent timezone queries:
+For more control or thread safety, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
+to be reused for multiple consequent timezone queries:
 
 .. code-block:: python
 
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()  # reuse
-
-
 
 Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
 
@@ -42,10 +59,22 @@ timezone_at()
 This is the default function to check which timezone a point lies within.
 If no timezone has been matched, ``None`` is being returned.
 
-
+Using the global function:
 
 .. code-block:: python
 
+    from timezonefinder import timezone_at
+
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
+
+Using a TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
     tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
@@ -63,10 +92,24 @@ timezone_at_land()
 ------------------
 
 This package includes ocean timezones (``Etc/GMT...``).
-If you want to explicitly receive only "land" timezones use
+If you want to explicitly receive only "land" timezones use:
+
+Using the global function:
 
 .. code-block:: python
 
+    from timezonefinder import timezone_at_land
+
+    tz = timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at_land(lng=1.0, lat=50.5)  # None
+
+Using a TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
     tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
 
@@ -77,9 +120,22 @@ For fast execution ``timezonefinder`` internally uses precomputed "shortcuts" wh
 Call ``unique_timezone_at()`` if you want to compute an exact result without actually performing "point-in-polygon" tests (<- computationally expensive).
 This function will return ``None`` when the correct zone cannot be uniquely determined without further computation.
 
+Using the global function:
+
 .. code-block:: python
 
-    tf.unique_timezone_at(lng=longitude, lat=latitude)
+    from timezonefinder import unique_timezone_at
+
+    tz = unique_timezone_at(lng=longitude, lat=latitude)
+
+Using a TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    tz = tf.unique_timezone_at(lng=longitude, lat=latitude)
 
 
 
@@ -99,9 +155,21 @@ certain_timezone_at()
 This function is for making sure a point is really inside a timezone. It is slower, because all polygons (with shortcuts in that area)
 are being checked until one polygon is matched. ``None`` is being returned in the case of no match.
 
+Using the global function:
 
 .. code-block:: python
 
+    from timezonefinder import certain_timezone_at
+
+    tz = certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+
+Using a TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
     tz = tf.certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
@@ -129,9 +197,22 @@ output format: ``[ [polygon1, hole1,...), [polygon2, ...], ...]``
 and each polygon and hole is itself formated like: ``([longitudes], [latitudes])``
 or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
 
+Using the global function:
 
 .. code-block:: python
 
+    from timezonefinder import get_geometry
+
+    get_geometry(tz_name="Africa/Addis_Ababa", coords_as_pairs=True)
+    get_geometry(tz_id=400, use_id=True)
+
+Using a TimezoneFinder instance:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
     tf.get_geometry(tz_name="Africa/Addis_Ababa", coords_as_pairs=True)
     tf.get_geometry(tz_id=400, use_id=True)
 
@@ -212,14 +293,15 @@ With the argument of the flag ``-f`` one can choose between the different functi
 
 ::
 
-    0: TimezoneFinder.timezone_at() = default
-    1: TimezoneFinder.certain_timezone_at()
+    0: timezone_at() = default (uses global function)
+    1: certain_timezone_at() (uses global function)
     2: removed
     3: TimezoneFinderL.timezone_at()
     4: TimezoneFinderL.timezone_at_land()
-    5: TimezoneFinder.timezone_at_land()
+    5: timezone_at_land() (uses global function)
 
 
 .. note::
 
-    This will be orders of magnitude slower than using the package directly from within python as a separate Timezonefinder() instance is being
+    Command line usage is efficient as it uses the global functions where possible (function IDs 0, 1, and 5),
+    avoiding repeated initialization of TimezoneFinder instances.
