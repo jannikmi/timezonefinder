@@ -1,14 +1,12 @@
 import json
 import pickle
-from contextlib import redirect_stdout
 from os.path import abspath
 from time import time
-from typing import Dict, List, Callable
+from typing import List, Callable
 
 import numpy as np
 
 from scripts.configs import (
-    DATA_REPORT_FILE,
     DEBUG,
     DTYPE_FORMAT_F_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
@@ -60,22 +58,6 @@ def time_execution(func: Callable) -> Callable:
     return wrap_func
 
 
-# decorator to reroute the output of a function to a file
-def redirect_output_to_file(file_path: str) -> Callable:
-    """Decorator to redirect the output of a function to a file."""
-
-    def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            # NOTE: append to the file, do not overwrite it
-            with open(file_path, "a") as f:
-                with redirect_stdout(f):
-                    return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
 def percent(numerator, denominator):
     return round((numerator / denominator) * 100, 2)
 
@@ -125,103 +107,6 @@ def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
         y_coords = y_coords[:-1]
     # NOTE: skip expensive validation
     return convert_polygon((x_coords, y_coords), validate=DEBUG)
-
-
-def accumulated_frequency(int_list):
-    out = []
-    total = sum(int_list)
-    acc = 0
-    for e in int_list:
-        acc += e
-        out.append(percent(acc, total))
-
-    return out
-
-
-def rst_title(title: str, level: int = 0) -> str:
-    """Return a title in restructured text format"""
-    separators = ["=", "-", "~", "^", "`"]
-    level = min(level, len(separators) - 1)
-    sep = separators[level]
-    return f"\n\n{title}\n{sep * len(title)}\n"
-
-
-def print_rst_table(headers: List[str], rows: List[List[str]]):
-    """
-    Print a table in restructured text (.rst) format using list-table directive
-
-    :param headers: List of column headers
-    :param rows: List of rows, each row is a list of values
-    """
-    # Calculate appropriate column widths based on content
-    col_count = len(headers)
-    default_width = 100 // col_count
-    widths = [default_width] * col_count
-
-    # Start the list-table directive
-    print("\n.. list-table::")
-    print("   :header-rows: 1")
-    print(f"   :widths: {' '.join(str(w) for w in widths)}")
-    print("")
-
-    # Print headers
-    print("   * - " + "\n     - ".join(str(h) for h in headers))
-
-    # Print rows
-    for row in rows:
-        # Convert all cells to strings
-        str_cells = [str(cell) for cell in row]
-        print("   * - " + "\n     - ".join(str_cells))
-
-    print("")
-
-
-def print_frequencies(counts: List[int], amount_of_shortcuts: int):
-    max_val = max(*counts)
-    frequencies = [counts.count(i) for i in range(max_val + 1)]
-
-    total_count = sum(frequencies)
-    acc = accumulated_frequency(frequencies)
-    acc_inverse = [round(100 - x, 2) for x in acc]
-
-    # Combined table with all frequency information
-    combined_headers = ["Amount", "Frequency", "Relative", "Accumulated", "Remaining"]
-    combined_rows = []
-
-    for i, amount in enumerate(frequencies):
-        if i < len(acc):  # Ensure we have accumulated values for this index
-            row = [
-                i,  # Amount
-                amount,  # Frequency
-                f"{percent(amount, total_count)}%",  # Relative %
-                f"{acc[i]}%",  # Accumulated %
-                f"{acc_inverse[i]}%",  # Remaining %
-            ]
-            combined_rows.append(row)
-
-    print_rst_table(combined_headers, combined_rows)
-
-
-@redirect_output_to_file(DATA_REPORT_FILE)
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
-    print(rst_title("Shortcut Mapping Statistics", level=1))
-
-    amount_of_shortcuts = len(mapping)
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
-
-    print("\nAmount of timezone polygons per shortcut:\n")
-    print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
-
-    amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
-        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-        distinct_zones = set(zone_ids)
-        amount_of_distinct_zones = len(distinct_zones)
-        amount_of_different_zones.append(amount_of_distinct_zones)
-
-    print("\nAmount of different timezones per shortcut:\n")
-    print_frequencies(amount_of_different_zones, amount_of_shortcuts)
 
 
 def has_coherent_sequences(lst: List[int]) -> bool:

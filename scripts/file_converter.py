@@ -45,7 +45,6 @@ from pathlib import Path
 
 import functools
 import itertools
-from collections import Counter
 from dataclasses import dataclass
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
@@ -54,7 +53,6 @@ import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.configs import (
-    DATA_REPORT_FILE,
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
@@ -68,14 +66,13 @@ from scripts.configs import (
 )
 from scripts.utils import (
     check_shortcut_sorting,
-    print_rst_table,
-    print_shortcut_statistics,
-    redirect_output_to_file,
-    rst_title,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
     load_json,
+)
+from scripts.reporting import (
+    write_data_report,
 )
 
 from scripts.utils_numba import fully_contained_in_hole, any_pt_in_poly
@@ -84,7 +81,6 @@ from timezonefinder.flatbuf.polygon_utils import (
     write_polygon_collection_flatbuffer,
 )
 from timezonefinder.flatbuf.shortcut_utils import (
-    get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
@@ -580,7 +576,7 @@ def compile_shortcut_mapping() -> ShortcutMapping:
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
     shortcuts = compile_h3_map(candidates=candidates)
-    print_shortcut_statistics(shortcuts, poly_zone_ids)
+    # Shortcut statistics will be printed in the reporting module
     return shortcuts
 
 
@@ -684,20 +680,6 @@ def write_numpy_binaries(output_path):
     print("Numpy binary files written successfully")
 
 
-def get_file_size_in_mb(file_path: Path) -> float:
-    """
-    Returns the size of a file in megabytes.
-    Args:
-        file_path: Path to the file
-
-    Returns:
-        Size of the file in megabytes
-    """
-    size_in_bytes = file_path.stat().st_size
-    size_in_mb = size_in_bytes / (1024**2)
-    return size_in_mb
-
-
 def write_flatbuffer_files(output_path: Path):
     # separate output directories for holes and boundaries
     holes_dir = get_holes_dir(output_path)
@@ -742,255 +724,10 @@ def compile_data_files(output_path):
     write_binary_files(output_path)
 
 
-def generate_polygon_statistics_table(
-    polygon_type: str, count: int, length_list: List[int], additional_rows: List = None
-) -> None:
-    """
-    Generate and print a table with statistics for a polygon collection.
-
-    Args:
-        polygon_type: Type of polygon ("Boundary" or "Hole")
-        count: Number of polygons
-        length_list: List of coordinate lengths for each polygon
-        additional_rows: Optional additional rows to add to the table
-    """
-    # Safe handling for empty or missing data
-    length_list = length_list or []
-    polygon_type_lower = polygon_type.lower()
-
-    if count == 0 or not length_list:
-        print(f"No {polygon_type_lower} polygons found.")
-        # Still print a table with zeros for consistency
-        headers = [f"{polygon_type} Metric", "Value"]
-        rows = [
-            [f"Total {polygon_type_lower} polygons", "0"],
-            [f"Total {polygon_type_lower} coordinates", "0"],
-            [f"Total {polygon_type_lower} coordinate values (2 per point)", "0"],
-        ]
-        if additional_rows:
-            rows.extend(additional_rows)
-        print_rst_table(headers, rows)
-        return
-
-    # Calculate statistics
-    total_coords = sum(length_list)
-    total_floats = 2 * total_coords
-    avg_length = round(sum(length_list) / len(length_list), 2)
-    max_length = max(length_list)
-    min_length = min(length_list)
-
-    # Create table
-    headers = [f"{polygon_type} Metric", "Value"]
-    rows = [
-        [f"Total {polygon_type_lower} polygons", f"{count:,}"],
-        [f"Total {polygon_type_lower} coordinates", f"{total_coords:,}"],
-        [
-            f"Total {polygon_type_lower} coordinate values (2 per point)",
-            f"{total_floats:,}",
-        ],
-        [f"Average coordinates per {polygon_type_lower} polygon", f"{avg_length:,}"],
-        [f"Maximum coordinates in one {polygon_type_lower} polygon", f"{max_length:,}"],
-        [f"Minimum coordinates in one {polygon_type_lower} polygon", f"{min_length:,}"],
-    ]
-
-    # Add any additional rows
-    if additional_rows:
-        rows.extend(additional_rows)
-
-    print_rst_table(headers, rows)
+# These functions have been moved to scripts.reporting module
 
 
-def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
-    """
-    Generate additional metric rows for tables based on a dictionary of metrics.
-
-    Args:
-        metric_type: Type of metrics (e.g., "boundary", "hole")
-        metrics_dict: Dictionary of metric names and values
-
-    Returns:
-        List of rows for a table
-    """
-    rows = []
-    for label, value in metrics_dict.items():
-        # Format numbers with commas and add % to percentages
-        if isinstance(value, (int, float)):
-            if "percentage" in label.lower() or "%" in label:
-                formatted_value = f"{value}%"
-            else:
-                formatted_value = f"{value:,}" if value == int(value) else f"{value}"
-        else:
-            formatted_value = str(value)
-
-        rows.append([label, formatted_value])
-    return rows
-
-
-@redirect_output_to_file(DATA_REPORT_FILE)
-def report_data_statistics():
-    """
-    prints a report of the statistics of the timezone data.
-    """
-    print(".. _data_report:\n")
-    print(rst_title("Data Report", level=0))
-    print(rst_title("Data Statistics", level=1))
-
-    # General statistics
-    total_floats_boundaries = 2 * sum(polygon_lengths) if polygon_lengths else 0
-    total_floats_holes = 2 * sum(all_hole_lengths) if all_hole_lengths else 0
-    total_floats = total_floats_boundaries + total_floats_holes
-
-    # Create a table of overall dataset statistics
-    general_metrics = {"Total coordinate values (2 per point)": total_floats}
-
-    print_rst_table(
-        ["General Metric", "Value"], generate_metrics_rows("general", general_metrics)
-    )
-
-    print(rst_title("Boundary Polygon Statistics", level=2))
-
-    # Additional boundary-specific statistics
-    boundary_metrics = {}
-    boundary_rows = generate_metrics_rows("boundary", boundary_metrics)
-    generate_polygon_statistics_table(
-        "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
-    )
-
-    print(rst_title("Hole Polygon Statistics", level=2))
-    # Hole-specific additional statistics
-    polygons_with_holes = len(set(polynrs_of_holes)) if polynrs_of_holes else 0
-
-    hole_metrics = {
-        "Number of boundary polygons with holes": polygons_with_holes,
-        "Percentage of boundary polygons with holes": round(
-            (polygons_with_holes / nr_of_polygons) * 100, 2
-        )
-        if nr_of_polygons > 0 and polygons_with_holes > 0
-        else 0,
-        "Average holes per boundary polygon (with holes)": round(
-            nr_of_holes / polygons_with_holes, 2
-        )
-        if polygons_with_holes > 0
-        else 0,
-    }
-
-    hole_rows = generate_metrics_rows("hole", hole_metrics)
-    generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
-
-    # Add timezone statistics table
-    print(rst_title("Timezone Statistics", level=2))
-
-    # Count polygons per timezone
-    polygons_per_timezone = Counter(poly_zone_ids)
-
-    # Calculate statistics about timezones
-    timezone_metrics = {
-        "Total timezones": nr_of_zones,
-        "Average boundary polygons per timezone": round(nr_of_polygons / nr_of_zones, 2)
-        if nr_of_zones > 0
-        else 0,
-        "Maximum polygons in one timezone": max(polygons_per_timezone.values())
-        if polygons_per_timezone
-        else 0,
-        "Minimum polygons in one timezone": min(polygons_per_timezone.values())
-        if polygons_per_timezone
-        else 0,
-        "Median polygons per timezone": sorted(list(polygons_per_timezone.values()))[
-            len(polygons_per_timezone) // 2
-        ]
-        if polygons_per_timezone
-        else 0,
-        "Timezones with single polygon": sum(
-            1 for count in polygons_per_timezone.values() if count == 1
-        ),
-        "Percentage of single-polygon timezones": round(
-            (
-                sum(1 for count in polygons_per_timezone.values() if count == 1)
-                / nr_of_zones
-            )
-            * 100,
-            2,
-        )
-        if nr_of_zones > 0
-        else 0,
-        "Timezones with 10+ polygons": sum(
-            1 for count in polygons_per_timezone.values() if count >= 10
-        ),
-        "Percentage of timezones with 10+ polygons": round(
-            (
-                sum(1 for count in polygons_per_timezone.values() if count >= 10)
-                / nr_of_zones
-            )
-            * 100,
-            2,
-        )
-        if nr_of_zones > 0
-        else 0,
-        "Most complex timezone (polygons)": f"{all_tz_names[max(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({max(polygons_per_timezone.values())} polygons)"
-        if polygons_per_timezone
-        else "None",
-    }
-
-    # Print timezone statistics table
-    timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
-    print_rst_table(["Timezone Metric", "Value"], timezone_rows)
-
-
-@redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path):
-    """
-    Reports the sizes of the biggest generated binary files.
-
-    NOTE: smaller .npy files are not reported here, since their size is negligible
-
-    Args:
-        output_path: Path to the output directory containing the binary files
-    """
-    print(rst_title("Binary File Sizes", level=1))
-    holes_dir = get_holes_dir(output_path)
-    boundaries_dir = get_boundaries_dir(output_path)
-
-    boundary_polygon_file = get_coordinate_path(boundaries_dir)
-    hole_polygon_file = get_coordinate_path(holes_dir)
-
-    names_and_paths = {
-        "boundary polygon data": boundary_polygon_file,
-        "hole polygon data": hole_polygon_file,
-        "shortcuts": get_shortcut_file_path(output_path),
-    }
-    names_and_sizes = {
-        name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
-    }
-    total_space = sum(names_and_sizes.values())
-
-    # Print total size summary
-    print(
-        f"Total space used by polygon and shortcut binary files: {total_space:.2f} MB\n"
-    )
-
-    # Create table for file sizes
-    headers = ["File Type", "Size (MB)", "Percentage"]
-    rows = [
-        [name, f"{size:.2f}", f"{size / total_space:.2%}"]
-        for name, size in names_and_sizes.items()
-    ]
-
-    # Add total row
-    rows.append(["Total", f"{total_space:.2f}", "100.00%"])
-
-    # Print the table
-    print_rst_table(headers, rows)
-
-
-def write_data_report(shortcuts: ShortcutMapping, output_path: Path):
-    if DATA_REPORT_FILE.exists():
-        print(f"Removing old data report file: {DATA_REPORT_FILE}")
-        DATA_REPORT_FILE.unlink()
-
-    print("Writing data report to:", DATA_REPORT_FILE)
-    report_data_statistics()
-    report_file_sizes(output_path)
-    print_shortcut_statistics(shortcuts, poly_zone_ids)
+# These functions have been moved to scripts.reporting module
 
 
 @time_execution
@@ -1010,7 +747,17 @@ def parse_data(
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
-    write_data_report(shortcuts, output_path)
+    write_data_report(
+        shortcuts,
+        output_path,
+        nr_of_polygons,
+        nr_of_zones,
+        polygon_lengths,
+        all_hole_lengths,
+        polynrs_of_holes,
+        poly_zone_ids,
+        all_tz_names,
+    )
 
 
 if __name__ == "__main__":
