@@ -21,8 +21,8 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
     from timezonefinder import timezone_at
 
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
-    tz = timezone_at_land(lng=1.0, lat=50.5)
-    tz = unique_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at_land(lng=13.358, lat=52.5061)
+    tz = unique_timezone_at(lng=13.358, lat=52.5061)
     geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
 
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
