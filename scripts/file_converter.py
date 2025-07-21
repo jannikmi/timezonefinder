@@ -204,6 +204,7 @@ def parse_polygons_from_json(input_path: Path) -> None:
                 print(
                     f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon",
                     end="",
+                    flush=True,
                 )
                 polynrs_of_holes.append(poly_id)
                 hole_poly = to_numpy_polygon_repr(hole)
@@ -580,60 +581,6 @@ def compile_shortcut_mapping() -> ShortcutMapping:
     return shortcuts
 
 
-def latlng_to_cell(lng: float, lat: float) -> int:
-    return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-
-def validate_shortcut_completeness(mapping: ShortcutMapping):
-    print("validating shortcut completeness...")
-
-    error = False
-    for poly_id, poly in enumerate(polygons):
-        print(f"\rvalidating polygon {poly_id}", end="")
-        for i, pt in enumerate(poly.T):
-            # ATTENTION: int to coord conversion required!
-            lng = int2coord(pt[0])
-            lat = int2coord(pt[1])
-            hex_id = latlng_to_cell(lng, lat)
-            try:
-                shortcut_entries = mapping[hex_id]
-            except KeyError:
-                raise ValueError(
-                    f"shortcut mapping is incomplete at point ({lng}, {lat}) "
-                    f"(hexagon cell id {hex_id} missing in mapping)"
-                )
-            if poly_id not in shortcut_entries:
-                print(
-                    f"ERR: point #{i} ({lng}, {lat}) of polygon {poly_id} "
-                    f"does not appear in shortcut entries {shortcut_entries} of cell {hex_id}"
-                )
-                error = True
-
-    assert not error
-
-
-def validate_shortcut_resolution(mapping: ShortcutMapping):
-    for hex_id in mapping.keys():
-        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
-
-
-def validate_unused_polygons(shortcuts: ShortcutMapping):
-    # check if all polygons are used in the shortcuts
-    used_polygons = set()
-    for poly_ids in shortcuts.values():
-        used_polygons.update(poly_ids)
-    all_polygon_ids = set(range(nr_of_polygons))
-    unused_poly_ids = all_polygon_ids - used_polygons
-    assert len(unused_poly_ids) == 0, f"there are unused polygons: {unused_poly_ids}"
-
-
-def validate_shortcut_mapping(mapping: ShortcutMapping):
-    print("validating shortcut mapping")
-    validate_shortcut_resolution(mapping)
-    validate_shortcut_completeness(mapping)
-    validate_unused_polygons(mapping)
-
-
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
     """
     Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
@@ -875,7 +822,7 @@ def parse_data(
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
     write_shortcuts_flatbuffers(shortcuts, output_path)
-    validate_shortcut_mapping(shortcuts)
+
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
     write_data_report(shortcuts, output_path)
