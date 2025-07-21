@@ -84,7 +84,7 @@ def print_rst_table(headers: List[str], rows: List[List[str]]):
     print("")
 
 
-def print_frequencies(counts: List[int], amount_of_shortcuts: int):
+def print_frequencies(counts: List[int], label: str):
     max_val = max(*counts)
     frequencies = [counts.count(i) for i in range(max_val + 1)]
 
@@ -93,7 +93,7 @@ def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     acc_inverse = [round(100 - x, 2) for x in acc]
 
     # Combined table with all frequency information
-    combined_headers = ["Amount", "Frequency", "Relative", "Accumulated", "Remaining"]
+    combined_headers = [label, "Frequency", "Relative", "Accumulated", "Remaining"]
     combined_rows = []
 
     for i, amount in enumerate(frequencies):
@@ -129,11 +129,9 @@ def get_file_size_in_mb(file_path: Path) -> float:
 def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    amount_of_shortcuts = len(mapping)
     nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
 
-    print("\nAmount of timezone polygons per shortcut:\n")
-    print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
+    print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
 
     amount_of_different_zones = []
     for polygon_ids in mapping.values():
@@ -143,8 +141,7 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
         amount_of_distinct_zones = len(distinct_zones)
         amount_of_different_zones.append(amount_of_distinct_zones)
 
-    print("\nAmount of different timezones per shortcut:\n")
-    print_frequencies(amount_of_different_zones, amount_of_shortcuts)
+    print_frequencies(amount_of_different_zones, "timezones/shortcut")
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
@@ -287,7 +284,6 @@ def calculate_timezone_metrics(
     nr_of_zones: int,
     nr_of_polygons: int,
     polygons_per_timezone: Counter,
-    all_tz_names: List[str],
 ) -> Dict:
     """
     Calculate statistics about timezones in the dataset.
@@ -301,13 +297,6 @@ def calculate_timezone_metrics(
     Returns:
         Dictionary of timezone metrics
     """
-    single_polygon_count = sum(
-        1 for count in polygons_per_timezone.values() if count == 1
-    )
-    multi_polygon_count = sum(
-        1 for count in polygons_per_timezone.values() if count >= 10
-    )
-
     return {
         "Total timezones": nr_of_zones,
         "Average boundary polygons per timezone": round(nr_of_polygons / nr_of_zones, 2)
@@ -324,88 +313,62 @@ def calculate_timezone_metrics(
         ]
         if polygons_per_timezone
         else 0,
-        "Timezones with single polygon": single_polygon_count,
-        "Percentage of single-polygon timezones": round(
-            (single_polygon_count / nr_of_zones) * 100, 2
-        )
-        if nr_of_zones > 0
-        else 0,
-        "Timezones with 10+ polygons": multi_polygon_count,
-        "Percentage of timezones with 10+ polygons": round(
-            (multi_polygon_count / nr_of_zones) * 100, 2
-        )
-        if nr_of_zones > 0
-        else 0,
-        "Most complex timezone (polygons)": f"{all_tz_names[max(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({max(polygons_per_timezone.values())} polygons)"
-        if polygons_per_timezone
-        else "None",
     }
 
 
-def create_polygon_distribution_table(
+def print_polygon_distribution_table(
     polygons_per_timezone: Counter,
+    all_tz_names: List[str],
 ) -> List[List[str]]:
     """
     Create a table showing the distribution of polygon counts across timezones.
 
     Args:
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
+        all_tz_names: List of timezone names
 
     Returns:
         List of rows for the distribution table
     """
+    print(rst_title("Polygons per Timezone Distribution", level=3))
+
     # Create distribution of polygon counts
     distribution = Counter(polygons_per_timezone.values())
     distribution_items = sorted(distribution.items())
 
-    # Group large numbers if there are too many entries
-    if len(distribution_items) > 15:
-        grouped_distribution = {}
-        groups = [
-            (1, 1),
-            (2, 2),
-            (3, 5),
-            (6, 10),
-            (11, 20),
-            (21, 50),
-            (51, 100),
-            (101, float("inf")),
-        ]
+    # Group timezone IDs by polygon count for examples
+    polygon_count_to_timezone = {}
+    for zone_id, poly_count in polygons_per_timezone.items():
+        if poly_count not in polygon_count_to_timezone:
+            polygon_count_to_timezone[poly_count] = zone_id
 
-        for lower, upper in groups:
-            count = sum(v for k, v in distribution_items if lower <= k <= upper)
-            if count > 0:
-                if upper == float("inf"):
-                    label = f"{lower}+ polygons"
-                else:
-                    label = (
-                        f"{lower}-{upper} polygons"
-                        if lower != upper
-                        else f"{lower} polygon" + ("s" if lower > 1 else "")
-                    )
-                grouped_distribution[label] = count
-
-        distribution_items = sorted(
-            grouped_distribution.items(),
-            key=lambda x: groups[
-                [g[0] for g in groups].index(int(x[0].split("-")[0].split("+")[0]))
-            ],
-        )
-    else:
-        # Convert to more readable format
-        distribution_items = [
-            (f"{k} polygon" + ("s" if k > 1 else ""), v) for k, v in distribution_items
-        ]
+    # Convert to more readable format
+    distribution_items = [
+        (f"{k} polygon" + ("s" if k > 1 else ""), v) for k, v in distribution_items
+    ]
 
     # Create rows for distribution table
     distribution_rows = []
     total_zones = sum(distribution.values())
 
     for category, count in distribution_items:
-        percentage = round((count / total_zones) * 100, 2) if total_zones > 0 else 0
-        distribution_rows.append([category, str(count), f"{percentage}%"])
+        polygon_count = int(category.split()[0])  # Extract number from category
+        example = ""
+        if polygon_count in polygon_count_to_timezone:
+            example_zone_id = polygon_count_to_timezone[polygon_count]
+            if 0 <= example_zone_id < len(all_tz_names):
+                example = all_tz_names[example_zone_id]
 
-    return distribution_rows
+        percentage = round((count / total_zones) * 100, 2) if total_zones > 0 else 0
+        distribution_rows.append([category, str(count), f"{percentage}%", example])
+
+    cols = [
+        "Number of Polygons",
+        "Number of Timezones",
+        "Percentage",
+        "Example Timezone",
+    ]
+    print_rst_table(cols, distribution_rows)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
@@ -467,11 +430,7 @@ def report_data_statistics(
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
 
     # Polygon distribution section
-    print(rst_title("Polygons per Timezone Distribution", level=3))
-    distribution_rows = create_polygon_distribution_table(polygons_per_timezone)
-    print_rst_table(
-        ["Number of Polygons", "Number of Timezones", "Percentage"], distribution_rows
-    )
+    print_polygon_distribution_table(polygons_per_timezone, all_tz_names)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
@@ -500,11 +459,6 @@ def report_file_sizes(output_path: Path) -> None:
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
     }
     total_space = sum(names_and_sizes.values())
-
-    # Print total size summary
-    print(
-        f"Total space used by polygon and shortcut binary files: {total_space:.2f} MB\n"
-    )
 
     # Create table for file sizes
     headers = ["File Type", "Size (MB)", "Percentage"]
@@ -559,5 +513,5 @@ def write_data_report(
         poly_zone_ids,
         all_tz_names,
     )
-    report_file_sizes(output_path)
     print_shortcut_statistics(shortcuts, poly_zone_ids)
+    report_file_sizes(output_path)

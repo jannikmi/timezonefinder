@@ -107,7 +107,7 @@ from timezonefinder.zone_names import write_zone_names
 
 
 # lower the shortcut resolution for debugging
-SHORTCUT_H3_RES = 1 if DEBUG else SHORTCUT_H3_RES
+SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 ShortcutMapping = Dict[int, List[int]]
 
