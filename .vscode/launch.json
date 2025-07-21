@@ -14,7 +14,7 @@
     {
       "args": [
         "-s",
-        "tests/utils_test.py::test_inside_polygon",
+        "tests/test_integration.py",
         "-v"
       ],
       "console": "integratedTerminal",
@@ -23,7 +23,23 @@
       },
       "justMyCode": false,
       "module": "pytest",
-      "name": "Run unit test",
+      "name": "test integration",
+      "request": "launch",
+      "type": "debugpy"
+    },
+    {
+      "args": [
+        "-s",
+        "tests/test_package_contents.py",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": false,
+      "module": "pytest",
+      "name": "test package contents",
       "request": "launch",
       "type": "debugpy"
     }

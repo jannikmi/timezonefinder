@@ -6,9 +6,10 @@ scripts/*.json
 MANIFEST
 tmp.py
 tmp/
-.venv
+.venv/
 
-build/
+.mypy_cache/
+.ruff_cache/
 
 *.DS_Store
 *.pytest_cache
@@ -37,13 +38,13 @@ __pycache__/
 *.so
 
 
-# Distribution / packaging  	deleted rule for build/
+# Distribution / packaging
 
 .Python
 env/
-
 develop-eggs/
 dist/
+build/
 downloads/
 eggs/
 .eggs/
