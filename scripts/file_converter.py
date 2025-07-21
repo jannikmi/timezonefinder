@@ -741,6 +741,90 @@ def compile_data_files(output_path):
     write_binary_files(output_path)
 
 
+def generate_polygon_statistics_table(
+    polygon_type: str, count: int, length_list: List[int], additional_rows: List = None
+) -> None:
+    """
+    Generate and print a table with statistics for a polygon collection.
+
+    Args:
+        polygon_type: Type of polygon ("Boundary" or "Hole")
+        count: Number of polygons
+        length_list: List of coordinate lengths for each polygon
+        additional_rows: Optional additional rows to add to the table
+    """
+    # Safe handling for empty or missing data
+    length_list = length_list or []
+    polygon_type_lower = polygon_type.lower()
+
+    if count == 0 or not length_list:
+        print(f"No {polygon_type_lower} polygons found.")
+        # Still print a table with zeros for consistency
+        headers = [f"{polygon_type} Metric", "Value"]
+        rows = [
+            [f"Total {polygon_type_lower} polygons", "0"],
+            [f"Total {polygon_type_lower} coordinates", "0"],
+            [f"Total {polygon_type_lower} coordinate values (2 per point)", "0"],
+        ]
+        if additional_rows:
+            rows.extend(additional_rows)
+        print_rst_table(headers, rows)
+        return
+
+    # Calculate statistics
+    total_coords = sum(length_list)
+    total_floats = 2 * total_coords
+    avg_length = round(sum(length_list) / len(length_list), 2)
+    max_length = max(length_list)
+    min_length = min(length_list)
+
+    # Create table
+    headers = [f"{polygon_type} Metric", "Value"]
+    rows = [
+        [f"Total {polygon_type_lower} polygons", f"{count:,}"],
+        [f"Total {polygon_type_lower} coordinates", f"{total_coords:,}"],
+        [
+            f"Total {polygon_type_lower} coordinate values (2 per point)",
+            f"{total_floats:,}",
+        ],
+        [f"Average coordinates per {polygon_type_lower} polygon", f"{avg_length:,}"],
+        [f"Maximum coordinates in one {polygon_type_lower} polygon", f"{max_length:,}"],
+        [f"Minimum coordinates in one {polygon_type_lower} polygon", f"{min_length:,}"],
+    ]
+
+    # Add any additional rows
+    if additional_rows:
+        rows.extend(additional_rows)
+
+    print_rst_table(headers, rows)
+
+
+def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
+    """
+    Generate additional metric rows for tables based on a dictionary of metrics.
+
+    Args:
+        metric_type: Type of metrics (e.g., "boundary", "hole")
+        metrics_dict: Dictionary of metric names and values
+
+    Returns:
+        List of rows for a table
+    """
+    rows = []
+    for label, value in metrics_dict.items():
+        # Format numbers with commas and add % to percentages
+        if isinstance(value, (int, float)):
+            if "percentage" in label.lower() or "%" in label:
+                formatted_value = f"{value}%"
+            else:
+                formatted_value = f"{value:,}" if value == int(value) else f"{value}"
+        else:
+            formatted_value = str(value)
+
+        rows.append([label, formatted_value])
+    return rows
+
+
 @redirect_output_to_file(DATA_REPORT_FILE)
 def report_data_statistics():
     """
@@ -750,24 +834,54 @@ def report_data_statistics():
     print(rst_title("Data Report", level=0))
     print(rst_title("Data Statistics", level=1))
 
-    max_poly_length = max(polygon_lengths)
-    max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
-    # there are two floats per coordinate (lng, lat)
-    nr_of_floats = 2 * sum(polygon_lengths)
+    # General statistics
+    total_floats_boundaries = 2 * sum(polygon_lengths) if polygon_lengths else 0
+    total_floats_holes = 2 * sum(all_hole_lengths) if all_hole_lengths else 0
+    total_floats = total_floats_boundaries + total_floats_holes
 
-    # Create a table of dataset statistics
-    headers = ["Metric", "Value"]
-    rows = [
-        ["Total polygons", f"{nr_of_polygons:,}"],
-        ["Total timezones", f"{nr_of_zones:,}"],
-        ["Total holes", f"{nr_of_holes:,}"],
-        ["Maximum coordinates in one polygon", f"{max_poly_length:,}"],
-        ["Maximum coordinates in one hole polygon", f"{max_hole_poly_length:,}"],
-        ["Total coordinate values (2 per point)", f"{nr_of_floats:,}"],
-    ]
+    # Create a table of overall dataset statistics
+    general_metrics = {"Total coordinate values (2 per point)": total_floats}
 
-    # Print the table using the print_rst_table function
-    print_rst_table(headers, rows)
+    print_rst_table(
+        ["General Metric", "Value"], generate_metrics_rows("general", general_metrics)
+    )
+
+    print(rst_title("Boundary Polygon Statistics", level=2))
+
+    # Additional boundary-specific statistics
+    boundary_metrics = {}
+    boundary_rows = generate_metrics_rows("boundary", boundary_metrics)
+    generate_polygon_statistics_table(
+        "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
+    )
+
+    print(rst_title("Hole Polygon Statistics", level=2))
+    # Hole-specific additional statistics
+    polygons_with_holes = len(set(polynrs_of_holes)) if polynrs_of_holes else 0
+
+    hole_metrics = {
+        "Number of boundary polygons with holes": polygons_with_holes,
+        "Percentage of boundary polygons with holes": round(
+            (polygons_with_holes / nr_of_polygons) * 100, 2
+        )
+        if nr_of_polygons > 0 and polygons_with_holes > 0
+        else 0,
+        "Average holes per boundary polygon (with holes)": round(
+            nr_of_holes / polygons_with_holes, 2
+        )
+        if polygons_with_holes > 0
+        else 0,
+    }
+
+    hole_rows = generate_metrics_rows("hole", hole_metrics)
+    generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
+
+    {
+        "Average boundary polygons per timezone": round(nr_of_polygons / nr_of_zones, 2)
+        if nr_of_zones > 0
+        else 0,
+        "Total timezones": nr_of_zones,
+    }
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
