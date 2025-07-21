@@ -8,12 +8,27 @@ for each thread.
 
 from typing import List, Optional, Union
 
-from timezonefinder import TimezoneFinder
+from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
 
+# Use a global variable to store the singleton instance
+TF_INSTANCE: TimezoneFinder
 
-# Initialize a global TimezoneFinder instance for module-level functions
-_global_tf_instance = TimezoneFinder()
+
+def _get_tf_instance():
+    """Get or create the global TimezoneFinder instance
+
+    Lazy initialization: delayed memory allocation until actually needed
+    required because, the package might be used with a user defined instance
+    and duplicate initialisation overhead must be avoided!
+    """
+    global TF_INSTANCE
+    try:
+        return TF_INSTANCE
+    except NameError:
+        # If TF_INSTANCE is not defined, create it
+        TF_INSTANCE = TimezoneFinder()
+    return TF_INSTANCE
 
 
 def timezone_at(*, lng: float, lat: float) -> Optional[str]:
@@ -28,7 +43,7 @@ def timezone_at(*, lng: float, lat: float) -> Optional[str]:
     :param lat: latitude in degree (90.0 to -90.0)
     :return: the timezone name of a matching polygon or None
     """
-    return _global_tf_instance.timezone_at(lng=lng, lat=lat)
+    return _get_tf_instance().timezone_at(lng=lng, lat=lat)
 
 
 def timezone_at_land(*, lng: float, lat: float) -> Optional[str]:
@@ -44,7 +59,7 @@ def timezone_at_land(*, lng: float, lat: float) -> Optional[str]:
     :return: the timezone name of a matching polygon or
         ``None`` when an ocean timezone ("Etc/GMT+-XX") has been matched.
     """
-    return _global_tf_instance.timezone_at_land(lng=lng, lat=lat)
+    return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
 
 
 def unique_timezone_at(*, lng: float, lat: float) -> Optional[str]:
@@ -59,7 +74,7 @@ def unique_timezone_at(*, lng: float, lat: float) -> Optional[str]:
     :param lat: latitude in degree (90.0 to -90.0)
     :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
     """
-    return _global_tf_instance.unique_timezone_at(lng=lng, lat=lat)
+    return _get_tf_instance().unique_timezone_at(lng=lng, lat=lat)
 
 
 def certain_timezone_at(*, lng: float, lat: float) -> Optional[str]:
@@ -81,7 +96,7 @@ def certain_timezone_at(*, lng: float, lat: float) -> Optional[str]:
     :param lat: latitude in degree
     :return: the timezone name of the polygon the point is included in or `None`
     """
-    return _global_tf_instance.certain_timezone_at(lng=lng, lat=lat)
+    return _get_tf_instance().certain_timezone_at(lng=lng, lat=lat)
 
 
 def get_geometry(
@@ -106,6 +121,6 @@ def get_geometry(
         and each polygon and hole is itself formatted like: ``([longitudes], [latitudes])``
         or ``[(lng1,lat1), (lng2,lat2),...]`` if ``coords_as_pairs=True``.
     """
-    return _global_tf_instance.get_geometry(
+    return _get_tf_instance().get_geometry(
         tz_name=tz_name, tz_id=tz_id, use_id=use_id, coords_as_pairs=coords_as_pairs
     )
