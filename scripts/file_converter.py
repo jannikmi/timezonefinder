@@ -69,6 +69,7 @@ from scripts.utils import (
     check_shortcut_sorting,
     print_shortcut_statistics,
     redirect_output_to_file,
+    rst_title,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
@@ -744,25 +745,22 @@ def report_data_statistics():
     """
     prints a report of the statistics of the timezone data.
     """
-    print("TimezoneFinder Data Report")
-    print("==========================")
-    print()
-    print("TimezoneFinder Data Statistics")
-    print("==============================")
-    print()
-
-    print(f"{nr_of_polygons:,} polygons from")
-    print(f"{nr_of_zones:,} timezones with")
-    print(f"{nr_of_holes:,} holes")
+    print(rst_title("Data Report", level=0))
+    print(rst_title("Data Statistics", level=1))
 
     max_poly_length = max(polygon_lengths)
     max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
-
-    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon")
-    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon")
     # there are two floats per coordinate (lng, lat)
     nr_of_floats = 2 * sum(polygon_lengths)
-    print(f"{nr_of_floats:,} floats in all the polygons (2 per point)")
+
+    # NOTE: newlines required for line breaks in .rst format
+    print("Dataset contains:\n")
+    print(f"{nr_of_polygons:,} polygons from\n")
+    print(f"{nr_of_zones:,} timezones with\n")
+    print(f"{nr_of_holes:,} holes.\n\n")
+    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon\n")
+    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon\n")
+    print(f"{nr_of_floats:,} floats in all the polygons (2 per point)\n")
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
@@ -775,6 +773,7 @@ def report_file_sizes(output_path: Path):
     Args:
         output_path: Path to the output directory containing the binary files
     """
+    print(rst_title("Binary File Sizes", level=1))
     holes_dir = get_holes_dir(output_path)
     boundaries_dir = get_boundaries_dir(output_path)
 
@@ -791,10 +790,10 @@ def report_file_sizes(output_path: Path):
     }
     total_space = sum(names_and_sizes.values())
     print(
-        f"\nTotal space used by polygon and shortcut binary files: {total_space:.2f} MB"
+        f"\nTotal space used by polygon and shortcut binary files: {total_space:.2f} MB\n"
     )
     for name, size in names_and_sizes.items():
-        print(f"{name} takes up {size:.2f} MB ({size / total_space:.2%})")
+        print(f"{name} takes up {size:.2f} MB ({size / total_space:.2%})\n")
 
 
 def write_data_report(shortcuts: ShortcutMapping, output_path: Path):

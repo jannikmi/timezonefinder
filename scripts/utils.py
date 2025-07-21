@@ -138,38 +138,87 @@ def accumulated_frequency(int_list):
     return out
 
 
+def rst_title(title: str, level: int = 0) -> str:
+    """Return a title in restructured text format"""
+    separators = ["=", "-", "~", "^", "`"]
+    level = min(level, len(separators) - 1)
+    sep = separators[level]
+    return f"\n\n{title}\n{sep * len(title)}\n"
+
+
+def print_rst_table(headers: List[str], rows: List[List[str]]):
+    """
+    Print a table in restructured text (.rst) format using list-table directive
+
+    :param headers: List of column headers
+    :param rows: List of rows, each row is a list of values
+    """
+    # Calculate appropriate column widths based on content
+    col_count = len(headers)
+    default_width = 100 // col_count
+    widths = [default_width] * col_count
+
+    # Start the list-table directive
+    print("\n.. list-table::")
+    print("   :header-rows: 1")
+    print(f"   :widths: {' '.join(str(w) for w in widths)}")
+    print("")
+
+    # Print headers
+    print("   * - " + "\n     - ".join(str(h) for h in headers))
+
+    # Print rows
+    for row in rows:
+        # Convert all cells to strings
+        str_cells = [str(cell) for cell in row]
+        print("   * - " + "\n     - ".join(str_cells))
+
+    print("")
+
+
 def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     max_val = max(*counts)
-    print("highest amount in one shortcut is", max_val)
     frequencies = [counts.count(i) for i in range(max_val + 1)]
     nr_empty_shortcuts = frequencies[0]
-    print(
-        percent(nr_empty_shortcuts, amount_of_shortcuts),
-        "% of all shortcuts are empty",
-    )
-    # show the proper amount of shortcuts with 0 zones (=nr of empty shortcuts)
-    # frequencies.append(nr_empty_shortcuts)
-    print("frequencies of entry amounts:")
-    for i, amount in enumerate(frequencies):
-        print(f"{i}: {amount}")
-    print("relative accumulated frequencies [%]:")
+
+    # Summary information
+    summary_headers = ["Metric", "Value"]
+    summary_rows = [
+        ["Highest amount in one shortcut", str(max_val)],
+        [
+            "Empty shortcuts percentage",
+            f"{percent(nr_empty_shortcuts, amount_of_shortcuts)}%",
+        ],
+    ]
+
+    print(rst_title("Summary Statistics", level=2))
+    print_rst_table(summary_headers, summary_rows)
+
+    # Frequency table
+    freq_headers = ["Amount", "Frequency"]
+    freq_rows = [[i, amount] for i, amount in enumerate(frequencies)]
+
+    print(rst_title("Frequencies of Entry Amounts", level=2))
+    print_rst_table(freq_headers, freq_rows)
+
+    # Accumulated frequency table
     acc = accumulated_frequency(frequencies)
-    print(acc)
-    print("missing relative accumulated frequencies [%]:")
     acc_inverse = [round(100 - x, 2) for x in acc]
-    print(acc_inverse)
-    print("--------------------------------\n")
+
+    acc_headers = ["Amount", "Accumulated %", "Missing %"]
+    acc_rows = [[i, acc[i], acc_inverse[i]] for i in range(len(acc))]
+    print(rst_title("Accumulated Frequencies", level=2))
+    print_rst_table(acc_headers, acc_rows)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
 def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
-    print("\n\nShortcut Mapping Statistics")
-    print("===========================")
+    print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    print("\n\nshortcut statistics:")
     amount_of_shortcuts = len(mapping)
     nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
-    print("\namount of timezone polygons per shortcut")
+
+    print("\nAmount of timezone polygons per shortcut:\n")
     print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
 
     amount_of_different_zones = []
@@ -180,7 +229,7 @@ def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List
         amount_of_distinct_zones = len(distinct_zones)
         amount_of_different_zones.append(amount_of_distinct_zones)
 
-    print("amount of different timezones per shortcut")
+    print("\nAmount of different timezones per shortcut:\n")
     print_frequencies(amount_of_different_zones, amount_of_shortcuts)
 
 
