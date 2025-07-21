@@ -81,6 +81,7 @@ from timezonefinder.flatbuf.polygon_utils import (
     write_polygon_collection_flatbuffer,
 )
 from timezonefinder.flatbuf.shortcut_utils import (
+    get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
@@ -743,7 +744,8 @@ def parse_data(
 
     compile_data_files(output_path)
     shortcuts = compile_shortcut_mapping()
-    write_shortcuts_flatbuffers(shortcuts, output_path)
+    output_file = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
