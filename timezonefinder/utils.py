@@ -1,10 +1,8 @@
 """utility functions"""
 
-import io
-import mmap
 from pathlib import Path
 import re
-from typing import Any, Callable, Tuple, Union
+from typing import Any, Callable, Tuple
 
 import numpy as np
 
@@ -52,23 +50,6 @@ def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
     validate_lng(lng)
     validate_lat(lat)
     return lng, lat
-
-
-def load_buffer(
-    file: Path, in_memory: bool = True
-) -> Tuple[Union[io.BufferedReader, None], Union[mmap.mmap, bytes]]:
-    """Load a binary file into memory or as a memory-mapped file."""
-    buf: Union[mmap.mmap, bytes]
-    if in_memory:
-        # Read entire file into memory
-        with open(file, "rb") as f:
-            buf = f.read()
-    else:
-        # Use memory-mapped file for on-demand reading
-        file_obj = open(file, "rb")
-        # Create memory map
-        buf = mmap.mmap(file_obj.fileno(), 0, access=mmap.ACCESS_READ)
-    return None, buf
 
 
 def close_ressource(obj: Any) -> None:
