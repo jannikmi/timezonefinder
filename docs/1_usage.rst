@@ -319,5 +319,4 @@ With the argument of the flag ``-f`` one can choose between the different functi
 
 .. note::
 
-    Command line usage is efficient as it uses the global functions where possible (function IDs 0, 1, and 5),
-    avoiding repeated initialization of TimezoneFinder instances.
+    This will be orders of magnitude slower than using the package directly from within Python as a separate Timezonefinder() instance is being created for every call.
