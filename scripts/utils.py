@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import pickle
 from os.path import abspath
 from time import time
@@ -16,26 +17,35 @@ from timezonefinder import configs
 from timezonefinder.utils_numba import coord2int
 
 
-def load_json(path):
+def load_json(path: Path):
+    print(
+        f"loading json from {repr(path)}",
+    )
     with open(path) as fp:
         return json.load(fp)
 
 
-def load_pickle(path):
-    print("loading pickle from ", path)
+def load_pickle(path: Path):
+    print(
+        f"loading pickle from {repr(path)}",
+    )
     with open(path, "rb") as fp:
         obj = pickle.load(fp)
     return obj
 
 
-def write_pickle(obj, path):
-    print("writing pickle to ", path)
+def write_pickle(obj, path: Path):
+    print(
+        f"writing pickle to {repr(path)}",
+    )
     with open(path, "wb") as fp:
         pickle.dump(obj, fp)
 
 
-def write_json(obj, path):
-    print("writing json to ", path)
+def write_json(obj, path: Path):
+    print(
+        f"writing json to {repr(path)}",
+    )
     with open(abspath(path), "w") as json_file:
         json.dump(obj, json_file, indent=2)
         # write a newline at the end of the file
