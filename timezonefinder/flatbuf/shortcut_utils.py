@@ -31,7 +31,7 @@ def get_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
 def write_shortcuts_flatbuffers(
     shortcut_mapping: Dict[int, List[int]],
     output_path: Path = DEFAULT_DATA_DIR,
-) -> int:
+) -> None:
     """
     Write H3 shortcuts to a FlatBuffer binary file.
 
@@ -40,7 +40,7 @@ def write_shortcuts_flatbuffers(
         output_path: Directory where the output file will be written
 
     Returns:
-        The size of the written file in bytes
+        None
     """
     print(f"writing {len(shortcut_mapping)} shortcuts to binary file {output_path}")
     builder = flatbuffers.Builder(0)
@@ -79,11 +79,6 @@ def write_shortcuts_flatbuffers(
     output_file = get_shortcut_file_path(output_path)
     with open(output_file, "wb") as f:
         f.write(buf)
-
-    size_in_bytes = output_file.stat().st_size
-    size_in_mb = size_in_bytes / (1024**2)
-    print(f"the binary file takes up {size_in_mb:.2f} MB")
-    return size_in_bytes
 
 
 def read_shortcuts_binary(

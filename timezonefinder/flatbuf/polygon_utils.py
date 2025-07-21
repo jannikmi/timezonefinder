@@ -53,7 +53,7 @@ def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
 
 def write_polygon_collection_flatbuffer(
     file_path: Path, polygons: List[np.ndarray]
-) -> int:
+) -> None:
     """Write a collection of polygons to a flatbuffer file using a single coordinate vector.
 
     Args:
@@ -62,7 +62,7 @@ def write_polygon_collection_flatbuffer(
                   where the first row contains x coordinates and the second row contains y coordinates
 
     Returns:
-        The size of the written file in bytes
+        None
     """
     print(f"writing {len(polygons)} polygons to binary file {file_path}")
     builder = flatbuffers.Builder(0)
@@ -102,11 +102,6 @@ def write_polygon_collection_flatbuffer(
     with open(file_path, "wb") as f:
         buf = builder.Output()
         f.write(buf)
-
-    size_in_bytes = file_path.stat().st_size
-    size_in_mb = size_in_bytes / (1024**2)
-    print(f"the binary file takes up {size_in_mb:.2f} MB")
-    return size_in_bytes
 
 
 def get_polygon_collection(buf: Union[bytes, mmap.mmap]) -> PolygonCollection:
