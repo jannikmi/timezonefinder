@@ -44,40 +44,35 @@ Notice: Looking for maintainers. Reach out if you want to contribute!
 
 This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
-Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
 
-
-Quick Guide:
-
-.. code-block:: console
-
-    pip install timezonefinder
-
+It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
 
 Quick Guide:
 
 .. code-block:: console
 
-    pip install timezonefinder
+    pip install timezonefinder[numba]
 
 
 .. code-block:: python
 
-    # Simple usage with global functions
     from timezonefinder import timezone_at
 
-    # No need to initialize TimezoneFinder
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
-    # For more control or thread safety, use an instance
+    # For thread safety, increased performance and control, re-use an instance:
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()  # reuse
+    tf = TimezoneFinder(in_memory=True)  # reuse
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:
         tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+
+
+Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
+
 
 
 For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
