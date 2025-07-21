@@ -68,7 +68,7 @@ TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
     (56.218, 19.4787, "baltic sea", "Etc/GMT-1"),
 ]
 
-BOUNDARY_TEST_CASES = [
+EDGE_TEST_CASES = [
     # directly at the poles and the 180deg longitude border the zone result is ambiguous
     # the result should still be well defined
     # zone_name="" is interpreted as "don't care"

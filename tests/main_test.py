@@ -8,12 +8,10 @@ from scripts.configs import THRES_DTYPE_H
 from tests.auxiliaries import (
     check_geometry,
     check_pairwise_geometry,
-    is_valid_lat_int,
-    is_valid_lng_int,
     ocean2land,
     validate_polygon_coordinates,
 )
-from tests.locations import BASIC_TEST_LOCATIONS, BOUNDARY_TEST_CASES, TEST_LOCATIONS
+from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
 )
@@ -79,13 +77,15 @@ class TestBaseTimezoneFinderClass:
             bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode
         )
 
-    def check_boundary(self, lng, lat, expected: Optional[str] = ""):
-        # at the boundaries of the coordinate system the algorithms should still be well defined!
+    def check_timezone_at_results(self, lng, lat, expected: Optional[str] = ""):
+        # at the edges of the coordinate system the algorithms should still be well defined!
 
         print(
             [
-                self.test_instance.zone_name_from_poly_id(p)
-                for p in self.test_instance.get_shortcut_polys(lng=lng, lat=lat)
+                self.test_instance.zone_name_from_boundary_id(b_id)
+                for b_id in self.test_instance.get_boundaries_in_shortcut(
+                    lng=lng, lat=lat
+                )
             ]
         )
 
@@ -95,20 +95,20 @@ class TestBaseTimezoneFinderClass:
             return
         assert result == expected
 
-    def test_shortcut_boundary_validity(self):
-        for lng, lat, _expected in BOUNDARY_TEST_CASES:
-            self.check_boundary(lng, lat)
+    def test_edge_shortcut_validity(self):
+        for lng, lat, _expected in EDGE_TEST_CASES:
+            self.check_timezone_at_results(lng, lat)
 
         with pytest.raises(ValueError):
-            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.check_boundary(
+            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
+            self.check_timezone_at_results(
                 lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
             )
-            self.check_boundary(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.check_boundary(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.check_boundary(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.check_boundary(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.check_boundary(
+            self.check_timezone_at_results(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
+            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
+            self.check_timezone_at_results(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
+            self.check_timezone_at_results(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
+            self.check_timezone_at_results(
                 lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
             )
 
@@ -222,10 +222,10 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
                 validate_polygon_coordinates(hole_coords)
         print()  # move to next line after progress output
 
-    def test_shortcut_boundary_result(self):
-        for lng, lat, expected in BOUNDARY_TEST_CASES:
+    def test_edge_shortcut_result(self):
+        for lng, lat, expected in EDGE_TEST_CASES:
             # NOTE: for TimezoneFinder (using polygon data) the results must match!
-            self.check_boundary(lng, lat, expected)
+            self.check_timezone_at_results(lng, lat, expected)
 
     def test_certain_timezone_at(self, lat, lng, loc, expected):
         self.run_location_tests(
@@ -316,23 +316,6 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
             self.test_instance.get_geometry(
                 tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
             )
-
-    def test_get_polygon_boundaries(self):
-        # boundaries should be defined for each polygon
-        instance = self.test_instance
-        nr_of_polygons = instance.nr_of_polygons
-        for poly_id in range(nr_of_polygons):
-            boundaries = instance.get_polygon_boundaries(poly_id=poly_id)
-            assert isinstance(boundaries, tuple)
-            assert len(boundaries) == 4
-            xmax, xmin, ymax, ymin = boundaries
-            # test value range:
-            assert is_valid_lat_int(ymin)
-            assert is_valid_lat_int(ymax)
-            assert is_valid_lng_int(xmin)
-            assert is_valid_lng_int(xmax)
-            assert ymin < ymax
-            assert xmin < xmax
 
 
 class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):

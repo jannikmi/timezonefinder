@@ -4,7 +4,14 @@ import pytest
 from scripts.configs import DEBUG
 from tests.auxiliaries import get_rnd_query_pt, timefunc
 
-from timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder import (
+    TimezoneFinder,
+    TimezoneFinderL,
+    timezone_at,
+    timezone_at_land,
+    certain_timezone_at,
+    unique_timezone_at,
+)
 
 N = 10 if DEBUG else int(1e4)
 tf_instance = TimezoneFinder()
@@ -74,17 +81,39 @@ def test_timezone_finding_speed(
     print(f"{N:,} {points_descr}")
 
     tf = TimezoneFinder(in_memory=in_memory_mode)
-    tfL = TimezoneFinderL(in_memory=in_memory_mode)
     test_functions = [
         # sorted by class then speed (increases readability)
         tf.certain_timezone_at,
         tf.timezone_at_land,
         tf.timezone_at,
-        tf.unique_timezone_at,
-        tfL.timezone_at_land,
-        tfL.timezone_at,
-        tfL.unique_timezone_at,
     ]
+    if in_memory_mode:
+        print(
+            "NOTE: global functions and TimezoneFinderL do not support (or ignore) in_memory mode"
+        )
+        test_functions = [
+            # sorted by increasing speed (increases readability)
+            tf.certain_timezone_at,
+            tf.timezone_at_land,
+            tf.timezone_at,
+            tf.unique_timezone_at,
+        ]
+    else:
+        tfL = TimezoneFinderL()
+        test_functions = [
+            # sorted by increasing speed (increases readability)
+            certain_timezone_at,
+            tf.certain_timezone_at,
+            timezone_at_land,
+            tf.timezone_at_land,
+            timezone_at,
+            tf.timezone_at,
+            unique_timezone_at,
+            tf.unique_timezone_at,
+            tfL.unique_timezone_at,
+            tfL.timezone_at_land,
+            tfL.timezone_at,
+        ]
 
     def time_all_runs(func2time: Callable, test_inputs: Iterable):
         for lng, lat in test_inputs:
@@ -97,10 +126,15 @@ def test_timezone_finding_speed(
         pts_p_sec = t_avg**-1
         pts_p_sec_k = pts_p_sec / 1000  # convert to thousands
         test_func_name = test_func.__name__
-        class_name = test_func.__self__.__class__.__name__
+        # Handle global functions (no __self__)
+        try:
+            class_name = test_func.__self__.__class__.__name__
+            func_label = f"{class_name}.{test_func_name}()"
+        except AttributeError:  # global function or static method
+            func_label = f"{test_func_name}()"
         print(
             RESULT_TEMPLATE.format(
-                f"{class_name}.{test_func_name}()",
+                func_label,
                 f"{t_avg:.1e}",
                 f"{pts_p_sec_k:.1f}k",
             )

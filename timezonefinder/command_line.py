@@ -3,9 +3,14 @@ import contextlib
 import os
 import sys
 import tempfile
-from typing import Callable, Union
+from typing import Callable
 
-from timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder import (
+    TimezoneFinderL,
+    timezone_at,
+    certain_timezone_at,
+    timezone_at_land,
+)
 
 
 @contextlib.contextmanager
@@ -34,23 +39,23 @@ def redirect_stdout_to_temp_file():
 
 def get_timezone_function(function_id: int) -> Callable:
     """
-    Note: script is being called for each point individually. Caching TimezoneFinder() instances is useless.
-    -> avoid constructing unnecessary instances
+    Get the appropriate timezone function based on the function ID.
+    Uses global functions when available, otherwise creates instances as needed.
     """
-    tf_instance: Union[TimezoneFinder, TimezoneFinderL]
-    if function_id in [0, 1, 5]:
-        tf_instance = TimezoneFinder()
-        functions = {
-            0: tf_instance.timezone_at,
-            1: tf_instance.certain_timezone_at,
-            5: tf_instance.timezone_at_land,
-        }
-    else:
-        tf_instance = TimezoneFinderL()
-        functions = {
-            3: tf_instance.timezone_at,
-            4: tf_instance.timezone_at_land,
-        }
+    # Use global functions for TimezoneFinder methods
+    if function_id == 0:
+        return timezone_at
+    elif function_id == 1:
+        return certain_timezone_at
+    elif function_id == 5:
+        return timezone_at_land
+
+    # For TimezoneFinderL methods, still create an instance
+    tf_instance = TimezoneFinderL()
+    functions = {
+        3: tf_instance.timezone_at,
+        4: tf_instance.timezone_at_land,
+    }
     return functions[function_id]
 
 
