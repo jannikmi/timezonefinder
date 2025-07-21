@@ -929,9 +929,6 @@ def report_data_statistics():
         "Most complex timezone (polygons)": f"{all_tz_names[max(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({max(polygons_per_timezone.values())} polygons)"
         if polygons_per_timezone
         else "None",
-        "Least complex timezone (polygons)": f"{all_tz_names[min(polygons_per_timezone.items(), key=lambda x: x[1])[0]]} ({min(polygons_per_timezone.values())} polygons)"
-        if polygons_per_timezone
-        else "None",
     }
 
     # Print timezone statistics table
