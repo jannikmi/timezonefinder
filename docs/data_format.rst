@@ -6,6 +6,9 @@ Data Format
 
 This document describes the data format used by ``timezonefinder`` library, including the data sources, design rationales, and performance optimizations.
 
+For detailed statistics of the current dataset in use, see :doc:`data_report`.
+
+
 Data Source
 ===========
 
