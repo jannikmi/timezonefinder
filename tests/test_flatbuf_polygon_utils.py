@@ -8,10 +8,9 @@ from timezonefinder.flatbuf.polygon_utils import (
     flatten_polygon_coords,
     reshape_to_polygon_coords,
 )
-from timezonefinder.utils import close_ressource, load_buffer
+from timezonefinder.utils import close_ressource
 
 
-@pytest.mark.parametrize("in_memory", [True, False])
 @pytest.mark.parametrize(
     "polygons",
     [
@@ -22,7 +21,7 @@ from timezonefinder.utils import close_ressource, load_buffer
         ],
     ],
 )
-def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
+def test_single_polygon_collection_round_trip(tmp_path, polygons):
     """Test that writing and reading a single polygon collection gives the same results."""
     # Define output path
     output_file = tmp_path / "polygons.fbs"
@@ -33,8 +32,9 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
     assert output_file.exists(), "Output file should exist after writing."
     assert output_file.stat().st_size > 0, "Output file should be non-empty."
 
-    # Read back the data
-    file, buffer = load_buffer(output_file, in_memory=in_memory)
+    with open(output_file, "rb") as file:
+        # Read the binary file and verify the polygons
+        buffer = file.read()
     poly_collection = get_polygon_collection(buffer)
     for idx, original_polygon in enumerate(polygons):
         read_polygon = read_polygon_array_from_binary(poly_collection, idx)

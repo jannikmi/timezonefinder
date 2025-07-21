@@ -58,7 +58,7 @@ class AbstractTimezoneFinder(ABC):
         """
         Initialize the AbstractTimezoneFinder.
         :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
-        :param in_memory: ignored. The binary files will be read into memory (few MB)
+        :param in_memory: ignored. All binary files will be read into memory (few MB). Only used for polygon coordinate data.
         """
         if bin_file_location is None:
             bin_file_location = DEFAULT_DATA_DIR
@@ -269,7 +269,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
     :ivar binary_data_attributes: the names of all attributes which store the opened binary data files
 
     :param bin_file_location: path to the binary data files to use, None if native package data should be used
-    :param in_memory: whether to completely read and keep the timezone polygon binary files in memory
+    :param in_memory: Whether to completely read and keep the coordinate data in memory as numpy arrays.
     """
 
     # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__

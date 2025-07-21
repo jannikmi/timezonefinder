@@ -88,7 +88,7 @@ Timezone finding
 ``scripts/check_speed_timezone_finding.py``
 
 
-Results from version 6.6.0:
+Results from version 6.6.3:
 
 .. code-block:: text
 
@@ -99,13 +99,13 @@ Results from version 6.6.0:
     10,000 random points (anywhere on earth)
     function name                          | s/query    | pts/s
     ------------------------------------------------------------
-    TimezoneFinder.certain_timezone_at()   | 1.9e-05    | 52.2k
-    TimezoneFinder.timezone_at_land()      | 5.1e-06    | 195.3k
-    TimezoneFinder.timezone_at()           | 4.6e-06    | 215.1k
-    TimezoneFinder.unique_timezone_at()    | 2.4e-06    | 424.5k
-    TimezoneFinderL.timezone_at_land()     | 1.6e-06    | 615.1k
-    TimezoneFinderL.timezone_at()          | 1.4e-06    | 715.6k
-    TimezoneFinderL.unique_timezone_at()   | 2.4e-06    | 420.1k
+    TimezoneFinder.certain_timezone_at()   | 1.4e-05    | 72.6k
+    TimezoneFinder.timezone_at_land()      | 4.3e-06    | 234.7k
+    TimezoneFinder.timezone_at()           | 3.7e-06    | 270.6k
+    TimezoneFinder.unique_timezone_at()    | 2.5e-06    | 404.0k
+    TimezoneFinderL.timezone_at_land()     | 2.0e-06    | 506.5k
+    TimezoneFinderL.timezone_at()          | 1.5e-06    | 669.7k
+    TimezoneFinderL.unique_timezone_at()   | 2.6e-06    | 384.3k
 
 
 

@@ -1,14 +1,12 @@
-from io import BytesIO
 from pathlib import Path
 from typing import Iterable, Union
 
 import numpy as np
 
 from timezonefinder import utils
+from timezonefinder.coord_accessors import AbstractCoordAccessor, create_coord_accessor
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
-    get_polygon_collection,
-    read_polygon_array_from_binary,
 )
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -24,23 +22,7 @@ class PolygonArray:
     xmax: np.ndarray
     ymin: np.ndarray
     ymax: np.ndarray
-
-    def _open_binary(self, path2file):
-        """Open a binary file, either in memory or as a file handle.
-
-        Args:
-            path2file: Path to the binary file
-
-        Returns:
-            Either a BytesIO object (if in_memory=True) or a file handle
-        """
-        if self.in_memory:
-            with open(path2file, mode="rb") as fp:
-                opened = BytesIO(fp.read())
-                opened.seek(0)
-        else:
-            opened = open(path2file, mode="rb")
-        return opened
+    coordinates: AbstractCoordAccessor
 
     def __init__(
         self,
@@ -50,7 +32,7 @@ class PolygonArray:
         """
         Initialize the AbstractTimezoneFinder.
         :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
-        :param in_memory: Whether to completely read and keep the binary files in memory.
+        :param in_memory: Whether to completely read and keep the coordinate data in memory as numpy.
         """
         self.in_memory = in_memory
         self._file_handle = None
@@ -69,17 +51,12 @@ class PolygonArray:
         self.ymax = read_per_polygon_vector(ymax_path)
 
         coordinate_file_path = get_coordinate_path(self.data_location)
-        # NOTE: this will read the file into memory if in_memory is True,
-        # otherwise it will open it as a file handle
-        self.coord_file, self.coord_buf = utils.load_buffer(
-            coordinate_file_path, in_memory=self.in_memory
-        )
-        self.polygon_collection = get_polygon_collection(self.coord_buf)
+        # Initialize the appropriate coordinate accessor based on memory mode
+        self.coordinates = create_coord_accessor(coordinate_file_path, self.in_memory)
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
-        utils.close_ressource(self.coord_file)
-        utils.close_ressource(self.coord_buf)
+        self.coordinates.cleanup()
 
     def __len__(self) -> int:
         """
@@ -108,7 +85,16 @@ class PolygonArray:
         return False
 
     def coords_of(self, idx: int) -> np.ndarray:
-        return read_polygon_array_from_binary(self.polygon_collection, idx)
+        """
+        Get the polygon coordinates for the given index.
+
+        Args:
+            idx: The polygon index
+
+        Returns:
+            A numpy array containing the polygon coordinates
+        """
+        return self.coordinates[idx]
 
     def pip(self, poly_id: int, x: int, y: int) -> bool:
         """

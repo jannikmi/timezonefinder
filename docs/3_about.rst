@@ -71,9 +71,9 @@ Both packages will likely coexist as they serve different use cases:
    * - Startup Time
      - Requires initialization time
      - No startup time (immediate)
-   * - `Lookup Speed <https://github.com/ringsaturn/tz-benchmark>`__
-     - Median: ~215k Queries per second (QPS). >700k with less accurate TimezoneFinderL
-     - Median: ~511k QPS
+   * - `Avg. Lookup Speed <https://github.com/ringsaturn/tz-benchmark>`__
+     - ~270k Queries per second (QPS). >730k with less accurate TimezoneFinderL
+     - ~320k QPS
    * - Data Representation
      - Complete timezone polygons
      - Simplified timezone polygons
