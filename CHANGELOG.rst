@@ -14,7 +14,7 @@ Changelog
     * ``certain_timezone_at``
     * ``get_geometry``
 
-* Documented thread safety considerations for global functions
+* Documented usage and warned about thread safety considerations for global functions
 * Updated command line interface to use global functions where appropriate
 * breaking API Changes: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
 
@@ -26,7 +26,6 @@ Changelog
 * when in_memory=True, all polygon numpy arrays are constructed once during startup rather than repeatedly on demand. This should significantly improve performance for applications that make frequent polygons queries.
 * Created a coord_accessors.py module for abstracting access to polygon coordinates, allowing for both in-memory and file-based access.
 * added auto-generated data report to the documentation. thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
-
 
 
 
