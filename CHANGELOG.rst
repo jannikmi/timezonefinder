@@ -15,7 +15,7 @@ Changelog
 
 * hotfix missing `hole_registry.json` in the distributions
 * added integration tests in CI/CD. Thanks to `theirix <https://github.com/theirix>`__
-
+* added auto-generated data report to the documentation. thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
 
 
 6.6.1 (2025-07-18)
