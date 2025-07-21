@@ -1,12 +1,18 @@
 import json
 import pickle
+from contextlib import redirect_stdout
 from os.path import abspath
 from time import time
-from typing import Dict, List
+from typing import Dict, List, Callable
 
 import numpy as np
 
-from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY
+from scripts.configs import (
+    DATA_REPORT_FILE,
+    DEBUG,
+    DTYPE_FORMAT_F_NUMPY,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
+)
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
 from timezonefinder.utils_numba import coord2int
@@ -38,7 +44,10 @@ def write_json(obj, path):
         json_file.write("\n")
 
 
-def time_execution(func):
+# DECORTAORS
+
+
+def time_execution(func: Callable) -> Callable:
     """decorator showing the execution time of a function"""
 
     def wrap_func(*args, **kwargs):
@@ -49,6 +58,22 @@ def time_execution(func):
         return result
 
     return wrap_func
+
+
+# decorator to reroute the output of a function to a file
+def redirect_output_to_file(file_path: str) -> Callable:
+    """Decorator to redirect the output of a function to a file."""
+
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, **kwargs):
+            # NOTE: append to the file, do not overwrite it
+            with open(file_path, "a") as f:
+                with redirect_stdout(f):
+                    return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def percent(numerator, denominator):
@@ -113,25 +138,6 @@ def accumulated_frequency(int_list):
     return out
 
 
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
-    print("\n\nshortcut statistics:")
-    amount_of_shortcuts = len(mapping)
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
-    print("\namount of timezone polygons per shortcut")
-    print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
-
-    amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
-        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-        distinct_zones = set(zone_ids)
-        amount_of_distinct_zones = len(distinct_zones)
-        amount_of_different_zones.append(amount_of_distinct_zones)
-
-    print("amount of different timezones per shortcut")
-    print_frequencies(amount_of_different_zones, amount_of_shortcuts)
-
-
 def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     max_val = max(*counts)
     print("highest amount in one shortcut is", max_val)
@@ -153,6 +159,29 @@ def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     acc_inverse = [round(100 - x, 2) for x in acc]
     print(acc_inverse)
     print("--------------------------------\n")
+
+
+@redirect_output_to_file(DATA_REPORT_FILE)
+def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
+    print("\n\nShortcut Mapping Statistics")
+    print("===========================")
+
+    print("\n\nshortcut statistics:")
+    amount_of_shortcuts = len(mapping)
+    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
+    print("\namount of timezone polygons per shortcut")
+    print_frequencies(nr_of_entries_in_shortcut, amount_of_shortcuts)
+
+    amount_of_different_zones = []
+    for polygon_ids in mapping.values():
+        # TODO count and evaluate the appearance of the different zones
+        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
+        distinct_zones = set(zone_ids)
+        amount_of_distinct_zones = len(distinct_zones)
+        amount_of_different_zones.append(amount_of_distinct_zones)
+
+    print("amount of different timezones per shortcut")
+    print_frequencies(amount_of_different_zones, amount_of_shortcuts)
 
 
 def has_coherent_sequences(lst: List[int]) -> bool:

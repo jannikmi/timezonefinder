@@ -3,6 +3,8 @@ from typing import Set
 
 SCRIPT_FOLDER = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_FOLDER.parent
+DOC_ROOT = PROJECT_ROOT / "docs"
+DATA_REPORT_FILE = DOC_ROOT / "data_report.rst"
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 
 DEBUG = False
@@ -26,7 +28,3 @@ DTYPE_FORMAT_SIGNED_I_NUMPY = "<i4"
 
 # f = 8byte signed float
 DTYPE_FORMAT_F_NUMPY = "<f8"
-
-# Shortcut resolution (used in shortcut mapping logic)
-# Default: 3 (can be lowered to 2 for testing)
-SHORTCUT_H3_RES = 3

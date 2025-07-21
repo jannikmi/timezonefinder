@@ -4,9 +4,6 @@ script for parsing the timezone data from https://github.com/evansiroky/timezone
 the used data format is described in the documentation under docs/data_format.rst
 
 
-TODO refactor into multiple modules
-
-
 USAGE:
 
 - download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder/releases
@@ -44,22 +41,19 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
 
-import sys
 from pathlib import Path
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import functools
 import itertools
 from dataclasses import dataclass
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
-from contextlib import redirect_stdout
 
 
 import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.configs import (
+    DATA_REPORT_FILE,
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
@@ -74,6 +68,7 @@ from scripts.configs import (
 from scripts.utils import (
     check_shortcut_sorting,
     print_shortcut_statistics,
+    redirect_output_to_file,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
@@ -85,11 +80,11 @@ from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
-from timezonefinder.configs import (
-    DEFAULT_DATA_DIR,
-    NR_BYTES_I,
-    SHORTCUT_H3_RES,
+from timezonefinder.flatbuf.shortcut_utils import (
+    get_shortcut_file_path,
+    write_shortcuts_flatbuffers,
 )
+from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
     get_xmin_path,
@@ -110,6 +105,9 @@ from timezonefinder.utils import (
 )
 from timezonefinder.zone_names import write_zone_names
 
+
+# lower the shortcut resolution for debugging
+SHORTCUT_H3_RES = 1 if DEBUG else SHORTCUT_H3_RES
 
 ShortcutMapping = Dict[int, List[int]]
 
@@ -166,7 +164,8 @@ def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
     return boundaries
 
 
-def parse_polygons_from_json(input_path: Path) -> int:
+def parse_polygons_from_json(input_path: Path) -> None:
+    """Parse the timezone polygons from the input JSON file."""
     global nr_of_holes, nr_of_polygons, nr_of_zones, poly_zone_ids
     global polygons, polygon_lengths, poly_zone_ids, poly_boundaries
 
@@ -230,30 +229,7 @@ def parse_polygons_from_json(input_path: Path) -> int:
     assert poly_id == nr_of_polygons, (
         f"polygon counter {poly_id} and entry amount in all_length {nr_of_polygons} are different."
     )
-    if 0 in polygon_lengths:
-        raise ValueError()
-
-    max_poly_length = max(polygon_lengths)
-    max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
-    print("... parsing done. found:")
-    print(f"{nr_of_polygons:,} polygons from")
-    print(f"{nr_of_zones:,} timezones with")
-    print(f"{nr_of_holes:,} holes")
-    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon")
-    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon")
-    # there are two floats per coordinate (lng, lat)
-    nr_of_floats = 2 * sum(polygon_lengths)
-    print(f"{nr_of_floats:,} floats in all the polygons (2 per point)")
-    polygon_space = nr_of_floats * NR_BYTES_I
-    return {
-        "polygon_space": polygon_space,
-        "nr_of_zones": nr_of_zones,
-        "nr_of_polygons": nr_of_polygons,
-        "nr_of_holes": nr_of_holes,
-        "max_poly_length": max(polygon_lengths),
-        "max_hole_poly_length": max(all_hole_lengths) if all_hole_lengths else 0,
-        "nr_of_floats": nr_of_floats,
-    }
+    assert 0 not in polygon_lengths, "found a polygon with no coordinates"
 
 
 def compute_zone_positions() -> List[int]:
@@ -608,6 +584,11 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
+def validate_shortcut_resolution(mapping: ShortcutMapping):
+    for hex_id in mapping.keys():
+        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
+
+
 def validate_shortcut_completeness(mapping: ShortcutMapping):
     print("validating shortcut completeness...")
 
@@ -636,12 +617,8 @@ def validate_shortcut_completeness(mapping: ShortcutMapping):
     assert not error
 
 
-def validate_shortcut_resolution(mapping: ShortcutMapping):
-    for hex_id in mapping.keys():
-        assert h3.get_resolution(hex_id) == SHORTCUT_H3_RES
-
-
 def validate_unused_polygons(shortcuts: ShortcutMapping):
+    # check if all polygons are used in the shortcuts
     used_polygons = set()
     for poly_ids in shortcuts.values():
         used_polygons.update(poly_ids)
@@ -650,15 +627,11 @@ def validate_unused_polygons(shortcuts: ShortcutMapping):
     assert len(unused_poly_ids) == 0, f"there are unused polygons: {unused_poly_ids}"
 
 
-@time_execution
 def validate_shortcut_mapping(mapping: ShortcutMapping):
     print("validating shortcut mapping")
     validate_shortcut_resolution(mapping)
     validate_shortcut_completeness(mapping)
     validate_unused_polygons(mapping)
-    assert not DEBUG, (
-        "DEBUG mode is on. shortcuts are invalid (not all polygons processed)"
-    )
 
 
 def create_and_write_hole_registry(polynrs_of_holes, output_path):
@@ -761,6 +734,20 @@ def write_numpy_binaries(output_path):
     print("Numpy binary files written successfully")
 
 
+def get_file_size_in_mb(file_path: Path) -> float:
+    """
+    Returns the size of a file in megabytes.
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        Size of the file in megabytes
+    """
+    size_in_bytes = file_path.stat().st_size
+    size_in_mb = size_in_bytes / (1024**2)
+    return size_in_mb
+
+
 def write_flatbuffer_files(output_path: Path):
     # separate output directories for holes and boundaries
     holes_dir = get_holes_dir(output_path)
@@ -771,14 +758,13 @@ def write_flatbuffer_files(output_path: Path):
 
     print("Writing binary data to flatbuffer files...")
     # Write polygon boundary coordinates to flatbuffer
-    file_path = get_coordinate_path(boundaries_dir)
-    _ = write_polygon_collection_flatbuffer(file_path, polygons)
+    boundary_polygon_file = get_coordinate_path(boundaries_dir)
+    write_polygon_collection_flatbuffer(boundary_polygon_file, polygons)
 
-    file_path = get_coordinate_path(holes_dir)
+    hole_polygon_file = get_coordinate_path(holes_dir)
     # Write holes coordinates to flatbuffer
-    hole_space = write_polygon_collection_flatbuffer(file_path, holes)
+    write_polygon_collection_flatbuffer(hole_polygon_file, holes)
     print("Flatbuffer files written successfully")
-    return hole_space
 
 
 def write_binary_files(output_path: Path) -> None:
@@ -791,25 +777,88 @@ def write_binary_files(output_path: Path) -> None:
         output_path: Directory where binary files will be written
     """
     write_numpy_binaries(output_path)
-    hole_space = write_flatbuffer_files(output_path)
-
+    write_flatbuffer_files(output_path)
     print("Binary files written successfully")
-    return hole_space
 
 
 @time_execution
 def compile_data_files(output_path):
-    global nr_of_polygons
-
     write_zone_names(all_tz_names, output_path)
 
     # Write registry for holes (which polygon each hole belongs to)
     create_and_write_hole_registry(polynrs_of_holes, output_path)
 
     # Write binary files
-    hole_space = write_binary_files(output_path)
+    write_binary_files(output_path)
 
-    return hole_space
+
+@redirect_output_to_file(DATA_REPORT_FILE)
+def report_data_statistics():
+    """
+    prints a report of the statistics of the timezone data.
+    """
+    print("TimezoneFinder Data Report")
+    print("==========================")
+    print()
+    print("TimezoneFinder Data Statistics")
+    print("==============================")
+    print()
+
+    print(f"{nr_of_polygons:,} polygons from")
+    print(f"{nr_of_zones:,} timezones with")
+    print(f"{nr_of_holes:,} holes")
+
+    max_poly_length = max(polygon_lengths)
+    max_hole_poly_length = max(all_hole_lengths) if all_hole_lengths else 0
+
+    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon")
+    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon")
+    # there are two floats per coordinate (lng, lat)
+    nr_of_floats = 2 * sum(polygon_lengths)
+    print(f"{nr_of_floats:,} floats in all the polygons (2 per point)")
+
+
+@redirect_output_to_file(DATA_REPORT_FILE)
+def report_file_sizes(output_path: Path):
+    """
+    Reports the sizes of the biggest generated binary files.
+
+    NOTE: smaller .npy files are not reported here, since their size is negligible
+
+    Args:
+        output_path: Path to the output directory containing the binary files
+    """
+    holes_dir = get_holes_dir(output_path)
+    boundaries_dir = get_boundaries_dir(output_path)
+
+    boundary_polygon_file = get_coordinate_path(boundaries_dir)
+    hole_polygon_file = get_coordinate_path(holes_dir)
+
+    names_and_paths = {
+        "boundary polygon data": boundary_polygon_file,
+        "hole polygon data": hole_polygon_file,
+        "shortcuts": get_shortcut_file_path(output_path),
+    }
+    names_and_sizes = {
+        name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
+    }
+    total_space = sum(names_and_sizes.values())
+    print(
+        f"\nTotal space used by polygon and shortcut binary files: {total_space:.2f} MB"
+    )
+    for name, size in names_and_sizes.items():
+        print(f"{name} takes up {size:.2f} MB ({size / total_space:.2%})")
+
+
+def write_data_report(shortcuts: ShortcutMapping, output_path: Path):
+    if DATA_REPORT_FILE.exists():
+        print(f"Removing old data report file: {DATA_REPORT_FILE}")
+        DATA_REPORT_FILE.unlink()
+
+    print("Writing data report to:", DATA_REPORT_FILE)
+    report_data_statistics()
+    report_file_sizes(output_path)
+    print_shortcut_statistics(shortcuts, poly_zone_ids)
 
 
 @time_execution
@@ -821,28 +870,15 @@ def parse_data(
     output_path = Path(output_path)
     output_path.mkdir(parents=True, exist_ok=True)
 
+    parse_polygons_from_json(input_path)
 
-def write_data_report(stats: dict, shortcuts):
-    report_path = Path("docs/data_report.rst")
-    report_path.parent.mkdir(parents=True, exist_ok=True)
+    compile_data_files(output_path)
+    shortcuts = compile_shortcut_mapping()
+    write_shortcuts_flatbuffers(shortcuts, output_path)
+    validate_shortcut_mapping(shortcuts)
+    print(f"\n\nfinished parsing timezonefinder data to {output_path}")
 
-    if report_path.exists():
-        report_path.unlink()
-
-    with open(report_path, "w", encoding="utf-8") as f:
-        with redirect_stdout(f):
-            print("TimezoneFinder Data Report")
-            print("==========================")
-            print()
-
-            print(f"Number of timezones: {len(stats['timezone_names'])}")
-            print(f"Polygons loaded: {stats['polygon_count']}")
-            print()
-
-            print("Shortcut Mapping Statistics")
-            print("===========================")
-            print()
-            print_shortcut_statistics(shortcuts, poly_zone_ids)
+    write_data_report(shortcuts, output_path)
 
 
 if __name__ == "__main__":
@@ -860,14 +896,3 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
 
     parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)
-
-    parse_polygons_from_json(Path(parsed_args.inp))
-
-    shortcuts = compile_shortcut_mapping()
-
-    real_stats = {
-        "timezone_names": all_tz_names,
-        "polygon_count": len(polygons),
-    }
-
-    write_data_report(real_stats, shortcuts)
