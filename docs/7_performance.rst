@@ -88,10 +88,69 @@ Timezone finding
 ``scripts/check_speed_timezone_finding.py``
 
 
-Results from version 6.6.3:
+Results from version 7.0.0:
 
 .. code-block:: text
+    STATUS:
+    using C implementation: False
+    using Numba: True
+    in memory mode: False
 
+    10,000 'on land points' (points included in a land timezone)
+    function name                          | s/query    | pts/s
+    ------------------------------------------------------------
+    certain_timezone_at()                  | 6.2e-05    | 16.2k
+    TimezoneFinder.certain_timezone_at()   | 2.9e-05    | 33.9k
+    timezone_at_land()                     | 8.3e-06    | 121.2k
+    TimezoneFinder.timezone_at_land()      | 8.3e-06    | 121.2k
+    timezone_at()                          | 7.7e-06    | 129.5k
+    TimezoneFinder.timezone_at()           | 7.8e-06    | 128.3k
+    unique_timezone_at()                   | 2.7e-06    | 369.0k
+    TimezoneFinder.unique_timezone_at()    | 2.8e-06    | 361.9k
+    TimezoneFinderL.unique_timezone_at()   | 2.7e-06    | 375.2k
+    TimezoneFinderL.timezone_at_land()     | 1.9e-06    | 517.9k
+    TimezoneFinderL.timezone_at()          | 1.3e-06    | 749.6k
+
+    PASSED
+    scripts/check_speed_timezone_finding.py::test_timezone_finding_speed[False-test_points1-random points (anywhere on earth)]
+    STATUS:
+    using C implementation: False
+    using Numba: True
+    in memory mode: False
+
+    10,000 random points (anywhere on earth)
+    function name                          | s/query    | pts/s
+    ------------------------------------------------------------
+    certain_timezone_at()                  | 2.1e-05    | 47.5k
+    TimezoneFinder.certain_timezone_at()   | 2.2e-05    | 45.8k
+    timezone_at_land()                     | 5.9e-06    | 170.4k
+    TimezoneFinder.timezone_at_land()      | 5.8e-06    | 173.1k
+    timezone_at()                          | 5.3e-06    | 187.7k
+    TimezoneFinder.timezone_at()           | 5.2e-06    | 192.7k
+    unique_timezone_at()                   | 5.4e-06    | 185.1k
+    TimezoneFinder.unique_timezone_at()    | 3.2e-06    | 311.3k
+    TimezoneFinderL.unique_timezone_at()   | 2.6e-06    | 378.4k
+    TimezoneFinderL.timezone_at_land()     | 1.9e-06    | 517.8k
+    TimezoneFinderL.timezone_at()          | 1.6e-06    | 628.4k
+
+    PASSED
+    scripts/check_speed_timezone_finding.py::test_timezone_finding_speed[True-test_points0-'on land points' (points included in a land timezone)]
+    STATUS:
+    using C implementation: False
+    using Numba: True
+    in memory mode: True
+
+    10,000 'on land points' (points included in a land timezone)
+    function name                          | s/query    | pts/s
+    ------------------------------------------------------------
+    TimezoneFinder.certain_timezone_at()   | 2.1e-05    | 47.3k
+    TimezoneFinder.timezone_at_land()      | 6.0e-06    | 166.6k
+    TimezoneFinder.timezone_at()           | 5.4e-06    | 184.7k
+    TimezoneFinder.unique_timezone_at()    | 2.7e-06    | 364.3k
+
+    PASSED
+    scripts/check_speed_timezone_finding.py::test_timezone_finding_speed[True-test_points1-random points (anywhere on earth)]
+    STATUS:
     using C implementation: False
     using Numba: True
     in memory mode: True
@@ -99,13 +158,10 @@ Results from version 6.6.3:
     10,000 random points (anywhere on earth)
     function name                          | s/query    | pts/s
     ------------------------------------------------------------
-    TimezoneFinder.certain_timezone_at()   | 1.4e-05    | 72.6k
-    TimezoneFinder.timezone_at_land()      | 4.3e-06    | 234.7k
-    TimezoneFinder.timezone_at()           | 3.7e-06    | 270.6k
-    TimezoneFinder.unique_timezone_at()    | 2.5e-06    | 404.0k
-    TimezoneFinderL.timezone_at_land()     | 2.0e-06    | 506.5k
-    TimezoneFinderL.timezone_at()          | 1.5e-06    | 669.7k
-    TimezoneFinderL.unique_timezone_at()   | 2.6e-06    | 384.3k
+    TimezoneFinder.certain_timezone_at()   | 1.4e-05    | 71.9k
+    TimezoneFinder.timezone_at_land()      | 4.2e-06    | 238.4k
+    TimezoneFinder.timezone_at()           | 3.6e-06    | 275.6k
+    TimezoneFinder.unique_timezone_at()    | 2.5e-06    | 393.5k
 
 
 
