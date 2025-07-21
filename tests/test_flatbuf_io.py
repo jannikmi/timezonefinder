@@ -28,10 +28,10 @@ def test_single_polygon_collection_round_trip(tmp_path, polygons, in_memory):
     output_file = tmp_path / "polygons.fbs"
 
     # Write polygons to a single binary file
-    boundaries_size = write_polygon_collection_flatbuffer(output_file, polygons)
+    write_polygon_collection_flatbuffer(output_file, polygons)
 
-    # Verify file size is non-zero
-    assert boundaries_size > 0, "File size should be greater than zero."
+    assert output_file.exists(), "Output file should exist after writing."
+    assert output_file.stat().st_size > 0, "Output file should be non-empty."
 
     # Read back the data
     file, buffer = load_buffer(output_file, in_memory=in_memory)
