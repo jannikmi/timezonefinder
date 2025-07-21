@@ -97,7 +97,8 @@ def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     combined_rows = []
 
     for i, amount in enumerate(frequencies):
-        if i < len(acc):  # Ensure we have accumulated values for this index
+        # Skip rows with an amount of 0
+        if amount > 0 and i < len(acc):
             row = [
                 i,  # Amount
                 amount,  # Frequency
