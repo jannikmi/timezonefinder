@@ -100,7 +100,7 @@ docs:
 
 speedtest:
 	# pytest -s flag: output to console
-# 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
-	@uv run pytest -s scripts/check_speed_initialisation.py -v
+	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
+# 	@uv run pytest -s scripts/check_speed_initialisation.py -v
 
 .PHONY: clean test build docs
