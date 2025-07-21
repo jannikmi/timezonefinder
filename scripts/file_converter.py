@@ -67,6 +67,7 @@ from scripts.configs import (
 )
 from scripts.utils import (
     check_shortcut_sorting,
+    print_rst_table,
     print_shortcut_statistics,
     redirect_output_to_file,
     rst_title,
@@ -745,6 +746,7 @@ def report_data_statistics():
     """
     prints a report of the statistics of the timezone data.
     """
+    print(".. _data_report:\n")
     print(rst_title("Data Report", level=0))
     print(rst_title("Data Statistics", level=1))
 
@@ -753,14 +755,19 @@ def report_data_statistics():
     # there are two floats per coordinate (lng, lat)
     nr_of_floats = 2 * sum(polygon_lengths)
 
-    # NOTE: newlines required for line breaks in .rst format
-    print("Dataset contains:\n")
-    print(f"{nr_of_polygons:,} polygons from\n")
-    print(f"{nr_of_zones:,} timezones with\n")
-    print(f"{nr_of_holes:,} holes.\n\n")
-    print(f"{max_poly_length:,} maximal amount of coordinates in one polygon\n")
-    print(f"{max_hole_poly_length:,} maximal amount of coordinates in a hole polygon\n")
-    print(f"{nr_of_floats:,} floats in all the polygons (2 per point)\n")
+    # Create a table of dataset statistics
+    headers = ["Metric", "Value"]
+    rows = [
+        ["Total polygons", f"{nr_of_polygons:,}"],
+        ["Total timezones", f"{nr_of_zones:,}"],
+        ["Total holes", f"{nr_of_holes:,}"],
+        ["Maximum coordinates in one polygon", f"{max_poly_length:,}"],
+        ["Maximum coordinates in one hole polygon", f"{max_hole_poly_length:,}"],
+        ["Total coordinate values (2 per point)", f"{nr_of_floats:,}"],
+    ]
+
+    # Print the table using the print_rst_table function
+    print_rst_table(headers, rows)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
@@ -789,11 +796,24 @@ def report_file_sizes(output_path: Path):
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
     }
     total_space = sum(names_and_sizes.values())
+
+    # Print total size summary
     print(
-        f"\nTotal space used by polygon and shortcut binary files: {total_space:.2f} MB\n"
+        f"Total space used by polygon and shortcut binary files: {total_space:.2f} MB\n"
     )
-    for name, size in names_and_sizes.items():
-        print(f"{name} takes up {size:.2f} MB ({size / total_space:.2%})\n")
+
+    # Create table for file sizes
+    headers = ["File Type", "Size (MB)", "Percentage"]
+    rows = [
+        [name, f"{size:.2f}", f"{size / total_space:.2%}"]
+        for name, size in names_and_sizes.items()
+    ]
+
+    # Add total row
+    rows.append(["Total", f"{total_space:.2f}", "100.00%"])
+
+    # Print the table
+    print_rst_table(headers, rows)
 
 
 def write_data_report(shortcuts: ShortcutMapping, output_path: Path):

@@ -179,36 +179,27 @@ def print_rst_table(headers: List[str], rows: List[List[str]]):
 def print_frequencies(counts: List[int], amount_of_shortcuts: int):
     max_val = max(*counts)
     frequencies = [counts.count(i) for i in range(max_val + 1)]
-    nr_empty_shortcuts = frequencies[0]
 
-    # Summary information
-    summary_headers = ["Metric", "Value"]
-    summary_rows = [
-        ["Highest amount in one shortcut", str(max_val)],
-        [
-            "Empty shortcuts percentage",
-            f"{percent(nr_empty_shortcuts, amount_of_shortcuts)}%",
-        ],
-    ]
-
-    print(rst_title("Summary Statistics", level=2))
-    print_rst_table(summary_headers, summary_rows)
-
-    # Frequency table
-    freq_headers = ["Amount", "Frequency"]
-    freq_rows = [[i, amount] for i, amount in enumerate(frequencies)]
-
-    print(rst_title("Frequencies of Entry Amounts", level=2))
-    print_rst_table(freq_headers, freq_rows)
-
-    # Accumulated frequency table
+    total_count = sum(frequencies)
     acc = accumulated_frequency(frequencies)
     acc_inverse = [round(100 - x, 2) for x in acc]
 
-    acc_headers = ["Amount", "Accumulated %", "Missing %"]
-    acc_rows = [[i, acc[i], acc_inverse[i]] for i in range(len(acc))]
-    print(rst_title("Accumulated Frequencies", level=2))
-    print_rst_table(acc_headers, acc_rows)
+    # Combined table with all frequency information
+    combined_headers = ["Amount", "Frequency", "Relative", "Accumulated", "Remaining"]
+    combined_rows = []
+
+    for i, amount in enumerate(frequencies):
+        if i < len(acc):  # Ensure we have accumulated values for this index
+            row = [
+                i,  # Amount
+                amount,  # Frequency
+                f"{percent(amount, total_count)}%",  # Relative %
+                f"{acc[i]}%",  # Accumulated %
+                f"{acc_inverse[i]}%",  # Remaining %
+            ]
+            combined_rows.append(row)
+
+    print_rst_table(combined_headers, combined_rows)
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
