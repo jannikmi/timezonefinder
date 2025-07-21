@@ -14,26 +14,37 @@ Usage
 Global Functions
 ---------------
 
-Starting with version 7.0.0, timezonefinder provides global functions that use a pre-initialized TimezoneFinder instance:
+Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 
 .. code-block:: python
 
     from timezonefinder import timezone_at
 
-    # No need to initialize TimezoneFinder
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at_land(lng=1.0, lat=50.5)
+    tz = unique_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
+
+The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
+
+.. warning::
+   Global functions share a single ``TimezoneFinder`` instance and are not thread-safe, due reading binary data on demand.
+   For multi-threaded applications, create separate ``TimezoneFinder`` instances per thread.
+
 
 .. note::
+    Lazy initialisation: expect the first call to be slightly slower due to the instance creation.
+    This also introduces a small overhead for every function call to access the global instance.
+    Consider using a custom TimezoneFinder instance for performance-critical applications.
 
-   These global functions are not thread-safe. For multi-threaded applications, create separate
-   TimezoneFinder instances for each thread.
+
 
 .. _init:
 
 Instance Initialisation
 ----------------------
 
-For more control or thread safety, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
+For more control and thread safety, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
 to be reused for multiple consequent timezone queries:
 
 .. code-block:: python
@@ -42,14 +53,19 @@ to be reused for multiple consequent timezone queries:
 
     tf = TimezoneFinder()  # reuse
 
+
+Use the ``in_memory`` argument to read all polygon data into memory for faster access at the cost of memory consumption and initialisation time:
+
+.. code-block:: python
+
+    tf = TimezoneFinder(in_memory=True)
+
+
 Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
 
 .. code-block:: python
 
     tf = TimezoneFinder(bin_file_location="path/to/files")
-
-
-
 
 
 
