@@ -88,7 +88,9 @@ def test_timezone_finding_speed(
         tf.timezone_at,
     ]
     if in_memory_mode:
-        # NOTE: global function and TimezoneFinderL do not support (or ignore) in_memory mode
+        print(
+            "NOTE: global functions and TimezoneFinderL do not support (or ignore) in_memory mode"
+        )
         test_functions = [
             # sorted by increasing speed (increases readability)
             tf.certain_timezone_at,
