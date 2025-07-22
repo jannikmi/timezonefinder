@@ -7,7 +7,7 @@ Changelog
 ------------------
 
 * Simplified API for end-users, reducing redundant code
-* Added global functions that use a shared TimezoneFinder instance:
+* Added global functions that use a shared ``TimezoneFinder`` instance:
     * ``timezone_at``
     * ``timezone_at_land``
     * ``unique_timezone_at``
@@ -17,14 +17,14 @@ Changelog
 * Documented usage and warned about thread safety considerations for global functions
 * Updated command line interface to use global functions where appropriate
 * breaking API Changes: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
-
+* hitting pyPI project size limit. had to delete all pyPI releases up to version ``3.4.2`` (last version supporting python 2.7) to free up project space
 
 
 6.6.3 (2025-07-21)
 ------------------
 
-* when in_memory=True, all polygon numpy arrays are constructed once during startup rather than repeatedly on demand. This should significantly improve performance for applications that make frequent polygons queries.
-* Created a coord_accessors.py module for abstracting access to polygon coordinates, allowing for both in-memory and file-based access.
+* when ``in_memory=True``, all polygon ``numpy`` arrays are constructed once during startup rather than repeatedly on demand. This should significantly improve performance for applications that make frequent polygons queries.
+* Created a ``coord_accessors.py`` module for abstracting access to polygon coordinates, allowing for both in-memory and file-based access.
 * added auto-generated data report to the documentation. thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
 
 
@@ -114,7 +114,7 @@ Changelog
 6.5.1 (2024-06-14)
 ------------------
 
-* added support for cibuildwheel: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to `theirix <https://github.com/theirix>`__
+* added support for ``cibuildwheel``: publish wheels including the native C extension. GHA CI/CD pipeline creates sdist (no binaries inside) and a bunch of binary wheels with a prebuilt clang-pip extension for each python version. Thanks to `theirix <https://github.com/theirix>`__
 
 
 

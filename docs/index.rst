@@ -6,6 +6,20 @@ timezonefinder
 
 a fast and lightweight python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
+
+Also check:
+
+`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+
+`online GUI and API <https://timezonefinder.michelfe.it>`__
+
+`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+
+ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
+
+`download stats <https://pepy.tech/project/timezonefinder>`__
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

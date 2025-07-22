@@ -10,7 +10,7 @@ API documentation
 .. _api_global:
 
 Global Functions
----------------
+----------------
 
 .. autofunction:: timezone_at
 .. autofunction:: timezone_at_land
