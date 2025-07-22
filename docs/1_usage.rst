@@ -12,7 +12,7 @@ Usage
 .. _global_functions:
 
 Global Functions
----------------
+----------------
 
 Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 
@@ -42,7 +42,7 @@ The functionality of these global functions is equivalent to the respective meth
 .. _init:
 
 Instance Initialisation
-----------------------
+-----------------------
 
 For more control and thread safety, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
 to be reused for multiple consequent timezone queries:

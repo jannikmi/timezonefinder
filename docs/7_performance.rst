@@ -79,7 +79,6 @@ This causes all binary files to be read into memory.
 Speed Benchmark Results
 -----------------------
 
-obtained on MacBook Pro (15-inch, 2017), 2,8 GHz Intel Core i7 and timezonefinder version ``6.1.0``
 
 
 Timezone finding

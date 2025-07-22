@@ -48,7 +48,7 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 2. **Shortcuts**: Spatial index using H3 hexagons (``shortcuts.fbs``)
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons:
 4. **Zone Names**: Text file listing the timezone names
-5. **Hole Registry**: a mapping from polygon IDs to the amount ane position of its holes
+5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
 
 
 Coordinate Representation
@@ -92,8 +92,8 @@ Other Files
 FlatBuffers Schema
 ==================
 
-The library uses (see `FlatBuffers from Google <https://pypi.org/project/flatbuffers/>`_) binary file format for efficient binary serialization of the polygon and shortcut data.
-Two main schemas are used: PolygonCollection and ShortcutCollection defined in the ``timezonefinder/flatbuf/*.fbs`` files.
+The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
+The schemas are defined in the ``timezonefinder/flatbuf/*.fbs`` files.
 
 
 Spatial Indexing with H3 Hexagons
@@ -107,12 +107,12 @@ The spatial indexing system based on `H3 hexagons  <https://github.com/uber/h3-p
 How it works:
 ~~~~~~~~~~~~~
 
-1. The surface of the Earth is divided into a grid of hexagons using Uber's H3 library
-2. For each hexagon cell, the library stores a list of timezone polygon IDs that intersect with that cell
-3. When looking up a timezone for a specific point, the library:
-   a. Determines which H3 hexagon contains the point
-   b. Retrieves the list of potentially relevant polygons from the shortcuts
-   c. Tests only those polygons to determine which timezone the point belongs to
+* The surface of the Earth is divided into a grid of hexagons using Uber's H3 library
+* For each hexagon cell, the library stores a list of timezone polygon IDs that intersect with that cell
+* When looking up a timezone for a specific point, the library:
+   * Determines which H3 hexagon contains the point
+   * Retrieves the list of potentially relevant polygons from the shortcuts
+   * Tests only those polygons to determine which timezone the point belongs to
 
 This approach provides several performance benefits:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,7 +123,7 @@ This approach provides several performance benefits:
 H3 Resolution Selection
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The library uses H3 resolution 3 for its spatial index, which offers a good balance between:
+The library uses H3 resolution 3 with 41k hexagons for its spatial index, which offers a good balance between:
 
 * **Precision**: Enough to significantly reduce the search space
 * **Memory Efficiency**: Not too many cells to store
@@ -150,7 +150,7 @@ Advantages
 
 The data format and algorithms used by ``timezonefinder`` provide several key advantages:
 
-1. **Speed**: Timezone lookups are extremely fast, typically taking less than a millisecond
+1. **Speed**: Timezone lookups are extremely fast, also see :ref:`speed tests <speed-tests>`
 
 2. **Memory Efficiency**: The library has a small memory footprint due to its binary data format and memory mapping
 
