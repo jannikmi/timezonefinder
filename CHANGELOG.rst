@@ -2,6 +2,12 @@
 Changelog
 =========
 
+7.0.post1 (2025-07-22)
+----------------------
+
+* trigger re-upload. ``7.0.0`` was not fully uploaded to PyPI due to size limits
+* deleted all pyPI versions up to version ``3.4.2`` (last version supporting python 2.7) to free up project space
+
 
 7.0.0 (2025-07-21)
 ------------------
