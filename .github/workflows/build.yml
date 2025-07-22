@@ -151,7 +151,7 @@ jobs:
     name: Create release and publish to TestPyPI
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
-    needs: [test, make-wheels, make-sdist]
+    needs: [test, make-wheels, make-sdist, end-to-end-test]
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     permissions:
         id-token: write
@@ -184,15 +184,16 @@ jobs:
           find . -name '*.whl' -exec mv '{}' dist/ \;
           ls -lR dist/
 
-      -   name: Test PyPI Publishing
-          # NOTE: PRs from forks fail due to: "missing or insufficient OIDC token permissions,
-          #  the ACTIONS_ID_TOKEN_REQUEST_TOKEN environment variable was unset"
-          # -> test publishing cannot be triggered in PRs?!
-          uses: pypa/gh-action-pypi-publish@release/v1
-          with:
-              password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-              repository-url: https://test.pypi.org/legacy/
-              skip-existing: true
+      # TODO re-enable Test PyPI publishing. disabled due to project size limits
+      # -   name: Test PyPI Publishing
+      #     # NOTE: PRs from forks fail due to: "missing or insufficient OIDC token permissions,
+      #     #  the ACTIONS_ID_TOKEN_REQUEST_TOKEN environment variable was unset"
+      #     # -> test publishing cannot be triggered in PRs?!
+      #     uses: pypa/gh-action-pypi-publish@release/v1
+      #     with:
+      #         password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
+      #         repository-url: https://test.pypi.org/legacy/
+      #         skip-existing: true
 
       - name: Create GitHub Release
         id: create_gh_release
