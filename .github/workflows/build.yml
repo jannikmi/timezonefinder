@@ -151,7 +151,7 @@ jobs:
     name: Create release and publish to TestPyPI
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
-    needs: [test, make-wheels, make-sdist, end-to-end-test]
+    needs: [test, make-wheels, make-sdist, end-to-end-test, pre-commit-hooks]
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     permissions:
         id-token: write
