@@ -3,6 +3,14 @@ Changelog
 =========
 
 
+7.0.1 (2025-07-24)
+------------------
+
+* hit PyPI project size limit. triggering re-upload to fix missing sdist in ``7.0.0`` release.
+* deleted all PyPI releases up to version ``3.4.2`` (last version supporting python 2.7) to free up project space
+
+
+
 7.0.0 (2025-07-21)
 ------------------
 
@@ -17,7 +25,6 @@ Changelog
 * Documented usage and warned about thread safety considerations for global functions
 * Updated command line interface to use global functions where appropriate
 * breaking API Changes: clarified naming. renamed "boundary" to "bbox". renamed "polygon" to "boundary". boundaries (the outer polygon defining part of a timezone) and holes are both polygons so hence the name "polygon" is ambiguous.
-* hitting pyPI project size limit. had to delete all pyPI releases up to version ``3.4.2`` (last version supporting python 2.7) to free up project space
 
 
 6.6.3 (2025-07-21)
