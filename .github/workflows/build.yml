@@ -206,6 +206,7 @@ jobs:
           draft: false
           prerelease: false
           skipIfReleaseExists: true
+          artifacts: "dist/timezonefinder*.whl,dist/timezonefinder*.tar.gz"
 
   publish-pypi:
     name: Publish to PyPI
