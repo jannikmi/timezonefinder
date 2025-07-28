@@ -424,7 +424,7 @@ def report_data_statistics(
     print(rst_title("Timezone Statistics", level=2))
     polygons_per_timezone = Counter(poly_zone_ids)
     timezone_metrics = calculate_timezone_metrics(
-        nr_of_zones, nr_of_polygons, polygons_per_timezone, all_tz_names
+        nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
     timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)

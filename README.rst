@@ -45,9 +45,10 @@ Notice: Looking for maintainers. Reach out if you want to contribute!
 This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 
-It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
+Quick Guide
+-----------
 
-Quick Guide:
+It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
 
 .. code-block:: console
 
@@ -74,20 +75,17 @@ Quick Guide:
 Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
 
 
+References
+----------
 
-For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
+* `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__
+* `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+* `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+* `download stats <https://pepy.tech/project/timezonefinder>`__
+* `online GUI and API <https://timezonefinder.michelfe.it>`__
+* `GUI repository <https://github.com/jannikmi/timezonefinder_gui>`__
+* `ruby port <https://github.com/gunyarakun/timezone_finder>`__
 
-Also check:
-
-`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
-
-`online GUI and API <https://timezonefinder.michelfe.it>`__
-
-`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
-
-ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
-
-`download stats <https://pepy.tech/project/timezonefinder>`__
 
 
 LICENSE

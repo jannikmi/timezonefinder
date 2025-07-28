@@ -4,10 +4,10 @@ WORKING_FOLDER_NAME=tmp
 ARCHIVE_NAME=data_downloaded.zip
 ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
 JSON_PREFIX=combined
-JSON_SUFFIX=.json
-DESTINATION_PATH=./timezonefinder
+JSON_SUFFIX=-now.json
+# DESTINATION_PATH=./timezonefinder
 URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
-URL_SUFFIX=.geojson.zip
+URL_SUFFIX=-now.geojson.zip
 
 echo "TIME ZONE DATA PARSING SCRIPT"
 
@@ -49,7 +49,8 @@ fi
 echo "START PARSING..."
 SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
-python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
+#  -out "$DESTINATION_PATH"
+python "$SCRIPT_PATH" -inp "$JSON_PATH"
 
 echo "runnings tests..."
 if ! tox; then
