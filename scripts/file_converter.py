@@ -46,6 +46,11 @@ from pathlib import Path
 import functools
 import itertools
 from dataclasses import dataclass
+
+from scripts.geojson_schema import GeoJSON
+from pydantic import ValidationError
+import json
+
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 
@@ -171,6 +176,14 @@ def parse_polygons_from_json(input_path: Path) -> None:
 
     print(f"parsing input file: {input_path}\n...\n")
     input_json = load_json(input_path)
+
+    try:
+        input_json = GeoJSON.model_validate(input_json).model_dump()
+    except ValidationError as e:
+        print("GeoJSON validation error:")
+        print(e)
+        return
+
     tz_list = input_json["features"]
 
     poly_id = 0
