@@ -1,24 +1,14 @@
 {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [
-          [
-            [-122.5, 37.8],
-            [-122.3, 37.8],
-            [-122.3, 37.7],
-            [-122.5, 37.7],
-            [-122.5, 37.8]
-          ]
-        ]
-      },
-      "properties": {
-        "name": "Test Zone",
-        "tzid": "America/Los_Angeles"
-      }
-    }
-  ]
+  "features" : [ {
+    "geometry" : {
+      "coordinates" : [[
+        [ -122.5, 37.8 ], [ -122.3, 37.8 ], [ -122.3, 37.7 ], [ -122.5, 37.7 ],
+        [ -122.5, 37.8 ]
+      ]],
+      "type" : "Polygon"
+    },
+    "properties" : {"name" : "Test Zone", "tzid" : "America/Los_Angeles"},
+    "type" : "Feature"
+  } ],
+  "type" : "FeatureCollection"
 }

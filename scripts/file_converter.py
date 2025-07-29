@@ -41,46 +41,39 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
 
-from pathlib import Path
-
 import functools
 import itertools
 from dataclasses import dataclass
-
-from scripts.geojson_schema import GeoJSON
-from pydantic import ValidationError
-import json
-
+from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
-
 
 import h3.api.numpy_int as h3
 import numpy as np
+from pydantic import ValidationError
+
+from scripts.geojson_schema import GeoJSON
 
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
+    DTYPE_FORMAT_H_NUMPY,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
     MAX_LAT,
     MAX_LNG,
     HexIdSet,
     PolyIdSet,
     ZoneIdSet,
-    DTYPE_FORMAT_H_NUMPY,
-    DTYPE_FORMAT_SIGNED_I_NUMPY,
 )
+from scripts.reporting import write_data_report
 from scripts.utils import (
     check_shortcut_sorting,
+    load_json,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
-    load_json,
 )
-from scripts.reporting import (
-    write_data_report,
-)
-
-from scripts.utils_numba import fully_contained_in_hole, any_pt_in_poly
+from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
@@ -104,9 +97,9 @@ from timezonefinder.utils_numba import (
     int2coord,
 )
 from timezonefinder.utils import (
+    get_boundaries_dir,
     get_hole_registry_path,
     get_holes_dir,
-    get_boundaries_dir,
 )
 from timezonefinder.zone_names import write_zone_names
 
