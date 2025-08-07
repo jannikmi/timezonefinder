@@ -112,6 +112,7 @@ WHEEL_EXCEPTION_PATTERNS = {
     "pyproject.toml",
     "setup.py",
     "README*",
+    "tests/*"
 }
 
 
