@@ -43,8 +43,10 @@ data:
 
 test:
 	@uv run pytest
-# 	@uv run pytest -m "integration"
 # 	@uv run pytest -m "not integration"
+
+testint:
+	@uv run pytest -m "integration"
 
 tox:
 	@uv run tox
