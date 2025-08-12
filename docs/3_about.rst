@@ -189,3 +189,4 @@ Thanks to:
 - `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
 - `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4
 - `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for providing example scripts and updating python version support
+- `Romain Girard <https://github.com/romaingd-spi>`__ for fixing unwanted test  content

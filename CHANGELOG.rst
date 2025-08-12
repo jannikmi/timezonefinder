@@ -12,6 +12,12 @@ Changelog
 * If you used ``timezonefinder`` for localisation beyond the timezone behavior, it might become necessary for you to individually parse the full original dataset version using the ``parse_data.sh`` script.
 
 
+7.0.2 (2025-08-06)
+------------------
+
+* exclude `tests` package closing issue #330
+
+
 7.0.1 (2025-07-24)
 ------------------
 
