@@ -20,10 +20,10 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 
     from timezonefinder import timezone_at
 
-    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
     tz = timezone_at_land(lng=13.358, lat=52.5061)
     tz = unique_timezone_at(lng=13.358, lat=52.5061)
-    geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
+    geometry = get_geometry(tz_name="Europe/Paris", coords_as_pairs=True)
 
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
 
@@ -81,7 +81,7 @@ Using the global function:
 
     from timezonefinder import timezone_at
 
-    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
     tz = timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
 Using a TimezoneFinder instance:
@@ -91,7 +91,7 @@ Using a TimezoneFinder instance:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
     tz = tf.timezone_at(lng=1.0, lat=50.5)  # 'Etc/GMT'
 
 .. note::
@@ -116,7 +116,7 @@ Using the global function:
 
     from timezonefinder import timezone_at_land
 
-    tz = timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Paris'
     tz = timezone_at_land(lng=1.0, lat=50.5)  # None
 
 Using a TimezoneFinder instance:
@@ -126,7 +126,7 @@ Using a TimezoneFinder instance:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Paris'
     tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
 
 unique_timezone_at()
@@ -177,7 +177,7 @@ Using the global function:
 
     from timezonefinder import certain_timezone_at
 
-    tz = certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 Using a TimezoneFinder instance:
 
@@ -186,7 +186,7 @@ Using a TimezoneFinder instance:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz = tf.certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = tf.certain_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 
 
@@ -257,7 +257,7 @@ The most probable zone in proximity can be retrieved with ``timezone_at()``:
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:
-        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
 
 
 
@@ -267,7 +267,7 @@ Certain results can be retrieved with ``unique_timezone_at()``:
 
 .. code-block:: python
 
-    tf.unique_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tf.unique_timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 
 .. note::

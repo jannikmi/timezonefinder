@@ -59,7 +59,7 @@ It is recommended to install it together with the optional `Numba <https://numba
 
     from timezonefinder import timezone_at
 
-    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 
     # For thread safety, increased performance and control, re-use an instance:
@@ -69,7 +69,7 @@ It is recommended to install it together with the optional `Numba <https://numba
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:
-        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
 
 
 Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
