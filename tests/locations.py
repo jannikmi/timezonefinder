@@ -1,3 +1,28 @@
+from timezonefinder.utils import is_ocean_timezone
+
+# mapping from original timezone to reduced timezone of the timezones-now dataset
+REDUCED_TIMEZONE_MAPPING: set[str, str] = {
+    "Europe/Berlin": "Europe/Paris",
+    "Europe/Kyiv": "Europe/Athens",
+    "Asia/Yakutsk": "Asia/Tokyo",
+    "Asia/Macau": "Asia/Manila",
+    "Asia/Yekaterinburg": "Asia/Karachi",
+    "Europe/Helsinki": "Europe/Athens",
+    "Asia/Brunei": "Asia/Manila",
+    "Asia/Nicosia": "Europe/Athens",
+    "Asia/Seoul": "Asia/Tokyo",
+    "Asia/Vladivostok": "Australia/Brisbane",
+    "America/Inuvik": "America/Denver",
+    "Asia/Anadyr": "Pacific/Fiji",
+    "Asia/Yerevan": "Asia/Dubai",
+    "Asia/Dushanbe": "Asia/Karachi",
+    "Europe/Busingen": "Europe/Paris",
+    "Europe/Zurich": "Europe/Paris",
+    "Africa/Maseru": "Africa/Johannesburg",
+    "Asia/Tashkent": "Asia/Karachi",
+}
+
+
 # for TimezoneFinderL:
 BASIC_TEST_LOCATIONS = [
     # lat, lng, description, expected
@@ -17,6 +42,7 @@ BASIC_TEST_LOCATIONS = [
     (30, -33, "atlantic ocean", "Etc/GMT+2"),
     (-24, 79, "indian ocean", "Etc/GMT-5"),
 ]
+
 
 # for TimezoneFinder:
 # certain algorithm should give the same results for all normal test cases
@@ -66,6 +92,12 @@ TEST_LOCATIONS = BASIC_TEST_LOCATIONS + [
     (50.26, -9.0, "Far off Cornwall", "Etc/GMT+1"),
     (50.5, 1, "English Channel1", "Etc/GMT"),
     (56.218, 19.4787, "baltic sea", "Etc/GMT-1"),
+]
+
+# the timezone_at_land function should return None for ocean timezones
+TEST_LOCATIONS_AT_LAND = [
+    (lat, lng, description, None if is_ocean_timezone(expected) else expected)
+    for lat, lng, description, expected in TEST_LOCATIONS
 ]
 
 EDGE_TEST_CASES = [

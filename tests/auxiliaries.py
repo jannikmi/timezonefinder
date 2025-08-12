@@ -16,6 +16,7 @@ from typing import Callable, Iterator, Tuple, Union
 import numpy as np
 
 from scripts.utils import validate_coord_array_shape
+from tests.locations import REDUCED_TIMEZONE_MAPPING
 from timezonefinder import utils
 from timezonefinder.configs import (
     MAX_LAT_VAL,
@@ -353,3 +354,26 @@ def get_pip_test_input() -> Tuple[int, int, np.ndarray]:
     x, y = convert_inside_polygon_input(lng, lat)
     poly_int = get_rnd_poly_int()
     return x, y, poly_int
+
+
+def convert_to_reduced_timezone(timezone: str) -> str:
+    """
+    Convert a timezone to its reduced version using the provided mapping.
+
+    Args:
+        timezone: The original timezone string.
+        mapping: A dictionary mapping original timezones to their reduced versions.
+
+    Returns:
+        The reduced timezone if found in the mapping, otherwise the original timezone.
+    """
+    return REDUCED_TIMEZONE_MAPPING.get(timezone, timezone)
+
+
+def single_location_test(func, lat, lng, description, expected_orig):
+    result = func(lng=lng, lat=lat)
+    func_name = func.__name__
+    expected = convert_to_reduced_timezone(expected_orig)
+    assert result == expected, (
+        f"{func_name}({lng}, {lat}) [{description}] should return {expected}, got {result}"
+    )
