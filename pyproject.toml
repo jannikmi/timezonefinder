@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "7.0.2"
+version = "8.0.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71

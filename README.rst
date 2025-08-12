@@ -45,9 +45,10 @@ Notice: Looking for maintainers. Reach out if you want to contribute!
 This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 
-It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
+Quick Guide
+-----------
 
-Quick Guide:
+It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
 
 .. code-block:: console
 
@@ -58,7 +59,7 @@ Quick Guide:
 
     from timezonefinder import timezone_at
 
-    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 
     # For thread safety, increased performance and control, re-use an instance:
@@ -68,26 +69,30 @@ Quick Guide:
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:
-        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
+
+
+
+.. note::
+
+    This library uses a dataset optimized for the primary use case of timezone determination for current/future time calculations. For applications requiring historical accuracy or resolving to precise locations, consider parsing the original dataset (cf. Chapter "Data Format" in the Documentation).
+
 
 
 Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
 
 
+References
+----------
 
-For more refer to the `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__.
+* `Documentation <https://timezonefinder.readthedocs.io/en/latest/>`__
+* `PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
+* `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
+* `download stats <https://pepy.tech/project/timezonefinder>`__
+* `online GUI and API <https://timezonefinder.michelfe.it>`__
+* `GUI repository <https://github.com/jannikmi/timezonefinder_gui>`__
+* `ruby port <https://github.com/gunyarakun/timezone_finder>`__
 
-Also check:
-
-`PyPI <https://pypi.python.org/pypi/timezonefinder/>`__
-
-`online GUI and API <https://timezonefinder.michelfe.it>`__
-
-`conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
-
-ruby port: `timezone_finder <https://github.com/gunyarakun/timezone_finder>`__
-
-`download stats <https://pepy.tech/project/timezonefinder>`__
 
 
 LICENSE
