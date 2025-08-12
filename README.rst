@@ -72,6 +72,13 @@ It is recommended to install it together with the optional `Numba <https://numba
         tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
 
 
+
+.. note::
+
+    This library uses a dataset optimized for the primary use case of timezone determination for current/future time calculations. For applications requiring historical accuracy or resolving to precise locations, consider parsing the original dataset (cf. Chapter "Data Format" in the Documentation).
+
+
+
 Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast alternative based on Rust.
 
 
