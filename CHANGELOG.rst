@@ -3,6 +3,15 @@ Changelog
 =========
 
 
+
+8.0.0 (2025-08-11)
+------------------
+
+* starting from this release, ``timezonefinder`` uses the reduced ``timezones-now`` dataset version (cf. `GitHub Discussion <https://github.com/jannikmi/timezonefinder/discussions/323>`__ )
+* in this dataset version, all timezones which agree on timekeeping methods as of the release date of the dataset, are merged into one zone (cf. `Dataset Documentation <https://github.com/evansiroky/timezone-boundary-builder?tab=readme-ov-file#same-since-now>`__ ). This results in a reduced set of ~90 timezones instead of >440 timezones and a reduced memory footprint of the package.
+* If you used ``timezonefinder`` for localisation beyond the timezone behavior, it might become necessary for you to individually parse the full original dataset version using the ``parse_data.sh`` script.
+
+
 7.0.1 (2025-07-24)
 ------------------
 
