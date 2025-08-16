@@ -91,7 +91,6 @@ jobs:
           CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
           CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
-          BUILD_ABI3: true
 
       - name: "Upload wheel as artifact"
         uses: actions/upload-artifact@v4

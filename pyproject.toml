@@ -113,3 +113,7 @@ repair-wheel-command = [
   "copy {wheel} {dest_dir}",
   "uvx abi3audit --strict --summary {wheel}",
 ]
+
+[[tool.cibuildwheel.overrides]]
+inherit.environment = "append"
+environment.BUILD_ABI3 = "true"
