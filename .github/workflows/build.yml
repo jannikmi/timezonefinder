@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  # the supported Python versions for pre-built wheels
-  CIBW_BUILD_VERSIONS: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+  # Use one base Python version with future-proof abi3 support
+  CIBW_BUILD_VERSIONS: "cp39-*"
 
 jobs:
   pre-commit-hooks:
@@ -91,6 +91,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
           CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
+          BUILD_ABI3: true
 
       - name: "Upload wheel as artifact"
         uses: actions/upload-artifact@v4
