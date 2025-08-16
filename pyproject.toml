@@ -114,6 +114,8 @@ repair-wheel-command = [
   "uvx abi3audit --strict --summary {wheel}",
 ]
 
+# Pass the environment variable to build the abi3 support
 [[tool.cibuildwheel.overrides]]
+select = "*"
 inherit.environment = "append"
 environment.BUILD_ABI3 = "true"
