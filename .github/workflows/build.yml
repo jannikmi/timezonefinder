@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  # the supported Python versions for pre-built wheels
-  CIBW_BUILD_VERSIONS: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+  # Use one base Python version with future-proof abi3 support
+  CIBW_BUILD_VERSIONS: "cp39-*"
 
 jobs:
   pre-commit-hooks:
@@ -143,7 +143,7 @@ jobs:
         run: |
             find .
             uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
-            uv add ./dist/timezonefinder*${{ matrix.uv-python-version }}*manylinux*whl
+            uv add ./dist/timezonefinder*manylinux*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
 
