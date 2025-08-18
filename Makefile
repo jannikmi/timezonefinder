@@ -48,6 +48,9 @@ test:
 testint:
 	@uv run pytest -m "integration"
 
+testparse:
+	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
+
 speedtest:
 	# pytest -s flag: output to console
 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
