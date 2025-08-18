@@ -1,0 +1,124 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              -122.5,
+              37.8
+            ],
+            [
+              -122.3,
+              37.8
+            ],
+            [
+              -122.3,
+              37.7
+            ],
+            [
+              -122.5,
+              37.7
+            ],
+            [
+              -122.5,
+              37.8
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "tzid": "America/Los_Angeles"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              [
+                -122.5,
+                37.8
+              ],
+              [
+                -122.3,
+                37.8
+              ],
+              [
+                -122.3,
+                37.7
+              ],
+              [
+                -122.5,
+                37.8
+              ]
+            ],
+            [
+              [
+                -122.5,
+                37.8
+              ],
+              [
+                -122.3,
+                37.8
+              ],
+              [
+                -122.3,
+                37.7
+              ],
+              [
+                -122.5,
+                37.8
+              ]
+            ]
+          ]
+        ],
+        "type": "MultiPolygon"
+      },
+      "properties": {
+        "tzid": "Europe/Paris"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              -17,
+              -86
+            ],
+            [
+              -15,
+              -86
+            ],
+            [
+              -5.5,
+              -86
+            ],
+            [
+              -5.5,
+              -69
+            ],
+            [
+              -17,
+              -71
+            ],
+            [
+              -17,
+              -86
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "tzid": "Etc/UTC"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}
