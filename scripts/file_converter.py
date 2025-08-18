@@ -49,7 +49,6 @@ from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
-from pydantic import ValidationError
 
 from scripts.geojson_schema import GeoJSON
 
@@ -170,12 +169,7 @@ def parse_polygons_from_json(input_path: Path) -> None:
     print(f"parsing input file: {input_path}\n...\n")
     input_json = load_json(input_path)
 
-    try:
-        input_json = GeoJSON.model_validate(input_json).model_dump()
-    except ValidationError as e:
-        print("GeoJSON validation error:")
-        print(e)
-        return
+    input_json = GeoJSON.model_validate(input_json).model_dump()
 
     tz_list = input_json["features"]
 
