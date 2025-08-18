@@ -171,7 +171,7 @@ def parse_polygons_from_json(input_path: Path) -> None:
     poly_id = 0
     print("parsing data...\nprocessing holes:")
     for zone_id, timezone in enumerate(geo_json.features):
-        tz_name = timezone.tzid
+        tz_name = timezone.id
         all_tz_names.append(tz_name)
         tz_geometry = timezone.geometry
         multipolygon = tz_geometry.coordinates
