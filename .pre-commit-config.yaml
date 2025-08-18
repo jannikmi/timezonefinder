@@ -1,6 +1,6 @@
 repos:
     -   repo: https://github.com/pre-commit/pre-commit-hooks
-        rev: v5.0.0
+        rev: v6.0.0
         hooks:
             -   id: check-ast  # Is it valid Python?
             -   id: debug-statements # no debbuging statements used
@@ -20,7 +20,7 @@ repos:
 
 
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.12.3
+      rev: v0.12.9
       hooks:
           # linter.
           - id: ruff
@@ -50,18 +50,18 @@ repos:
             -   id: pyupgrade
 
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v1.17.0
+        rev: v1.17.1
         hooks:
             -   id: mypy
                 exclude: ^((tests|scripts|docs)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
-    #  - repo: https://github.com/mgedmin/check-manifest
-    #    rev: "0.48"
-    #    hooks:
-    #      - id: check-manifest
-    #        args: [ "--no-build-isolation", "--ignore",  "*.png,docs/*,publish.py,readthedocs.yml,poetry.lock" ]
-    #        additional_dependencies: [ numpy, poetry==1.1.11 ]
+    -   repo: https://github.com/mgedmin/check-manifest
+        rev: "0.50"
+        hooks:
+            -   id: check-manifest
+                args: [ "--no-build-isolation", "--ignore",  ".*,.*/*,docs/*,examples/*,scripts/*,*.sh,CHANGELOG.rst,CONTRIBUTING.rst,Makefile,publish.py,readthedocs.yml,uv.lock,tox.ini" ]
+                additional_dependencies: [ numpy, uv, cffi ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
         rev: v20.1.8

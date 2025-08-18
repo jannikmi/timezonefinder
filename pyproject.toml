@@ -60,6 +60,7 @@ dev = [
     "isort",
     "ruff",
     "cibuildwheel",
+    "pydantic>=2.11.7",
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",

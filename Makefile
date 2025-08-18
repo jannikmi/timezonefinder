@@ -35,11 +35,14 @@ env:
 	#	&& conda activate timezonefinder
 	# && make req
 
-parse:
-	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
-
 data:
 	bash parse_data.sh
+
+parse:
+	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans-now.json
+
+testparse:
+	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
 
 test:
 # 	@uv run pytest

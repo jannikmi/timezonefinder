@@ -41,41 +41,37 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
 
-from pathlib import Path
-
 import functools
 import itertools
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple, Union
-
 
 import h3.api.numpy_int as h3
 import numpy as np
+
+from scripts.geojson_schema import GeoJSON, PolygonGeometry
 
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     DEFAULT_INPUT_PATH,
+    DTYPE_FORMAT_H_NUMPY,
+    DTYPE_FORMAT_SIGNED_I_NUMPY,
     MAX_LAT,
     MAX_LNG,
     HexIdSet,
     PolyIdSet,
     ZoneIdSet,
-    DTYPE_FORMAT_H_NUMPY,
-    DTYPE_FORMAT_SIGNED_I_NUMPY,
 )
+from scripts.reporting import write_data_report
 from scripts.utils import (
     check_shortcut_sorting,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
-    load_json,
 )
-from scripts.reporting import (
-    write_data_report,
-)
-
-from scripts.utils_numba import fully_contained_in_hole, any_pt_in_poly
+from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
 from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
@@ -99,9 +95,9 @@ from timezonefinder.utils_numba import (
     int2coord,
 )
 from timezonefinder.utils import (
+    get_boundaries_dir,
     get_hole_registry_path,
     get_holes_dir,
-    get_boundaries_dir,
 )
 from timezonefinder.zone_names import write_zone_names
 
@@ -170,28 +166,24 @@ def parse_polygons_from_json(input_path: Path) -> None:
     global polygons, polygon_lengths, poly_zone_ids, poly_boundaries
 
     print(f"parsing input file: {input_path}\n...\n")
-    input_json = load_json(input_path)
-    tz_list = input_json["features"]
+    geo_json = GeoJSON.model_validate_json(input_path.read_text())
 
     poly_id = 0
-    zone_id = 0
     print("parsing data...\nprocessing holes:")
-    for zone_id, tz_dict in enumerate(tz_list):
-        tz_name = tz_dict.get("properties").get("tzid")
+    for zone_id, timezone in enumerate(geo_json.features):
+        tz_name = timezone.id
         all_tz_names.append(tz_name)
-        geometry = tz_dict.get("geometry")
-        if geometry.get("type") == "MultiPolygon":
-            # depth is 4
-            multipolygon = geometry.get("coordinates")
-        else:
+        tz_geometry = timezone.geometry
+        multipolygon = tz_geometry.coordinates
+        # case: MultiPolygon -> depth is 4
+        if isinstance(tz_geometry, PolygonGeometry):
             # depth is 3 (only one polygon, possibly with holes!)
-            multipolygon = [geometry.get("coordinates")]
-        # multipolygon has depth 4
-        # assert depth_of_array(multipolygon) == 4
+            multipolygon = [multipolygon]
+
         for poly_with_hole in multipolygon:
-            # the first entry is the outer polygon
+            # the first entry is the boundary polygon
             # NOTE: starting from here, only coordinates converted into int32 will be considered!
-            # this allows using the JIT util function already here
+            # this allows using the Numba JIT util functions already here
             poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
             polygons.append(poly)
             x_coords = poly[0]
