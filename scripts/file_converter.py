@@ -67,7 +67,6 @@ from scripts.configs import (
 from scripts.reporting import write_data_report
 from scripts.utils import (
     check_shortcut_sorting,
-    load_json,
     time_execution,
     to_numpy_polygon_repr,
     write_json,
@@ -167,20 +166,14 @@ def parse_polygons_from_json(input_path: Path) -> None:
     global polygons, polygon_lengths, poly_zone_ids, poly_boundaries
 
     print(f"parsing input file: {input_path}\n...\n")
-    input_json = load_json(input_path)
-
-    geo_json = GeoJSON.model_validate(input_json)
-    print(geo_json.type)
-
-    tz_features = geo_json.features
+    geo_json = GeoJSON.model_validate_json(input_path.read_text())
 
     poly_id = 0
-    zone_id = 0
     print("parsing data...\nprocessing holes:")
-    for zone_id, tz_feature in enumerate(tz_features):
-        tz_name = tz_feature.tzid
+    for zone_id, timezone in enumerate(geo_json.features):
+        tz_name = timezone.tzid
         all_tz_names.append(tz_name)
-        tz_geometry = tz_feature.geometry
+        tz_geometry = timezone.geometry
         multipolygon = tz_geometry.coordinates
         # case: MultiPolygon -> depth is 4
         if isinstance(tz_geometry, PolygonGeometry):
@@ -188,9 +181,9 @@ def parse_polygons_from_json(input_path: Path) -> None:
             multipolygon = [multipolygon]
 
         for poly_with_hole in multipolygon:
-            # the first entry is the outer polygon
+            # the first entry is the boundary polygon
             # NOTE: starting from here, only coordinates converted into int32 will be considered!
-            # this allows using the JIT util function already here
+            # this allows using the Numba JIT util functions already here
             poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
             polygons.append(poly)
             x_coords = poly[0]
