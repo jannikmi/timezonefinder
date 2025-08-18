@@ -107,11 +107,13 @@ ESSENTIAL_SOURCE_PATTERNS = {
     "*.txt",  # Text files (used for timezone names)
 }
 
-# TODO these files are not included in wheels
+# these files are not included in wheels
 WHEEL_EXCEPTION_PATTERNS = {
     "pyproject.toml",
     "setup.py",
     "README*",
+    # wheels define what is installed. tests should not be included
+    "tests/*",
 }
 
 

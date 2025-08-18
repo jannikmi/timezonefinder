@@ -18,7 +18,7 @@ Data Statistics
    * - General Metric
      - Value
    * - Total coordinate values (2 per point)
-     - 15,769,132
+     - 8,124,230
 
 
 
@@ -33,15 +33,15 @@ Boundary Polygon Statistics
    * - Boundary Metric
      - Value
    * - Total boundary polygons
-     - 1,319
+     - 856
    * - Total boundary coordinates
-     - 7,626,105
+     - 3,837,427
    * - Total boundary coordinate values (2 per point)
-     - 15,252,210
+     - 7,674,854
    * - Average coordinates per boundary polygon
-     - 5,781.73
+     - 4,482.98
    * - Maximum coordinates in one boundary polygon
-     - 167,969
+     - 188,570
    * - Minimum coordinates in one boundary polygon
      - 3
 
@@ -58,23 +58,23 @@ Hole Polygon Statistics
    * - Hole Metric
      - Value
    * - Total hole polygons
-     - 753
+     - 579
    * - Total hole coordinates
-     - 258,461
+     - 224,688
    * - Total hole coordinate values (2 per point)
-     - 516,922
+     - 449,376
    * - Average coordinates per hole polygon
-     - 343.24
+     - 388.06
    * - Maximum coordinates in one hole polygon
-     - 23,862
+     - 11,473
    * - Minimum coordinates in one hole polygon
-     - 3
+     - 4
    * - Number of boundary polygons with holes
-     - 95
+     - 75
    * - Percentage of boundary polygons with holes
-     - 7.2%
+     - 8.76%
    * - Average holes per boundary polygon (with holes)
-     - 7.93
+     - 7.72
 
 
 
@@ -89,15 +89,15 @@ Timezone Statistics
    * - Timezone Metric
      - Value
    * - Total timezones
-     - 444
+     - 92
    * - Average boundary polygons per timezone
-     - 2.97
+     - 9.3
    * - Maximum polygons in one timezone
-     - 96
+     - 72
    * - Minimum polygons in one timezone
      - 1
    * - Median polygons per timezone
-     - 1
+     - 4
 
 
 
@@ -114,93 +114,113 @@ Polygons per Timezone Distribution
      - Percentage
      - Example Timezone
    * - 1 polygon
-     - 280
-     - 63.06%
-     - Africa/Abidjan
-   * - 2 polygons
-     - 45
-     - 10.14%
-     - Africa/Cairo
-   * - 3 polygons
-     - 30
-     - 6.76%
-     - Africa/Blantyre
-   * - 4 polygons
      - 21
-     - 4.73%
-     - America/Anchorage
+     - 22.83%
+     - Etc/UTC
+   * - 2 polygons
+     - 11
+     - 11.96%
+     - Africa/Lagos
+   * - 3 polygons
+     - 6
+     - 6.52%
+     - America/Los_Angeles
+   * - 4 polygons
+     - 11
+     - 11.96%
+     - Africa/Johannesburg
    * - 5 polygons
-     - 13
-     - 2.93%
-     - America/Merida
+     - 4
+     - 4.35%
+     - Asia/Kolkata
    * - 6 polygons
-     - 7
-     - 1.58%
-     - America/Asuncion
+     - 4
+     - 4.35%
+     - America/New_York
    * - 7 polygons
-     - 7
-     - 1.58%
+     - 5
+     - 5.43%
      - America/Adak
    * - 8 polygons
-     - 14
-     - 3.15%
-     - America/Caracas
+     - 3
+     - 3.26%
+     - Pacific/Kiritimati
    * - 9 polygons
      - 4
-     - 0.9%
-     - America/Bogota
+     - 4.35%
+     - Africa/Abidjan
    * - 10 polygons
-     - 7
-     - 1.58%
-     - Africa/Ceuta
+     - 1
+     - 1.09%
+     - Etc/GMT-3
    * - 11 polygons
-     - 2
-     - 0.45%
-     - Atlantic/South_Georgia
+     - 1
+     - 1.09%
+     - Pacific/Auckland
    * - 12 polygons
-     - 2
-     - 0.45%
-     - Asia/Shanghai
+     - 1
+     - 1.09%
+     - America/Phoenix
    * - 13 polygons
      - 2
-     - 0.45%
-     - America/Costa_Rica
+     - 2.17%
+     - America/Noronha
+   * - 17 polygons
+     - 3
+     - 3.26%
+     - America/Caracas
    * - 18 polygons
+     - 2
+     - 2.17%
+     - Asia/Karachi
+   * - 20 polygons
      - 1
-     - 0.23%
-     - Etc/GMT-2
+     - 1.09%
+     - Asia/Jakarta
    * - 21 polygons
      - 1
-     - 0.23%
-     - Asia/Taipei
+     - 1.09%
+     - America/Mexico_City
    * - 22 polygons
-     - 1
-     - 0.23%
-     - Europe/Brussels
-   * - 23 polygons
      - 2
-     - 0.45%
-     - Asia/Pyongyang
-   * - 24 polygons
-     - 1
-     - 0.23%
-     - Asia/Tokyo
+     - 2.17%
+     - Europe/Moscow
    * - 25 polygons
      - 1
-     - 0.23%
-     - Australia/Brisbane
-   * - 28 polygons
+     - 1.09%
+     - Asia/Dubai
+   * - 27 polygons
      - 1
-     - 0.23%
+     - 1.09%
+     - Europe/Paris
+   * - 29 polygons
+     - 1
+     - 1.09%
+     - Asia/Manila
+   * - 31 polygons
+     - 1
+     - 1.09%
      - Europe/Athens
-   * - 49 polygons
+   * - 36 polygons
      - 1
-     - 0.23%
-     - Pacific/Tahiti
-   * - 96 polygons
+     - 1.09%
+     - Pacific/Fiji
+   * - 39 polygons
      - 1
-     - 0.23%
-     - America/Argentina/Cordoba
+     - 1.09%
+     - Asia/Sakhalin
+   * - 60 polygons
+     - 1
+     - 1.09%
+     - Asia/Tokyo
+   * - 62 polygons
+     - 1
+     - 1.09%
+     - Australia/Brisbane
+   * - 72 polygons
+     - 1
+     - 1.09%
+     - Pacific/Honolulu
 
 
 
@@ -218,50 +238,45 @@ Shortcut Mapping Statistics
      - Accumulated
      - Remaining
    * - 1
-     - 30674
-     - 74.52%
-     - 74.52%
-     - 25.48%
+     - 32183
+     - 78.19%
+     - 78.19%
+     - 21.81%
    * - 2
-     - 8771
-     - 21.31%
-     - 95.83%
-     - 4.17%
+     - 7901
+     - 19.19%
+     - 97.38%
+     - 2.62%
    * - 3
-     - 1401
-     - 3.4%
-     - 99.23%
-     - 0.77%
+     - 901
+     - 2.19%
+     - 99.57%
+     - 0.43%
    * - 4
-     - 233
-     - 0.57%
-     - 99.8%
-     - 0.2%
+     - 130
+     - 0.32%
+     - 99.89%
+     - 0.11%
    * - 5
-     - 43
-     - 0.1%
-     - 99.9%
-     - 0.1%
-   * - 6
-     - 15
-     - 0.04%
+     - 22
+     - 0.05%
      - 99.94%
      - 0.06%
-   * - 7
-     - 9
-     - 0.02%
-     - 99.96%
-     - 0.04%
-   * - 8
-     - 5
-     - 0.01%
+   * - 6
+     - 13
+     - 0.03%
      - 99.97%
      - 0.03%
-   * - 9
-     - 4
+   * - 7
+     - 6
      - 0.01%
-     - 99.98%
-     - 0.02%
+     - 99.99%
+     - 0.01%
+   * - 8
+     - 2
+     - 0.0%
+     - 99.99%
+     - 0.01%
    * - 10
      - 1
      - 0.0%
@@ -270,29 +285,14 @@ Shortcut Mapping Statistics
    * - 12
      - 1
      - 0.0%
-     - 99.99%
-     - 0.01%
+     - 100.0%
+     - 0.0%
    * - 17
      - 1
      - 0.0%
-     - 99.99%
-     - 0.01%
+     - 100.0%
+     - 0.0%
    * - 25
-     - 1
-     - 0.0%
-     - 99.99%
-     - 0.01%
-   * - 31
-     - 1
-     - 0.0%
-     - 100.0%
-     - 0.0%
-   * - 46
-     - 1
-     - 0.0%
-     - 100.0%
-     - 0.0%
-   * - 59
      - 1
      - 0.0%
      - 100.0%
@@ -309,37 +309,32 @@ Shortcut Mapping Statistics
      - Accumulated
      - Remaining
    * - 1
-     - 30681
-     - 74.54%
-     - 74.54%
-     - 25.46%
+     - 32190
+     - 78.2%
+     - 78.2%
+     - 21.8%
    * - 2
-     - 9016
-     - 21.9%
-     - 96.44%
-     - 3.56%
+     - 8176
+     - 19.86%
+     - 98.07%
+     - 1.93%
    * - 3
-     - 1288
-     - 3.13%
-     - 99.57%
-     - 0.43%
+     - 748
+     - 1.82%
+     - 99.88%
+     - 0.12%
    * - 4
-     - 156
-     - 0.38%
-     - 99.95%
-     - 0.05%
+     - 44
+     - 0.11%
+     - 99.99%
+     - 0.01%
    * - 5
-     - 16
-     - 0.04%
+     - 1
+     - 0.0%
      - 99.99%
      - 0.01%
    * - 6
-     - 3
-     - 0.01%
-     - 100.0%
-     - 0.0%
-   * - 7
-     - 1
+     - 2
      - 0.0%
      - 100.0%
      - 0.0%
@@ -348,6 +343,7 @@ Shortcut Mapping Statistics
      - 0.0%
      - 100.0%
      - 0.0%
+
 
 
 Binary File Sizes
@@ -362,14 +358,14 @@ Binary File Sizes
      - Size (MB)
      - Percentage
    * - boundary polygon data
-     - 58.20
-     - 94.95%
+     - 29.29
+     - 91.19%
    * - hole polygon data
-     - 1.98
-     - 3.24%
+     - 1.72
+     - 5.36%
    * - shortcuts
      - 1.11
-     - 1.82%
+     - 3.45%
    * - Total
-     - 61.30
+     - 32.12
      - 100.00%

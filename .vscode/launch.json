@@ -14,6 +14,22 @@
     {
       "args": [
         "-s",
+        "tests/main_test.py::TestTimezonefinderClass::test_timezone_at",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": false,
+      "module": "pytest",
+      "name": "run unit test",
+      "request": "launch",
+      "type": "debugpy"
+    },
+    {
+      "args": [
+        "-s",
         "tests/test_integration.py",
         "-v"
       ],

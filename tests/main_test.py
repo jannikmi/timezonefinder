@@ -11,6 +11,7 @@ from tests.auxiliaries import (
     ocean2land,
     validate_polygon_coordinates,
 )
+from tests.global_functions_test import single_location_test
 from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
 from timezonefinder.configs import (
     INT2COORD_FACTOR,
@@ -123,14 +124,9 @@ class TestBaseTimezoneFinderClass:
             self.test_instance.timezone_at_land(23.0, lng=42.0)
             self.test_instance.timezone_at_land(23.0, lat=42.0)
 
-    # Common helper function for running parameterized tests
-    def run_location_tests(self, test_fct, lat, lng, loc, expected):
-        test_name = test_fct.__name__  # Get the name of the test function
-        print(f"\ntesting function {test_name} for location: {loc}")
-        computed = test_fct(lng=lng, lat=lat)
-        assert computed == expected, (
-            f"different results. coords: {lat} lat, {lng} lng, expected: {expected}, computed: {computed}"
-        )
+    @staticmethod
+    def run_location_tests(test_fct, lat, lng, loc, expected_orig):
+        single_location_test(test_fct, lat, lng, loc, expected_orig)
 
     @classmethod
     def pytest_generate_tests(cls, metafunc):

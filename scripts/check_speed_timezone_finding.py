@@ -117,7 +117,7 @@ def test_timezone_finding_speed(
 
     def time_all_runs(func2time: Callable, test_inputs: Iterable):
         for lng, lat in test_inputs:
-            _ = func2time(lng=lng, lat=lat)  # 'Europe/Berlin'
+            _ = func2time(lng=lng, lat=lat)
 
     def time_func(test_func: Callable):
         t = timefunc(time_all_runs, test_func, test_points)

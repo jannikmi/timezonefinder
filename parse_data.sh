@@ -19,6 +19,17 @@ parent_path=$(
 cd "$parent_path" || exit 1
 mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 
+echo "Which dataset version to download?"
+echo "1) Original full dataset"
+echo "2) Reduced timezones-now dataset"
+read -r DATASET_CHOICE
+
+if [ "$DATASET_CHOICE" -eq 2 ]; then
+    DATASET_SUFFIX=-now
+else
+    DATASET_SUFFIX=""
+fi
+
 echo "use timezone data with oceans (0: No, 1: Yes)? "
 read -r WITH_OCEANS
 if [ "$WITH_OCEANS" -eq 1 ]; then
@@ -26,7 +37,7 @@ if [ "$WITH_OCEANS" -eq 1 ]; then
 else
     INTERFIX=""
 fi
-JSON_FILE_NAME=$JSON_PREFIX$INTERFIX$JSON_SUFFIX
+JSON_FILE_NAME=$JSON_PREFIX$INTERFIX$DATASET_SUFFIX$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_FILE_NAME
 
 if [ -f $JSON_PATH ]; then
@@ -35,7 +46,7 @@ else
     if [ -f $ZIP_ARCHIVE_PATH ]; then
         echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
     else
-        URL=$URL_PREFIX$INTERFIX$URL_SUFFIX
+        URL=$URL_PREFIX$INTERFIX$DATASET_SUFFIX$URL_SUFFIX
         echo "DOWNLOADING $URL"
 
         # install command mac:
@@ -49,7 +60,7 @@ fi
 echo "START PARSING..."
 SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
-python "$SCRIPT_PATH" -inp "$JSON_PATH" -out "$DESTINATION_PATH"
+python "$SCRIPT_PATH" -inp "$JSON_PATH"  -out "$DESTINATION_PATH"
 
 echo "runnings tests..."
 if ! tox; then
