@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from typing_extensions import Literal
 
 from pydantic import AliasPath, BaseModel, Field
@@ -25,7 +25,7 @@ class Timezone(BaseModel):
 
     type: Literal["Feature"]
     id: str = Field(..., validation_alias=AliasPath("properties", "tzid"))
-    geometry: PolygonGeometry | MultiPolygonGeometry
+    geometry: Union[PolygonGeometry, MultiPolygonGeometry]
 
 
 class GeoJSON(BaseModel):
