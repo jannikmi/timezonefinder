@@ -1,23 +1,26 @@
-from typing import List, Union
+from typing import List
+from typing_extensions import Literal
 
-from pydantic import BaseModel
-
-
-class Geometry(BaseModel):
-    type: str
-    coordinates: Union[list, List[List[float]], List[List[List[float]]]]
+from pydantic import AliasPath, BaseModel, Field
 
 
-class FeatureProperties(BaseModel):
-    tzid: str
+class PolygonGeometry(BaseModel):
+    type: Literal["Polygon"]
+    coordinates: List[List[List[float]]]
+
+
+class MultiPolygonGeometry(BaseModel):
+    type: Literal["MultiPolygon"]
+    coordinates: List[List[List[List[float]]]]
 
 
 class Feature(BaseModel):
-    type: str
-    properties: FeatureProperties
-    geometry: Geometry
+    type: Literal["Feature"]
+    tzid: str = Field(..., validation_alias=AliasPath("properties", "tzid"))
+
+    geometry: PolygonGeometry | MultiPolygonGeometry
 
 
 class GeoJSON(BaseModel):
-    type: str
+    type: Literal["FeatureCollection"]
     features: List[Feature]
