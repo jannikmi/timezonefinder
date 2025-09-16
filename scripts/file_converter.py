@@ -1,20 +1,13 @@
 """
 script for parsing the timezone data from https://github.com/evansiroky/timezone-boundary-builder to the binary format required by `timezonefinder`
 
+the usage is described in docs/2_use_cases.rst (parse_data)
+
 the used data format is described in the documentation under docs/data_format.rst
-
-
-USAGE:
-
-- download the latest timezones.geojson.zip file from github.com/evansiroky/timezone-boundary-builder/releases
-- unzip and place the combined.json inside the `scripts` folder
-- run this `file_converter.py` script to compile the data files.
-
 
 IMPORTANT: all coordinates (floats) of the timezone polygons are being converted to int32 (multiplied by 10^7).
 This makes computations faster and it takes lot less space,
     without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
-
 
 
 [SHORTCUTS:] spacial index: coordinate to potential polygon id candidates
