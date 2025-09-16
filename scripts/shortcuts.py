@@ -2,7 +2,7 @@
 
 import itertools
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Optional
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -164,8 +164,7 @@ def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]
 
 
 def compile_h3_map(
-    data: TimezoneData,
-    candidates: Set,
+    data: TimezoneData, candidates: Set, max_workers: Optional[int] = None
 ) -> ShortcutMapping:
     """
     operate on one hex resolution
@@ -177,7 +176,6 @@ def compile_h3_map(
         use_parallel: Whether to use parallel processing (default: True)
         max_workers: Maximum number of worker threads (default: optimal based on benchmarks)
     """
-
     if not using_numba:
         print(
             "NOTE: if the shortcut compilation is slow, consider installing Numba for JIT compilation\n"
@@ -186,16 +184,62 @@ def compile_h3_map(
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
-    processed = 0
-    for hex_id in candidates:
-        hex_id, polys_optimised = process_single_hex(hex_id, data)
-        mapping[hex_id] = polys_optimised
-        processed += 1
-        print(
-            f"\r{processed:,} processed\t{total_candidates - processed:,} remaining\t",
-            end="",
-            flush=True,
-        )
+    if max_workers is None:
+        import os
+
+        cpu_count = os.cpu_count() or 1
+        max_workers = cpu_count
+    print(
+        f"Using {'sequential' if max_workers == 1 else 'parallel'} processing with {max_workers} worker{'s' if max_workers > 1 else ''}..."
+    )
+    if max_workers == 1:
+        processed = 0
+        for hex_id in candidates:
+            hex_id, polys_optimised = process_single_hex(hex_id, data)
+            mapping[hex_id] = polys_optimised
+            processed += 1
+            print(
+                f"\r{processed:,} processed\t{total_candidates - processed:,} remaining\t",
+                end="",
+                flush=True,
+            )
+    else:
+        # Use parallel processing with thread-safe hex cache
+        import concurrent.futures
+        import threading
+
+        progress_lock = threading.Lock()
+        processed = 0
+
+        def report_progress():
+            nonlocal processed
+            with progress_lock:
+                processed += 1
+                remaining = total_candidates - processed
+                print(
+                    f"\r{processed:,} processed\t{remaining:,} remaining\t",
+                    end="",
+                    flush=True,
+                )
+
+        # Process hex cells in parallel with thread-safe hex cache
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            future_to_hex = {
+                executor.submit(process_single_hex, hex_id, data): hex_id
+                for hex_id in candidates
+            }
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_hex):
+                try:
+                    hex_id, polys_optimised = future.result()
+                    mapping[hex_id] = polys_optimised
+                    report_progress()
+                except Exception as exc:
+                    hex_id = future_to_hex[future]
+                    print(f"\nHex {hex_id} generated an exception: {exc}")
+                    raise
 
     print()  # New line after progress reporting
     return mapping
@@ -211,11 +255,18 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 
 @time_execution
-def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
-    """compiles h3 hexagon shortcut mapping
+def compile_shortcut_mapping(
+    data: TimezoneData, use_parallel: bool = True, max_workers: Optional[int] = None
+) -> ShortcutMapping:
+    """compiles h3 hexagon shortcut mapping with optimized parallel processing
+
+    Cold cache benchmarks show sequential processing is fastest for first-time compilation,
+    but parallel processing provides benefits for warm cache scenarios.
 
     Args:
         data: TimezoneData instance containing polygon and timezone information
+        use_parallel: Whether to use parallel processing (default: True)
+        max_workers: Override automatic worker selection (default: None for auto-selection)
 
     Returns:
         mapping from hexagon id to list of polygon ids
@@ -232,7 +283,9 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    shortcuts = compile_h3_map(data, candidates=candidates)
+    shortcuts = compile_h3_map(
+        data, candidates=candidates, use_parallel=use_parallel, max_workers=max_workers
+    )
     # Shortcut statistics will be printed in the reporting module
     return shortcuts
 
@@ -240,9 +293,13 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
 def compile_shortcuts(
     output_path: Path,
     data: TimezoneData,
+    use_parallel: bool = True,
+    max_workers: Optional[int] = None,
 ) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
-    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
+    shortcuts: ShortcutMapping = compile_shortcut_mapping(
+        data, use_parallel=use_parallel, max_workers=max_workers
+    )
     output_file: Path = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
     return shortcuts
@@ -250,4 +307,4 @@ def compile_shortcuts(
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
-    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)
+    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data, max_workers=10)

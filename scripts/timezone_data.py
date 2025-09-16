@@ -15,7 +15,7 @@ from scripts.helper_classes import Boundaries, GeoJSON, PolygonGeometry, compile
 from scripts.hex_utils import Hex
 from scripts.utils import to_numpy_polygon_repr
 
-
+import threading
 import numpy as np
 from pydantic import (
     BaseModel,
@@ -48,6 +48,8 @@ class TimezoneData(BaseModel):
 
     # Instance-based hex cache to avoid hashability issues
     hex_cache: dict = Field(default_factory=dict, exclude=True)
+    # Thread lock for hex cache to ensure thread safety in parallel processing
+    hex_cache_lock: threading.Lock = Field(default_factory=threading.Lock, exclude=True)
     # Cache for hole_registry to avoid recomputing
     hole_registry_cached: HoleRegistry = Field(default_factory=dict, exclude=True)
     # Cache for polygon boundaries to avoid expensive recomputation
@@ -510,15 +512,25 @@ class TimezoneData(BaseModel):
         This method provides instance-based caching to work around the fact that
         TimezoneData is not hashable and cannot be used with functools.lru_cache.
 
+        Thread-safe for parallel processing - uses double-checked locking pattern
+        for optimal performance.
+
         Args:
             hex_id: The H3 hexagon ID
 
         Returns:
             Hex instance for the given hex_id
         """
-        if hex_id not in self.hex_cache:
-            self.hex_cache[hex_id] = Hex.from_id(hex_id, self)
-        return self.hex_cache[hex_id]
+        # Fast path: check if already cached (read-only, no lock needed)
+        if hex_id in self.hex_cache:
+            return self.hex_cache[hex_id]
+
+        # Slow path: need to create and cache (thread-safe)
+        with self.hex_cache_lock:
+            # Double-check: another thread might have created it while we waited
+            if hex_id not in self.hex_cache:
+                self.hex_cache[hex_id] = Hex.from_id(hex_id, self)
+            return self.hex_cache[hex_id]
 
     @property
     def hole_registry(self) -> dict:
