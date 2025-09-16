@@ -42,9 +42,10 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 """
 
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Tuple, Union
 
 import numpy as np
+from numpy.typing import NDArray
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -95,6 +96,15 @@ from timezonefinder.utils import (
 from timezonefinder.zone_names import write_zone_names
 
 
+# Type aliases for better readability and conciseness
+CoordinateArray = NDArray[np.int32]  # Polygon coordinate arrays
+PolygonList = List[CoordinateArray]  # List of polygon coordinate arrays
+HoleRegistry = Dict[int, Tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
+ZoneIdArray = NDArray[np.uint16]  # Zone ID array
+BoundaryArray = NDArray[np.int32]  # Boundary coordinate array
+LengthList = List[int]  # List of coordinate counts
+HoleLengthList = List[int]  # List of hole coordinate counts
+PolynrHolesList = List[int]  # List of polygon numbers that have holes
 ShortcutMapping = Dict[int, List[int]]
 
 
@@ -118,9 +128,9 @@ class Boundaries(NamedTuple):
         return True
 
 
-def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
+def compile_bboxes(coord_list: PolygonList) -> List[Boundaries]:
     print("compiling the bounding boxes of the polygons from the coordinates...")
-    boundaries = []
+    boundaries: List[Boundaries] = []
     for coords in coord_list:
         x_coords, y_coords = coords
         y_coords = coords[1]
@@ -135,25 +145,25 @@ class TimezoneData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     all_tz_names: List[str]
-    poly_zone_ids: np.ndarray
-    polygons: List[np.ndarray]
-    polygon_lengths: List[int]
+    poly_zone_ids: ZoneIdArray
+    polygons: PolygonList
+    polygon_lengths: LengthList
     nr_of_holes: int
-    polynrs_of_holes: List[int]
-    holes: List[np.ndarray]
-    all_hole_lengths: List[int]
+    polynrs_of_holes: PolynrHolesList
+    holes: PolygonList
+    all_hole_lengths: HoleLengthList
 
     @classmethod
     def _process_hole(
         cls,
-        hole: List,
+        hole: List[List[Tuple[float, float]]],
         poly_id: int,
         hole_nr: int,
         nr_of_holes: int,
         tz_name: str,
-        polynrs_of_holes: List[int],
-        holes: List[np.ndarray],
-        all_hole_lengths: List[int],
+        polynrs_of_holes: PolynrHolesList,
+        holes: PolygonList,
+        all_hole_lengths: HoleLengthList,
     ) -> int:
         """Process a single hole within a polygon.
 
@@ -186,17 +196,17 @@ class TimezoneData(BaseModel):
     @classmethod
     def _process_polygon_with_holes(
         cls,
-        poly_with_hole: List,
+        poly_with_hole: List[List[List[Tuple[float, float]]]],
         zone_id: int,
         tz_name: str,
         poly_id: int,
-        polygons: List[np.ndarray],
-        polygon_lengths: List[int],
+        polygons: PolygonList,
+        polygon_lengths: LengthList,
         poly_zone_ids: List[int],
         nr_of_holes: int,
-        polynrs_of_holes: List[int],
-        holes: List[np.ndarray],
-        all_hole_lengths: List[int],
+        polynrs_of_holes: PolynrHolesList,
+        holes: PolygonList,
+        all_hole_lengths: HoleLengthList,
     ) -> int:
         """Process a polygon and all its holes.
 
@@ -244,16 +254,16 @@ class TimezoneData(BaseModel):
     def _process_timezone_feature(
         cls,
         zone_id: int,
-        timezone,
+        timezone: Any,  # GeoJSON Feature type
         poly_id: int,
         all_tz_names: List[str],
-        polygons: List[np.ndarray],
-        polygon_lengths: List[int],
+        polygons: PolygonList,
+        polygon_lengths: LengthList,
         poly_zone_ids: List[int],
         nr_of_holes: int,
-        polynrs_of_holes: List[int],
-        holes: List[np.ndarray],
-        all_hole_lengths: List[int],
+        polynrs_of_holes: PolynrHolesList,
+        holes: PolygonList,
+        all_hole_lengths: HoleLengthList,
     ) -> Tuple[int, int]:
         """Process a single timezone feature with all its polygons and holes.
 
@@ -332,16 +342,16 @@ class TimezoneData(BaseModel):
             TimezoneData instance with processed polygon and hole data
         """
         # Initialize data containers
-        all_tz_names = []
-        polygons: List[np.ndarray] = []
-        polygon_lengths = []
-        poly_zone_ids = []
-        nr_of_holes = 0
-        polynrs_of_holes = []
-        holes = []
-        all_hole_lengths = []
+        all_tz_names: List[str] = []
+        polygons: PolygonList = []
+        polygon_lengths: LengthList = []
+        poly_zone_ids: List[int] = []
+        nr_of_holes: int = 0
+        polynrs_of_holes: PolynrHolesList = []
+        holes: PolygonList = []
+        all_hole_lengths: HoleLengthList = []
 
-        poly_id = 0
+        poly_id: int = 0
         print("parsing data...\nprocessing holes:")
 
         # Process each timezone feature
@@ -378,7 +388,7 @@ class TimezoneData(BaseModel):
 
     @field_validator("polygons", "holes")
     @classmethod
-    def check_polygon_shapes(cls, v: List[np.ndarray]):
+    def check_polygon_shapes(cls, v: PolygonList) -> PolygonList:
         for poly in v:
             if not isinstance(poly, np.ndarray):
                 raise TypeError("Polygon must be a numpy array")
@@ -388,7 +398,7 @@ class TimezoneData(BaseModel):
                 raise ValueError("Polygon array must have shape (2, N)")
         return v
 
-    def _validate_count_consistency(self, count: int, data_list: List) -> None:
+    def _validate_count_consistency(self, count: int, data_list: List[Any]) -> None:
         """Validate that a count field matches the length of its corresponding list.
 
         Args:
@@ -410,7 +420,7 @@ class TimezoneData(BaseModel):
             raise ValueError(f"{value.__name__} cannot be negative")
 
     def _validate_minimum_coordinates(
-        self, lengths: List[int], min_coords: int, item_type: str
+        self, lengths: LengthList, min_coords: int, item_type: str
     ) -> None:
         """Validate that all items have minimum required coordinates.
 
@@ -428,7 +438,7 @@ class TimezoneData(BaseModel):
             )
 
     @model_validator(mode="after")
-    def validate_basic_counts(self):
+    def validate_basic_counts(self) -> "TimezoneData":
         self._validate_non_negative(self.nr_of_polygons)
         self._validate_non_negative(self.nr_of_zones)
         self._validate_non_negative(self.nr_of_holes)
@@ -440,7 +450,7 @@ class TimezoneData(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_polygon_data_consistency(self):
+    def validate_polygon_data_consistency(self) -> "TimezoneData":
         self._validate_count_consistency(self.nr_of_polygons, self.polygons)
         self._validate_count_consistency(self.nr_of_polygons, self.polygon_lengths)
         self._validate_count_consistency(self.nr_of_polygons, self.poly_boundaries)
@@ -448,25 +458,25 @@ class TimezoneData(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_zone_data_consistency(self):
+    def validate_zone_data_consistency(self) -> "TimezoneData":
         self._validate_count_consistency(self.nr_of_zones, self.all_tz_names)
         return self
 
     @model_validator(mode="after")
-    def validate_hole_data_consistency(self):
+    def validate_hole_data_consistency(self) -> "TimezoneData":
         self._validate_count_consistency(self.nr_of_holes, self.holes)
         self._validate_count_consistency(self.nr_of_holes, self.all_hole_lengths)
         self._validate_count_consistency(self.nr_of_holes, self.polynrs_of_holes)
         return self
 
     @model_validator(mode="after")
-    def validate_geometric_constraints(self):
+    def validate_geometric_constraints(self) -> "TimezoneData":
         self._validate_minimum_coordinates(self.polygon_lengths, 3, "polygon")
         self._validate_minimum_coordinates(self.all_hole_lengths, 3, "hole")
         return self
 
     @model_validator(mode="after")
-    def validate_zone_id_constraints(self):
+    def validate_zone_id_constraints(self) -> "TimezoneData":
         if len(self.poly_zone_ids) == 0:
             return self
 
@@ -480,7 +490,7 @@ class TimezoneData(BaseModel):
         if min_zone_id < 0:
             raise ValueError(f"Zone IDs cannot be negative, found {min_zone_id}")
 
-        last_zone_id = -1
+        last_zone_id: int = -1
         for zone_id in self.poly_zone_ids:
             if zone_id < last_zone_id:
                 raise ValueError(
@@ -490,17 +500,17 @@ class TimezoneData(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_hole_references(self):
+    def validate_hole_references(self) -> "TimezoneData":
         if not self.polynrs_of_holes:
             return self
 
-        max_poly_ref = max(self.polynrs_of_holes)
+        max_poly_ref: int = max(self.polynrs_of_holes)
         if max_poly_ref >= self.nr_of_polygons:
             raise ValueError(
                 f"Hole references polygon {max_poly_ref} but only {self.nr_of_polygons} polygons exist"
             )
 
-        min_poly_ref = min(self.polynrs_of_holes)
+        min_poly_ref: int = min(self.polynrs_of_holes)
         if min_poly_ref < 0:
             raise ValueError(
                 f"Hole polygon references cannot be negative, found {min_poly_ref}"
@@ -535,9 +545,9 @@ class TimezoneData(BaseModel):
             List of polygon indices where each zone starts, plus one final entry
             indicating where the last zone ends (i.e., total number of polygons).
         """
-        poly_nr2zone_id = []
+        poly_nr2zone_id: List[int] = []
         print("Computing where zones start and end...")
-        last_id = -1
+        last_id: int = -1
         for poly_nr, zone_id in enumerate(self.poly_zone_ids):
             if zone_id != last_id:
                 poly_nr2zone_id.append(poly_nr)
@@ -560,23 +570,23 @@ def parse_polygons_from_json(input_path: Path) -> TimezoneData:
     return TimezoneData.from_geojson(geo_json)
 
 
-def create_and_write_hole_registry(data: TimezoneData, output_path: Path):
+def create_and_write_hole_registry(data: TimezoneData, output_path: Path) -> None:
     """
     Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
     and writes it as JSON to the output path.
     """
-    hole_registry = {}
+    hole_registry: HoleRegistry = {}
     for i, poly_id in enumerate(data.polynrs_of_holes):
         try:
             amount_of_holes, hole_id = hole_registry[poly_id]
             hole_registry[poly_id] = (amount_of_holes + 1, hole_id)
         except KeyError:
             hole_registry[poly_id] = (1, i)
-    path = get_hole_registry_path(output_path)
+    path: Path = get_hole_registry_path(output_path)
     write_json(hole_registry, path)
 
 
-def to_numpy_array(values: List, dtype: str) -> np.ndarray:
+def to_numpy_array(values: List[Any], dtype: str) -> NDArray[Any]:
     """
     Converts a list of values to a numpy array with the specified dtype.
     Args:
@@ -588,54 +598,56 @@ def to_numpy_array(values: List, dtype: str) -> np.ndarray:
     return np.array(values, dtype=dtype)
 
 
-def to_bbox_vector(values: List[int]) -> np.ndarray:
+def to_bbox_vector(values: List[int]) -> BoundaryArray:
     return to_numpy_array(values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
 
 
 def convert_bboxes_to_numpy(
     bboxes: List[Boundaries],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[BoundaryArray, BoundaryArray, BoundaryArray, BoundaryArray]:
     """Converts a list of Boundaries to numpy arrays for xmax, xmin, ymax, ymin.
     Args:
         bboxes: List of Boundaries objects
     Returns:
         Tuple of numpy arrays (xmax, xmin, ymax, ymin)
     """
-    xmax_list = []
-    xmin_list = []
-    ymax_list = []
-    ymin_list = []
+    xmax_list: List[int] = []
+    xmin_list: List[int] = []
+    ymax_list: List[int] = []
+    ymin_list: List[int] = []
     for bounds in bboxes:
         xmax_list.append(bounds.xmax)
         xmin_list.append(bounds.xmin)
         ymax_list.append(bounds.ymax)
         ymin_list.append(bounds.ymin)
-    xmax = to_bbox_vector(xmax_list)
-    xmin = to_bbox_vector(xmin_list)
-    ymax = to_bbox_vector(ymax_list)
-    ymin = to_bbox_vector(ymin_list)
+    xmax: BoundaryArray = to_bbox_vector(xmax_list)
+    xmin: BoundaryArray = to_bbox_vector(xmin_list)
+    ymax: BoundaryArray = to_bbox_vector(ymax_list)
+    ymin: BoundaryArray = to_bbox_vector(ymin_list)
     return xmax, xmin, ymax, ymin
 
 
-def write_numpy_binaries(data: TimezoneData, output_path: Path):
+def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     print("Writing binary data to separate Numpy binary .npy files...")
     # some properties are very small but essential for the performance of the package
     # -> store them directly as numpy arrays (overhead is negligible) and read them into memory at runtime
 
     # ZONE_POSITIONS: where each timezone starts and ends
-    zone_positions_arr = to_numpy_array(data.zone_positions, dtype=DTYPE_FORMAT_H_NUMPY)
-    zone_positions_path = get_zone_positions_path(output_path)
+    zone_positions_arr: NDArray[Any] = to_numpy_array(
+        data.zone_positions, dtype=DTYPE_FORMAT_H_NUMPY
+    )
+    zone_positions_path: Path = get_zone_positions_path(output_path)
     store_per_polygon_vector(zone_positions_path, zone_positions_arr)
 
     # BOUNDARY_ZONE_IDS: the zone id for every polygon
     # NOTE: zone ids are stored idependently from boundaries or holes
-    zone_id_file = get_zone_ids_path(output_path)
+    zone_id_file: Path = get_zone_ids_path(output_path)
     np.save(zone_id_file, data.poly_zone_ids)
 
     # properties which are "per polygon" (boundary/hole) vectors
     # separate output directories for holes and boundaries
-    holes_dir = get_holes_dir(output_path)
-    boundaries_dir = get_boundaries_dir(output_path)
+    holes_dir: Path = get_holes_dir(output_path)
+    boundaries_dir: Path = get_boundaries_dir(output_path)
 
     holes_dir.mkdir(parents=True, exist_ok=True)
     boundaries_dir.mkdir(parents=True, exist_ok=True)
@@ -657,20 +669,20 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path):
     print("Numpy binary files written successfully")
 
 
-def write_flatbuffer_files(data: TimezoneData, output_path: Path):
+def write_flatbuffer_files(data: TimezoneData, output_path: Path) -> None:
     # separate output directories for holes and boundaries
-    holes_dir = get_holes_dir(output_path)
-    boundaries_dir = get_boundaries_dir(output_path)
+    holes_dir: Path = get_holes_dir(output_path)
+    boundaries_dir: Path = get_boundaries_dir(output_path)
 
     holes_dir.mkdir(parents=True, exist_ok=True)
     boundaries_dir.mkdir(parents=True, exist_ok=True)
 
     print("Writing binary data to flatbuffer files...")
     # Write polygon boundary coordinates to flatbuffer
-    boundary_polygon_file = get_coordinate_path(boundaries_dir)
+    boundary_polygon_file: Path = get_coordinate_path(boundaries_dir)
     write_polygon_collection_flatbuffer(boundary_polygon_file, data.polygons)
 
-    hole_polygon_file = get_coordinate_path(holes_dir)
+    hole_polygon_file: Path = get_coordinate_path(holes_dir)
     # Write holes coordinates to flatbuffer
     write_polygon_collection_flatbuffer(hole_polygon_file, data.holes)
     print("Flatbuffer files written successfully")
@@ -691,7 +703,7 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
 
 
 @time_execution
-def compile_data_files(data: TimezoneData, output_path: Path):
+def compile_data_files(data: TimezoneData, output_path: Path) -> None:
     write_zone_names(data.all_tz_names, output_path)
 
     # Write registry for holes (which polygon each hole belongs to)
@@ -705,22 +717,22 @@ def compile_data_files(data: TimezoneData, output_path: Path):
 def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_DATA_DIR,
-):
-    input_path = Path(input_path)
-    output_path = Path(output_path)
-    output_path.mkdir(parents=True, exist_ok=True)
+) -> None:
+    input_path_obj: Path = Path(input_path)
+    output_path_obj: Path = Path(output_path)
+    output_path_obj.mkdir(parents=True, exist_ok=True)
 
-    data = parse_polygons_from_json(input_path)
+    data: TimezoneData = parse_polygons_from_json(input_path_obj)
 
-    compile_data_files(data, output_path)
-    shortcuts = compile_shortcut_mapping(data)
-    output_file = get_shortcut_file_path(output_path)
+    compile_data_files(data, output_path_obj)
+    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
+    output_file: Path = get_shortcut_file_path(output_path_obj)
     write_shortcuts_flatbuffers(shortcuts, output_file)
 
-    print(f"\n\nfinished parsing timezonefinder data to {output_path}")
+    print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     write_data_report(
         shortcuts,
-        output_path,
+        output_path_obj,
         data.nr_of_polygons,
         data.nr_of_zones,
         data.polygon_lengths,
@@ -734,7 +746,9 @@ def parse_data(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="parse data directories")
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        description="parse data directories"
+    )
     parser.add_argument(
         "-inp", help="path to input JSON file", default=DEFAULT_INPUT_PATH
     )
@@ -743,6 +757,6 @@ if __name__ == "__main__":
         help="path to output folder for storing the parsed data files",
         default=DEFAULT_DATA_DIR,
     )
-    parsed_args = parser.parse_args()
+    parsed_args: argparse.Namespace = parser.parse_args()
 
     parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)
