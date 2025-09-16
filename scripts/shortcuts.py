@@ -1,4 +1,7 @@
+"""functions for compiling the h3 hexagon shortcuts"""
+
 import itertools
+from pathlib import Path
 from typing import List, Set, Tuple
 
 import h3.api.numpy_int as h3
@@ -7,14 +10,20 @@ import numpy as np
 from scripts.timezone_data import TimezoneData
 from scripts.helper_classes import Boundaries
 from scripts.configs import (
+    DEFAULT_INPUT_PATH,
     MAX_LAT,
     MAX_LNG,
     HexIdSet,
     SHORTCUT_H3_RES,
     ShortcutMapping,
+    DEFAULT_DATA_DIR,
 )
 from scripts.utils import (
     time_execution,
+)
+from timezonefinder.flatbuf.shortcut_utils import (
+    get_shortcut_file_path,
+    write_shortcuts_flatbuffers,
 )
 from timezonefinder.utils_numba import coord2int, int2coord
 
@@ -199,3 +208,16 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
     shortcuts = compile_h3_map(data, candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
     return shortcuts
+
+
+def compile_shortcuts(output_path: Path, data: TimezoneData) -> ShortcutMapping:
+    print("\ncompiling shortcuts...")
+    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
+    output_file: Path = get_shortcut_file_path(output_path)
+    write_shortcuts_flatbuffers(shortcuts, output_file)
+    return shortcuts
+
+
+if __name__ == "__main__":
+    data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
+    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)

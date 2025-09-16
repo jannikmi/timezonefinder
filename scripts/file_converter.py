@@ -41,8 +41,8 @@ from numpy.typing import NDArray
 import numpy as np
 
 from scripts.timezone_data import TimezoneData
-from scripts.shortcuts import compile_shortcut_mapping
-from scripts.helper_classes import Boundaries, GeoJSON
+from scripts.shortcuts import compile_shortcuts
+from scripts.helper_classes import Boundaries
 
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
@@ -56,11 +56,7 @@ from timezonefinder.flatbuf.polygon_utils import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
-from timezonefinder.flatbuf.shortcut_utils import (
-    get_shortcut_file_path,
-    write_shortcuts_flatbuffers,
-)
-from timezonefinder.configs import DEFAULT_DATA_DIR, ShortcutMapping
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
     get_xmin_path,
@@ -76,13 +72,6 @@ from timezonefinder.utils import (
     get_holes_dir,
 )
 from timezonefinder.zone_names import write_zone_names
-
-
-def parse_polygons_from_json(input_path: Path) -> TimezoneData:
-    """Parse the timezone polygons from the input JSON file."""
-    print(f"parsing input file: {input_path}\n...\n")
-    geo_json = GeoJSON.model_validate_json(input_path.read_text())
-    return TimezoneData.from_geojson(geo_json)
 
 
 def create_and_write_hole_registry(data: TimezoneData, output_path: Path) -> None:
@@ -230,12 +219,10 @@ def parse_data(
     output_path_obj: Path = Path(output_path)
     output_path_obj.mkdir(parents=True, exist_ok=True)
 
-    data: TimezoneData = parse_polygons_from_json(input_path_obj)
-
+    data: TimezoneData = TimezoneData.from_path(input_path_obj)
     compile_data_files(data, output_path_obj)
-    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
-    output_file: Path = get_shortcut_file_path(output_path_obj)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    shortcuts = compile_shortcuts(output_path_obj, data)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     write_data_report(

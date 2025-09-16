@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from pathlib import Path
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
@@ -278,6 +279,13 @@ class TimezoneData(BaseModel):
             holes=holes,
             all_hole_lengths=all_hole_lengths,
         )
+
+    @classmethod
+    def from_path(cls, input_path: Path) -> "TimezoneData":
+        """Parse the timezone data from the input JSON file."""
+        print(f"parsing input file: {input_path}\n...\n")
+        geo_json = GeoJSON.model_validate_json(input_path.read_text())
+        return cls.from_geojson(geo_json)
 
     @field_validator("polygons", "holes")
     @classmethod
