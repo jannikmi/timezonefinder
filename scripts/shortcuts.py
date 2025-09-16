@@ -1,29 +1,27 @@
-from typing import Optional
-
-from scripts.configs import DEBUG, MAX_LAT, MAX_LNG, HexIdSet, PolyIdSet, ZoneIdSet
-from scripts.file_converter import (
-    Boundaries,
-    ShortcutMapping,
-    TimezoneData,
-)
-from scripts.utils import check_shortcut_sorting, time_execution, to_numpy_polygon_repr
-from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
-from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.utils_numba import coord2int, int2coord
-
+import itertools
+from dataclasses import dataclass
+from typing import Optional, List, Set, Tuple
 
 import h3.api.numpy_int as h3
 import numpy as np
 
-
-import functools
-import itertools
-from dataclasses import dataclass
-from typing import List, Set, Tuple
-
-
-# lower the shortcut resolution for debugging
-SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
+from scripts.classes import Boundaries, TimezoneData
+from scripts.configs import (
+    MAX_LAT,
+    MAX_LNG,
+    HexIdSet,
+    PolyIdSet,
+    ZoneIdSet,
+    SHORTCUT_H3_RES,
+    ShortcutMapping,
+)
+from scripts.utils import (
+    check_shortcut_sorting,
+    time_execution,
+    to_numpy_polygon_repr,
+)
+from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
+from timezonefinder.utils_numba import coord2int, int2coord
 
 
 def _holes_in_poly(data: TimezoneData, poly_nr):
@@ -242,7 +240,6 @@ class Hex:
         return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
-@functools.lru_cache(maxsize=int(1e6))
 def get_hex(hex_id: int, data: TimezoneData) -> Hex:
     return Hex.from_id(hex_id, data)
 

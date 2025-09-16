@@ -149,4 +149,3 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
     assert has_coherent_sequences(zone_ids), (
         f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
     )
-    # TODO further check the ordering of the polygons
