@@ -42,6 +42,10 @@ class TimezoneData(BaseModel):
     holes: PolygonList
     all_hole_lengths: HoleLengthList
 
+    # Original float coordinates for polygons as NumPy arrays (used during compilation for H3 API calls)
+    # Each array has shape (2, N) where first row is longitude, second row is latitude
+    original_polygons: Optional[List[np.ndarray]] = Field(default=None, exclude=True)
+
     # Instance-based hex cache to avoid hashability issues
     hex_cache: dict = Field(default_factory=dict, exclude=True)
     # Cache for hole_registry to avoid recomputing
@@ -109,6 +113,7 @@ class TimezoneData(BaseModel):
         polynrs_of_holes: PolynrHolesList,
         holes: PolygonList,
         all_hole_lengths: HoleLengthList,
+        original_polygons: List[np.ndarray],
     ) -> int:
         """Process a polygon and all its holes.
 
@@ -124,11 +129,29 @@ class TimezoneData(BaseModel):
             polynrs_of_holes: List to append polygon IDs that have holes
             holes: List to append processed hole polygons
             all_hole_lengths: List to append hole coordinate counts
+            original_polygons: List to append original float coordinates
 
         Returns:
             Updated number of holes processed
         """
         # the first entry is the boundary polygon
+        # Store original coordinates as NumPy array for fast iteration
+        original_boundary_coords = poly_with_hole[0]
+        # Convert to NumPy array with shape (2, N) - same format as processed polygons
+        x_coords_orig, y_coords_orig = zip(*original_boundary_coords)
+        # Remove last coordinate if it repeats the first (closing coordinate)
+        if (
+            len(x_coords_orig) > 3
+            and x_coords_orig[0] == x_coords_orig[-1]
+            and y_coords_orig[0] == y_coords_orig[-1]
+        ):
+            x_coords_orig = x_coords_orig[:-1]
+            y_coords_orig = y_coords_orig[:-1]
+        original_coord_array = np.array(
+            [x_coords_orig, y_coords_orig], dtype=np.float64
+        )
+        original_polygons.append(original_coord_array)
+
         # NOTE: starting from here, only coordinates converted into int32 will be considered!
         # this allows using the Numba JIT util functions already here
         poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
@@ -166,6 +189,7 @@ class TimezoneData(BaseModel):
         polynrs_of_holes: PolynrHolesList,
         holes: PolygonList,
         all_hole_lengths: HoleLengthList,
+        original_polygons: List[np.ndarray],
     ) -> Tuple[int, int]:
         """Process a single timezone feature with all its polygons and holes.
 
@@ -181,6 +205,7 @@ class TimezoneData(BaseModel):
             polynrs_of_holes: List to append polygon IDs that have holes
             holes: List to append processed hole polygons
             all_hole_lengths: List to append hole coordinate counts
+            original_polygons: List to append original float coordinates
 
         Returns:
             Tuple of (updated poly_id, updated nr_of_holes)
@@ -207,6 +232,7 @@ class TimezoneData(BaseModel):
                 polynrs_of_holes,
                 holes,
                 all_hole_lengths,
+                original_polygons,
             )
             poly_id += 1
 
@@ -252,6 +278,7 @@ class TimezoneData(BaseModel):
         polynrs_of_holes: PolynrHolesList = []
         holes: PolygonList = []
         all_hole_lengths: HoleLengthList = []
+        original_polygons: List[np.ndarray] = []
 
         poly_id: int = 0
         print("parsing data...\nprocessing holes:")
@@ -270,6 +297,7 @@ class TimezoneData(BaseModel):
                 polynrs_of_holes,
                 holes,
                 all_hole_lengths,
+                original_polygons,
             )
 
             if DEBUG and zone_id >= DEBUG_ZONE_CTR_STOP:
@@ -286,6 +314,7 @@ class TimezoneData(BaseModel):
             polynrs_of_holes=polynrs_of_holes,
             holes=holes,
             all_hole_lengths=all_hole_lengths,
+            original_polygons=original_polygons,
         )
 
     @classmethod

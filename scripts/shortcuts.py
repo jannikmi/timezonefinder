@@ -221,6 +221,9 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
         mapping from hexagon id to list of polygon ids
 
     cf. https://eng.uber.com/h3/
+
+    NOTE: benchmarking parallel execution revealed no significant speedup (baseline: 13s for 40k hexes)
+        -> probably because of the fast per-hex processing time and the overhead of managing threads
     """
     print("\n\ncomputing timezone polygon index ('shortcuts')...")
 

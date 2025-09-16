@@ -169,7 +169,7 @@ class Hex:
         if not overlap:
             # also test the inverse: if any point of the polygon lies inside the hex cell
             # ATTENTION: some hex cells cannot be used as polygons in regular point in polygon algorithm!
-            overlap = any_pt_in_cell(self.data, self.id, poly_nr)
+            overlap = any_pt_in_cell(self.data, self, poly_nr)
 
         # ATTENTION: in general polygons can overlap without having included vertices
         # usually the polygon edges would need to be checked for intersections
@@ -219,27 +219,20 @@ class Hex:
         return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
-def any_pt_in_cell(data: "TimezoneData", h: int, poly_nr: int) -> bool:
+def any_pt_in_cell(data: "TimezoneData", hex_obj: Hex, poly_nr: int) -> bool:
     """
-    Optimized version using hex coordinates and fast Numba point-in-polygon test.
+    Check if any polygon points lie inside the hex cell.
 
-    Instead of checking if polygon points lie in the hex cell (expensive H3 operations),
-    we check if any hex vertices lie inside the polygon using fast Numba JIT functions.
-    This is geometrically equivalent and much faster.
+    Uses fast Numba JIT for regular cases, falls back to complete H3 API check
+    for special cases (hexagons that cross coordinate boundaries or surround poles).
     """
-    # Fast geometric pre-filter: check if bounding boxes overlap
-    poly_bounds = data.poly_boundaries[poly_nr]
-    hex_obj = data.get_hex(h)
-    hex_bounds = hex_obj.bounds
-
-    if not poly_bounds.overlaps(hex_bounds):
-        return False
-
-    # Use hex coordinates and fast Numba point-in-polygon test
-    # This is geometrically equivalent to testing polygon points in hex
-    # but uses the fast JIT-compiled point-in-polygon algorithm
-    hex_coords = hex_obj.coords
-    poly_coords = data.polygons[poly_nr]
-
-    # Use the fast Numba JIT function to test if any hex vertex is in the polygon
-    return any_pt_in_poly(hex_coords, poly_coords)
+    # NOTE: bounding boxes already checked before calling this function
+    # Use original float coordinates directly, avoiding int2coord conversion
+    # original_coords is numpy array with shape (2, N): [lngs, lats]
+    original_coords = data.original_polygons[poly_nr]
+    target_hex_id = hex_obj.id
+    resolution = hex_obj.res
+    for lng, lat in original_coords.T:
+        if h3.latlng_to_cell(lat, lng, resolution) == target_hex_id:
+            return True
+    return False

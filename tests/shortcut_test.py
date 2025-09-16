@@ -6,11 +6,9 @@ import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
-from scripts.utils import (
-    check_shortcut_sorting,
-    has_coherent_sequences,
-)
-from scripts.shortcuts import surrounds_north_pole, surrounds_south_pole
+
+from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
+from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
 from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
