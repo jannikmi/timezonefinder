@@ -25,7 +25,7 @@ from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
-from timezonefinder.utils_numba import coord2int, int2coord
+from timezonefinder.utils_numba import coord2int, int2coord, using_numba
 
 
 def get_corrected_hex_boundaries(
@@ -144,12 +144,39 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
     )
 
 
-def compile_h3_map(data: TimezoneData, candidates: Set) -> ShortcutMapping:
+def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]:
+    """
+    Process a single hex cell to find its polygon shortcuts.
+
+    Args:
+        hex_id: The H3 hexagon ID to process
+        data: The timezone data (shared read-only resource)
+
+    Returns:
+        Tuple of (hex_id, list of optimized polygon IDs)
+    """
+    # IMPORTANT: cache hexagons to avoid recomputing them
+    cell = data.get_hex(hex_id)
+    polys = list(cell.polys_in_cell)
+    polys_optimised = optimise_shortcut_ordering(data, polys)
+    check_shortcut_sorting(polys_optimised, data.poly_zone_ids)
+    return hex_id, polys_optimised
+
+
+def compile_h3_map(
+    data: TimezoneData,
+    candidates: Set,
+) -> ShortcutMapping:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
+
+    Args:
+        data: TimezoneData instance
+        candidates: Set of hex IDs to process
+        use_parallel: Whether to use parallel processing (default: True)
+        max_workers: Maximum number of worker threads (default: optimal based on benchmarks)
     """
-    from timezonefinder.utils import using_numba
 
     if not using_numba:
         print(
@@ -159,25 +186,18 @@ def compile_h3_map(data: TimezoneData, candidates: Set) -> ShortcutMapping:
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
-    def report_progress():
-        nr_candidates = len(candidates)
-        processed = total_candidates - nr_candidates
+    processed = 0
+    for hex_id in candidates:
+        hex_id, polys_optimised = process_single_hex(hex_id, data)
+        mapping[hex_id] = polys_optimised
+        processed += 1
         print(
-            f"\r{processed:,} processed\t{nr_candidates:,} remaining\t",
+            f"\r{processed:,} processed\t{total_candidates - processed:,} remaining\t",
             end="",
             flush=True,
         )
 
-    while candidates:
-        hex_id = candidates.pop()
-        # IMPORTANT: cache hexagons to avoid recomputing them
-        cell = data.get_hex(hex_id)
-        polys = list(cell.polys_in_cell)
-        polys_optimised = optimise_shortcut_ordering(data, polys)
-        check_shortcut_sorting(polys_optimised, data.poly_zone_ids)
-        mapping[hex_id] = polys_optimised
-        report_progress()
-
+    print()  # New line after progress reporting
     return mapping
 
 
@@ -194,7 +214,11 @@ def all_res_candidates(res: int) -> HexIdSet:
 def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
     """compiles h3 hexagon shortcut mapping
 
-    returns: mapping from hexagon id to list of polygon ids
+    Args:
+        data: TimezoneData instance containing polygon and timezone information
+
+    Returns:
+        mapping from hexagon id to list of polygon ids
 
     cf. https://eng.uber.com/h3/
     """
@@ -210,7 +234,10 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
     return shortcuts
 
 
-def compile_shortcuts(output_path: Path, data: TimezoneData) -> ShortcutMapping:
+def compile_shortcuts(
+    output_path: Path,
+    data: TimezoneData,
+) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
     shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
     output_file: Path = get_shortcut_file_path(output_path)

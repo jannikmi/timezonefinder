@@ -12,8 +12,8 @@ DOC_ROOT = PROJECT_ROOT / "docs"
 DATA_REPORT_FILE = DOC_ROOT / "data_report.rst"
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans-now.json"
 
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 # lower the shortcut resolution for debugging
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
