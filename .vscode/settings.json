@@ -3,6 +3,9 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}"
   ],
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}"
+  },
   "terminal.integrated.env.osx": {
     "PYTHONPATH": "${workspaceFolder}"
   }

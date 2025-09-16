@@ -3,9 +3,6 @@
     {
       "args": [],
       "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
       "name": "Python: File Converter",
       "program": "${workspaceFolder}/scripts/file_converter.py",
       "request": "launch",
@@ -18,9 +15,6 @@
         "-v"
       ],
       "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
       "justMyCode": false,
       "module": "pytest",
       "name": "run unit test",
@@ -34,9 +28,6 @@
         "-v"
       ],
       "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
       "justMyCode": false,
       "module": "pytest",
       "name": "test integration",
@@ -50,9 +41,6 @@
         "-v"
       ],
       "console": "integratedTerminal",
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      },
       "justMyCode": false,
       "module": "pytest",
       "name": "test package contents",
