@@ -46,6 +46,14 @@ class TimezoneData(BaseModel):
     hex_cache: dict = Field(default_factory=dict, exclude=True)
     # Cache for hole_registry to avoid recomputing
     hole_registry_cached: HoleRegistry = Field(default_factory=dict, exclude=True)
+    # Cache for polygon boundaries to avoid expensive recomputation
+    poly_boundaries_cached: Optional[List[Boundaries]] = Field(
+        default=None, exclude=True
+    )
+    # Cache for hole boundaries to avoid expensive recomputation
+    hole_boundaries_cached: Optional[List[Boundaries]] = Field(
+        default=None, exclude=True
+    )
 
     @classmethod
     def _process_hole(
@@ -431,12 +439,16 @@ class TimezoneData(BaseModel):
     @property
     def poly_boundaries(self) -> List[Boundaries]:
         """Compute bounding boxes for polygon boundaries."""
-        return compile_bboxes(self.polygons)
+        if self.poly_boundaries_cached is None:
+            self.poly_boundaries_cached = compile_bboxes(self.polygons)
+        return self.poly_boundaries_cached
 
     @property
     def hole_boundaries(self) -> List[Boundaries]:
         """Compute bounding boxes for holes."""
-        return compile_bboxes(self.holes)
+        if self.hole_boundaries_cached is None:
+            self.hole_boundaries_cached = compile_bboxes(self.holes)
+        return self.hole_boundaries_cached
 
     @property
     def zone_positions(self) -> List[int]:
@@ -463,7 +475,7 @@ class TimezoneData(BaseModel):
         print("...Done.\n")
         return poly_nr2zone_id
 
-    def get_hex(self, hex_id: int) -> "Hex":
+    def get_hex(self, hex_id: int) -> Hex:
         """Get a cached Hex instance for the given hex_id.
 
         This method provides instance-based caching to work around the fact that
@@ -476,7 +488,6 @@ class TimezoneData(BaseModel):
             Hex instance for the given hex_id
         """
         if hex_id not in self.hex_cache:
-            # Import here to avoid circular imports
             self.hex_cache[hex_id] = Hex.from_id(hex_id, self)
         return self.hex_cache[hex_id]
 
