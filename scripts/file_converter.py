@@ -244,31 +244,53 @@ class TimezoneData(BaseModel):
 
     @model_validator(mode="after")
     def check_lengths(self):
-        assert self.nr_of_polygons == len(
-            self.polygons
-        ), "nr_of_polygons does not match length of polygons list"
-        assert self.nr_of_polygons == len(
-            self.polygon_lengths
-        ), "nr_of_polygons does not match length of polygon_lengths list"
-        assert self.nr_of_polygons == len(
-            self.poly_boundaries
-        ), "nr_of_polygons does not match length of poly_boundaries list"
-        assert self.nr_of_polygons == len(
-            self.poly_zone_ids
-        ), "nr_of_polygons does not match length of poly_zone_ids list"
-        assert (
-            self.nr_of_zones == len(self.all_tz_names)
-        ), "nr_of_zones does not match length of all_tz_names list"
-        assert (
-            self.nr_of_holes == len(self.holes)
-        ), "nr_of_holes does not match length of holes list"
-        assert self.nr_of_holes == len(
-            self.all_hole_lengths
-        ), "nr_of_holes does not match length of all_hole_lengths list"
-        assert self.nr_of_holes == len(
-            self.polynrs_of_holes
-        ), "nr_of_holes does not match length of polynrs_of_holes list"
+        assert self.nr_of_polygons == len(self.polygons), (
+            "nr_of_polygons does not match length of polygons list"
+        )
+        assert self.nr_of_polygons == len(self.polygon_lengths), (
+            "nr_of_polygons does not match length of polygon_lengths list"
+        )
+        assert self.nr_of_polygons == len(self.poly_boundaries), (
+            "nr_of_polygons does not match length of poly_boundaries list"
+        )
+        assert self.nr_of_polygons == len(self.poly_zone_ids), (
+            "nr_of_polygons does not match length of poly_zone_ids list"
+        )
+        assert self.nr_of_zones == len(self.all_tz_names), (
+            "nr_of_zones does not match length of all_tz_names list"
+        )
+        assert self.nr_of_holes == len(self.holes), (
+            "nr_of_holes does not match length of holes list"
+        )
+        assert self.nr_of_holes == len(self.all_hole_lengths), (
+            "nr_of_holes does not match length of all_hole_lengths list"
+        )
+        assert self.nr_of_holes == len(self.polynrs_of_holes), (
+            "nr_of_holes does not match length of polynrs_of_holes list"
+        )
         return self
+
+    @property
+    def zone_positions(self) -> List[int]:
+        """Compute where each timezone starts and ends in the polygon array.
+
+        Returns:
+            List of polygon indices where each zone starts, plus one final entry
+            indicating where the last zone ends (i.e., total number of polygons).
+        """
+        poly_nr2zone_id = []
+        print("Computing where zones start and end...")
+        last_id = -1
+        for poly_nr, zone_id in enumerate(self.poly_zone_ids):
+            if zone_id != last_id:
+                poly_nr2zone_id.append(poly_nr)
+                assert zone_id >= last_id
+                last_id = int(zone_id)
+
+        # ATTENTION: add one more entry for knowing where the last zone ends!
+        poly_nr2zone_id.append(self.nr_of_polygons)
+        print("...Done.\n")
+        return poly_nr2zone_id
 
 
 def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
@@ -289,22 +311,6 @@ def parse_polygons_from_json(input_path: Path) -> TimezoneData:
     print(f"parsing input file: {input_path}\n...\n")
     geo_json = GeoJSON.model_validate_json(input_path.read_text())
     return TimezoneData.from_geojson(geo_json)
-
-
-def compute_zone_positions(data: TimezoneData) -> List[int]:
-    poly_nr2zone_id = []
-    print("Computing where zones start and end...")
-    last_id = -1
-    for poly_nr, zone_id in enumerate(data.poly_zone_ids):
-        if zone_id != last_id:
-            poly_nr2zone_id.append(poly_nr)
-            assert zone_id >= last_id
-            last_id = int(zone_id)
-
-    # ATTENTION: add one more entry for knowing where the last zone ends!
-    poly_nr2zone_id.append(data.nr_of_polygons)
-    print("...Done.\n")
-    return poly_nr2zone_id
 
 
 @time_execution
@@ -370,9 +376,9 @@ def compile_shortcut_mapping(data: TimezoneData) -> ShortcutMapping:
         max_longitude = coord2int(MAX_LNG)
 
         delta_y = abs(ymax0 - ymin0)
-        assert (
-            delta_y < max_latitude
-        ), f"longitude difference {int2coord(delta_y)} too high"
+        assert delta_y < max_latitude, (
+            f"longitude difference {int2coord(delta_y)} too high"
+        )
         delta_x = abs(xmax0 - xmin0)
         x_overflow = delta_x > max_longitude
 
@@ -666,8 +672,7 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path):
     # -> store them directly as numpy arrays (overhead is negligible) and read them into memory at runtime
 
     # ZONE_POSITIONS: where each timezone starts and ends
-    zone_positions = compute_zone_positions(data)
-    zone_positions_arr = to_numpy_array(zone_positions, dtype=DTYPE_FORMAT_H_NUMPY)
+    zone_positions_arr = to_numpy_array(data.zone_positions, dtype=DTYPE_FORMAT_H_NUMPY)
     zone_positions_path = get_zone_positions_path(output_path)
     store_per_polygon_vector(zone_positions_path, zone_positions_arr)
 
