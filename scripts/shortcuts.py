@@ -1,6 +1,8 @@
 """functions for compiling the h3 hexagon shortcuts"""
 
 import itertools
+import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Set, Tuple
 
@@ -93,22 +95,26 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[
     if len(poly_ids) <= 1:
         return poly_ids
 
-    poly_sizes = [data.polygon_lengths[i] for i in poly_ids]
-    zone_ids = [data.poly_zone_ids[i] for i in poly_ids]
-    zone_ids_unique = list(set(zone_ids))
-    zipped = list(zip(poly_ids, zone_ids, poly_sizes))
-    zone2size = {
-        i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped)))
-        for i in zone_ids_unique
-    }
-    zone_ids_sorted = sorted(zone_ids_unique, key=lambda x: zone2size[x])
-    poly_ids_sorted = []
+    polygon_lengths = data.polygon_lengths
+    zone_ids = data.poly_zone_ids
+
+    zone_buckets = defaultdict(list)
+    zone_sizes = defaultdict(int)
+
+    for poly_id in poly_ids:
+        zone_id = int(zone_ids[poly_id])
+        zone_buckets[zone_id].append(poly_id)
+        zone_sizes[zone_id] += int(polygon_lengths[poly_id])
+
+    zone_ids_sorted = sorted(zone_buckets, key=zone_sizes.__getitem__)
+    get_length = polygon_lengths.__getitem__
+    poly_ids_sorted: List[int] = []
+
     for zone_id in zone_ids_sorted:
-        # smaller polygons can be ruled out faster -> smaller polygons should come first
-        zone_entries = filter(lambda e: e[1] == zone_id, zipped)
-        zone_entries_sorted = sorted(zone_entries, key=lambda x: x[2])
-        zone_poly_ids_sorted, _, _ = zip(*zone_entries_sorted)
-        poly_ids_sorted += list(zone_poly_ids_sorted)
+        zone_poly_ids = zone_buckets[zone_id]
+        zone_poly_ids.sort(key=get_length)
+        poly_ids_sorted.extend(zone_poly_ids)
+
     return poly_ids_sorted
 
 
@@ -186,16 +192,18 @@ def compile_h3_map(
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
-    processed = 0
-    for hex_id in candidates:
+    progress_interval = max(1, total_candidates // 500)
+
+    for processed, hex_id in enumerate(candidates, start=1):
         hex_id, polys_optimised = process_single_hex(hex_id, data)
         mapping[hex_id] = polys_optimised
-        processed += 1
-        print(
-            f"\r{processed:,} processed\t{total_candidates - processed:,} remaining\t",
-            end="",
-            flush=True,
-        )
+
+        if processed % progress_interval == 0 or processed == total_candidates:
+            remaining = total_candidates - processed
+            sys.stdout.write(
+                f"\r{processed:,} processed\t{remaining:,} remaining\t"
+            )
+            sys.stdout.flush()
 
     print()  # New line after progress reporting
     return mapping

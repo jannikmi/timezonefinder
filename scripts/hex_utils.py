@@ -157,10 +157,18 @@ class Hex:
 
     @property
     def poly_candidates(self) -> Set[int]:
-        self._init_candidates()
-        real_candidates = set(filter(self.is_poly_candidate, self._poly_candidates))
-        self._poly_candidates = real_candidates
-        return self._poly_candidates
+        candidates = self._poly_candidates
+        if candidates is None:
+            self._init_candidates()
+            candidates = self._poly_candidates
+            if candidates is None:
+                return set()
+            filtered_candidates = {
+                poly_id for poly_id in candidates if self.is_poly_candidate(poly_id)
+            }
+            self._poly_candidates = filtered_candidates
+            candidates = filtered_candidates
+        return candidates
 
     def lies_in_cell(self, poly_nr: int) -> bool:
         hex_coords = self.coords
