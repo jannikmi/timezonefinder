@@ -35,7 +35,7 @@ else:
     inside_polygon = utils_numba.pt_in_poly_python
 
 
-def validate_lat(lat):
+def validate_lat(lat: float) -> None:
     if not is_valid_lat(lat):
         raise ValueError(f"The given latitude {lat} is out of bounds")
 
@@ -52,13 +52,13 @@ def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
     return lng, lat
 
 
-def close_ressource(obj: Any) -> None:
-    """Safely close a resource, ignoring errors."""
+def close_resource(obj: Any) -> None:
+    """Safely close a resource, ignoring specific expected errors."""
     if obj is None:
         return
     try:
         obj.close()
-    except Exception:
+    except (AttributeError, OSError, ValueError):
         pass
 
 

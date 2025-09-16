@@ -3,7 +3,7 @@ import contextlib
 import os
 import sys
 import tempfile
-from typing import Callable
+from typing import Callable, Generator
 
 from timezonefinder import (
     TimezoneFinderL,
@@ -14,7 +14,7 @@ from timezonefinder import (
 
 
 @contextlib.contextmanager
-def redirect_stdout_to_temp_file():
+def redirect_stdout_to_temp_file() -> Generator[str, None, None]:
     """
     Context manager that redirects stdout to a temporary file for the duration of the context.
     The temporary file is created but not deleted when the context exits.
@@ -59,7 +59,7 @@ def get_timezone_function(function_id: int) -> Callable:
     return functions[function_id]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="parse TimezoneFinder parameters")
     parser.add_argument("lng", type=float, help="longitude to be queried")
     parser.add_argument("lat", type=float, help="latitude to be queried")

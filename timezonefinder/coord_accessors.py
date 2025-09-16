@@ -84,8 +84,8 @@ class FileCoordAccessor(AbstractCoordAccessor):
 
     def cleanup(self) -> None:
         """Clean up resources."""
-        utils.close_ressource(self.coord_file)
-        utils.close_ressource(self.coord_buf)
+        utils.close_resource(self.coord_file)
+        utils.close_resource(self.coord_buf)
 
 
 class MemoryCoordAccessor(AbstractCoordAccessor):

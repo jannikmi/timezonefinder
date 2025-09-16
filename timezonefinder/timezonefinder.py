@@ -73,7 +73,7 @@ class AbstractTimezoneFinder(ABC):
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
 
     @property
-    def nr_of_zones(self):
+    def nr_of_zones(self) -> int:
         """
         Get the number of timezones.
 
@@ -306,11 +306,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return {int(k): v for k, v in hole_registry_tmp.items()}
 
     @property
-    def nr_of_polygons(self):
+    def nr_of_polygons(self) -> int:
         return len(self.boundaries)
 
     @property
-    def nr_of_holes(self):
+    def nr_of_holes(self) -> int:
         return len(self.holes)
 
     def coords_of(self, boundary_id: int = 0) -> np.ndarray:
@@ -336,7 +336,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         for i in range(amount_of_holes):
             yield first_hole_id + i
 
-    def _holes_of_poly(self, boundary_id: int):
+    def _holes_of_poly(self, boundary_id: int) -> Iterable[np.ndarray]:
         """
         Get the hole coordinates of a boundary polygon from the FlatBuffers collection.
 
