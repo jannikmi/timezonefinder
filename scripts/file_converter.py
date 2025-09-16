@@ -134,17 +134,13 @@ def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
 class TimezoneData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    nr_of_polygons: int
-    nr_of_zones: int
     all_tz_names: List[str]
     poly_zone_ids: np.ndarray
-    poly_boundaries: List[Boundaries]
     polygons: List[np.ndarray]
     polygon_lengths: List[int]
     nr_of_holes: int
     polynrs_of_holes: List[int]
     holes: List[np.ndarray]
-    hole_boundaries: List[Boundaries]
     all_hole_lengths: List[int]
 
     @classmethod
@@ -369,26 +365,14 @@ class TimezoneData(BaseModel):
 
         print("\n")
 
-        # Compile bounding boxes for polygons and holes
-        poly_boundaries = compile_bboxes(polygons)
-        hole_boundaries = compile_bboxes(holes)
-
-        # Calculate final counts
-        nr_of_polygons = len(polygon_lengths)
-        nr_of_zones = len(all_tz_names)
-
         return cls.create_validated(
-            nr_of_polygons=nr_of_polygons,
-            nr_of_zones=nr_of_zones,
             all_tz_names=all_tz_names,
             poly_zone_ids=np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY),
-            poly_boundaries=poly_boundaries,
             polygons=polygons,
             polygon_lengths=polygon_lengths,
             nr_of_holes=nr_of_holes,
             polynrs_of_holes=polynrs_of_holes,
             holes=holes,
-            hole_boundaries=hole_boundaries,
             all_hole_lengths=all_hole_lengths,
         )
 
@@ -404,115 +388,144 @@ class TimezoneData(BaseModel):
                 raise ValueError("Polygon array must have shape (2, N)")
         return v
 
-    @model_validator(mode="after")
-    def validate_data_integrity(self):
-        """Validate data integrity using Pydantic model validator.
+    def _validate_count_consistency(self, count: int, data_list: List) -> None:
+        """Validate that a count field matches the length of its corresponding list.
 
-        This method performs all validation logic in one place rather than using
-        intermediate validation calls during data processing. This ensures:
-        - Consistent validation behavior
-        - Better error reporting
-        - Clean separation between data processing and validation
+        Args:
+            count: The count value to validate
+            data_list: The list whose length should match the count
         """
-        # Validate polygon data consistency
-        if self.nr_of_polygons < 0:
-            raise ValueError("Number of polygons cannot be negative")
+        if count != len(data_list):
+            raise ValueError(
+                f"{count.__name__} ({count}) does not match length of {data_list.__name__} list ({len(data_list)})"
+            )
+
+    def _validate_non_negative(self, value: int) -> None:
+        """Validate that a value is non-negative.
+
+        Args:
+            value: The value to validate
+        """
+        if value < 0:
+            raise ValueError(f"{value.__name__} cannot be negative")
+
+    def _validate_minimum_coordinates(
+        self, lengths: List[int], min_coords: int, item_type: str
+    ) -> None:
+        """Validate that all items have minimum required coordinates.
+
+        Args:
+            lengths: List of coordinate counts
+            min_coords: Minimum required coordinates
+            item_type: Type of item (e.g., "polygon", "hole") for error messages
+        """
+        if any(length == 0 for length in lengths):
+            raise ValueError(f"Found a {item_type} with no coordinates")
+
+        if any(length < min_coords for length in lengths):
+            raise ValueError(
+                f"All {item_type}s must have at least {min_coords} coordinates"
+            )
+
+    @model_validator(mode="after")
+    def validate_basic_counts(self):
+        self._validate_non_negative(self.nr_of_polygons)
+        self._validate_non_negative(self.nr_of_zones)
+        self._validate_non_negative(self.nr_of_holes)
 
         if self.nr_of_polygons < self.nr_of_zones:
             raise ValueError(
                 f"Number of polygons ({self.nr_of_polygons}) cannot be less than number of zones ({self.nr_of_zones})"
             )
-
-        # Validate list lengths match polygon counts
-        if self.nr_of_polygons != len(self.polygons):
-            raise ValueError(
-                f"nr_of_polygons ({self.nr_of_polygons}) does not match length of polygons list ({len(self.polygons)})"
-            )
-
-        if self.nr_of_polygons != len(self.polygon_lengths):
-            raise ValueError(
-                f"nr_of_polygons ({self.nr_of_polygons}) does not match length of polygon_lengths list ({len(self.polygon_lengths)})"
-            )
-
-        if self.nr_of_polygons != len(self.poly_boundaries):
-            raise ValueError(
-                f"nr_of_polygons ({self.nr_of_polygons}) does not match length of poly_boundaries list ({len(self.poly_boundaries)})"
-            )
-
-        if self.nr_of_polygons != len(self.poly_zone_ids):
-            raise ValueError(
-                f"nr_of_polygons ({self.nr_of_polygons}) does not match length of poly_zone_ids list ({len(self.poly_zone_ids)})"
-            )
-
-        # Validate zone data consistency
-        if self.nr_of_zones != len(self.all_tz_names):
-            raise ValueError(
-                f"nr_of_zones ({self.nr_of_zones}) does not match length of all_tz_names list ({len(self.all_tz_names)})"
-            )
-
-        # Validate hole data consistency
-        if self.nr_of_holes != len(self.holes):
-            raise ValueError(
-                f"nr_of_holes ({self.nr_of_holes}) does not match length of holes list ({len(self.holes)})"
-            )
-
-        if self.nr_of_holes != len(self.all_hole_lengths):
-            raise ValueError(
-                f"nr_of_holes ({self.nr_of_holes}) does not match length of all_hole_lengths list ({len(self.all_hole_lengths)})"
-            )
-
-        if self.nr_of_holes != len(self.polynrs_of_holes):
-            raise ValueError(
-                f"nr_of_holes ({self.nr_of_holes}) does not match length of polynrs_of_holes list ({len(self.polynrs_of_holes)})"
-            )
-
-        # Validate polygon lengths are valid
-        if any(length == 0 for length in self.polygon_lengths):
-            raise ValueError("Found a polygon with no coordinates")
-
-        if any(length < 3 for length in self.polygon_lengths):
-            raise ValueError("All polygons must have at least 3 coordinates")
-
-        # Validate hole lengths are valid
-        if any(length < 3 for length in self.all_hole_lengths):
-            raise ValueError("All holes must have at least 3 coordinates")
-
-        # Validate zone ID consistency
-        if len(self.poly_zone_ids) > 0:
-            max_zone_id = int(max(self.poly_zone_ids))
-            if max_zone_id != self.nr_of_zones - 1:
-                raise ValueError(
-                    f"Maximum zone ID ({max_zone_id}) should equal nr_of_zones - 1 ({self.nr_of_zones - 1})"
-                )
-
-            min_zone_id = int(min(self.poly_zone_ids))
-            if min_zone_id < 0:
-                raise ValueError(f"Zone IDs cannot be negative, found {min_zone_id}")
-
-            # Validate zone IDs are properly ordered (non-decreasing for each zone group)
-            last_zone_id = -1
-            for zone_id in self.poly_zone_ids:
-                if zone_id < last_zone_id:
-                    raise ValueError(
-                        f"Zone IDs must be in non-decreasing order, found {zone_id} after {last_zone_id}"
-                    )
-                last_zone_id = int(zone_id)
-
-        # Validate that all hole polygon references are valid
-        if self.polynrs_of_holes:
-            max_poly_ref = max(self.polynrs_of_holes)
-            if max_poly_ref >= self.nr_of_polygons:
-                raise ValueError(
-                    f"Hole references polygon {max_poly_ref} but only {self.nr_of_polygons} polygons exist"
-                )
-
-            min_poly_ref = min(self.polynrs_of_holes)
-            if min_poly_ref < 0:
-                raise ValueError(
-                    f"Hole polygon references cannot be negative, found {min_poly_ref}"
-                )
-
         return self
+
+    @model_validator(mode="after")
+    def validate_polygon_data_consistency(self):
+        self._validate_count_consistency(self.nr_of_polygons, self.polygons)
+        self._validate_count_consistency(self.nr_of_polygons, self.polygon_lengths)
+        self._validate_count_consistency(self.nr_of_polygons, self.poly_boundaries)
+        self._validate_count_consistency(self.nr_of_polygons, self.poly_zone_ids)
+        return self
+
+    @model_validator(mode="after")
+    def validate_zone_data_consistency(self):
+        self._validate_count_consistency(self.nr_of_zones, self.all_tz_names)
+        return self
+
+    @model_validator(mode="after")
+    def validate_hole_data_consistency(self):
+        self._validate_count_consistency(self.nr_of_holes, self.holes)
+        self._validate_count_consistency(self.nr_of_holes, self.all_hole_lengths)
+        self._validate_count_consistency(self.nr_of_holes, self.polynrs_of_holes)
+        return self
+
+    @model_validator(mode="after")
+    def validate_geometric_constraints(self):
+        self._validate_minimum_coordinates(self.polygon_lengths, 3, "polygon")
+        self._validate_minimum_coordinates(self.all_hole_lengths, 3, "hole")
+        return self
+
+    @model_validator(mode="after")
+    def validate_zone_id_constraints(self):
+        if len(self.poly_zone_ids) == 0:
+            return self
+
+        max_zone_id = int(max(self.poly_zone_ids))
+        if max_zone_id != self.nr_of_zones - 1:
+            raise ValueError(
+                f"Maximum zone ID ({max_zone_id}) should equal nr_of_zones - 1 ({self.nr_of_zones - 1})"
+            )
+
+        min_zone_id = int(min(self.poly_zone_ids))
+        if min_zone_id < 0:
+            raise ValueError(f"Zone IDs cannot be negative, found {min_zone_id}")
+
+        last_zone_id = -1
+        for zone_id in self.poly_zone_ids:
+            if zone_id < last_zone_id:
+                raise ValueError(
+                    f"Zone IDs must be in non-decreasing order, found {zone_id} after {last_zone_id}"
+                )
+            last_zone_id = int(zone_id)
+        return self
+
+    @model_validator(mode="after")
+    def validate_hole_references(self):
+        if not self.polynrs_of_holes:
+            return self
+
+        max_poly_ref = max(self.polynrs_of_holes)
+        if max_poly_ref >= self.nr_of_polygons:
+            raise ValueError(
+                f"Hole references polygon {max_poly_ref} but only {self.nr_of_polygons} polygons exist"
+            )
+
+        min_poly_ref = min(self.polynrs_of_holes)
+        if min_poly_ref < 0:
+            raise ValueError(
+                f"Hole polygon references cannot be negative, found {min_poly_ref}"
+            )
+        return self
+
+    @property
+    def nr_of_polygons(self) -> int:
+        """the number of boundary polygons"""
+        return len(self.polygon_lengths)
+
+    @property
+    def nr_of_zones(self) -> int:
+        """the number of timezones"""
+        return len(self.all_tz_names)
+
+    @property
+    def poly_boundaries(self) -> List[Boundaries]:
+        """Compute bounding boxes for polygon boundaries."""
+        return compile_bboxes(self.polygons)
+
+    @property
+    def hole_boundaries(self) -> List[Boundaries]:
+        """Compute bounding boxes for holes."""
+        return compile_bboxes(self.holes)
 
     @property
     def zone_positions(self) -> List[int]:
