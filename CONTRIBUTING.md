@@ -1,80 +1,71 @@
 # Contribution Guidelines
 
-Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
+These guidelines describe how maintainers, contributors, and coding agents collaborate on timezonefinder. They extend the repository tour in `Agents.md` and focus on delivering production-ready features with strong guarantees around correctness, performance, and maintainability.
 
-You can contribute in many ways:
+## Mission & Expectations
 
-## Types of Contributions
+- timezonefinder provides accurate offline timezone lookups across platforms. Every change should preserve numerical correctness at timezone borders and remain friendly to constrained runtimes.
+- Assume your work will ship immediately. Submit only production-ready code: defensive error handling, predictable behaviour across Python versions we support, and clear fallbacks when optional accelerators (Numba, clang-based polygon checks) are missing.
+- Be explicit about trade-offs. Document assumptions in code comments or pull request notes when optimisations or heuristics change behaviour.
 
-### Report Bugs
+## Development Workflow
 
-Report bugs via [GitHub Issues](https://github.com/jannikmi/timezonefinder/issues).
+1. Fork the repository and create a feature branch: `git checkout -b my-topic`.
+2. Install tooling with `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime validation only).
+3. Activate the environment via `uv run` and work from the project root. Run targeted commands through `make` or `uv run …` to ensure reproducibility.
+4. Keep pull requests focused. Reference issue numbers and describe user-facing impact, dataset changes, and risk areas up front.
+5. Before opening a PR, run the test matrix that matches the scope of your change and ensure CI will pass. Heavy packaging checks live under the `integration` marker—run them if you touched build config or bundled data.
 
-When reporting a bug, please include:
+## Coding Standards (also for Agents)
 
-- Your version of the package, Python, and Numba (if you use it)
-- Any other details about your local setup that might be helpful in troubleshooting (for example, operating system)
-- Detailed steps to reproduce the bug
-- A detailed description of the bug (error log, stack trace, screenshots, etc.)
+### Production-Ready Implementation
 
-### Fix Bugs
+- Write complete solutions—no placeholders, commented-out experiments, or TODOs without filed issues.
+- Prefer pure functions or clearly delimited side effects. Use dependency injection instead of module-level state when possible.
+- Treat concurrency as a first-class concern. Avoid introducing shared global state; guard mutable caches and document thread expectations.
 
-Look through the GitHub issues for bugs. Anything tagged with "bug" is open to whoever wants to implement it.
+### Pythonic, Functional Design
 
-### Implement Features
+- Strive for expressive, readable code that leverages Python's standard library and idioms (`with` statements, comprehensions, `enum.Enum`, context managers).
+- Bias towards small, composable functions with explicit inputs/outputs. When mutability is required, minimise scope and communicate intent.
+- Maintain backwards-compatible APIs. Deprecations require documentation updates and tests that cover both old and new paths.
 
-Look through the GitHub issues for features. Anything tagged with "help wanted" and not assigned to anyone is open to whoever wants to implement it—leave a comment to say you have started working on it, and open a pull request as soon as you have something working so continuous integration can start building it.
+### Strong Typing & Contracts
 
-Issues without "help wanted" generally already have some code ready in the background (maybe it is not yet open source), but you can still contribute to them by explaining how you would find the fix useful, linking to known prior art, or offering other relevant help.
+- Add or refine type hints for new code. Use `typing.Protocol`, `TypedDict`, and `Literal` to capture constraints.
+- Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
+- Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
 
-### Write Documentation
+### Performance & Memory Discipline
 
-Some features might have missing or unclear documentation. You can help improve it!
+- Preserve the fast path. Profile hot code (`scripts/check_speed_*.py`, `make speedtest`) when touching polygon math or shortcut lookups.
+- Use vectorised/NumPy-aware operations and avoid quadratic fallbacks on large datasets. When performance optimisations add complexity, include comments that summarise the micro-optimisation.
+- Respect coordinate scaling constants and FlatBuffers layouts; keep performance-sensitive structures (H3 mappings, bbox filters) cache-friendly.
 
-### Submit Feedback
+### Testing & Coverage
 
-The best way to send feedback is to file an issue via [GitHub Issues](https://github.com/jannikmi/timezonefinder/issues).
+- Add targeted unit tests under `tests/` for every behavioural change. Use fixtures in `tests/auxiliaries.py` to cover edge coordinates and polygon holes.
+- Run `uv run pytest -m "not integration"` for fast feedback. Execute `uv run pytest -m "integration"` or `uv run tox` when packaging, build metadata, or binary assets change.
+- Maintain deterministic tests—mock filesystem/network access, and avoid relying on system timezone settings. If you alter CLI behaviour, update `tests/test_integration.py` accordingly.
 
-If you are proposing a feature:
+### Documentation & Communication
 
-- Explain in detail how it would work
-- Keep the scope as narrow as possible to make it easier to implement (create multiple issues if necessary)
-- Remember that this is a volunteer-driven project, and contributions are always welcome :)
+- Update `README.rst`, `docs/`, and changelog entries (`CHANGELOG.rst`) when behaviour, flags, or datasets change.
+- For data regeneration, document the timezone boundary release used, update reports via `scripts/reporting.py`, and note version bumps initiated with `uv version`.
+- Keep comments succinct but informative, especially around geometry calculations, numerical tolerances, and shortcut heuristics.
 
-## Get Started!
+## Tooling & Quality Gates
 
-Ready to contribute? Here's how to set up this project for local development.
+- Format and lint with `make hook` or the individual tools wired in `pyproject.toml` (Ruff, isort, mypy). Ensure pre-commit hooks pass before pushing.
+- Honour `.editorconfig` and keep files ASCII unless a different encoding already exists.
+- Use `rg`/`uv`-provided helpers for repository introspection; avoid introducing tool-specific dependencies without discussion.
 
-1. Fork this repo on GitHub.
-2. Clone your fork locally.
-3. Create a branch for local development:
+## Pull Request Checklist
 
-   ```sh
-   git checkout -b name-of-your-bugfix-or-feature
-   ```
+- [ ] Branch is rebased on the latest `main` and commit history is clean.
+- [ ] Code follows the standards above, with type hints, performance considerations, and Pythonic structure.
+- [ ] Tests are updated/added and pass (`pytest`, and `integration`/`tox` where relevant).
+- [ ] Documentation and changelog entries reflect the change.
+- [ ] Binary data or configuration changes are justified and the regeneration process is documented in the PR description.
 
-4. Review the instructions and notes in `publish.py`.
-5. Install `tox` and run the tests:
-
-   ```sh
-   pip install tox
-   tox
-   ```
-
-   The `tox.ini` file defines multiple test environments for different Python versions and for checking code style. During development of a feature or fix, you'll probably want to run just one environment plus the relevant code-style checks:
-
-   ```sh
-   tox -e codestyle
-   ```
-
-6. Commit your changes and push your branch to GitHub:
-
-   ```sh
-   git add .
-   git commit -m "Your detailed description of your changes."
-   git push origin name-of-your-bugfix-or-feature
-   ```
-
-7. Submit a pull request through the GitHub website. This will trigger the CI workflow, which runs the tests against all supported versions of Python.
-
-Thank you for contributing!
+Thank you for helping to keep timezonefinder robust and high-performance!
