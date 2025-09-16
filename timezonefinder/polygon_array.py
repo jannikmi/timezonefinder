@@ -30,13 +30,11 @@ class PolygonArray:
         in_memory: bool = False,
     ):
         """
-        Initialize the AbstractTimezoneFinder.
-        :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
+        Initialize the PolygonArray.
+        :param data_location: The path to the binary data files to use.
         :param in_memory: Whether to completely read and keep the coordinate data in memory as numpy.
         """
         self.in_memory = in_memory
-        self._file_handle = None
-
         self.data_location: Path = Path(data_location)
 
         xmin_path = get_xmin_path(self.data_location)
@@ -56,7 +54,11 @@ class PolygonArray:
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
-        self.coordinates.cleanup()
+        del self.coordinates
+        del self.xmin
+        del self.xmax
+        del self.ymin
+        del self.ymax
 
     def __len__(self) -> int:
         """

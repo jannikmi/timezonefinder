@@ -231,6 +231,19 @@ class AbstractTimezoneFinder(ABC):
             return None
         return self.zone_name_from_id(unique_id)
 
+    def cleanup(self) -> None:
+        """Clean up resources. Override in subclasses as needed."""
+        pass
+
+    def __enter__(self):
+        """Enter the runtime context for the TimezoneFinder."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the runtime context and clean up resources."""
+        self.cleanup()
+        return False
+
 
 class TimezoneFinderL(AbstractTimezoneFinder):
     """a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
@@ -294,6 +307,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few entries it is feasible to keep them in the memory
         self.hole_registry = self._load_hole_registry()
+
+    def __del__(self):
+        """Clean up resources when the object is destroyed."""
+        del self.boundaries
+        del self.holes
+        del self.hole_registry
 
     def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
         """

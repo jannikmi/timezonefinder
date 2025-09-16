@@ -46,6 +46,12 @@ class AbstractCoordAccessor(ABC):
         """
         pass
 
+    def __del__(self):
+        """
+        Ensure resources are cleaned up when the object is destroyed.
+        """
+        self.cleanup()
+
     @abstractmethod
     def cleanup(self) -> None:
         """Clean up resources."""
@@ -62,13 +68,22 @@ class FileCoordAccessor(AbstractCoordAccessor):
         Args:
             coordinate_file_path: Path to the coordinate file
         """
-        # Use memory-mapped file for on-demand reading
-        self.coord_file = open(coordinate_file_path, "rb")
-        # Create memory map
-        self.coord_buf = mmap.mmap(self.coord_file.fileno(), 0, access=mmap.ACCESS_READ)
-        self.polygon_collection: PolygonCollection = get_polygon_collection(
-            self.coord_buf
-        )
+        self.coordinate_file_path = coordinate_file_path
+        # Initialize file resources using proper resource management.
+        try:
+            # Use memory-mapped file for on-demand reading
+            self.coord_file: object = open(self.coordinate_file_path, "rb")
+            # Create memory map
+            self.coord_buf: mmap.mmap = mmap.mmap(
+                self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
+            )
+            self.polygon_collection: PolygonCollection = get_polygon_collection(
+                self.coord_buf
+            )
+        except Exception:
+            # Clean up any partially initialized resources
+            self.cleanup()
+            raise
 
     def __getitem__(self, idx: int) -> np.ndarray:
         """
@@ -86,6 +101,7 @@ class FileCoordAccessor(AbstractCoordAccessor):
         """Clean up resources."""
         utils.close_resource(self.coord_file)
         utils.close_resource(self.coord_buf)
+        del self.polygon_collection
 
 
 class MemoryCoordAccessor(AbstractCoordAccessor):
@@ -130,6 +146,7 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
 
     def cleanup(self) -> None:
         """Clean up resources."""
+        del self.polygons
         # Just clear the dictionary, no file resources to clean up
         if hasattr(self, "polygons"):
             self.polygons.clear()
