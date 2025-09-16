@@ -16,11 +16,11 @@ from scripts.configs import (
     HexIdSet,
     SHORTCUT_H3_RES,
     ShortcutMapping,
-    DEFAULT_DATA_DIR,
 )
 from scripts.utils import (
     time_execution,
 )
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
@@ -112,6 +112,38 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[
     return poly_ids_sorted
 
 
+def has_coherent_sequences(lst: List[int]) -> bool:
+    """
+    :return: True if equal entries in the list are not separated by entries of other values
+    """
+    if len(lst) <= 1:
+        return True
+    encountered = set()
+    # at least 2 entries
+    lst_iter = iter(lst)
+    prev = next(lst_iter)
+    for e in lst:
+        if e in encountered:
+            # the entry appeared earlier already
+            return False
+        if e != prev:
+            encountered.add(prev)
+            prev = e
+
+    return True
+
+
+def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
+    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
+    if len(polygon_ids) == 1:
+        # single polygon in the shortcut, no need to check
+        return
+    zone_ids = all_zone_ids[polygon_ids]
+    assert has_coherent_sequences(zone_ids), (
+        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
+    )
+
+
 def compile_h3_map(data: TimezoneData, candidates: Set) -> ShortcutMapping:
     """
     operate on one hex resolution
@@ -156,38 +188,6 @@ def all_res_candidates(res: int) -> HexIdSet:
     parent_res_candidates = all_res_candidates(res - 1)
     child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
     return set(itertools.chain.from_iterable(child_iter))
-
-
-def has_coherent_sequences(lst: List[int]) -> bool:
-    """
-    :return: True if equal entries in the list are not separated by entries of other values
-    """
-    if len(lst) <= 1:
-        return True
-    encountered = set()
-    # at least 2 entries
-    lst_iter = iter(lst)
-    prev = next(lst_iter)
-    for e in lst:
-        if e in encountered:
-            # the entry appeared earlier already
-            return False
-        if e != prev:
-            encountered.add(prev)
-            prev = e
-
-    return True
-
-
-def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
-    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
-    if len(polygon_ids) == 1:
-        # single polygon in the shortcut, no need to check
-        return
-    zone_ids = all_zone_ids[polygon_ids]
-    assert has_coherent_sequences(zone_ids), (
-        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
-    )
 
 
 @time_execution
