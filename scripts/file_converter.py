@@ -134,6 +134,19 @@ class Boundaries(NamedTuple):
         return True
 
 
+def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
+    print("compiling the bounding boxes of the polygons from the coordinates...")
+    boundaries = []
+    for coords in coord_list:
+        x_coords, y_coords = coords
+        y_coords = coords[1]
+        bounds = Boundaries(
+            np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
+        )
+        boundaries.append(bounds)
+    return boundaries
+
+
 class TimezoneData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -147,6 +160,7 @@ class TimezoneData(BaseModel):
     nr_of_holes: int
     polynrs_of_holes: List[int]
     holes: List[np.ndarray]
+    hole_boundaries: List[Boundaries]
     all_hole_lengths: List[int]
 
     @classmethod
@@ -205,6 +219,7 @@ class TimezoneData(BaseModel):
         print("\n")
 
         poly_boundaries = compile_bboxes(polygons)
+        hole_boundaries = compile_bboxes(holes)
 
         nr_of_polygons = len(polygon_lengths)
         nr_of_zones = len(all_tz_names)
@@ -227,6 +242,7 @@ class TimezoneData(BaseModel):
             nr_of_holes=nr_of_holes,
             polynrs_of_holes=polynrs_of_holes,
             holes=holes,
+            hole_boundaries=hole_boundaries,
             all_hole_lengths=all_hole_lengths,
         )
 
@@ -291,19 +307,6 @@ class TimezoneData(BaseModel):
         poly_nr2zone_id.append(self.nr_of_polygons)
         print("...Done.\n")
         return poly_nr2zone_id
-
-
-def compile_bboxes(coord_list: List[np.ndarray]) -> List[Boundaries]:
-    print("compiling the bounding boxes of the polygons from the coordinates...")
-    boundaries = []
-    for coords in coord_list:
-        x_coords, y_coords = coords
-        y_coords = coords[1]
-        bounds = Boundaries(
-            np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
-        )
-        boundaries.append(bounds)
-    return boundaries
 
 
 def parse_polygons_from_json(input_path: Path) -> TimezoneData:
@@ -689,10 +692,9 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path):
     holes_dir.mkdir(parents=True, exist_ok=True)
     boundaries_dir.mkdir(parents=True, exist_ok=True)
 
-    hole_boundaries = compile_bboxes(data.holes)
     # save 4 bbox vectors for holes and polygons to the respective directories
     for dir, bounds in zip(
-        [holes_dir, boundaries_dir], [hole_boundaries, data.poly_boundaries]
+        [holes_dir, boundaries_dir], [data.hole_boundaries, data.poly_boundaries]
     ):
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
