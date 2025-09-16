@@ -1,9 +1,22 @@
-from typing import Any, List, NamedTuple, Tuple, Union
-import numpy as np
-from typing_extensions import Literal
+from collections.abc import Iterable
+from scripts.configs import (
+    DEBUG,
+    DEBUG_ZONE_CTR_STOP,
+    DTYPE_FORMAT_H_NUMPY,
+    HoleLengthList,
+    HoleRegistry,
+    LengthList,
+    PolygonList,
+    PolynrHolesList,
+    ZoneIdArray,
+)
+from scripts.helper_classes import Boundaries, GeoJSON, PolygonGeometry, compile_bboxes
+from scripts.hex_utils import Hex
+from scripts.utils import to_numpy_polygon_repr
 
+
+import numpy as np
 from pydantic import (
-    AliasPath,
     BaseModel,
     ConfigDict,
     Field,
@@ -12,82 +25,8 @@ from pydantic import (
     model_validator,
 )
 
-from scripts.configs import (
-    DEBUG,
-    DEBUG_ZONE_CTR_STOP,
-    DTYPE_FORMAT_H_NUMPY,
-    ZoneIdArray,
-    LengthList,
-    HoleLengthList,
-    PolynrHolesList,
-    PolygonList,
-)
-from scripts.utils import to_numpy_polygon_repr
 
-
-class PolygonGeometry(BaseModel):
-    """data representation of a timezone geometry consisting of a single polygon with holes"""
-
-    type: Literal["Polygon"]
-    # depth: 3
-    coordinates: List[List[List[float]]]
-
-
-class MultiPolygonGeometry(BaseModel):
-    """data representation of a timezone geometry consisting of multiple polygons with holes"""
-
-    type: Literal["MultiPolygon"]
-    # depth: 4
-    coordinates: List[List[List[List[float]]]]
-
-
-class Timezone(BaseModel):
-    """data representation of a timezone"""
-
-    type: Literal["Feature"]
-    id: str = Field(..., validation_alias=AliasPath("properties", "tzid"))
-    geometry: Union[PolygonGeometry, MultiPolygonGeometry]
-
-
-class GeoJSON(BaseModel):
-    """schema for a timezone dataset in GeoJSON format"""
-
-    type: Literal["FeatureCollection"]
-    features: List[Timezone]
-
-
-class Boundaries(NamedTuple):
-    xmax: float
-    xmin: float
-    ymax: float
-    ymin: float
-
-    def overlaps(self, other: "Boundaries") -> bool:
-        if not isinstance(other, Boundaries):
-            raise TypeError
-        if self.xmin > other.xmax:
-            return False
-        if self.xmax < other.xmin:
-            return False
-        if self.ymin > other.ymax:
-            return False
-        if self.ymax < other.ymin:
-            return False
-        return True
-
-
-def compile_bboxes(coord_list: PolygonList) -> List[Boundaries]:
-    # print("compiling the bounding boxes of the polygons from the coordinates...")
-    boundaries: List[Boundaries] = []
-    for coords in coord_list:
-        x_coords, y_coords = coords
-        y_coords = coords[1]
-        bounds = Boundaries(
-            np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
-        )
-        boundaries.append(bounds)
-    return boundaries
-    # TODO further check the ordering of the polygons
+from typing import Any, List, Optional, Tuple
 
 
 class TimezoneData(BaseModel):
@@ -101,6 +40,11 @@ class TimezoneData(BaseModel):
     polynrs_of_holes: PolynrHolesList
     holes: PolygonList
     all_hole_lengths: HoleLengthList
+
+    # Instance-based hex cache to avoid hashability issues
+    hex_cache: dict = Field(default_factory=dict, exclude=True)
+    # Cache for hole_registry to avoid recomputing
+    hole_registry_cached: HoleRegistry = Field(default_factory=dict, exclude=True)
 
     @classmethod
     def _process_hole(
@@ -510,3 +454,57 @@ class TimezoneData(BaseModel):
         poly_nr2zone_id.append(self.nr_of_polygons)
         print("...Done.\n")
         return poly_nr2zone_id
+
+    def get_hex(self, hex_id: int) -> "Hex":
+        """Get a cached Hex instance for the given hex_id.
+
+        This method provides instance-based caching to work around the fact that
+        TimezoneData is not hashable and cannot be used with functools.lru_cache.
+
+        Args:
+            hex_id: The H3 hexagon ID
+
+        Returns:
+            Hex instance for the given hex_id
+        """
+        if hex_id not in self.hex_cache:
+            # Import here to avoid circular imports
+            self.hex_cache[hex_id] = Hex.from_id(hex_id, self)
+        return self.hex_cache[hex_id]
+
+    @property
+    def hole_registry(self) -> dict:
+        """
+        Creates a registry mapping each polygon id to a tuple (number of holes, first hole id).
+
+        This property computes the hole registry on-demand from the polynrs_of_holes data
+        and caches the result for subsequent calls.
+        For each polygon that has holes, it maps: polygon_id -> (amount_of_holes, first_hole_id)
+
+        Returns:
+            Dictionary mapping polygon_id -> (amount_of_holes, first_hole_id)
+        """
+        # Return cached result if already computed
+        if self.hole_registry_cached:
+            return self.hole_registry_cached
+
+        registry: HoleRegistry = {}
+        for i, poly_id in enumerate(self.polynrs_of_holes):
+            try:
+                amount_of_holes, hole_id = registry[poly_id]
+                registry[poly_id] = (amount_of_holes + 1, hole_id)
+            except KeyError:
+                registry[poly_id] = (1, i)
+
+        # Cache the result for future calls
+        self.hole_registry_cached = registry
+        return registry
+
+    def holes_in_poly(self, poly_nr: int) -> Optional[Iterable[PolygonList]]:
+        registry = self.hole_registry
+        if poly_nr not in registry:
+            return  # No holes for this polygon
+
+        hole_count, first_hole_index = registry[poly_nr]
+        for i in range(first_hole_index, first_hole_index + hole_count):
+            yield self.holes[i]

@@ -1,59 +1,22 @@
 import itertools
-from dataclasses import dataclass
-from typing import Optional, List, Set, Tuple
+from typing import List, Set, Tuple
 
 import h3.api.numpy_int as h3
 import numpy as np
 
-from scripts.classes import Boundaries, TimezoneData
+from scripts.timezone_data import TimezoneData
+from scripts.helper_classes import Boundaries
 from scripts.configs import (
     MAX_LAT,
     MAX_LNG,
     HexIdSet,
-    PolyIdSet,
-    ZoneIdSet,
     SHORTCUT_H3_RES,
     ShortcutMapping,
 )
 from scripts.utils import (
-    check_shortcut_sorting,
     time_execution,
-    to_numpy_polygon_repr,
 )
-from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
 from timezonefinder.utils_numba import coord2int, int2coord
-
-
-def _holes_in_poly(data: TimezoneData, poly_nr):
-    for i, nr in enumerate(data.polynrs_of_holes):
-        if nr == poly_nr:
-            yield data.holes[i]
-
-
-def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
-    res = h3.get_resolution(h)
-    return h3.latlng_to_cell(lat, lng, res) == h
-
-
-def surrounds_north_pole(hex_id: int) -> bool:
-    """Check if a hex cell surrounds the north pole."""
-    return lies_in_h3_cell(hex_id, lng=0.0, lat=MAX_LAT)
-
-
-def surrounds_south_pole(hex_id: int) -> bool:
-    """Check if a hex cell surrounds the south pole."""
-    return lies_in_h3_cell(hex_id, lng=0.0, lat=-MAX_LAT)
-
-
-def any_pt_in_cell(data: TimezoneData, h: int, poly_nr: int) -> bool:
-    def pt_in_cell(pt: np.ndarray) -> bool:
-        # ATTENTION: must first convert integers back to coord floats!
-        lng = int2coord(pt[0])
-        lat = int2coord(pt[1])
-        return lies_in_h3_cell(h, lng, lat)
-
-    poly = data.polygons[poly_nr]
-    return any(map(pt_in_cell, poly.T))
 
 
 def get_corrected_hex_boundaries(
@@ -108,142 +71,6 @@ def get_corrected_hex_boundaries(
     return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
 
 
-@dataclass
-class Hex:
-    id: int
-    res: int
-    coords: np.ndarray
-    bounds: Boundaries
-    x_overflow: bool
-    surr_n_pole: bool
-    surr_s_pole: bool
-    data: TimezoneData
-    _poly_candidates: Optional[PolyIdSet] = None
-    _polys_in_cell: Optional[PolyIdSet] = None
-    _zones_in_cell: Optional[ZoneIdSet] = None
-
-    @classmethod
-    def from_id(cls, id: int, data: TimezoneData):
-        res = h3.get_resolution(id)
-        coord_pairs = h3.cell_to_boundary(id)
-        # ATTENTION: (lat, lng)! pairs
-        coords = to_numpy_polygon_repr(coord_pairs, flipped=True)
-        x_coords, y_coords = coords[0], coords[1]
-        surr_n_pole = surrounds_north_pole(id)
-        surr_s_pole = surrounds_south_pole(id)
-        bounds, x_overflow = get_corrected_hex_boundaries(
-            x_coords, y_coords, surr_n_pole, surr_s_pole
-        )
-        return cls(id, res, coords, bounds, x_overflow, surr_n_pole, surr_s_pole, data)
-
-    @property
-    def is_special(self) -> bool:
-        return self.x_overflow or self.surr_n_pole or self.surr_s_pole
-
-    def _init_candidates(self):
-        """
-        here one might be tempted to only consider the actual detected zones of the parent cell
-        to narrow down choice and speed up the computation up.
-        however, the child hexagon cells protrude from the parent (cf. https://h3geo.org/docs/highlights/indexing)
-            and hence the candidate zones are different
-        solution: take the "true" parents not just the single parent
-        note: do not just take the true included polygons,
-            but only the candidates to avoid expensive point-in-polygon computations
-
-        Note: also the root level hexagon cells are too large to easily check for polygon in hex inclusion
-        (might overlap without included vertices but just intersecting edges!).
-        Taking just the smaller set of candidates is still valid (no point in polygon check)
-        """
-        if self._poly_candidates is not None:
-            # avoid overwriting initialised values
-            return
-        if self.res == 0:
-            # at the highest level all polygons should be tested
-            self._poly_candidates = set(range(self.data.nr_of_polygons))
-            return
-
-        candidates: HexIdSet = set()
-        for parent_id in self.true_parents:
-            parent_hex = get_hex(parent_id, self.data)
-            parent_polys = parent_hex.poly_candidates
-            candidates.update(parent_polys)
-
-        self._poly_candidates = candidates
-
-    def is_poly_candidate(self, poly_id: int) -> bool:
-        cell_bounds = self.bounds
-        poly_bounds = self.data.poly_boundaries[poly_id]
-        overlapping = cell_bounds.overlaps(poly_bounds)
-        return overlapping
-
-    @property
-    def poly_candidates(self) -> Set[int]:
-        self._init_candidates()
-        real_candidates = set(filter(self.is_poly_candidate, self._poly_candidates))
-        self._poly_candidates = real_candidates
-        return self._poly_candidates
-
-    def lies_in_cell(self, poly_nr: int) -> bool:
-        hex_coords = self.coords
-        poly_coords = self.data.polygons[poly_nr]
-        overlap = any_pt_in_poly(hex_coords, poly_coords)
-        if not overlap:
-            # also test the inverse: if any point of the polygon lies inside the hex cell
-            # ATTENTION: some hex cells cannot be used as polygons in regular point in polygon algorithm!
-            overlap = any_pt_in_cell(self.data, self.id, poly_nr)
-
-        # ATTENTION: in general polygons can overlap without having included vertices
-        # usually the polygon edges would need to be checked for intersections
-        # assumption: the polygons and cells have a similar size
-        # and are small enough to just check vertex inclusion
-        # valid simplification
-
-        # account for holes in polygon
-        # only check if found overlapping
-        if overlap:
-            for hole in _holes_in_poly(self.data, poly_nr):
-                # check all hex point within hole
-                if fully_contained_in_hole(hex_coords, hole):
-                    return False
-        return overlap
-
-    @property
-    def polys_in_cell(self) -> Set[int]:
-        if self._polys_in_cell is None:
-            # lazy evaluation, caching
-            self._polys_in_cell = set(filter(self.lies_in_cell, self.poly_candidates))
-        return self._polys_in_cell
-
-    @property
-    def zones_in_cell(self) -> Set[int]:
-        if self._zones_in_cell is None:
-            # lazy evaluation, caching
-            self._zones_in_cell = set(
-                map(lambda p: self.data.poly_zone_ids[p], self.polys_in_cell)
-            )
-        return self._zones_in_cell
-
-    @property
-    def true_parents(self) -> HexIdSet:
-        """
-        hexagons do not cleanly subdivide into seven finer hexagons.
-        the child hexagon cells protrude from the parent (cf. https://h3geo.org/docs/highlights/indexing)
-            and hence a cell does not have a single, but actually up to 2 "true" parents
-
-        returns: the hex ids of all parent cells which any of the cell points belong
-        """
-        if self.res == 0:
-            raise ValueError("not defined for resolution 0")
-        lower_res = self.res - 1
-        # NOTE: (lat,lng) pairs!
-        coord_pairs = h3.cell_to_boundary(self.id)
-        return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
-
-
-def get_hex(hex_id: int, data: TimezoneData) -> Hex:
-    return Hex.from_id(hex_id, data)
-
-
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[int]:
     """optimises the order of polygon ids for faster timezone checks
 
@@ -281,6 +108,13 @@ def compile_h3_map(data: TimezoneData, candidates: Set) -> ShortcutMapping:
     operate on one hex resolution
     also store results separately to divide the output data files
     """
+    from timezonefinder.utils import using_numba
+
+    if not using_numba:
+        print(
+            "NOTE: if the shortcut compilation is slow, consider installing Numba for JIT compilation\n"
+        )
+
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
@@ -295,7 +129,8 @@ def compile_h3_map(data: TimezoneData, candidates: Set) -> ShortcutMapping:
 
     while candidates:
         hex_id = candidates.pop()
-        cell = get_hex(hex_id, data)
+        # IMPORTANT: cache hexagons to avoid recomputing them
+        cell = data.get_hex(hex_id)
         polys = list(cell.polys_in_cell)
         polys_optimised = optimise_shortcut_ordering(data, polys)
         check_shortcut_sorting(polys_optimised, data.poly_zone_ids)
@@ -312,6 +147,38 @@ def all_res_candidates(res: int) -> HexIdSet:
     parent_res_candidates = all_res_candidates(res - 1)
     child_iter = (h3.cell_to_children(h) for h in parent_res_candidates)
     return set(itertools.chain.from_iterable(child_iter))
+
+
+def has_coherent_sequences(lst: List[int]) -> bool:
+    """
+    :return: True if equal entries in the list are not separated by entries of other values
+    """
+    if len(lst) <= 1:
+        return True
+    encountered = set()
+    # at least 2 entries
+    lst_iter = iter(lst)
+    prev = next(lst_iter)
+    for e in lst:
+        if e in encountered:
+            # the entry appeared earlier already
+            return False
+        if e != prev:
+            encountered.add(prev)
+            prev = e
+
+    return True
+
+
+def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
+    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
+    if len(polygon_ids) == 1:
+        # single polygon in the shortcut, no need to check
+        return
+    zone_ids = all_zone_ids[polygon_ids]
+    assert has_coherent_sequences(zone_ids), (
+        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
+    )
 
 
 @time_execution

@@ -40,15 +40,15 @@ from numpy.typing import NDArray
 
 import numpy as np
 
+from scripts.timezone_data import TimezoneData
 from scripts.shortcuts import compile_shortcut_mapping
-from scripts.classes import Boundaries, GeoJSON, TimezoneData
+from scripts.helper_classes import Boundaries, GeoJSON
 
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
     BoundaryArray,
-    HoleRegistry,
 )
 from scripts.reporting import write_data_report
 from scripts.utils import time_execution, write_json
@@ -87,18 +87,11 @@ def parse_polygons_from_json(input_path: Path) -> TimezoneData:
 
 def create_and_write_hole_registry(data: TimezoneData, output_path: Path) -> None:
     """
-    Creates a registry mapping each polygon id to a tuple (number of holes, first hole id),
-    and writes it as JSON to the output path.
+    Writes the hole registry as JSON to the output path.
+    The hole registry is a property of TimezoneData.
     """
-    hole_registry: HoleRegistry = {}
-    for i, poly_id in enumerate(data.polynrs_of_holes):
-        try:
-            amount_of_holes, hole_id = hole_registry[poly_id]
-            hole_registry[poly_id] = (amount_of_holes + 1, hole_id)
-        except KeyError:
-            hole_registry[poly_id] = (1, i)
     path: Path = get_hole_registry_path(output_path)
-    write_json(hole_registry, path)
+    write_json(data.hole_registry, path)
 
 
 def to_numpy_array(values: List[Any], dtype: str) -> NDArray[Any]:
