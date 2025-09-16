@@ -30,6 +30,14 @@ from timezonefinder.flatbuf.shortcut_utils import (
 from timezonefinder.utils_numba import coord2int, int2coord, using_numba
 
 
+try:
+    profile  # type: ignore[name-defined]
+except NameError:  # pragma: no cover - used only during profiling
+
+    def profile(func):
+        return func
+
+
 def get_corrected_hex_boundaries(
     x_coords, y_coords, surr_n_pole, surr_s_pole
 ) -> Tuple["Boundaries", bool]:
@@ -82,6 +90,7 @@ def get_corrected_hex_boundaries(
     return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
 
 
+@profile
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[int]:
     """optimises the order of polygon ids for faster timezone checks
 
@@ -150,6 +159,7 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
     )
 
 
+@profile
 def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]:
     """
     Process a single hex cell to find its polygon shortcuts.
@@ -169,6 +179,7 @@ def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]
     return hex_id, polys_optimised
 
 
+@profile
 def compile_h3_map(
     data: TimezoneData,
     candidates: Set,
@@ -192,7 +203,7 @@ def compile_h3_map(
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
-    progress_interval = max(1, total_candidates // 500)
+    progress_interval = 50
 
     for processed, hex_id in enumerate(candidates, start=1):
         hex_id, polys_optimised = process_single_hex(hex_id, data)
@@ -200,9 +211,7 @@ def compile_h3_map(
 
         if processed % progress_interval == 0 or processed == total_candidates:
             remaining = total_candidates - processed
-            sys.stdout.write(
-                f"\r{processed:,} processed\t{remaining:,} remaining\t"
-            )
+            sys.stdout.write(f"\r{processed:,} processed\t{remaining:,} remaining\t")
             sys.stdout.flush()
 
     print()  # New line after progress reporting

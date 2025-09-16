@@ -19,6 +19,14 @@ if TYPE_CHECKING:
     from scripts.timezone_data import TimezoneData
 
 
+try:
+    profile  # type: ignore[name-defined]
+except NameError:  # pragma: no cover - used only during profiling
+
+    def profile(func):  # type: ignore[misc]
+        return func
+
+
 def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
     res = h3.get_resolution(h)
     return h3.latlng_to_cell(lat, lng, res) == h
@@ -170,6 +178,7 @@ class Hex:
             candidates = filtered_candidates
         return candidates
 
+    @profile
     def lies_in_cell(self, poly_nr: int) -> bool:
         hex_coords = self.coords
         poly_coords = self.data.polygons[poly_nr]
@@ -227,20 +236,10 @@ class Hex:
         return {h3.latlng_to_cell(pt[0], pt[1], lower_res) for pt in coord_pairs}
 
 
+@profile
 def any_pt_in_cell(data: "TimezoneData", hex_obj: Hex, poly_nr: int) -> bool:
-    """
-    Check if any polygon points lie inside the hex cell.
-
-    Uses fast Numba JIT for regular cases, falls back to complete H3 API check
-    for special cases (hexagons that cross coordinate boundaries or surround poles).
-    """
-    # NOTE: bounding boxes already checked before calling this function
-    # Use original float coordinates directly, avoiding int2coord conversion
-    # original_coords is numpy array with shape (2, N): [lngs, lats]
-    original_coords = data.original_polygons[poly_nr]
+    """Check if any polygon points lie inside the hex cell via cached vertex mappings."""
     target_hex_id = hex_obj.id
     resolution = hex_obj.res
-    for lng, lat in original_coords.T:
-        if h3.latlng_to_cell(lat, lng, resolution) == target_hex_id:
-            return True
-    return False
+    vertex_hexes = data.polygon_vertex_hexes(poly_nr, resolution)
+    return target_hex_id in vertex_hexes
