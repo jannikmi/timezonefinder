@@ -6,11 +6,9 @@ import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
-from scripts import file_converter
-from scripts.utils import (
-    check_shortcut_sorting,
-    has_coherent_sequences,
-)
+
+from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
+from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
 from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
@@ -116,10 +114,10 @@ def test_unique_pole_cells():
     n_pole_cells = []
 
     for hex_id in shortcuts.keys():
-        hex = file_converter.get_hex(hex_id)
-        if hex.surr_s_pole:
+        # Check if this hex cell surrounds the poles using extracted functions
+        if surrounds_south_pole(hex_id):
             s_pole_cells.append(hex_id)
-        if hex.surr_n_pole:
+        if surrounds_north_pole(hex_id):
             n_pole_cells.append(hex_id)
 
     assert len(s_pole_cells) == 1, (

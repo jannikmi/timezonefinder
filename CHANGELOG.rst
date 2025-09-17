@@ -6,9 +6,14 @@ Changelog
 8.x.x (TBA)
 ------------------
 
+* add the support of using the TimeZonefinder class instances as context managers. added a basic usage examples
+
+
 Internal:
+
 * using abi3 (aka Python limited API) wheels to avoid a combinatory explosion with Python version. It allows the use of a single Python 3.9 base and building future-proof wheels. Thanks to `theirix <https://github.com/theirix>`__
-* using pydantic to validating and parsing the GeoJSON dataset. thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* using pydantic to validating and parsing the GeoJSON dataset. Thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
+* refactored file_converter.py to improve code quality. Thanks to `Pratyush Kumar <https://github.com/pratyushkumar211`__ for the PR.
 
 
 8.0.0 (2025-08-11)

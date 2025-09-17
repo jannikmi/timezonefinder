@@ -15,7 +15,7 @@ from timezonefinder.configs import CoordPairs, CoordLists
 TF_INSTANCE: TimezoneFinder
 
 
-def _get_tf_instance():
+def _get_tf_instance() -> TimezoneFinder:
     """Get or create the global TimezoneFinder instance
 
     Lazy initialization: delayed memory allocation until actually needed

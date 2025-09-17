@@ -22,6 +22,7 @@ def write_zone_names(
     path = get_zone_names_path(output_path)
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(zone_names))
+        f.write("\n")  # write a newline at the end of the file
 
 
 def read_zone_names(path: Path) -> List[str]:

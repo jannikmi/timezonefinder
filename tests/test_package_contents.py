@@ -59,6 +59,7 @@ UNWANTED_DIST_PATTERNS = {
     ".pre-commit-config.yaml",
     "CHANGELOG*",
     "CONTRIBUTING.*",
+    "Agents.*",
     "Makefile",
     "parse_data.sh",
     "readthedocs.yaml",

@@ -73,7 +73,7 @@ class AbstractTimezoneFinder(ABC):
         self.zone_ids = read_per_polygon_vector(zone_ids_path)
 
     @property
-    def nr_of_zones(self):
+    def nr_of_zones(self) -> int:
         """
         Get the number of timezones.
 
@@ -231,6 +231,19 @@ class AbstractTimezoneFinder(ABC):
             return None
         return self.zone_name_from_id(unique_id)
 
+    def cleanup(self) -> None:
+        """Clean up resources. Override in subclasses as needed."""
+        pass
+
+    def __enter__(self):
+        """Enter the runtime context for the TimezoneFinder."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the runtime context and clean up resources."""
+        self.cleanup()
+        return False
+
 
 class TimezoneFinderL(AbstractTimezoneFinder):
     """a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
@@ -295,6 +308,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # since there are very few entries it is feasible to keep them in the memory
         self.hole_registry = self._load_hole_registry()
 
+    def __del__(self):
+        """Clean up resources when the object is destroyed."""
+        del self.boundaries
+        del self.holes
+        del self.hole_registry
+
     def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
@@ -306,11 +325,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return {int(k): v for k, v in hole_registry_tmp.items()}
 
     @property
-    def nr_of_polygons(self):
+    def nr_of_polygons(self) -> int:
         return len(self.boundaries)
 
     @property
-    def nr_of_holes(self):
+    def nr_of_holes(self) -> int:
         return len(self.holes)
 
     def coords_of(self, boundary_id: int = 0) -> np.ndarray:
@@ -336,7 +355,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         for i in range(amount_of_holes):
             yield first_hole_id + i
 
-    def _holes_of_poly(self, boundary_id: int):
+    def _holes_of_poly(self, boundary_id: int) -> Iterable[np.ndarray]:
         """
         Get the hole coordinates of a boundary polygon from the FlatBuffers collection.
 
