@@ -1,9 +1,12 @@
 include README.rst
+include Agents.md
+include CONTRIBUTING.md
 include LICENSE
 include DATA_LICENSE
 include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.npy *.fbs *.txt *.json *.c *.h
 graft tests
+prune tests/.pytest_cache
 global-exclude __pycache__/*
 global-exclude *.pyc

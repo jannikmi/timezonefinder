@@ -38,11 +38,14 @@ timezonefinder
 
 
 
+This is a python package providing offline timezone lookups for WGS84 coordinates.
+In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
+It combines preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
+
+
+
 Notice: Looking for maintainers. Reach out if you want to contribute!
 ---------------------------------------------------------------------
-
-
-This is a python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
 
 
 Quick Guide
