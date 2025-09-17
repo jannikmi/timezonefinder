@@ -16,14 +16,16 @@ from pydantic import (
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
-    DTYPE_FORMAT_H_NUMPY,
     HoleLengthList,
     HoleRegistry,
     LengthList,
     PolygonList,
     PolynrHolesList,
     ZoneIdArray,
+    ZONE_ID_DTYPE,
+    ZONE_ID_DTYPE_NUMPY_FORMAT,
 )
+from timezonefinder.configs import zone_id_dtype_to_string
 from scripts.helper_classes import Boundaries, GeoJSON, PolygonGeometry, compile_bboxes
 from scripts.hex_utils import Hex
 from scripts.utils import to_numpy_polygon_repr
@@ -40,6 +42,7 @@ class TimezoneData(BaseModel):
     polynrs_of_holes: PolynrHolesList
     holes: PolygonList
     all_hole_lengths: HoleLengthList
+    zone_id_dtype_str: str = Field(default=ZONE_ID_DTYPE_NUMPY_FORMAT, exclude=True)
 
     # Original float coordinates for polygons as NumPy arrays (used during compilation for H3 API calls)
     # Each array has shape (2, N) where first row is longitude, second row is latitude
@@ -264,15 +267,23 @@ class TimezoneData(BaseModel):
             raise
 
     @classmethod
-    def from_geojson(cls, geo_json: GeoJSON) -> "TimezoneData":
+    def from_geojson(
+        cls, geo_json: GeoJSON, *, zone_id_dtype: np.dtype = ZONE_ID_DTYPE
+    ) -> "TimezoneData":
         """Parse GeoJSON timezone data into TimezoneData model.
 
         Args:
             geo_json: Parsed GeoJSON timezone data
+            zone_id_dtype: NumPy dtype to use for storing timezone IDs
 
         Returns:
             TimezoneData instance with processed polygon and hole data
         """
+        if not np.issubdtype(zone_id_dtype, np.unsignedinteger):
+            raise ValueError(
+                f"Zone ID dtype must be unsigned integer, got {zone_id_dtype}"
+            )
+
         # Initialize data containers
         all_tz_names: List[str] = []
         polygons: PolygonList = []
@@ -309,9 +320,18 @@ class TimezoneData(BaseModel):
 
         print("\n")
 
+        max_zone_id = len(all_tz_names) - 1
+        dtype_info = np.iinfo(zone_id_dtype)
+        if max_zone_id > dtype_info.max:
+            raise ValueError(
+                "Zone ID dtype too small: maximum zone ID "
+                f"{max_zone_id} exceeds {zone_id_dtype} capacity ({dtype_info.max}). "
+                "Use a larger dtype via --zone-id-dtype or the TIMEZONEFINDER_ZONE_ID_DTYPE env var."
+            )
+
         return cls.create_validated(
             all_tz_names=all_tz_names,
-            poly_zone_ids=np.array(poly_zone_ids, dtype=DTYPE_FORMAT_H_NUMPY),
+            poly_zone_ids=np.array(poly_zone_ids, dtype=zone_id_dtype),
             polygons=polygons,
             polygon_lengths=polygon_lengths,
             nr_of_holes=nr_of_holes,
@@ -319,14 +339,17 @@ class TimezoneData(BaseModel):
             holes=holes,
             all_hole_lengths=all_hole_lengths,
             original_polygons=original_polygons,
+            zone_id_dtype_str=zone_id_dtype_to_string(zone_id_dtype),
         )
 
     @classmethod
-    def from_path(cls, input_path: Path) -> "TimezoneData":
+    def from_path(
+        cls, input_path: Path, *, zone_id_dtype: np.dtype = ZONE_ID_DTYPE
+    ) -> "TimezoneData":
         """Parse the timezone data from the input JSON file."""
         print(f"parsing input file: {input_path}\n...\n")
         geo_json = GeoJSON.model_validate_json(input_path.read_text())
-        return cls.from_geojson(geo_json)
+        return cls.from_geojson(geo_json, zone_id_dtype=zone_id_dtype)
 
     @field_validator("polygons", "holes")
     @classmethod

@@ -7,6 +7,7 @@ Changelog
 ------------------
 
 * add the support of using the TimeZonefinder class instances as context managers. added a basic usage examples
+* zone id storage now defaults to ``uint8`` and can be overridden via ``--zone-id-dtype``/``TIMEZONEFINDER_ZONE_ID_DTYPE`` when recompiling binaries
 
 
 Internal:

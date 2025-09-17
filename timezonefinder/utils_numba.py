@@ -21,14 +21,14 @@ from timezonefinder.configs import (
 )
 
 try:
-    from numba import njit, boolean, i4, uint16, f8
+    from numba import njit, boolean, i4, f8
     from numba.types import Array
 
     using_numba = True
 except ImportError:
     using_numba = False
     # replace Numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import njit, boolean, Array, i4, uint16, f8
+    from timezonefinder._numba_replacements import njit, boolean, Array, i4, f8
 
 
 # For Fortran-ordered arrays (F-contiguous), use the 'order="F"' in the Numba signature
@@ -136,7 +136,7 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     return inside
 
 
-@njit(uint16(uint16[:]), cache=True)
+@njit(cache=True)
 def get_last_change_idx(lst: np.ndarray) -> int:
     """
     :param lst: list of entries

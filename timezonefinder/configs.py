@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -42,3 +43,45 @@ ShortcutMapping = Dict[int, np.ndarray]
 CoordPairs = List[Tuple[float, float]]
 CoordLists = List[List[float]]
 IntLists = List[List[int]]
+
+
+# zone id storage settings ---------------------------------------------------
+
+_ZONE_ID_DTYPE_ALIASES = {
+    "uint8": np.dtype("<u1"),
+    "uint16": np.dtype("<u2"),
+    "uint32": np.dtype("<u4"),
+}
+
+
+def _normalise_zone_id_dtype_key(key: str) -> str:
+    """Normalise user provided dtype keys to canonical form."""
+    return key.lower().strip()
+
+
+def get_zone_id_dtype(name: str) -> np.dtype:
+    """Return the configured numpy dtype for storing zone IDs."""
+
+    try:
+        return _ZONE_ID_DTYPE_ALIASES[_normalise_zone_id_dtype_key(name)]
+    except KeyError as exc:  # pragma: no cover - defensive, validated on import
+        valid = ", ".join(sorted(_ZONE_ID_DTYPE_ALIASES))
+        raise ValueError(
+            f"Unsupported zone id dtype '{name}'. Choose one of: {valid}"
+        ) from exc
+
+
+def zone_id_dtype_to_string(dtype: np.dtype) -> str:
+    """Return the little-endian numpy dtype string for serialisation."""
+
+    return dtype.newbyteorder("<").str
+
+
+def available_zone_id_dtype_names() -> Tuple[str, ...]:
+    """Return the supported zone id dtype names."""
+
+    return tuple(sorted(_ZONE_ID_DTYPE_ALIASES))
+
+
+DEFAULT_ZONE_ID_DTYPE_NAME = os.getenv("TIMEZONEFINDER_ZONE_ID_DTYPE", "uint8")
+DEFAULT_ZONE_ID_DTYPE = get_zone_id_dtype(DEFAULT_ZONE_ID_DTYPE_NAME)

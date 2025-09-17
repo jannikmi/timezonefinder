@@ -44,10 +44,6 @@ class i4(SubscriptAndCallable):
     pass
 
 
-class uint16(SubscriptAndCallable):
-    pass
-
-
 class boolean(SubscriptAndCallable):
     pass
 
