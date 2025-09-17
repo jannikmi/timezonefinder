@@ -1,4 +1,4 @@
-namespace timezonefinder.flatbuf;
+namespace timezonefinder.flatbuf.generated.shortcuts;
 
 // mapping from shortcut id to a list of polygon ids
 table ShortcutEntry {

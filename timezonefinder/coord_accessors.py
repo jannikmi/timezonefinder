@@ -13,8 +13,10 @@ from typing import Dict
 import numpy as np
 
 from timezonefinder import utils
-from timezonefinder.flatbuf.PolygonCollection import PolygonCollection
-from timezonefinder.flatbuf.polygon_utils import (
+from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
+    PolygonCollection,
+)
+from timezonefinder.flatbuf.io.polygons import (
     get_polygon_collection,
     read_polygon_array_from_binary,
 )

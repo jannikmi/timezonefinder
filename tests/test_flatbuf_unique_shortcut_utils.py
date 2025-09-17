@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from timezonefinder.flatbuf.unique_shortcut_utils import (
+from timezonefinder.flatbuf.io.unique_shortcuts import (
     read_unique_shortcuts_binary,
     write_unique_shortcuts_flatbuffers,
 )

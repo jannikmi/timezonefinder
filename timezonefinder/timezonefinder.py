@@ -19,11 +19,11 @@ from timezonefinder.configs import (
     CoordPairs,
 )
 
-from timezonefinder.flatbuf.shortcut_utils import (
+from timezonefinder.flatbuf.io.shortcuts import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
-from timezonefinder.flatbuf.unique_shortcut_utils import (
+from timezonefinder.flatbuf.io.unique_shortcuts import (
     get_unique_shortcut_file_path,
     read_unique_shortcuts_binary,
 )

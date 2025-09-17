@@ -1,4 +1,4 @@
-namespace timezonefinder.flatbuf;
+namespace timezonefinder.flatbuf.generated.unique;
 
 enum ZoneIdWidth : ubyte {
   UINT8 = 1,

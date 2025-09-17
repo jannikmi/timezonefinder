@@ -7,7 +7,7 @@ import flatbuffers
 import numpy as np
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.UniqueShortcutCollection import (
+from timezonefinder.flatbuf.generated.unique.UniqueShortcutCollection import (
     UniqueShortcutCollection,
     UniqueShortcutCollectionAddEntries,
     UniqueShortcutCollectionAddWidth,
@@ -16,13 +16,13 @@ from timezonefinder.flatbuf.UniqueShortcutCollection import (
     UniqueShortcutCollectionStart,
     UniqueShortcutCollectionStartEntriesVector,
 )
-from timezonefinder.flatbuf.UniqueShortcutEntry import (
+from timezonefinder.flatbuf.generated.unique.UniqueShortcutEntry import (
     UniqueShortcutEntryAddHexId,
     UniqueShortcutEntryAddZoneIndex,
     UniqueShortcutEntryEnd,
     UniqueShortcutEntryStart,
 )
-from timezonefinder.flatbuf.ZoneIdWidth import ZoneIdWidth
+from timezonefinder.flatbuf.generated.unique.ZoneIdWidth import ZoneIdWidth
 
 
 _ZONE_ID_WIDTH_TO_DTYPE = {
@@ -40,7 +40,7 @@ _DTYPE_TO_ZONE_ID_WIDTH = {
 def get_unique_shortcut_file_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
     """Return the path to the unique shortcut FlatBuffer binary file."""
 
-    return output_path / "shortcuts_unique_zone.fbs"
+    return output_path / "unique_shortcuts.fbs"
 
 
 def _normalise_zone_id_dtype(dtype: np.dtype) -> np.dtype:

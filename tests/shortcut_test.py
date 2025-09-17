@@ -10,11 +10,11 @@ import pytest
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
 from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.flatbuf.shortcut_utils import (
+from timezonefinder.flatbuf.io.shortcuts import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
-from timezonefinder.flatbuf.unique_shortcut_utils import (
+from timezonefinder.flatbuf.io.unique_shortcuts import (
     get_unique_shortcut_file_path,
     read_unique_shortcuts_binary,
 )

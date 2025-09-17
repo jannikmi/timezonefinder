@@ -23,11 +23,11 @@ from scripts.utils import (
     time_execution,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.shortcut_utils import (
+from timezonefinder.flatbuf.io.shortcuts import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
 )
-from timezonefinder.flatbuf.unique_shortcut_utils import (
+from timezonefinder.flatbuf.io.unique_shortcuts import (
     get_unique_shortcut_file_path,
     write_unique_shortcuts_flatbuffers,
 )
