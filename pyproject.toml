@@ -61,6 +61,7 @@ dev = [
     "ruff",
     "cibuildwheel",
     "pydantic>=2.11.7",
+    "line-profiler>=5.0.0",
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",

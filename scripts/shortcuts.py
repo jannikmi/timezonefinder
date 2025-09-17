@@ -1,8 +1,10 @@
 """functions for compiling the h3 hexagon shortcuts"""
 
 import itertools
+import sys
+from collections import defaultdict
 from pathlib import Path
-from typing import List, Set, Tuple, Optional
+from typing import List, Set, Tuple
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -26,6 +28,14 @@ from timezonefinder.flatbuf.shortcut_utils import (
     write_shortcuts_flatbuffers,
 )
 from timezonefinder.utils_numba import coord2int, int2coord, using_numba
+
+
+try:
+    profile  # type: ignore[name-defined]
+except NameError:  # pragma: no cover - used only during profiling
+
+    def profile(func):
+        return func
 
 
 def get_corrected_hex_boundaries(
@@ -80,6 +90,7 @@ def get_corrected_hex_boundaries(
     return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
 
 
+@profile
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[int]:
     """optimises the order of polygon ids for faster timezone checks
 
@@ -93,22 +104,26 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[
     if len(poly_ids) <= 1:
         return poly_ids
 
-    poly_sizes = [data.polygon_lengths[i] for i in poly_ids]
-    zone_ids = [data.poly_zone_ids[i] for i in poly_ids]
-    zone_ids_unique = list(set(zone_ids))
-    zipped = list(zip(poly_ids, zone_ids, poly_sizes))
-    zone2size = {
-        i: sum(map(lambda e: e[2], filter(lambda e: e[1] == i, zipped)))
-        for i in zone_ids_unique
-    }
-    zone_ids_sorted = sorted(zone_ids_unique, key=lambda x: zone2size[x])
-    poly_ids_sorted = []
+    polygon_lengths = data.polygon_lengths
+    zone_ids = data.poly_zone_ids
+
+    zone_buckets = defaultdict(list)
+    zone_sizes = defaultdict(int)
+
+    for poly_id in poly_ids:
+        zone_id = int(zone_ids[poly_id])
+        zone_buckets[zone_id].append(poly_id)
+        zone_sizes[zone_id] += int(polygon_lengths[poly_id])
+
+    zone_ids_sorted = sorted(zone_buckets, key=zone_sizes.__getitem__)
+    get_length = polygon_lengths.__getitem__
+    poly_ids_sorted: List[int] = []
+
     for zone_id in zone_ids_sorted:
-        # smaller polygons can be ruled out faster -> smaller polygons should come first
-        zone_entries = filter(lambda e: e[1] == zone_id, zipped)
-        zone_entries_sorted = sorted(zone_entries, key=lambda x: x[2])
-        zone_poly_ids_sorted, _, _ = zip(*zone_entries_sorted)
-        poly_ids_sorted += list(zone_poly_ids_sorted)
+        zone_poly_ids = zone_buckets[zone_id]
+        zone_poly_ids.sort(key=get_length)
+        poly_ids_sorted.extend(zone_poly_ids)
+
     return poly_ids_sorted
 
 
@@ -144,6 +159,7 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
     )
 
 
+@profile
 def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]:
     """
     Process a single hex cell to find its polygon shortcuts.
@@ -163,9 +179,8 @@ def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]
     return hex_id, polys_optimised
 
 
-def compile_h3_map(
-    data: TimezoneData, candidates: Set, max_workers: Optional[int] = None
-) -> ShortcutMapping:
+@profile
+def compile_h3_map(data: TimezoneData, candidates: Set[int]) -> ShortcutMapping:
     """
     operate on one hex resolution
     also store results separately to divide the output data files
@@ -184,62 +199,16 @@ def compile_h3_map(
     mapping: ShortcutMapping = {}
     total_candidates = len(candidates)
 
-    if max_workers is None:
-        import os
+    progress_interval = 50
 
-        cpu_count = os.cpu_count() or 1
-        max_workers = cpu_count
-    print(
-        f"Using {'sequential' if max_workers == 1 else 'parallel'} processing with {max_workers} worker{'s' if max_workers > 1 else ''}..."
-    )
-    if max_workers == 1:
-        processed = 0
-        for hex_id in candidates:
-            hex_id, polys_optimised = process_single_hex(hex_id, data)
-            mapping[hex_id] = polys_optimised
-            processed += 1
-            print(
-                f"\r{processed:,} processed\t{total_candidates - processed:,} remaining\t",
-                end="",
-                flush=True,
-            )
-    else:
-        # Use parallel processing with thread-safe hex cache
-        import concurrent.futures
-        import threading
+    for processed, hex_id in enumerate(candidates, start=1):
+        hex_id, polys_optimised = process_single_hex(hex_id, data)
+        mapping[hex_id] = polys_optimised
 
-        progress_lock = threading.Lock()
-        processed = 0
-
-        def report_progress():
-            nonlocal processed
-            with progress_lock:
-                processed += 1
-                remaining = total_candidates - processed
-                print(
-                    f"\r{processed:,} processed\t{remaining:,} remaining\t",
-                    end="",
-                    flush=True,
-                )
-
-        # Process hex cells in parallel with thread-safe hex cache
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_hex = {
-                executor.submit(process_single_hex, hex_id, data): hex_id
-                for hex_id in candidates
-            }
-
-            # Collect results as they complete
-            for future in concurrent.futures.as_completed(future_to_hex):
-                try:
-                    hex_id, polys_optimised = future.result()
-                    mapping[hex_id] = polys_optimised
-                    report_progress()
-                except Exception as exc:
-                    hex_id = future_to_hex[future]
-                    print(f"\nHex {hex_id} generated an exception: {exc}")
-                    raise
+        if processed % progress_interval == 0 or processed == total_candidates:
+            remaining = total_candidates - processed
+            sys.stdout.write(f"\r{processed:,} processed\t{remaining:,} remaining\t")
+            sys.stdout.flush()
 
     print()  # New line after progress reporting
     return mapping
@@ -256,7 +225,7 @@ def all_res_candidates(res: int) -> HexIdSet:
 
 @time_execution
 def compile_shortcut_mapping(
-    data: TimezoneData, use_parallel: bool = True, max_workers: Optional[int] = None
+    data: TimezoneData,
 ) -> ShortcutMapping:
     """compiles h3 hexagon shortcut mapping with optimized parallel processing
 
@@ -283,9 +252,7 @@ def compile_shortcut_mapping(
         f"reached desired resolution {SHORTCUT_H3_RES}.\n"
         "storing mapping to timezone polygons for every hexagon candidate at this resolution (-> 'full coverage')"
     )
-    shortcuts = compile_h3_map(
-        data, candidates=candidates, use_parallel=use_parallel, max_workers=max_workers
-    )
+    shortcuts = compile_h3_map(data, candidates=candidates)
     # Shortcut statistics will be printed in the reporting module
     return shortcuts
 
@@ -293,13 +260,9 @@ def compile_shortcut_mapping(
 def compile_shortcuts(
     output_path: Path,
     data: TimezoneData,
-    use_parallel: bool = True,
-    max_workers: Optional[int] = None,
 ) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
-    shortcuts: ShortcutMapping = compile_shortcut_mapping(
-        data, use_parallel=use_parallel, max_workers=max_workers
-    )
+    shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
     output_file: Path = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
     return shortcuts
@@ -307,4 +270,4 @@ def compile_shortcuts(
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
-    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data, max_workers=10)
+    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)
