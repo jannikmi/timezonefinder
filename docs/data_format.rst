@@ -85,9 +85,10 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes
 2. **Shortcuts**: Spatial index using H3 hexagons (``shortcuts.fbs``)
-3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons:
-4. **Zone Names**: Text file listing the timezone names
-5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
+3. **Unique Shortcut Zones**: Fast lookup table returning a timezone immediately when all polygons in a hexagon share the same zone (``shortcuts_unique_zone.fbs``)
+4. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
+5. **Zone Names**: Text file listing the timezone names
+6. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
 
 
 Coordinate Representation
@@ -126,6 +127,7 @@ Spatial Indexing
 ----------------
 
 * ``shortcuts.fbs``: FlatBuffer binary file mapping H3 hexagon IDs to lists of polygon IDs that intersect with each hexagon
+* ``shortcuts_unique_zone.fbs``: FlatBuffer binary file containing the subset of H3 cells whose polygons all belong to the same timezone; stores the zone ID byte-width in the file header so the runtime can honour the configured ``zone_id`` dtype
 
 Other Files
 -----------

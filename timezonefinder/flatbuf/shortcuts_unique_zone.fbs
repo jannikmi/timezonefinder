@@ -1,0 +1,20 @@
+namespace timezonefinder.flatbuf;
+
+enum ZoneIdWidth : ubyte {
+  UINT8 = 1,
+  UINT16 = 2,
+  UINT32 = 4
+}
+
+table UniqueShortcutEntry {
+  hex_id: ulong;
+  zone_index: uint;
+}
+
+table UniqueShortcutCollection {
+  width: ZoneIdWidth = UINT8;
+  zone_ids: [ubyte];
+  entries: [UniqueShortcutEntry];
+}
+
+root_type UniqueShortcutCollection;

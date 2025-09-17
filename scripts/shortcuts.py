@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -26,6 +26,10 @@ from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.shortcut_utils import (
     get_shortcut_file_path,
     write_shortcuts_flatbuffers,
+)
+from timezonefinder.flatbuf.unique_shortcut_utils import (
+    get_unique_shortcut_file_path,
+    write_unique_shortcuts_flatbuffers,
 )
 from timezonefinder.utils_numba import coord2int, int2coord, using_numba
 
@@ -257,6 +261,23 @@ def compile_shortcut_mapping(
     return shortcuts
 
 
+def compute_unique_shortcut_mapping(
+    shortcuts: ShortcutMapping, zone_ids: np.ndarray
+) -> Dict[int, int]:
+    """Derive a mapping from hex id to a unique zone id when present."""
+
+    unique_map: Dict[int, int] = {}
+    for hex_id, polygon_ids in shortcuts.items():
+        if len(polygon_ids) == 0:
+            continue
+        polygon_zone_ids = zone_ids[np.asarray(polygon_ids, dtype=np.int64)]
+        first_zone = int(polygon_zone_ids[0])
+        if np.all(polygon_zone_ids == first_zone):
+            unique_map[hex_id] = first_zone
+
+    return unique_map
+
+
 def compile_shortcuts(
     output_path: Path,
     data: TimezoneData,
@@ -265,6 +286,11 @@ def compile_shortcuts(
     shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
     output_file: Path = get_shortcut_file_path(output_path)
     write_shortcuts_flatbuffers(shortcuts, output_file)
+    unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
+    unique_output_file = get_unique_shortcut_file_path(output_path)
+    write_unique_shortcuts_flatbuffers(
+        unique_mapping, data.poly_zone_ids.dtype, unique_output_file
+    )
     return shortcuts
 
 
