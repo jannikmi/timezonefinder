@@ -21,6 +21,7 @@ The primary lookup flow converts query coordinates to scaled int32 values, colle
 ## Development Workflow
 - useful commands are documented in the `Makefile`
 - Install tooling via `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime only); extras `numba` and `pytz` live in `pyproject.toml`.
+- all python commands should be run via `uv run`
 - Day-to-day tests: `uv run pytest -m "not integration"`; heavy packaging checks: `uv run pytest -m "integration"` or `uv run tox`.
 - Format/lint: Ruff, isort, mypy, and pre-commit hooks are wired through `pyproject.toml` and the `Makefile` targets (`make hook`).
 - Docs: build with `(cd docs && make html)`; badges in `docs/badges.rst` stay in sync manually with `README.rst`.

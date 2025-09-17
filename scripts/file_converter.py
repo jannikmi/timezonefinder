@@ -48,7 +48,11 @@ from scripts.configs import (
     DEFAULT_INPUT_PATH,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
+    ZONE_ID_DTYPE,
+    ZONE_ID_DTYPE_CHOICES,
+    ZONE_ID_DTYPE_NAME,
     BoundaryArray,
+    resolve_zone_id_dtype,
 )
 from scripts.reporting import write_data_report
 from scripts.utils import time_execution, write_json
@@ -124,6 +128,16 @@ def convert_bboxes_to_numpy(
     return xmax, xmin, ymax, ymin
 
 
+def _coerce_zone_id_dtype(zone_id_dtype: Union[str, np.dtype, None]) -> np.dtype:
+    """Normalise zone id dtype configuration into a numpy dtype."""
+
+    if zone_id_dtype is None:
+        return ZONE_ID_DTYPE
+    if isinstance(zone_id_dtype, str):
+        return resolve_zone_id_dtype(zone_id_dtype)
+    return np.dtype(zone_id_dtype)
+
+
 def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     print("Writing binary data to separate Numpy binary .npy files...")
     # some properties are very small but essential for the performance of the package
@@ -150,9 +164,12 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     boundaries_dir.mkdir(parents=True, exist_ok=True)
 
     # save 4 bbox vectors for holes and polygons to the respective directories
-    for dir, bounds in zip(
-        [holes_dir, boundaries_dir], [data.hole_boundaries, data.poly_boundaries]
-    ):
+    boundary_sources = [
+        (holes_dir, data.hole_boundaries),
+        (boundaries_dir, data.poly_boundaries),
+    ]
+
+    for dir, bounds in boundary_sources:
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
             convert_bboxes_to_numpy(bounds)
@@ -214,12 +231,18 @@ def compile_data_files(data: TimezoneData, output_path: Path) -> None:
 def parse_data(
     input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
     output_path: Union[Path, str] = DEFAULT_DATA_DIR,
+    zone_id_dtype: Union[str, np.dtype, None] = ZONE_ID_DTYPE_NAME,
 ) -> None:
     input_path_obj: Path = Path(input_path)
     output_path_obj: Path = Path(output_path)
     output_path_obj.mkdir(parents=True, exist_ok=True)
 
-    data: TimezoneData = TimezoneData.from_path(input_path_obj)
+    resolved_zone_id_dtype = _coerce_zone_id_dtype(zone_id_dtype)
+    print(f"Using zone id dtype: {resolved_zone_id_dtype}")
+
+    data: TimezoneData = TimezoneData.from_path(
+        input_path_obj, zone_id_dtype=resolved_zone_id_dtype
+    )
     compile_data_files(data, output_path_obj)
 
     shortcuts = compile_shortcuts(output_path_obj, data)
@@ -252,6 +275,16 @@ if __name__ == "__main__":
         help="path to output folder for storing the parsed data files",
         default=DEFAULT_DATA_DIR,
     )
+    parser.add_argument(
+        "--zone-id-dtype",
+        choices=ZONE_ID_DTYPE_CHOICES,
+        default=ZONE_ID_DTYPE_NAME,
+        help="unsigned integer dtype for timezone IDs",
+    )
     parsed_args: argparse.Namespace = parser.parse_args()
 
-    parse_data(input_path=parsed_args.inp, output_path=parsed_args.out)
+    parse_data(
+        input_path=parsed_args.inp,
+        output_path=parsed_args.out,
+        zone_id_dtype=parsed_args.zone_id_dtype,
+    )

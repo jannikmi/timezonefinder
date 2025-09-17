@@ -3,7 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 import pytest
 
-from scripts.configs import DTYPE_FORMAT_H_NUMPY
+from scripts.configs import ZONE_ID_DTYPE
 from scripts.utils import convert2ints, convert_polygon
 from tests.auxiliaries import (
     convert_inside_polygon_input,
@@ -277,7 +277,7 @@ def test_rectify_coords_invalid(lng, lat):
     ],
 )
 def test_get_last_change_idx(entry_list, expected):
-    array = np.array(entry_list, dtype=DTYPE_FORMAT_H_NUMPY)
+    array = np.array(entry_list, dtype=ZONE_ID_DTYPE)
     assert utils.get_last_change_idx(array) == expected
 
 

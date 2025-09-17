@@ -110,7 +110,11 @@ Polygon Data
 ------------
 
 * ``coordinates.fbs``: FlatBuffer binary file containing all polygon coordinates
-* ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs
+* ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
+  unsigned integers (``uint8`` by default for the reduced dataset); pass
+  ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
+  ``TIMEZONEFINDER_ZONE_ID_DTYPE`` when compiling custom data if more than
+  256 timezones are required.
 * ``zone_positions.npy``: NumPy array indicating where each timezone's polygons start and end
 
 Boundaries Information
