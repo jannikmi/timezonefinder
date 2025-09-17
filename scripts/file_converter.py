@@ -164,9 +164,12 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     boundaries_dir.mkdir(parents=True, exist_ok=True)
 
     # save 4 bbox vectors for holes and polygons to the respective directories
-    for dir, bounds in zip(
-        [holes_dir, boundaries_dir], [data.hole_boundaries, data.poly_boundaries]
-    ):
+    boundary_sources = [
+        (holes_dir, data.hole_boundaries),
+        (boundaries_dir, data.poly_boundaries),
+    ]
+
+    for dir, bounds in boundary_sources:
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
             convert_bboxes_to_numpy(bounds)
