@@ -76,8 +76,9 @@ clean:
 # compile flatbuffers files:
 flatbuf:
 	@echo "Compiling FlatBuffer schemas..."
-	@flatc --python --gen-mutable timezonefinder/flatbuf/polygon_schema.fbs
-	@flatc --python --gen-mutable timezonefinder/flatbuf/shortcut_schema.fbs
+	@flatc --python --gen-mutable -o . timezonefinder/flatbuf/schemas/polygons.fbs
+	@flatc --python --gen-mutable -o . timezonefinder/flatbuf/schemas/shortcuts.fbs
+	@flatc --python --gen-mutable -o . timezonefinder/flatbuf/schemas/unique_shortcuts.fbs
 
 builsdist:
 	@echo "Building single tar.gz distribution..."

@@ -1,7 +1,7 @@
 import struct
 import numpy as np
 import pytest
-from timezonefinder.flatbuf.polygon_utils import (
+from timezonefinder.flatbuf.io.polygons import (
     get_polygon_collection,
     write_polygon_collection_flatbuffer,
     read_polygon_array_from_binary,

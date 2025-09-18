@@ -11,8 +11,8 @@ from typing import Callable, Dict, List
 
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
-from timezonefinder.flatbuf.polygon_utils import get_coordinate_path
-from timezonefinder.flatbuf.shortcut_utils import get_shortcut_file_path
+from timezonefinder.flatbuf.io.polygons import get_coordinate_path
+from timezonefinder.flatbuf.io.shortcuts import get_shortcut_file_path
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
