@@ -153,31 +153,19 @@ class AbstractTimezoneFinder(ABC):
         zone_id = self.zone_id_of(boundary_id)
         return self.zone_name_from_id(zone_id)
 
-    def _shortcut_hex_id(self, *, lng: float, lat: float) -> int:
-        """Return the shortcut hex id containing the given coordinates."""
-
-        return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-    def _lookup_unique_shortcut_zone(self, hex_id: int) -> Optional[int]:
-        """Return the unique zone id for the given shortcut hex if available."""
-
-        return self.unique_shortcut_zone_ids.get(hex_id)
-
-    def _lookup_shortcut_boundaries(self, hex_id: int) -> np.ndarray:
-        """Return the boundary ids for the given shortcut hex."""
-
-        return self.shortcut_mapping[hex_id]
-
     def get_boundaries_in_shortcut(self, *, lng: float, lat: float) -> np.ndarray:
         """
         Get the boundary polygon IDs in the shortcut corresponding to the given coordinates.
+
+        NOTE: rather than calling this utility function, we inline these calls in the performance critical hot path
+        -> avoid tuple creation, function call overhead
 
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: An array of boundary polygon IDs.
         """
-        hex_id = self._shortcut_hex_id(lng=lng, lat=lat)
-        return self._lookup_shortcut_boundaries(hex_id)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        return self.shortcut_mapping[hex_id]
 
     def most_common_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
         """
@@ -187,12 +175,15 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The most common zone ID or None if no polygons exist in the shortcut.
         """
-        hex_id = self._shortcut_hex_id(lng=lng, lat=lat)
-        unique_zone_id = self._lookup_unique_shortcut_zone(hex_id)
+        # Inline fast-path to skip helper overhead (dict lookup only once)
+        # Inline fast-path to minimize function-call overhead in hot path
+        # Inline fast-path to avoid helper indirection in hot path
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        unique_zone_id = self.unique_shortcut_zone_ids.get(hex_id)
         if unique_zone_id is not None:
             return unique_zone_id
 
-        polys = self._lookup_shortcut_boundaries(hex_id)
+        polys = self.shortcut_mapping[hex_id]
         if len(polys) == 0:
             return None
         # Note: boundary polygons are sorted from small to big in the shortcuts (grouped by zone)
@@ -208,12 +199,14 @@ class AbstractTimezoneFinder(ABC):
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :return: The unique zone ID or None if no polygons exist in the shortcut.
         """
-        hex_id = self._shortcut_hex_id(lng=lng, lat=lat)
-        unique_zone_id = self._lookup_unique_shortcut_zone(hex_id)
+        # Inline fast-path to skip helper overhead (dict lookup only once)
+        # Inline fast-path to minimize helper overhead in hot path
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        unique_zone_id = self.unique_shortcut_zone_ids.get(hex_id)
         if unique_zone_id is not None:
             return unique_zone_id
 
-        polys = self._lookup_shortcut_boundaries(hex_id)
+        polys = self.shortcut_mapping[hex_id]
         if len(polys) == 0:
             return None
         if len(polys) == 1:
@@ -521,11 +514,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = self._shortcut_hex_id(lng=lng, lat=lat)
-        unique_zone_id = self._lookup_unique_shortcut_zone(hex_id)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        unique_zone_id = self.unique_shortcut_zone_ids.get(hex_id)
         if unique_zone_id is not None:
             return self.zone_name_from_id(unique_zone_id)
-        possible_boundaries = self._lookup_shortcut_boundaries(hex_id)
+        possible_boundaries = self.shortcut_mapping[hex_id]
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:
             # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
@@ -578,9 +571,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        possible_boundaries = self.get_boundaries_in_shortcut(lng=lng, lat=lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        possible_boundaries = self.shortcut_mapping[hex_id]
         nr_possible_boundaries = len(possible_boundaries)
-
         if nr_possible_boundaries == 0:
             # Note: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
             return None
