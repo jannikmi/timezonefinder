@@ -8,6 +8,7 @@ Changelog
 
 * add the support of using the TimeZonefinder class instances as context managers. added a basic usage examples
 * zone id storage now defaults to ``uint8`` and can be overridden via ``--zone-id-dtype``/``TIMEZONEFINDER_ZONE_ID_DTYPE`` when recompiling binaries
+* relax ``cffi`` upper bound to allow the 2.x series (minimum stays at ``1.15.1``) so downstream packages pinning ``cffi>=2.0`` resolve cleanly
 
 
 Internal:
