@@ -1,4 +1,4 @@
-namespace timezonefinder.flatbuf;
+namespace timezonefinder.flatbuf.generated.polygons;
 
 table Polygon {
   // combined x and y coordinates stored as a single vector

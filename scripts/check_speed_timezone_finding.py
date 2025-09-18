@@ -136,7 +136,7 @@ def test_timezone_finding_speed(
             RESULT_TEMPLATE.format(
                 func_label,
                 f"{t_avg:.1e}",
-                f"{pts_p_sec_k:.1f}k",
+                f"{pts_p_sec_k:.0f}k",
             )
         )
 

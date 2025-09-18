@@ -56,7 +56,7 @@ from scripts.configs import (
 )
 from scripts.reporting import write_data_report
 from scripts.utils import time_execution, write_json
-from timezonefinder.flatbuf.polygon_utils import (
+from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )

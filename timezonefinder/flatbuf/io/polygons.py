@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import List, Union
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.Polygon import (
+from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,
     PolygonAddCoords,
     PolygonStartCoordsVector,
 )
-from timezonefinder.flatbuf.PolygonCollection import (
+from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
     PolygonCollectionStart,
     PolygonCollectionEnd,

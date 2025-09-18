@@ -7,14 +7,14 @@ from typing import Dict, List
 import flatbuffers
 import numpy as np
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.ShortcutEntry import (
+from timezonefinder.flatbuf.generated.shortcuts.ShortcutEntry import (
     ShortcutEntryStart,
     ShortcutEntryEnd,
     ShortcutEntryAddHexId,
     ShortcutEntryAddPolyIds,
     ShortcutEntryStartPolyIdsVector,
 )
-from timezonefinder.flatbuf.ShortcutCollection import (
+from timezonefinder.flatbuf.generated.shortcuts.ShortcutCollection import (
     ShortcutCollection,
     ShortcutCollectionStart,
     ShortcutCollectionEnd,
@@ -93,7 +93,7 @@ def read_shortcuts_binary(
     with open(file_path, "rb") as f:
         buf = f.read()
 
-    collection = ShortcutCollection.GetRootAsShortcutCollection(buf, 0)
+    collection = ShortcutCollection.GetRootAs(buf, 0)
 
     shortcut_mapping = {}
     for i in range(collection.EntriesLength()):

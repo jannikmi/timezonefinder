@@ -5,7 +5,7 @@ import numpy as np
 
 from timezonefinder import utils
 from timezonefinder.coord_accessors import AbstractCoordAccessor, create_coord_accessor
-from timezonefinder.flatbuf.polygon_utils import (
+from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
 )
 from timezonefinder.np_binary_helpers import (
