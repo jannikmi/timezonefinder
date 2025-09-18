@@ -10,7 +10,7 @@ from typing import Dict, List
 import numpy as np
 import pytest
 
-from timezonefinder.flatbuf.shortcut_utils import (
+from timezonefinder.flatbuf.io.shortcuts import (
     write_shortcuts_flatbuffers,
     read_shortcuts_binary,
 )

@@ -10,15 +10,21 @@ import pytest
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
 from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.flatbuf.shortcut_utils import (
+from timezonefinder.flatbuf.io.shortcuts import (
     get_shortcut_file_path,
     read_shortcuts_binary,
+)
+from timezonefinder.flatbuf.io.unique_shortcuts import (
+    get_unique_shortcut_file_path,
+    read_unique_shortcuts_binary,
 )
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.utils_numba import int2coord
 
 shortcut_file_path = get_shortcut_file_path()
 shortcuts = read_shortcuts_binary(shortcut_file_path)
+unique_shortcut_file_path = get_unique_shortcut_file_path()
+unique_shortcuts = read_unique_shortcuts_binary(unique_shortcut_file_path)
 
 VERBOSE_TESTING = True
 
@@ -138,6 +144,19 @@ def test_shortcut_uniqueness():
             )
 
     assert not duplicates, f"Shortcut uniqueness errors: {duplicates[:5]}"
+
+
+def test_unique_shortcut_consistency(tf):
+    """Ensure the unique shortcut map matches shortcut polygon membership."""
+
+    assert len(unique_shortcuts) > 0
+
+    for hex_id, zone_id in unique_shortcuts.items():
+        assert hex_id in shortcuts
+        polygon_ids = shortcuts[hex_id]
+        assert len(polygon_ids) > 0
+        polygon_zones = tf.zone_ids[polygon_ids]
+        assert np.all(polygon_zones == zone_id)
 
 
 @pytest.mark.parametrize(
