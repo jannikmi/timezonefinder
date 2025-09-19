@@ -38,6 +38,7 @@ from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
 from timezonefinder.timezonefinder import TimezoneFinder
 
+
 # Resolutions above 5 are intentionally excluded because the index size explodes.
 # ``MIN_RESOLUTION`` may be raised for debug runs, but the first stored
 # resolution must contain *all* H3 cells to guarantee that every query has a
@@ -45,9 +46,9 @@ from timezonefinder.timezonefinder import TimezoneFinder
 MIN_RESOLUTION = (
     0
     if DEBUG
-    else 3  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
+    else 0  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
-MAX_RESOLUTION = 2 if DEBUG else 3
+MAX_RESOLUTION = 2 if DEBUG else 5
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
