@@ -34,6 +34,11 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CSV_PATH = ROOT / "plots" / "hierarchical_metrics.csv"
 
+try:
+    from prototypes.shortcut_split_bfs_bench import RESOLUTIONS as BENCHMARK_RESOLUTIONS
+except ImportError:  # pragma: no cover - fallback for standalone usage
+    BENCHMARK_RESOLUTIONS = None
+
 
 BASE_METRIC_COLUMNS: tuple[str, ...] = (
     "mean_throughput_kpts",
@@ -65,6 +70,31 @@ def load_metrics(csv_path: Path) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     ensure_metrics_present(df, ("min_res", "max_res", "binary_size_bytes"))
     df["binary_size_mib"] = df["binary_size_bytes"] / (1024**2)
+    if BENCHMARK_RESOLUTIONS is not None:
+        allowed = set(BENCHMARK_RESOLUTIONS)
+        # Filtering here keeps existing CSVs usable when the benchmark's resolution window shrinks,
+        # so there is no need to rerun the benchmark just to regenerate metrics.
+        df = df[df["min_res"].isin(allowed) & df["max_res"].isin(allowed)]
+        expected_pairs = {
+            (min_res, max_res)
+            for min_res in allowed
+            for max_res in allowed
+            if max_res >= min_res
+        }
+        present_pairs = set(zip(df["min_res"], df["max_res"]))
+        missing_pairs = sorted(expected_pairs - present_pairs)
+        if missing_pairs:
+            formatted = ", ".join(f"({a}, {b})" for a, b in missing_pairs[:10])
+            suffix = "" if len(missing_pairs) <= 10 else ", ..."
+            print(
+                "Warning: metrics CSV is missing "
+                f"{len(missing_pairs)} expected (min_res, max_res) pairs "
+                f"({formatted}{suffix})."
+            )
+            print(
+                "         Rerun 'uv run python prototypes/shortcut_split_bfs_bench.py' "
+                "to refresh the metrics."
+            )
     ensure_metrics_present(df, BASE_METRIC_COLUMNS)
     return df
 
