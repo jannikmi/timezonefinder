@@ -28,7 +28,8 @@ import plotly.io as pio
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CSV_PATH = ROOT / "plots" / "hierarchical_metrics.csv"
 
-METRIC_COLUMNS: tuple[str, ...] = (
+
+BASE_METRIC_COLUMNS: tuple[str, ...] = (
     "mean_throughput_kpts",
     "median_ns",
     "max_ns",
@@ -58,14 +59,14 @@ def load_metrics(csv_path: Path) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     ensure_metrics_present(df, ("min_res", "max_res", "binary_size_bytes"))
     df["binary_size_mib"] = df["binary_size_bytes"] / (1024**2)
-    ensure_metrics_present(df, METRIC_COLUMNS)
+    ensure_metrics_present(df, BASE_METRIC_COLUMNS)
     return df
 
 
-def show_scatter_matrix(df: pd.DataFrame) -> None:
+def show_scatter_matrix(df: pd.DataFrame, metrics: list[str]) -> None:
     fig = px.scatter_matrix(
         df,
-        dimensions=list(METRIC_COLUMNS),
+        dimensions=metrics,
         color="min_res",
         symbol="max_res",
         hover_data={col: True for col in df.columns},
@@ -91,11 +92,11 @@ def show_resolution_scatter(df: pd.DataFrame, metric: str) -> None:
     fig.show()
 
 
-def show_parallel_coordinates(df: pd.DataFrame) -> None:
+def show_parallel_coordinates(df: pd.DataFrame, metrics: list[str]) -> None:
     fig = px.parallel_coordinates(
         df,
         color="mean_throughput_kpts",
-        dimensions=["min_res", "max_res", *METRIC_COLUMNS],
+        dimensions=["min_res", "max_res", *metrics],
         color_continuous_scale=px.colors.sequential.Viridis,
         title="Parallel coordinates across metrics",
     )
@@ -108,14 +109,17 @@ def main() -> None:
     df = load_metrics(csv_path)
     print(f"Loaded {len(df)} (min_res, max_res) combinations. Opening figures...")
 
+    res_check_cols = sorted(col for col in df.columns if col.startswith("res_checks_r"))
+    metrics = list(BASE_METRIC_COLUMNS) + res_check_cols
+
     # Prefer opening in the browser if running from the CLI.
     if pio.renderers.default in {"notebook", "notebook_connected"}:
         pio.renderers.default = "browser"
 
-    show_scatter_matrix(df)
+    show_scatter_matrix(df, metrics)
     show_resolution_scatter(df, "mean_throughput_kpts")
     show_resolution_scatter(df, "median_ns")
-    show_parallel_coordinates(df)
+    show_parallel_coordinates(df, metrics)
 
 
 if __name__ == "__main__":
