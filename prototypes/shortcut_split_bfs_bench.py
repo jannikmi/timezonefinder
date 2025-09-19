@@ -101,22 +101,20 @@ class IndexStats:
 def _create_entry_array(
     data: TimezoneData,
     polygon_ids: Sequence[int],
-    is_unique: bool,
-) -> np.ndarray | None:
+) -> tuple[np.ndarray | None, bool]:
     if not polygon_ids:
-        return None
+        return None, True
 
     ordered = optimise_shortcut_ordering(data, polygon_ids)
     polygon_array = np.asarray(ordered, dtype=np.uint16)
+    zone_candidates = data.poly_zone_ids[polygon_array]
+    zone_candidates = np.asarray(zone_candidates, dtype=np.uint16)
 
-    if is_unique:
-        zone_candidates = data.poly_zone_ids[polygon_array]
-        zone_candidates = np.asarray(zone_candidates, dtype=np.uint16)
-        if zone_candidates.size > 0:
-            zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint16)
-            return zone_entry
+    if zone_candidates.size > 0 and np.all(zone_candidates == zone_candidates[0]):
+        zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint16)
+        return zone_entry, True
 
-    return polygon_array
+    return polygon_array, False
 
 
 def build_hierarchical_index(
@@ -138,10 +136,8 @@ def build_hierarchical_index(
             continue
 
         hex_obj = data.get_hex(hex_id)
-        zones_in_cell = hex_obj.zones_in_cell
-        is_unique = len(zones_in_cell) <= 1
         polygons_in_cell = list(hex_obj.polys_in_cell)
-        entry_array = _create_entry_array(data, polygons_in_cell, is_unique)
+        entry_array, is_unique = _create_entry_array(data, polygons_in_cell)
 
         if cfg.min_res <= res <= cfg.max_res and entry_array is not None:
             entries_for_res[hex_id] = entry_array
