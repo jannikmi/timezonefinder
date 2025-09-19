@@ -44,9 +44,9 @@ from timezonefinder.timezonefinder import TimezoneFinder
 MIN_RESOLUTION = (
     0
     if DEBUG
-    else 1  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
+    else 3  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
-MAX_RESOLUTION = 2 if DEBUG else 5
+MAX_RESOLUTION = 2 if DEBUG else 6
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
@@ -94,6 +94,9 @@ class IndexStats:
     possible_counts_per_res: dict[int, int]
     stored_counts_per_res: dict[int, int]
     missing_counts_per_res: dict[int, int]
+
+
+ENTRY_KEY_SIZE_BYTES = np.dtype(np.int64).itemsize
 
 
 def _create_entry_array(
@@ -231,7 +234,7 @@ def compute_index_stats(index: dict[int, dict[int, np.ndarray]]) -> IndexStats:
             else:
                 polygon_entries += 1
                 polygon_id_count += length
-            size_bytes += int(payload.nbytes)
+            size_bytes += ENTRY_KEY_SIZE_BYTES + int(payload.nbytes)
 
         entries_per_res[res] = len(entries)
         zone_entries_per_res[res] = zone_entries
@@ -532,7 +535,8 @@ def test_compute_index_stats_counts() -> None:
     stats = compute_index_stats(index)
     assert stats.zone_entries_per_res[0] == 1
     assert stats.polygon_entries_per_res[0] == 1
-    assert stats.size_per_res[0] == 6
+    expected_key_bytes = ENTRY_KEY_SIZE_BYTES
+    assert stats.size_per_res[0] == expected_key_bytes * 2 + (2 + 4)
     assert stats.polygon_entries_per_res[1] == 1
     assert stats.polygon_id_counts_per_res[1] == 3
 
