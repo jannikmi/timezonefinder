@@ -19,11 +19,12 @@ Adjust ``DEFAULT_CSV_PATH`` below if the metrics CSV lives elsewhere.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
+from plotly.graph_objects import Figure
 import numpy as np
 import seaborn as sns
 import matplotlib
@@ -59,6 +60,20 @@ def ensure_metrics_present(df: pd.DataFrame, columns: Iterable[str]) -> None:
     missing = [col for col in columns if col not in df.columns]
     if missing:
         raise KeyError("Missing required columns in metrics CSV: " + ", ".join(missing))
+
+
+def _configure_legend(fig: Figure, *, title: str | None = None) -> None:
+    legend: dict[str, Any] = {
+        "orientation": "h",
+        "x": 0.5,
+        "xanchor": "center",
+        "y": 1.05,
+        "yanchor": "bottom",
+        "itemsizing": "constant",
+    }
+    if title is not None:
+        legend["title"] = title
+    fig.update_layout(legend=legend)
 
 
 def load_metrics(csv_path: Path) -> pd.DataFrame:
@@ -110,6 +125,7 @@ def show_scatter_matrix(df: pd.DataFrame, metrics: list[str]) -> None:
     )
     fig.update_traces(diagonal_visible=False, showupperhalf=False)
     fig.update_layout(height=900, width=1200)
+    _configure_legend(fig, title="Legend")
     fig.show()
 
 
@@ -168,8 +184,8 @@ def show_resolution_scatter(df: pd.DataFrame, metric: str) -> None:
     fig.update_layout(
         yaxis=dict(dtick=1),
         xaxis=dict(dtick=1),
-        legend=dict(title="Marker size = binary size (MiB)", itemsizing="constant"),
     )
+    _configure_legend(fig, title="Marker size = binary size (MiB)")
     fig.show()
 
 
@@ -181,6 +197,7 @@ def show_parallel_coordinates(df: pd.DataFrame, metrics: list[str]) -> None:
         color_continuous_scale=px.colors.sequential.Viridis,
         title="Parallel coordinates across metrics",
     )
+    _configure_legend(fig)
     fig.show()
 
 
@@ -197,7 +214,7 @@ def show_size_throughput_scatter(
         hover_data={col: True for col in df.columns},
         title=title,
     )
-    fig.update_layout(legend=dict(title="min_res / max_res", itemsizing="constant"))
+    _configure_legend(fig, title="min_res / max_res")
     fig.show()
 
 
@@ -257,7 +274,7 @@ def save_size_throughput_plots(df: pd.DataFrame, output_dir: Path) -> None:
     raw_sizes = plot_df["binary_size_mib"].fillna(0.0)
     positive = raw_sizes[raw_sizes > 0]
     min_positive = positive.min() if not positive.empty else 1.0
-    plot_df["plot_size"] = np.where(raw_sizes > 0, raw_sizes, min_positive)
+    plot_df["binary size MiB"] = np.where(raw_sizes > 0, raw_sizes, min_positive)
 
     def _scatter(x: str, y: str, filename: str, xlabel: str, ylabel: str) -> None:
         plt.figure(figsize=(8, 6))
@@ -267,7 +284,7 @@ def save_size_throughput_plots(df: pd.DataFrame, output_dir: Path) -> None:
             y=y,
             hue="min_res",
             style="max_res",
-            size="plot_size",
+            size="binary size MiB",
             sizes=(40, 400),
             palette="viridis",
             legend="brief",
