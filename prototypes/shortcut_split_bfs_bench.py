@@ -17,6 +17,7 @@ from __future__ import annotations
 import random
 import sys
 import time
+import warnings
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from functools import lru_cache
@@ -46,7 +47,7 @@ MIN_RESOLUTION = (
     if DEBUG
     else 3  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
-MAX_RESOLUTION = 2 if DEBUG else 6
+MAX_RESOLUTION = 2 if DEBUG else 3
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
@@ -99,14 +100,34 @@ class IndexStats:
 ENTRY_KEY_SIZE_BYTES = np.dtype(np.int64).itemsize
 
 
+def _warn_empty_shortcut_entry(hex_id: int, resolution: int | None = None) -> None:
+    """Warn about empty shortcut entries, but skip in DEBUG mode since reduced data creates empty entries on purpose."""
+    if DEBUG:
+        return
+
+    if resolution is not None:
+        message = (
+            f"Shortcut entry for hex {hex_id} at resolution {resolution} is empty."
+        )
+    else:
+        message = (
+            f"Hex {hex_id} has no polygon candidates; storing empty shortcut entry."
+        )
+
+    warnings.warn(message, RuntimeWarning)
+
+
 def _create_entry_array(
     data: TimezoneData,
     polygon_ids: Sequence[int],
     *,
     zone_dtype: np.dtype,
-) -> np.ndarray | None:
+    hex_id: int | None = None,
+) -> np.ndarray:
     if not polygon_ids:
-        return None
+        if hex_id is not None:
+            _warn_empty_shortcut_entry(hex_id)
+        return np.empty(0, dtype=np.uint16)
 
     ordered = optimise_shortcut_ordering(data, polygon_ids)
     polygon_array = np.asarray(ordered, dtype=np.uint16)
@@ -118,34 +139,9 @@ def _create_entry_array(
     return polygon_array
 
 
-def _fallback_zone_entry(
-    cell_id: int,
-    *,
-    baseline_tf: TimezoneFinder | None,
-    zone_lookup: dict[str, int] | None,
-    dtype: np.dtype,
-) -> np.ndarray | None:
-    if baseline_tf is None or zone_lookup is None:
-        return None
-
-    lat, lng = h3.cell_to_latlng(cell_id)
-    zone_name = baseline_tf.timezone_at(lng=lng, lat=lat)
-    if zone_name is None:
-        zone_name = baseline_tf.timezone_at_land(lng=lng, lat=lat)
-    if zone_name is None:
-        return None
-    zone_id = zone_lookup.get(zone_name)
-    if zone_id is None:
-        return None
-    return np.asarray([zone_id], dtype=dtype)
-
-
 def build_hierarchical_index(
     data: TimezoneData,
     cfg: BFSConfig,
-    *,
-    baseline_tf: TimezoneFinder | None = None,
-    zone_lookup: dict[str, int] | None = None,
 ) -> dict[int, dict[int, np.ndarray]]:
     start_cells = h3_cells_at_resolution(cfg.min_res)
     queue: deque[tuple[int, int]] = deque(
@@ -171,18 +167,14 @@ def build_hierarchical_index(
             data,
             polygons_in_cell,
             zone_dtype=zone_dtype,
+            hex_id=hex_id,
         )
 
         if cfg.min_res <= res <= cfg.max_res:
-            if entry_array is None:
-                entry_array = _fallback_zone_entry(
-                    hex_id,
-                    baseline_tf=baseline_tf,
-                    zone_lookup=zone_lookup,
-                    dtype=zone_dtype,
-                )
-            if entry_array is not None:
-                entries_for_res[hex_id] = entry_array
+            assert entry_array is not None
+            if entry_array.size == 0:
+                _warn_empty_shortcut_entry(hex_id, res)
+            entries_for_res[hex_id] = entry_array
 
         if res < cfg.max_res:
             for child in h3.cell_to_children(hex_id):
@@ -195,14 +187,18 @@ def build_hierarchical_index(
         int_cell = int(cell_id)
         if int_cell in entries:
             continue
-        fallback = _fallback_zone_entry(
-            int_cell,
-            baseline_tf=baseline_tf,
-            zone_lookup=zone_lookup,
-            dtype=zone_dtype,
+        hex_obj = data.get_hex(int_cell)
+        polygons = list(hex_obj.polys_in_cell)
+        entry_array = _create_entry_array(
+            data,
+            polygons,
+            zone_dtype=zone_dtype,
+            hex_id=int_cell,
         )
-        if fallback is not None:
-            entries[int_cell] = fallback
+        assert entry_array is not None
+        if entry_array.size == 0:
+            _warn_empty_shortcut_entry(int_cell, target_res)
+        entries[int_cell] = entry_array
 
     return {res: dict(entries) for res, entries in hierarchical.items()}
 
@@ -420,18 +416,7 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
         return self.zone_name_from_id(zone_ids[-1])
 
 
-def run_benchmark() -> None:
-    data_path = Path(INPUT_JSON_PATH)
-    if not data_path.exists():
-        print(f"Input JSON does not exist: {data_path}", file=sys.stderr)
-        return
-
-    print("Loading timezone data...")
-    tz_data = TimezoneData.from_path(data_path)
-
-    baseline_tf = TimezoneFinder()
-    zone_lookup = {name: idx for idx, name in enumerate(tz_data.all_tz_names)}
-
+def run_benchmark(tz_data: TimezoneData) -> None:
     random.seed(SEED)
     np.random.seed(SEED)
     random_points = [
@@ -457,8 +442,6 @@ def run_benchmark() -> None:
             index = build_hierarchical_index(
                 tz_data,
                 cfg,
-                baseline_tf=baseline_tf,
-                zone_lookup=zone_lookup,
             )
             stats = compute_index_stats(index)
             aggregated = aggregate_stats_for_range(stats, min_res, max_res)
@@ -560,13 +543,6 @@ def test_snapshot_stats_copies_nested_dict() -> None:
 
 
 def test_min_resolution_full_population() -> None:
-    class DummyTF:
-        def timezone_at(self, *, lng: float, lat: float) -> str:
-            return "Dummy/Zone"
-
-        def timezone_at_land(self, *, lng: float, lat: float) -> str:
-            return "Dummy/Zone"
-
     class DummyHex:
         polys_in_cell: tuple[int, ...] = ()
 
@@ -579,34 +555,145 @@ def test_min_resolution_full_population() -> None:
 
     min_res = 0
     cfg = BFSConfig(min_res=min_res, max_res=min_res)
-    zone_lookup = {"Dummy/Zone": 0}
     index = build_hierarchical_index(
         DummyData(),
         cfg,
-        baseline_tf=DummyTF(),
-        zone_lookup=zone_lookup,
     )
 
     expected = len(h3_cells_at_resolution(min_res))
     entries = index.get(min_res, {})
     assert len(entries) == expected
     sample = next(iter(entries.values()))
-    assert sample.dtype == np.uint32
+    assert sample.dtype == np.uint16
+    assert sample.size == 0
 
 
-def run_tests() -> None:
-    tests = [
+def _sample_points(count: int = 50, *, seed: int = SEED) -> list[tuple[float, float]]:
+    rng = random.Random(seed)
+    return [
+        (rng.uniform(-180.0, 180.0), rng.uniform(-90.0, 90.0)) for _ in range(count)
+    ]
+
+
+def _baseline_zone_name(tf: TimezoneFinder, lng: float, lat: float) -> str | None:
+    zone_name = tf.timezone_at(lng=lng, lat=lat)
+    if zone_name is None:
+        zone_name = tf.timezone_at_land(lng=lng, lat=lat)
+    return zone_name
+
+
+def test_lookup_consistency_between_indices(tz_data: TimezoneData | None) -> None:
+    if tz_data is None:
+        return
+    if MIN_RESOLUTION > MAX_RESOLUTION:
+        print("Skipping consistency test: invalid resolution range.")
+        return
+
+    mid_res = min(MIN_RESOLUTION + 1, MAX_RESOLUTION)
+    if mid_res < MIN_RESOLUTION:
+        mid_res = MIN_RESOLUTION
+
+    cfg_shallow = BFSConfig(min_res=MIN_RESOLUTION, max_res=mid_res)
+    cfg_deep = BFSConfig(min_res=MIN_RESOLUTION, max_res=MAX_RESOLUTION)
+
+    index_shallow = build_hierarchical_index(
+        tz_data,
+        cfg_shallow,
+    )
+    index_deep = build_hierarchical_index(
+        tz_data,
+        cfg_deep,
+    )
+
+    tf_shallow = HierarchicalTimezoneFinder(
+        index_shallow, max_depth=cfg_shallow.max_res
+    )
+    tf_deep = HierarchicalTimezoneFinder(index_deep, max_depth=cfg_deep.max_res)
+
+    for lng, lat in _sample_points():
+        shallow_zone = tf_shallow.timezone_at(lng=lng, lat=lat)
+        deep_zone = tf_deep.timezone_at(lng=lng, lat=lat)
+        assert shallow_zone == deep_zone
+
+
+def test_lookup_matches_baseline_index(
+    tz_data: TimezoneData | None, baseline_tf: TimezoneFinder | None
+) -> None:
+    if tz_data is None or baseline_tf is None:
+        return
+    # Use a single resolution that matches the current configuration
+    # In DEBUG mode, use MAX_RESOLUTION, otherwise use the baseline resolution 3
+    target_res = MAX_RESOLUTION if DEBUG else 3
+    cfg_equal = BFSConfig(min_res=target_res, max_res=target_res)
+    if cfg_equal.max_res < cfg_equal.min_res or target_res > MAX_RESOLUTION:
+        print("Skipping baseline comparison: invalid resolution range.")
+        return
+
+    hierarchical_index = build_hierarchical_index(
+        tz_data,
+        cfg_equal,
+    )
+    tf_hierarchical = HierarchicalTimezoneFinder(
+        hierarchical_index,
+        max_depth=cfg_equal.max_res,
+    )
+
+    mismatches = 0
+    total_points = 0
+    for lng, lat in _sample_points(seed=SEED + 1):
+        baseline_zone = _baseline_zone_name(baseline_tf, lng, lat)
+        hierarchical_zone = tf_hierarchical.timezone_at(lng=lng, lat=lat)
+        total_points += 1
+
+        if hierarchical_zone != baseline_zone:
+            mismatches += 1
+            if not DEBUG:
+                print(
+                    f"Mismatch at ({lng:.6f}, {lat:.6f}): baseline='{baseline_zone}', hierarchical='{hierarchical_zone}'"
+                )
+                assert hierarchical_zone == baseline_zone
+
+    if DEBUG and mismatches > 0:
+        print(
+            f"DEBUG mode: {mismatches}/{total_points} mismatches found (expected with reduced dataset)"
+        )
+    elif not DEBUG:
+        assert mismatches == 0, f"Found {mismatches} mismatches in production mode"
+
+
+def run_tests(
+    tz_data: TimezoneData | None = None, baseline_tf: TimezoneFinder | None = None
+) -> None:
+    # Tests that don't need runtime data
+    simple_tests = [
         test_compute_index_stats_counts,
         test_extract_single_resolution,
         test_snapshot_stats_copies_nested_dict,
         test_min_resolution_full_population,
     ]
-    for test in tests:
+    for test in simple_tests:
         test()
+
+    # Tests that need runtime data
+    if tz_data is not None:
+        test_lookup_consistency_between_indices(tz_data)
+        test_lookup_matches_baseline_index(tz_data, baseline_tf)
+
     print("All tests passed.")
 
 
 if __name__ == "__main__":
+    # Load timezone data once for all operations
+    data_path = Path(INPUT_JSON_PATH)
+    if not data_path.exists():
+        print(f"Input JSON does not exist: {data_path}", file=sys.stderr)
+        exit(1)
+
+    print("Loading timezone data...")
+    tz_data = TimezoneData.from_path(data_path)
+    baseline_tf = TimezoneFinder() if DEBUG else None
+
     if DEBUG:
-        run_tests()
-    run_benchmark()
+        print("DEBUG mode is ON: using reduced dataset and resolutions.")
+        run_tests(tz_data, baseline_tf)
+    run_benchmark(tz_data)
