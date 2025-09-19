@@ -13,8 +13,9 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 1. Fork the repository and create a feature branch: `git checkout -b my-topic`.
 2. Install tooling with `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime validation only).
 3. Activate the environment via `uv run` and work from the project root. Run targeted commands through `make` or `uv run …` to ensure reproducibility.
-4. Keep pull requests focused. Reference issue numbers and describe user-facing impact, dataset changes, and risk areas up front.
-5. Before opening a PR, run the test matrix that matches the scope of your change and ensure CI will pass. Heavy packaging checks live under the `integration` marker—run them if you touched build config or bundled data.
+4. Formatting and linting are enforced via pre-commit hooks (install with `make hook`) and can be run manually with `ruff`, `isort`, and `mypy`.
+5. Keep pull requests focused. Reference issue numbers and describe user-facing impact, dataset changes, and risk areas up front.
+6. Before opening a PR, run the test matrix that matches the scope of your change and ensure CI will pass. Heavy packaging checks live under the `integration` marker—run them if you touched build config or bundled data.
 
 ## Coding Standards (also for Agents)
 
