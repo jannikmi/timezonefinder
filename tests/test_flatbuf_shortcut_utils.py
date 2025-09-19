@@ -87,7 +87,7 @@ class TestShortcutUtils:
         "hex_id,poly_ids",
         [
             (0, [0]),  # Minimal case
-            (2**32 - 1, list(range(10))),  # Maximum uint32 with multiple polygons
+            (2**63 - 1, list(range(10))),  # Large 64-bit hex id with multiple polygons
             (42, list(range(100))),  # Many polygon IDs
         ],
     )

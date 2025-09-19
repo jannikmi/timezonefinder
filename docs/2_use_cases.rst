@@ -66,14 +66,14 @@ Any other data in this format can also be parsed:
     python /path/to/timezonefinder/scripts/file_converter.py \
         [-inp /path/to/input.json] \
         [-out /path/to/output_folder] \
-        [--zone-id-dtype {uint8,uint16,uint32}]
+        [--zone-id-dtype {uint8,uint16}]
 
 
 
 Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.
 Use ``--zone-id-dtype`` (or set ``TIMEZONEFINDER_ZONE_ID_DTYPE``) when your dataset
-contains more than 256 distinct timezones so the generated binaries can store the
-larger zone identifiers safely.
+contains more than 256 distinct timezones so the generated binaries use
+``uint16`` storage instead of the default ``uint8``.
 How to use the ``timezonefinder`` package with data files from another location is described :ref:`HERE <init>`.
 
 

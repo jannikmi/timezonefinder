@@ -28,12 +28,10 @@ from timezonefinder.flatbuf.generated.unique.ZoneIdWidth import ZoneIdWidth
 _ZONE_ID_WIDTH_TO_DTYPE = {
     ZoneIdWidth.UINT8: np.dtype("<u1"),
     ZoneIdWidth.UINT16: np.dtype("<u2"),
-    ZoneIdWidth.UINT32: np.dtype("<u4"),
 }
 _DTYPE_TO_ZONE_ID_WIDTH = {
     np.dtype("<u1"): ZoneIdWidth.UINT8,
     np.dtype("<u2"): ZoneIdWidth.UINT16,
-    np.dtype("<u4"): ZoneIdWidth.UINT32,
 }
 
 
@@ -52,7 +50,9 @@ def _normalise_zone_id_dtype(dtype: np.dtype) -> np.dtype:
     if dtype.itemsize == 2:
         return np.dtype("<u2")
     if dtype.itemsize == 4:
-        return np.dtype("<u4")
+        raise ValueError(
+            "Zone id dtype wider than 16 bit is not supported; use uint8 or uint16."
+        )
     return dtype.newbyteorder("<")
 
 
@@ -62,7 +62,7 @@ def _zone_width_from_dtype(dtype: np.dtype) -> int:
         return _DTYPE_TO_ZONE_ID_WIDTH[normalised]
     except KeyError as exc:
         raise ValueError(
-            f"Unsupported zone id dtype '{dtype}'. Use one of uint8, uint16, or uint32."
+            f"Unsupported zone id dtype '{dtype}'. Use one of uint8 or uint16."
         ) from exc
 
 

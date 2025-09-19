@@ -50,7 +50,6 @@ IntLists = List[List[int]]
 _ZONE_ID_DTYPE_ALIASES = {
     "uint8": np.dtype("<u1"),
     "uint16": np.dtype("<u2"),
-    "uint32": np.dtype("<u4"),
 }
 
 

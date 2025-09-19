@@ -6,4 +6,3 @@
 class ZoneIdWidth:
     UINT8 = 1
     UINT16 = 2
-    UINT32 = 4
