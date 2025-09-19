@@ -7,6 +7,10 @@ resulting index is benchmarked against a single set of 10,000 globally random
 query points; all throughput and latency statistics reported below originate
 from this random dataset.
 
+IMPORTANT: Data type handling for shortcut entries:
+- Polygon IDs: Always uint16 (2 bytes each) - fixed across all configurations
+- Zone IDs: Configurable dtype (uint8 or uint16) - set via DEFAULT_ZONE_ID_DTYPE
+
 Run with::
 
     uv run python prototypes/shortcut_split_bfs_bench.py
@@ -37,6 +41,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.configs import DEBUG, DEFAULT_INPUT_PATH
+from timezonefinder.configs import DEFAULT_ZONE_ID_DTYPE
 from scripts.shortcuts import optimise_shortcut_ordering
 from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
@@ -49,6 +54,14 @@ MIN_RESOLUTION = (
     if DEBUG
     else 2  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
+
+# IMPORTANT: Data type distinction for shortcut entries:
+# - Polygon IDs: Always uint16 (2 bytes) - fixed size for all polygon references
+# - Zone IDs: Configurable dtype (uint8 or uint16) - used for unique zone entries
+POLYGON_ID_BYTES = 2  # uint16 - always 2 bytes for polygon IDs
+ZONE_ID_BYTES = (
+    DEFAULT_ZONE_ID_DTYPE.itemsize
+)  # Configurable: uint8 (1 byte) or uint16 (2 bytes)
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
@@ -109,13 +122,15 @@ def _create_entry_array(
         return None
 
     ordered = optimise_shortcut_ordering(data, polygon_ids)
+    # Polygon IDs are always stored as uint16 (2 bytes each)
     polygon_array = np.asarray(ordered, dtype=np.uint16)
 
     if is_unique:
         zone_candidates = data.poly_zone_ids[polygon_array]
         zone_candidates = np.asarray(zone_candidates, dtype=np.uint16)
         if zone_candidates.size > 0:
-            zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint16)
+            # Zone IDs use the configured dtype (uint8 or uint16)
+            zone_entry = np.asarray([zone_candidates[0]], dtype=DEFAULT_ZONE_ID_DTYPE)
             return zone_entry
 
     return polygon_array
@@ -180,14 +195,14 @@ def compute_index_stats(index: dict[int, dict[int, np.ndarray]]) -> IndexStats:
             if length <= 1:
                 zone_entries += 1
                 size_bytes += (
-                    8 + 1
-                )  # 8 bytes for hex_id (uint64) + 1 byte for single polygon ID
+                    8 + ZONE_ID_BYTES
+                )  # 8 bytes for hex_id (uint64) + zone ID bytes (single unique zone entry)
             else:
                 polygon_entries += 1
                 polygon_id_count += length
                 size_bytes += (
-                    8 + 2 * length
-                )  # 8 bytes for hex_id (uint64) + 2 bytes per polygon ID (uint16)
+                    8 + POLYGON_ID_BYTES * length
+                )  # 8 bytes for hex_id (uint64) + 2 bytes per polygon ID (uint16, fixed size)
 
         entries_per_res[res] = len(entries)
         zone_entries_per_res[res] = zone_entries
@@ -291,9 +306,12 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
         max_depth: int,
     ) -> None:
         super().__init__()
+        # IMPORTANT: Preserve original dtypes - zone entries use configurable dtype, polygon entries use uint16
         self.hierarchical_shortcuts = {
             res: {
-                int(hex_id): np.asarray(values, dtype=np.uint16)
+                int(hex_id): np.asarray(
+                    values
+                )  # Preserve original dtype from _create_entry_array
                 for hex_id, values in entries.items()
             }
             for res, entries in hierarchical_shortcuts.items()
@@ -544,17 +562,20 @@ def run_benchmark() -> None:
 
 
 def test_compute_index_stats_counts() -> None:
+    # Test data: mix of zone entries (single values) and polygon entries (multiple values)
     index = {
         0: {
-            1: np.asarray([10], dtype=np.uint16),
-            2: np.asarray([1, 2], dtype=np.uint16),
+            1: np.asarray([10], dtype=np.uint16),  # Single zone entry
+            2: np.asarray([1, 2], dtype=np.uint16),  # Polygon entry with 2 IDs
         },
-        1: {3: np.asarray([4, 5, 6], dtype=np.uint16)},
+        1: {3: np.asarray([4, 5, 6], dtype=np.uint16)},  # Polygon entry with 3 IDs
     }
     stats = compute_index_stats(index)
     assert stats.zone_entries_per_res[0] == 1
     assert stats.polygon_entries_per_res[0] == 1
-    assert stats.size_per_res[0] == 1 + 2 * 2
+    # Size calculation: (8 + ZONE_ID_BYTES) for single zone + (8 + 2*2) for 2 polygon IDs
+    expected_size = (8 + ZONE_ID_BYTES) + (8 + 2 * 2)
+    assert stats.size_per_res[0] == expected_size
     assert stats.polygon_entries_per_res[1] == 1
     assert stats.polygon_id_counts_per_res[1] == 3
 
