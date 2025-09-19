@@ -53,7 +53,7 @@ repos:
         rev: v1.18.1
         hooks:
             -   id: mypy
-                exclude: ^((tests|scripts|docs)/)
+                exclude: ^((tests|prototypes|scripts|docs)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
     -   repo: https://github.com/mgedmin/check-manifest
