@@ -31,17 +31,22 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.configs import DEFAULT_INPUT_PATH
+from scripts.configs import DEFAULT_INPUT_PATH, DEBUG
 from scripts.shortcuts import optimise_shortcut_ordering
 from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
 from timezonefinder.timezonefinder import TimezoneFinder
 
 # Resolutions above 5 are intentionally excluded because the index size explodes.
-MAX_RESOLUTION = 7
+# ``MIN_RESOLUTION`` may be raised for debug runs, but the first stored
+# resolution must contain *all* H3 cells to guarantee that every query has a
+# shortcut entry. We enforce this during compilation.
 MIN_RESOLUTION = (
-    4  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
+    0
+    if DEBUG
+    else 1  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
+MAX_RESOLUTION = 2 if DEBUG else 5
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
@@ -54,12 +59,11 @@ def h3_cells_at_resolution(resolution: int) -> frozenset[int]:
         raise ValueError("H3 resolution must be non-negative")
     if resolution == 0:
         return frozenset(int(cell) for cell in h3.get_res0_cells())
-    parent_cells = h3_cells_at_resolution(resolution - 1)
-    children: set[int] = set()
-    for parent in parent_cells:
-        for child in h3.cell_to_children(parent):
-            children.add(int(child))
-    return frozenset(children)
+    return frozenset(
+        int(child)
+        for parent in h3_cells_at_resolution(resolution - 1)
+        for child in h3.cell_to_children(parent)
+    )
 
 
 def h3_num_hexagons(resolution: int) -> int:
@@ -73,11 +77,10 @@ class BFSConfig:
 
 
 def snapshot_stats(stats: dict[str, Any]) -> dict[str, Any]:
-    copied = dict(stats)
-    res_checks = copied.get("res_checks")
-    if res_checks is not None:
-        copied["res_checks"] = dict(res_checks)
-    return copied
+    return {
+        key: dict(value) if key == "res_checks" else value
+        for key, value in stats.items()
+    }
 
 
 @dataclass
@@ -96,30 +99,59 @@ class IndexStats:
 def _create_entry_array(
     data: TimezoneData,
     polygon_ids: Sequence[int],
-) -> tuple[np.ndarray | None, bool]:
+    *,
+    zone_dtype: np.dtype,
+) -> np.ndarray | None:
     if not polygon_ids:
-        return None, True
+        return None
 
     ordered = optimise_shortcut_ordering(data, polygon_ids)
     polygon_array = np.asarray(ordered, dtype=np.uint16)
-    zone_candidates = data.poly_zone_ids[polygon_array]
-    zone_candidates = np.asarray(zone_candidates, dtype=np.uint16)
+    zone_candidates = np.asarray(data.poly_zone_ids[polygon_array], dtype=zone_dtype)
 
     if zone_candidates.size > 0 and np.all(zone_candidates == zone_candidates[0]):
-        zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint16)
-        return zone_entry, True
+        return np.asarray([zone_candidates[0]], dtype=zone_dtype)
 
-    return polygon_array, False
+    return polygon_array
+
+
+def _fallback_zone_entry(
+    cell_id: int,
+    *,
+    baseline_tf: TimezoneFinder | None,
+    zone_lookup: dict[str, int] | None,
+    dtype: np.dtype,
+) -> np.ndarray | None:
+    if baseline_tf is None or zone_lookup is None:
+        return None
+
+    lat, lng = h3.cell_to_latlng(cell_id)
+    zone_name = baseline_tf.timezone_at(lng=lng, lat=lat)
+    if zone_name is None:
+        zone_name = baseline_tf.timezone_at_land(lng=lng, lat=lat)
+    if zone_name is None:
+        return None
+    zone_id = zone_lookup.get(zone_name)
+    if zone_id is None:
+        return None
+    return np.asarray([zone_id], dtype=dtype)
 
 
 def build_hierarchical_index(
     data: TimezoneData,
     cfg: BFSConfig,
+    *,
+    baseline_tf: TimezoneFinder | None = None,
+    zone_lookup: dict[str, int] | None = None,
 ) -> dict[int, dict[int, np.ndarray]]:
+    start_cells = h3_cells_at_resolution(cfg.min_res)
     queue: deque[tuple[int, int]] = deque(
-        (0, int(res0_hex)) for res0_hex in h3.get_res0_cells()
+        (cfg.min_res, int(cell)) for cell in start_cells
     )
     hierarchical: dict[int, dict[int, np.ndarray]] = defaultdict(dict)
+    zone_dtype = (
+        data.poly_zone_ids.dtype if hasattr(data, "poly_zone_ids") else np.uint32
+    )
 
     while queue:
         res, hex_id = queue.popleft()
@@ -132,14 +164,42 @@ def build_hierarchical_index(
 
         hex_obj = data.get_hex(hex_id)
         polygons_in_cell = list(hex_obj.polys_in_cell)
-        entry_array, is_unique = _create_entry_array(data, polygons_in_cell)
+        entry_array = _create_entry_array(
+            data,
+            polygons_in_cell,
+            zone_dtype=zone_dtype,
+        )
 
-        if cfg.min_res <= res <= cfg.max_res and entry_array is not None:
-            entries_for_res[hex_id] = entry_array
+        if cfg.min_res <= res <= cfg.max_res:
+            if entry_array is None:
+                entry_array = _fallback_zone_entry(
+                    hex_id,
+                    baseline_tf=baseline_tf,
+                    zone_lookup=zone_lookup,
+                    dtype=zone_dtype,
+                )
+            if entry_array is not None:
+                entries_for_res[hex_id] = entry_array
 
-        if (not is_unique) and polygons_in_cell and res < cfg.max_res:
+        if res < cfg.max_res:
             for child in h3.cell_to_children(hex_id):
                 queue.append((res + 1, int(child)))
+
+    target_res = cfg.min_res
+    required_cells = h3_cells_at_resolution(target_res)
+    entries = hierarchical.setdefault(target_res, {})
+    for cell_id in required_cells:
+        int_cell = int(cell_id)
+        if int_cell in entries:
+            continue
+        fallback = _fallback_zone_entry(
+            int_cell,
+            baseline_tf=baseline_tf,
+            zone_lookup=zone_lookup,
+            dtype=zone_dtype,
+        )
+        if fallback is not None:
+            entries[int_cell] = fallback
 
     return {res: dict(entries) for res, entries in hierarchical.items()}
 
@@ -168,11 +228,10 @@ def compute_index_stats(index: dict[int, dict[int, np.ndarray]]) -> IndexStats:
             length = int(payload.size)
             if length <= 1:
                 zone_entries += 1
-                size_bytes += 1
             else:
                 polygon_entries += 1
                 polygon_id_count += length
-                size_bytes += 2 * length
+            size_bytes += int(payload.nbytes)
 
         entries_per_res[res] = len(entries)
         zone_entries_per_res[res] = zone_entries
@@ -287,12 +346,6 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
         }
         self.resolutions_desc = sorted(self.hierarchical_shortcuts.keys(), reverse=True)
         self.max_depth = max_depth
-        self._single_res = (
-            self.resolutions_desc[0] if len(self.resolutions_desc) == 1 else None
-        )
-        self._lookup_fn = (
-            self._lookup_single if self._single_res is not None else self._lookup_multi
-        )
         self.reset_stats()
 
     def reset_stats(self) -> None:
@@ -307,87 +360,61 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
     def timezone_at(self, *, lng: float, lat: float) -> str | None:  # type: ignore[override]
         lng, lat = utils.validate_coordinates(lng, lat)
         self.stats["queries"] += 1
-        return self._lookup_fn(lng, lat)
+        return self._lookup(lng, lat)
 
-    def _lookup_single(self, lng: float, lat: float) -> str | None:
-        res = self._single_res
-        if res is None:
-            return None
-        mapping = self.hierarchical_shortcuts.get(res)
-        if not mapping:
-            return None
-        hex_id = int(h3.latlng_to_cell(lat, lng, res))
-        payload = mapping.get(hex_id)
-        if payload is None:
-            return None
-        self.stats["shortcuts_used"] += 1
-        self.stats["res_checks"][res] += 1
+    def _lookup(self, lng: float, lat: float) -> str | None:
+        coord_cache: tuple[int, int] | None = None
 
-        if payload.size <= 1:
-            if payload.size == 1:
-                self.stats["unique_hits"] += 1
-                return self.zone_name_from_id(int(payload[0]))
-            return None
-
-        zone_ids = self.zone_ids_of(payload)
-        last_change_idx = utils.get_last_change_idx(zone_ids)
-        if last_change_idx == 0:
-            self.stats["unique_hits"] += 1
-            return self.zone_name_from_id(zone_ids[0])
-
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
-        for i, boundary_id in enumerate(payload):
-            if i >= last_change_idx:
-                break
-            self.stats["polygons_tested"] += 1
-            if self.inside_of_polygon(int(boundary_id), x, y):
-                zone_id = zone_ids[i]
-                return self.zone_name_from_id(zone_id)
-
-        zone_id = zone_ids[-1]
-        return self.zone_name_from_id(zone_id)
-
-    def _lookup_multi(self, lng: float, lat: float) -> str | None:
         for res in self.resolutions_desc:
             mapping = self.hierarchical_shortcuts.get(res)
             if not mapping:
                 continue
+
             hex_id = int(h3.latlng_to_cell(lat, lng, res))
-            possible_boundaries = mapping.get(hex_id)
-            if possible_boundaries is None:
+            payload = mapping.get(hex_id)
+            if payload is None:
                 continue
 
-            self.stats["shortcuts_used"] += 1
-            self.stats["res_checks"][res] += 1
+            self._record_shortcut(res)
 
-            if possible_boundaries.size <= 1:
-                if possible_boundaries.size == 1:
-                    self.stats["unique_hits"] += 1
-                    zone_id = int(possible_boundaries[0])
-                    return self.zone_name_from_id(zone_id)
+            if payload.size == 0:
                 continue
-
-            zone_ids = self.zone_ids_of(possible_boundaries)
-            last_change_idx = utils.get_last_change_idx(zone_ids)
-            if last_change_idx == 0:
+            if payload.size == 1:
                 self.stats["unique_hits"] += 1
-                return self.zone_name_from_id(zone_ids[0])
+                return self.zone_name_from_id(int(payload[0]))
 
-            x = utils.coord2int(lng)
-            y = utils.coord2int(lat)
-            for i, boundary_id in enumerate(possible_boundaries):
-                if i >= last_change_idx:
-                    break
-                self.stats["polygons_tested"] += 1
-                if self.inside_of_polygon(int(boundary_id), x, y):
-                    zone_id = zone_ids[i]
-                    return self.zone_name_from_id(zone_id)
+            if coord_cache is None:
+                coord_cache = (utils.coord2int(lng), utils.coord2int(lat))
 
-            zone_id = zone_ids[-1]
-            return self.zone_name_from_id(zone_id)
+            zone_name = self._resolve_polygons(payload, coord_cache)
+            if zone_name is not None:
+                return zone_name
 
         return None
+
+    def _record_shortcut(self, res: int) -> None:
+        self.stats["shortcuts_used"] += 1
+        self.stats["res_checks"][res] += 1
+
+    def _resolve_polygons(
+        self, polygon_ids: np.ndarray, coord_cache: tuple[int, int]
+    ) -> str | None:
+        zone_ids = self.zone_ids_of(polygon_ids)
+        last_change_idx = utils.get_last_change_idx(zone_ids)
+
+        if last_change_idx == 0:
+            self.stats["unique_hits"] += 1
+            return self.zone_name_from_id(zone_ids[0])
+
+        x, y = coord_cache
+        for i, boundary_id in enumerate(polygon_ids):
+            if i >= last_change_idx:
+                break
+            self.stats["polygons_tested"] += 1
+            if self.inside_of_polygon(int(boundary_id), x, y):
+                return self.zone_name_from_id(zone_ids[i])
+
+        return self.zone_name_from_id(zone_ids[-1])
 
 
 def run_benchmark() -> None:
@@ -398,6 +425,9 @@ def run_benchmark() -> None:
 
     print("Loading timezone data...")
     tz_data = TimezoneData.from_path(data_path)
+
+    baseline_tf = TimezoneFinder()
+    zone_lookup = {name: idx for idx, name in enumerate(tz_data.all_tz_names)}
 
     random.seed(SEED)
     np.random.seed(SEED)
@@ -421,7 +451,12 @@ def run_benchmark() -> None:
             combo_index += 1
 
             cfg = BFSConfig(min_res=min_res, max_res=max_res)
-            index = build_hierarchical_index(tz_data, cfg)
+            index = build_hierarchical_index(
+                tz_data,
+                cfg,
+                baseline_tf=baseline_tf,
+                zone_lookup=zone_lookup,
+            )
             stats = compute_index_stats(index)
             aggregated = aggregate_stats_for_range(stats, min_res, max_res)
 
@@ -497,7 +532,7 @@ def test_compute_index_stats_counts() -> None:
     stats = compute_index_stats(index)
     assert stats.zone_entries_per_res[0] == 1
     assert stats.polygon_entries_per_res[0] == 1
-    assert stats.size_per_res[0] == 1 + 2 * 2
+    assert stats.size_per_res[0] == 6
     assert stats.polygon_entries_per_res[1] == 1
     assert stats.polygon_id_counts_per_res[1] == 3
 
@@ -520,21 +555,54 @@ def test_snapshot_stats_copies_nested_dict() -> None:
     assert stats["res_checks"][0] == 1
 
 
+def test_min_resolution_full_population() -> None:
+    class DummyTF:
+        def timezone_at(self, *, lng: float, lat: float) -> str:
+            return "Dummy/Zone"
+
+        def timezone_at_land(self, *, lng: float, lat: float) -> str:
+            return "Dummy/Zone"
+
+    class DummyHex:
+        polys_in_cell: tuple[int, ...] = ()
+
+    class DummyData:
+        all_tz_names = ["Dummy/Zone"]
+        poly_zone_ids = np.asarray([], dtype=np.uint32)
+
+        def get_hex(self, _: int) -> DummyHex:
+            return DummyHex()
+
+    min_res = 0
+    cfg = BFSConfig(min_res=min_res, max_res=min_res)
+    zone_lookup = {"Dummy/Zone": 0}
+    index = build_hierarchical_index(
+        DummyData(),
+        cfg,
+        baseline_tf=DummyTF(),
+        zone_lookup=zone_lookup,
+    )
+
+    expected = len(h3_cells_at_resolution(min_res))
+    entries = index.get(min_res, {})
+    assert len(entries) == expected
+    sample = next(iter(entries.values()))
+    assert sample.dtype == np.uint32
+
+
 def run_tests() -> None:
     tests = [
         test_compute_index_stats_counts,
         test_extract_single_resolution,
         test_snapshot_stats_copies_nested_dict,
+        test_min_resolution_full_population,
     ]
     for test in tests:
         test()
     print("All tests passed.")
 
 
-RUN_TESTS = False
-
-
 if __name__ == "__main__":
-    if RUN_TESTS:
+    if DEBUG:
         run_tests()
     run_benchmark()
