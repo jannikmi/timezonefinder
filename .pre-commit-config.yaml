@@ -22,9 +22,10 @@ repos:
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.13.0
       hooks:
-          # linter.
           - id: ruff
+            # linter.
             args: [ --fix ]
+            exclude: ^(prototypes/)
           - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
