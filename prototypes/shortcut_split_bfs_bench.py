@@ -26,11 +26,6 @@ from typing import Any, Sequence
 import h3.api.numpy_int as h3
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -223,6 +218,7 @@ def aggregate_stats_for_range(
     possible_cells = 0
     size_bytes = 0
     unique_surface_fraction = 0.0
+    coverage_fraction = 0.0
 
     for res in range(min_res, max_res + 1):
         zone = stats.zone_entries_per_res.get(res, 0)
@@ -240,9 +236,10 @@ def aggregate_stats_for_range(
 
         if possible:
             unique_surface_fraction += zone / possible
+            coverage_fraction += stored / possible
 
     unique_entry_fraction = zone_entries / total_entries if total_entries else 0.0
-    coverage_ratio = stored_cells / possible_cells if possible_cells else 0.0
+    coverage_ratio = coverage_fraction
 
     return {
         "zone_entries": zone_entries,
@@ -487,50 +484,6 @@ def run_benchmark() -> None:
     print("\nMetrics table (Markdown):\n")
     print(metrics_df.to_markdown(index=False, floatfmt=".3f"))
     print("\nAll performance metrics above use random global query points only.\n")
-
-    heatmap_specs = [
-        ("mean_throughput_kpts", "Average throughput (random queries; k/s)"),
-        ("median_ns", "Median latency (random queries; ns)"),
-        ("max_ns", "Max latency (random queries; ns)"),
-        ("binary_size_mib", "Binary size (MiB)"),
-        ("unique_surface_fraction", "Unique surface fraction (sum)"),
-        ("unique_entry_fraction", "Unique entry fraction"),
-    ]
-
-    for res in RESOLUTIONS:
-        heatmap_specs.append(
-            (f"res_checks_r{res}", f"Shortcut checks at resolution {res}")
-        )
-
-    sns.set_theme(style="white")
-    print("\nGenerating heatmaps...")
-    for column, title in heatmap_specs:
-        pivot = metrics_df.pivot(index="min_res", columns="max_res", values=column)
-        pivot = pivot.reindex(index=sorted(metrics_df["min_res"].unique()))
-        pivot = pivot.reindex(columns=sorted(metrics_df["max_res"].unique()))
-
-        mask = np.zeros_like(pivot, dtype=bool)
-        for i, min_res in enumerate(pivot.index):
-            for j, max_res in enumerate(pivot.columns):
-                if max_res < min_res:
-                    mask[i, j] = True
-
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(
-            pivot,
-            mask=mask,
-            cmap="viridis",
-            annot=False,
-            cbar_kws={"label": title},
-        )
-        plt.title(title)
-        plt.xlabel("max_res")
-        plt.ylabel("min_res")
-        plt.tight_layout()
-        heatmap_path = output_dir / f"heatmap_{column}.png"
-        plt.savefig(heatmap_path, dpi=200)
-        plt.close()
-        print(f"  - Saved {heatmap_path}")
 
 
 def test_compute_index_stats_counts() -> None:
