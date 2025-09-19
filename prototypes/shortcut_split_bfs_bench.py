@@ -43,9 +43,9 @@ from timezonefinder import utils
 from timezonefinder.timezonefinder import TimezoneFinder
 
 # Resolutions above 5 are intentionally excluded because the index size explodes.
-MAX_RESOLUTION = 3
+MAX_RESOLUTION = 7
 MIN_RESOLUTION = (
-    1  # NOTE: resolution 0 only has 122 cells. does not produce any unique zone entries
+    4  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
@@ -106,12 +106,12 @@ def _create_entry_array(
         return None, True
 
     ordered = optimise_shortcut_ordering(data, polygon_ids)
-    polygon_array = np.asarray(ordered, dtype=np.uint32)
+    polygon_array = np.asarray(ordered, dtype=np.uint16)
     zone_candidates = data.poly_zone_ids[polygon_array]
-    zone_candidates = np.asarray(zone_candidates, dtype=np.uint32)
+    zone_candidates = np.asarray(zone_candidates, dtype=np.uint16)
 
     if zone_candidates.size > 0 and np.all(zone_candidates == zone_candidates[0]):
-        zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint32)
+        zone_entry = np.asarray([zone_candidates[0]], dtype=np.uint16)
         return zone_entry, True
 
     return polygon_array, False
@@ -283,15 +283,18 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
         super().__init__()
         self.hierarchical_shortcuts = {
             res: {
-                int(hex_id): np.asarray(values, dtype=np.uint32)
+                int(hex_id): np.asarray(values, dtype=np.uint16)
                 for hex_id, values in entries.items()
             }
             for res, entries in hierarchical_shortcuts.items()
         }
         self.resolutions_desc = sorted(self.hierarchical_shortcuts.keys(), reverse=True)
         self.max_depth = max_depth
-        self.single_resolution_res = (
+        self._single_res = (
             self.resolutions_desc[0] if len(self.resolutions_desc) == 1 else None
+        )
+        self._lookup_fn = (
+            self._lookup_single if self._single_res is not None else self._lookup_multi
         )
         self.reset_stats()
 
@@ -307,10 +310,48 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
     def timezone_at(self, *, lng: float, lat: float) -> str | None:  # type: ignore[override]
         lng, lat = utils.validate_coordinates(lng, lat)
         self.stats["queries"] += 1
+        return self._lookup_fn(lng, lat)
 
-        if self.single_resolution_res is not None:
-            return self._lookup_single(lng, lat, self.single_resolution_res)
+    def _lookup_single(self, lng: float, lat: float) -> str | None:
+        res = self._single_res
+        if res is None:
+            return None
+        mapping = self.hierarchical_shortcuts.get(res)
+        if not mapping:
+            return None
+        hex_id = int(h3.latlng_to_cell(lat, lng, res))
+        payload = mapping.get(hex_id)
+        if payload is None:
+            return None
+        self.stats["shortcuts_used"] += 1
+        self.stats["res_checks"][res] += 1
 
+        if payload.size <= 1:
+            if payload.size == 1:
+                self.stats["unique_hits"] += 1
+                return self.zone_name_from_id(int(payload[0]))
+            return None
+
+        zone_ids = self.zone_ids_of(payload)
+        last_change_idx = utils.get_last_change_idx(zone_ids)
+        if last_change_idx == 0:
+            self.stats["unique_hits"] += 1
+            return self.zone_name_from_id(zone_ids[0])
+
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
+        for i, boundary_id in enumerate(payload):
+            if i >= last_change_idx:
+                break
+            self.stats["polygons_tested"] += 1
+            if self.inside_of_polygon(int(boundary_id), x, y):
+                zone_id = zone_ids[i]
+                return self.zone_name_from_id(zone_id)
+
+        zone_id = zone_ids[-1]
+        return self.zone_name_from_id(zone_id)
+
+    def _lookup_multi(self, lng: float, lat: float) -> str | None:
         for res in self.resolutions_desc:
             mapping = self.hierarchical_shortcuts.get(res)
             if not mapping:
@@ -350,42 +391,6 @@ class HierarchicalTimezoneFinder(TimezoneFinder):
             return self.zone_name_from_id(zone_id)
 
         return None
-
-    def _lookup_single(self, lng: float, lat: float, res: int) -> str | None:
-        mapping = self.hierarchical_shortcuts.get(res)
-        if not mapping:
-            return None
-        hex_id = int(h3.latlng_to_cell(lat, lng, res))
-        payload = mapping.get(hex_id)
-        if payload is None:
-            return None
-        self.stats["shortcuts_used"] += 1
-        self.stats["res_checks"][res] += 1
-
-        if payload.size <= 1:
-            if payload.size == 1:
-                self.stats["unique_hits"] += 1
-                return self.zone_name_from_id(int(payload[0]))
-            return None
-
-        zone_ids = self.zone_ids_of(payload)
-        last_change_idx = utils.get_last_change_idx(zone_ids)
-        if last_change_idx == 0:
-            self.stats["unique_hits"] += 1
-            return self.zone_name_from_id(zone_ids[0])
-
-        x = utils.coord2int(lng)
-        y = utils.coord2int(lat)
-        for i, boundary_id in enumerate(payload):
-            if i >= last_change_idx:
-                break
-            self.stats["polygons_tested"] += 1
-            if self.inside_of_polygon(int(boundary_id), x, y):
-                zone_id = zone_ids[i]
-                return self.zone_name_from_id(zone_id)
-
-        zone_id = zone_ids[-1]
-        return self.zone_name_from_id(zone_id)
 
 
 def run_benchmark() -> None:
@@ -438,29 +443,38 @@ def run_benchmark() -> None:
                 mean_ns = median_ns = max_ns = 0.0
                 throughput_kpts = 0.0
 
-            metrics_records.append(
-                {
-                    "min_res": min_res,
-                    "max_res": max_res,
-                    "mean_ns": mean_ns,
-                    "median_ns": median_ns,
-                    "max_ns": max_ns,
-                    "mean_throughput_kpts": throughput_kpts,
-                    "binary_size_bytes": aggregated["size_bytes"],
-                    "unique_surface_fraction": aggregated["unique_surface_fraction"],
-                    "unique_entry_fraction": aggregated["unique_entry_fraction"],
-                    "zone_entries": aggregated["zone_entries"],
-                    "polygon_entries": aggregated["polygon_entries"],
-                    "polygon_ids": aggregated["polygon_ids"],
-                    "total_entries": aggregated["total_entries"],
-                    "coverage_ratio": aggregated["coverage_ratio"],
-                    "stored_cells": aggregated["stored_cells"],
-                    "possible_cells": aggregated["possible_cells"],
-                }
-            )
+            record = {
+                "min_res": min_res,
+                "max_res": max_res,
+                "mean_ns": mean_ns,
+                "median_ns": median_ns,
+                "max_ns": max_ns,
+                "mean_throughput_kpts": throughput_kpts,
+                "binary_size_bytes": aggregated["size_bytes"],
+                "unique_surface_fraction": aggregated["unique_surface_fraction"],
+                "unique_entry_fraction": aggregated["unique_entry_fraction"],
+                "zone_entries": aggregated["zone_entries"],
+                "polygon_entries": aggregated["polygon_entries"],
+                "polygon_ids": aggregated["polygon_ids"],
+                "total_entries": aggregated["total_entries"],
+                "coverage_ratio": aggregated["coverage_ratio"],
+                "stored_cells": aggregated["stored_cells"],
+                "possible_cells": aggregated["possible_cells"],
+            }
+            for res, count in tf.stats["res_checks"].items():
+                record[f"res_checks_r{res}"] = count
+            metrics_records.append(record)
 
     metrics_df = pd.DataFrame(metrics_records)
     metrics_df.sort_values(["min_res", "max_res"], inplace=True)
+
+    for res in RESOLUTIONS:
+        col = f"res_checks_r{res}"
+        if col not in metrics_df.columns:
+            metrics_df[col] = 0
+        else:
+            metrics_df[col] = metrics_df[col].fillna(0)
+
     metrics_df["binary_size_mib"] = metrics_df["binary_size_bytes"] / (1024**2)
 
     output_dir = Path("plots")
@@ -482,6 +496,11 @@ def run_benchmark() -> None:
         ("unique_surface_fraction", "Unique surface fraction (sum)"),
         ("unique_entry_fraction", "Unique entry fraction"),
     ]
+
+    for res in RESOLUTIONS:
+        heatmap_specs.append(
+            (f"res_checks_r{res}", f"Shortcut checks at resolution {res}")
+        )
 
     sns.set_theme(style="white")
     print("\nGenerating heatmaps...")
@@ -517,10 +536,10 @@ def run_benchmark() -> None:
 def test_compute_index_stats_counts() -> None:
     index = {
         0: {
-            1: np.asarray([10], dtype=np.uint32),
-            2: np.asarray([1, 2], dtype=np.uint32),
+            1: np.asarray([10], dtype=np.uint16),
+            2: np.asarray([1, 2], dtype=np.uint16),
         },
-        1: {3: np.asarray([4, 5, 6], dtype=np.uint32)},
+        1: {3: np.asarray([4, 5, 6], dtype=np.uint16)},
     }
     stats = compute_index_stats(index)
     assert stats.zone_entries_per_res[0] == 1
@@ -532,8 +551,8 @@ def test_compute_index_stats_counts() -> None:
 
 def test_extract_single_resolution() -> None:
     index = {
-        0: {1: np.asarray([7], dtype=np.uint32)},
-        2: {5: np.asarray([9, 10], dtype=np.uint32)},
+        0: {1: np.asarray([7], dtype=np.uint16)},
+        2: {5: np.asarray([9, 10], dtype=np.uint16)},
     }
     extracted = extract_single_resolution(index, 2)
     assert 2 in extracted and 0 not in extracted
