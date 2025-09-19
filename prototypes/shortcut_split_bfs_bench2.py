@@ -36,16 +36,18 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.configs import DEFAULT_INPUT_PATH
+from scripts.configs import DEBUG, DEFAULT_INPUT_PATH
 from scripts.shortcuts import optimise_shortcut_ordering
 from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
 from timezonefinder.timezonefinder import TimezoneFinder
 
 # Resolutions above 5 are intentionally excluded because the index size explodes.
-MAX_RESOLUTION = 4
+MAX_RESOLUTION = 2 if DEBUG else 4
 MIN_RESOLUTION = (
-    2  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
+    0
+    if DEBUG
+    else 2  # resolution 0 (122 cells) offers no unique-zone benefit in DEBUG dataset
 )
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
@@ -177,11 +179,15 @@ def compute_index_stats(index: dict[int, dict[int, np.ndarray]]) -> IndexStats:
             length = int(payload.size)
             if length <= 1:
                 zone_entries += 1
-                size_bytes += 1
+                size_bytes += (
+                    8 + 1
+                )  # 8 bytes for hex_id (uint64) + 1 byte for single polygon ID
             else:
                 polygon_entries += 1
                 polygon_id_count += length
-                size_bytes += 2 * length
+                size_bytes += (
+                    8 + 2 * length
+                )  # 8 bytes for hex_id (uint64) + 2 bytes per polygon ID (uint16)
 
         entries_per_res[res] = len(entries)
         zone_entries_per_res[res] = zone_entries
