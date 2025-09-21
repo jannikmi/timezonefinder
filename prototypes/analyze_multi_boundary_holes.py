@@ -7,8 +7,7 @@ from different timezone zones, rather than just single boundary matches.
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional, NamedTuple
-import numpy as np
+from typing import Dict, List, Tuple, NamedTuple
 from itertools import combinations
 import json
 
@@ -315,7 +314,7 @@ def print_multi_boundary_analysis(results: List[Dict]):
             no_good_matches += 1
 
     total = len(results)
-    print(f"\nSUMMARY STATISTICS:")
+    print("\nSUMMARY STATISTICS:")
     print(f"{'=' * 50}")
     print(f"Total holes analyzed: {total}")
     print(
@@ -335,7 +334,7 @@ def print_multi_boundary_analysis(results: List[Dict]):
     )
 
     # Show examples of perfect unions
-    print(f"\n🎯 PERFECT UNION EXAMPLES:")
+    print("\n🎯 PERFECT UNION EXAMPLES:")
     print(f"{'=' * 50}")
 
     perfect_examples = []
@@ -361,7 +360,7 @@ def print_multi_boundary_analysis(results: List[Dict]):
         print(f"  Union bbox: {union_bbox_deg}")
 
     # Show examples of good containments
-    print(f"\n🎯 GOOD CONTAINMENT EXAMPLES:")
+    print("\n🎯 GOOD CONTAINMENT EXAMPLES:")
     print(f"{'=' * 50}")
 
     containment_examples = []
@@ -379,7 +378,7 @@ def print_multi_boundary_analysis(results: List[Dict]):
         print(f"  Boundary IDs: {combo['boundaries']}")
 
     # Show holes with no good matches (the problematic cases)
-    print(f"\n⚠️  HOLES WITH NO GOOD MATCHES:")
+    print("\n⚠️  HOLES WITH NO GOOD MATCHES:")
     print(f"{'=' * 50}")
 
     no_match_examples = [
