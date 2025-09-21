@@ -25,6 +25,7 @@ repos:
           # linter.
           - id: ruff
             args: [ --fix ]
+            exclude: ^((prototypes)/)
           - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
@@ -53,7 +54,7 @@ repos:
         rev: v1.18.1
         hooks:
             -   id: mypy
-                exclude: ^((tests|scripts|docs)/)
+                exclude: ^((tests|scripts|prototypes|docs)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
     -   repo: https://github.com/mgedmin/check-manifest
