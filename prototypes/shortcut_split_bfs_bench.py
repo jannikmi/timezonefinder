@@ -10,6 +10,15 @@ from this random dataset.
 Run with::
 
     uv run python prototypes/shortcut_split_bfs_bench.py
+
+
+FINDINGS:
+the maximum resolution dominates the size, and the lower resolutions only add a small overhead. hence, hierarchical index binary files are slightly larger than their single-resolution counterparts.
+all cells in the start resolution need to be populated to ensure full coverage.
+when breaking down cells into children, the parent cell still has to be kept since the h3 cells do not nest cleanly.
+checking multiple resolutions introduces an overhead.
+the hierarchical approach does not yield any performance benefit over a single-resolution index at max resolution.
+-> dropped the idea of using a hierarchical index. sticking with a single resolution index structure, since it is simpler and more efficient.
 """
 
 from __future__ import annotations
