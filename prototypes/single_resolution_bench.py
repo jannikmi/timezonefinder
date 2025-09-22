@@ -19,6 +19,11 @@ data loss or corruption.
 Run with::
 
     uv run python prototypes/single_resolution_bench.py
+
+
+FINDINGS:
+for resolution 3 the hybrid index is about 1.6MB
+the resolution 4 index would be much larger and does the performance benefits do not justify the increased footprint of the releases (the index would account for more than 10% of the timezone polygon data)
 """
 
 from __future__ import annotations
