@@ -41,6 +41,32 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
+def test_single_shortcut_binary_exists():
+    """Test that only a single .fbs binary file for the shortcut index exists in the data folder."""
+    data_dir = DEFAULT_DATA_DIR
+
+    # Find all .fbs files that could be shortcut-related
+    fbs_files = list(data_dir.glob("*shortcut*.fbs"))
+
+    # We expect exactly one shortcut .fbs file (hybrid_shortcuts_uint8.fbs or hybrid_shortcuts_uint16.fbs)
+    assert len(fbs_files) == 1, (
+        f"Expected exactly 1 shortcut .fbs file in {data_dir}, "
+        f"but found {len(fbs_files)}: {[f.name for f in fbs_files]}"
+    )
+
+    # Verify it's the correct hybrid shortcuts file
+    shortcut_file = fbs_files[0]
+    assert shortcut_file.name.startswith("hybrid_shortcuts_"), (
+        f"Expected hybrid shortcuts file, but found {shortcut_file.name}"
+    )
+
+    # Verify it matches the expected file based on zone_id_dtype
+    expected_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_dir)
+    assert shortcut_file == expected_file, (
+        f"Found shortcut file {shortcut_file.name} doesn't match expected {expected_file.name}"
+    )
+
+
 @pytest.fixture
 def tf():
     return TimezoneFinder(in_memory=True)
