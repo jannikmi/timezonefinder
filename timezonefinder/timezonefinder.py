@@ -166,31 +166,27 @@ class AbstractTimezoneFinder(ABC):
         zone_id = self.zone_id_of(boundary_id)
         return self.zone_name_from_id(zone_id)
 
-    def get_boundaries_in_shortcut(self, *, lng: float, lat: float) -> np.ndarray:
+    def _iter_boundaries_in_shortcut(self, *, lng: float, lat: float) -> Iterable[int]:
         """
-        Get the boundary polygon IDs in the shortcut corresponding to the given coordinates.
-
-        NOTE: rather than calling this utility function, we inline these calls in the performance critical hot path
-        -> avoid tuple creation, function call overhead
+        Iterate over boundary polygon IDs in the shortcut corresponding to the given coordinates.
 
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
-        :return: An array of boundary polygon IDs.
+        :yield: Boundary polygon IDs.
         """
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # Handle shortcuts (hybrid structure) - if it's a zone ID, get all polygons for that zone
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
-            return np.array([], dtype=np.uint16)
+            return
         elif isinstance(shortcut_value, int):
             # Zone ID - get all boundary polygons for this zone
             # Most polygons will be quickly ruled out by bbox check
-            boundary_ids = list(self._iter_boundary_ids_of_zone(shortcut_value))
-            return np.array(boundary_ids, dtype=np.uint16)
+            yield from self._iter_boundary_ids_of_zone(shortcut_value)
         else:
             # Polygon array
-            return shortcut_value
+            yield from shortcut_value
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
