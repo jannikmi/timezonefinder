@@ -56,7 +56,7 @@ from scripts.configs import (
     BoundaryArray,
     resolve_zone_id_dtype,
 )
-from scripts.reporting import write_data_report
+from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -247,20 +247,11 @@ def parse_data(
     )
     compile_data_files(data, output_path_obj)
 
-    shortcuts = compile_shortcuts(output_path_obj, data)
+    _ = compile_shortcuts(output_path_obj, data)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
-    write_data_report(
-        shortcuts,
-        output_path_obj,
-        data.nr_of_polygons,
-        data.nr_of_zones,
-        data.polygon_lengths,
-        data.all_hole_lengths,
-        data.polynrs_of_holes,
-        data.poly_zone_ids.tolist(),
-        data.all_tz_names,
-    )
+    print("Generating data report from binary files...")
+    write_data_report_from_binary(output_path_obj)
 
 
 if __name__ == "__main__":

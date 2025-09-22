@@ -10,6 +10,7 @@ Changelog
 * introduced hybrid shortcut index structure that combines the functionality of separate shortcuts and unique shortcuts into a single optimized data structure, improving performance and reducing memory usage
 * zone id storage now defaults to ``uint8`` and can be overridden via ``--zone-id-dtype``/``TIMEZONEFINDER_ZONE_ID_DTYPE`` when recompiling binaries
 * relax ``cffi`` upper bound to allow the 2.x series (minimum stays at ``1.15.1``) so downstream packages pinning ``cffi>=2.0`` resolve cleanly
+* ``scripts/reporting.py`` can now be executed as a standalone script to generate data reports from binary files
 
 Internal:
 

@@ -3,20 +3,32 @@ Module for generating reports about timezone data statistics.
 Contains functions for reporting various metrics about timezone polygons, holes, and boundaries.
 """
 
+import argparse
+import json
 from collections import Counter
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 
+import numpy as np
 
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
-from timezonefinder.flatbuf.io.hybrid_shortcuts import get_hybrid_shortcut_file_path
+from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    get_hybrid_shortcut_file_path,
+    read_hybrid_shortcuts_binary,
+)
+from timezonefinder.np_binary_helpers import (
+    get_zone_ids_path,
+    read_per_polygon_vector,
+)
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
 )
+from timezonefinder.zone_names import read_zone_names
 
 
 # decorator to reroute the output of a function to a file
@@ -33,6 +45,99 @@ def redirect_output_to_file(file_path: str) -> Callable:
         return wrapper
 
     return decorator
+
+
+def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> Dict:
+    """
+    Load all necessary data from binary files to generate reports.
+
+    Args:
+        data_path: Path to the directory containing binary data files
+
+    Returns:
+        Dictionary containing all loaded data
+    """
+    print(f"Loading binary data from: {data_path}")
+
+    # Load shortcuts
+    zone_ids = read_per_polygon_vector(get_zone_ids_path(data_path))
+    zone_id_dtype = zone_ids.dtype
+    shortcut_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_path)
+    shortcuts = read_hybrid_shortcuts_binary(shortcut_file)
+
+    # Load timezone names
+    all_tz_names = read_zone_names(data_path)
+    nr_of_zones = len(all_tz_names)
+
+    # Load boundary polygon data
+    boundaries_dir = get_boundaries_dir(data_path)
+    boundary_coord_path = get_coordinate_path(boundaries_dir)
+
+    # Read boundary polygons using FlatBuffer
+    from timezonefinder.flatbuf.io.polygons import (
+        get_polygon_collection,
+        read_polygon_array_from_binary,
+    )
+
+    with open(boundary_coord_path, "rb") as f:
+        coord_buf = f.read()
+
+    polygon_collection = get_polygon_collection(coord_buf)
+    nr_of_polygons = polygon_collection.PolygonsLength()
+
+    # Calculate polygon lengths from FlatBuffer data
+    polygon_lengths = []
+    for idx in range(nr_of_polygons):
+        polygon_coords = read_polygon_array_from_binary(polygon_collection, idx)
+        polygon_lengths.append(polygon_coords.shape[1])  # Number of coordinate pairs
+
+    # Load hole data
+    holes_dir = get_holes_dir(data_path)
+    hole_coord_path = get_coordinate_path(holes_dir)
+
+    # Load hole registry to get polynrs_of_holes
+    hole_registry_path = data_path / "hole_registry.json"
+    polynrs_of_holes = []
+    all_hole_lengths = []
+
+    if hole_registry_path.exists() and hole_coord_path.exists():
+        with open(hole_registry_path) as f:
+            hole_registry = json.load(f)
+
+        # Read hole polygons using FlatBuffers
+        with open(hole_coord_path, "rb") as f:
+            hole_coord_buf = f.read()
+
+        hole_polygon_collection = get_polygon_collection(hole_coord_buf)
+
+        # Build polynrs_of_holes list from hole registry
+        hole_index = 0
+        for poly_id_str, hole_info in hole_registry.items():
+            poly_id = int(poly_id_str)
+            num_holes = hole_info[0]
+
+            for _ in range(num_holes):
+                polynrs_of_holes.append(poly_id)
+                if hole_index < hole_polygon_collection.PolygonsLength():
+                    hole_coords = read_polygon_array_from_binary(
+                        hole_polygon_collection, hole_index
+                    )
+                    all_hole_lengths.append(
+                        hole_coords.shape[1]
+                    )  # Number of coordinate pairs
+                    hole_index += 1
+
+    return {
+        "shortcuts": shortcuts,
+        "nr_of_polygons": nr_of_polygons,
+        "nr_of_zones": nr_of_zones,
+        "polygon_lengths": polygon_lengths,
+        "all_hole_lengths": all_hole_lengths,
+        "polynrs_of_holes": polynrs_of_holes,
+        "poly_zone_ids": zone_ids.tolist(),
+        "all_tz_names": all_tz_names,
+        "output_path": data_path,
+    }
 
 
 def accumulated_frequency(int_list):
@@ -126,21 +231,31 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
+def print_shortcut_statistics(
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
+    # Handle hybrid shortcuts - entries can be either int (zone ID) or np.ndarray (polygon IDs)
+    nr_of_entries_in_shortcut = []
+    amount_of_different_zones = []
+
+    for v in mapping.values():
+        if isinstance(v, int):
+            # Direct zone ID - single zone, no polygons to enumerate
+            nr_of_entries_in_shortcut.append(0)  # No polygons, direct zone
+            amount_of_different_zones.append(1)  # Single zone
+        else:
+            # Polygon list - count polygons and distinct zones
+            polygon_ids = v
+            nr_of_entries_in_shortcut.append(len(polygon_ids))
+
+            # Count distinct zones for these polygons
+            zone_ids = [poly_zone_ids[i] for i in polygon_ids]
+            distinct_zones = set(zone_ids)
+            amount_of_different_zones.append(len(distinct_zones))
 
     print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
-
-    amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
-        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-        distinct_zones = set(zone_ids)
-        amount_of_distinct_zones = len(distinct_zones)
-        amount_of_different_zones.append(amount_of_distinct_zones)
-
     print_frequencies(amount_of_different_zones, "timezones/shortcut")
 
 
@@ -488,48 +603,94 @@ def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
     print_rst_table(headers, rows)
 
 
-def write_data_report(
-    shortcuts: Dict[int, List[int]],
-    output_path: Path,
-    nr_of_polygons: int,
-    nr_of_zones: int,
-    polygon_lengths: List[int],
-    all_hole_lengths: List[int],
-    polynrs_of_holes: List[int],
-    poly_zone_ids: List[int],
-    all_tz_names: List[str],
-) -> None:
+def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
     """
-    Writes a complete data report to the report file.
+    Writes a complete data report to the report file by loading data from binary files.
 
     Args:
-        shortcuts: Mapping of hexagon IDs to polygon IDs
-        output_path: Path to the output directory
-        nr_of_polygons: Number of boundary polygons
-        nr_of_zones: Number of timezone zones
-        polygon_lengths: List of coordinate lengths for each boundary polygon
-        all_hole_lengths: List of coordinate lengths for each hole
-        polynrs_of_holes: List mapping holes to their parent polygons
-        poly_zone_ids: List mapping polygons to zone IDs
-        all_tz_names: List of timezone names
+        data_path: Path to binary data files directory
     """
+    data = load_binary_data(data_path)
+
     if DATA_REPORT_FILE.exists():
         print(f"Removing old data report file: {DATA_REPORT_FILE}")
         DATA_REPORT_FILE.unlink()
 
     print("Writing data report to:", DATA_REPORT_FILE)
     report_data_statistics(
-        nr_of_polygons,
-        nr_of_zones,
-        polygon_lengths,
-        all_hole_lengths,
-        polynrs_of_holes,
-        poly_zone_ids,
-        all_tz_names,
+        data["nr_of_polygons"],
+        data["nr_of_zones"],
+        data["polygon_lengths"],
+        data["all_hole_lengths"],
+        data["polynrs_of_holes"],
+        data["poly_zone_ids"],
+        data["all_tz_names"],
     )
-    print_shortcut_statistics(shortcuts, poly_zone_ids)
+    print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
     # Derive zone_id_dtype from the zone IDs data
-    import numpy as np
+    zone_ids_array = np.array(data["poly_zone_ids"])
+    # Convert int64 to appropriate dtype based on range
+    if zone_ids_array.max() < 256:
+        zone_id_dtype = np.dtype(np.uint8)
+    elif zone_ids_array.max() < 65536:
+        zone_id_dtype = np.dtype(np.uint16)
+    else:
+        raise ValueError(f"Zone ID range too large: {zone_ids_array.max()}")
 
-    zone_id_dtype = np.array(poly_zone_ids).dtype
-    report_file_sizes(output_path, zone_id_dtype)
+    report_file_sizes(data["output_path"], zone_id_dtype)
+
+
+def main() -> None:
+    """
+    Main function for standalone execution.
+    Generate data report from binary files.
+    """
+    parser = argparse.ArgumentParser(
+        description="Generate timezone data report from binary files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate report using default data directory
+  python -m scripts.reporting
+
+  # Generate report using custom data directory
+  python -m scripts.reporting --data-path /path/to/data
+
+  # Generate report using current package data
+  python -m scripts.reporting --data-path timezonefinder/data
+        """.strip(),
+    )
+
+    parser.add_argument(
+        "--data-path",
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help=f"Path to directory containing binary data files (default: {DEFAULT_DATA_DIR})",
+    )
+
+    args = parser.parse_args()
+
+    # Validate data path exists
+    if not args.data_path.exists():
+        print(f"Error: Data path does not exist: {args.data_path}")
+        return 1
+
+    if not args.data_path.is_dir():
+        print(f"Error: Data path is not a directory: {args.data_path}")
+        return 1
+
+    try:
+        print(f"Generating data report from: {args.data_path}")
+        write_data_report_from_binary(args.data_path)
+        print(f"Data report successfully generated at: {DATA_REPORT_FILE}")
+        return 0
+    except Exception as e:
+        print(f"Error generating data report: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+if __name__ == "__main__":
+    exit(main())

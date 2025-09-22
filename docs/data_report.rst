@@ -237,14 +237,14 @@ Shortcut Mapping Statistics
      - Relative
      - Accumulated
      - Remaining
-   * - 1
-     - 32183
-     - 78.19%
-     - 78.19%
-     - 21.81%
+   * - 0
+     - 32190
+     - 78.2%
+     - 78.2%
+     - 21.8%
    * - 2
-     - 7901
-     - 19.19%
+     - 7894
+     - 19.18%
      - 97.38%
      - 2.62%
    * - 3
@@ -359,13 +359,13 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 29.29
-     - 91.19%
+     - 90.14%
    * - hole polygon data
      - 1.72
-     - 5.36%
-   * - shortcuts
-     - 1.11
-     - 3.45%
+     - 5.30%
+   * - hybrid shortcut index
+     - 1.48
+     - 4.56%
    * - Total
-     - 32.12
+     - 32.50
      - 100.00%
