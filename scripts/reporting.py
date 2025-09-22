@@ -12,7 +12,7 @@ from typing import Callable, Dict, List
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
-from timezonefinder.flatbuf.io.shortcuts import get_shortcut_file_path
+from timezonefinder.flatbuf.io.hybrid_shortcuts import get_hybrid_shortcut_file_path
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
@@ -434,7 +434,7 @@ def report_data_statistics(
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path) -> None:
+def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
     """
     Reports the sizes of the biggest generated binary files.
 
@@ -442,6 +442,7 @@ def report_file_sizes(output_path: Path) -> None:
 
     Args:
         output_path: Path to the output directory containing the binary files
+        zone_id_dtype: Data type for zone IDs (needed for hybrid shortcut file path)
     """
     print(rst_title("Binary File Sizes", level=1))
     holes_dir = get_holes_dir(output_path)
@@ -450,10 +451,21 @@ def report_file_sizes(output_path: Path) -> None:
     boundary_polygon_file = get_coordinate_path(boundaries_dir)
     hole_polygon_file = get_coordinate_path(holes_dir)
 
+    # Get hybrid shortcut file path - if zone_id_dtype not provided, try to infer it
+    if zone_id_dtype is None:
+        from timezonefinder.np_binary_helpers import (
+            get_zone_ids_path,
+            read_per_polygon_vector,
+        )
+
+        zone_ids_path = get_zone_ids_path(output_path)
+        zone_ids_temp = read_per_polygon_vector(zone_ids_path)
+        zone_id_dtype = zone_ids_temp.dtype
+
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
-        "shortcuts": get_shortcut_file_path(output_path),
+        "hybrid shortcuts": get_hybrid_shortcut_file_path(zone_id_dtype, output_path),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
@@ -514,4 +526,8 @@ def write_data_report(
         all_tz_names,
     )
     print_shortcut_statistics(shortcuts, poly_zone_ids)
-    report_file_sizes(output_path)
+    # Derive zone_id_dtype from the zone IDs data
+    import numpy as np
+
+    zone_id_dtype = np.array(poly_zone_ids).dtype
+    report_file_sizes(output_path, zone_id_dtype)

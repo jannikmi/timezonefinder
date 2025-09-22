@@ -8,16 +8,6 @@ from .polygons import (
     get_polygon_collection,
     read_polygon_array_from_binary,
 )
-from .shortcuts import (
-    get_shortcut_file_path,
-    write_shortcuts_flatbuffers,
-    read_shortcuts_binary,
-)
-from .unique_shortcuts import (
-    get_unique_shortcut_file_path,
-    write_unique_shortcuts_flatbuffers,
-    read_unique_shortcuts_binary,
-)
 from .hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
     write_hybrid_shortcuts_flatbuffers,
@@ -31,12 +21,6 @@ __all__ = [
     "write_polygon_collection_flatbuffer",
     "get_polygon_collection",
     "read_polygon_array_from_binary",
-    "get_shortcut_file_path",
-    "write_shortcuts_flatbuffers",
-    "read_shortcuts_binary",
-    "get_unique_shortcut_file_path",
-    "write_unique_shortcuts_flatbuffers",
-    "read_unique_shortcuts_binary",
     "get_hybrid_shortcut_file_path",
     "write_hybrid_shortcuts_flatbuffers",
     "read_hybrid_shortcuts_binary",

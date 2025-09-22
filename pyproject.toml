@@ -152,7 +152,6 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = [
     "timezonefinder.configs",
-    "timezonefinder.flatbuf.io.unique_shortcuts",
 ]
 allow_any_generics = true
 

@@ -1,6 +1,5 @@
 """
 Hex-related utility functions that don't depend on classes.
-Created to break circular import between shortcuts.py and classes.py.
 """
 
 from dataclasses import dataclass
