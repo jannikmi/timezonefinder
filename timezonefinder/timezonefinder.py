@@ -931,18 +931,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         if hybrid_value is None:
             return None
 
-        if isinstance(hybrid_value, int):
-            # For zone IDs, we need to get all polygons of that zone and test them
-            # Most polygons will be quickly ruled out by bbox check
-            possible_boundaries = list(self._iter_boundary_ids_of_zone(hybrid_value))
-        else:
-            # Polygon array case
-            possible_boundaries = list(hybrid_value)
-
-        nr_possible_boundaries = len(possible_boundaries)
-        if nr_possible_boundaries == 0:
-            return None
-
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
         # x = longitude  y = latitude  both converted to 8byte int
@@ -950,7 +938,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
         y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
-        for boundary_id in possible_boundaries:
+        if isinstance(hybrid_value, int):
+            # For zone IDs, iterate directly over boundary polygons for that zone
+            # Most polygons will be quickly ruled out by bbox check
+            boundary_ids = self._iter_boundary_ids_of_zone(hybrid_value)
+        else:
+            # Polygon array case - iterate directly over the array
+            boundary_ids = hybrid_value
+
+        for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = self.zone_id_of(boundary_id)
                 return self.zone_name_from_id(zone_id)
