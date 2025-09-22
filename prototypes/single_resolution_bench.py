@@ -8,6 +8,14 @@ indices are benchmarked against a single set of 10,000 globally random
 query points; all throughput and latency statistics reported below originate
 from this random dataset.
 
+TEMPORARY HYBRID INDEX TEST:
+This script also includes a test function `test_hybrid_index_algorithm()` that
+validates the correctness of the algorithm for building the new combined hybrid
+index data structure. The test asserts equality of content between the new
+hybrid index and the two separate legacy data structures (unique_shortcuts and
+shortcuts), ensuring that the hybrid approach correctly combines both without
+data loss or corruption.
+
 Run with::
 
     uv run python prototypes/single_resolution_bench.py
@@ -23,7 +31,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -447,6 +455,252 @@ def test_single_resolution_finder() -> None:
     assert tf.stats["unique_hits"] == 0
 
 
+def build_hybrid_index_from_separate_indices(
+    shortcuts: dict[int, list[int]], unique_shortcuts: dict[int, int]
+) -> dict[int, int | list[int]]:
+    """Build hybrid index from separate shortcuts and unique_shortcuts indices.
+
+    This is the algorithm being tested - it combines the two legacy data structures
+    into a single hybrid structure that replaces both.
+
+    ALGORITHM EXPLANATION:
+    The legacy system uses two separate data structures:
+    1. `shortcuts`: Maps hex_id -> [polygon_ids] for ALL hex cells
+    2. `unique_shortcuts`: Maps hex_id -> zone_id for hex cells where all polygons belong to same zone
+
+    The hybrid system combines these into one structure:
+    - If a hex is in unique_shortcuts, store just the zone_id (saves space & lookup time)
+    - Otherwise, store the polygon_ids list (allows proper ambiguity resolution)
+
+    This optimization reduces storage (single zone_id vs list of polygon_ids) and
+    improves lookup performance (direct zone lookup vs polygon intersection tests)
+    for the common case where all polygons in a hex belong to the same timezone.
+
+    Args:
+        shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
+        unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
+
+    Returns:
+        Dictionary mapping hex IDs to either:
+        - int: zone ID (for unique cases where all polygons share same zone)
+        - list[int]: polygon IDs (for ambiguous cases requiring polygon tests)
+    """
+    hybrid_mapping = {}
+
+    # First, add all entries from shortcuts (polygon lists)
+    # This ensures we have entries for all hex cells with any polygons
+    for hex_id, polygon_ids in shortcuts.items():
+        hybrid_mapping[hex_id] = polygon_ids
+
+    # Then, override with unique shortcuts where applicable
+    # This replaces polygon lists with single zone IDs when all polygons
+    # in the hex belong to the same timezone
+    for hex_id, zone_id in unique_shortcuts.items():
+        hybrid_mapping[hex_id] = zone_id
+
+    return hybrid_mapping
+
+
+# Example usage of the hybrid index algorithm:
+#
+# # Legacy data structures (what we have now):
+# shortcuts = {
+#     hex1: [poly1, poly2, poly3],  # Multiple polygons
+#     hex2: [poly4],                # Single polygon
+#     hex3: [poly5, poly6],         # Multiple polygons from same zone
+# }
+# unique_shortcuts = {
+#     hex2: zone_a,  # All polygons in hex2 belong to zone_a
+#     hex3: zone_b,  # All polygons in hex3 belong to zone_b
+# }
+#
+# # Combined hybrid structure (what we want):
+# hybrid_index = build_hybrid_index_from_separate_indices(shortcuts, unique_shortcuts)
+# # Result: {
+# #     hex1: [poly1, poly2, poly3],  # Ambiguous - keep polygon list
+# #     hex2: zone_a,                 # Unique - use zone ID directly
+# #     hex3: zone_b,                 # Unique - use zone ID directly
+# # }
+
+
+def test_hybrid_index_algorithm_simple() -> None:
+    """Test the hybrid index algorithm with simple mock data."""
+    print("Testing hybrid index algorithm with mock data...")
+
+    # Create mock legacy data structures
+    # Scenario: 5 hex cells with different patterns
+    legacy_shortcuts = {
+        100: [1, 2, 3],  # Multiple polygons from different zones
+        101: [4],  # Single polygon (but will be unique)
+        102: [5, 6],  # Multiple polygons from same zone (will be unique)
+        103: [7, 8, 9],  # Multiple polygons from different zones
+        104: [10],  # Single polygon (but will be unique)
+    }
+
+    legacy_unique_shortcuts = {
+        101: 5,  # Hex 101 has all polygons from zone 5
+        102: 8,  # Hex 102 has all polygons from zone 8
+        104: 12,  # Hex 104 has all polygons from zone 12
+        # Note: 100 and 103 are not in unique_shortcuts (ambiguous zones)
+    }
+
+    # Build hybrid index using our algorithm
+    hybrid_index = build_hybrid_index_from_separate_indices(
+        legacy_shortcuts, legacy_unique_shortcuts
+    )
+
+    # Verify correctness
+    print(
+        f"  Testing mock data with {len(legacy_shortcuts)} shortcuts and {len(legacy_unique_shortcuts)} unique shortcuts"
+    )
+
+    # Expected hybrid structure:
+    expected_hybrid = {
+        100: [1, 2, 3],  # Polygon list (not unique)
+        101: 5,  # Zone ID (unique)
+        102: 8,  # Zone ID (unique)
+        103: [7, 8, 9],  # Polygon list (not unique)
+        104: 12,  # Zone ID (unique)
+    }
+
+    # Verify exact match
+    assert hybrid_index == expected_hybrid, (
+        f"Hybrid index mismatch: got {hybrid_index}, expected {expected_hybrid}"
+    )
+
+    # Verify data types
+    zone_count = sum(1 for v in hybrid_index.values() if isinstance(v, int))
+    polygon_count = sum(1 for v in hybrid_index.values() if isinstance(v, list))
+
+    assert zone_count == 3, f"Expected 3 zone entries, got {zone_count}"
+    assert polygon_count == 2, f"Expected 2 polygon entries, got {polygon_count}"
+
+    print("  ✓ Mock data test PASSED")
+
+
+def test_hybrid_index_algorithm(tz_data: TimezoneData) -> None:
+    """Test that the hybrid index algorithm correctly combines legacy data structures."""
+    print("Testing hybrid index algorithm...")
+
+    # First run the simple test
+    test_hybrid_index_algorithm_simple()
+
+    # Use a resolution that will have both unique and non-unique entries
+    test_resolution = min(2, MAX_RESOLUTION)  # Use resolution 2 or max available
+
+    # Build the legacy data structures using the existing logic from shortcuts.py
+    from scripts.shortcuts import (
+        compile_h3_map,
+        compute_unique_shortcut_mapping,
+        all_res_candidates,
+    )
+
+    # Get hex candidates for the test resolution
+    candidates = all_res_candidates(test_resolution)
+    # Take a smaller sample for testing to avoid long computation
+    sample_candidates = (
+        set(list(candidates)[:100]) if len(candidates) > 100 else candidates
+    )
+
+    # Build legacy shortcuts (hex_id -> [polygon_ids])
+    legacy_shortcuts = compile_h3_map(tz_data, sample_candidates)
+
+    # Build legacy unique_shortcuts (hex_id -> zone_id)
+    legacy_unique_shortcuts = compute_unique_shortcut_mapping(
+        legacy_shortcuts, tz_data.poly_zone_ids
+    )
+
+    # Build hybrid index using our algorithm
+    hybrid_index = build_hybrid_index_from_separate_indices(
+        legacy_shortcuts, legacy_unique_shortcuts
+    )
+
+    # Verify the algorithm correctness
+    print(f"  Testing {len(sample_candidates)} hex cells with real data...")
+
+    # Test 1: All hex IDs from both legacy structures should be in hybrid
+    all_legacy_hex_ids = set(legacy_shortcuts.keys()) | set(
+        legacy_unique_shortcuts.keys()
+    )
+    assert all_legacy_hex_ids == set(hybrid_index.keys()), (
+        "Hybrid index missing hex IDs"
+    )
+
+    # Test 2: For each hex ID, verify the content matches expectations
+    mismatches = 0
+    for hex_id in all_legacy_hex_ids:
+        if hex_id in legacy_unique_shortcuts:
+            # Should be a zone ID in hybrid
+            expected_zone_id = legacy_unique_shortcuts[hex_id]
+            hybrid_value = hybrid_index[hex_id]
+            if hybrid_value != expected_zone_id:
+                print(
+                    f"    Mismatch at hex {hex_id}: expected zone {expected_zone_id}, got {hybrid_value}"
+                )
+                mismatches += 1
+        else:
+            # Should be polygon list in hybrid
+            expected_polygons = legacy_shortcuts[hex_id]
+            hybrid_value = hybrid_index[hex_id]
+            if hybrid_value != expected_polygons:
+                print(
+                    f"    Mismatch at hex {hex_id}: expected polygons {expected_polygons}, got {hybrid_value}"
+                )
+                mismatches += 1
+
+    # Test 3: Verify data type consistency
+    zone_entries = sum(1 for v in hybrid_index.values() if isinstance(v, int))
+    polygon_entries = sum(1 for v in hybrid_index.values() if isinstance(v, list))
+
+    print(f"  Hybrid index stats:")
+    print(f"    Total entries: {len(hybrid_index)}")
+    print(f"    Zone entries: {zone_entries}")
+    print(f"    Polygon entries: {polygon_entries}")
+    print(f"    Legacy unique shortcuts: {len(legacy_unique_shortcuts)}")
+    print(f"    Legacy shortcuts: {len(legacy_shortcuts)}")
+
+    # Test 4: All unique shortcuts should result in zone entries
+    assert zone_entries == len(legacy_unique_shortcuts), (
+        f"Zone entries ({zone_entries}) != unique shortcuts ({len(legacy_unique_shortcuts)})"
+    )
+
+    # Test 5: All non-unique shortcuts should result in polygon entries
+    non_unique_shortcuts = len(legacy_shortcuts) - len(legacy_unique_shortcuts)
+    assert polygon_entries == non_unique_shortcuts, (
+        f"Polygon entries ({polygon_entries}) != non-unique shortcuts ({non_unique_shortcuts})"
+    )
+
+    if mismatches == 0:
+        print(
+            "  ✓ Hybrid index algorithm test PASSED - all entries match expected values"
+        )
+    else:
+        raise AssertionError(
+            f"Hybrid index algorithm test FAILED - {mismatches} mismatches found"
+        )
+
+    # Test 6: Verify that zones and polygons don't mix inappropriately
+    for hex_id, value in hybrid_index.items():
+        if isinstance(value, int):
+            # Zone entry - verify it matches what unique_shortcuts says
+            assert hex_id in legacy_unique_shortcuts, (
+                f"Zone entry {hex_id} not in unique shortcuts"
+            )
+            assert value == legacy_unique_shortcuts[hex_id], (
+                f"Zone ID mismatch for hex {hex_id}"
+            )
+        elif isinstance(value, list):
+            # Polygon entry - verify it's not in unique_shortcuts
+            assert hex_id not in legacy_unique_shortcuts, (
+                f"Polygon entry {hex_id} should not be in unique shortcuts"
+            )
+            assert value == legacy_shortcuts[hex_id], (
+                f"Polygon list mismatch for hex {hex_id}"
+            )
+
+    print("  ✓ Hybrid index content validation PASSED")
+
+
 def run_tests(
     tz_data: TimezoneData | None = None, baseline_tf: TimezoneFinder | None = None
 ) -> None:
@@ -462,6 +716,9 @@ def run_tests(
 
     # Test with real data if available
     if tz_data is not None and baseline_tf is not None:
+        # Test the hybrid index algorithm
+        test_hybrid_index_algorithm(tz_data)
+
         # Test that a single resolution gives reasonable results
         if MIN_RESOLUTION <= MAX_RESOLUTION:
             test_res = min(3, MAX_RESOLUTION)  # Use resolution 3 or max available
