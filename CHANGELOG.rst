@@ -19,7 +19,7 @@ Internal:
 
 * using abi3 (aka Python limited API) wheels to avoid a combinatory explosion with Python version. It allows the use of a single Python 3.9 base and building future-proof wheels. Thanks to `theirix <https://github.com/theirix>`__
 * using pydantic to validating and parsing the GeoJSON dataset. Thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
-* refactored file_converter.py to improve code quality. Thanks to `Pratyush Kumar <https://github.com/pratyushkumar211`__ for the PR.
+* refactored file_converter.py to improve code quality. Thanks to `Pratyush Kumar <https://github.com/pratyushkumar211>`__ for the PR.
 * consolidated shortcut data structures: replaced ``shortcuts.fbs`` file with ``hybrid_shortcuts_uint8.fbs`` (or ``hybrid_shortcuts_uint16.fbs``) file that stores both polygon lists and direct zone IDs using the minimal dtype for zone IDs.
 
 
