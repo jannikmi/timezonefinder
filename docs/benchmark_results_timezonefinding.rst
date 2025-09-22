@@ -6,17 +6,57 @@ Timezone Finding Performance Benchmark
 
 
 
-System Configuration
---------------------
+System Status
+-------------
 
 
-**C Implementation**: False
 
 
-**Numba JIT**: True
+Python Environment
+~~~~~~~~~~~~~~~~~~
 
 
-**Test Queries**: 100
+**Python Version**: 3.12.1 (CPython)
+
+**NumPy Version**: 2.2.6
+
+**Platform**: Darwin arm64
+
+**Processor**: arm
+
+
+
+TimezoneFinder Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+**C Implementation Available**: False
+
+**Numba JIT Available**: True
+
+
+
+Performance Optimizations
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+* ✗ Using pure Python point-in-polygon implementation
+
+* ✓ Numba JIT compilation enabled
+
+
+
+Benchmark Configuration
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+**Test Queries**: 10,000
+
+**Algorithm Type**: Timezone Finding
+
+**Test Modes**: File-based and In-memory
+
+**Query Types**: On-land points and Random points
 
 
 
@@ -39,38 +79,38 @@ Results for 'on land points' (points included in a land timezone)
      - Seconds/Query
      - Points/Second
    * - certain_timezone_at()
-     - 4.6e-03
-     - 0k
+     - 2.0e-04
+     - 5k
    * - TimezoneFinder.certain_timezone_at()
-     - 1.6e-04
-     - 6k
+     - 1.5e-04
+     - 7k
    * - timezone_at_land()
      - 7.1e-06
-     - 140k
+     - 141k
    * - TimezoneFinder.timezone_at_land()
-     - 6.6e-06
-     - 152k
+     - 7.0e-06
+     - 142k
    * - timezone_at()
-     - 6.0e-06
-     - 168k
+     - 6.6e-06
+     - 151k
    * - TimezoneFinder.timezone_at()
-     - 5.8e-06
-     - 172k
+     - 6.8e-06
+     - 147k
    * - unique_timezone_at()
-     - 9.6e-07
-     - 1046k
+     - 9.9e-07
+     - 1012k
    * - TimezoneFinder.unique_timezone_at()
-     - 8.5e-07
-     - 1172k
+     - 9.3e-07
+     - 1072k
    * - TimezoneFinderL.unique_timezone_at()
-     - 2.5e-06
-     - 405k
+     - 9.3e-07
+     - 1073k
    * - TimezoneFinderL.timezone_at_land()
-     - 1.5e-06
-     - 662k
+     - 1.4e-06
+     - 722k
    * - TimezoneFinderL.timezone_at()
-     - 8.9e-07
-     - 1125k
+     - 9.4e-07
+     - 1062k
 
 
 
@@ -88,38 +128,38 @@ Results for random points (anywhere on earth)
      - Seconds/Query
      - Points/Second
    * - certain_timezone_at()
-     - 1.8e-04
-     - 6k
+     - 1.2e-04
+     - 8k
    * - TimezoneFinder.certain_timezone_at()
-     - 1.3e-04
+     - 1.2e-04
      - 8k
    * - timezone_at_land()
-     - 8.3e-06
-     - 121k
+     - 5.2e-06
+     - 194k
    * - TimezoneFinder.timezone_at_land()
-     - 7.4e-06
-     - 136k
+     - 5.4e-06
+     - 186k
    * - timezone_at()
-     - 6.6e-06
-     - 151k
+     - 4.7e-06
+     - 213k
    * - TimezoneFinder.timezone_at()
-     - 6.5e-06
-     - 155k
+     - 4.6e-06
+     - 216k
    * - unique_timezone_at()
-     - 9.5e-07
-     - 1054k
+     - 1.0e-06
+     - 1003k
    * - TimezoneFinder.unique_timezone_at()
-     - 8.5e-07
-     - 1171k
+     - 9.4e-07
+     - 1066k
    * - TimezoneFinderL.unique_timezone_at()
-     - 1.5e-06
-     - 657k
+     - 9.6e-07
+     - 1044k
    * - TimezoneFinderL.timezone_at_land()
-     - 1.5e-06
-     - 668k
+     - 1.4e-06
+     - 705k
    * - TimezoneFinderL.timezone_at()
-     - 9.0e-07
-     - 1114k
+     - 9.6e-07
+     - 1047k
 
 
 
@@ -147,17 +187,17 @@ Results for 'on land points' (points included in a land timezone)
      - Seconds/Query
      - Points/Second
    * - TimezoneFinder.certain_timezone_at()
-     - 1.4e-04
+     - 1.5e-04
      - 7k
    * - TimezoneFinder.timezone_at_land()
-     - 5.4e-06
-     - 184k
+     - 5.5e-06
+     - 183k
    * - TimezoneFinder.timezone_at()
-     - 4.6e-06
-     - 218k
+     - 5.0e-06
+     - 201k
    * - TimezoneFinder.unique_timezone_at()
-     - 8.8e-07
-     - 1134k
+     - 9.1e-07
+     - 1103k
 
 
 
@@ -175,14 +215,14 @@ Results for random points (anywhere on earth)
      - Seconds/Query
      - Points/Second
    * - TimezoneFinder.certain_timezone_at()
-     - 1.6e-04
-     - 6k
+     - 1.1e-04
+     - 9k
    * - TimezoneFinder.timezone_at_land()
-     - 7.4e-06
-     - 135k
+     - 3.8e-06
+     - 264k
    * - TimezoneFinder.timezone_at()
-     - 5.3e-06
-     - 188k
+     - 3.2e-06
+     - 309k
    * - TimezoneFinder.unique_timezone_at()
-     - 1.2e-06
-     - 811k
+     - 9.2e-07
+     - 1089k

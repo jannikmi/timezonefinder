@@ -11,7 +11,11 @@ from typing import List, Tuple, Callable, Iterable
 
 import pytest
 
-from scripts.benchmark_utils import BenchmarkReporter, create_cli_parser
+from scripts.benchmark_utils import (
+    BenchmarkReporter,
+    create_cli_parser,
+    add_system_status_section,
+)
 from scripts.configs import DOC_ROOT, PERFORMANCE_REPORT_FILE, DEBUG
 from tests.auxiliaries import get_rnd_query_pt, timefunc
 from timezonefinder import (
@@ -252,19 +256,20 @@ def write_performance_report(
         (test_points_rnd, "random points (anywhere on earth)"),
     ]
 
-    tf_instance = TimezoneFinder()
-
     reporter = BenchmarkReporter(
         title="Timezone Finding Performance Benchmark", output_path=output_path
     )
 
-    # Add system configuration
-    reporter.add_section("System Configuration")
-    reporter.add_text(f"**C Implementation**: {tf_instance.using_clang_pip()}")
-    reporter.add_text("")
-    reporter.add_text(f"**Numba JIT**: {tf_instance.using_numba()}")
-    reporter.add_text("")
-    reporter.add_text(f"**Test Queries**: {n_queries:,}")
+    # Add comprehensive system status section
+    add_system_status_section(
+        reporter,
+        {
+            "test_queries": n_queries,
+            "algorithm_type": "Timezone Finding",
+            "test_modes": "File-based and In-memory",
+            "query_types": "On-land points and Random points",
+        },
+    )
 
     for in_memory_mode in [False, True]:
         mode_desc = "In-Memory Mode" if in_memory_mode else "File-Based Mode"

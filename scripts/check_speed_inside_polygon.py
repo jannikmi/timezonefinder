@@ -6,14 +6,17 @@ This script benchmarks the performance of different point-in-polygon algorithm i
 Can be run as a standalone script to generate RST reports or for console output.
 """
 
-import platform
 import warnings
 from pathlib import Path
 from typing import Callable, Iterable
 
 import numpy as np
 
-from scripts.benchmark_utils import BenchmarkReporter, create_cli_parser
+from scripts.benchmark_utils import (
+    BenchmarkReporter,
+    create_cli_parser,
+    add_system_status_section,
+)
 from scripts.configs import POLYGON_REPORT_FILE
 from tests.auxiliaries import (
     get_pip_test_input,
@@ -129,12 +132,15 @@ def write_polygon_report(output_path: Path, n_queries: int = nr_of_runs) -> None
         output_path=output_path,
     )
 
-    # Add system configuration
-    reporter.add_section("System Configuration")
-    reporter.add_text(f"* Python version: {platform.python_version()}")
-    reporter.add_text(f"* NumPy version: {np.__version__}")
-    reporter.add_text(f"* Numba enabled: {benchmark_data['numba_enabled']}")
-    reporter.add_text(f"* Test queries: {benchmark_data['n_runs']:,}")
+    # Add comprehensive system status section
+    add_system_status_section(
+        reporter,
+        {
+            "test_queries": benchmark_data["n_runs"],
+            "algorithm_type": "Point-in-Polygon",
+            "test_data_type": "Random polygons with random query points",
+        },
+    )
 
     # Add performance results
     reporter.add_section("Performance Results")

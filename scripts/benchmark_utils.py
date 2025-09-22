@@ -7,14 +7,18 @@ to generate RST reports and handle CLI interfaces.
 """
 
 import argparse
+import platform
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Any
+
+import numpy as np
 
 from scripts.reporting import (
     redirect_output_to_file_contextmanager,
     print_rst_table,
     rst_title,
 )
+from timezonefinder import TimezoneFinder
 
 
 class BenchmarkReporter:
@@ -128,3 +132,76 @@ def print_progress(current: int, total: int, prefix: str = "Progress"):
         percent = int((current / total) * 100)
         if percent % 10 == 0 and current > 0:
             print(f"{prefix}: {percent}%")
+
+
+def get_system_status() -> Dict[str, Any]:
+    """Get comprehensive system status information for benchmark reports."""
+    tf_instance = TimezoneFinder()
+
+    return {
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "platform_system": platform.system(),
+        "platform_machine": platform.machine(),
+        "platform_processor": platform.processor() or "Unknown",
+        "numpy_version": np.__version__,
+        "using_clang_pip": tf_instance.using_clang_pip(),
+        "using_numba": tf_instance.using_numba(),
+        "timezonefinder_version": getattr(tf_instance, "__version__", "Unknown"),
+    }
+
+
+def add_system_status_section(
+    reporter: BenchmarkReporter, additional_info: Dict[str, Any] = None
+):
+    """Add a comprehensive system status section to a benchmark report."""
+    system_info = get_system_status()
+
+    reporter.add_section("System Status")
+
+    # Python environment
+    reporter.add_section("Python Environment", level=2)
+    reporter.add_text(
+        f"**Python Version**: {system_info['python_version']} ({system_info['python_implementation']})"
+    )
+    reporter.add_text(f"**NumPy Version**: {system_info['numpy_version']}")
+    reporter.add_text(
+        f"**Platform**: {system_info['platform_system']} {system_info['platform_machine']}"
+    )
+    if system_info["platform_processor"] != "Unknown":
+        reporter.add_text(f"**Processor**: {system_info['platform_processor']}")
+
+    # TimezoneFinder configuration
+    reporter.add_section("TimezoneFinder Configuration", level=2)
+    reporter.add_text(
+        f"**C Implementation Available**: {system_info['using_clang_pip']}"
+    )
+    reporter.add_text(f"**Numba JIT Available**: {system_info['using_numba']}")
+
+    # Performance optimizations status
+    reporter.add_section("Performance Optimizations", level=2)
+    optimizations = []
+    if system_info["using_clang_pip"]:
+        optimizations.append("✓ Compiled C extension for point-in-polygon operations")
+    else:
+        optimizations.append("✗ Using pure Python point-in-polygon implementation")
+
+    if system_info["using_numba"]:
+        optimizations.append("✓ Numba JIT compilation enabled")
+    else:
+        optimizations.append("✗ Numba JIT compilation not available")
+
+    for opt in optimizations:
+        reporter.add_text(f"* {opt}")
+
+    # Additional benchmark-specific information
+    if additional_info:
+        reporter.add_section("Benchmark Configuration", level=2)
+        for key, value in additional_info.items():
+            if isinstance(value, (int, float)) and value >= 1000:
+                formatted_value = f"{value:,}"
+            else:
+                formatted_value = str(value)
+            reporter.add_text(f"**{key.replace('_', ' ').title()}**: {formatted_value}")
+
+    return reporter
