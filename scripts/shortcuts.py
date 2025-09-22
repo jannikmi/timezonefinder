@@ -23,14 +23,6 @@ from scripts.utils import (
     time_execution,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.io.shortcuts import (
-    get_shortcut_file_path,
-    write_shortcuts_flatbuffers,
-)
-from timezonefinder.flatbuf.io.unique_shortcuts import (
-    get_unique_shortcut_file_path,
-    write_unique_shortcuts_flatbuffers,
-)
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
     write_hybrid_shortcuts_flatbuffers,
@@ -381,18 +373,10 @@ def compile_shortcuts(
     print("\ncompiling shortcuts...")
     shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
 
-    # Write legacy shortcuts binary file
-    output_file: Path = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
-
-    # Compute and write legacy unique shortcuts binary file
+    # Compute unique shortcuts mapping (needed for hybrid shortcuts)
     unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
-    unique_output_file = get_unique_shortcut_file_path(output_path)
-    write_unique_shortcuts_flatbuffers(
-        unique_mapping, data.poly_zone_ids.dtype, unique_output_file
-    )
 
-    # Compile and write new hybrid shortcuts binary file
+    # Compile and write hybrid shortcuts binary file (replaces legacy formats)
     compile_hybrid_shortcuts(
         shortcuts=shortcuts,
         unique_shortcuts=unique_mapping,
@@ -405,8 +389,6 @@ def compile_shortcuts(
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
-    # This will generate three binary files:
-    # 1. shortcuts.fbs - legacy format (hex_id -> [polygon_ids])
-    # 2. unique_shortcuts.fbs - legacy format (hex_id -> zone_id for unique cases)
-    # 3. hybrid_shortcuts_uint8.fbs - new combined format (hex_id -> zone_id OR [polygon_ids])
+    # This will generate the hybrid shortcuts binary file:
+    # hybrid_shortcuts_uint8.fbs - optimized format (hex_id -> zone_id OR [polygon_ids])
     compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)
