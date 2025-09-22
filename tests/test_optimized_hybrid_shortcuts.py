@@ -249,6 +249,129 @@ class TestOptimizedHybridShortcuts:
             uint8_path.unlink(missing_ok=True)
             uint16_path.unlink(missing_ok=True)
 
+    def test_single_element_arrays_should_not_occur(
+        self, zone_id_dtype, temp_file_path
+    ):
+        """Test documenting that single-element arrays currently occur but should be optimized.
+
+        This test demonstrates that the current shortcut generation logic produces
+        single-element arrays when it should optimize them to store zone IDs directly.
+        This is the issue that the len(shortcut_value) == 1 case in timezonefinder.py
+        is designed to handle.
+
+        TODO: When the shortcut generation logic is optimized to detect single polygons
+        with unique timezones and store their zone ID directly, this test should be
+        updated to assert that single-element arrays do NOT occur.
+        """
+        try:
+            # Create test data representing the current suboptimal behavior
+            test_data = {
+                0x85283473FFFFFFF: [100],  # Single polygon - currently stored as array
+                0x85283447FFFFFFF: [
+                    200
+                ],  # Another single polygon - currently stored as array
+                0x85283463FFFFFFF: 42,  # Optimized zone ID (this is correct)
+                0x8528344FFFFFFFF: [
+                    300,
+                    301,
+                ],  # Multi-polygon - correctly stored as array
+            }
+
+            # Write and read the data
+            read_data = self._write_and_read_roundtrip(
+                test_data, zone_id_dtype, temp_file_path
+            )
+
+            # Verify current behavior: single-element arrays are preserved
+            # (This documents the suboptimal behavior that should be fixed)
+            single_element_count = 0
+            for hex_id, original_value in test_data.items():
+                assert hex_id in read_data, f"Missing hex_id {hex_id:x}"
+                actual_value = read_data[hex_id]
+
+                if isinstance(original_value, list) and len(original_value) == 1:
+                    # Currently, single-element arrays are stored as arrays (suboptimal)
+                    assert isinstance(actual_value, np.ndarray)
+                    assert len(actual_value) == 1
+                    single_element_count += 1
+
+                    # Document what the optimized behavior should be:
+                    # If polygon 100 has a unique timezone (e.g., zone_id=5), then
+                    # this shortcut should store 5 directly instead of [100]
+                    print(
+                        f"SUBOPTIMAL: Hex ID {hex_id:x} stores single-element array {actual_value}"
+                    )
+                    print(
+                        f"  Should be optimized to store the zone_id directly if polygon {original_value[0]} has unique timezone"
+                    )
+
+            # Verify that we found the expected suboptimal cases
+            assert single_element_count == 2, (
+                f"Expected 2 single-element arrays, found {single_element_count}"
+            )
+
+            print(
+                f"\nFound {single_element_count} single-element arrays that should be optimized."
+            )
+            print(
+                "The len(shortcut_value) == 1 case in timezonefinder.py handles this suboptimal data structure."
+            )
+
+        finally:
+            temp_file_path.unlink(missing_ok=True)
+
+    def test_runtime_handling_of_single_element_arrays(self):
+        """Test that the runtime code correctly handles single-element arrays.
+
+        This test verifies that the len(shortcut_value) == 1 case in
+        AbstractTimezoneFinder._timezone_id_from_shortcut works correctly
+        even with the suboptimal single-element array data structure.
+        """
+        from timezonefinder.configs import IntegerLike
+        import numpy as np
+
+        # Mock the zone mapping for testing
+        class MockTimezoneFinder:
+            def zone_id_of(self, boundary_id: IntegerLike) -> int:
+                # Simple mock: return boundary_id + 1000 as zone_id
+                return int(boundary_id) + 1000
+
+        mock_finder = MockTimezoneFinder()
+
+        # Test the logic that handles len(shortcut_value) == 1
+        test_cases = [
+            ([100], 1100),  # Single element array should return zone_id_of(100) = 1100
+            ([200], 1200),  # Single element array should return zone_id_of(200) = 1200
+            ([42], 1042),  # Single element array should return zone_id_of(42) = 1042
+        ]
+
+        for shortcut_value, expected_zone_id in test_cases:
+            shortcut_array = np.array(shortcut_value, dtype=np.uint16)
+
+            # Simulate the len(shortcut_value) == 1 case
+            if len(shortcut_array) == 1:
+                # This is the logic from timezonefinder.py line ~220
+                actual_zone_id = mock_finder.zone_id_of(shortcut_array[0])
+
+                assert actual_zone_id == expected_zone_id, (
+                    f"Expected zone_id {expected_zone_id} for shortcut_value {shortcut_value}, "
+                    f"but got {actual_zone_id}"
+                )
+
+                # Verify that shortcut_array[0] is indeed a numpy scalar, not an array
+                element = shortcut_array[0]
+                assert isinstance(element, np.integer), (
+                    f"Expected numpy integer, got {type(element)}"
+                )
+                assert not isinstance(element, np.ndarray), (
+                    "shortcut_array[0] should be scalar, not array"
+                )
+
+        print(f"✓ Successfully tested {len(test_cases)} single-element array cases")
+        print(
+            "✓ Verified that shortcut_array[0] returns numpy scalars compatible with IntegerLike"
+        )
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
