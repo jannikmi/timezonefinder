@@ -4,4 +4,6 @@ __all__ = [
     "polygons",
     "shortcuts",
     "unique",
+    "shortcuts_uint8",
+    "shortcuts_uint16",
 ]

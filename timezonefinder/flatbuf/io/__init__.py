@@ -18,6 +18,11 @@ from .unique_shortcuts import (
     write_unique_shortcuts_flatbuffers,
     read_unique_shortcuts_binary,
 )
+from .hybrid_shortcuts import (
+    get_hybrid_shortcut_file_path,
+    write_hybrid_shortcuts_flatbuffers,
+    read_hybrid_shortcuts_binary,
+)
 
 __all__ = [
     "flatten_polygon_coords",
@@ -32,4 +37,7 @@ __all__ = [
     "get_unique_shortcut_file_path",
     "write_unique_shortcuts_flatbuffers",
     "read_unique_shortcuts_binary",
+    "get_hybrid_shortcut_file_path",
+    "write_hybrid_shortcuts_flatbuffers",
+    "read_hybrid_shortcuts_binary",
 ]
