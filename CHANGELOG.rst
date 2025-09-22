@@ -7,10 +7,13 @@ Changelog
 ------------------
 
 * add the support of using the TimeZonefinder class instances as context managers. added a basic usage examples
+* note that the performance of certain_timezone_at() degraded drastically, since now many more polygons will be checked with an expensive point-in-polygon algorithm. consider using timezone_at() or timezone_at_land() instead.
 * introduced hybrid shortcut index structure that combines the functionality of separate shortcuts and unique shortcuts into a single optimized data structure, improving performance and reducing memory usage
 * zone id storage now defaults to ``uint8`` and can be overridden via ``--zone-id-dtype``/``TIMEZONEFINDER_ZONE_ID_DTYPE`` when recompiling binaries
 * relax ``cffi`` upper bound to allow the 2.x series (minimum stays at ``1.15.1``) so downstream packages pinning ``cffi>=2.0`` resolve cleanly
-* ``scripts/reporting.py`` can now be executed as a standalone script to generate data reports from binary files
+* ``scripts/reporting.py`` can now be executed as a standalone script to generate data reports from binary files independent from ``file_converter.py``
+* the ``check_speed_*.py`` scripts now generates a detailed performance reports in reStructuredText format automatically included into documentation
+
 
 Internal:
 

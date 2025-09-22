@@ -57,6 +57,8 @@ from scripts.configs import (
     resolve_zone_id_dtype,
 )
 from scripts.reporting import write_data_report_from_binary
+from scripts.check_speed_timezone_finding import write_performance_report
+from scripts.check_speed_inside_polygon import write_polygon_report
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -252,6 +254,12 @@ def parse_data(
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     print("Generating data report from binary files...")
     write_data_report_from_binary(output_path_obj)
+
+    print("Generating performance benchmark report...")
+    write_performance_report()
+
+    print("Generating point-in-polygon benchmark report...")
+    write_polygon_report()
 
 
 if __name__ == "__main__":

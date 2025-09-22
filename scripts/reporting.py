@@ -47,6 +47,25 @@ def redirect_output_to_file(file_path: str) -> Callable:
     return decorator
 
 
+# context manager version for direct output redirection
+def redirect_output_to_file_contextmanager(file_path: Union[str, Path]):
+    """Context manager to redirect stdout to a file."""
+    import sys
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _redirect():
+        original_stdout = sys.stdout
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                sys.stdout = f
+                yield
+        finally:
+            sys.stdout = original_stdout
+
+    return _redirect()
+
+
 def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> Dict:
     """
     Load all necessary data from binary files to generate reports.
