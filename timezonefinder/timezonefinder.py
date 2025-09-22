@@ -180,7 +180,6 @@ class AbstractTimezoneFinder(ABC):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # Handle shortcuts (hybrid structure) - if it's a zone ID, get all polygons for that zone
-        assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             return np.array([], dtype=np.uint16)
@@ -204,7 +203,6 @@ class AbstractTimezoneFinder(ABC):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # Shortcuts behavior (hybrid structure with precomputed uniqueness)
-        assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             return None
@@ -296,7 +294,6 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         # Inline fast-path to minimize helper overhead
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             return None
@@ -518,7 +515,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # Get shortcut value (hybrid optimization)
-        assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             # NOTE: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
@@ -586,7 +582,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # Get shortcut value (hybrid optimization)
-        assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             return None
