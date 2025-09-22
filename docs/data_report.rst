@@ -228,6 +228,66 @@ Shortcut Mapping Statistics
 ---------------------------
 
 
+
+Shortcut Index Overview
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+.. list-table::
+   :header-rows: 1
+   :widths: 50 50
+
+   * - Shortcut Index Metric
+     - Value
+   * - H3 Resolution
+     - 3
+   * - Total shortcut entries
+     - 41,162
+   * - Zone entries (direct lookup)
+     - 32,190
+   * - Polygon entries (require testing)
+     - 8,972
+   * - Empty entries
+     - 0
+   * - Total polygon references
+     - 19,321
+   * -
+     -
+   * - H3 cells stored
+     - 41,162
+   * - H3 cells possible at resolution
+     - 41,162
+   * - H3 cells missing
+     - 0
+   * - H3 coverage ratio
+     - 1.000
+   * -
+     -
+   * - Unique entry fraction
+     - 0.782
+   * - Unique surface fraction
+     - 0.782
+   * - Zone distribution efficiency
+     - 0.782
+   * - Avg polygons per polygon entry
+     - 2.15
+   * -
+     -
+   * - Zone storage (KB)
+     - 282.9
+   * - Polygon storage (KB)
+     - 107.8
+   * - Total estimated storage (KB)
+     - 390.8
+   * - Storage compression ratio
+     - 0.92x
+
+
+
+Shortcut Entry Distributions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 .. list-table::
    :header-rows: 1
    :widths: 20 20 20 20 20

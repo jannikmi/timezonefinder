@@ -230,33 +230,202 @@ def get_file_size_in_mb(file_path: Path) -> float:
     return size_in_mb
 
 
+def calculate_shortcut_index_stats(
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+) -> Dict[str, Union[int, float]]:
+    """
+    Calculate comprehensive statistics about the hybrid shortcut index.
+
+    Args:
+        mapping: Hybrid shortcut mapping (hex_id -> zone_id | polygon_ids)
+        poly_zone_ids: Zone IDs for each polygon
+
+    Returns:
+        Dictionary of statistical metrics
+    """
+    from scripts.configs import SHORTCUT_H3_RES
+
+    # Basic counts
+    total_entries = len(mapping)
+    zone_entries = 0
+    polygon_entries = 0
+    polygon_id_count = 0
+    empty_entries = 0
+
+    # Data for frequency analysis
+    nr_of_entries_in_shortcut = []
+    amount_of_different_zones = []
+
+    # Calculate per-entry statistics
+    for v in mapping.values():
+        if isinstance(v, int):
+            # Direct zone ID - single zone, no polygons to enumerate
+            zone_entries += 1
+            nr_of_entries_in_shortcut.append(0)  # No polygons, direct zone
+            amount_of_different_zones.append(1)  # Single zone
+        else:
+            # Polygon list - count polygons and distinct zones
+            polygon_ids = v
+            polygon_count = len(polygon_ids)
+
+            if polygon_count == 0:
+                empty_entries += 1
+                nr_of_entries_in_shortcut.append(0)
+                amount_of_different_zones.append(0)
+            else:
+                polygon_entries += 1
+                polygon_id_count += polygon_count
+                nr_of_entries_in_shortcut.append(polygon_count)
+
+                # Count distinct zones for these polygons
+                zone_ids = [poly_zone_ids[i] for i in polygon_ids]
+                distinct_zones = set(zone_ids)
+                amount_of_different_zones.append(len(distinct_zones))
+
+    # Calculate H3 coverage statistics
+    try:
+        import h3.api.numpy_int as h3
+
+        # Calculate theoretical maximum cells at this resolution
+        if SHORTCUT_H3_RES == 0:
+            possible_cells = len(h3.get_res0_cells())
+        else:
+            # For higher resolutions, calculate based on H3 formula
+            # Each parent cell has 7 children (except res 0->1 which is different)
+            # Approximately 2 + 240 * 7^(res-1) cells for res >= 1
+            if SHORTCUT_H3_RES == 1:
+                possible_cells = 842  # Known value for resolution 1
+            elif SHORTCUT_H3_RES == 2:
+                possible_cells = 5882  # Known value for resolution 2
+            elif SHORTCUT_H3_RES == 3:
+                possible_cells = 41162  # Known value for resolution 3 (current default)
+            elif SHORTCUT_H3_RES == 4:
+                possible_cells = 288122  # Known value for resolution 4
+            else:
+                # For other resolutions, use the stored cells as a conservative estimate
+                possible_cells = total_entries
+
+    except ImportError:
+        # If h3 is not available, use stored cells as estimate
+        possible_cells = total_entries
+
+    stored_cells = total_entries
+    missing_cells = max(possible_cells - stored_cells, 0)
+
+    # Calculate derived metrics
+    unique_entry_fraction = zone_entries / total_entries if total_entries else 0.0
+    unique_surface_fraction = zone_entries / possible_cells if possible_cells else 0.0
+    coverage_ratio = stored_cells / possible_cells if possible_cells else 0.0
+
+    # Calculate average polygons per non-unique entry
+    avg_polygons_per_entry = (
+        polygon_id_count / polygon_entries if polygon_entries else 0.0
+    )
+
+    # Calculate zone distribution efficiency
+    zone_distribution_efficiency = (
+        sum(1 for zones in amount_of_different_zones if zones <= 1) / total_entries
+        if total_entries
+        else 0.0
+    )
+
+    # Calculate storage efficiency metrics
+    # Estimate bytes per entry (key + value)
+    ENTRY_KEY_SIZE_BYTES = 8  # int64 hex ID
+    zone_storage_bytes = zone_entries * (
+        ENTRY_KEY_SIZE_BYTES + 1
+    )  # 1 byte for uint8 zone ID
+    polygon_storage_bytes = (
+        polygon_entries * ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2
+    )  # 2 bytes per uint16 polygon ID
+    total_storage_bytes = zone_storage_bytes + polygon_storage_bytes
+
+    # Calculate compression ratio vs naive storage
+    naive_storage_bytes = total_entries * (
+        ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2 / total_entries
+        if total_entries
+        else 0
+    )
+    compression_ratio = (
+        naive_storage_bytes / total_storage_bytes if total_storage_bytes else 1.0
+    )
+
+    return {
+        # Basic counts
+        "total_entries": total_entries,
+        "zone_entries": zone_entries,
+        "polygon_entries": polygon_entries,
+        "empty_entries": empty_entries,
+        "polygon_id_count": polygon_id_count,
+        # H3 coverage
+        "h3_resolution": SHORTCUT_H3_RES,
+        "stored_cells": stored_cells,
+        "possible_cells": possible_cells,
+        "missing_cells": missing_cells,
+        "coverage_ratio": coverage_ratio,
+        # Efficiency metrics
+        "unique_entry_fraction": unique_entry_fraction,
+        "unique_surface_fraction": unique_surface_fraction,
+        "zone_distribution_efficiency": zone_distribution_efficiency,
+        "avg_polygons_per_entry": avg_polygons_per_entry,
+        # Storage efficiency
+        "zone_storage_bytes": zone_storage_bytes,
+        "polygon_storage_bytes": polygon_storage_bytes,
+        "total_storage_bytes": total_storage_bytes,
+        "compression_ratio": compression_ratio,
+        # Data for frequency analysis
+        "polygons_per_shortcut": nr_of_entries_in_shortcut,
+        "zones_per_shortcut": amount_of_different_zones,
+    }
+
+
 @redirect_output_to_file(DATA_REPORT_FILE)
 def print_shortcut_statistics(
     mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
 ):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    # Handle hybrid shortcuts - entries can be either int (zone ID) or np.ndarray (polygon IDs)
-    nr_of_entries_in_shortcut = []
-    amount_of_different_zones = []
+    # Calculate comprehensive statistics
+    stats = calculate_shortcut_index_stats(mapping, poly_zone_ids)
 
-    for v in mapping.values():
-        if isinstance(v, int):
-            # Direct zone ID - single zone, no polygons to enumerate
-            nr_of_entries_in_shortcut.append(0)  # No polygons, direct zone
-            amount_of_different_zones.append(1)  # Single zone
-        else:
-            # Polygon list - count polygons and distinct zones
-            polygon_ids = v
-            nr_of_entries_in_shortcut.append(len(polygon_ids))
+    # Print detailed statistics table
+    print(rst_title("Shortcut Index Overview", level=2))
 
-            # Count distinct zones for these polygons
-            zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-            distinct_zones = set(zone_ids)
-            amount_of_different_zones.append(len(distinct_zones))
+    shortcut_headers = ["Shortcut Index Metric", "Value"]
+    shortcut_rows = [
+        ["H3 Resolution", f"{stats['h3_resolution']}"],
+        ["Total shortcut entries", f"{stats['total_entries']:,}"],
+        ["Zone entries (direct lookup)", f"{stats['zone_entries']:,}"],
+        ["Polygon entries (require testing)", f"{stats['polygon_entries']:,}"],
+        ["Empty entries", f"{stats['empty_entries']:,}"],
+        ["Total polygon references", f"{stats['polygon_id_count']:,}"],
+        ["", ""],  # Separator
+        ["H3 cells stored", f"{stats['stored_cells']:,}"],
+        ["H3 cells possible at resolution", f"{stats['possible_cells']:,}"],
+        ["H3 cells missing", f"{stats['missing_cells']:,}"],
+        ["H3 coverage ratio", f"{stats['coverage_ratio']:.3f}"],
+        ["", ""],  # Separator
+        ["Unique entry fraction", f"{stats['unique_entry_fraction']:.3f}"],
+        ["Unique surface fraction", f"{stats['unique_surface_fraction']:.3f}"],
+        [
+            "Zone distribution efficiency",
+            f"{stats['zone_distribution_efficiency']:.3f}",
+        ],
+        ["Avg polygons per polygon entry", f"{stats['avg_polygons_per_entry']:.2f}"],
+        ["", ""],  # Separator
+        ["Zone storage (KB)", f"{stats['zone_storage_bytes'] / 1024:.1f}"],
+        ["Polygon storage (KB)", f"{stats['polygon_storage_bytes'] / 1024:.1f}"],
+        ["Total estimated storage (KB)", f"{stats['total_storage_bytes'] / 1024:.1f}"],
+        ["Storage compression ratio", f"{stats['compression_ratio']:.2f}x"],
+    ]
 
-    print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
-    print_frequencies(amount_of_different_zones, "timezones/shortcut")
+    print_rst_table(shortcut_headers, shortcut_rows)
+
+    # Print frequency distributions
+    print(rst_title("Shortcut Entry Distributions", level=2))
+
+    print_frequencies(stats["polygons_per_shortcut"], "polygons/shortcut")
+    print_frequencies(stats["zones_per_shortcut"], "timezones/shortcut")
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
