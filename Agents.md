@@ -51,3 +51,4 @@ Regenerating data changes the binary blobs in `timezonefinder/data/` and typical
 - When swapping datasets, remember the reduced "now" data loses location-specific names; mention this in user-facing docs to preempt surprise regressions.
 - Global state in `timezonefinder/global_functions.py` intentionally delays instantiation; avoid side effects before the first call and prefer dependency injection inside tests.
 - Thread-safety: Global helper functions are not thread-safe - prefer explicit `TimezoneFinder(in_memory=True)` instances for concurrent workloads.
+- do not remove the __all__ definitions in `__init__.py` files; they define the public API surface and are checked by tests.
