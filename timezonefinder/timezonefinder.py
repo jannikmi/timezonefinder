@@ -518,19 +518,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:
             return None
-        if nr_possible_polygons == 1:
-            # there is only one boundary polygon in that area. return its timezone name without further checks
-            boundary_id = possible_boundaries[0]
-            # boundary_id is a numpy scalar from array indexing, but mypy sees it as ndarray
-            # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
-            return self.zone_name_from_boundary_id(boundary_id)  # type: ignore[arg-type]
+        # NOTE: the length 1 case can never occur here, since this is covered by the unique zone shortcut
 
         # create a list of all the timezone ids of all possible boundary polygons
         zone_ids = self.zone_ids_of(possible_boundaries)
 
         last_zone_change_idx = utils.get_last_change_idx(zone_ids)
-        if last_zone_change_idx == 0:
-            return self.zone_name_from_id(int(zone_ids[0]))
+        # NOTE: the case last_zone_change_idx == 0 is covered by the unique zone shortcut
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -541,6 +535,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # check until the point is included in one of the possible boundary polygons
         for i, boundary_id in enumerate(possible_boundaries):
             if i >= last_zone_change_idx:
+                # avoid expensive PIP checks when no other zone can be matched anymore
                 break
 
             if self.inside_of_polygon(boundary_id, x, y):
