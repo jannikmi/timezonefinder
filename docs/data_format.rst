@@ -168,7 +168,7 @@ How it works:
    * If it's a polygon array, tests only those polygons to determine which timezone the point belongs to
 
 This hybrid approach provides several performance benefits:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **Reduced Search Space**: Instead of checking all polygons (thousands), only a small subset needs to be evaluated
 * **Immediate Results**: For hexagons with unique timezones (~majority of cases), the result is returned immediately without any polygon testing

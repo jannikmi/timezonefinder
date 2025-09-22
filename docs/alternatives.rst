@@ -38,9 +38,9 @@ Both packages will likely coexist as they serve different use cases:
    * - Startup Time
      - Requires initialization time
      - No startup time (immediate)
-   * - `Avg. Lookup Speed <https://github.com/ringsaturn/tz-benchmark>`__
-     - ~270k Queries per second (QPS). >730k with less accurate TimezoneFinderL
-     - ~320k QPS
+   * - Avg. Lookup Speed Queries per Second
+     - ~300k (TimezoneFinder), >1M (TimezoneFinderL) :doc:`benchmark_results_timezonefinding`
+     - `~320k <https://github.com/ringsaturn/tz-benchmark>`__
    * - Data Representation
      - Complete, non-simplified timezone polygons
      - Simplified timezone polygons
@@ -48,14 +48,14 @@ Both packages will likely coexist as they serve different use cases:
      - Higher accuracy around timezone borders (full polygon precision)
      - Lower accuracy near borders due to simplified polygons
    * - Distribution Size
-     - ~50 MB
+     - ~28 MB
      - ~6 MB
    * - Memory Usage
-     - ~40MB
-     - ~40MB
+     - TBA
+     - TBA
    * - Spatial Index
-     - H3 hexagon-based index with ~40k cells
-     - Hierarchical tree of ~80k rectangles with fallback to polygon data
+     - H3 hexagon-based index with ~41k cells (resolution 3)
+     - Hierarchical tree of ~80k rectangles with fallback to simplified polygon data
    * - Build Complexity
      - Easier to build when wheels are missing
      - Requires Rust to build wheels for some platforms
@@ -79,22 +79,22 @@ Both packages will likely coexist as they serve different use cases:
 
    * - Use Case
      - Recommended Package
+   * - Timezone border accuracy
+     - ``timezonefinder``
+   * - Access to timezone geometry data
+     - ``timezonefinder``
+   * - Compatibility with varied Python environments
+     - ``timezonefinder``
+   * - Maintainability and Ease of Contribution
+     - ``timezonefinder``
    * - Lookup Performance
      - ``tzfpy``
    * - Initialization Time
      - ``tzfpy``
    * - Minimal Distribution Size
      - ``tzfpy``
-   * - Timezone border accuracy
-     - ``timezonefinder``
    * - Full localization power (>440 timezone names)
      - ``tzfpy``
-   * - Compatibility with varied Python environments
-     - ``timezonefinder``
-   * - Access to timezone geometry data
-     - ``timezonefinder``
-   * - Maintainability and Ease of Contribution
-     - ``timezonefinder``
    * - Memory efficiency
      - Either
 
