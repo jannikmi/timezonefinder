@@ -32,6 +32,7 @@ References
    Data Format <data_format>
    Data Report <data_report>
    About <3_about>
+   Alternatives <alternatives>
    API <4_api>
    Contributing <5_contributing>
    Changelog <6_changelog>
