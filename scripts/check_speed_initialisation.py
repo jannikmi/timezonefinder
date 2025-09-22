@@ -23,6 +23,14 @@ from timezonefinder import TimezoneFinder, TimezoneFinderL
 N = 10 if DEBUG else int(1e2)
 
 
+def format_speedup_analysis(
+    faster_time: float, slower_time: float, faster_name: str, slower_name: str
+) -> str:
+    """Format speedup analysis with both multiplier and percentage."""
+    relative_improvement = (slower_time - faster_time) / slower_time
+    return f"**{faster_name}** is {relative_improvement:.0%} faster ({faster_time:.1f} ms vs {slower_time:.1f} ms)"
+
+
 def run_initialization_benchmark(n_runs: int = N) -> Dict[str, Any]:
     """Run initialization benchmark and return results for RST formatting."""
     print(f"Running {n_runs} initialization benchmarks...")
@@ -97,7 +105,7 @@ def write_initialization_report(output_path: Path, n_runs: int = N) -> None:
 
         fastest_time_ms = float(fastest[1])
         slowest_time_ms = float(slowest[1])
-        speedup = slowest_time_ms / fastest_time_ms
+        relative_improvement = (slowest_time_ms - fastest_time_ms) / slowest_time_ms
 
         reporter.add_text(
             f"* **Fastest configuration**: {fastest[0]} ({fastest[1]} ms)"
@@ -105,7 +113,9 @@ def write_initialization_report(output_path: Path, n_runs: int = N) -> None:
         reporter.add_text(
             f"* **Slowest configuration**: {slowest[0]} ({slowest[1]} ms)"
         )
-        reporter.add_text(f"* **Performance difference**: {speedup:.2f}x speedup")
+        reporter.add_text(
+            f"* **Performance difference**: {relative_improvement:.0%} faster"
+        )
         reporter.add_text("")
 
         # Analyze by mode
@@ -121,15 +131,12 @@ def write_initialization_report(output_path: Path, n_runs: int = N) -> None:
             )
 
             if avg_file_based < avg_in_memory:
-                mode_speedup = avg_in_memory / avg_file_based
-                # Use 2 decimal places for better precision when speedup is small
                 reporter.add_text(
-                    f"* **File-based mode** is {mode_speedup:.2f}x faster on average ({avg_file_based:.1f} ms vs {avg_in_memory:.1f} ms)"
+                    f"* {format_speedup_analysis(avg_file_based, avg_in_memory, 'File-based mode', 'in-memory mode')}"
                 )
             else:
-                mode_speedup = avg_file_based / avg_in_memory
                 reporter.add_text(
-                    f"* **In-memory mode** is {mode_speedup:.2f}x faster on average ({avg_in_memory:.1f} ms vs {avg_file_based:.1f} ms)"
+                    f"* {format_speedup_analysis(avg_in_memory, avg_file_based, 'In-memory mode', 'file-based mode')}"
                 )
 
     reporter.add_note(
