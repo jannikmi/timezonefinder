@@ -192,27 +192,6 @@ class AbstractTimezoneFinder(ABC):
             # Polygon array
             return shortcut_value
 
-    def unique_zone_id(self, *, lng: float, lat: float) -> Optional[int]:
-        """
-        Get the unique zone ID in the shortcut corresponding to the given coordinates.
-
-        :param lng: The longitude of the point in degrees (-180.0 to 180.0).
-        :param lat: The latitude of the point in degrees (90.0 to -90.0).
-        :return: The unique zone ID or None if no unique zone exists in the shortcut.
-        """
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        # Shortcuts behavior (hybrid structure with precomputed uniqueness)
-        shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return None
-        elif isinstance(shortcut_value, int):
-            # Zone ID - this is a precomputed unique zone
-            return shortcut_value
-        else:
-            # Polygon array - by definition not unique (would be stored as int if unique)
-            return None
-
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """looks up in which timezone the given coordinate is included in
@@ -248,9 +227,19 @@ class AbstractTimezoneFinder(ABC):
         :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        unique_id = self.unique_zone_id(lng=lng, lat=lat)
-        if unique_id is None:
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+        # Shortcuts behavior (hybrid structure with precomputed uniqueness)
+        shortcut_value = self.shortcut_mapping.get(hex_id)
+        if shortcut_value is None:
             return None
+        elif isinstance(shortcut_value, int):
+            # Zone ID - this is a precomputed unique zone
+            unique_id = shortcut_value
+        else:
+            # Polygon array - by definition not unique (would be stored as int if unique)
+            return None
+
         return self.zone_name_from_id(unique_id)
 
     def cleanup(self) -> None:
