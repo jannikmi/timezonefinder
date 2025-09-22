@@ -5,6 +5,7 @@ Tests for the global functions in timezonefinder
 import pytest
 
 from tests.auxiliaries import single_location_test
+from tests.locations import BASIC_TEST_LOCATIONS, TEST_LOCATIONS_AT_LAND, TEST_LOCATIONS
 from timezonefinder import (
     timezone_at,
     timezone_at_land,
@@ -13,7 +14,6 @@ from timezonefinder import (
     get_geometry,
     TimezoneFinder,
 )
-from tests.locations import BASIC_TEST_LOCATIONS, TEST_LOCATIONS_AT_LAND, TEST_LOCATIONS
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.zone_names import read_zone_names
 

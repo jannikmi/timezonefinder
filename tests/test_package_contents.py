@@ -52,6 +52,7 @@ UNWANTED_DIST_PATTERNS = {
     "examples/",
     "docs/",
     "scripts/",
+    "prototypes/",
     # "tests/", # NOTE: tests should be included in the package for users to validate the package
     ".coveragerc",
     ".editorconfig",

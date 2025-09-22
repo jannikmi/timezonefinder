@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -38,6 +38,9 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 # NOTE: Changes in the global settings might not immediately affect
 #  the functions due to caching!
 
+# Type alias for flexibility with integer types (pure int or numpy integer scalars)
+IntegerLike = Union[int, np.integer]
+
 # hexagon id to list of polygon ids
 ShortcutMapping = Dict[int, np.ndarray]
 CoordPairs = List[Tuple[float, float]]
@@ -47,10 +50,9 @@ IntLists = List[List[int]]
 
 # zone id storage settings ---------------------------------------------------
 
-_ZONE_ID_DTYPE_ALIASES = {
+_ZONE_ID_DTYPE_ALIASES: Dict[str, "np.dtype[Any]"] = {
     "uint8": np.dtype("<u1"),
     "uint16": np.dtype("<u2"),
-    "uint32": np.dtype("<u4"),
 }
 
 
@@ -59,7 +61,7 @@ def _normalise_zone_id_dtype_key(key: str) -> str:
     return key.lower().strip()
 
 
-def get_zone_id_dtype(name: str) -> np.dtype:
+def get_zone_id_dtype(name: str) -> "np.dtype[Any]":
     """Return the configured numpy dtype for storing zone IDs."""
 
     try:

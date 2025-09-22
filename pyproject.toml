@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "8.0.0"
+version = "8.1.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -51,6 +51,7 @@ test=[
     "setuptools>=61",
     "cffi",
 ]
+# development and parsing data
 dev = [
     "tox",
     "pytest",
@@ -61,7 +62,6 @@ dev = [
     "ruff",
     "cibuildwheel",
     "pydantic>=2.11.7",
-    "line-profiler>=5.0.0",
 ]
 numba = [
   "numba>=0.56,<1; python_version < '3.12'",
@@ -69,6 +69,15 @@ numba = [
 ]
 pytz = [
     "pytz>=2022.7.1"
+]
+# prototyping, performance analytics
+proto = [
+    "line-profiler>=5.0.0",
+    "pandas>=2.3.2",
+    "matplotlib>=3.9.4",
+    "seaborn>=0.13.2",
+    "plotly>=6.3.0",
+    "tabulate>=0.9.0",
 ]
 
 [build-system]
@@ -97,6 +106,54 @@ markers = [
     "unit: mark test as a unit test",
     "integration: mark test as an integration test"
 ]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# Ignore missing stubs for third-party libraries
+[[tool.mypy.overrides]]
+module = [
+    "flatbuffers",
+    "flatbuffers.*",
+    "numba",
+    "numba.*",
+    "h3",
+    "h3.*",
+]
+ignore_missing_imports = true
+
+# Ignore generated/low-level files that are hard to type properly
+[[tool.mypy.overrides]]
+module = [
+    "timezonefinder.flatbuf.generated.*",
+    "timezonefinder._numba_replacements",
+    "timezonefinder.utils_numba",
+    "timezonefinder.np_binary_helpers",
+    "timezonefinder.flatbuf.io.*",
+    "timezonefinder.coord_accessors",
+    "timezonefinder.polygon_array",
+    "timezonefinder.utils_clang",
+]
+ignore_errors = true
+
+# Allow Any for complex numpy dtype cases
+[[tool.mypy.overrides]]
+module = [
+    "timezonefinder.configs",
+]
+allow_any_generics = true
 
 # Use abi3audit to check wheel abi3 conformance
 # A first line in command is a default value

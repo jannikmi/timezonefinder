@@ -29,9 +29,13 @@ References
    Usage <1_usage>
    Use Cases <2_use_cases>
    Performance <7_performance>
+   Timezone Finding Benchmarks <benchmark_results_timezonefinding>
+   Point-in-Polygon Benchmarks <benchmark_results_polygon>
+   Initialization Benchmarks <benchmark_results_initialization>
    Data Format <data_format>
    Data Report <data_report>
    About <3_about>
+   Alternatives <alternatives>
    API <4_api>
    Contributing <5_contributing>
    Changelog <6_changelog>

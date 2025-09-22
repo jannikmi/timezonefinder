@@ -10,27 +10,61 @@ import pytest
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
 from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.flatbuf.io.shortcuts import (
-    get_shortcut_file_path,
-    read_shortcuts_binary,
-)
-from timezonefinder.flatbuf.io.unique_shortcuts import (
-    get_unique_shortcut_file_path,
-    read_unique_shortcuts_binary,
+from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    get_hybrid_shortcut_file_path,
+    read_hybrid_shortcuts_binary,
 )
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.utils_numba import int2coord
+from timezonefinder.np_binary_helpers import (
+    get_zone_ids_path,
+    read_per_polygon_vector,
+)
+from timezonefinder.configs import DEFAULT_DATA_DIR
 
-shortcut_file_path = get_shortcut_file_path()
-shortcuts = read_shortcuts_binary(shortcut_file_path)
-unique_shortcut_file_path = get_unique_shortcut_file_path()
-unique_shortcuts = read_unique_shortcuts_binary(unique_shortcut_file_path)
+# Load zone IDs to determine the correct hybrid shortcut file
+zone_ids_path = get_zone_ids_path(DEFAULT_DATA_DIR)
+zone_ids_temp = read_per_polygon_vector(zone_ids_path)
+zone_id_dtype = zone_ids_temp.dtype
+
+hybrid_shortcut_file_path = get_hybrid_shortcut_file_path(
+    zone_id_dtype, DEFAULT_DATA_DIR
+)
+hybrid_shortcuts = read_hybrid_shortcuts_binary(hybrid_shortcut_file_path)
+
+# Tests now work directly with hybrid_shortcuts format
 
 VERBOSE_TESTING = True
 
 
 def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+
+def test_single_shortcut_binary_exists():
+    """Test that only a single .fbs binary file for the shortcut index exists in the data folder."""
+    data_dir = DEFAULT_DATA_DIR
+
+    # Find all .fbs files that could be shortcut-related
+    fbs_files = list(data_dir.glob("*shortcut*.fbs"))
+
+    # We expect exactly one shortcut .fbs file (hybrid_shortcuts_uint8.fbs or hybrid_shortcuts_uint16.fbs)
+    assert len(fbs_files) == 1, (
+        f"Expected exactly 1 shortcut .fbs file in {data_dir}, "
+        f"but found {len(fbs_files)}: {[f.name for f in fbs_files]}"
+    )
+
+    # Verify it's the correct hybrid shortcuts file
+    shortcut_file = fbs_files[0]
+    assert shortcut_file.name.startswith("hybrid_shortcuts_"), (
+        f"Expected hybrid shortcuts file, but found {shortcut_file.name}"
+    )
+
+    # Verify it matches the expected file based on zone_id_dtype
+    expected_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_dir)
+    assert shortcut_file == expected_file, (
+        f"Found shortcut file {shortcut_file.name} doesn't match expected {expected_file.name}"
+    )
 
 
 @pytest.fixture
@@ -54,7 +88,7 @@ def test_shortcut_completeness(tf):
             lat = int2coord(pt[1])
             hex_id = latlng_to_cell(lng, lat)
             try:
-                shortcut_entries = shortcuts[hex_id]
+                hybrid_value = hybrid_shortcuts[hex_id]
             except KeyError:
                 errors.append(
                     f"shortcut mapping is incomplete at point ({lng}, {lat}) "
@@ -62,10 +96,20 @@ def test_shortcut_completeness(tf):
                 )
                 continue
 
-            if poly_id not in shortcut_entries:
+            # For hybrid shortcuts, check if polygon is covered
+            polygon_covered = False
+            if isinstance(hybrid_value, int):
+                # Zone ID - check if polygon belongs to this zone
+                polygon_zone = tf.zone_id_of(poly_id)
+                polygon_covered = polygon_zone == hybrid_value
+            else:
+                # Polygon array - check if polygon is in the list
+                polygon_covered = poly_id in hybrid_value
+
+            if not polygon_covered:
                 errors.append(
-                    f"point #{i} ({lng}, {lat}) of polygon {poly_id} "
-                    f"does not appear in shortcut entries {shortcut_entries} of cell {hex_id}"
+                    f"point #{i} ({lng}, {lat}) of polygon {poly_id} (zone {tf.zone_id_of(poly_id)}) "
+                    f"is not covered by hybrid shortcut entry {hybrid_value} of cell {hex_id}"
                 )
 
     assert not errors, f"Shortcut completeness errors: {errors[:5]}"
@@ -74,7 +118,7 @@ def test_shortcut_completeness(tf):
 def test_shortcut_resolution():
     """Test that all shortcuts have the correct H3 resolution."""
     invalid_resolutions = []
-    for hex_id in shortcuts.keys():
+    for hex_id in hybrid_shortcuts.keys():
         res = h3.get_resolution(hex_id)
         if res != SHORTCUT_H3_RES:
             invalid_resolutions.append(
@@ -89,10 +133,17 @@ def test_unused_polygons(tf):
     # Get the total number of polygons
     nr_of_polygons = tf.nr_of_polygons
 
-    # check if all polygons are used in the shortcuts
+    # check if all polygons are used in the shortcuts (hybrid format)
     used_polygons = set()
-    for poly_ids in shortcuts.values():
-        used_polygons.update(poly_ids)
+    for hybrid_value in hybrid_shortcuts.values():
+        if isinstance(hybrid_value, int):
+            # Zone ID - find all polygons belonging to this zone
+            for poly_id in range(nr_of_polygons):
+                if tf.zone_id_of(poly_id) == hybrid_value:
+                    used_polygons.add(poly_id)
+        else:
+            # Polygon array
+            used_polygons.update(hybrid_value)
 
     all_polygon_ids = set(range(nr_of_polygons))
     unused_poly_ids = all_polygon_ids - used_polygons
@@ -103,11 +154,19 @@ def test_unused_polygons(tf):
 
 
 def test_empty_shortcut():
-    """Test that no shortcut entries are empty (all should have polygons)."""
-    # since using timezone data with ocean coverage all the cells should have polygons in them
+    """Test that no shortcut entries are empty (all should have polygons or zones)."""
+    # since using timezone data with ocean coverage all the cells should have polygons or zones in them
     empty_shortcuts = []
-    for hex_id, polygon_ids in shortcuts.items():
-        if len(polygon_ids) == 0:
+    for hex_id, hybrid_value in hybrid_shortcuts.items():
+        is_empty = False
+        if isinstance(hybrid_value, int):
+            # Zone ID - not empty
+            is_empty = False
+        else:
+            # Polygon array - check if empty
+            is_empty = len(hybrid_value) == 0
+
+        if is_empty:
             boundary = h3.cell_to_boundary(hex_id)[0]
             empty_shortcuts.append(f"Hexagon {hex_id} at {boundary}")
 
@@ -119,7 +178,7 @@ def test_unique_pole_cells():
     s_pole_cells = []
     n_pole_cells = []
 
-    for hex_id in shortcuts.keys():
+    for hex_id in hybrid_shortcuts.keys():
         # Check if this hex cell surrounds the poles using extracted functions
         if surrounds_south_pole(hex_id):
             s_pole_cells.append(hex_id)
@@ -137,26 +196,47 @@ def test_unique_pole_cells():
 def test_shortcut_uniqueness():
     """Test that shortcuts are unique (no duplicates in polygon IDs)."""
     duplicates = []
-    for hex_id, polygon_ids in shortcuts.items():
-        if len(np.unique(polygon_ids)) != len(polygon_ids):
-            duplicates.append(
-                f"Shortcut {hex_id} contains duplicate polygon IDs: {polygon_ids}"
-            )
+    for hex_id, hybrid_value in hybrid_shortcuts.items():
+        if isinstance(hybrid_value, int):
+            # Zone ID - no duplicates by definition
+            continue
+        else:
+            # Polygon array - check for duplicates
+            polygon_ids = hybrid_value
+            if len(np.unique(polygon_ids)) != len(polygon_ids):
+                duplicates.append(
+                    f"Shortcut {hex_id} contains duplicate polygon IDs: {polygon_ids}"
+                )
 
     assert not duplicates, f"Shortcut uniqueness errors: {duplicates[:5]}"
 
 
 def test_unique_shortcut_consistency(tf):
-    """Ensure the unique shortcut map matches shortcut polygon membership."""
+    """Ensure the unique shortcut entries are consistent with zone assignments."""
 
-    assert len(unique_shortcuts) > 0
+    # Count unique shortcuts (zone IDs in hybrid format)
+    unique_shortcut_count = sum(
+        1 for value in hybrid_shortcuts.values() if isinstance(value, int)
+    )
+    assert unique_shortcut_count > 0
 
-    for hex_id, zone_id in unique_shortcuts.items():
-        assert hex_id in shortcuts
-        polygon_ids = shortcuts[hex_id]
-        assert len(polygon_ids) > 0
-        polygon_zones = tf.zone_ids[polygon_ids]
-        assert np.all(polygon_zones == zone_id)
+    for hex_id, hybrid_value in hybrid_shortcuts.items():
+        if isinstance(hybrid_value, int):
+            # This is a zone ID - verify it's consistent with timezone_at
+            zone_id = hybrid_value
+            # Get a point in this hex cell to test
+            boundary = h3.cell_to_boundary(hex_id)
+            lat, lng = boundary[0]  # Get first boundary point
+
+            # Check using TimezoneFinder's timezone_at method
+            found_timezone = tf.timezone_at(lng=lng, lat=lat)
+            if found_timezone is not None:
+                # Convert timezone name to zone ID to compare
+                expected_zone_id = tf.timezone_names.index(found_timezone)
+                assert expected_zone_id == zone_id, (
+                    f"Hybrid shortcut has zone {zone_id} for hex {hex_id}, "
+                    f"but TimezoneFinder returns timezone '{found_timezone}' (zone {expected_zone_id})"
+                )
 
 
 @pytest.mark.parametrize(
@@ -178,10 +258,18 @@ def test_has_coherent_check_fct(lst, expected):
 def test_shortcut_sorting(tf):
     """Test that shortcuts are correctly sorted by zone ID and polygon size."""
     invalid_sortings = []
-    for hex_id, polygon_ids in shortcuts.items():
-        try:
-            check_shortcut_sorting(polygon_ids, tf.zone_ids)
-        except AssertionError as e:
-            invalid_sortings.append(f"Invalid sorting for hexagon {hex_id}: {str(e)}")
+    for hex_id, hybrid_value in hybrid_shortcuts.items():
+        if isinstance(hybrid_value, int):
+            # Zone ID - no sorting to check
+            continue
+        else:
+            # Polygon array - check sorting
+            polygon_ids = hybrid_value
+            try:
+                check_shortcut_sorting(polygon_ids, tf.zone_ids)
+            except AssertionError as e:
+                invalid_sortings.append(
+                    f"Invalid sorting for hexagon {hex_id}: {str(e)}"
+                )
 
     assert not invalid_sortings, f"Shortcut sorting errors: {invalid_sortings[:5]}"

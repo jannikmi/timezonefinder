@@ -3,13 +3,16 @@ Changelog
 =========
 
 
-8.x.x (TBA)
+8.1.0 (2025-09-22)
 ------------------
 
 * add the support of using the TimeZonefinder class instances as context managers. added a basic usage examples
+* note that the performance of certain_timezone_at() degraded drastically, since now many more polygons will be checked with an expensive point-in-polygon algorithm. consider using timezone_at() or timezone_at_land() instead.
+* introduced hybrid shortcut index structure that combines the functionality of separate shortcuts and unique shortcuts into a single optimized data structure, improving performance and reducing memory usage
 * zone id storage now defaults to ``uint8`` and can be overridden via ``--zone-id-dtype``/``TIMEZONEFINDER_ZONE_ID_DTYPE`` when recompiling binaries
-* relax ``cffi`` upper bound to allow the 2.x series (minimum stays at ``1.15.1``) so downstream packages pinning ``cffi>=2.0`` resolve cleanly
-* added ``unique_shortcuts.fbs`` containing the precomputed "single-zone" shortcut map so lookups in uniquely covered hex cells return without polygon checks
+* relax ``cffi`` upper bound to allow the 2.x series so downstream packages pinning ``cffi>=2.0`` resolve cleanly
+* ``scripts/reporting.py`` can now be executed as a standalone script to generate data reports from binary files independent from ``file_converter.py``
+* the ``check_speed_*.py`` scripts now generates a detailed performance reports in reStructuredText format automatically included into documentation
 
 
 Internal:
@@ -17,6 +20,7 @@ Internal:
 * using abi3 (aka Python limited API) wheels to avoid a combinatory explosion with Python version. It allows the use of a single Python 3.9 base and building future-proof wheels. Thanks to `theirix <https://github.com/theirix>`__
 * using pydantic to validating and parsing the GeoJSON dataset. Thanks to `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for the PR.
 * refactored file_converter.py to improve code quality. Thanks to `Pratyush Kumar <https://github.com/pratyushkumar211`__ for the PR.
+* consolidated shortcut data structures: replaced ``shortcuts.fbs`` file with ``hybrid_shortcuts_uint8.fbs`` (or ``hybrid_shortcuts_uint16.fbs``) file that stores both polygon lists and direct zone IDs using the minimal dtype for zone IDs.
 
 
 8.0.0 (2025-08-11)

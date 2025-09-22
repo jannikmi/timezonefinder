@@ -104,7 +104,7 @@ def get_geometry(
     tz_id: Optional[int] = 0,
     use_id: bool = False,
     coords_as_pairs: bool = False,
-) -> List[Union[List[CoordPairs], List[CoordLists]]]:
+) -> List[List[Union[CoordPairs, CoordLists]]]:
     """
     Retrieves the geometry of a timezone polygon.
     Uses the global TimezoneFinder instance.
