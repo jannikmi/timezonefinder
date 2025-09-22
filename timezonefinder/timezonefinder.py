@@ -199,31 +199,20 @@ class AbstractTimezoneFinder(ABC):
 
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
-        :return: The unique zone ID or None if no polygons exist in the shortcut.
+        :return: The unique zone ID or None if no unique zone exists in the shortcut.
         """
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        # Shortcuts behavior (hybrid structure)
+        # Shortcuts behavior (hybrid structure with precomputed uniqueness)
         assert self.shortcut_mapping is not None
         shortcut_value = self.shortcut_mapping.get(hex_id)
         if shortcut_value is None:
             return None
         elif isinstance(shortcut_value, int):
-            # Zone ID - this is a unique zone
+            # Zone ID - this is a precomputed unique zone
             return shortcut_value
         else:
-            # Polygon array - check if all polygons belong to same zone
-            if len(shortcut_value) == 0:
-                return None
-            if len(shortcut_value) == 1:
-                # shortcut_value[0] is a numpy scalar from array indexing, but mypy sees it as ndarray
-                # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
-                return self.zone_id_of(shortcut_value[0])  # type: ignore[arg-type]
-            zones = self.zone_ids_of(shortcut_value)
-            zones_unique = np.unique(zones)
-            if len(zones_unique) == 1:
-                return int(zones_unique[0])
-            # more than one zone in this shortcut
+            # Polygon array - by definition not unique (would be stored as int if unique)
             return None
 
     @abstractmethod
