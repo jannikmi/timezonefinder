@@ -465,7 +465,9 @@ def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
-        "hybrid shortcuts": get_hybrid_shortcut_file_path(zone_id_dtype, output_path),
+        "hybrid shortcut index": get_hybrid_shortcut_file_path(
+            zone_id_dtype, output_path
+        ),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()

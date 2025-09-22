@@ -10,11 +10,13 @@ This makes computations faster and it takes lot less space,
     without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
 
 
-[SHORTCUTS:] spacial index: coordinate to potential polygon id candidates
+[SHORTCUTS:] hybrid spatial index: coordinate to potential polygon id candidates or direct zone IDs
 shortcuts drastically reduce the amount of polygons which need to be checked in order to
     decide which timezone a point is located in.
 the surface of the world is split up into a grid of hexagons (h3 library)
-shortcut here means storing for every cell in a grid of the world map which polygons are located in that cell.
+hybrid shortcut here means storing for every cell in a grid of the world map either:
+    - a direct zone ID (when all polygons in that cell belong to the same timezone)
+    - an array of polygon IDs that need to be checked (when the cell contains multiple timezones)
 
 Note: the poly ids within one shortcut entry are sorted for optimal performance
 
