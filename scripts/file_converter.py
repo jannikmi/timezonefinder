@@ -59,6 +59,7 @@ from scripts.configs import (
 from scripts.reporting import write_data_report_from_binary
 from scripts.check_speed_timezone_finding import write_performance_report
 from scripts.check_speed_inside_polygon import write_polygon_report
+from scripts.check_speed_initialisation import write_initialization_report
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -260,6 +261,9 @@ def parse_data(
 
     print("Generating point-in-polygon benchmark report...")
     write_polygon_report()
+
+    print("Generating initialization benchmark report...")
+    write_initialization_report()
 
 
 if __name__ == "__main__":

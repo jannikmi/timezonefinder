@@ -31,6 +31,7 @@ References
    Performance <7_performance>
    Timezone Finding Benchmarks <benchmark_results_timezonefinding>
    Point-in-Polygon Benchmarks <benchmark_results_polygon>
+   Initialization Benchmarks <benchmark_results_initialization>
    Data Format <data_format>
    Data Report <data_report>
    About <3_about>
