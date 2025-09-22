@@ -1,7 +1,7 @@
 """Utilities for working with unique shortcut FlatBuffer data."""
 
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 import flatbuffers
 import numpy as np
@@ -66,7 +66,7 @@ def _zone_width_from_dtype(dtype: np.dtype) -> int:
         ) from exc
 
 
-def _dtype_from_zone_width(width: int) -> np.dtype:
+def _dtype_from_zone_width(width: int) -> "np.dtype[Any]":
     try:
         return _ZONE_ID_WIDTH_TO_DTYPE[width]
     except KeyError as exc:

@@ -17,6 +17,7 @@ from timezonefinder.configs import (
     SHORTCUT_H3_RES,
     CoordLists,
     CoordPairs,
+    IntegerLike,
 )
 
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
@@ -120,7 +121,7 @@ class AbstractTimezoneFinder(ABC):
         """
         return utils.inside_polygon == utils_clang.pt_in_poly_clang
 
-    def zone_id_of(self, boundary_id: int) -> int:
+    def zone_id_of(self, boundary_id: IntegerLike) -> int:
         """
         Get the zone ID of a polygon.
 
@@ -129,7 +130,7 @@ class AbstractTimezoneFinder(ABC):
         :rtype: int
         """
         try:
-            return self.zone_ids[boundary_id]
+            return int(self.zone_ids[boundary_id])
         except TypeError:
             raise ValueError(f"zone_ids is not set in directory {self.data_location}.")
 
@@ -155,7 +156,7 @@ class AbstractTimezoneFinder(ABC):
         except IndexError:
             raise ValueError("timezone could not be found. index error.")
 
-    def zone_name_from_boundary_id(self, boundary_id: int) -> str:
+    def zone_name_from_boundary_id(self, boundary_id: IntegerLike) -> str:
         """
         Get the zone name from a boundary polygon ID.
 
@@ -215,11 +216,13 @@ class AbstractTimezoneFinder(ABC):
             if len(shortcut_value) == 0:
                 return None
             if len(shortcut_value) == 1:
-                return self.zone_id_of(shortcut_value[0])
+                # shortcut_value[0] is a numpy scalar from array indexing, but mypy sees it as ndarray
+                # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
+                return self.zone_id_of(shortcut_value[0])  # type: ignore[arg-type]
             zones = self.zone_ids_of(shortcut_value)
             zones_unique = np.unique(zones)
             if len(zones_unique) == 1:
-                return zones_unique[0]
+                return int(zones_unique[0])
             # more than one zone in this shortcut
             return None
 
@@ -316,7 +319,9 @@ class TimezoneFinderL(AbstractTimezoneFinder):
             if len(shortcut_value) == 0:
                 return None
             poly_of_biggest_zone = shortcut_value[-1]
-            most_common_id = self.zone_id_of(poly_of_biggest_zone)
+            # poly_of_biggest_zone is a numpy scalar from array indexing, but mypy sees it as ndarray
+            # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
+            most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
             return self.zone_name_from_id(most_common_id)
 
 
@@ -358,7 +363,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # since there are very few entries it is feasible to keep them in the memory
         self.hole_registry = self._load_hole_registry()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
         del self.boundaries
         del self.holes
@@ -382,7 +387,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
     def nr_of_holes(self) -> int:
         return len(self.holes)
 
-    def coords_of(self, boundary_id: int = 0) -> np.ndarray:
+    def coords_of(self, boundary_id: IntegerLike = 0) -> np.ndarray:
         """
         Get the coordinates of a boundary polygon from the FlatBuffers collection.
 
@@ -391,7 +396,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         return self.boundaries.coords_of(boundary_id)
 
-    def _iter_hole_ids_of(self, boundary_id: int) -> Iterable[int]:
+    def _iter_hole_ids_of(self, boundary_id: IntegerLike) -> Iterable[int]:
         """
         Yield the hole IDs for a given boundary polygon id.
 
@@ -399,13 +404,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :yield: Hole IDs
         """
         try:
-            amount_of_holes, first_hole_id = self.hole_registry[boundary_id]
+            amount_of_holes, first_hole_id = self.hole_registry[int(boundary_id)]
         except KeyError:
             return
         for i in range(amount_of_holes):
             yield first_hole_id + i
 
-    def _holes_of_poly(self, boundary_id: int) -> Iterable[np.ndarray]:
+    def _holes_of_poly(self, boundary_id: IntegerLike) -> Iterable[np.ndarray]:
         """
         Get the hole coordinates of a boundary polygon from the FlatBuffers collection.
 
@@ -416,7 +421,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             yield self.holes.coords_of(hole_id)
 
     def get_polygon(
-        self, boundary_id: int, coords_as_pairs: bool = False
+        self, boundary_id: IntegerLike, coords_as_pairs: bool = False
     ) -> List[Union[CoordPairs, CoordLists]]:
         """
         Get the polygon coordinates of a given boundary polygon including its holes.
@@ -446,7 +451,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         tz_id: Optional[int] = 0,
         use_id: bool = False,
         coords_as_pairs: bool = False,
-    ):
+    ) -> List[List[Union[CoordPairs, CoordLists]]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
@@ -481,7 +486,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             for boundary_id in self._iter_boundary_ids_of_zone(tz_id)
         ]
 
-    def inside_of_polygon(self, boundary_id: int, x: int, y: int) -> bool:
+    def inside_of_polygon(self, boundary_id: IntegerLike, x: int, y: int) -> bool:
         """
         Check if a point is inside a boundary polygon.
 
@@ -542,14 +547,16 @@ class TimezoneFinder(AbstractTimezoneFinder):
         if nr_possible_polygons == 1:
             # there is only one boundary polygon in that area. return its timezone name without further checks
             boundary_id = possible_boundaries[0]
-            return self.zone_name_from_boundary_id(boundary_id)
+            # boundary_id is a numpy scalar from array indexing, but mypy sees it as ndarray
+            # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
+            return self.zone_name_from_boundary_id(boundary_id)  # type: ignore[arg-type]
 
         # create a list of all the timezone ids of all possible boundary polygons
         zone_ids = self.zone_ids_of(possible_boundaries)
 
         last_zone_change_idx = utils.get_last_change_idx(zone_ids)
         if last_zone_change_idx == 0:
-            return self.zone_name_from_id(zone_ids[0])
+            return self.zone_name_from_id(int(zone_ids[0]))
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -564,13 +571,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = zone_ids[i]
-                return self.zone_name_from_id(zone_id)
+                return self.zone_name_from_id(int(zone_id))
 
         # since it is the last possible option,
         # the polygons of the last possible zone don't actually have to be checked
         # -> instantly return the last zone
         zone_id = zone_ids[-1]
-        return self.zone_name_from_id(zone_id)
+        return self.zone_name_from_id(int(zone_id))
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts

@@ -36,6 +36,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 - Add or refine type hints for new code. Use `typing.Protocol`, `TypedDict`, and `Literal` to capture constraints.
 - Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
 - Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
+- all types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 
 ### Performance & Memory Discipline
 
