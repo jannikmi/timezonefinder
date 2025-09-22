@@ -138,8 +138,24 @@ def write_polygon_report(output_path: Path, n_queries: int = nr_of_runs) -> None
         {
             "test_queries": benchmark_data["n_runs"],
             "algorithm_type": "Point-in-Polygon",
-            "test_data_type": "Random polygons with random query points",
+            "test_data_type": "Random timezone boundary polygons with random query points",
+            "polygon_source": "TimezoneFinder's timezone boundary dataset",
         },
+    )
+
+    # Add test methodology section
+    reporter.add_section("Test Methodology")
+    reporter.add_text(
+        "**Polygons Used**: Random timezone boundary polygons from TimezoneFinder's dataset"
+    )
+    reporter.add_text(
+        "**Query Points**: Random geographic coordinates (longitude, latitude)"
+    )
+    reporter.add_text(
+        "**Test Process**: Each test iteration selects a random polygon from the timezone boundary dataset and a random query point, then measures the time to determine if the point lies within the polygon"
+    )
+    reporter.add_text(
+        "**Polygon Characteristics**: Real-world timezone boundaries with varying complexity, from simple rectangular shapes to highly detailed coastlines and political boundaries"
     )
 
     # Add performance results
@@ -153,7 +169,8 @@ def write_polygon_report(output_path: Path, n_queries: int = nr_of_runs) -> None
 
     reporter.add_note(
         "Performance results may vary based on system configuration, "
-        "compiler optimizations, and runtime conditions."
+        "compiler optimizations, runtime conditions, and the complexity of "
+        "the randomly selected timezone boundary polygons used in each test run."
     )
 
     reporter.write_report()
