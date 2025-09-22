@@ -22,9 +22,10 @@ repos:
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.13.0
       hooks:
-          # linter.
           - id: ruff
+            # linter.
             args: [ --fix ]
+            exclude: ^(prototypes/)
           - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
@@ -53,7 +54,7 @@ repos:
         rev: v1.18.1
         hooks:
             -   id: mypy
-                exclude: ^((tests|scripts|docs)/)
+                exclude: ^((tests|prototypes|scripts|docs)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
     -   repo: https://github.com/mgedmin/check-manifest

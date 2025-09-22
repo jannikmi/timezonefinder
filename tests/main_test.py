@@ -84,7 +84,7 @@ class TestBaseTimezoneFinderClass:
         print(
             [
                 self.test_instance.zone_name_from_boundary_id(b_id)
-                for b_id in self.test_instance.get_boundaries_in_shortcut(
+                for b_id in self.test_instance._iter_boundaries_in_shortcut(
                     lng=lng, lat=lat
                 )
             ]

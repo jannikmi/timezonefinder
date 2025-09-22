@@ -84,11 +84,10 @@ Data Structure Overview
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes
-2. **Shortcuts**: Spatial index using H3 hexagons (``shortcuts.fbs``)
-3. **Unique Shortcut Zones**: Fast lookup table returning a timezone immediately when all polygons in a hexagon share the same zone (``unique_shortcuts.fbs``)
-4. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
-5. **Zone Names**: Text file listing the timezone names
-6. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
+2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.fbs`` or ``hybrid_shortcuts_uint16.fbs``) that stores either direct zone IDs or polygon lists depending on timezone complexity
+3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
+4. **Zone Names**: Text file listing the timezone names
+5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
 
 
 Coordinate Representation
@@ -126,8 +125,12 @@ Boundaries Information
 Spatial Indexing
 ----------------
 
-* ``shortcuts.fbs``: FlatBuffer binary file mapping H3 hexagon IDs to lists of polygon IDs that intersect with each hexagon
-* ``unique_shortcuts.fbs``: FlatBuffer binary file containing the subset of H3 cells whose polygons all belong to the same timezone; stores the zone ID byte-width in the file header so the runtime can honour the configured ``zone_id`` dtype
+* ``hybrid_shortcuts_uint8.fbs`` (or ``hybrid_shortcuts_uint16.fbs``): FlatBuffer binary file containing the hybrid spatial index that maps H3 hexagon IDs to either:
+
+   - Direct zone IDs (when all polygons in a hexagon belong to the same timezone)
+   - Arrays of polygon IDs that intersect with each hexagon (when multiple timezones are present)
+
+   The file format is automatically selected based on the zone ID data type to optimize storage.
 
 Other Files
 -----------
@@ -153,17 +156,24 @@ How it works:
 ~~~~~~~~~~~~~
 
 * The surface of the Earth is divided into a grid of hexagons using Uber's H3 library
-* For each hexagon cell, the library stores a list of timezone polygon IDs that intersect with that cell
+* For each hexagon cell, the library uses a hybrid storage approach:
+
+   - **Unique zones**: When all polygons in a hexagon belong to the same timezone, the zone ID is stored directly
+   - **Multiple zones**: When a hexagon contains polygons from different timezones, an array of polygon IDs is stored
+
 * When looking up a timezone for a specific point, the library:
    * Determines which H3 hexagon contains the point
-   * Retrieves the list of potentially relevant polygons from the shortcuts
-   * Tests only those polygons to determine which timezone the point belongs to
+   * Retrieves the shortcut entry for that hexagon
+   * If it's a zone ID, returns the timezone immediately
+   * If it's a polygon array, tests only those polygons to determine which timezone the point belongs to
 
-This approach provides several performance benefits:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This hybrid approach provides several performance benefits:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **Reduced Search Space**: Instead of checking all polygons (thousands), only a small subset needs to be evaluated
-* **Memory Efficiency**: The spatial index is compact and optimized for fast lookups
+* **Immediate Results**: For hexagons with unique timezones (~majority of cases), the result is returned immediately without any polygon testing
+* **Memory Efficiency**: The spatial index is compact and optimized for fast lookups, storing zone IDs directly when possible
+* **Adaptive Storage**: Uses the most efficient storage method for each hexagon based on its timezone complexity
 
 H3 Resolution Selection
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,6 +185,17 @@ The library uses H3 resolution 3 with 41k hexagons for its spatial index, which 
 * **Lookup Speed**: Quick to determine which cell contains a point
 
 The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
+
+Hybrid Shortcut Data Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The hybrid shortcut system combines two previous approaches into a single optimized data structure:
+
+* **Direct Zone Storage**: For hexagons where all intersecting polygons belong to the same timezone, the zone ID is stored directly as an integer. This eliminates the need for polygon testing in the majority of cases.
+
+* **Polygon List Storage**: For hexagons that contain polygons from multiple timezones, an array of polygon IDs is stored. Only these polygons need to be tested during lookup.
+
+This hybrid approach automatically chooses the most efficient storage method for each hexagon, providing optimal performance across different geographic regions. Areas with clear timezone boundaries benefit from immediate zone ID lookups, while complex border regions still use the efficient polygon list approach.
 
 Design Rationales
 =================

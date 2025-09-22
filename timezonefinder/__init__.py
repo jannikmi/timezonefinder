@@ -1,4 +1,7 @@
-from timezonefinder.timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder.timezonefinder import (
+    TimezoneFinder,
+    TimezoneFinderL,
+)
 
 # Import module-level functions
 from timezonefinder.global_functions import (

@@ -1,6 +1,5 @@
 """
 Hex-related utility functions that don't depend on classes.
-Created to break circular import between shortcuts.py and classes.py.
 """
 
 from dataclasses import dataclass
@@ -214,9 +213,9 @@ class Hex:
     def zones_in_cell(self) -> Set[int]:
         if self._zones_in_cell is None:
             # lazy evaluation, caching
-            self._zones_in_cell = set(
-                map(lambda p: self.data.poly_zone_ids[p], self.polys_in_cell)
-            )
+            self._zones_in_cell = {
+                self.data.poly_zone_ids[p] for p in self.polys_in_cell
+            }
         return self._zones_in_cell
 
     @property

@@ -4,6 +4,7 @@ include DATA_LICENSE
 include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.npy *.fbs *.txt *.json *.c *.h
+recursive-exclude prototypes *.py
 exclude Agents.md
 exclude CONTRIBUTING.md
 graft tests

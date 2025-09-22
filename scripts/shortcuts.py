@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -23,13 +23,9 @@ from scripts.utils import (
     time_execution,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.io.shortcuts import (
-    get_shortcut_file_path,
-    write_shortcuts_flatbuffers,
-)
-from timezonefinder.flatbuf.io.unique_shortcuts import (
-    get_unique_shortcut_file_path,
-    write_unique_shortcuts_flatbuffers,
+from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    get_hybrid_shortcut_file_path,
+    write_hybrid_shortcuts_flatbuffers,
 )
 from timezonefinder.utils_numba import coord2int, int2coord, using_numba
 
@@ -278,22 +274,121 @@ def compute_unique_shortcut_mapping(
     return unique_map
 
 
+def build_hybrid_index_from_separate_indices(
+    shortcuts: ShortcutMapping, unique_shortcuts: Dict[int, int]
+) -> Dict[int, Union[int, List[int]]]:
+    """Build hybrid index from separate shortcuts and unique_shortcuts indices.
+
+    This algorithm combines the two legacy data structures into a single hybrid
+    structure that replaces both, optimizing storage and lookup performance.
+
+    ALGORITHM EXPLANATION:
+    The legacy system uses two separate data structures:
+    1. `shortcuts`: Maps hex_id -> [polygon_ids] for ALL hex cells
+    2. `unique_shortcuts`: Maps hex_id -> zone_id for hex cells where all polygons belong to same zone
+
+    The hybrid system combines these into one structure:
+    - If a hex is in unique_shortcuts, store just the zone_id (saves space & lookup time)
+    - Otherwise, store the polygon_ids list (allows proper ambiguity resolution)
+
+    This optimization reduces storage (single zone_id vs list of polygon_ids) and
+    improves lookup performance (direct zone lookup vs polygon intersection tests)
+    for the common case where all polygons in a hex belong to the same timezone.
+
+    Args:
+        shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
+        unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
+
+    Returns:
+        Dictionary mapping hex IDs to either:
+        - int: zone ID (for unique cases where all polygons share same zone)
+        - List[int]: polygon IDs (for ambiguous cases requiring polygon tests)
+    """
+    hybrid_mapping = {}
+
+    # First, add all entries from shortcuts (polygon lists)
+    # This ensures we have entries for all hex cells with any polygons
+    for hex_id, polygon_ids in shortcuts.items():
+        hybrid_mapping[hex_id] = polygon_ids
+
+    # Then, override with unique shortcuts where applicable
+    # This replaces polygon lists with single zone IDs when all polygons
+    # in the hex belong to the same timezone
+    for hex_id, zone_id in unique_shortcuts.items():
+        hybrid_mapping[hex_id] = zone_id
+
+    return hybrid_mapping
+
+
+def compile_hybrid_shortcuts(
+    shortcuts: ShortcutMapping,
+    unique_shortcuts: Dict[int, int],
+    zone_id_dtype: np.dtype,
+    output_path: Path,
+) -> Dict[int, Union[int, List[int]]]:
+    """Compile hybrid shortcuts combining legacy shortcuts and unique_shortcuts.
+
+    Args:
+        shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
+        unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
+        zone_id_dtype: numpy dtype for zone IDs (determines output file schema)
+        output_path: Path where to save the hybrid shortcuts binary file
+
+    Returns:
+        The compiled hybrid shortcuts mapping
+    """
+    print("compiling hybrid shortcuts...")
+
+    # Build the hybrid index using our algorithm
+    hybrid_mapping = build_hybrid_index_from_separate_indices(
+        shortcuts, unique_shortcuts
+    )
+
+    # Generate output file path based on zone_id_dtype
+    output_file = get_hybrid_shortcut_file_path(zone_id_dtype, output_path)
+
+    # Write to FlatBuffer binary file
+    write_hybrid_shortcuts_flatbuffers(hybrid_mapping, zone_id_dtype, output_file)
+
+    # Report statistics
+    zone_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, int))
+    polygon_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, list))
+
+    print(f"hybrid shortcuts compiled: {len(hybrid_mapping)} total entries")
+    print(
+        f"  - zone entries: {zone_entries} ({zone_entries / len(hybrid_mapping) * 100:.1f}%)"
+    )
+    print(
+        f"  - polygon entries: {polygon_entries} ({polygon_entries / len(hybrid_mapping) * 100:.1f}%)"
+    )
+    print(f"  - saved to: {output_file}")
+
+    return hybrid_mapping
+
+
 def compile_shortcuts(
     output_path: Path,
     data: TimezoneData,
 ) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
     shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
-    output_file: Path = get_shortcut_file_path(output_path)
-    write_shortcuts_flatbuffers(shortcuts, output_file)
+
+    # Compute unique shortcuts mapping (needed for hybrid shortcuts)
     unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
-    unique_output_file = get_unique_shortcut_file_path(output_path)
-    write_unique_shortcuts_flatbuffers(
-        unique_mapping, data.poly_zone_ids.dtype, unique_output_file
+
+    # Compile and write hybrid shortcuts binary file (replaces legacy formats)
+    compile_hybrid_shortcuts(
+        shortcuts=shortcuts,
+        unique_shortcuts=unique_mapping,
+        zone_id_dtype=data.poly_zone_ids.dtype,
+        output_path=output_path,
     )
+
     return shortcuts
 
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
+    # This will generate the hybrid shortcuts binary file:
+    # hybrid_shortcuts_uint8.fbs - optimized format (hex_id -> zone_id OR [polygon_ids])
     compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)

@@ -3,20 +3,32 @@ Module for generating reports about timezone data statistics.
 Contains functions for reporting various metrics about timezone polygons, holes, and boundaries.
 """
 
+import argparse
+import json
 from collections import Counter
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Union
 
+import numpy as np
 
 from scripts.configs import DATA_REPORT_FILE
 from scripts.utils import percent
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
-from timezonefinder.flatbuf.io.shortcuts import get_shortcut_file_path
+from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    get_hybrid_shortcut_file_path,
+    read_hybrid_shortcuts_binary,
+)
+from timezonefinder.np_binary_helpers import (
+    get_zone_ids_path,
+    read_per_polygon_vector,
+)
 from timezonefinder.utils import (
     get_holes_dir,
     get_boundaries_dir,
 )
+from timezonefinder.zone_names import read_zone_names
 
 
 # decorator to reroute the output of a function to a file
@@ -33,6 +45,118 @@ def redirect_output_to_file(file_path: str) -> Callable:
         return wrapper
 
     return decorator
+
+
+# context manager version for direct output redirection
+def redirect_output_to_file_contextmanager(file_path: Union[str, Path]):
+    """Context manager to redirect stdout to a file."""
+    import sys
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _redirect():
+        original_stdout = sys.stdout
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                sys.stdout = f
+                yield
+        finally:
+            sys.stdout = original_stdout
+
+    return _redirect()
+
+
+def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> Dict:
+    """
+    Load all necessary data from binary files to generate reports.
+
+    Args:
+        data_path: Path to the directory containing binary data files
+
+    Returns:
+        Dictionary containing all loaded data
+    """
+    print(f"Loading binary data from: {data_path}")
+
+    # Load shortcuts
+    zone_ids = read_per_polygon_vector(get_zone_ids_path(data_path))
+    zone_id_dtype = zone_ids.dtype
+    shortcut_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_path)
+    shortcuts = read_hybrid_shortcuts_binary(shortcut_file)
+
+    # Load timezone names
+    all_tz_names = read_zone_names(data_path)
+    nr_of_zones = len(all_tz_names)
+
+    # Load boundary polygon data
+    boundaries_dir = get_boundaries_dir(data_path)
+    boundary_coord_path = get_coordinate_path(boundaries_dir)
+
+    # Read boundary polygons using FlatBuffer
+    from timezonefinder.flatbuf.io.polygons import (
+        get_polygon_collection,
+        read_polygon_array_from_binary,
+    )
+
+    with open(boundary_coord_path, "rb") as f:
+        coord_buf = f.read()
+
+    polygon_collection = get_polygon_collection(coord_buf)
+    nr_of_polygons = polygon_collection.PolygonsLength()
+
+    # Calculate polygon lengths from FlatBuffer data
+    polygon_lengths = []
+    for idx in range(nr_of_polygons):
+        polygon_coords = read_polygon_array_from_binary(polygon_collection, idx)
+        polygon_lengths.append(polygon_coords.shape[1])  # Number of coordinate pairs
+
+    # Load hole data
+    holes_dir = get_holes_dir(data_path)
+    hole_coord_path = get_coordinate_path(holes_dir)
+
+    # Load hole registry to get polynrs_of_holes
+    hole_registry_path = data_path / "hole_registry.json"
+    polynrs_of_holes = []
+    all_hole_lengths = []
+
+    if hole_registry_path.exists() and hole_coord_path.exists():
+        with open(hole_registry_path) as f:
+            hole_registry = json.load(f)
+
+        # Read hole polygons using FlatBuffers
+        with open(hole_coord_path, "rb") as f:
+            hole_coord_buf = f.read()
+
+        hole_polygon_collection = get_polygon_collection(hole_coord_buf)
+
+        # Build polynrs_of_holes list from hole registry
+        hole_index = 0
+        for poly_id_str, hole_info in hole_registry.items():
+            poly_id = int(poly_id_str)
+            num_holes = hole_info[0]
+
+            for _ in range(num_holes):
+                polynrs_of_holes.append(poly_id)
+                if hole_index < hole_polygon_collection.PolygonsLength():
+                    hole_coords = read_polygon_array_from_binary(
+                        hole_polygon_collection, hole_index
+                    )
+                    all_hole_lengths.append(
+                        hole_coords.shape[1]
+                    )  # Number of coordinate pairs
+                    hole_index += 1
+
+    return {
+        "shortcuts": shortcuts,
+        "nr_of_polygons": nr_of_polygons,
+        "nr_of_zones": nr_of_zones,
+        "polygon_lengths": polygon_lengths,
+        "all_hole_lengths": all_hole_lengths,
+        "polynrs_of_holes": polynrs_of_holes,
+        "poly_zone_ids": zone_ids.tolist(),
+        "all_tz_names": all_tz_names,
+        "output_path": data_path,
+    }
 
 
 def accumulated_frequency(int_list):
@@ -125,23 +249,202 @@ def get_file_size_in_mb(file_path: Path) -> float:
     return size_in_mb
 
 
+def calculate_shortcut_index_stats(
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+) -> Dict[str, Union[int, float]]:
+    """
+    Calculate comprehensive statistics about the hybrid shortcut index.
+
+    Args:
+        mapping: Hybrid shortcut mapping (hex_id -> zone_id | polygon_ids)
+        poly_zone_ids: Zone IDs for each polygon
+
+    Returns:
+        Dictionary of statistical metrics
+    """
+    from scripts.configs import SHORTCUT_H3_RES
+
+    # Basic counts
+    total_entries = len(mapping)
+    zone_entries = 0
+    polygon_entries = 0
+    polygon_id_count = 0
+    empty_entries = 0
+
+    # Data for frequency analysis
+    nr_of_entries_in_shortcut = []
+    amount_of_different_zones = []
+
+    # Calculate per-entry statistics
+    for v in mapping.values():
+        if isinstance(v, int):
+            # Direct zone ID - single zone, no polygons to enumerate
+            zone_entries += 1
+            nr_of_entries_in_shortcut.append(0)  # No polygons, direct zone
+            amount_of_different_zones.append(1)  # Single zone
+        else:
+            # Polygon list - count polygons and distinct zones
+            polygon_ids = v
+            polygon_count = len(polygon_ids)
+
+            if polygon_count == 0:
+                empty_entries += 1
+                nr_of_entries_in_shortcut.append(0)
+                amount_of_different_zones.append(0)
+            else:
+                polygon_entries += 1
+                polygon_id_count += polygon_count
+                nr_of_entries_in_shortcut.append(polygon_count)
+
+                # Count distinct zones for these polygons
+                zone_ids = [poly_zone_ids[i] for i in polygon_ids]
+                distinct_zones = set(zone_ids)
+                amount_of_different_zones.append(len(distinct_zones))
+
+    # Calculate H3 coverage statistics
+    try:
+        import h3.api.numpy_int as h3
+
+        # Calculate theoretical maximum cells at this resolution
+        if SHORTCUT_H3_RES == 0:
+            possible_cells = len(h3.get_res0_cells())
+        else:
+            # For higher resolutions, calculate based on H3 formula
+            # Each parent cell has 7 children (except res 0->1 which is different)
+            # Approximately 2 + 240 * 7^(res-1) cells for res >= 1
+            if SHORTCUT_H3_RES == 1:
+                possible_cells = 842  # Known value for resolution 1
+            elif SHORTCUT_H3_RES == 2:
+                possible_cells = 5882  # Known value for resolution 2
+            elif SHORTCUT_H3_RES == 3:
+                possible_cells = 41162  # Known value for resolution 3 (current default)
+            elif SHORTCUT_H3_RES == 4:
+                possible_cells = 288122  # Known value for resolution 4
+            else:
+                # For other resolutions, use the stored cells as a conservative estimate
+                possible_cells = total_entries
+
+    except ImportError:
+        # If h3 is not available, use stored cells as estimate
+        possible_cells = total_entries
+
+    stored_cells = total_entries
+    missing_cells = max(possible_cells - stored_cells, 0)
+
+    # Calculate derived metrics
+    unique_entry_fraction = zone_entries / total_entries if total_entries else 0.0
+    unique_surface_fraction = zone_entries / possible_cells if possible_cells else 0.0
+    coverage_ratio = stored_cells / possible_cells if possible_cells else 0.0
+
+    # Calculate average polygons per non-unique entry
+    avg_polygons_per_entry = (
+        polygon_id_count / polygon_entries if polygon_entries else 0.0
+    )
+
+    # Calculate zone distribution efficiency
+    zone_distribution_efficiency = (
+        sum(1 for zones in amount_of_different_zones if zones <= 1) / total_entries
+        if total_entries
+        else 0.0
+    )
+
+    # Calculate storage efficiency metrics
+    # Estimate bytes per entry (key + value)
+    ENTRY_KEY_SIZE_BYTES = 8  # int64 hex ID
+    zone_storage_bytes = zone_entries * (
+        ENTRY_KEY_SIZE_BYTES + 1
+    )  # 1 byte for uint8 zone ID
+    polygon_storage_bytes = (
+        polygon_entries * ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2
+    )  # 2 bytes per uint16 polygon ID
+    total_storage_bytes = zone_storage_bytes + polygon_storage_bytes
+
+    # Calculate compression ratio vs naive storage
+    naive_storage_bytes = total_entries * (
+        ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2 / total_entries
+        if total_entries
+        else 0
+    )
+    compression_ratio = (
+        naive_storage_bytes / total_storage_bytes if total_storage_bytes else 1.0
+    )
+
+    return {
+        # Basic counts
+        "total_entries": total_entries,
+        "zone_entries": zone_entries,
+        "polygon_entries": polygon_entries,
+        "empty_entries": empty_entries,
+        "polygon_id_count": polygon_id_count,
+        # H3 coverage
+        "h3_resolution": SHORTCUT_H3_RES,
+        "stored_cells": stored_cells,
+        "possible_cells": possible_cells,
+        "missing_cells": missing_cells,
+        "coverage_ratio": coverage_ratio,
+        # Efficiency metrics
+        "unique_entry_fraction": unique_entry_fraction,
+        "unique_surface_fraction": unique_surface_fraction,
+        "zone_distribution_efficiency": zone_distribution_efficiency,
+        "avg_polygons_per_entry": avg_polygons_per_entry,
+        # Storage efficiency
+        "zone_storage_bytes": zone_storage_bytes,
+        "polygon_storage_bytes": polygon_storage_bytes,
+        "total_storage_bytes": total_storage_bytes,
+        "compression_ratio": compression_ratio,
+        # Data for frequency analysis
+        "polygons_per_shortcut": nr_of_entries_in_shortcut,
+        "zones_per_shortcut": amount_of_different_zones,
+    }
+
+
 @redirect_output_to_file(DATA_REPORT_FILE)
-def print_shortcut_statistics(mapping: Dict[int, List[int]], poly_zone_ids: List[int]):
+def print_shortcut_statistics(
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
-    nr_of_entries_in_shortcut = [len(v) for v in mapping.values()]
+    # Calculate comprehensive statistics
+    stats = calculate_shortcut_index_stats(mapping, poly_zone_ids)
 
-    print_frequencies(nr_of_entries_in_shortcut, "polygons/shortcut")
+    # Print detailed statistics table
+    print(rst_title("Shortcut Index Overview", level=2))
 
-    amount_of_different_zones = []
-    for polygon_ids in mapping.values():
-        # TODO count and evaluate the appearance of the different zones
-        zone_ids = [poly_zone_ids[i] for i in polygon_ids]
-        distinct_zones = set(zone_ids)
-        amount_of_distinct_zones = len(distinct_zones)
-        amount_of_different_zones.append(amount_of_distinct_zones)
+    shortcut_headers = ["Shortcut Index Metric", "Value"]
+    shortcut_rows = [
+        ["H3 Resolution", f"{stats['h3_resolution']}"],
+        ["Total shortcut entries", f"{stats['total_entries']:,}"],
+        ["Zone entries (direct lookup)", f"{stats['zone_entries']:,}"],
+        ["Polygon entries (require testing)", f"{stats['polygon_entries']:,}"],
+        ["Empty entries", f"{stats['empty_entries']:,}"],
+        ["Total polygon references", f"{stats['polygon_id_count']:,}"],
+        ["", ""],  # Separator
+        ["H3 cells stored", f"{stats['stored_cells']:,}"],
+        ["H3 cells possible at resolution", f"{stats['possible_cells']:,}"],
+        ["H3 cells missing", f"{stats['missing_cells']:,}"],
+        ["H3 coverage ratio", f"{stats['coverage_ratio']:.3f}"],
+        ["", ""],  # Separator
+        ["Unique entry fraction", f"{stats['unique_entry_fraction']:.3f}"],
+        ["Unique surface fraction", f"{stats['unique_surface_fraction']:.3f}"],
+        [
+            "Zone distribution efficiency",
+            f"{stats['zone_distribution_efficiency']:.3f}",
+        ],
+        ["Avg polygons per polygon entry", f"{stats['avg_polygons_per_entry']:.2f}"],
+        ["", ""],  # Separator
+        ["Zone storage (KB)", f"{stats['zone_storage_bytes'] / 1024:.1f}"],
+        ["Polygon storage (KB)", f"{stats['polygon_storage_bytes'] / 1024:.1f}"],
+        ["Total estimated storage (KB)", f"{stats['total_storage_bytes'] / 1024:.1f}"],
+        ["Storage compression ratio", f"{stats['compression_ratio']:.2f}x"],
+    ]
 
-    print_frequencies(amount_of_different_zones, "timezones/shortcut")
+    print_rst_table(shortcut_headers, shortcut_rows)
+
+    # Print frequency distributions
+    print(rst_title("Shortcut Entry Distributions", level=2))
+
+    print_frequencies(stats["polygons_per_shortcut"], "polygons/shortcut")
+    print_frequencies(stats["zones_per_shortcut"], "timezones/shortcut")
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
@@ -434,7 +737,7 @@ def report_data_statistics(
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path) -> None:
+def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
     """
     Reports the sizes of the biggest generated binary files.
 
@@ -442,6 +745,7 @@ def report_file_sizes(output_path: Path) -> None:
 
     Args:
         output_path: Path to the output directory containing the binary files
+        zone_id_dtype: Data type for zone IDs (needed for hybrid shortcut file path)
     """
     print(rst_title("Binary File Sizes", level=1))
     holes_dir = get_holes_dir(output_path)
@@ -450,10 +754,23 @@ def report_file_sizes(output_path: Path) -> None:
     boundary_polygon_file = get_coordinate_path(boundaries_dir)
     hole_polygon_file = get_coordinate_path(holes_dir)
 
+    # Get hybrid shortcut file path - if zone_id_dtype not provided, try to infer it
+    if zone_id_dtype is None:
+        from timezonefinder.np_binary_helpers import (
+            get_zone_ids_path,
+            read_per_polygon_vector,
+        )
+
+        zone_ids_path = get_zone_ids_path(output_path)
+        zone_ids_temp = read_per_polygon_vector(zone_ids_path)
+        zone_id_dtype = zone_ids_temp.dtype
+
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
-        "shortcuts": get_shortcut_file_path(output_path),
+        "hybrid shortcut index": get_hybrid_shortcut_file_path(
+            zone_id_dtype, output_path
+        ),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
@@ -474,44 +791,94 @@ def report_file_sizes(output_path: Path) -> None:
     print_rst_table(headers, rows)
 
 
-def write_data_report(
-    shortcuts: Dict[int, List[int]],
-    output_path: Path,
-    nr_of_polygons: int,
-    nr_of_zones: int,
-    polygon_lengths: List[int],
-    all_hole_lengths: List[int],
-    polynrs_of_holes: List[int],
-    poly_zone_ids: List[int],
-    all_tz_names: List[str],
-) -> None:
+def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
     """
-    Writes a complete data report to the report file.
+    Writes a complete data report to the report file by loading data from binary files.
 
     Args:
-        shortcuts: Mapping of hexagon IDs to polygon IDs
-        output_path: Path to the output directory
-        nr_of_polygons: Number of boundary polygons
-        nr_of_zones: Number of timezone zones
-        polygon_lengths: List of coordinate lengths for each boundary polygon
-        all_hole_lengths: List of coordinate lengths for each hole
-        polynrs_of_holes: List mapping holes to their parent polygons
-        poly_zone_ids: List mapping polygons to zone IDs
-        all_tz_names: List of timezone names
+        data_path: Path to binary data files directory
     """
+    data = load_binary_data(data_path)
+
     if DATA_REPORT_FILE.exists():
         print(f"Removing old data report file: {DATA_REPORT_FILE}")
         DATA_REPORT_FILE.unlink()
 
     print("Writing data report to:", DATA_REPORT_FILE)
     report_data_statistics(
-        nr_of_polygons,
-        nr_of_zones,
-        polygon_lengths,
-        all_hole_lengths,
-        polynrs_of_holes,
-        poly_zone_ids,
-        all_tz_names,
+        data["nr_of_polygons"],
+        data["nr_of_zones"],
+        data["polygon_lengths"],
+        data["all_hole_lengths"],
+        data["polynrs_of_holes"],
+        data["poly_zone_ids"],
+        data["all_tz_names"],
     )
-    print_shortcut_statistics(shortcuts, poly_zone_ids)
-    report_file_sizes(output_path)
+    print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
+    # Derive zone_id_dtype from the zone IDs data
+    zone_ids_array = np.array(data["poly_zone_ids"])
+    # Convert int64 to appropriate dtype based on range
+    if zone_ids_array.max() < 256:
+        zone_id_dtype = np.dtype(np.uint8)
+    elif zone_ids_array.max() < 65536:
+        zone_id_dtype = np.dtype(np.uint16)
+    else:
+        raise ValueError(f"Zone ID range too large: {zone_ids_array.max()}")
+
+    report_file_sizes(data["output_path"], zone_id_dtype)
+
+
+def main() -> None:
+    """
+    Main function for standalone execution.
+    Generate data report from binary files.
+    """
+    parser = argparse.ArgumentParser(
+        description="Generate timezone data report from binary files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate report using default data directory
+  python -m scripts.reporting
+
+  # Generate report using custom data directory
+  python -m scripts.reporting --data-path /path/to/data
+
+  # Generate report using current package data
+  python -m scripts.reporting --data-path timezonefinder/data
+        """.strip(),
+    )
+
+    parser.add_argument(
+        "--data-path",
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help=f"Path to directory containing binary data files (default: {DEFAULT_DATA_DIR})",
+    )
+
+    args = parser.parse_args()
+
+    # Validate data path exists
+    if not args.data_path.exists():
+        print(f"Error: Data path does not exist: {args.data_path}")
+        return 1
+
+    if not args.data_path.is_dir():
+        print(f"Error: Data path is not a directory: {args.data_path}")
+        return 1
+
+    try:
+        print(f"Generating data report from: {args.data_path}")
+        write_data_report_from_binary(args.data_path)
+        print(f"Data report successfully generated at: {DATA_REPORT_FILE}")
+        return 0
+    except Exception as e:
+        print(f"Error generating data report: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+if __name__ == "__main__":
+    exit(main())

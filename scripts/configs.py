@@ -17,6 +17,9 @@ SCRIPT_FOLDER = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_FOLDER.parent
 DOC_ROOT = PROJECT_ROOT / "docs"
 DATA_REPORT_FILE = DOC_ROOT / "data_report.rst"
+PERFORMANCE_REPORT_FILE = DOC_ROOT / "benchmark_results_timezonefinding.rst"
+POLYGON_REPORT_FILE = DOC_ROOT / "benchmark_results_polygon.rst"
+INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans-now.json"
 
 DEBUG = False
