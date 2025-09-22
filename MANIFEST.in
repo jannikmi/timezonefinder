@@ -9,5 +9,6 @@ exclude Agents.md
 exclude CONTRIBUTING.md
 graft tests
 prune tests/.pytest_cache
+global-exclude prototypes/*
 global-exclude __pycache__/*
 global-exclude *.pyc
