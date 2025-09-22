@@ -14,6 +14,10 @@ Comparison to tzfpy
 
 ``tzfpy`` is a Python binding of the Rust package ``tzf-rs``, which serves as an alternative to ``timezonefinder`` with different trade-offs.
 
+A key distinction is the dataset choice: ``timezonefinder`` uses the reduced "timezones-now" dataset (~90 timezones) that merges zones with identical current behavior, while ``tzfpy`` uses the full original dataset (>440 timezones). This makes ``tzfpy`` particularly valuable for applications requiring full localization power beyond pure timezone behavior, such as precise location identification or historical timezone accuracy.
+
+**Important:** Despite using fewer timezone names, ``timezonefinder`` maintains **higher accuracy around timezone borders** because it uses complete, non-simplified polygon data. In contrast, ``tzfpy`` uses simplified polygons for performance, which can lead to inaccuracies near boundaries. The "reduced" aspect of ``timezonefinder``'s dataset refers only to the number of distinct timezone names, not the geometric precision of the boundaries.
+
 Both packages will likely coexist as they serve different use cases:
 
 **Comprehensive Comparison:**
@@ -28,6 +32,9 @@ Both packages will likely coexist as they serve different use cases:
    * - Implementation
      - Pure Python with optional C extensions and Numba compilation
      - Python binding of Rust package ``tzf-rs``
+   * - Dataset Version
+     - Reduced "timezones-now" dataset (~90 timezones)
+     - Full original dataset (>440 timezones)
    * - Startup Time
      - Requires initialization time
      - No startup time (immediate)
@@ -35,11 +42,11 @@ Both packages will likely coexist as they serve different use cases:
      - ~270k Queries per second (QPS). >730k with less accurate TimezoneFinderL
      - ~320k QPS
    * - Data Representation
-     - Complete timezone polygons
+     - Complete, non-simplified timezone polygons
      - Simplified timezone polygons
-   * - Accuracy
-     - Higher accuracy with full polygon data
-     - Lower accuracy due to simplified polygons
+   * - Border Accuracy
+     - Higher accuracy around timezone borders (full polygon precision)
+     - Lower accuracy near borders due to simplified polygons
    * - Distribution Size
      - ~50 MB
      - ~6 MB
@@ -78,8 +85,10 @@ Both packages will likely coexist as they serve different use cases:
      - ``tzfpy``
    * - Minimal Distribution Size
      - ``tzfpy``
-   * - Data Accuracy
+   * - Timezone border accuracy
      - ``timezonefinder``
+   * - Full localization power (>440 timezone names)
+     - ``tzfpy``
    * - Compatibility with varied Python environments
      - ``timezonefinder``
    * - Access to timezone geometry data
