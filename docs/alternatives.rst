@@ -64,7 +64,7 @@ Both packages will likely coexist as they serve different use cases:
      - Requires Rust to build wheels on certain platforms or Python versions
    * - Additional Features
      - ``get_geometry()`` for retrieving the timezone shapes
-     - None
+     - Return GeoJSON representation of timezone shapes and timezone's indexes
    * - Maintainability
      - Single repository
      - Downstream of multiple repositories (tzf, tzf-rel, tzf-rs) languages (Go, Rust, Python)
@@ -82,7 +82,7 @@ Both packages will likely coexist as they serve different use cases:
    * - Timezone border accuracy
      - ``timezonefinder``
    * - Access to timezone geometry data
-     - ``timezonefinder``
+     - Either
    * - Compatibility with varied Python environments
      - ``timezonefinder``
    * - Maintainability and Ease of Contribution
