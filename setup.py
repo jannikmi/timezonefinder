@@ -6,7 +6,10 @@ import os
 _abi3 = bool(os.getenv("BUILD_ABI3", ""))
 print("Using ABI3 wheel suffix:", _abi3)
 
+_build_cffi = bool(os.getenv("BUILD_CFFI", ""))
+print("Using CFFI to compile extension:", _build_cffi)
+
 setup(
-    cffi_modules=["timezonefinder/build.py:ffibuilder"],
+    cffi_modules=["timezonefinder/build.py:ffibuilder"] if _build_cffi else [],
     options={"bdist_wheel": {"py_limited_api": "cp39"} if _abi3 else {}},
 )
