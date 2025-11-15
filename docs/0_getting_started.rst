@@ -20,8 +20,9 @@ for improved speed also install the optional dependency ``numba`` via its extra 
     pip install timezonefinder[numba]
 
 
+Binary wheels from PyPI are prebuilt with a C extension using a stable "abi3" Python ABI instead of numba. To build a wheel with C extension locally, set ``BUILD_CFFI=true`` environment variable before installing.
 
-in case you are using ``pytz``, also require it via its extra to avoid incompatibilities (e.g. due to updated timezone names):
+In case you are using ``pytz``, also require it via its extra to avoid incompatibilities (e.g. due to updated timezone names):
 
 .. code-block:: console
 
