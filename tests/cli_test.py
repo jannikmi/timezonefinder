@@ -20,6 +20,7 @@ timezone_names = read_zone_names(DEFAULT_DATA_DIR)
     ],
 )
 def test_main(cmd: str):
-    res = subprocess.getoutput(cmd).rstrip("\n\x1b[0m")
+    run_result = subprocess.run(cmd, shell=True, check=True, capture_output=True)
+    res = run_result.stdout.decode("utf-8").rstrip("\n\x1b[0m")
     assert not res.endswith("command not found"), "package not installed"
     assert res == "None" or res in timezone_names
