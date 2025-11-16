@@ -178,4 +178,3 @@ repair-wheel-command = [
 select = "*"
 inherit.environment = "append"
 environment.BUILD_ABI3 = "true"
-environment.BUILD_CFFI = "true"

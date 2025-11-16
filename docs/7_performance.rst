@@ -18,9 +18,12 @@ For detailed information about the data format in use, see :doc:`data_format`.
 C extension
 -----------
 
-PyPI binary wheels of ``timezonefinder`` use a C extension with an implementation of the time critical point in polygon check algorithm. This binary extension is not built for local installation unless you specify a ``BUILD_CFFI=true`` environment variable. In order for this to work, a Clang compiler has to be installed.
+During installation ``timezonefinder`` automatically tries to compile a C extension with an implementation of the time critical point in polygon check algorithm.
+In order for this to work, a Clang compiler has to be installed.
 
-Without this extension, ``timezonefinder`` will silently fall back to a pure Python implementation (~400x slower, cf. :ref:`speed test results <speed-tests>` below).
+.. note::
+
+    If compilation fails (due to e.g. missing C compiler or broken ``cffi`` installation) ``timezonefinder`` will silently fall back to a pure Python implementation (~400x slower, cf. :ref:`speed test results <speed-tests>` below).
 
 
 For testing if the compiled C implementation of the point in polygon algorithm is being used:
