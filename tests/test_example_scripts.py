@@ -17,6 +17,7 @@ def get_example_scripts():
     return scripts
 
 
+@pytest.mark.examples
 @pytest.mark.parametrize(
     "script_name",
     get_example_scripts(),
