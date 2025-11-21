@@ -1,0 +1,3669 @@
+[
+  {
+    "hole_area": 31986492123600,
+    "hole_bbox": [
+      1240339860,
+      -95041700,
+      1244972220,
+      -88136690
+    ],
+    "hole_id": 28,
+    "parent_zone": "Asia/Manila",
+    "top_matches": [
+      {
+        "area_difference": 7232641718400,
+        "bbox": [
+          1240339860,
+          -95041700,
+          1244938930,
+          -89659340
+        ],
+        "bbox_differences": [
+          0,
+          0,
+          33290,
+          1522650
+        ],
+        "boundary_id": 482,
+        "distance_score": 1708205.0,
+        "zone_name": "Asia/Tokyo"
+      },
+      {
+        "area_difference": 21059829299600,
+        "bbox": [
+          1240802120,
+          -90756930,
+          1244972220,
+          -88136690
+        ],
+        "bbox_differences": [
+          462260,
+          4284770,
+          0,
+          0
+        ],
+        "boundary_id": 744,
+        "distance_score": 5175507.0,
+        "zone_name": "Etc/GMT-8"
+      },
+      {
+        "area_difference": 20834569080000,
+        "bbox": [
+          1258166370,
+          -83083130,
+          1266582090,
+          -81758000
+        ],
+        "bbox_differences": [
+          17826510,
+          11958570,
+          21609870,
+          6378690
+        ],
+        "boundary_id": 745,
+        "distance_score": 59934627.0,
+        "zone_name": "Etc/GMT-8"
+      },
+      {
+        "area_difference": 22222635675289800,
+        "bbox": [
+          1239232300,
+          -96096850,
+          1410194440,
+          34075960
+        ],
+        "bbox_differences": [
+          1107560,
+          1055150,
+          165222220,
+          122212650
+        ],
+        "boundary_id": 481,
+        "distance_score": 306119802.0,
+        "zone_name": "Asia/Tokyo"
+      },
+      {
+        "area_difference": 18876452657876400,
+        "bbox": [
+          1275000000,
+          -174788820,
+          1425000000,
+          -48732559
+        ],
+        "bbox_differences": [
+          34660140,
+          79747120,
+          180027780,
+          39404131
+        ],
+        "boundary_id": 737,
+        "distance_score": 351841949.0,
+        "zone_name": "Etc/GMT-9"
+      },
+      {
+        "area_difference": 28057560840600,
+        "bbox": [
+          1414810650,
+          -96695680,
+          1416566440,
+          -94457980
+        ],
+        "bbox_differences": [
+          174470790,
+          1653980,
+          171594220,
+          6321290
+        ],
+        "boundary_id": 270,
+        "distance_score": 371487359.0,
+        "zone_name": "Australia/Brisbane"
+      },
+      {
+        "area_difference": 30587253479350,
+        "bbox": [
+          1413621470,
+          -98812570,
+          1414875549,
+          -97696820
+        ],
+        "bbox_differences": [
+          173281610,
+          3770870,
+          169903329,
+          9560130
+        ],
+        "boundary_id": 273,
+        "distance_score": 373844100.0,
+        "zone_name": "Australia/Brisbane"
+      },
+      {
+        "area_difference": 31860235420600,
+        "bbox": [
+          1420594400,
+          -92604610,
+          1420938330,
+          -92237510
+        ],
+        "bbox_differences": [
+          180254540,
+          2437090,
+          175966110,
+          4100820
+        ],
+        "boundary_id": 738,
+        "distance_score": 380784014.0,
+        "zone_name": "Etc/GMT-9"
+      },
+      {
+        "area_difference": 28163405988400,
+        "bbox": [
+          1421268970,
+          -96298310,
+          1423897460,
+          -94843830
+        ],
+        "bbox_differences": [
+          180929110,
+          1256610,
+          178925240,
+          6707140
+        ],
+        "boundary_id": 272,
+        "distance_score": 385911011.0,
+        "zone_name": "Australia/Brisbane"
+      },
+      {
+        "area_difference": 13930572034476400,
+        "bbox": [
+          1290004450,
+          -259986200,
+          1381281950,
+          -107017960
+        ],
+        "bbox_differences": [
+          49664590,
+          164944500,
+          136309730,
+          18881270
+        ],
+        "boundary_id": 584,
+        "distance_score": 386294540.0,
+        "zone_name": "Australia/Darwin"
+      }
+    ]
+  },
+  {
+    "hole_area": 1877581238400,
+    "hole_bbox": [
+      350818550,
+      322755190,
+      352155830,
+      324159220
+    ],
+    "hole_id": 78,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 82083412624500,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2018000,
+          9334120,
+          3583410,
+          1362260
+        ],
+        "boundary_id": 521,
+        "distance_score": 17231202.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 23000805831400,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          10271640,
+          10553900,
+          6482590,
+          7104870
+        ],
+        "boundary_id": 520,
+        "distance_score": 35468390.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 283378198686870,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          1992880,
+          7795140,
+          14094170,
+          22762229
+        ],
+        "boundary_id": 406,
+        "distance_score": 48920641.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 415891324874389,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          30590970,
+          21628519,
+          3602651,
+          34973300
+        ],
+        "boundary_id": 519,
+        "distance_score": 94292770.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 17443466757800,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          4622390,
+          61748400,
+          1294080,
+          59011250
+        ],
+        "boundary_id": 38,
+        "distance_score": 132850960.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2811874683200,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          56953880,
+          37506390,
+          55317730,
+          37679480
+        ],
+        "boundary_id": 490,
+        "distance_score": 193152868.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 2145592707413400,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          8651490,
+          111025860,
+          22844170,
+          47023920
+        ],
+        "boundary_id": 790,
+        "distance_score": 200648026.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 43342462656000,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          83597440,
+          29824550,
+          78731560,
+          35710360
+        ],
+        "boundary_id": 499,
+        "distance_score": 236223654.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 23390424204800,
+        "bbox": [
+          273032480,
+          363239050,
+          281545500,
+          366207210
+        ],
+        "bbox_differences": [
+          77786070,
+          40483860,
+          70610330,
+          42047990
+        ],
+        "boundary_id": 784,
+        "distance_score": 238706857.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 6605753624100,
+        "bbox": [
+          276452850,
+          364334480,
+          279578100,
+          367048930
+        ],
+        "bbox_differences": [
+          74365700,
+          41579290,
+          72577730,
+          42889710
+        ],
+        "boundary_id": 516,
+        "distance_score": 238849000.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 162482518800,
+    "hole_bbox": [
+      350160050,
+      322988380,
+      350634230,
+      323331040
+    ],
+    "hole_id": 79,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83798511344100,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          1359500,
+          9567310,
+          5105010,
+          2190440
+        ],
+        "boundary_id": 521,
+        "distance_score": 19178991.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24715904551000,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          9613140,
+          10787090,
+          4960990,
+          6276690
+        ],
+        "boundary_id": 520,
+        "distance_score": 32716619.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 285093297406470,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          1334380,
+          7561950,
+          15615770,
+          23590409
+        ],
+        "boundary_id": 406,
+        "distance_score": 50461549.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417606423593989,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          29932470,
+          21395329,
+          2081051,
+          35801480
+        ],
+        "boundary_id": 519,
+        "distance_score": 92790478.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19158565477400,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          3963890,
+          61981590,
+          227520,
+          58183070
+        ],
+        "boundary_id": 38,
+        "distance_score": 130554229.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 4526973402800,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          56295380,
+          37273200,
+          53796130,
+          38507660
+        ],
+        "boundary_id": 490,
+        "distance_score": 191501908.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 2147307806133000,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          7992990,
+          111259050,
+          24365770,
+          46195740
+        ],
+        "boundary_id": 790,
+        "distance_score": 200939455.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 45057561375600,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          82938940,
+          29591360,
+          77209960,
+          36538540
+        ],
+        "boundary_id": 499,
+        "distance_score": 234572694.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 25105522924400,
+        "bbox": [
+          273032480,
+          363239050,
+          281545500,
+          366207210
+        ],
+        "bbox_differences": [
+          77127570,
+          40250670,
+          69088730,
+          42876170
+        ],
+        "boundary_id": 784,
+        "distance_score": 237055897.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 8320852343700,
+        "bbox": [
+          276452850,
+          364334480,
+          279578100,
+          367048930
+        ],
+        "bbox_differences": [
+          73707200,
+          41346100,
+          71056130,
+          43717890
+        ],
+        "boundary_id": 516,
+        "distance_score": 237198040.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 1581918482000,
+    "hole_bbox": [
+      350854470,
+      320018890,
+      352578350,
+      320936540
+    ],
+    "hole_id": 80,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 82379075380900,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2053920,
+          6597820,
+          3160890,
+          4584940
+        ],
+        "boundary_id": 521,
+        "distance_score": 17057352.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 23296468587800,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          10307560,
+          7817600,
+          6905110,
+          3882190
+        ],
+        "boundary_id": 520,
+        "distance_score": 29943216.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 283673861443270,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          2028800,
+          10531440,
+          13671650,
+          25984909
+        ],
+        "boundary_id": 406,
+        "distance_score": 54815289.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 416186987630789,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          30626890,
+          24364819,
+          4025171,
+          38195980
+        ],
+        "boundary_id": 519,
+        "distance_score": 101032458.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 17739129514200,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          4658310,
+          59012100,
+          1716600,
+          55788570
+        ],
+        "boundary_id": 38,
+        "distance_score": 127076790.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2145888370169800,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          8687410,
+          108289560,
+          22421650,
+          43801240
+        ],
+        "boundary_id": 790,
+        "distance_score": 194028816.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 3107537439600,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          56989800,
+          40242690,
+          55740250,
+          40902160
+        ],
+        "boundary_id": 490,
+        "distance_score": 199573880.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12598591800566500,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          104355360,
+          102768890,
+          18575170,
+          2605690
+        ],
+        "boundary_id": 39,
+        "distance_score": 238740646.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12941569610935800,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          125854470,
+          9202500,
+          4343870,
+          87991840
+        ],
+        "boundary_id": 776,
+        "distance_score": 239978127.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 43638125412400,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          83633360,
+          32560850,
+          79154080,
+          38933040
+        ],
+        "boundary_id": 499,
+        "distance_score": 242644666.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 717676822440,
+    "hole_bbox": [
+      351917520,
+      321847459,
+      353031560,
+      322491670
+    ],
+    "hole_id": 81,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83243317040460,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          3116970,
+          8426389,
+          2707680,
+          3029810
+        ],
+        "boundary_id": 521,
+        "distance_score": 18123487.9,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24160710247360,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          11370610,
+          9646169,
+          7358320,
+          5437320
+        ],
+        "boundary_id": 520,
+        "distance_score": 34949480.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284538103102830,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          3091850,
+          8702871,
+          13218440,
+          24429779
+        ],
+        "boundary_id": 406,
+        "distance_score": 51885917.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417051229290349,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          31689940,
+          22536250,
+          4478381,
+          36640850
+        ],
+        "boundary_id": 519,
+        "distance_score": 99009506.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18603371173760,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          5721360,
+          60840669,
+          2169810,
+          57343700
+        ],
+        "boundary_id": 38,
+        "distance_score": 132159605.9,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 3971779099160,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          58052850,
+          38414121,
+          56193460,
+          39347030
+        ],
+        "boundary_id": 490,
+        "distance_score": 197812746.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 2146752611829360,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          9750460,
+          110118129,
+          21968440,
+          45356370
+        ],
+        "boundary_id": 790,
+        "distance_score": 198205211.9,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 44502367071960,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          84696410,
+          30732281,
+          79607290,
+          37377910
+        ],
+        "boundary_id": 499,
+        "distance_score": 240883532.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12942433852595360,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          126917520,
+          11031069,
+          3890660,
+          86436710
+        ],
+        "boundary_id": 776,
+        "distance_score": 240967711.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 12599456042226060,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          105418410,
+          104597459,
+          18121960,
+          4160820
+        ],
+        "boundary_id": 39,
+        "distance_score": 242840490.0,
+        "zone_name": "Africa/Cairo"
+      }
+    ]
+  },
+  {
+    "hole_area": 48340787200,
+    "hole_bbox": [
+      349593850,
+      321780920,
+      349840890,
+      321976600
+    ],
+    "hole_id": 82,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83912653075700,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          793300,
+          8359850,
+          5898350,
+          3544880
+        ],
+        "boundary_id": 521,
+        "distance_score": 19432365.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24830046282600,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          9046940,
+          9579630,
+          4167650,
+          4922250
+        ],
+        "boundary_id": 520,
+        "distance_score": 28674433.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 285207439138070,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          768180,
+          8769410,
+          16409110,
+          24944849
+        ],
+        "boundary_id": 406,
+        "distance_score": 53386033.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417720565325589,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          29366270,
+          22602789,
+          1287711,
+          37155920
+        ],
+        "boundary_id": 519,
+        "distance_score": 94128282.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19272707209000,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          3397690,
+          60774130,
+          1020860,
+          56828630
+        ],
+        "boundary_id": 38,
+        "distance_score": 128098723.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 4641115134400,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          55729180,
+          38480660,
+          53002790,
+          39862100
+        ],
+        "boundary_id": 490,
+        "distance_score": 192647648.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 2147421947864600,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          7426790,
+          110051590,
+          25159110,
+          44841300
+        ],
+        "boundary_id": 790,
+        "distance_score": 198483949.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 45171703107200,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          82372740,
+          30798820,
+          76416620,
+          37892980
+        ],
+        "boundary_id": 499,
+        "distance_score": 235718434.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 25219664656000,
+        "bbox": [
+          273032480,
+          363239050,
+          281545500,
+          366207210
+        ],
+        "bbox_differences": [
+          76561370,
+          41458130,
+          68295390,
+          44230610
+        ],
+        "boundary_id": 784,
+        "distance_score": 238201637.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 8434994075300,
+        "bbox": [
+          276452850,
+          364334480,
+          279578100,
+          367048930
+        ],
+        "bbox_differences": [
+          73141000,
+          42553560,
+          70262790,
+          45072330
+        ],
+        "boundary_id": 516,
+        "distance_score": 238343780.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 6221391029570,
+    "hole_bbox": [
+      351877650,
+      322435910,
+      354131680,
+      325196029
+    ],
+    "hole_id": 83,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 77739602833330,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          3077100,
+          9014840,
+          1607560,
+          325451
+        ],
+        "boundary_id": 521,
+        "distance_score": 14926435.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 18656996040230,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          11330740,
+          10234620,
+          8458440,
+          8141679
+        ],
+        "boundary_id": 520,
+        "distance_score": 39298553.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 279034388895700,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          3051980,
+          8114420,
+          12118320,
+          21725420
+        ],
+        "boundary_id": 406,
+        "distance_score": 47182682.0,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 411547515083219,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          31650070,
+          21947799,
+          5578501,
+          33936491
+        ],
+        "boundary_id": 519,
+        "distance_score": 96506510.1,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 13099656966630,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          5681490,
+          61429120,
+          3269930,
+          60048059
+        ],
+        "boundary_id": 38,
+        "distance_score": 136571511.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 1531935107970,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          58012980,
+          37825670,
+          57293580,
+          36642671
+        ],
+        "boundary_id": 490,
+        "distance_score": 195576199.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 2141248897622230,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          9710590,
+          110706580,
+          20868320,
+          48060729
+        ],
+        "boundary_id": 790,
+        "distance_score": 200416877.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 12936930138388230,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          126877650,
+          11619520,
+          2790540,
+          83732351
+        ],
+        "boundary_id": 776,
+        "distance_score": 237707826.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 38998652864830,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          84656540,
+          30143830,
+          80707410,
+          34673551
+        ],
+        "boundary_id": 499,
+        "distance_score": 238646985.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19046614413630,
+        "bbox": [
+          273032480,
+          363239050,
+          281545500,
+          366207210
+        ],
+        "bbox_differences": [
+          78845170,
+          40803140,
+          72586180,
+          41011181
+        ],
+        "boundary_id": 784,
+        "distance_score": 241130188.0,
+        "zone_name": "Etc/GMT-2"
+      }
+    ]
+  },
+  {
+    "hole_area": 64293005700,
+    "hole_bbox": [
+      350877620,
+      315675240,
+      351163710,
+      315899970
+    ],
+    "hole_id": 84,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83896700857200,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2077070,
+          2254170,
+          4575530,
+          9621510
+        ],
+        "boundary_id": 521,
+        "distance_score": 19490431.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24814094064100,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          10330710,
+          3473950,
+          5490470,
+          1154380
+        ],
+        "boundary_id": 520,
+        "distance_score": 21482581.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 285191486919570,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          2051950,
+          14875090,
+          15086290,
+          31021479
+        ],
+        "boundary_id": 406,
+        "distance_score": 66136956.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417704613107089,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          30650040,
+          28708469,
+          2610531,
+          43232550
+        ],
+        "boundary_id": 519,
+        "distance_score": 109524845.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19256754990500,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          4681460,
+          54668450,
+          301960,
+          50752000
+        ],
+        "boundary_id": 38,
+        "distance_score": 115870715.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147405995646100,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          8710560,
+          103945910,
+          23836290,
+          38764670
+        ],
+        "boundary_id": 790,
+        "distance_score": 185652021.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4625162915900,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          57012950,
+          44586340,
+          54325610,
+          45938730
+        ],
+        "boundary_id": 490,
+        "distance_score": 207564925.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12600109426042800,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          104378510,
+          98425240,
+          19989810,
+          2430880
+        ],
+        "boundary_id": 39,
+        "distance_score": 235662291.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12943087236412100,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          125877620,
+          4858850,
+          5758510,
+          93028410
+        ],
+        "boundary_id": 776,
+        "distance_score": 242111152.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 45155750888700,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          83656510,
+          36904500,
+          77739440,
+          43969610
+        ],
+        "boundary_id": 499,
+        "distance_score": 250635711.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 1236477388800,
+    "hole_bbox": [
+      351446820,
+      314686770,
+      352622000,
+      315738930
+    ],
+    "hole_id": 85,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 82724516474100,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2646270,
+          1265700,
+          3117240,
+          9782550
+        ],
+        "boundary_id": 521,
+        "distance_score": 17790015.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 23641909681000,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          10899910,
+          2485480,
+          6948760,
+          1315420
+        ],
+        "boundary_id": 520,
+        "distance_score": 22739561.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284019302536470,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          2621150,
+          15863560,
+          13628000,
+          31182519
+        ],
+        "boundary_id": 406,
+        "distance_score": 66413480.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 416532428723989,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          31219240,
+          29696939,
+          4068821,
+          43393590
+        ],
+        "boundary_id": 519,
+        "distance_score": 112717949.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18084570607400,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          5250660,
+          53679980,
+          1760250,
+          50590960
+        ],
+        "boundary_id": 38,
+        "distance_score": 116649848.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2146233811263000,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          9279760,
+          102957440,
+          22378000,
+          38603630
+        ],
+        "boundary_id": 790,
+        "distance_score": 183514574.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 3452978532800,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          57582150,
+          45574810,
+          55783900,
+          46099770
+        ],
+        "boundary_id": 490,
+        "distance_score": 210798845.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12598937241659700,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          104947710,
+          97436770,
+          18531520,
+          2591920
+        ],
+        "boundary_id": 39,
+        "distance_score": 234002691.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12941915052029000,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          126446820,
+          3870380,
+          4300220,
+          93189450
+        ],
+        "boundary_id": 776,
+        "distance_score": 240451552.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 43983566505600,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          84225710,
+          37892970,
+          79197730,
+          44130650
+        ],
+        "boundary_id": 499,
+        "distance_score": 253869631.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 1229184099000,
+    "hole_bbox": [
+      350443250,
+      313781040,
+      351537200,
+      314904660
+    ],
+    "hole_id": 86,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 82731809763900,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          1642700,
+          359970,
+          4202040,
+          10616820
+        ],
+        "boundary_id": 521,
+        "distance_score": 17883212.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 23649202970800,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          9896340,
+          1579750,
+          5863960,
+          2149690
+        ],
+        "boundary_id": 520,
+        "distance_score": 20479374.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284026595826270,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          1617580,
+          16769290,
+          14712800,
+          32016789
+        ],
+        "boundary_id": 406,
+        "distance_score": 68318137.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 416539722013789,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          30215670,
+          30602669,
+          2984021,
+          44227860
+        ],
+        "boundary_id": 519,
+        "distance_score": 112453006.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18091863897200,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          4247090,
+          52774250,
+          675450,
+          49756690
+        ],
+        "boundary_id": 38,
+        "distance_score": 112730905.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2146241104552800,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          8276190,
+          102051710,
+          23462800,
+          37769360
+        ],
+        "boundary_id": 790,
+        "distance_score": 181765231.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 3460271822600,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          56578580,
+          46480540,
+          54699100,
+          46934040
+        ],
+        "boundary_id": 490,
+        "distance_score": 210350118.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12598944534949500,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          103944140,
+          96531040,
+          19616320,
+          3426190
+        ],
+        "boundary_id": 39,
+        "distance_score": 233912104.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12941922345318800,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          125443250,
+          2964650,
+          5385020,
+          94023720
+        ],
+        "boundary_id": 776,
+        "distance_score": 240360965.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 43990859795400,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          83222140,
+          38798700,
+          78112930,
+          44964920
+        ],
+        "boundary_id": 499,
+        "distance_score": 253420904.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 322879653420,
+    "hole_bbox": [
+      351618960,
+      318822080,
+      352272589,
+      319316060
+    ],
+    "hole_id": 87,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83638114209480,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2818410,
+          5401010,
+          3466651,
+          6205420
+        ],
+        "boundary_id": 521,
+        "distance_score": 18512033.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24555507416380,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          11072050,
+          6620790,
+          6599349,
+          2261710
+        ],
+        "boundary_id": 520,
+        "distance_score": 27661104.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284932900271850,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          2793290,
+          11728250,
+          13977411,
+          27605389
+        ],
+        "boundary_id": 406,
+        "distance_score": 58864878.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417446026459369,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          31391380,
+          25561629,
+          3719410,
+          39816460
+        ],
+        "boundary_id": 519,
+        "distance_score": 104470525.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18998168342780,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          5422800,
+          57815290,
+          1410839,
+          54168090
+        ],
+        "boundary_id": 38,
+        "distance_score": 124598548.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147147408998380,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          9451900,
+          107092750,
+          22727411,
+          42180760
+        ],
+        "boundary_id": 790,
+        "distance_score": 192162096.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4366576268180,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          57754290,
+          41439500,
+          55434489,
+          42522640
+        ],
+        "boundary_id": 490,
+        "distance_score": 202926348.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12599850839395080,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          105119850,
+          101572080,
+          18880931,
+          985210
+        ],
+        "boundary_id": 39,
+        "distance_score": 237070056.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12942828649764380,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          126618960,
+          8005690,
+          4649631,
+          89612320
+        ],
+        "boundary_id": 776,
+        "distance_score": 241548497.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 44897164240980,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          84397850,
+          33757660,
+          78848319,
+          40553520
+        ],
+        "boundary_id": 499,
+        "distance_score": 245997134.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 354121070600,
+    "hole_bbox": [
+      352527450,
+      316739630,
+      353143120,
+      317314810
+    ],
+    "hole_id": 88,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83606872792300,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          3726900,
+          3318560,
+          2596120,
+          8206670
+        ],
+        "boundary_id": 521,
+        "distance_score": 18668917.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24524265999200,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          11980540,
+          4538340,
+          7469880,
+          260460
+        ],
+        "boundary_id": 520,
+        "distance_score": 25447274.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284901658854670,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          3701780,
+          13810700,
+          13106880,
+          29606639
+        ],
+        "boundary_id": 406,
+        "distance_score": 63186662.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417414785042189,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          32299870,
+          27644079,
+          4589941,
+          41817710
+        ],
+        "boundary_id": 519,
+        "distance_score": 110533371.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18966926925600,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          6331290,
+          55732840,
+          2281370,
+          52166840
+        ],
+        "boundary_id": 38,
+        "distance_score": 122085624.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147116167581200,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          10360390,
+          105010300,
+          21856880,
+          40179510
+        ],
+        "boundary_id": 790,
+        "distance_score": 187908110.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4335334851000,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          58662780,
+          43521950,
+          56305020,
+          44523890
+        ],
+        "boundary_id": 490,
+        "distance_score": 208879918.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12599819597977900,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          106028340,
+          99489630,
+          18010400,
+          1016040
+        ],
+        "boundary_id": 39,
+        "distance_score": 235147244.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12942797408347200,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          127527450,
+          5923240,
+          3779100,
+          91613570
+        ],
+        "boundary_id": 776,
+        "distance_score": 241596105.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 44865922823800,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          85306340,
+          35840110,
+          79718850,
+          42554770
+        ],
+        "boundary_id": 499,
+        "distance_score": 251950704.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 435245521200,
+    "hole_bbox": [
+      351631270,
+      316653170,
+      352401180,
+      317218490
+    ],
+    "hole_id": 89,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83525748341700,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          2830720,
+          3232100,
+          3338060,
+          8302990
+        ],
+        "boundary_id": 521,
+        "distance_score": 18534169.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24443141548600,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          11084360,
+          4451880,
+          6727940,
+          164140
+        ],
+        "boundary_id": 520,
+        "distance_score": 23536756.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 284820534404070,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          2805600,
+          13897160,
+          13848820,
+          29702959
+        ],
+        "boundary_id": 406,
+        "distance_score": 63224834.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417333660591589,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          31403690,
+          27730539,
+          3848001,
+          41914030
+        ],
+        "boundary_id": 519,
+        "distance_score": 109087663.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 18885802475000,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          5435110,
+          55646380,
+          1539430,
+          52070520
+        ],
+        "boundary_id": 38,
+        "distance_score": 120256078.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147035043130600,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          9464210,
+          104923840,
+          22598820,
+          40083190
+        ],
+        "boundary_id": 790,
+        "distance_score": 187562444.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4254210400400,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          57766600,
+          43608410,
+          55563080,
+          44620210
+        ],
+        "boundary_id": 490,
+        "distance_score": 207334960.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12599738473527300,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          105132160,
+          99403170,
+          18752340,
+          1112360
+        ],
+        "boundary_id": 39,
+        "distance_score": 234913246.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12942716283896600,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          126631270,
+          5836780,
+          4521040,
+          91709890
+        ],
+        "boundary_id": 776,
+        "distance_score": 241362107.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 44784798373200,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          84410160,
+          35926570,
+          78976910,
+          42651090
+        ],
+        "boundary_id": 499,
+        "distance_score": 250405746.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 1494823639400,
+    "hole_bbox": [
+      353926650,
+      318159980,
+      355061870,
+      319476750
+    ],
+    "hole_id": 90,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 82466170223500,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          5126100,
+          4738910,
+          677370,
+          6044730
+        ],
+        "boundary_id": 521,
+        "distance_score": 17191583.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 23383563430400,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          13379740,
+          5958690,
+          9388630,
+          2422400
+        ],
+        "boundary_id": 520,
+        "distance_score": 32487434.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 283760956285870,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          5100980,
+          12390350,
+          11188130,
+          27444699
+        ],
+        "boundary_id": 406,
+        "distance_score": 58868628.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 416274082473389,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          33699070,
+          26223729,
+          6508691,
+          39655770
+        ],
+        "boundary_id": 519,
+        "distance_score": 110052837.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 17826224356800,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          7730490,
+          57153190,
+          4200120,
+          54328780
+        ],
+        "boundary_id": 38,
+        "distance_score": 129127899.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2145975465012400,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          11759590,
+          106430650,
+          19938130,
+          42341450
+        ],
+        "boundary_id": 790,
+        "distance_score": 191112885.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 3194632282200,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          60061980,
+          42101600,
+          58223770,
+          42361950
+        ],
+        "boundary_id": 490,
+        "distance_score": 208755498.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12598678895409100,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          107427540,
+          100909980,
+          16091650,
+          1145900
+        ],
+        "boundary_id": 39,
+        "distance_score": 236317824.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12941656705778400,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          128926650,
+          7343590,
+          1860350,
+          89451630
+        ],
+        "boundary_id": 776,
+        "distance_score": 240474885.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 43725220255000,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          86705540,
+          34419760,
+          81637600,
+          40392830
+        ],
+        "boundary_id": 499,
+        "distance_score": 251826284.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 46170222700,
+    "hole_bbox": [
+      354409780,
+      319431180,
+      354691770,
+      319594910
+    ],
+    "hole_id": 91,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83914823640200,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          5609230,
+          6010110,
+          1047470,
+          5926570
+        ],
+        "boundary_id": 521,
+        "distance_score": 19194391.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24832216847100,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          13862870,
+          7229890,
+          9018530,
+          2540560
+        ],
+        "boundary_id": 520,
+        "distance_score": 34038137.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 285209609702570,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          5584110,
+          11119150,
+          11558230,
+          27326539
+        ],
+        "boundary_id": 406,
+        "distance_score": 58320682.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417722735890089,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          34182200,
+          24952529,
+          6138591,
+          39537610
+        ],
+        "boundary_id": 519,
+        "distance_score": 108764691.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19274877773500,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          8213620,
+          58424390,
+          3830020,
+          54446940
+        ],
+        "boundary_id": 38,
+        "distance_score": 130757409.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147424118429100,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          12242720,
+          107701850,
+          20308230,
+          42459610
+        ],
+        "boundary_id": 790,
+        "distance_score": 193482595.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4643285698900,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          60545110,
+          40830400,
+          57853670,
+          42243790
+        ],
+        "boundary_id": 490,
+        "distance_score": 207527481.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12600127548825800,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          107910670,
+          102181180,
+          16461750,
+          1264060
+        ],
+        "boundary_id": 39,
+        "distance_score": 238608727.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12943105359195100,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          129409780,
+          8614790,
+          2230450,
+          89333470
+        ],
+        "boundary_id": 776,
+        "distance_score": 242529468.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 45173873671700,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          87188670,
+          33148560,
+          81267500,
+          40274670
+        ],
+        "boundary_id": 499,
+        "distance_score": 250598267.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 104828035760,
+    "hole_bbox": [
+      354694170,
+      319376940,
+      355004459,
+      319714780
+    ],
+    "hole_id": 92,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 83856165827140,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          5893620,
+          5955870,
+          734781,
+          5806700
+        ],
+        "boundary_id": 521,
+        "distance_score": 18986558.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 24773559034040,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          14147260,
+          7175650,
+          9331219,
+          2660430
+        ],
+        "boundary_id": 520,
+        "distance_score": 34729285.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 285150951889510,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          5868500,
+          11173390,
+          11245541,
+          27206669
+        ],
+        "boundary_id": 406,
+        "distance_score": 58214766.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 417664078077029,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          34466590,
+          25006769,
+          6451280,
+          39417740
+        ],
+        "boundary_id": 519,
+        "distance_score": 109284153.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 19216219960440,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          8498010,
+          58370150,
+          4142709,
+          54566810
+        ],
+        "boundary_id": 38,
+        "distance_score": 131414694.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2147365460616040,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          12527110,
+          107647610,
+          19995541,
+          42579480
+        ],
+        "boundary_id": 790,
+        "distance_score": 193514502.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 4584627885840,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          60829500,
+          40884640,
+          58166359,
+          42123920
+        ],
+        "boundary_id": 490,
+        "distance_score": 208087369.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12600068891012740,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          108195060,
+          102126940,
+          16149061,
+          1383930
+        ],
+        "boundary_id": 39,
+        "distance_score": 238674497.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12943046701382040,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          129694170,
+          8560550,
+          1917761,
+          89213600
+        ],
+        "boundary_id": 776,
+        "distance_score": 242355498.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 45115215858640,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          87473060,
+          33202800,
+          81580189,
+          40154800
+        ],
+        "boundary_id": 499,
+        "distance_score": 251158155.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 2978076974400,
+    "hole_bbox": [
+      349382440,
+      313962280,
+      351146620,
+      315650360
+    ],
+    "hole_id": 93,
+    "parent_zone": "Asia/Jerusalem",
+    "top_matches": [
+      {
+        "area_difference": 80982916888500,
+        "bbox": [
+          348800550,
+          313421070,
+          355739240,
+          325521480
+        ],
+        "bbox_differences": [
+          581890,
+          541210,
+          4592620,
+          9871120
+        ],
+        "boundary_id": 521,
+        "distance_score": 16573952.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 21900310095400,
+        "bbox": [
+          340546910,
+          312201290,
+          345673240,
+          317054350
+        ],
+        "bbox_differences": [
+          8835530,
+          1760990,
+          5473380,
+          1403990
+        ],
+        "boundary_id": 520,
+        "distance_score": 18357443.0,
+        "zone_name": "Asia/Gaza"
+      },
+      {
+        "area_difference": 282277702950870,
+        "bbox": [
+          348825670,
+          330550330,
+          366250000,
+          346921449
+        ],
+        "bbox_differences": [
+          556770,
+          16588050,
+          15103380,
+          31271089
+        ],
+        "boundary_id": 406,
+        "distance_score": 66646397.9,
+        "zone_name": "Asia/Beirut"
+      },
+      {
+        "area_difference": 414790829138389,
+        "bbox": [
+          320227580,
+          344383709,
+          348553179,
+          359132520
+        ],
+        "bbox_differences": [
+          29154860,
+          30421429,
+          2593441,
+          43482160
+        ],
+        "boundary_id": 519,
+        "distance_score": 110000106.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 16342971021800,
+        "bbox": [
+          346196160,
+          261006790,
+          350861750,
+          265147970
+        ],
+        "bbox_differences": [
+          3186280,
+          52955490,
+          284870,
+          50502390
+        ],
+        "boundary_id": 38,
+        "distance_score": 112224579.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 2144492211677400,
+        "bbox": [
+          342167060,
+          211729330,
+          375000000,
+          277135300
+        ],
+        "bbox_differences": [
+          7215380,
+          102232950,
+          23853380,
+          38515060
+        ],
+        "boundary_id": 790,
+        "distance_score": 182040065.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 1711378947200,
+        "bbox": [
+          293864670,
+          360261580,
+          296838100,
+          361838700
+        ],
+        "bbox_differences": [
+          55517770,
+          46299300,
+          54308520,
+          46188340
+        ],
+        "boundary_id": 490,
+        "distance_score": 207865707.0,
+        "zone_name": "Europe/Athens"
+      },
+      {
+        "area_difference": 12597195642074100,
+        "bbox": [
+          246499110,
+          217250000,
+          371153520,
+          318330850
+        ],
+        "bbox_differences": [
+          102883330,
+          96712280,
+          20006900,
+          2680490
+        ],
+        "boundary_id": 39,
+        "distance_score": 232571333.0,
+        "zone_name": "Africa/Cairo"
+      },
+      {
+        "area_difference": 12940173452443400,
+        "bbox": [
+          225000000,
+          310816390,
+          356922220,
+          408928380
+        ],
+        "bbox_differences": [
+          124382440,
+          3145890,
+          5775600,
+          93278020
+        ],
+        "boundary_id": 776,
+        "distance_score": 239020194.0,
+        "zone_name": "Etc/GMT-2"
+      },
+      {
+        "area_difference": 42241966920000,
+        "bbox": [
+          267221110,
+          352579740,
+          273424270,
+          359869580
+        ],
+        "bbox_differences": [
+          82161330,
+          38617460,
+          77722350,
+          44219220
+        ],
+        "boundary_id": 499,
+        "distance_score": 250936493.0,
+        "zone_name": "Europe/Athens"
+      }
+    ]
+  },
+  {
+    "hole_area": 240238720263500,
+    "hole_bbox": [
+      1136422390,
+      95152190,
+      1147664600,
+      116521540
+    ],
+    "hole_id": 248,
+    "parent_zone": "Etc/GMT-8",
+    "top_matches": [
+      {
+        "area_difference": 169757467863500,
+        "bbox": [
+          1140530870,
+          95960870,
+          1147664600,
+          105840870
+        ],
+        "bbox_differences": [
+          4108480,
+          808680,
+          0,
+          10680670
+        ],
+        "boundary_id": 231,
+        "distance_score": 16665897.0,
+        "zone_name": "Asia/Jakarta"
+      },
+      {
+        "area_difference": 181787460769700,
+        "bbox": [
+          1138719500,
+          105477460,
+          1147354040,
+          112246930
+        ],
+        "bbox_differences": [
+          2297110,
+          10325270,
+          310560,
+          4274610
+        ],
+        "boundary_id": 206,
+        "distance_score": 18240077.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 219880040516500,
+        "bbox": [
+          1136422390,
+          98128820,
+          1140613290,
+          102986650
+        ],
+        "bbox_differences": [
+          0,
+          2976630,
+          7051310,
+          13534890
+        ],
+        "boundary_id": 240,
+        "distance_score": 24916319.0,
+        "zone_name": "Asia/Jakarta"
+      },
+      {
+        "area_difference": 227652500903900,
+        "bbox": [
+          1140210200,
+          99873740,
+          1143276390,
+          103978580
+        ],
+        "bbox_differences": [
+          3787810,
+          4721550,
+          4388210,
+          12542960
+        ],
+        "boundary_id": 212,
+        "distance_score": 26694826.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 226793324962700,
+        "bbox": [
+          1140970330,
+          112163170,
+          1144852490,
+          115626550
+        ],
+        "bbox_differences": [
+          4547940,
+          17010980,
+          2812110,
+          894990
+        ],
+        "boundary_id": 235,
+        "distance_score": 26967118.0,
+        "zone_name": "Asia/Jakarta"
+      },
+      {
+        "area_difference": 227067636009500,
+        "bbox": [
+          1141845580,
+          112995740,
+          1145581210,
+          116521540
+        ],
+        "bbox_differences": [
+          5423190,
+          17843550,
+          2083390,
+          0
+        ],
+        "boundary_id": 203,
+        "distance_score": 27134485.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 230840066178500,
+        "bbox": [
+          1140949160,
+          95152190,
+          1144500660,
+          97798580
+        ],
+        "bbox_differences": [
+          4526770,
+          0,
+          3163940,
+          18722960
+        ],
+        "boundary_id": 210,
+        "distance_score": 28285966.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 233966899326500,
+        "bbox": [
+          1143928510,
+          97088840,
+          1145524840,
+          101017740
+        ],
+        "bbox_differences": [
+          7506120,
+          1936650,
+          2139760,
+          15503800
+        ],
+        "boundary_id": 211,
+        "distance_score": 28636710.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 238636417513530,
+        "bbox": [
+          1142857870,
+          103267659,
+          1144269440,
+          104402780
+        ],
+        "bbox_differences": [
+          6435480,
+          8115469,
+          3395160,
+          12118760
+        ],
+        "boundary_id": 219,
+        "distance_score": 31276745.0,
+        "zone_name": "Asia/Manila"
+      },
+      {
+        "area_difference": 209442381202700,
+        "bbox": [
+          1147176260,
+          106751330,
+          1152264680,
+          112803570
+        ],
+        "bbox_differences": [
+          10753870,
+          11599140,
+          4600080,
+          3717970
+        ],
+        "boundary_id": 204,
+        "distance_score": 31830974.0,
+        "zone_name": "Asia/Manila"
+      }
+    ]
+  },
+  {
+    "hole_area": 1690361858539400,
+    "hole_bbox": [
+      919933170,
+      65531170,
+      941491150,
+      143941200
+    ],
+    "hole_id": 275,
+    "parent_zone": "Etc/GMT-6",
+    "top_matches": [
+      {
+        "area_difference": 111459499355600,
+        "bbox": [
+          919933170,
+          65531170,
+          941491150,
+          138770980
+        ],
+        "bbox_differences": [
+          0,
+          0,
+          0,
+          5170220
+        ],
+        "boundary_id": 486,
+        "distance_score": 5687242.0,
+        "zone_name": "Asia/Kolkata"
+      },
+      {
+        "area_difference": 1654454095291200,
+        "bbox": [
+          930125120,
+          137718740,
+          935895790,
+          143941200
+        ],
+        "bbox_differences": [
+          10191950,
+          72187570,
+          5595360,
+          0
+        ],
+        "boundary_id": 566,
+        "distance_score": 95193637.0,
+        "zone_name": "Asia/Yangon"
+      },
+      {
+        "area_difference": 1671839882399390,
+        "bbox": [
+          936468710,
+          120638270,
+          940822500,
+          124892489
+        ],
+        "bbox_differences": [
+          16535540,
+          55107100,
+          668650,
+          19048711
+        ],
+        "boundary_id": 485,
+        "distance_score": 96870711.0,
+        "zone_name": "Asia/Kolkata"
+      },
+      {
+        "area_difference": 1671957774246500,
+        "bbox": [
+          940448900,
+          132365470,
+          944783730,
+          136611100
+        ],
+        "bbox_differences": [
+          20515730,
+          66834300,
+          3292580,
+          7330100
+        ],
+        "boundary_id": 484,
+        "distance_score": 104656140.0,
+        "zone_name": "Asia/Kolkata"
+      },
+      {
+        "area_difference": 1661795908164200,
+        "bbox": [
+          933428820,
+          145828540,
+          938585650,
+          151367980
+        ],
+        "bbox_differences": [
+          13495650,
+          80297370,
+          2905500,
+          7426780
+        ],
+        "boundary_id": 567,
+        "distance_score": 112155037.0,
+        "zone_name": "Asia/Yangon"
+      },
+      {
+        "area_difference": 1674757706988500,
+        "bbox": [
+          975000000,
+          122858950,
+          975779790,
+          142869660
+        ],
+        "bbox_differences": [
+          55066830,
+          57327780,
+          34288640,
+          1071540
+        ],
+        "boundary_id": 752,
+        "distance_score": 153487568.0,
+        "zone_name": "Etc/GMT-7"
+      },
+      {
+        "area_difference": 1656558331291400,
+        "bbox": [
+          975000000,
+          88066230,
+          977171570,
+          103632630
+        ],
+        "bbox_differences": [
+          55066830,
+          22535060,
+          35680420,
+          40308570
+        ],
+        "boundary_id": 751,
+        "distance_score": 159097563.0,
+        "zone_name": "Etc/GMT-7"
+      },
+      {
+        "area_difference": 342887535983100,
+        "bbox": [
+          975000000,
+          30156730,
+          1008231310,
+          91341480
+        ],
+        "bbox_differences": [
+          55066830,
+          35374440,
+          66740160,
+          52599720
+        ],
+        "boundary_id": 749,
+        "distance_score": 216455166.0,
+        "zone_name": "Etc/GMT-7"
+      },
+      {
+        "area_difference": 15423815668526800,
+        "bbox": [
+          921729180,
+          95260840,
+          1011700800,
+          285478350
+        ],
+        "bbox_differences": [
+          1796010,
+          29729670,
+          70209650,
+          141537150
+        ],
+        "boundary_id": 568,
+        "distance_score": 257426195.0,
+        "zone_name": "Asia/Yangon"
+      },
+      {
+        "area_difference": 1676387306142420,
+        "bbox": [
+          987365109,
+          11285400,
+          1047512030,
+          67260820
+        ],
+        "bbox_differences": [
+          67431939,
+          54245770,
+          106020880,
+          76680380
+        ],
+        "boundary_id": 222,
+        "distance_score": 314981057.0,
+        "zone_name": "Asia/Manila"
+      }
+    ]
+  }
+]
