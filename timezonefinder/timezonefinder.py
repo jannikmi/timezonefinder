@@ -336,9 +336,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
-        del self.boundaries
-        del self.holes
-        del self.hole_registry
+        try:
+            del self.boundaries
+            del self.holes
+            del self.hole_registry
+        except AttributeError:
+            pass
 
     def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
         """
