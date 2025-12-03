@@ -101,8 +101,11 @@ class FileCoordAccessor(AbstractCoordAccessor):
 
     def cleanup(self) -> None:
         """Clean up resources."""
-        utils.close_resource(self.coord_file)
-        utils.close_resource(self.coord_buf)
+        # At termination utils may have been tidied up. If we're terminating we don't need to
+        # worry about closing file handles so just avoid an exception.
+        if getattr(utils, "close_resource", None) is not None:
+            utils.close_resource(self.coord_file)
+            utils.close_resource(self.coord_buf)
         del self.polygon_collection
 
 

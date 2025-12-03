@@ -2,6 +2,12 @@
 Changelog
 =========
 
+8.1.1 (???)
+-----------
+
+* Bug fixed where on termination we may hit an exception attempting to close resources in ``FileCoordAccessor``.
+
+
 
 8.1.0 (2025-09-22)
 ------------------
