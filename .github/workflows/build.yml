@@ -146,6 +146,7 @@ jobs:
             uv add ./dist/timezonefinder*manylinux*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
+            uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
 
   release:
     name: Create release and publish to TestPyPI
