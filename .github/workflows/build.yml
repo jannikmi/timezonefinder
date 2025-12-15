@@ -93,7 +93,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: "Upload wheel as artifact"
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
           path: "./**/dist/*.whl"
@@ -109,7 +109,7 @@ jobs:
 
     - run: uv build -v --sdist
 
-    - uses: actions/upload-artifact@v5
+    - uses: actions/upload-artifact@v6
       with:
         name: artifact-source-dist
         path: "./**/dist/*.tar.gz"
