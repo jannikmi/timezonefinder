@@ -3,7 +3,6 @@
 SHELL=/bin/bash
 
 install:
-	pip install --upgrade pip
 	@echo "installing all specified dependencies..."
 	# NOTE: root package needs to be installed for CLI tests to work!
 	@uv sync --all-groups
@@ -27,13 +26,6 @@ force_update:
 
 outdated:
 	@uv pip list --outdated
-
-
-env:
-	# conda env remove -n timezonefinder
-	source $(CONDAROOT)/bin/activate && conda create -n timezonefinder python=3.9 uv -y
-	#	&& conda activate timezonefinder
-	# && make req
 
 data:
 	bash parse_data.sh
