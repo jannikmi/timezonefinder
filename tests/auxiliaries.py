@@ -360,6 +360,8 @@ def convert_to_reduced_timezone(timezone: str) -> str:
     """
     Convert a timezone to its reduced version using the provided mapping.
 
+    NOTE: unused, but kept for future reference
+
     Args:
         timezone: The original timezone string.
         mapping: A dictionary mapping original timezones to their reduced versions.
@@ -373,7 +375,7 @@ def convert_to_reduced_timezone(timezone: str) -> str:
 def single_location_test(func, lat, lng, description, expected_orig):
     result = func(lng=lng, lat=lat)
     func_name = func.__name__
-    expected = convert_to_reduced_timezone(expected_orig)
-    assert result == expected, (
-        f"{func_name}({lng}, {lat}) [{description}] should return {expected}, got {result}"
+    # expected = convert_to_reduced_timezone(expected_orig)
+    assert result == expected_orig, (
+        f"{func_name}({lng}, {lat}) [{description}] should return {expected_orig}, got {result}"
     )
