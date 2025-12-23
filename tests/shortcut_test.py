@@ -9,28 +9,8 @@ import pytest
 
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
-from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.flatbuf.io.hybrid_shortcuts import (
-    get_hybrid_shortcut_file_path,
-    read_hybrid_shortcuts_binary,
-)
-from timezonefinder.timezonefinder import TimezoneFinder
+from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.utils_numba import int2coord
-from timezonefinder.np_binary_helpers import (
-    get_zone_ids_path,
-    read_per_polygon_vector,
-)
-from timezonefinder.configs import DEFAULT_DATA_DIR
-
-# Load zone IDs to determine the correct hybrid shortcut file
-zone_ids_path = get_zone_ids_path(DEFAULT_DATA_DIR)
-zone_ids_temp = read_per_polygon_vector(zone_ids_path)
-zone_id_dtype = zone_ids_temp.dtype
-
-hybrid_shortcut_file_path = get_hybrid_shortcut_file_path(
-    zone_id_dtype, DEFAULT_DATA_DIR
-)
-hybrid_shortcuts = read_hybrid_shortcuts_binary(hybrid_shortcut_file_path)
 
 # Tests now work directly with hybrid_shortcuts format
 
@@ -41,7 +21,7 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
-def test_single_shortcut_binary_exists():
+def test_single_shortcut_binary_exists(zone_id_dtype, hybrid_shortcut_file_path):
     """Test that only a single .fbs binary file for the shortcut index exists in the data folder."""
     data_dir = DEFAULT_DATA_DIR
 
@@ -61,18 +41,12 @@ def test_single_shortcut_binary_exists():
     )
 
     # Verify it matches the expected file based on zone_id_dtype
-    expected_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_dir)
-    assert shortcut_file == expected_file, (
-        f"Found shortcut file {shortcut_file.name} doesn't match expected {expected_file.name}"
+    assert shortcut_file == hybrid_shortcut_file_path, (
+        f"Found shortcut file {shortcut_file.name} doesn't match expected {hybrid_shortcut_file_path.name}"
     )
 
 
-@pytest.fixture
-def tf():
-    return TimezoneFinder(in_memory=True)
-
-
-def test_shortcut_completeness(tf):
+def test_shortcut_completeness(tf, hybrid_shortcuts):
     """Test that all points of each polygon are included in the proper shortcuts."""
     # Get access to the timezone polygons
     polygons = [tf.boundaries.coords_of(i) for i in range(tf.nr_of_polygons)]
@@ -115,7 +89,7 @@ def test_shortcut_completeness(tf):
     assert not errors, f"Shortcut completeness errors: {errors[:5]}"
 
 
-def test_shortcut_resolution():
+def test_shortcut_resolution(hybrid_shortcuts):
     """Test that all shortcuts have the correct H3 resolution."""
     invalid_resolutions = []
     for hex_id in hybrid_shortcuts.keys():
@@ -128,7 +102,7 @@ def test_shortcut_resolution():
     assert not invalid_resolutions, f"Resolution errors: {invalid_resolutions[:5]}"
 
 
-def test_unused_polygons(tf):
+def test_unused_polygons(tf, hybrid_shortcuts):
     """Test that all polygons are used in at least one shortcut."""
     # Get the total number of polygons
     nr_of_polygons = tf.nr_of_polygons
@@ -153,7 +127,7 @@ def test_unused_polygons(tf):
     )
 
 
-def test_empty_shortcut():
+def test_empty_shortcut(hybrid_shortcuts):
     """Test that no shortcut entries are empty (all should have polygons or zones)."""
     # since using timezone data with ocean coverage all the cells should have polygons or zones in them
     empty_shortcuts = []
@@ -173,7 +147,7 @@ def test_empty_shortcut():
     assert not empty_shortcuts, f"Found empty shortcut entries: {empty_shortcuts[:5]}"
 
 
-def test_unique_pole_cells():
+def test_unique_pole_cells(hybrid_shortcuts):
     """Test that exactly one cell surrounds each pole."""
     s_pole_cells = []
     n_pole_cells = []
@@ -193,7 +167,7 @@ def test_unique_pole_cells():
     )
 
 
-def test_shortcut_uniqueness():
+def test_shortcut_uniqueness(hybrid_shortcuts):
     """Test that shortcuts are unique (no duplicates in polygon IDs)."""
     duplicates = []
     for hex_id, hybrid_value in hybrid_shortcuts.items():
@@ -211,7 +185,7 @@ def test_shortcut_uniqueness():
     assert not duplicates, f"Shortcut uniqueness errors: {duplicates[:5]}"
 
 
-def test_unique_shortcut_consistency(tf):
+def test_unique_shortcut_consistency(tf, hybrid_shortcuts):
     """Ensure the unique shortcut entries are consistent with zone assignments."""
 
     # Count unique shortcuts (zone IDs in hybrid format)
@@ -255,7 +229,7 @@ def test_has_coherent_check_fct(lst, expected):
     assert has_coherent_sequences(lst) == expected
 
 
-def test_shortcut_sorting(tf):
+def test_shortcut_sorting(tf, hybrid_shortcuts):
     """Test that shortcuts are correctly sorted by zone ID and polygon size."""
     invalid_sortings = []
     for hex_id, hybrid_value in hybrid_shortcuts.items():
