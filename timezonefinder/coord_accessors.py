@@ -101,6 +101,8 @@ class FileCoordAccessor(AbstractCoordAccessor):
 
     def cleanup(self) -> None:
         """Clean up resources."""
+        # At termination utils may have been tidied up. If we're terminating we don't need to
+        # worry about closing file handles so just avoid an exception.
         close_resource = getattr(utils, "close_resource", None)
         if close_resource is None:
             return
