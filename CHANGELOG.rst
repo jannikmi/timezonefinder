@@ -5,10 +5,11 @@ Changelog
 8.2.0 (2025-12-23)
 ------------------
 
-* **Reverted to the full timezone dataset**: Starting from this release, ``timezonefinder`` uses the full original ``timezones-with-oceans`` dataset instead of the reduced ``timezones-now`` dataset. This restores access to all >440 original timezone names, providing full localization capabilities and historical timezone accuracy. The reduced dataset (with ~90 timezones) is still available via the ``parse_data.sh`` script for users who prefer the smaller memory footprint.
+* **Reverted to the full timezone dataset**: Starting from this release, ``timezonefinder`` uses the full original ``timezones-with-oceans`` dataset instead of the reduced ``timezones-now`` dataset.  This restores access to all >440 original timezone names, providing full localization capabilities and historical timezone accuracy. The reduced dataset (with ~90 timezones) is still available via the ``parse_data.sh`` script for users who prefer the smaller memory footprint. Due to the discussion in `GitHub Issue #363 <https://github.com/jannikmi/timezonefinder/issues/363>`__
 * Improved error handling for resource cleanup. Thanks to `Dave Tapley <https://github.com/davetapley>`__ for the PR #375.
 * Bug fixed where on termination we may hit an exception attempting to close resources in ``FileCoordAccessor``. Thanks to `David Park <https://github.com/daphtdazz>`__ for the PR #377.
 * Made CFFI extension builds fallible, allowing the build process to continue even if C extension compilation fails. Thanks to `theirix <https://github.com/theirix>`__ for the PR #369.
+* Added Python 3.14 to the supported test matrix (tox + GitHub Actions).
 
 
 
