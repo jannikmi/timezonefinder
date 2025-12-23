@@ -8,7 +8,6 @@ from re import Pattern
 import re
 import shutil
 import subprocess
-import sys
 import timeit
 from math import log10
 from typing import Callable, Iterator, Tuple, Union
@@ -38,10 +37,8 @@ DIST_DIR = PROJECT_ROOT / "dist"
 
 
 # Command constants
-# BUILD_SDIST_CMD = [sys.executable, "setup.py", "sdist"]
 BUILD_SDIST_CMD = ["uv", "build", "-v", "--sdist"]
-BUILD_WHEEL_CMD = [sys.executable, "setup.py", "bdist_wheel"]
-# BUILD_WHEEL_CMD = ["uv", "build", "-v", "--wheel"]
+BUILD_WHEEL_CMD = ["uv", "build", "-v", "--wheel"]
 
 
 # for reading coordinates
@@ -78,32 +75,27 @@ def run_command(
         ) from None
 
 
-def build_wheel() -> Path:
+def build_wheel(clean_dist: bool = True) -> Path:
     """Build wheel distribution and return its path."""
     # TODO reuse with DistributionFilesFixture (found in test_package_contents.py)
-    # Clean up dist directory if it exists
-    if DIST_DIR.exists():
+    if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
 
-    # Build the wheel
     run_command(BUILD_WHEEL_CMD, cwd=str(PROJECT_ROOT))
 
-    # Find the wheel file
     wheels = list(DIST_DIR.glob("*.whl"))
     assert wheels, "No wheel file found in dist/"
     return wheels[0]
 
 
-def build_sdist() -> Path:
+def build_sdist(clean_dist: bool = True) -> Path:
     """Build the distribution using the configured build command and return the path to the archive."""
-    # Clean up dist directory if it exists
-    if DIST_DIR.exists():
+    if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
 
     run_command(BUILD_SDIST_CMD, cwd=str(PROJECT_ROOT))
 
     dist_files = file_path_iterator(DIST_DIR, relative=False)
-    # Find the generated .tar.gz file in the dist directory
     sdist_files = list(filter_paths(dist_files, "*.tar.gz"))
     assert len(sdist_files) == 1, "Expected exactly one .tar.gz distribution file"
     sdist = sdist_files[0]
