@@ -9,6 +9,7 @@ This Python library `timezonefinder` provides offline timezone lookups for WGS84
 - **Package Manager**: Use `uv` for all dependency management
 - **Python Commands**: Always run via `uv run` (e.g., `uv run pytest`, `uv run python script.py`)
 - **Installation**: `uv sync --all-groups` to install all dependencies
+- **Lockfile**: Whenever dependencies or the set of officially supported/tested Python versions change, update `uv.lock` with `make lock`
 - **Pre-commit Hooks**: Install with `make hook` before making changes
 - **Command Prefixes**: Avoid redundant `cd /Users/Jannik.Kissinger/github/timezonefinder` in suggested commands; only add `cd` when running from a different subdirectory matters
 
