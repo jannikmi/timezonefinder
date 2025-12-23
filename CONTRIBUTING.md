@@ -42,7 +42,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 
 - Preserve the fast path. Profile hot code (`scripts/check_speed_*.py`, `make speedtest`) when touching polygon math or shortcut lookups.
 - Use vectorised/NumPy-aware operations and avoid quadratic fallbacks on large datasets. When performance optimisations add complexity, include comments that summarise the micro-optimisation.
-- Respect coordinate scaling constants and FlatBuffers layouts; keep performance-sensitive structures (H3 mappings, bbox filters) cache-friendly.
+- Respect coordinate scaling constants and FlatBuffers layouts; keep performance-sensitive structures (H3 mappings, bbox filters) cache-friendly. When changing the datatype of shortcut-related FlatBuffers schemas (for example `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently.
 
 ### Backward Compability & Stability
 

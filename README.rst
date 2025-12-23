@@ -76,8 +76,7 @@ It is recommended to install it together with the optional `Numba <https://numba
 
 
 
-**Note:** This library uses the `"same since now dataset" <https://github.com/evansiroky/timezone-boundary-builder?tab=readme-ov-file#same-since-now>`__ optimized for the primary use case of timezone determination for current/future time calculations.
-For applications requiring historical accuracy or resolving to precise locations, consider parsing the original dataset (cf. `Documentation <https://timezonefinder.readthedocs.io/en/latest/data_format.html#reduced-dataset-caveats>`__).
+**Note:** This library uses the full original timezone dataset with all >440 timezone names, providing full localization capabilities and historical timezone accuracy. For applications that prefer a smaller memory footprint, the reduced "timezones-now" dataset is available via the ``parse_data.sh`` script (cf. `Documentation <https://timezonefinder.readthedocs.io/en/latest/data_format.html#alternative-dataset-options>`__).
 
 
 **Alternative:** Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast and lightweight alternative based on Rust.
