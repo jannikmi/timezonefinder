@@ -3143,14 +3143,12 @@ dev = [
     { name = "mypy" },
     { name = "pre-commit", version = "4.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pre-commit", version = "4.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "rstcheck" },
     { name = "ruff" },
 ]
 docs = [
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
-]
-lint = [
-    { name = "rstcheck" },
 ]
 numba = [
     { name = "numba", version = "0.60.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -3196,13 +3194,13 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
+    { name = "rstcheck" },
     { name = "ruff" },
 ]
 docs = [
     { name = "sphinx", specifier = ">=5,<6" },
     { name = "sphinx-rtd-theme", specifier = ">=1,<2" },
 ]
-lint = [{ name = "rstcheck" }]
 numba = [
     { name = "numba", marker = "python_full_version < '3.12'", specifier = ">=0.56,<1" },
     { name = "numba", marker = "python_full_version >= '3.12'", specifier = ">=0.59,<1" },
