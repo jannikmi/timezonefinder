@@ -10,7 +10,6 @@ This Python library `timezonefinder` provides offline timezone lookups for WGS84
 - **Python Commands**: Always run via `uv run` (e.g., `uv run pytest`, `uv run python script.py`)
 - **Installation**: `uv sync --all-groups` to install all dependencies
 - **Lockfile**: Whenever dependencies or the set of officially supported/tested Python versions change, update `uv.lock` with `make lock`
-- **Pre-commit Hooks**: Install with `make hook` before making changes
 - **Command Prefixes**: Avoid redundant `cd /Users/Jannik.Kissinger/github/timezonefinder` in suggested commands; only add `cd` when running from a different subdirectory matters
 
 ## Key Directories
@@ -57,6 +56,12 @@ Ocean zones (`Etc/GMT+/-XX`) guarantee a timezone match for all possible input c
 - Use dependency injection instead of module-level state when possible
 - Treat concurrency as first-class concern; avoid shared global state
 - Maintain `__all__` definitions in `__init__.py` files - they define the public API surface
+
+### Code Changes Workflow
+- **ALWAYS run pre-commit hooks after making code changes**: `make hook`
+- Pre-commit hooks check formatting (ruff, blacken-docs), linting (mypy, ruff), file integrity, and more
+- Fix any issues reported by pre-commit hooks before considering changes complete
+- Pre-commit hooks must pass before committing or submitting PRs
 
 ## Testing
 
