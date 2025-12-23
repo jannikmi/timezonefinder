@@ -50,18 +50,17 @@ test=[
     "pytz>=2022.7.1",
     # setuptoosl required for integration tests: building sdist and wheel
     "setuptools>=61",
-    "cffi",
 ]
-# development and parsing data
 dev = [
-    "tox",
-    "pytest",
     "pre-commit",
     "mypy",
     "rstcheck",
     "isort",
     "ruff",
     "cibuildwheel",
+]
+# data generation / parsing helpers
+data = [
     "pydantic>=2.11.7",
 ]
 numba = [
