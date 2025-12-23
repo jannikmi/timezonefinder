@@ -20,7 +20,7 @@ DATA_REPORT_FILE = DOC_ROOT / "data_report.rst"
 PERFORMANCE_REPORT_FILE = DOC_ROOT / "benchmark_results_timezonefinding.rst"
 POLYGON_REPORT_FILE = DOC_ROOT / "benchmark_results_polygon.rst"
 INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
-DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans-now.json"
+DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 
 DEBUG = False
 # DEBUG = True
