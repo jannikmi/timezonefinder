@@ -14,9 +14,9 @@ Comparison to tzfpy
 
 ``tzfpy`` is a Python binding of the Rust package ``tzf-rs``, which serves as an alternative to ``timezonefinder`` with different trade-offs.
 
-A key distinction is the dataset choice: ``timezonefinder`` uses the reduced "timezones-now" dataset (~90 timezones) that merges zones with identical current behavior, while ``tzfpy`` uses the full original dataset (>440 timezones). This makes ``tzfpy`` particularly valuable for applications requiring full localization power beyond pure timezone behavior, such as precise location identification or historical timezone accuracy.
+Both packages use the full original dataset (>440 timezones), providing full localization capabilities and historical timezone accuracy.
 
-**Important:** Despite using fewer timezone names, ``timezonefinder`` maintains **higher accuracy around timezone borders** because it uses complete, non-simplified polygon data. In contrast, ``tzfpy`` uses simplified polygons for performance, which can lead to inaccuracies near boundaries. The "reduced" aspect of ``timezonefinder``'s dataset refers only to the number of distinct timezone names, not the geometric precision of the boundaries.
+**Important:** ``timezonefinder`` maintains **higher accuracy around timezone borders** because it uses complete, non-simplified polygon data. In contrast, ``tzfpy`` uses simplified polygons for performance, which can lead to inaccuracies near boundaries.
 
 Both packages will likely coexist as they serve different use cases:
 
@@ -33,13 +33,13 @@ Both packages will likely coexist as they serve different use cases:
      - Pure Python with optional C extensions and Numba compilation
      - Python binding of Rust package ``tzf-rs``
    * - Dataset Version
-     - Reduced "timezones-now" dataset (~90 timezones)
+     - Full original dataset (>440 timezones)
      - Full original dataset (>440 timezones)
    * - Startup Time
      - Requires initialization time
      - No startup time (immediate)
    * - Avg. Lookup Speed Queries per Second
-     - ~300k (TimezoneFinder), >1M (TimezoneFinderL) :doc:`benchmark_results_timezonefinding`
+     - >500k in a single CPU of a new Macbook Pro M5 ults_timezonefinding`
      - `~320k <https://github.com/ringsaturn/tz-benchmark>`__
    * - Data Representation
      - Complete, non-simplified timezone polygons
@@ -94,7 +94,7 @@ Both packages will likely coexist as they serve different use cases:
    * - Minimal Distribution Size
      - ``tzfpy``
    * - Full localization power (>440 timezone names)
-     - ``tzfpy``
+     - Either
    * - Memory efficiency
      - Either
 

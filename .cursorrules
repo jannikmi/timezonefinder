@@ -1,0 +1,104 @@
+# Cursor Rules for timezonefinder
+
+## Project Overview
+
+This Python library `timezonefinder` provides offline timezone lookups for WGS84 coordinates by combining preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine. The package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
+
+## Development Environment
+
+- **Package Manager**: Use `uv` for all dependency management
+- **Python Commands**: Always run via `uv run` (e.g., `uv run pytest`, `uv run python script.py`)
+- **Installation**: `uv sync --all-groups` to install all dependencies
+- **Lockfile**: Whenever dependencies or the set of officially supported/tested Python versions change, update `uv.lock` with `make lock`
+- **Command Prefixes**: Avoid redundant `cd /Users/Jannik.Kissinger/github/timezonefinder` in suggested commands; only add `cd` when running from a different subdirectory matters
+
+## Key Directories
+
+- `timezonefinder/`: Core library with `TimezoneFinder` (full polygon search), `TimezoneFinderL` (shortcut-only heuristic), global helper functions, CLI entry point, and utilities
+- `timezonefinder/data/`: Packaged binary assets (FlatBuffers, NumPy arrays, zone names, shortcut index) consumed at runtime
+- `scripts/`: Tooling for regenerating data (`file_converter.py`, `parse_data.sh`), reporting, and helper configs
+- `tests/`: PyTest suite with unit tests and integration tests
+- `docs/`: Sphinx documentation; `docs/data_format.rst` is authoritative reference for binary layouts
+
+## Runtime Model
+
+The primary lookup flow:
+1. Converts query coordinates to scaled int32 values
+2. Collects candidate polygon IDs via H3 shortcut map
+3. Rejects polygons whose bbox rules them out
+4. Checks holes first
+5. Applies ray casting point-in-polygon test
+6. Short-circuits when candidates share a timezone ID
+
+Ocean zones (`Etc/GMT+/-XX`) guarantee a timezone match for all possible input coordinates unless callers explicitly use `timezone_at_land`.
+
+## Coding Standards
+
+### Type Hints & Configuration
+- Add type hints for new code; use `typing.Protocol`, `TypedDict`, `Literal` to capture constraints
+- All types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
+- Keep annotations consistent with runtime behaviour—no `Any` unless justified
+- Ensure `mypy` passes locally
+
+### Performance & Memory
+- Preserve the fast path; profile hot code when touching polygon math or shortcut lookups
+- Use vectorised/NumPy-aware operations
+- Respect coordinate scaling constants (`DECIMAL_PLACES_SHIFT`, `COORD2INT_FACTOR`) - keep them in sync between runtime and converter
+- Keep performance-sensitive structures (H3 mappings, bbox filters) cache-friendly
+
+### Backward Compatibility
+- **External**: Avoid breaking changes to public APIs unless absolutely necessary
+- **Internal**: Internal assets (code, data formats, binary assets) must NOT be backward compatible - code is packaged and versioned together
+
+### Code Quality
+- Write complete solutions—no placeholders, commented-out experiments, or TODOs without filed issues
+- Prefer pure functions or clearly delimited side effects
+- Use dependency injection instead of module-level state when possible
+- Treat concurrency as first-class concern; avoid shared global state
+- Maintain `__all__` definitions in `__init__.py` files - they define the public API surface
+
+### Code Changes Workflow
+- **ALWAYS run pre-commit hooks after making code changes**: `make hook`
+- Pre-commit hooks check formatting (ruff, blacken-docs), linting (mypy, ruff), file integrity, and more
+- Fix any issues reported by pre-commit hooks before considering changes complete
+- Pre-commit hooks must pass before committing or submitting PRs
+
+## Testing
+
+- **Unit Tests**: `uv run pytest -m "not integration"` for fast feedback
+- **Integration Tests**: `uv run pytest -m "integration"` or `uv run tox` for packaging/build validation
+- **Performance Tests**: `make speedtest` when altering hotspots
+- Add targeted unit tests under `tests/` for every behavioural change
+- Use fixtures in `tests/auxiliaries.py` for edge coordinates and polygon holes
+
+## Common Commands
+
+- `make install`: Install all dependencies
+- `make test`: Run unit tests (excludes integration tests)
+- `make testint`: Run integration tests
+- `make hook`: Install and run pre-commit hooks
+- `make speedtest`: Run performance benchmarks
+- `make docs`: Build documentation
+- `make data`: Regenerate data from timezone-boundary-builder
+
+## Important Notes
+
+- The optional Numba dependency accelerates `utils.pt_in_poly_python`; when absent, the CFFI-backed clang extension is used
+- `TimezoneFinderL` is heuristic only; prefer full `TimezoneFinder` when correctness matters
+- Global state in `timezonefinder/global_functions.py` intentionally delays instantiation; avoid side effects before the first call
+- Thread-safety: Global helper functions are not thread-safe - prefer explicit `TimezoneFinder(in_memory=True)` instances for concurrent workloads
+- When swapping datasets, remember the reduced "now" data loses location-specific names
+
+## Data Pipeline
+
+- `parse_data.sh` downloads timezone-boundary-builder release, unpacks to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets
+- The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata
+- Adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags
+- When changing the datatype of shortcut-related FlatBuffers schemas (e.g. `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently
+- compiling a new data set version automatially updates `docs/data_report.rst` through `scripts/reporting.py`
+
+## Release Process
+
+- Regenerating data changes binary blobs in `timezonefinder/data/` and typically warrants a minor version bump via `uv version`
+- Update `CHANGELOG.rst`
+- Tag releases with `make release`

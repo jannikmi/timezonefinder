@@ -7,12 +7,12 @@ import pytest
 from tests.auxiliaries import single_location_test
 from tests.locations import BASIC_TEST_LOCATIONS, TEST_LOCATIONS_AT_LAND, TEST_LOCATIONS
 from timezonefinder import (
+    TimezoneFinder,
+    certain_timezone_at,
+    get_geometry,
     timezone_at,
     timezone_at_land,
     unique_timezone_at,
-    certain_timezone_at,
-    get_geometry,
-    TimezoneFinder,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.zone_names import read_zone_names
@@ -26,6 +26,16 @@ FUNC2TEST_CASES = {
     unique_timezone_at: BASIC_TEST_LOCATIONS,
     timezone_at_land: TEST_LOCATIONS_AT_LAND,
 }
+
+
+@pytest.fixture(scope="session")
+def timezonefinder_instance() -> TimezoneFinder:
+    """Provide a single, reusable TimezoneFinder instance for all tests.
+
+    Using in_memory=True avoids repeated disk I/O and initialization overhead
+    while preserving the behaviour of the public API.
+    """
+    return TimezoneFinder(in_memory=True)
 
 
 # Create parameterized test data from FUNC2TEST_CASES mapping
@@ -58,10 +68,9 @@ class TestGlobalFunctions:
         single_location_test(func, lat, lng, description, expected)
 
     @pytest.mark.parametrize("tz_name", all_timezone_names)
-    def test_get_geometry(self, tz_name):
+    def test_get_geometry(self, tz_name, timezonefinder_instance: TimezoneFinder):
         """Test the global get_geometry function for all timezones"""
-        tf = TimezoneFinder()
-        expected = tf.get_geometry(tz_name=tz_name)
+        expected = timezonefinder_instance.get_geometry(tz_name=tz_name)
         result = get_geometry(tz_name=tz_name)
         assert isinstance(result, type(expected)), (
             f"Type mismatch for {tz_name}: {type(result)} != {type(expected)}"

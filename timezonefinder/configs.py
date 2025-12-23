@@ -85,5 +85,5 @@ def available_zone_id_dtype_names() -> Tuple[str, ...]:
     return tuple(sorted(_ZONE_ID_DTYPE_ALIASES))
 
 
-DEFAULT_ZONE_ID_DTYPE_NAME = os.getenv("TIMEZONEFINDER_ZONE_ID_DTYPE", "uint8")
+DEFAULT_ZONE_ID_DTYPE_NAME = os.getenv("TIMEZONEFINDER_ZONE_ID_DTYPE", "uint16")
 DEFAULT_ZONE_ID_DTYPE = get_zone_id_dtype(DEFAULT_ZONE_ID_DTYPE_NAME)

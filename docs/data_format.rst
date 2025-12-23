@@ -16,7 +16,7 @@ The timezone boundary data used in ``timezonefinder`` is sourced from the `timez
 This project compiles timezone boundaries from OpenStreetMap data and makes them available as GeoJSON files.
 
 
-Dataset version ``timezones-with-oceans-now``: Currently the boundaries with ocean time zones and the reduced set of timezones with strategy "same since now" are being used.
+Dataset version ``timezones-with-oceans``: Currently the boundaries with ocean time zones and the full original dataset are being used.
 
 
 .. note::
@@ -34,47 +34,23 @@ Dataset version ``timezones-with-oceans-now``: Currently the boundaries with oce
 
 The processing pipeline for this data involves:
 
-1. Downloading the latest ``timezones-with-oceans-now.geojson.zip`` file from the releases section of the timezone-boundary-builder repository
+1. Downloading the latest ``timezones-with-<...>.geojson.zip`` file from the releases section of the timezone-boundary-builder repository
 2. Unzipping into the ``combined.json`` file
 3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
 The script ``parse_data.sh`` automates this process.
 
+Alternative Dataset Options
+============================
 
-Reduced Dataset Caveats
-========================
+The ``parse_data.sh`` script also supports downloading the reduced ``timezones-now`` dataset, which merges timezones with identical behavior (as of now) into a single zone. This reduces the number of timezones from ~440 to ~90 and provides a smaller memory footprint. However, this dataset:
 
-Starting from version 8.0.0, ``timezonefinder`` uses the reduced ``timezones-now`` dataset where timezones with identical behavior (as of now) are merged together. This reduces the number of timezones from ~440 to ~90 and provides significant performance and storage benefits.
+* Provides incorrect data for observed timekeeping methods in the past at certain locations
+* Loses location-specific information (e.g., ``Europe/Berlin`` becomes ``Europe/Paris``)
+* Reduces localization capabilities
 
-However, this dataset choice comes with important caveats that users should be aware of:
-
-
-Historical Inaccuracy
----------------------
-
-The reduced dataset will provide **incorrect data for observed timekeeping methods in the past** at certain locations. It is only suitable for use cases that need to determine the current or future time at a location. If your application requires historical timezone accuracy, you should consider using the full dataset.
-
-Loss of Location Specificity
-----------------------------
-
-The information about specific locations encoded in the more precise timezone names is lost in the reduced dataset. For example, coordinates that would previously return ``Europe/Berlin`` will now return ``Europe/Paris`` since these timezones currently have identical behavior.
-
-This means:
-
-* **Reduced localization capabilities**: The timezone name can no longer be reliably used to determine the specific country or region
-* **Loss of geographical context**: Applications that rely on timezone names for location identification will need alternative approaches
-
-Alternative for Full Dataset Users
-----------------------------------
-
-If your use case requires the full timezone dataset with all >400 original timezones, you can:
-
-1. **Parse your own dataset**: use the ``parse_data.sh`` script to download and process the original ``timezones-with-oceans.geojson`` from the `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder>`_ repository
-2. **Use the conversion scripts**: Utilize the same ``file_converter.py`` script used by ``timezonefinder`` to compile your custom dataset
-3. **Load custom data**: Configure ``timezonefinder`` to use your custom dataset files
-
-This approach allows you to maintain full timezone precision while still benefiting from the optimized data structures and algorithms provided by ``timezonefinder``.
+If your use case requires the reduced dataset, you can use the ``parse_data.sh`` script to download and process the ``timezones-with-oceans-now.geojson`` file.
 
 
 
@@ -111,10 +87,9 @@ Polygon Data
 
 * ``coordinates.fbs``: FlatBuffer binary file containing all polygon coordinates
 * ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
-  unsigned integers (``uint8`` by default for the reduced dataset); pass
+  unsigned integers (``uint16`` by default, ``uint8`` for datasets with less than 256 timezones); pass
   ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
-  ``TIMEZONEFINDER_ZONE_ID_DTYPE`` when compiling custom data if more than
-  256 timezones are required.
+  the ``TIMEZONEFINDER_ZONE_ID_DTYPE`` environment variable when compiling custom data to override the default.
 * ``zone_positions.npy``: NumPy array indicating where each timezone's polygons start and end
 
 Boundaries Information

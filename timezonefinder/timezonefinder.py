@@ -240,7 +240,17 @@ class AbstractTimezoneFinder(ABC):
 
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
-        pass
+        # At termination utils may have been tidied up. If we're terminating we don't need to
+        # worry about closing file handles so just avoid an exception.
+        close_resource = getattr(utils, "close_resource", None)
+        if close_resource is None:
+            return
+
+        # PolygonArray exposes underlying accessors that manage their own buffers;
+        # this is a best-effort close for any objects with a close() method.
+        close_resource(getattr(self, "boundaries", None))
+        close_resource(getattr(self, "holes", None))
+        # hole_registry is an in-memory dict only; nothing to close
 
     def __enter__(self):
         """Enter the runtime context for the TimezoneFinder."""
@@ -337,10 +347,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
         try:
-            del self.boundaries
-            del self.holes
-            del self.hole_registry
-        except AttributeError:
+            self.cleanup()
+        except Exception:
             pass
 
     def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:

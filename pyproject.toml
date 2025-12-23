@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "8.1.0"
+version = "8.2.0"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.9,<4"
 dependencies = [
@@ -49,18 +50,17 @@ test=[
     "pytz>=2022.7.1",
     # setuptoosl required for integration tests: building sdist and wheel
     "setuptools>=61",
-    "cffi",
 ]
-# development and parsing data
 dev = [
-    "tox",
-    "pytest",
     "pre-commit",
     "mypy",
     "rstcheck",
     "isort",
     "ruff",
     "cibuildwheel",
+]
+# data generation / parsing helpers
+data = [
     "pydantic>=2.11.7",
 ]
 numba = [
@@ -96,7 +96,17 @@ requires = ["setuptools>=61", "cffi"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["timezonefinder", "timezonefinder.inside_poly_extension", "timezonefinder.flatbuf"]
+packages = [
+    "timezonefinder",
+    "timezonefinder.inside_poly_extension",
+    "timezonefinder.flatbuf",
+    "timezonefinder.flatbuf.generated",
+    "timezonefinder.flatbuf.generated.polygons",
+    "timezonefinder.flatbuf.generated.shortcuts_uint8",
+    "timezonefinder.flatbuf.generated.shortcuts_uint16",
+    "timezonefinder.flatbuf.io",
+    "timezonefinder.flatbuf.schemas",
+]
 
 [tool.setuptools.package-data]
 timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.txt", "**/*.json", "**/*.c", "**/*.h", ]

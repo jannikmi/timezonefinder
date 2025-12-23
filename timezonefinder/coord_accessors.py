@@ -103,10 +103,14 @@ class FileCoordAccessor(AbstractCoordAccessor):
         """Clean up resources."""
         # At termination utils may have been tidied up. If we're terminating we don't need to
         # worry about closing file handles so just avoid an exception.
-        if getattr(utils, "close_resource", None) is not None:
-            utils.close_resource(self.coord_file)
-            utils.close_resource(self.coord_buf)
-        del self.polygon_collection
+        close_resource = getattr(utils, "close_resource", None)
+        if close_resource is None:
+            return
+
+        # close_resource already ignores None and common close errors
+        close_resource(getattr(self, "coord_file", None))
+        close_resource(getattr(self, "coord_buf", None))
+        # polygon_collection is just a FlatBuffers view on coord_buf and owns no resources itself
 
 
 class MemoryCoordAccessor(AbstractCoordAccessor):

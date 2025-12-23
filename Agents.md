@@ -2,7 +2,7 @@
 
 ## Mission
 
-This Python library `timezonefinder` provides offline timezone lookups for WGS84 coordinates by combining preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine. In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments. The shipped dataset targets current/future timezone behavior by using the "same since now" reduced boundaries that merge zones equivalent in their timekeeping.
+This Python library `timezonefinder` provides offline timezone lookups for WGS84 coordinates by combining preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine. In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments. The shipped dataset uses the full original timezone dataset with all >440 timezone names, providing full localization capabilities and historical timezone accuracy.
 
 ## Repository Tour
 
@@ -20,13 +20,14 @@ The primary lookup flow converts query coordinates to scaled int32 values, colle
 
 ## Data Pipeline
 
-`parse_data.sh` downloads a chosen timezone-boundary-builder release (full or "now", optional ocean polygons), unpacks it to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets under `timezonefinder/data/`, runs `tox`, bumps the project version with `uv run --bump minor`, and offers to clean intermediates. The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata; adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags.
+`parse_data.sh` downloads a chosen timezone-boundary-builder release (full or "now", optional ocean polygons), unpacks it to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets under `timezonefinder/data/`, runs `tox`, bumps the project version with `uv run --bump minor`, and offers to clean intermediates. The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata; adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags. When changing the datatype of shortcut-related FlatBuffers schemas (for example `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently.
 
 ## Development Workflow
 
 - useful commands are documented in the `Makefile`
 - Install tooling via `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime only); extras `numba` and `pytz` live in `pyproject.toml`.
 - all python commands should be run via `uv run`
+- whenever dependencies or the set of officially supported/tested Python versions change, update the lockfile with `make lock`
 - Day-to-day tests: `uv run pytest -m "not integration"`; heavy packaging checks: `uv run pytest -m "integration"` or `uv run tox`.
 - Format/lint: Ruff, isort, mypy, and pre-commit hooks are wired through `pyproject.toml` and the `Makefile` targets (`make hook`).
 - Docs: build with `(cd docs && make html)`; badges in `docs/badges.rst` stay in sync manually with `README.rst`.
@@ -48,7 +49,7 @@ Regenerating data changes the binary blobs in `timezonefinder/data/` and typical
 - the optional Numba dependency accelerates `utils.pt_in_poly_python`; when absent, the CFFI-backed clang extension is used - verify both paths if you touch `utils.py` or polygon math.
 - Keep coordinate scaling factors (`DECIMAL_PLACES_SHIFT`, `COORD2INT_FACTOR`) in sync between runtime and converter; altering them invalidates shipped binaries.
 - `TimezoneFinderL` is heuristic only; prefer full `TimezoneFinder` when correctness matters, and document any behavior changes in `docs/2_use_cases.rst`.
-- When swapping datasets, remember the reduced "now" data loses location-specific names; mention this in user-facing docs to preempt surprise regressions.
+- The default dataset is the full original dataset. The reduced "now" dataset is available via parse_data.sh for users who prefer a smaller memory footprint, but it loses location-specific names.
 - Global state in `timezonefinder/global_functions.py` intentionally delays instantiation; avoid side effects before the first call and prefer dependency injection inside tests.
 - Thread-safety: Global helper functions are not thread-safe - prefer explicit `TimezoneFinder(in_memory=True)` instances for concurrent workloads.
 - do not remove the __all__ definitions in `__init__.py` files; they define the public API surface and are checked by tests.

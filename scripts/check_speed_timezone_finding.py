@@ -239,10 +239,10 @@ def write_performance_report(
     output_path: Path = PERFORMANCE_REPORT_FILE, n_queries: int = None
 ) -> None:
     """Generate comprehensive performance report in RST format."""
-    print(f"Generating performance report with {n_queries:,} queries...")
-    print(f"Output will be written to: {output_path}")
     if n_queries is None:
         n_queries = N
+    print(f"Generating performance report with {n_queries:,} queries...")
+    print(f"Output will be written to: {output_path}")
 
     output_path = Path(output_path)
 
