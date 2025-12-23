@@ -65,6 +65,9 @@ jobs:
 
       - name: Run tox
         run: uv run tox -e ${{ matrix.tox-env }}
+        env:
+          # allow PyO3-based wheels (e.g., pydantic-core) to build on Python 3.14
+          PYO3_USE_ABI3_FORWARD_COMPATIBILITY: "1"
 
   make-wheels:
     name: Make ${{ matrix.os }} ${{ matrix.cibw_arch }} wheels
