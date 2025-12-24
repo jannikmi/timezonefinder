@@ -38,10 +38,13 @@ testparse:
 
 test:
 # 	@uv run pytest
-	@uv run pytest -m "not integration"
+	@uv run pytest -m "not integration and not fast"
 
 testint:
 	@uv run pytest -m "integration"
+
+testall:
+	@uv run pytest
 
 speedtest:
 	# pytest -s flag: output to console

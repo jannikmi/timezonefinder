@@ -46,6 +46,7 @@ def test_single_shortcut_binary_exists(zone_id_dtype, hybrid_shortcut_file_path)
     )
 
 
+@pytest.mark.slow
 def test_shortcut_completeness(tf, hybrid_shortcuts):
     """Test that all points of each polygon are included in the proper shortcuts."""
     # Get access to the timezone polygons
@@ -102,6 +103,7 @@ def test_shortcut_resolution(hybrid_shortcuts):
     assert not invalid_resolutions, f"Resolution errors: {invalid_resolutions[:5]}"
 
 
+@pytest.mark.slow
 def test_unused_polygons(tf, hybrid_shortcuts):
     """Test that all polygons are used in at least one shortcut."""
     # Get the total number of polygons
@@ -185,6 +187,7 @@ def test_shortcut_uniqueness(hybrid_shortcuts):
     assert not duplicates, f"Shortcut uniqueness errors: {duplicates[:5]}"
 
 
+@pytest.mark.slow
 def test_unique_shortcut_consistency(tf, hybrid_shortcuts):
     """Ensure the unique shortcut entries are consistent with zone assignments."""
 
