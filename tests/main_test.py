@@ -192,13 +192,15 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
 
     # test if all polygon coordinates can be retrieved
     # NOTE: too many polygons, so this test is not parametrized
+    @pytest.mark.slow
     def test_coords_of(self):
         nr_of_polygons = self.test_instance.nr_of_polygons
         for poly_id in range(nr_of_polygons):
             print(f"Testing polygon ID: {poly_id}")
             coords = self.test_instance.coords_of(poly_id)
             validate_polygon_coordinates(coords)
-
+    
+    @pytest.mark.slow
     def test_holes_of_poly(self):
         print("test retrieving all holes for each polygon using _holes_of_poly:")
         nr_of_polygons = self.test_instance.nr_of_polygons

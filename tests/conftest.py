@@ -24,6 +24,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: mark test as integration test")
     config.addinivalue_line("markers", "unit: mark test as unit test")
     config.addinivalue_line("markers", "examples: mark test as examples cli test")
+    config.addinivalue_line("markers", "slow: mark test as slow (deselect with '-m \"not slow\"')")
 
 
 @pytest.fixture(scope="session")

@@ -15,7 +15,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 3. Activate the environment via `uv run` and work from the project root. Run targeted commands through `make` or `uv run …` to ensure reproducibility.
 4. Formatting and linting are enforced via pre-commit hooks (install with `make hook`) and can be run manually with `ruff`, `isort`, and `mypy`.
 5. Keep pull requests focused. Reference issue numbers and describe user-facing impact, dataset changes, and risk areas up front.
-6. Before opening a PR, run the test matrix that matches the scope of your change and ensure CI will pass. Heavy packaging checks live under the `integration` marker—run them if you touched build config or bundled data.
+6. Before opening a PR, run the test matrix that matches the scope of your change and ensure CI will pass. Heavy packaging checks live under the `integration` marker—run them if you touched build config or bundled data. Expensive validation tests (like geometry or shortcut consistency checks) live under the `slow` marker—run them if you touched core logic.
 
 ## Coding Standards (also for Agents)
 
@@ -52,7 +52,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 ### Testing & Coverage
 
 - Add targeted unit tests under `tests/` for every behavioural change. Use fixtures in `tests/auxiliaries.py` to cover edge coordinates and polygon holes.
-- Run `uv run pytest -m "not integration"` for fast feedback. Execute `uv run pytest -m "integration"` or `uv run tox` when packaging, build metadata, or binary assets change.
+- Run `uv run make test` for fast feedback. Execute `uv run pytest -m "integration"` or `uv run tox` when packaging, build metadata, or binary assets change. Run `uv run pytest -m "slow"` when verifying dataset integrity or core algorithmic changes (shortcuts, geometry).
 - Maintain deterministic tests—mock filesystem/network access, and avoid relying on system timezone settings. If you alter CLI behaviour, update `tests/test_integration.py` accordingly.
 
 ### Documentation & Communication
