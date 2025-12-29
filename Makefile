@@ -25,7 +25,9 @@ force_update:
 	@uv sync --refresh
 
 outdated:
-	@uv pip list --outdated
+	uv tree --outdated
+	uv pip list --outdated
+
 
 data:
 	bash parse_data.sh

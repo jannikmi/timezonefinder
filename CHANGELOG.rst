@@ -8,6 +8,7 @@ TBA (Unreleased)
 Internal:
 
 * Introduced ``slow`` test marker for computationally expensive tests to improve CI performance and local development workflow.  Updated CI configuration, tox environments, Makefile targets, and documentation accordingly. Thanks to `Chase Horton <https://github.com/Chase-Horton>`__ for the PR.
+* enabled `Numba` tests for Python 3.13 and 3.14.
 
 
 8.2.0 (2025-12-23)
