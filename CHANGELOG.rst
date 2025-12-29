@@ -5,6 +5,9 @@ Changelog
 TBA (Unreleased)
 ----------------
 
+* require ``numpy >=2`` following the official `NumPy Deprecation Policy <https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule>`__
+* dropped official support for Python 3.9 and 3.10, due to NumPy dropping support for these versions.
+
 Internal:
 
 * Introduced ``slow`` test marker for computationally expensive tests to improve CI performance and local development workflow.  Updated CI configuration, tox environments, Makefile targets, and documentation accordingly. Thanks to `Chase Horton <https://github.com/Chase-Horton>`__ for the PR.
