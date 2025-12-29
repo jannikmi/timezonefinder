@@ -7,7 +7,7 @@ install:
 	# NOTE: root package needs to be installed for CLI tests to work!
 	@uv sync --all-groups
 
-update:
+update: hookup
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
 	@uv lock --upgrade
 
@@ -63,6 +63,7 @@ hook:
 	@uv run pre-commit run --all-files
 
 hookup:
+	@echo "updating the pre-commit hooks..."
 	@uv run pre-commit autoupdate
 
 hook3:
