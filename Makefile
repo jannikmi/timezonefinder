@@ -7,7 +7,7 @@ install:
 	# NOTE: root package needs to be installed for CLI tests to work!
 	@uv sync --all-groups
 
-update:
+update: hookup
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
 	@uv lock --upgrade
 
@@ -25,8 +25,8 @@ force_update:
 	@uv sync --refresh
 
 outdated:
-	uv tree --outdated
-	uv pip list --outdated
+	@echo "Checking for outdated packages (excluding those constrained by dependencies)..."
+	@bash scripts/check_upgradeable.sh
 
 
 data:
@@ -63,6 +63,7 @@ hook:
 	@uv run pre-commit run --all-files
 
 hookup:
+	@echo "updating the pre-commit hooks..."
 	@uv run pre-commit autoupdate
 
 hook3:

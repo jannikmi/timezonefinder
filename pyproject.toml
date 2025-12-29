@@ -14,18 +14,17 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Localization",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.9,<4"
+# following the official NumPy support/deprecation schedule:
+# https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule
+requires-python = ">=3.11,<4"
 dependencies = [
-    # https://numpy.org/neps/nep-0029-deprecation_policy.html
-    "numpy<3,>=1.23; python_version >= '3.9'",
-    "h3>4",
+    "numpy>=2",
+    "h3>=4",
     "cffi<3,>=1.15.1",
     "flatbuffers>=25.2.10",
 ]
@@ -40,7 +39,7 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [dependency-groups]
 docs = [
-    "sphinx>=7,<8",
+    "sphinx>=8,<10",
     "sphinx-rtd-theme>=3,<4",
 ]
 test=[
@@ -113,7 +112,7 @@ timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.txt", "**/*.json", "**/*.c", "**
 "." = ["DATA_LICENSE"]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
 src = ["timezonefinder", "tests", "build.py"]
 
 [tool.ruff.lint.isort]
@@ -126,7 +125,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
