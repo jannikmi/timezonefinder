@@ -43,10 +43,9 @@ jobs:
           - python-version: "3.12"
             tox-env: "py312,py312-numba,py312-pytz,docs"
           - python-version: "3.13"
-            # TODO add numba as soon as it supports Python 3.13/3.14
-            tox-env: "py313,py313-pytz"
+            tox-env: "py313,py313-numba,py313-pytz"
           - python-version: "3.14"
-            tox-env: "py314,py314-pytz,slow"
+            tox-env: "py314,py314-numba,py314-pytz,slow"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:

@@ -40,8 +40,8 @@ timezonefinder = "timezonefinder.command_line:main"
 
 [dependency-groups]
 docs = [
-    "Sphinx<6,>=5",
-    "sphinx-rtd-theme<2,>=1",
+    "sphinx>=7,<8",
+    "sphinx-rtd-theme>=3,<4",
 ]
 test=[
     "tox",
@@ -64,8 +64,7 @@ data = [
     "pydantic>=2.11.7",
 ]
 numba = [
-  "numba>=0.56,<1; python_version < '3.12'",
-  "numba>=0.59,<1; python_version >= '3.12'",
+  "numba>=0.56,<1",
 ]
 pytz = [
     "pytz>=2022.7.1"
@@ -83,8 +82,7 @@ proto = [
 # Package extras
 [project.optional-dependencies]
 numba = [
-  "numba>=0.56,<1; python_version < '3.12'",
-  "numba>=0.59,<1; python_version >= '3.12'",
+  "numba>=0.56,<1",
 ]
 pytz = [
     "pytz>=2022.7.1"
