@@ -65,8 +65,11 @@ Ocean zones (`Etc/GMT+/-XX`) guarantee a timezone match for all possible input c
 
 ## Testing
 
-- **Unit Tests**: `uv run pytest -m "not integration"` for fast feedback
-- **Integration Tests**: `uv run pytest -m "integration"` or `uv run tox` for packaging/build validation
+- **Global test runs**: Use make commands (`make test`, `make testint`, `make testall`, `make speedtest`) for running full test suites
+- **Isolated unit tests**: When only specific tests are affected, run them directly via `uv run pytest tests/path/to/test_file.py::test_name` or `uv run pytest -k "test_pattern"`
+- **Unit Tests**: `make test` (or `uv run pytest -m "not integration and not slow"`) for fast feedback
+- **Integration Tests**: `make testint` (or `uv run pytest -m "integration"` or `uv run tox`) for packaging/build validation
+- **Full Test Suite**: `make testall` (runs all tests including slow tests)
 - **Performance Tests**: `make speedtest` when altering hotspots
 - Add targeted unit tests under `tests/` for every behavioural change
 - Use fixtures in `tests/auxiliaries.py` for edge coordinates and polygon holes
@@ -74,8 +77,9 @@ Ocean zones (`Etc/GMT+/-XX`) guarantee a timezone match for all possible input c
 ## Common Commands
 
 - `make install`: Install all dependencies
-- `make test`: Run unit tests (excludes integration tests)
+- `make test`: Run unit tests (excludes integration and slow tests)
 - `make testint`: Run integration tests
+- `make testall`: Run full test suite (includes slow tests)
 - `make hook`: Install and run pre-commit hooks
 - `make speedtest`: Run performance benchmarks
 - `make docs`: Build documentation

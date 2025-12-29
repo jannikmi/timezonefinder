@@ -43,6 +43,7 @@ test:
 testint:
 	@uv run pytest -m "integration"
 
+# includes slow tests
 testall:
 	@uv run pytest
 

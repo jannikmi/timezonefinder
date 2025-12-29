@@ -51,8 +51,12 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 
 ### Testing & Coverage
 
+- **Global test runs**: Use make commands (`make test`, `make testint`, `make testall`) for running full test suites
+- **Isolated unit tests**: When only specific tests are affected, run them directly via `uv run pytest tests/path/to/test_file.py::test_name` or `uv run pytest -k "test_pattern"`
 - Add targeted unit tests under `tests/` for every behavioural change. Use fixtures in `tests/auxiliaries.py` to cover edge coordinates and polygon holes.
-- Run `uv run make test` for fast feedback. Execute `uv run pytest -m "integration"` or `uv run tox` when packaging, build metadata, or binary assets change. Run `uv run pytest -m "slow"` when verifying dataset integrity or core algorithmic changes (shortcuts, geometry).
+- Run `make test` for fast feedback (excludes integration and slow tests).
+- Run integration tests via `make testint` when packaging, build metadata, or binary assets change
+- Run all tests including slow test cases via `make testall` when verifying dataset integrity or core algorithmic changes (shortcuts, geometry).
 - Maintain deterministic tests—mock filesystem/network access, and avoid relying on system timezone settings. If you alter CLI behaviour, update `tests/test_integration.py` accordingly.
 
 ### Documentation & Communication
