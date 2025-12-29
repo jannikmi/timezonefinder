@@ -25,8 +25,8 @@ force_update:
 	@uv sync --refresh
 
 outdated:
-	uv tree --outdated
-	uv pip list --outdated
+	@echo "Checking for outdated packages (excluding those constrained by dependencies)..."
+	@bash scripts/check_upgradeable.sh
 
 
 data:
