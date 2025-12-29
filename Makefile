@@ -89,6 +89,7 @@ build:
 	uv build --python cp313
 
 # in order to release a new package version, the commit needs to be tagged with the version number
+# NOTE: do not skip the "non tag" GHA run, otherwise the CICD badge shows "failing"
 release:
 	@echo "tagging the current commit with the version number: $(VERSION)"
 	git tag -a "$(shell uv version --short)" -m "Release $(VERSION)"
