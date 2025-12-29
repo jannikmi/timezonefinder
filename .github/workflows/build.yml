@@ -46,7 +46,7 @@ jobs:
             # TODO add numba as soon as it supports Python 3.13/3.14
             tox-env: "py313,py313-pytz"
           - python-version: "3.14"
-            tox-env: "py314,py314-pytz,integration"
+            tox-env: "py314,py314-pytz,slow"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:

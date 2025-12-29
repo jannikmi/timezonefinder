@@ -28,7 +28,7 @@ The primary lookup flow converts query coordinates to scaled int32 values, colle
 - Install tooling via `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime only); extras `numba` and `pytz` live in `pyproject.toml`.
 - all python commands should be run via `uv run`
 - whenever dependencies or the set of officially supported/tested Python versions change, update the lockfile with `make lock`
-- Day-to-day tests: `uv run pytest -m "not integration"`; heavy packaging checks: `uv run pytest -m "integration"` or `uv run tox`.
+- **Testing**: Use make commands (`make test`, `make testint`, `make testall`) for global test runs. When only specific isolated unit tests are affected, run them directly via `uv run pytest tests/path/to/test_file.py::test_name` or `uv run pytest -k "test_pattern"`. For full test suites: `make test` (unit tests excluding integration and slow), `make testint` (integration tests), `make testall` (all tests including slow), or `uv run tox` (all environments).
 - Format/lint: Ruff, isort, mypy, and pre-commit hooks are wired through `pyproject.toml` and the `Makefile` targets (`make hook`).
 - Docs: build with `(cd docs && make html)`; badges in `docs/badges.rst` stay in sync manually with `README.rst`.
 - Packaging: wheels/sdists use `uv build`; integration tests exercise both `setup.py` and `uv` paths, so keep them green after touching build config.

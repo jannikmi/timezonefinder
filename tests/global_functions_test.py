@@ -67,6 +67,7 @@ class TestGlobalFunctions:
         """Test global functions with their respective test cases defined in FUNC2TEST_CASES"""
         single_location_test(func, lat, lng, description, expected)
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("tz_name", all_timezone_names)
     def test_get_geometry(self, tz_name, timezonefinder_instance: TimezoneFinder):
         """Test the global get_geometry function for all timezones"""
