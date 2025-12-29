@@ -38,7 +38,7 @@ testparse:
 
 test:
 # 	@uv run pytest
-	@uv run pytest -m "not integration and not fast"
+	@uv run pytest -m "not integration and not slow"
 
 testint:
 	@uv run pytest -m "integration"
