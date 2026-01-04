@@ -1,0 +1,13 @@
+{
+  "holes_with_exactly_one_match": 560,
+  "holes_with_matches": 560,
+  "holes_with_multiple_matches": 0,
+  "holes_without_matches": 19,
+  "summary_stats": {
+    "all_different_zones": true,
+    "all_have_matches": false,
+    "hypothesis_confirmed": false
+  },
+  "total_holes": 579,
+  "zone_mismatch_count": 560
+}
