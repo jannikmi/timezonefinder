@@ -2,9 +2,10 @@
 Changelog
 =========
 
-TBA (Unreleased)
-----------------
+8.2.1 (2026-01-10)
+------------------
 
+* updated the data to `2025c <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2025c>`__
 * require ``numpy >=2`` following the official `NumPy Deprecation Policy <https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule>`__
 * dropped official support for Python 3.9 and 3.10, due to NumPy dropping support for these versions.
 
