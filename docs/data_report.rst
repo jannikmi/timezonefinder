@@ -18,7 +18,7 @@ Data Statistics
    * - General Metric
      - Value
    * - Total coordinate values (2 per point)
-     - 15,769,132
+     - 15,999,970
 
 
 
@@ -35,13 +35,13 @@ Boundary Polygon Statistics
    * - Total boundary polygons
      - 1,319
    * - Total boundary coordinates
-     - 7,626,105
+     - 7,736,868
    * - Total boundary coordinate values (2 per point)
-     - 15,252,210
+     - 15,473,736
    * - Average coordinates per boundary polygon
-     - 5,781.73
+     - 5,865.71
    * - Maximum coordinates in one boundary polygon
-     - 167,969
+     - 177,928
    * - Minimum coordinates in one boundary polygon
      - 3
 
@@ -58,23 +58,23 @@ Hole Polygon Statistics
    * - Hole Metric
      - Value
    * - Total hole polygons
-     - 753
+     - 781
    * - Total hole coordinates
-     - 258,461
+     - 263,117
    * - Total hole coordinate values (2 per point)
-     - 516,922
+     - 526,234
    * - Average coordinates per hole polygon
-     - 343.24
+     - 336.9
    * - Maximum coordinates in one hole polygon
-     - 23,862
+     - 23,949
    * - Minimum coordinates in one hole polygon
      - 3
    * - Number of boundary polygons with holes
-     - 95
+     - 96
    * - Percentage of boundary polygons with holes
-     - 7.2%
+     - 7.28%
    * - Average holes per boundary polygon (with holes)
-     - 7.93
+     - 8.14
 
 
 
@@ -114,57 +114,61 @@ Polygons per Timezone Distribution
      - Percentage
      - Example Timezone
    * - 1 polygon
-     - 280
-     - 63.06%
+     - 282
+     - 63.51%
      - Africa/Abidjan
    * - 2 polygons
-     - 45
-     - 10.14%
+     - 43
+     - 9.68%
      - Africa/Cairo
    * - 3 polygons
-     - 30
-     - 6.76%
+     - 29
+     - 6.53%
      - Africa/Blantyre
    * - 4 polygons
-     - 21
-     - 4.73%
+     - 22
+     - 4.95%
      - America/Anchorage
    * - 5 polygons
-     - 13
-     - 2.93%
+     - 12
+     - 2.7%
      - America/Merida
    * - 6 polygons
-     - 7
-     - 1.58%
-     - America/Asuncion
+     - 9
+     - 2.03%
+     - Africa/Ceuta
    * - 7 polygons
-     - 7
-     - 1.58%
+     - 6
+     - 1.35%
      - America/Adak
    * - 8 polygons
-     - 14
-     - 3.15%
+     - 15
+     - 3.38%
      - America/Caracas
    * - 9 polygons
      - 4
      - 0.9%
      - America/Bogota
    * - 10 polygons
-     - 7
-     - 1.58%
-     - Africa/Ceuta
+     - 6
+     - 1.35%
+     - Europe/Moscow
    * - 11 polygons
      - 2
      - 0.45%
      - Atlantic/South_Georgia
    * - 12 polygons
+     - 1
+     - 0.23%
+     - Pacific/Honolulu
+   * - 13 polygons
+     - 1
+     - 0.23%
+     - America/Costa_Rica
+   * - 14 polygons
      - 2
      - 0.45%
      - Asia/Shanghai
-   * - 13 polygons
-     - 2
-     - 0.45%
-     - America/Costa_Rica
    * - 18 polygons
      - 1
      - 0.23%
@@ -224,13 +228,13 @@ Shortcut Index Overview
    * - Total shortcut entries
      - 41,162
    * - Zone entries (direct lookup)
-     - 30,681
+     - 30,682
    * - Polygon entries (require testing)
-     - 10,481
+     - 10,480
    * - Empty entries
      - 0
    * - Total polygon references
-     - 23,307
+     - 23,305
    * -
      -
    * - H3 cells stored
@@ -278,12 +282,12 @@ Shortcut Entry Distributions
      - Accumulated
      - Remaining
    * - 0
-     - 30681
+     - 30682
      - 74.54%
      - 74.54%
      - 25.46%
    * - 2
-     - 8764
+     - 8762
      - 21.29%
      - 95.83%
      - 4.17%
@@ -293,22 +297,22 @@ Shortcut Entry Distributions
      - 99.23%
      - 0.77%
    * - 4
-     - 233
+     - 235
      - 0.57%
      - 99.8%
      - 0.2%
    * - 5
-     - 43
-     - 0.1%
-     - 99.9%
-     - 0.1%
+     - 44
+     - 0.11%
+     - 99.91%
+     - 0.09%
    * - 6
-     - 15
-     - 0.04%
+     - 14
+     - 0.03%
      - 99.94%
      - 0.06%
    * - 7
-     - 9
+     - 7
      - 0.02%
      - 99.96%
      - 0.04%
@@ -318,7 +322,7 @@ Shortcut Entry Distributions
      - 99.97%
      - 0.03%
    * - 9
-     - 4
+     - 5
      - 0.01%
      - 99.98%
      - 0.02%
@@ -369,18 +373,18 @@ Shortcut Entry Distributions
      - Accumulated
      - Remaining
    * - 1
-     - 30681
+     - 30682
      - 74.54%
      - 74.54%
      - 25.46%
    * - 2
-     - 9016
-     - 21.9%
-     - 96.44%
-     - 3.56%
+     - 9017
+     - 21.91%
+     - 96.45%
+     - 3.55%
    * - 3
-     - 1288
-     - 3.13%
+     - 1286
+     - 3.12%
      - 99.57%
      - 0.43%
    * - 4
@@ -423,14 +427,14 @@ Binary File Sizes
      - Size (MB)
      - Percentage
    * - boundary polygon data
-     - 58.20
-     - 94.36%
+     - 59.05
+     - 94.38%
    * - hole polygon data
-     - 1.98
-     - 3.22%
+     - 2.02
+     - 3.23%
    * - hybrid shortcut index
      - 1.49
-     - 2.42%
+     - 2.39%
    * - Total
-     - 61.68
+     - 62.56
      - 100.00%
