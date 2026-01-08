@@ -6,6 +6,7 @@ This script benchmarks the performance of different timezone finding functions.
 Can be run as a standalone script to generate RST reports or for pytest execution.
 """
 
+import warnings
 from pathlib import Path
 from typing import List, Tuple, Callable, Iterable
 
@@ -18,6 +19,7 @@ from scripts.benchmark_utils import (
 )
 from scripts.configs import DOC_ROOT, PERFORMANCE_REPORT_FILE, DEBUG
 from tests.auxiliaries import get_rnd_query_pt, timefunc
+from tests.locations import TEST_LOCATIONS_AT_LAND
 from timezonefinder import (
     TimezoneFinder,
     TimezoneFinderL,
@@ -30,9 +32,22 @@ from timezonefinder import (
 N = 10 if DEBUG else int(1e4)
 tf_instance = TimezoneFinder()
 
+# Known land points from test fixtures (lat, lng, description, expected)
+_KNOWN_LAND_POINTS: List[Tuple[float, float]] = [
+    (lng, lat)
+    for lat, lng, _description, expected in TEST_LOCATIONS_AT_LAND
+    if expected is not None
+]
+
 
 def get_on_land_pts(length: int):
     # create an array of points where timezone_finder finds something (on_land queries)
+    if DEBUG:
+        warnings.warn(
+            "DEBUG mode: Dataset lacks land coverage - using test fixture locations"
+        )
+        return _KNOWN_LAND_POINTS[: min(length, len(_KNOWN_LAND_POINTS))]
+
     print(f"collecting and storing {N:,} on land points for the tests...")
     on_land_points = []
     ps_for_10percent = int(N / 10)
