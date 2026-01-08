@@ -8,7 +8,7 @@ and modes. Can be run as a standalone script to generate RST reports or for pyte
 
 import timeit
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import pytest
 
@@ -31,8 +31,15 @@ def format_speedup_analysis(
     return f"**{faster_name}** is {relative_improvement:.0%} faster ({faster_time:.1f} ms vs {slower_time:.1f} ms)"
 
 
-def run_initialization_benchmark(n_runs: int = N) -> Dict[str, Any]:
-    """Run initialization benchmark and return results for RST formatting."""
+def run_initialization_benchmark(
+    n_runs: int = N, data_path: Optional[Path] = None
+) -> Dict[str, Any]:
+    """Run initialization benchmark and return results for RST formatting.
+
+    Args:
+        n_runs: Number of initialization runs per configuration
+        data_path: Optional path to data directory. If None, uses default package data.
+    """
     print(f"Running {n_runs} initialization benchmarks...")
 
     results = []
@@ -50,7 +57,7 @@ def run_initialization_benchmark(n_runs: int = N) -> Dict[str, Any]:
         config_name = f"{class_name} ({mode_desc})"
 
         def initialise_instance():
-            class_under_test(in_memory=in_memory_mode)
+            class_under_test(bin_file_location=data_path, in_memory=in_memory_mode)
 
         # Run benchmark
         t = timeit.timeit(
@@ -68,11 +75,19 @@ def run_initialization_benchmark(n_runs: int = N) -> Dict[str, Any]:
     return {"n_runs": n_runs, "results": results}
 
 
-def write_initialization_report(output_path: Path, n_runs: int = N) -> None:
-    """Write a comprehensive initialization benchmark report in RST format."""
+def write_initialization_report(
+    output_path: Path, n_runs: int = N, data_path: Optional[Path] = None
+) -> None:
+    """Write a comprehensive initialization benchmark report in RST format.
+
+    Args:
+        output_path: Path where the RST report will be written
+        n_runs: Number of initialization runs per configuration
+        data_path: Optional path to data directory. If None, uses default package data.
+    """
     print(f"Generating initialization benchmark report at {output_path}...")
 
-    benchmark_data = run_initialization_benchmark(n_runs)
+    benchmark_data = run_initialization_benchmark(n_runs, data_path)
 
     reporter = BenchmarkReporter(
         title="TimezoneFinder Initialization Performance Benchmark",

@@ -12,9 +12,14 @@ from typing import Callable, Dict, List, Union
 
 import numpy as np
 
-from scripts.configs import DATA_REPORT_FILE
+from scripts.configs import (
+    DATA_REPORT_FILE,
+    ZONE_ID_DTYPE_CHOICES,
+    ZONE_ID_DTYPE_NAME,
+    resolve_zone_id_dtype,
+)
 from scripts.utils import percent
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import DEFAULT_DATA_DIR, DEFAULT_ZONE_ID_DTYPE
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
@@ -737,7 +742,7 @@ def report_data_statistics(
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
+def report_file_sizes(output_path: Path, zone_id_dtype: np.dtype) -> None:
     """
     Reports the sizes of the biggest generated binary files.
 
@@ -753,17 +758,6 @@ def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
 
     boundary_polygon_file = get_coordinate_path(boundaries_dir)
     hole_polygon_file = get_coordinate_path(holes_dir)
-
-    # Get hybrid shortcut file path - if zone_id_dtype not provided, try to infer it
-    if zone_id_dtype is None:
-        from timezonefinder.np_binary_helpers import (
-            get_zone_ids_path,
-            read_per_polygon_vector,
-        )
-
-        zone_ids_path = get_zone_ids_path(output_path)
-        zone_ids_temp = read_per_polygon_vector(zone_ids_path)
-        zone_id_dtype = zone_ids_temp.dtype
 
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
@@ -791,7 +785,9 @@ def report_file_sizes(output_path: Path, zone_id_dtype=None) -> None:
     print_rst_table(headers, rows)
 
 
-def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
+def write_data_report_from_binary(
+    data_path: Path = DEFAULT_DATA_DIR, zone_id_dtype: np.dtype = DEFAULT_ZONE_ID_DTYPE
+) -> None:
     """
     Writes a complete data report to the report file by loading data from binary files.
 
@@ -815,16 +811,6 @@ def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
         data["all_tz_names"],
     )
     print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
-    # Derive zone_id_dtype from the zone IDs data
-    zone_ids_array = np.array(data["poly_zone_ids"])
-    # Convert int64 to appropriate dtype based on range
-    if zone_ids_array.max() < 256:
-        zone_id_dtype = np.dtype(np.uint8)
-    elif zone_ids_array.max() < 65536:
-        zone_id_dtype = np.dtype(np.uint16)
-    else:
-        raise ValueError(f"Zone ID range too large: {zone_ids_array.max()}")
-
     report_file_sizes(data["output_path"], zone_id_dtype)
 
 
@@ -855,6 +841,12 @@ Examples:
         default=DEFAULT_DATA_DIR,
         help=f"Path to directory containing binary data files (default: {DEFAULT_DATA_DIR})",
     )
+    parser.add_argument(
+        "--zone-id-dtype",
+        choices=ZONE_ID_DTYPE_CHOICES,
+        default=ZONE_ID_DTYPE_NAME,
+        help="Zone ID dtype to use when reporting file sizes",
+    )
 
     args = parser.parse_args()
 
@@ -868,8 +860,9 @@ Examples:
         return 1
 
     try:
+        zone_id_dtype = resolve_zone_id_dtype(args.zone_id_dtype)
         print(f"Generating data report from: {args.data_path}")
-        write_data_report_from_binary(args.data_path)
+        write_data_report_from_binary(args.data_path, zone_id_dtype=zone_id_dtype)
         print(f"Data report successfully generated at: {DATA_REPORT_FILE}")
         return 0
     except Exception as e:
