@@ -50,6 +50,8 @@ from scripts.configs import (
     DEFAULT_INPUT_PATH,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
+    INITIALIZATION_REPORT_FILE,
+    POLYGON_REPORT_FILE,
     ZONE_ID_DTYPE,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
@@ -260,10 +262,10 @@ def parse_data(
     write_performance_report()
 
     print("Generating point-in-polygon benchmark report...")
-    write_polygon_report()
+    write_polygon_report(POLYGON_REPORT_FILE)
 
     print("Generating initialization benchmark report...")
-    write_initialization_report()
+    write_initialization_report(INITIALIZATION_REPORT_FILE)
 
 
 if __name__ == "__main__":
