@@ -46,7 +46,7 @@ DIST_TYPES = [SDIST_TYPE, WHEEL_TYPE]
 # no files matching these patterns should be included in the distribution
 UNWANTED_DIST_PATTERNS = {
     ".github",
-    ".git",
+    ".git/*",
     ".vscode/",
     "build/",
     "examples/",

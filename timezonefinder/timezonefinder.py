@@ -271,7 +271,9 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     """
 
     def __init__(
-        self, bin_file_location: Optional[str] = None, in_memory: bool = False
+        self,
+        bin_file_location: Optional[Union[str, Path]] = None,
+        in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
 
@@ -330,7 +332,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
     ]
 
     def __init__(
-        self, bin_file_location: Optional[str] = None, in_memory: bool = False
+        self,
+        bin_file_location: Optional[Union[str, Path]] = None,
+        in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
         self.holes_dir = utils.get_holes_dir(self.data_location)

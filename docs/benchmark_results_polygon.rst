@@ -16,9 +16,9 @@ Python Environment
 ~~~~~~~~~~~~~~~~~~
 
 
-**Python Version**: 3.12.1 (CPython)
+**Python Version**: 3.14.2 (CPython)
 
-**NumPy Version**: 2.2.6
+**NumPy Version**: 2.3.5
 
 **Platform**: Darwin arm64
 
@@ -87,11 +87,11 @@ Performance Results
      - Average Time (s)
      - Throughput (queries/sec)
    * - pt_in_poly_clang
-     - 7.7e-06
-     - 1.3e+05
+     - 6.0e-06
+     - 1.7e+05
    * - pt_in_poly_python
-     - 2.6e-06
-     - 3.9e+05
+     - 2.0e-06
+     - 4.9e+05
 
 
 
