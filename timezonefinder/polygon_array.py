@@ -9,6 +9,7 @@ from timezonefinder import utils
 from timezonefinder.coord_accessors import AbstractCoordAccessor, create_coord_accessor
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
+    get_coordinate_path_compressed,
 )
 from timezonefinder.np_binary_helpers import (
     get_xmax_path,
@@ -50,7 +51,9 @@ class PolygonArray:
         self.ymin = read_per_polygon_vector(ymin_path)
         self.ymax = read_per_polygon_vector(ymax_path)
 
-        coordinate_file_path = get_coordinate_path(self.data_location)
+        # Try to use compressed coordinate file if available, otherwise fall back to uncompressed
+        compressed_path = get_coordinate_path_compressed(self.data_location)
+        coordinate_file_path = compressed_path if compressed_path.exists() else get_coordinate_path(self.data_location)
         # Initialize the appropriate coordinate accessor based on memory mode
         self.coordinates = create_coord_accessor(coordinate_file_path, self.in_memory)
 

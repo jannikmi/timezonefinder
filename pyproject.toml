@@ -27,6 +27,7 @@ dependencies = [
     "h3>=4",
     "cffi<3,>=1.15.1",
     "flatbuffers>=25.2.10",
+    "zstandard>=0.20.0",
 ]
 
 [project.urls]
