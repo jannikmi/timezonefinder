@@ -8,6 +8,10 @@ import flatbuffers
 import numpy as np
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.flatbuf.io.compression import (
+    compress_file,
+    decompress_bytes,
+)
 
 # Static imports for uint8 schema
 from timezonefinder.flatbuf.generated.shortcuts_uint8.HybridShortcutCollection import (
@@ -150,6 +154,7 @@ def write_hybrid_shortcuts_flatbuffers(
     hybrid_mapping: Dict[int, Union[int, List[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
+    compress: bool = True,
 ) -> None:
     """
     Write hybrid shortcut mapping to the appropriate optimized FlatBuffer binary file.
@@ -160,17 +165,19 @@ def write_hybrid_shortcuts_flatbuffers(
                        - List[int]: list of polygon IDs (when multiple zones)
         zone_id_dtype: numpy dtype for zone IDs (uint8 or uint16)
         output_file: Path to save the FlatBuffer file
+        compress: Whether to compress the output file using zstandard (default True)
     """
     print(f"Writing {len(hybrid_mapping)} optimized hybrid shortcuts to {output_file}")
 
     dtype = _validate_zone_id_dtype(zone_id_dtype)
-    _write_hybrid_shortcuts_generic(hybrid_mapping, dtype, output_file)
+    _write_hybrid_shortcuts_generic(hybrid_mapping, dtype, output_file, compress)
 
 
 def _write_hybrid_shortcuts_generic(
     hybrid_mapping: Dict[int, Union[int, List[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
+    compress: bool = True,
 ) -> None:
     """Write hybrid shortcuts using the appropriate schema based on dtype."""
     if zone_id_dtype.itemsize == 1:
@@ -291,6 +298,13 @@ def _write_hybrid_shortcuts_with_schema(
     with open(output_file, "wb") as f:
         f.write(builder.Output())
 
+    # Compress if requested
+    if compress:
+        compressed_path = Path(str(output_file) + ".zst")
+        compress_file(output_file, compressed_path)
+        print(f"Compressed {output_file} to {compressed_path}")
+        # Keep original uncompressed file for backwards compatibility
+
 
 def read_hybrid_shortcuts_binary(
     file_path: Path,
@@ -299,6 +313,7 @@ def read_hybrid_shortcuts_binary(
     Read hybrid shortcut mapping from an optimized FlatBuffer binary file.
 
     Auto-detects whether the file uses uint8 or uint16 schema based on filename.
+    Handles both compressed (.zst) and uncompressed files transparently.
 
     Args:
         file_path: Path to the hybrid shortcut FlatBuffer file
@@ -308,15 +323,29 @@ def read_hybrid_shortcuts_binary(
         - int: unique zone ID (when all polygons share same zone)
         - np.ndarray: array of polygon IDs (when multiple zones)
     """
+    # Try to load compressed version first if it exists
+    compressed_path = Path(str(file_path) + ".zst")
+    if compressed_path.exists():
+        with open(compressed_path, "rb") as f:
+            buf = f.read()
+        # Decompress the data
+        buf = decompress_bytes(buf)
+    else:
+        # Fall back to uncompressed file
+        with open(file_path, "rb") as f:
+            buf = f.read()
+
     # Determine schema type from filename and select appropriate imports
-    if "uint8" in file_path.name:
+    # Remove .zst extension if present when checking filename
+    base_filename = file_path.name.replace(".zst", "")
+    if "uint8" in base_filename:
         schema = ReadSchemaImports(
             collection=HybridShortcutCollectionUint8,
             unique_zone=UniqueZoneUint8,
             polygon_list=PolygonListUint8,
             shortcut_value=ShortcutValueUint8,
         )
-    elif "uint16" in file_path.name:
+    elif "uint16" in base_filename:
         schema = ReadSchemaImports(
             collection=HybridShortcutCollectionUint16,
             unique_zone=UniqueZoneUint16,
@@ -325,19 +354,26 @@ def read_hybrid_shortcuts_binary(
         )
     else:
         raise ValueError(
-            f"Cannot determine schema from filename: {file_path.name}. "
+            f"Cannot determine schema from filename: {base_filename}. "
             "Filename must include 'uint8' or 'uint16'."
         )
 
-    return _read_hybrid_shortcuts_with_schema(file_path, schema)
+    return _read_hybrid_shortcuts_with_schema(buf, schema)
 
 
 def _read_hybrid_shortcuts_with_schema(
-    file_path: Path, schema: ReadSchemaImports
+    buf: Union[bytes, Path], schema: ReadSchemaImports
 ) -> Dict[int, Union[int, np.ndarray]]:
-    """Read hybrid shortcuts using the provided schema imports."""
-    with open(file_path, "rb") as f:
-        buf = f.read()
+    """Read hybrid shortcuts using the provided schema imports.
+
+    Args:
+        buf: Binary data or path to the file
+        schema: ReadSchemaImports with the appropriate schema for the data
+    """
+    # Handle both bytes and Path for backwards compatibility
+    if isinstance(buf, Path):
+        with open(buf, "rb") as f:
+            buf = f.read()
 
     # mypy: GetRootAs is a class method on FlatBuffers classes
     collection = schema.collection.GetRootAs(buf, 0)  # type: ignore
