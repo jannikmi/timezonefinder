@@ -126,7 +126,7 @@ jobs:
           ignore-empty-workdir: true
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
 
       - name: Copy artifacts to dist/ folder
         run: |
@@ -172,7 +172,7 @@ jobs:
         run: echo "version_nr=$(uv version --short)" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
 
       - name: Copy artifacts to dist/ folder
         run: |
@@ -231,7 +231,7 @@ jobs:
         run: echo "version_nr=$(uv version --short)" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
 
       - name: Copy artifacts to dist/ folder
         run: |
