@@ -72,8 +72,8 @@ if ! uv run tox; then
     exit 1
 fi
 
-# minor version bump
-uv run --bump minor
+# patch version bump
+uv version --bump patch
 
 # TODO
  read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
