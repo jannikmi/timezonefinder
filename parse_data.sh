@@ -59,7 +59,11 @@ fi
 echo "START PARSING..."
 SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
-uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"
+# ensure Python can import the local 'scripts' package
+if ! PYTHONPATH=. uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"; then
+    echo "file_converter.py failed!"
+    exit 1
+fi
 
 echo "runnings tests..."
 if ! uv run tox; then
