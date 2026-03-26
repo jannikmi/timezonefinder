@@ -18,7 +18,7 @@ Data Statistics
    * - General Metric
      - Value
    * - Total coordinate values (2 per point)
-     - 15,999,970
+     - 16,044,980
 
 
 
@@ -33,15 +33,15 @@ Boundary Polygon Statistics
    * - Boundary Metric
      - Value
    * - Total boundary polygons
-     - 1,319
+     - 1,323
    * - Total boundary coordinates
-     - 7,736,868
+     - 7,759,496
    * - Total boundary coordinate values (2 per point)
-     - 15,473,736
+     - 15,518,992
    * - Average coordinates per boundary polygon
-     - 5,865.71
+     - 5,865.08
    * - Maximum coordinates in one boundary polygon
-     - 177,928
+     - 179,597
    * - Minimum coordinates in one boundary polygon
      - 3
 
@@ -58,23 +58,23 @@ Hole Polygon Statistics
    * - Hole Metric
      - Value
    * - Total hole polygons
-     - 781
+     - 755
    * - Total hole coordinates
-     - 263,117
+     - 262,994
    * - Total hole coordinate values (2 per point)
-     - 526,234
+     - 525,988
    * - Average coordinates per hole polygon
-     - 336.9
+     - 348.34
    * - Maximum coordinates in one hole polygon
-     - 23,949
+     - 23,954
    * - Minimum coordinates in one hole polygon
      - 3
    * - Number of boundary polygons with holes
-     - 96
+     - 95
    * - Percentage of boundary polygons with holes
-     - 7.28%
+     - 7.18%
    * - Average holes per boundary polygon (with holes)
-     - 8.14
+     - 7.95
 
 
 
@@ -91,7 +91,7 @@ Timezone Statistics
    * - Total timezones
      - 444
    * - Average boundary polygons per timezone
-     - 2.97
+     - 2.98
    * - Maximum polygons in one timezone
      - 96
    * - Minimum polygons in one timezone
@@ -114,20 +114,20 @@ Polygons per Timezone Distribution
      - Percentage
      - Example Timezone
    * - 1 polygon
-     - 282
-     - 63.51%
+     - 281
+     - 63.29%
      - Africa/Abidjan
    * - 2 polygons
      - 43
      - 9.68%
      - Africa/Cairo
    * - 3 polygons
-     - 29
-     - 6.53%
+     - 28
+     - 6.31%
      - Africa/Blantyre
    * - 4 polygons
-     - 22
-     - 4.95%
+     - 24
+     - 5.41%
      - America/Anchorage
    * - 5 polygons
      - 12
@@ -162,14 +162,14 @@ Polygons per Timezone Distribution
      - 0.23%
      - Pacific/Honolulu
    * - 13 polygons
-     - 1
-     - 0.23%
-     - America/Costa_Rica
-   * - 14 polygons
      - 2
      - 0.45%
+     - America/Costa_Rica
+   * - 14 polygons
+     - 1
+     - 0.23%
      - Asia/Shanghai
-   * - 18 polygons
+   * - 19 polygons
      - 1
      - 0.23%
      - Etc/GMT-2
@@ -234,7 +234,7 @@ Shortcut Index Overview
    * - Empty entries
      - 0
    * - Total polygon references
-     - 23,305
+     - 23,310
    * -
      -
    * - H3 cells stored
@@ -287,17 +287,17 @@ Shortcut Entry Distributions
      - 74.54%
      - 25.46%
    * - 2
-     - 8762
-     - 21.29%
-     - 95.83%
-     - 4.17%
+     - 8760
+     - 21.28%
+     - 95.82%
+     - 4.18%
    * - 3
-     - 1401
-     - 3.4%
+     - 1403
+     - 3.41%
      - 99.23%
      - 0.77%
    * - 4
-     - 235
+     - 234
      - 0.57%
      - 99.8%
      - 0.2%
@@ -312,7 +312,7 @@ Shortcut Entry Distributions
      - 99.94%
      - 0.06%
    * - 7
-     - 7
+     - 8
      - 0.02%
      - 99.96%
      - 0.04%
@@ -427,14 +427,14 @@ Binary File Sizes
      - Size (MB)
      - Percentage
    * - boundary polygon data
-     - 59.05
-     - 94.38%
+     - 59.22
+     - 94.40%
    * - hole polygon data
      - 2.02
-     - 3.23%
+     - 3.22%
    * - hybrid shortcut index
      - 1.49
-     - 2.39%
+     - 2.38%
    * - Total
-     - 62.56
+     - 62.73
      - 100.00%

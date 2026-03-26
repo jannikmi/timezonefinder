@@ -71,16 +71,16 @@ Initialization Performance Results
      - Average Time (ms)
      - Average Time (s)
    * - TimezoneFinder (File-Based)
-     - 214.3
-     - 0.214
+     - 216.3
+     - 0.216
    * - TimezoneFinder (In-Memory)
-     - 224.2
-     - 0.224
+     - 218.9
+     - 0.219
    * - TimezoneFinderL (File-Based)
-     - 209.6
-     - 0.210
+     - 207.5
+     - 0.208
    * - TimezoneFinderL (In-Memory)
-     - 208.2
+     - 208.1
      - 0.208
 
 
@@ -90,14 +90,14 @@ Performance Analysis
 --------------------
 
 
-* **Fastest configuration**: TimezoneFinderL (In-Memory) (208.2 ms)
+* **Fastest configuration**: TimezoneFinderL (File-Based) (207.5 ms)
 
-* **Slowest configuration**: TimezoneFinder (In-Memory) (224.2 ms)
+* **Slowest configuration**: TimezoneFinder (In-Memory) (218.9 ms)
 
-* **Performance difference**: 7% faster
+* **Performance difference**: 5% faster
 
 
-* **File-based mode** is 2% faster (211.9 ms vs 216.2 ms)
+* **File-based mode** is 1% faster (211.9 ms vs 213.5 ms)
 
 .. note::
 
