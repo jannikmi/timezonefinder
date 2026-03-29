@@ -87,11 +87,11 @@ Performance Results
      - Average Time (s)
      - Throughput (queries/sec)
    * - pt_in_poly_clang
-     - 6.0e-06
-     - 1.7e+05
+     - 6.6e-06
+     - 1.5e+05
    * - pt_in_poly_python
-     - 2.0e-06
-     - 4.9e+05
+     - 2.1e-06
+     - 4.8e+05
 
 
 
@@ -100,7 +100,7 @@ Performance Summary
 -------------------
 
 
-Python implementation WITH Numba is 2.0x faster than the C implementation
+Python implementation WITH Numba is 2.2x faster than the C implementation
 
 .. note::
 

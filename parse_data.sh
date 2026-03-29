@@ -59,7 +59,11 @@ fi
 echo "START PARSING..."
 SCRIPT_PATH=./scripts/file_converter.py
 echo "calling $SCRIPT_PATH:"
-uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"
+# ensure Python can import the local 'scripts' package
+if ! PYTHONPATH=. uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"; then
+    echo "file_converter.py failed!"
+    exit 1
+fi
 
 echo "runnings tests..."
 if ! uv run tox; then
@@ -68,8 +72,8 @@ if ! uv run tox; then
     exit 1
 fi
 
-# minor version bump
-uv run --bump minor
+# patch version bump
+uv version --bump patch
 
 # TODO
  read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
