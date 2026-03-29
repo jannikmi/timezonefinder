@@ -1,12 +1,18 @@
 name: build
 
+# Triggers:
+# - push to master, version tags, or publishing a GitHub Release (fallback if a tag push did not start a run).
+# GitHub limits: tag push webhooks are not emitted when more than three tags are pushed in one operation.
+# Tag push runs use the workflow file as it exists in the commit the tag points to (the workflow must exist there).
 on:
   pull_request:
   push:
     branches:
       - master
     tags:
-      - '*'
+      - '**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
