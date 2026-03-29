@@ -98,17 +98,24 @@ build:
 
 # in order to release a new package version, the commit needs to be tagged with the version number
 # NOTE: do not skip the "non tag" GHA run, otherwise the CICD badge shows "failing"
+# Push the release commit to origin before tagging; GitHub Actions uses the workflow file at the tagged SHA.
+VERSION := $$(uv version --short)
+
 release:
+	@if [ "$$(git branch --show-current)" != "master" ]; then \
+		echo "Error: releases can only be tagged from the master branch. Current branch: $$(git branch --show-current)"; \
+		exit 1; \
+	fi
 	@echo "tagging the current commit with the version number: $(VERSION)"
-	git tag -a "$(shell uv version --short)" -m "Release $(VERSION)"
-	@echo "pushing the changes to the remote repository"
-	git push origin "$(shell uv version --short)"
+	@git tag -a "$(VERSION)" -m "Release $(VERSION)"
+	@echo "pushing the tag to the remote repository"
+	@git push origin "$(VERSION)"
 
 rmtag:
 	@echo "removing the tag: $(VERSION)"
-	git tag -d "$(shell uv version --short)"
-	@echo "pushing the changes to the remote repository"
-	git push origin --delete "$(shell uv version --short)"
+	@git tag -d "$(VERSION)"
+	@echo "pushing the tag deletion to the remote repository"
+	@git push origin --delete "$(VERSION)"
 
 # documentation generation:
 # https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html

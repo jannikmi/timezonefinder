@@ -1,12 +1,18 @@
 name: build
 
+# Triggers:
+# - push to master, version tags, or publishing a GitHub Release (fallback if a tag push did not start a run).
+# GitHub limits: tag push webhooks are not emitted when more than three tags are pushed in one operation.
+# Tag push runs use the workflow file as it exists in the commit the tag points to (the workflow must exist there).
 on:
   pull_request:
   push:
     branches:
       - master
     tags:
-      - '*'
+      - '**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -150,6 +156,8 @@ jobs:
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
     needs: [test, make-wheels, make-sdist, end-to-end-test, pre-commit-hooks]
+    # Run on pushes to master or tag pushes to create releases.
+    # The verification step below ensures tags are only released if on master.
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     permissions:
         id-token: write
@@ -157,6 +165,20 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
+        # Fetch full history to check remote branches for verification.
+        with:
+          fetch-depth: 0
+
+      # Verify that the commit is on the master branch to prevent releases from other branches.
+      # This is crucial because tags can be pushed from any branch, but releases should only occur from master.
+      - name: Verify commit is on master branch
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            if ! git branch -r --contains HEAD | grep -q origin/master; then
+              echo "Tag is not on master branch. Aborting release."
+              exit 1
+            fi
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
