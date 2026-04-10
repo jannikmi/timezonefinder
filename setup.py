@@ -23,5 +23,5 @@ class fallible_build_ext(build_ext):
 setup(
     cffi_modules=["timezonefinder/build.py:ffibuilder"],
     cmdclass={"build_ext": fallible_build_ext},
-    options={"bdist_wheel": {"py_limited_api": "cp39"} if _abi3 else {}},
+    options={"bdist_wheel": {"py_limited_api": "cp311"} if _abi3 else {}},
 )
