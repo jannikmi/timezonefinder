@@ -8,7 +8,6 @@ https://github.com/libmbd/libmbd/blob/master/build.py
 
 import pathlib
 import re
-from typing import Optional
 import warnings
 
 import cffi
@@ -20,7 +19,7 @@ EXTENSION_PATH = pathlib.Path("timezonefinder") / "inside_poly_extension"
 h_file_path = EXTENSION_PATH / H_FILE_NAME
 c_file_path = EXTENSION_PATH / C_FILE_NAME
 
-ffibuilder: Optional[cffi.FFI] = None
+ffibuilder: cffi.FFI | None = None
 try:
     ffibuilder = cffi.FFI()
 except Exception as exc:

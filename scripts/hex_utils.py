@@ -3,7 +3,7 @@ Hex-related utility functions that don't depend on classes.
 """
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -104,9 +104,9 @@ class Hex:
     surr_n_pole: bool
     surr_s_pole: bool
     data: "TimezoneData"
-    _poly_candidates: Optional[PolyIdSet] = None
-    _polys_in_cell: Optional[PolyIdSet] = None
-    _zones_in_cell: Optional[ZoneIdSet] = None
+    _poly_candidates: PolyIdSet | None = None
+    _polys_in_cell: PolyIdSet | None = None
+    _zones_in_cell: ZoneIdSet | None = None
 
     @classmethod
     def from_id(cls, id: int, data: "TimezoneData"):

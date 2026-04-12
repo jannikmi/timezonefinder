@@ -8,7 +8,7 @@ and modes. Can be run as a standalone script to generate RST reports or for pyte
 
 import timeit
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -32,7 +32,7 @@ def format_speedup_analysis(
 
 
 def run_initialization_benchmark(
-    n_runs: int = N, data_path: Optional[Path] = None
+    n_runs: int = N, data_path: Path | None = None
 ) -> dict[str, Any]:
     """Run initialization benchmark and return results for RST formatting.
 
@@ -76,7 +76,7 @@ def run_initialization_benchmark(
 
 
 def write_initialization_report(
-    output_path: Path, n_runs: int = N, data_path: Optional[Path] = None
+    output_path: Path, n_runs: int = N, data_path: Path | None = None
 ) -> None:
     """Write a comprehensive initialization benchmark report in RST format.
 

@@ -1,10 +1,10 @@
-from typing import Final, Optional
+from typing import Final
 
 import cffi
 
 import numpy as np
 
-ffi: Optional[cffi.FFI] = None
+ffi: cffi.FFI | None = None
 try:
     # Note: IDE might complain as this import comes from a cffi C extension
     from timezonefinder import inside_polygon_ext  # type: ignore

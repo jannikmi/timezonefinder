@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -128,8 +128,8 @@ class PolygonCollection(BaseModel):
 
     polygons: PolygonList
     lengths: LengthList
-    original_polygons: Optional[list[np.ndarray]] = None
-    _boundaries: Optional[list[Boundaries]] = PrivateAttr(default=None)
+    original_polygons: list[np.ndarray] | None = None
+    _boundaries: list[Boundaries] | None = PrivateAttr(default=None)
     _vertex_hex_cache: dict[int, dict[int, set[int]]] = PrivateAttr(
         default_factory=dict
     )
@@ -187,8 +187,8 @@ class HoleCollection(BaseModel):
     holes: PolygonList
     lengths: HoleLengthList
     polynrs_of_holes: PolynrHolesList
-    _boundaries: Optional[list[Boundaries]] = PrivateAttr(default=None)
-    _registry: Optional[HoleRegistry] = PrivateAttr(default=None)
+    _boundaries: list[Boundaries] | None = PrivateAttr(default=None)
+    _registry: HoleRegistry | None = PrivateAttr(default=None)
 
     @field_validator("holes")
     @classmethod
@@ -543,7 +543,7 @@ class TimezoneData(BaseModel):
         return self.hole_store.polynrs_of_holes
 
     @property
-    def original_polygons(self) -> Optional[list[np.ndarray]]:
+    def original_polygons(self) -> list[np.ndarray] | None:
         return self.polygon_store.original_polygons
 
     @property

@@ -6,7 +6,6 @@ TimezoneFinder in a multi-threaded environment, create separate TimezoneFinder i
 for each thread.
 """
 
-from typing import Optional
 
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
@@ -31,7 +30,7 @@ def _get_tf_instance() -> TimezoneFinder:
     return TF_INSTANCE
 
 
-def timezone_at(*, lng: float, lat: float) -> Optional[str]:
+def timezone_at(*, lng: float, lat: float) -> str | None:
     """
     Looks up in which timezone the given coordinate is included in.
     Uses the global TimezoneFinder instance.
@@ -46,7 +45,7 @@ def timezone_at(*, lng: float, lat: float) -> Optional[str]:
     return _get_tf_instance().timezone_at(lng=lng, lat=lat)
 
 
-def timezone_at_land(*, lng: float, lat: float) -> Optional[str]:
+def timezone_at_land(*, lng: float, lat: float) -> str | None:
     """
     Computes in which land timezone a point is included in.
     Uses the global TimezoneFinder instance.
@@ -62,7 +61,7 @@ def timezone_at_land(*, lng: float, lat: float) -> Optional[str]:
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
 
 
-def unique_timezone_at(*, lng: float, lat: float) -> Optional[str]:
+def unique_timezone_at(*, lng: float, lat: float) -> str | None:
     """
     Returns the name of a unique zone within the corresponding shortcut.
     Uses the global TimezoneFinder instance.
@@ -77,7 +76,7 @@ def unique_timezone_at(*, lng: float, lat: float) -> Optional[str]:
     return _get_tf_instance().unique_timezone_at(lng=lng, lat=lat)
 
 
-def certain_timezone_at(*, lng: float, lat: float) -> Optional[str]:
+def certain_timezone_at(*, lng: float, lat: float) -> str | None:
     """
     Checks in which timezone polygon the point is certainly included in.
     Uses the global TimezoneFinder instance.
@@ -100,8 +99,8 @@ def certain_timezone_at(*, lng: float, lat: float) -> Optional[str]:
 
 
 def get_geometry(
-    tz_name: Optional[str] = "",
-    tz_id: Optional[int] = 0,
+    tz_name: str | None = "",
+    tz_id: int | None = 0,
     use_id: bool = False,
     coords_as_pairs: bool = False,
 ) -> list[list[CoordPairs | CoordLists]]:
