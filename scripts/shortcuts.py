@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Set, Union
+from typing import Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -180,7 +180,7 @@ def process_single_hex(hex_id: int, data: TimezoneData) -> tuple[int, list[int]]
 
 
 @profile
-def compile_h3_map(data: TimezoneData, candidates: Set[int]) -> ShortcutMapping:
+def compile_h3_map(data: TimezoneData, candidates: set[int]) -> ShortcutMapping:
     """
     operate on one hex resolution
     also store results separately to divide the output data files

@@ -13,7 +13,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import zipfile
-from typing import Iterator, Set
+from typing import Iterator
 
 import pytest
 from tests.auxiliaries import (
@@ -119,7 +119,7 @@ WHEEL_EXCEPTION_PATTERNS = {
 }
 
 
-def load_gitignore_patterns() -> Set[str]:
+def load_gitignore_patterns() -> set[str]:
     """
     Load patterns from a .gitignore file.
 

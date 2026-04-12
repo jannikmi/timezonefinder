@@ -3,7 +3,7 @@ Hex-related utility functions that don't depend on classes.
 """
 
 from dataclasses import dataclass
-from typing import Set, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -163,7 +163,7 @@ class Hex:
         return overlapping
 
     @property
-    def poly_candidates(self) -> Set[int]:
+    def poly_candidates(self) -> set[int]:
         candidates = self._poly_candidates
         if candidates is None:
             self._init_candidates()
@@ -203,14 +203,14 @@ class Hex:
         return overlap
 
     @property
-    def polys_in_cell(self) -> Set[int]:
+    def polys_in_cell(self) -> set[int]:
         if self._polys_in_cell is None:
             # lazy evaluation, caching
             self._polys_in_cell = set(filter(self.lies_in_cell, self.poly_candidates))
         return self._polys_in_cell
 
     @property
-    def zones_in_cell(self) -> Set[int]:
+    def zones_in_cell(self) -> set[int]:
         if self._zones_in_cell is None:
             # lazy evaluation, caching
             self._zones_in_cell = {

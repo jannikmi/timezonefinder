@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Set
 from numpy.typing import NDArray
 import numpy as np
 
@@ -31,9 +30,9 @@ SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
 MAX_LAT = 90.0
 MAX_LNG = 180.0
-HexIdSet = Set[int]
-PolyIdSet = Set[int]
-ZoneIdSet = Set[int]
+HexIdSet = set[int]
+PolyIdSet = set[int]
+ZoneIdSet = set[int]
 
 # BINARY DATA TYPES
 # https://docs.python.org/3/library/struct.html#format-characters

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Set
+from typing import Any, Optional
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -130,7 +130,7 @@ class PolygonCollection(BaseModel):
     lengths: LengthList
     original_polygons: Optional[list[np.ndarray]] = None
     _boundaries: Optional[list[Boundaries]] = PrivateAttr(default=None)
-    _vertex_hex_cache: dict[int, dict[int, Set[int]]] = PrivateAttr(
+    _vertex_hex_cache: dict[int, dict[int, set[int]]] = PrivateAttr(
         default_factory=dict
     )
 
@@ -168,7 +168,7 @@ class PolygonCollection(BaseModel):
             self._boundaries = compile_bboxes(self.polygons)
         return self._boundaries
 
-    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> Set[int]:
+    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
         res_cache = self._vertex_hex_cache.setdefault(res, {})
         try:
             return res_cache[poly_nr]
@@ -576,7 +576,7 @@ class TimezoneData(BaseModel):
     def get_hex(self, hex_id: int) -> Hex:
         return self.hex_cache.get(hex_id, self)
 
-    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> Set[int]:
+    def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
         return self.polygon_store.polygon_vertex_hexes(poly_nr, res)
 
     @property
