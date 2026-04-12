@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -47,14 +47,14 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
-    shortcut_mapping: dict[int, Union[int, np.ndarray]]
+    shortcut_mapping: dict[int, int | np.ndarray]
     """
     List of attribute names that store opened binary data files.
     """
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: Optional[str | Path] = None,
         in_memory: bool = False,
     ):
         """
@@ -272,7 +272,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: Optional[str | Path] = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
@@ -333,7 +333,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: Optional[str | Path] = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
@@ -408,7 +408,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_polygon(
         self, boundary_id: IntegerLike, coords_as_pairs: bool = False
-    ) -> list[Union[CoordPairs, CoordLists]]:
+    ) -> list[CoordPairs | CoordLists]:
         """
         Get the polygon coordinates of a given boundary polygon including its holes.
 
@@ -437,7 +437,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         tz_id: Optional[int] = 0,
         use_id: bool = False,
         coords_as_pairs: bool = False,
-    ) -> list[list[Union[CoordPairs, CoordLists]]]:
+    ) -> list[list[CoordPairs | CoordLists]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``

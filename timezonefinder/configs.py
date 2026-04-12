@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -39,7 +39,7 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 #  the functions due to caching!
 
 # Type alias for flexibility with integer types (pure int or numpy integer scalars)
-IntegerLike = Union[int, np.integer]
+IntegerLike = int | np.integer
 
 # hexagon id to list of polygon ids
 ShortcutMapping = dict[int, np.ndarray]

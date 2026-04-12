@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class PolygonArray:
 
     def __init__(
         self,
-        data_location: Union[str, Path],
+        data_location: str | Path,
         in_memory: bool = False,
     ):
         """

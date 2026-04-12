@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import timeit
 from math import log10
-from typing import Callable, Iterator, Union
+from typing import Callable, Iterator
 
 import numpy as np
 
@@ -130,7 +130,7 @@ def file_path_iterator(
             yield file_path
 
 
-def matches_pattern(path: Path, pattern: Union[str, Pattern, None]) -> bool:
+def matches_pattern(path: Path, pattern: str | Pattern | None) -> bool:
     r"""
     Check if a path matches a given pattern.
 
@@ -192,7 +192,7 @@ def matches_pattern(path: Path, pattern: Union[str, Pattern, None]) -> bool:
 
 def filter_paths(
     paths: Iterator[Path],
-    pattern: Union[str, Pattern, None] = None,
+    pattern: str | Pattern | None = None,
     include_matches: bool = True,
 ) -> Iterator[Path]:
     """

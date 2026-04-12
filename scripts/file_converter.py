@@ -37,7 +37,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 """
 
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 from numpy.typing import NDArray
 
 import numpy as np
@@ -135,7 +135,7 @@ def convert_bboxes_to_numpy(
     return xmax, xmin, ymax, ymin
 
 
-def _coerce_zone_id_dtype(zone_id_dtype: Union[str, np.dtype, None]) -> np.dtype:
+def _coerce_zone_id_dtype(zone_id_dtype: str | np.dtype | None) -> np.dtype:
     """Normalise zone id dtype configuration into a numpy dtype."""
 
     if zone_id_dtype is None:
@@ -236,9 +236,9 @@ def compile_data_files(data: TimezoneData, output_path: Path) -> None:
 
 @time_execution
 def parse_data(
-    input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
-    output_path: Union[Path, str] = DEFAULT_DATA_DIR,
-    zone_id_dtype: Union[str, np.dtype, None] = ZONE_ID_DTYPE_NAME,
+    input_path: Path | str = DEFAULT_INPUT_PATH,
+    output_path: Path | str = DEFAULT_DATA_DIR,
+    zone_id_dtype: str | np.dtype | None = ZONE_ID_DTYPE_NAME,
 ) -> None:
     input_path_obj: Path = Path(input_path)
     output_path_obj: Path = Path(output_path)

@@ -2,7 +2,6 @@ import flatbuffers
 import mmap
 import numpy as np
 from pathlib import Path
-from typing import Union
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
@@ -104,7 +103,7 @@ def write_polygon_collection_flatbuffer(
         f.write(buf)
 
 
-def get_polygon_collection(buf: Union[bytes, mmap.mmap]) -> PolygonCollection:
+def get_polygon_collection(buf: bytes | mmap.mmap) -> PolygonCollection:
     """Load a PolygonCollection from a file path.
 
     Args:

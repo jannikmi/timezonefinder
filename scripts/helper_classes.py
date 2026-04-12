@@ -1,4 +1,4 @@
-from typing import NamedTuple, Union
+from typing import NamedTuple
 import numpy as np
 
 from typing import Literal
@@ -34,7 +34,7 @@ class Timezone(BaseModel):
 
     type: Literal["Feature"]
     id: str = Field(..., validation_alias=AliasPath("properties", "tzid"))
-    geometry: Union[PolygonGeometry, MultiPolygonGeometry]
+    geometry: PolygonGeometry | MultiPolygonGeometry
 
 
 class GeoJSON(BaseModel):
