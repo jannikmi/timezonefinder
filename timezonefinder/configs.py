@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 
@@ -43,9 +43,9 @@ IntegerLike = Union[int, np.integer]
 
 # hexagon id to list of polygon ids
 ShortcutMapping = Dict[int, np.ndarray]
-CoordPairs = List[Tuple[float, float]]
-CoordLists = List[List[float]]
-IntLists = List[List[int]]
+CoordPairs = list[Tuple[float, float]]
+CoordLists = list[list[float]]
+IntLists = list[list[int]]
 
 
 # zone id storage settings ---------------------------------------------------

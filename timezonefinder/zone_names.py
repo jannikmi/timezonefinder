@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
 
@@ -10,7 +9,7 @@ def get_zone_names_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
 
 
 def write_zone_names(
-    zone_names: List[str], output_path: Path = DEFAULT_DATA_DIR
+    zone_names: list[str], output_path: Path = DEFAULT_DATA_DIR
 ) -> None:
     """
     Write timezone names to a text file.
@@ -25,7 +24,7 @@ def write_zone_names(
         f.write("\n")  # write a newline at the end of the file
 
 
-def read_zone_names(path: Path) -> List[str]:
+def read_zone_names(path: Path) -> list[str]:
     """
     Read timezone names from a text file.
 

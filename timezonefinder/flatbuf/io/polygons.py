@@ -2,7 +2,7 @@ import flatbuffers
 import mmap
 import numpy as np
 from pathlib import Path
-from typing import List, Union
+from typing import Union
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
@@ -52,7 +52,7 @@ def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
 
 
 def write_polygon_collection_flatbuffer(
-    file_path: Path, polygons: List[np.ndarray]
+    file_path: Path, polygons: list[np.ndarray]
 ) -> None:
     """Write a collection of polygons to a flatbuffer file using a single coordinate vector.
 

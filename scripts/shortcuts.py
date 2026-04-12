@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, Set, Tuple, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -91,7 +91,7 @@ def get_corrected_hex_boundaries(
 
 
 @profile
-def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[int]:
+def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[int]:
     """optimises the order of polygon ids for faster timezone checks
 
     observation: as soon as just polygons of one zone are left, this zone can be returned
@@ -117,7 +117,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[
 
     zone_ids_sorted = sorted(zone_buckets, key=zone_sizes.__getitem__)
     get_length = polygon_lengths.__getitem__
-    poly_ids_sorted: List[int] = []
+    poly_ids_sorted: list[int] = []
 
     for zone_id in zone_ids_sorted:
         zone_poly_ids = zone_buckets[zone_id]
@@ -127,7 +127,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: List[int]) -> List[
     return poly_ids_sorted
 
 
-def has_coherent_sequences(lst: List[int]) -> bool:
+def has_coherent_sequences(lst: list[int]) -> bool:
     """
     :return: True if equal entries in the list are not separated by entries of other values
     """
@@ -160,7 +160,7 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
 
 
 @profile
-def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, List[int]]:
+def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, list[int]]:
     """
     Process a single hex cell to find its polygon shortcuts.
 
@@ -276,7 +276,7 @@ def compute_unique_shortcut_mapping(
 
 def build_hybrid_index_from_separate_indices(
     shortcuts: ShortcutMapping, unique_shortcuts: Dict[int, int]
-) -> Dict[int, Union[int, List[int]]]:
+) -> Dict[int, Union[int, list[int]]]:
     """Build hybrid index from separate shortcuts and unique_shortcuts indices.
 
     This algorithm combines the two legacy data structures into a single hybrid
@@ -302,7 +302,7 @@ def build_hybrid_index_from_separate_indices(
     Returns:
         Dictionary mapping hex IDs to either:
         - int: zone ID (for unique cases where all polygons share same zone)
-        - List[int]: polygon IDs (for ambiguous cases requiring polygon tests)
+        - list[int]: polygon IDs (for ambiguous cases requiring polygon tests)
     """
     hybrid_mapping = {}
 
@@ -325,7 +325,7 @@ def compile_hybrid_shortcuts(
     unique_shortcuts: Dict[int, int],
     zone_id_dtype: np.dtype,
     output_path: Path,
-) -> Dict[int, Union[int, List[int]]]:
+) -> Dict[int, Union[int, list[int]]]:
     """Compile hybrid shortcuts combining legacy shortcuts and unique_shortcuts.
 
     Args:

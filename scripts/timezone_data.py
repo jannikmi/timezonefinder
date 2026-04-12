@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -44,7 +44,7 @@ def _validate_numpy_polygons(polygons: PolygonList, kind: str) -> None:
             raise ValueError(f"{kind} polygon array must have shape (2, N)")
 
 
-def _validate_lengths(lengths: List[int], kind: str, minimum: int) -> None:
+def _validate_lengths(lengths: list[int], kind: str, minimum: int) -> None:
     if any(length == 0 for length in lengths):
         raise ValueError(f"Found a {kind} with no coordinates")
     if any(length < minimum for length in lengths):
@@ -54,7 +54,7 @@ def _validate_lengths(lengths: List[int], kind: str, minimum: int) -> None:
 class ZoneCollection(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    names: List[str]
+    names: list[str]
     poly_zone_ids: ZoneIdArray
     dtype_str: str = ZONE_ID_DTYPE_NUMPY_FORMAT
 
@@ -107,8 +107,8 @@ class ZoneCollection(BaseModel):
     def nr_of_polygons(self) -> int:
         return int(self.poly_zone_ids.size)
 
-    def zone_positions(self) -> List[int]:
-        positions: List[int] = []
+    def zone_positions(self) -> list[int]:
+        positions: list[int] = []
         last_id = -1
         for poly_idx, zone_id in enumerate(self.poly_zone_ids):
             zone_int = int(zone_id)
@@ -128,8 +128,8 @@ class PolygonCollection(BaseModel):
 
     polygons: PolygonList
     lengths: LengthList
-    original_polygons: Optional[List[np.ndarray]] = None
-    _boundaries: Optional[List[Boundaries]] = PrivateAttr(default=None)
+    original_polygons: Optional[list[np.ndarray]] = None
+    _boundaries: Optional[list[Boundaries]] = PrivateAttr(default=None)
     _vertex_hex_cache: Dict[int, Dict[int, Set[int]]] = PrivateAttr(
         default_factory=dict
     )
@@ -163,7 +163,7 @@ class PolygonCollection(BaseModel):
         return len(self.lengths)
 
     @property
-    def boundaries(self) -> List[Boundaries]:
+    def boundaries(self) -> list[Boundaries]:
         if self._boundaries is None:
             self._boundaries = compile_bboxes(self.polygons)
         return self._boundaries
@@ -187,7 +187,7 @@ class HoleCollection(BaseModel):
     holes: PolygonList
     lengths: HoleLengthList
     polynrs_of_holes: PolynrHolesList
-    _boundaries: Optional[List[Boundaries]] = PrivateAttr(default=None)
+    _boundaries: Optional[list[Boundaries]] = PrivateAttr(default=None)
     _registry: Optional[HoleRegistry] = PrivateAttr(default=None)
 
     @field_validator("holes")
@@ -217,7 +217,7 @@ class HoleCollection(BaseModel):
         return len(self.lengths)
 
     @property
-    def boundaries(self) -> List[Boundaries]:
+    def boundaries(self) -> list[Boundaries]:
         if self._boundaries is None:
             self._boundaries = compile_bboxes(self.holes)
         return self._boundaries
@@ -286,7 +286,7 @@ class TimezoneData(BaseModel):
     @classmethod
     def _process_hole(
         cls,
-        hole: List[List[Tuple[float, float]]],
+        hole: list[list[Tuple[float, float]]],
         poly_id: int,
         hole_nr: int,
         nr_of_holes: int,
@@ -311,18 +311,18 @@ class TimezoneData(BaseModel):
     @classmethod
     def _process_polygon_with_holes(
         cls,
-        poly_with_hole: List[List[List[Tuple[float, float]]]],
+        poly_with_hole: list[list[list[Tuple[float, float]]]],
         zone_id: int,
         tz_name: str,
         poly_id: int,
         polygons: PolygonList,
         polygon_lengths: LengthList,
-        poly_zone_ids: List[int],
+        poly_zone_ids: list[int],
         nr_of_holes: int,
         polynrs_of_holes: PolynrHolesList,
         holes: PolygonList,
         all_hole_lengths: HoleLengthList,
-        original_polygons: List[np.ndarray],
+        original_polygons: list[np.ndarray],
     ) -> int:
         original_boundary_coords = poly_with_hole[0]
         x_coords_orig, y_coords_orig = zip(*original_boundary_coords)
@@ -364,15 +364,15 @@ class TimezoneData(BaseModel):
         zone_id: int,
         timezone: Any,
         poly_id: int,
-        all_tz_names: List[str],
+        all_tz_names: list[str],
         polygons: PolygonList,
         polygon_lengths: LengthList,
-        poly_zone_ids: List[int],
+        poly_zone_ids: list[int],
         nr_of_holes: int,
         polynrs_of_holes: PolynrHolesList,
         holes: PolygonList,
         all_hole_lengths: HoleLengthList,
-        original_polygons: List[np.ndarray],
+        original_polygons: list[np.ndarray],
     ) -> Tuple[int, int]:
         tz_name = timezone.id
         all_tz_names.append(tz_name)
@@ -419,15 +419,15 @@ class TimezoneData(BaseModel):
                 f"Zone ID dtype must be unsigned integer, got {zone_id_dtype}"
             )
 
-        all_tz_names: List[str] = []
+        all_tz_names: list[str] = []
         polygons: PolygonList = []
         polygon_lengths: LengthList = []
-        poly_zone_ids: List[int] = []
+        poly_zone_ids: list[int] = []
         nr_of_holes: int = 0
         polynrs_of_holes: PolynrHolesList = []
         holes: PolygonList = []
         all_hole_lengths: HoleLengthList = []
-        original_polygons: List[np.ndarray] = []
+        original_polygons: list[np.ndarray] = []
 
         poly_id: int = 0
         print("parsing data...\nprocessing holes:")
@@ -511,7 +511,7 @@ class TimezoneData(BaseModel):
         return self
 
     @property
-    def all_tz_names(self) -> List[str]:
+    def all_tz_names(self) -> list[str]:
         return self.zones.names
 
     @property
@@ -543,7 +543,7 @@ class TimezoneData(BaseModel):
         return self.hole_store.polynrs_of_holes
 
     @property
-    def original_polygons(self) -> Optional[List[np.ndarray]]:
+    def original_polygons(self) -> Optional[list[np.ndarray]]:
         return self.polygon_store.original_polygons
 
     @property
@@ -559,15 +559,15 @@ class TimezoneData(BaseModel):
         return self.hole_store.nr_of_holes
 
     @property
-    def poly_boundaries(self) -> List[Boundaries]:
+    def poly_boundaries(self) -> list[Boundaries]:
         return self.polygon_store.boundaries
 
     @property
-    def hole_boundaries(self) -> List[Boundaries]:
+    def hole_boundaries(self) -> list[Boundaries]:
         return self.hole_store.boundaries
 
     @property
-    def zone_positions(self) -> List[int]:
+    def zone_positions(self) -> list[int]:
         print("Computing where zones start and end...")
         positions = self.zones.zone_positions()
         print("...Done.\n")

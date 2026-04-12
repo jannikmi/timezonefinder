@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -408,7 +408,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_polygon(
         self, boundary_id: IntegerLike, coords_as_pairs: bool = False
-    ) -> List[Union[CoordPairs, CoordLists]]:
+    ) -> list[Union[CoordPairs, CoordLists]]:
         """
         Get the polygon coordinates of a given boundary polygon including its holes.
 
@@ -437,7 +437,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         tz_id: Optional[int] = 0,
         use_id: bool = False,
         coords_as_pairs: bool = False,
-    ) -> List[List[Union[CoordPairs, CoordLists]]]:
+    ) -> list[list[Union[CoordPairs, CoordLists]]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``

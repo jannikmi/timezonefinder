@@ -8,7 +8,7 @@ Can be run as a standalone script to generate RST reports or for pytest executio
 
 import warnings
 from pathlib import Path
-from typing import List, Tuple, Callable, Iterable
+from typing import Tuple, Callable, Iterable
 
 import pytest
 
@@ -33,7 +33,7 @@ N = 10 if DEBUG else int(1e4)
 tf_instance = TimezoneFinder()
 
 # Known land points from test fixtures (lat, lng, description, expected)
-_KNOWN_LAND_POINTS: List[Tuple[float, float]] = [
+_KNOWN_LAND_POINTS: list[Tuple[float, float]] = [
     (lng, lat)
     for lat, lng, _description, expected in TEST_LOCATIONS_AT_LAND
     if expected is not None
@@ -67,7 +67,7 @@ def get_on_land_pts(length: int):
     return on_land_points
 
 
-def get_random_points(length: int) -> List[Tuple[float, float]]:
+def get_random_points(length: int) -> list[Tuple[float, float]]:
     return [get_rnd_query_pt() for _ in range(length)]
 
 
@@ -194,11 +194,11 @@ def test_timezone_finding_speed(
 
 # RST Report Generation Functions
 def run_benchmark_for_rst(
-    test_points: List[Tuple[float, float]],
+    test_points: list[Tuple[float, float]],
     points_descr: str,
     in_memory_mode: bool,
     n_queries: int,
-) -> List[Tuple[str, str, str]]:
+) -> list[Tuple[str, str, str]]:
     """Run benchmark and return results as list of tuples for RST formatting."""
     results = []
 

@@ -1,4 +1,4 @@
-from typing import List, NamedTuple, Union
+from typing import NamedTuple, Union
 import numpy as np
 
 from typing import Literal
@@ -18,7 +18,7 @@ class PolygonGeometry(BaseModel):
 
     type: Literal["Polygon"]
     # depth: 3
-    coordinates: List[List[List[float]]]
+    coordinates: list[list[list[float]]]
 
 
 class MultiPolygonGeometry(BaseModel):
@@ -26,7 +26,7 @@ class MultiPolygonGeometry(BaseModel):
 
     type: Literal["MultiPolygon"]
     # depth: 4
-    coordinates: List[List[List[List[float]]]]
+    coordinates: list[list[list[list[float]]]]
 
 
 class Timezone(BaseModel):
@@ -41,7 +41,7 @@ class GeoJSON(BaseModel):
     """schema for a timezone dataset in GeoJSON format"""
 
     type: Literal["FeatureCollection"]
-    features: List[Timezone]
+    features: list[Timezone]
 
 
 class Boundaries(NamedTuple):
@@ -64,9 +64,9 @@ class Boundaries(NamedTuple):
         return True
 
 
-def compile_bboxes(coord_list: PolygonList) -> List[Boundaries]:
+def compile_bboxes(coord_list: PolygonList) -> list[Boundaries]:
     # print("compiling the bounding boxes of the polygons from the coordinates...")
-    boundaries: List[Boundaries] = []
+    boundaries: list[Boundaries] = []
     for coords in coord_list:
         x_coords, y_coords = coords
         y_coords = coords[1]

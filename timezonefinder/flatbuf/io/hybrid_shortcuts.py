@@ -1,7 +1,7 @@
 """Utilities for working with optimized hybrid shortcut FlatBuffer data."""
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, Union
 from dataclasses import dataclass
 
 import flatbuffers
@@ -147,7 +147,7 @@ def _validate_zone_id_dtype(zone_id_dtype: np.dtype) -> np.dtype:
 
 
 def write_hybrid_shortcuts_flatbuffers(
-    hybrid_mapping: Dict[int, Union[int, List[int]]],
+    hybrid_mapping: Dict[int, Union[int, list[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
 ) -> None:
@@ -157,7 +157,7 @@ def write_hybrid_shortcuts_flatbuffers(
     Args:
         hybrid_mapping: Dictionary mapping H3 hexagon IDs to either:
                        - int: unique zone ID (when all polygons share same zone)
-                       - List[int]: list of polygon IDs (when multiple zones)
+                       - list[int]: list of polygon IDs (when multiple zones)
         zone_id_dtype: numpy dtype for zone IDs (uint8 or uint16)
         output_file: Path to save the FlatBuffer file
     """
@@ -168,7 +168,7 @@ def write_hybrid_shortcuts_flatbuffers(
 
 
 def _write_hybrid_shortcuts_generic(
-    hybrid_mapping: Dict[int, Union[int, List[int]]],
+    hybrid_mapping: Dict[int, Union[int, list[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
 ) -> None:
@@ -224,7 +224,7 @@ def _write_hybrid_shortcuts_generic(
 
 
 def _write_hybrid_shortcuts_with_schema(
-    hybrid_mapping: Dict[int, Union[int, List[int]]],
+    hybrid_mapping: Dict[int, Union[int, list[int]]],
     output_file: Path,
     schema: SchemaImports,
 ) -> None:

@@ -9,7 +9,7 @@ to generate RST reports and handle CLI interfaces.
 import argparse
 import platform
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 import numpy as np
 
@@ -39,7 +39,7 @@ class BenchmarkReporter:
         self.content.append(("text", text))
         return self
 
-    def add_table(self, headers: List[str], rows: List[List[str]]):
+    def add_table(self, headers: list[str], rows: list[list[str]]):
         """Add a table to the report."""
         self.content.append(("table", headers, rows))
         return self
@@ -105,7 +105,7 @@ Examples:
 
 def format_performance_result(
     name: str, time_per_query: float, queries_per_second: float
-) -> List[str]:
+) -> list[str]:
     """Format performance results for table display."""
     return [
         name,

@@ -8,7 +8,7 @@ import json
 from collections import Counter
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, Union
 
 import numpy as np
 
@@ -183,7 +183,7 @@ def rst_title(title: str, level: int = 0) -> str:
     return f"\n\n{title}\n{sep * len(title)}\n"
 
 
-def print_rst_table(headers: List[str], rows: List[List[str]]):
+def print_rst_table(headers: list[str], rows: list[list[str]]):
     """
     Print a table in restructured text (.rst) format using list-table directive
 
@@ -213,7 +213,7 @@ def print_rst_table(headers: List[str], rows: List[List[str]]):
     print("")
 
 
-def print_frequencies(counts: List[int], label: str):
+def print_frequencies(counts: list[int], label: str):
     max_val = max(*counts)
     frequencies = [counts.count(i) for i in range(max_val + 1)]
 
@@ -255,7 +255,7 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 
 def calculate_shortcut_index_stats(
-    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
 ) -> Dict[str, Union[int, float]]:
     """
     Calculate comprehensive statistics about the hybrid shortcut index.
@@ -405,7 +405,7 @@ def calculate_shortcut_index_stats(
 
 @redirect_output_to_file(DATA_REPORT_FILE)
 def print_shortcut_statistics(
-    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: List[int]
+    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
 ):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 
@@ -452,7 +452,7 @@ def print_shortcut_statistics(
     print_frequencies(stats["zones_per_shortcut"], "timezones/shortcut")
 
 
-def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
+def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> list[list]:
     """
     Generate additional metric rows for tables based on a dictionary of metrics.
 
@@ -479,7 +479,7 @@ def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> List[List]:
 
 
 def generate_polygon_statistics_table(
-    polygon_type: str, count: int, length_list: List[int], additional_rows: List = None
+    polygon_type: str, count: int, length_list: list[int], additional_rows: list = None
 ) -> None:
     """
     Generate and print a table with statistics for a polygon collection.
@@ -537,7 +537,7 @@ def generate_polygon_statistics_table(
 
 
 def calculate_general_statistics(
-    polygon_lengths: List[int], all_hole_lengths: List[int]
+    polygon_lengths: list[int], all_hole_lengths: list[int]
 ) -> Dict:
     """
     Calculate general statistics about the dataset.
@@ -557,7 +557,7 @@ def calculate_general_statistics(
 
 
 def calculate_hole_metrics(
-    nr_of_polygons: int, all_hole_lengths: List[int], polynrs_of_holes: List[int]
+    nr_of_polygons: int, all_hole_lengths: list[int], polynrs_of_holes: list[int]
 ) -> Dict:
     """
     Calculate statistics about holes in the dataset.
@@ -626,8 +626,8 @@ def calculate_timezone_metrics(
 
 def print_polygon_distribution_table(
     polygons_per_timezone: Counter,
-    all_tz_names: List[str],
-) -> List[List[str]]:
+    all_tz_names: list[str],
+) -> list[list[str]]:
     """
     Create a table showing the distribution of polygon counts across timezones.
 
@@ -683,11 +683,11 @@ def print_polygon_distribution_table(
 def report_data_statistics(
     nr_of_polygons: int,
     nr_of_zones: int,
-    polygon_lengths: List[int],
-    all_hole_lengths: List[int],
-    polynrs_of_holes: List[int],
-    poly_zone_ids: List[int],
-    all_tz_names: List[str],
+    polygon_lengths: list[int],
+    all_hole_lengths: list[int],
+    polynrs_of_holes: list[int],
+    poly_zone_ids: list[int],
+    all_tz_names: list[str],
 ) -> None:
     """
     Prints a report of the statistics of the timezone data.

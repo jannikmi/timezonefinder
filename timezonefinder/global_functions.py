@@ -6,7 +6,7 @@ TimezoneFinder in a multi-threaded environment, create separate TimezoneFinder i
 for each thread.
 """
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
@@ -104,7 +104,7 @@ def get_geometry(
     tz_id: Optional[int] = 0,
     use_id: bool = False,
     coords_as_pairs: bool = False,
-) -> List[List[Union[CoordPairs, CoordLists]]]:
+) -> list[list[Union[CoordPairs, CoordLists]]]:
     """
     Retrieves the geometry of a timezone polygon.
     Uses the global TimezoneFinder instance.
