@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -43,7 +43,7 @@ IntegerLike = Union[int, np.integer]
 
 # hexagon id to list of polygon ids
 ShortcutMapping = dict[int, np.ndarray]
-CoordPairs = list[Tuple[float, float]]
+CoordPairs = list[tuple[float, float]]
 CoordLists = list[list[float]]
 IntLists = list[list[int]]
 
@@ -79,7 +79,7 @@ def zone_id_dtype_to_string(dtype: np.dtype) -> str:
     return dtype.newbyteorder("<").str
 
 
-def available_zone_id_dtype_names() -> Tuple[str, ...]:
+def available_zone_id_dtype_names() -> tuple[str, ...]:
     """Return the supported zone id dtype names."""
 
     return tuple(sorted(_ZONE_ID_DTYPE_ALIASES))

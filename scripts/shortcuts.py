@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Set, Tuple, Union
+from typing import Set, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -40,7 +40,7 @@ except NameError:  # pragma: no cover - used only during profiling
 
 def get_corrected_hex_boundaries(
     x_coords, y_coords, surr_n_pole, surr_s_pole
-) -> Tuple["Boundaries", bool]:
+) -> tuple["Boundaries", bool]:
     """boundaries of a hex cell used for pre-filtering the polygons
     which have to be checked with expensive point-in-polygon algorithm
 
@@ -160,7 +160,7 @@ def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
 
 
 @profile
-def process_single_hex(hex_id: int, data: TimezoneData) -> Tuple[int, list[int]]:
+def process_single_hex(hex_id: int, data: TimezoneData) -> tuple[int, list[int]]:
     """
     Process a single hex cell to find its polygon shortcuts.
 

@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import timeit
 from math import log10
-from typing import Callable, Iterator, Tuple, Union
+from typing import Callable, Iterator, Union
 
 import numpy as np
 
@@ -316,7 +316,7 @@ def time_preprocess(time):
     return str(round(time, digits_to_print)) + "s"
 
 
-def get_rnd_query_pt() -> Tuple[float, float]:
+def get_rnd_query_pt() -> tuple[float, float]:
     lng = random.uniform(-MAX_LNG_VAL, MAX_LNG_VAL)
     lat = random.uniform(-MAX_LAT_VAL, MAX_LAT_VAL)
     return lng, lat
@@ -340,7 +340,7 @@ def convert_inside_polygon_input(lng: float, lat: float):
     return x, y
 
 
-def get_pip_test_input() -> Tuple[int, int, np.ndarray]:
+def get_pip_test_input() -> tuple[int, int, np.ndarray]:
     # one test polygon + one query point
     lng, lat = get_rnd_query_pt()
     x, y = convert_inside_polygon_input(lng, lat)

@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, Optional, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -355,7 +355,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         except Exception:
             pass
 
-    def _load_hole_registry(self) -> dict[int, Tuple[int, int]]:
+    def _load_hole_registry(self) -> dict[int, tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
         """

@@ -15,7 +15,6 @@ that its core functionality works properly.
 import shutil
 import sys
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -35,7 +34,7 @@ def run_timezonefinder_test(python_bin: str) -> None:
     run_command([python_bin, "-c", code])
 
 
-def setup_venv(tempdir: str, upgrade_pip: bool = False) -> Tuple[str, str]:
+def setup_venv(tempdir: str, upgrade_pip: bool = False) -> tuple[str, str]:
     """Set up a virtual environment and return paths to python and pip binaries."""
     venv_dir = Path(tempdir) / "venv"
     run_command([sys.executable, "-m", "venv", str(venv_dir)])
@@ -57,7 +56,7 @@ def reinstall_and_test(package_path: Path, python_bin: str, pip_bin: str) -> Non
 
 
 @pytest.fixture(scope="session")
-def venv_bins(tmp_path_factory) -> Tuple[str, str]:
+def venv_bins(tmp_path_factory) -> tuple[str, str]:
     """Create a single virtual environment reused across package install checks."""
     tempdir = tmp_path_factory.mktemp("integration-venv")
     return setup_venv(str(tempdir), upgrade_pip=False)
@@ -81,7 +80,7 @@ def package_paths() -> dict[str, Path]:
 
 @pytest.mark.parametrize("package_key", ["wheel", "sdist", "source"])
 def test_install_from_artifacts(
-    package_key: str, package_paths: dict[str, Path], venv_bins: Tuple[str, str]
+    package_key: str, package_paths: dict[str, Path], venv_bins: tuple[str, str]
 ) -> None:
     python_bin, pip_bin = venv_bins
     package_path = package_paths[package_key]

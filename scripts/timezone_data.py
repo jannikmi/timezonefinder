@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Set, Tuple
+from typing import Any, Optional, Set
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -286,7 +286,7 @@ class TimezoneData(BaseModel):
     @classmethod
     def _process_hole(
         cls,
-        hole: list[list[Tuple[float, float]]],
+        hole: list[list[tuple[float, float]]],
         poly_id: int,
         hole_nr: int,
         nr_of_holes: int,
@@ -311,7 +311,7 @@ class TimezoneData(BaseModel):
     @classmethod
     def _process_polygon_with_holes(
         cls,
-        poly_with_hole: list[list[list[Tuple[float, float]]]],
+        poly_with_hole: list[list[list[tuple[float, float]]]],
         zone_id: int,
         tz_name: str,
         poly_id: int,
@@ -373,7 +373,7 @@ class TimezoneData(BaseModel):
         holes: PolygonList,
         all_hole_lengths: HoleLengthList,
         original_polygons: list[np.ndarray],
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         tz_name = timezone.id
         all_tz_names.append(tz_name)
         tz_geometry = timezone.geometry

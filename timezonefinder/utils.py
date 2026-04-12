@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import re
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 
 import numpy as np
 
@@ -45,7 +45,7 @@ def validate_lng(lng: float) -> None:
         raise ValueError(f"The given longitude {lng} is out of bounds")
 
 
-def validate_coordinates(lng: float, lat: float) -> Tuple[float, float]:
+def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
     lng, lat = float(lng), float(lat)
     validate_lng(lng)
     validate_lat(lat)

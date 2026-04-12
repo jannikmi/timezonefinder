@@ -3,7 +3,7 @@ Hex-related utility functions that don't depend on classes.
 """
 
 from dataclasses import dataclass
-from typing import Set, Tuple, TYPE_CHECKING, Optional
+from typing import Set, TYPE_CHECKING, Optional
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -43,7 +43,7 @@ def surrounds_south_pole(hex_id: int) -> bool:
 
 def get_corrected_hex_boundaries(
     x_coords, y_coords, surr_n_pole, surr_s_pole
-) -> Tuple[Boundaries, bool]:
+) -> tuple[Boundaries, bool]:
     """boundaries of a hex cell used for pre-filtering the polygons
     which have to be checked with expensive point-in-polygon algorithm
 

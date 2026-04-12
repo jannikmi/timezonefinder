@@ -37,7 +37,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 """
 
 from pathlib import Path
-from typing import Any, Tuple, Union
+from typing import Any, Union
 from numpy.typing import NDArray
 
 import numpy as np
@@ -112,7 +112,7 @@ def to_bbox_vector(values: list[int]) -> BoundaryArray:
 
 def convert_bboxes_to_numpy(
     bboxes: list[Boundaries],
-) -> Tuple[BoundaryArray, BoundaryArray, BoundaryArray, BoundaryArray]:
+) -> tuple[BoundaryArray, BoundaryArray, BoundaryArray, BoundaryArray]:
     """Converts a list of Boundaries to numpy arrays for xmax, xmin, ymax, ymin.
     Args:
         bboxes: List of Boundaries objects
