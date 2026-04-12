@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TypeAlias
 from numpy.typing import NDArray
 import numpy as np
 
@@ -30,9 +31,9 @@ SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
 MAX_LAT = 90.0
 MAX_LNG = 180.0
-HexIdSet = set[int]
-PolyIdSet = set[int]
-ZoneIdSet = set[int]
+HexIdSet: TypeAlias = set[int]
+PolyIdSet: TypeAlias = set[int]
+ZoneIdSet: TypeAlias = set[int]
 
 # BINARY DATA TYPES
 # https://docs.python.org/3/library/struct.html#format-characters
@@ -49,15 +50,15 @@ DTYPE_FORMAT_F_NUMPY = "<f8"
 
 
 # Type aliases for better readability and conciseness
-CoordinateArray = NDArray[np.int32]  # Polygon coordinate arrays
-PolygonList = list[CoordinateArray]  # List of polygon coordinate arrays
-HoleRegistry = dict[int, tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
-ZoneIdArray = NDArray[np.unsignedinteger]
-BoundaryArray = NDArray[np.int32]  # Boundary coordinate array
-LengthList = list[int]  # List of coordinate counts
-HoleLengthList = list[int]  # List of hole coordinate counts
-PolynrHolesList = list[int]  # List of polygon numbers that have holes
-ShortcutMapping = dict[int, list[int]]
+CoordinateArray: TypeAlias = NDArray[np.int32]  # Polygon coordinate arrays
+PolygonList: TypeAlias = list[CoordinateArray]  # List of polygon coordinate arrays
+HoleRegistry: TypeAlias = dict[int, tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
+ZoneIdArray: TypeAlias = NDArray[np.unsignedinteger]
+BoundaryArray: TypeAlias = NDArray[np.int32]  # Boundary coordinate array
+LengthList: TypeAlias = list[int]  # List of coordinate counts
+HoleLengthList: TypeAlias = list[int]  # List of hole coordinate counts
+PolynrHolesList: TypeAlias = list[int]  # List of polygon numbers that have holes
+ShortcutMapping: TypeAlias = dict[int, list[int]]
 
 
 ZONE_ID_DTYPE = DEFAULT_ZONE_ID_DTYPE

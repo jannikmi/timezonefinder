@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import numpy as np
 
@@ -39,13 +39,13 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 #  the functions due to caching!
 
 # Type alias for flexibility with integer types (pure int or numpy integer scalars)
-IntegerLike = int | np.integer
+IntegerLike: TypeAlias = int | np.integer
 
 # hexagon id to list of polygon ids
-ShortcutMapping = dict[int, np.ndarray]
-CoordPairs = list[tuple[float, float]]
-CoordLists = list[list[float]]
-IntLists = list[list[int]]
+ShortcutMapping: TypeAlias = dict[int, np.ndarray]
+CoordPairs: TypeAlias = list[tuple[float, float]]
+CoordLists: TypeAlias = list[list[float]]
+IntLists: TypeAlias = list[list[int]]
 
 
 # zone id storage settings ---------------------------------------------------
