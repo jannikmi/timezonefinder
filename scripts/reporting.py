@@ -8,7 +8,7 @@ import json
 from collections import Counter
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Callable, Dict, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -71,7 +71,7 @@ def redirect_output_to_file_contextmanager(file_path: Union[str, Path]):
     return _redirect()
 
 
-def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> Dict:
+def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
     """
     Load all necessary data from binary files to generate reports.
 
@@ -255,8 +255,8 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 
 def calculate_shortcut_index_stats(
-    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
-) -> Dict[str, Union[int, float]]:
+    mapping: dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
+) -> dict[str, Union[int, float]]:
     """
     Calculate comprehensive statistics about the hybrid shortcut index.
 
@@ -405,7 +405,7 @@ def calculate_shortcut_index_stats(
 
 @redirect_output_to_file(DATA_REPORT_FILE)
 def print_shortcut_statistics(
-    mapping: Dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
+    mapping: dict[int, Union[int, np.ndarray]], poly_zone_ids: list[int]
 ):
     print(rst_title("Shortcut Mapping Statistics", level=1))
 

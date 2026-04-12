@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -47,7 +47,7 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
-    shortcut_mapping: Dict[int, Union[int, np.ndarray]]
+    shortcut_mapping: dict[int, Union[int, np.ndarray]]
     """
     List of attribute names that store opened binary data files.
     """
@@ -355,7 +355,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         except Exception:
             pass
 
-    def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
+    def _load_hole_registry(self) -> dict[int, Tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
         """

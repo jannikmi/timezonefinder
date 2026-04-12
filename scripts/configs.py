@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Set
-from typing import Dict, Tuple
+from typing import Tuple
 from numpy.typing import NDArray
 import numpy as np
 
@@ -53,13 +53,13 @@ DTYPE_FORMAT_F_NUMPY = "<f8"
 # Type aliases for better readability and conciseness
 CoordinateArray = NDArray[np.int32]  # Polygon coordinate arrays
 PolygonList = list[CoordinateArray]  # List of polygon coordinate arrays
-HoleRegistry = Dict[int, Tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
+HoleRegistry = dict[int, Tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
 ZoneIdArray = NDArray[np.unsignedinteger]
 BoundaryArray = NDArray[np.int32]  # Boundary coordinate array
 LengthList = list[int]  # List of coordinate counts
 HoleLengthList = list[int]  # List of hole coordinate counts
 PolynrHolesList = list[int]  # List of polygon numbers that have holes
-ShortcutMapping = Dict[int, list[int]]
+ShortcutMapping = dict[int, list[int]]
 
 
 ZONE_ID_DTYPE = DEFAULT_ZONE_ID_DTYPE

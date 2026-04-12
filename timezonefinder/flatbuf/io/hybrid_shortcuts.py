@@ -1,7 +1,7 @@
 """Utilities for working with optimized hybrid shortcut FlatBuffer data."""
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Union
+from typing import Any, Callable, Union
 from dataclasses import dataclass
 
 import flatbuffers
@@ -147,7 +147,7 @@ def _validate_zone_id_dtype(zone_id_dtype: np.dtype) -> np.dtype:
 
 
 def write_hybrid_shortcuts_flatbuffers(
-    hybrid_mapping: Dict[int, Union[int, list[int]]],
+    hybrid_mapping: dict[int, Union[int, list[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
 ) -> None:
@@ -168,7 +168,7 @@ def write_hybrid_shortcuts_flatbuffers(
 
 
 def _write_hybrid_shortcuts_generic(
-    hybrid_mapping: Dict[int, Union[int, list[int]]],
+    hybrid_mapping: dict[int, Union[int, list[int]]],
     zone_id_dtype: np.dtype,
     output_file: Path,
 ) -> None:
@@ -224,7 +224,7 @@ def _write_hybrid_shortcuts_generic(
 
 
 def _write_hybrid_shortcuts_with_schema(
-    hybrid_mapping: Dict[int, Union[int, list[int]]],
+    hybrid_mapping: dict[int, Union[int, list[int]]],
     output_file: Path,
     schema: SchemaImports,
 ) -> None:
@@ -294,7 +294,7 @@ def _write_hybrid_shortcuts_with_schema(
 
 def read_hybrid_shortcuts_binary(
     file_path: Path,
-) -> Dict[int, Union[int, np.ndarray]]:
+) -> dict[int, Union[int, np.ndarray]]:
     """
     Read hybrid shortcut mapping from an optimized FlatBuffer binary file.
 
@@ -334,7 +334,7 @@ def read_hybrid_shortcuts_binary(
 
 def _read_hybrid_shortcuts_with_schema(
     file_path: Path, schema: ReadSchemaImports
-) -> Dict[int, Union[int, np.ndarray]]:
+) -> dict[int, Union[int, np.ndarray]]:
     """Read hybrid shortcuts using the provided schema imports."""
     with open(file_path, "rb") as f:
         buf = f.read()
@@ -342,7 +342,7 @@ def _read_hybrid_shortcuts_with_schema(
     # mypy: GetRootAs is a class method on FlatBuffers classes
     collection = schema.collection.GetRootAs(buf, 0)  # type: ignore
 
-    hybrid_mapping: Dict[int, Union[int, np.ndarray]] = {}
+    hybrid_mapping: dict[int, Union[int, np.ndarray]] = {}
     for i in range(collection.EntriesLength()):
         entry = collection.Entries(i)
         hex_id = entry.HexId()

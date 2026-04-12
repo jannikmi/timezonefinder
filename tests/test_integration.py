@@ -15,7 +15,7 @@ that its core functionality works properly.
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Tuple
 
 import pytest
 
@@ -64,7 +64,7 @@ def venv_bins(tmp_path_factory) -> Tuple[str, str]:
 
 
 @pytest.fixture(scope="session")
-def package_paths() -> Dict[str, Path]:
+def package_paths() -> dict[str, Path]:
     """Build artifacts once and return all package paths."""
     dist_dir = PROJECT_ROOT / "dist"
     if dist_dir.exists():
@@ -81,7 +81,7 @@ def package_paths() -> Dict[str, Path]:
 
 @pytest.mark.parametrize("package_key", ["wheel", "sdist", "source"])
 def test_install_from_artifacts(
-    package_key: str, package_paths: Dict[str, Path], venv_bins: Tuple[str, str]
+    package_key: str, package_paths: dict[str, Path], venv_bins: Tuple[str, str]
 ) -> None:
     python_bin, pip_bin = venv_bins
     package_path = package_paths[package_key]

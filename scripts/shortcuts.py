@@ -4,7 +4,7 @@ import itertools
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Set, Tuple, Union
+from typing import Set, Tuple, Union
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -259,10 +259,10 @@ def compile_shortcut_mapping(
 
 def compute_unique_shortcut_mapping(
     shortcuts: ShortcutMapping, zone_ids: np.ndarray
-) -> Dict[int, int]:
+) -> dict[int, int]:
     """Derive a mapping from hex id to a unique zone id when present."""
 
-    unique_map: Dict[int, int] = {}
+    unique_map: dict[int, int] = {}
     for hex_id, polygon_ids in shortcuts.items():
         if len(polygon_ids) == 0:
             continue
@@ -275,8 +275,8 @@ def compute_unique_shortcut_mapping(
 
 
 def build_hybrid_index_from_separate_indices(
-    shortcuts: ShortcutMapping, unique_shortcuts: Dict[int, int]
-) -> Dict[int, Union[int, list[int]]]:
+    shortcuts: ShortcutMapping, unique_shortcuts: dict[int, int]
+) -> dict[int, Union[int, list[int]]]:
     """Build hybrid index from separate shortcuts and unique_shortcuts indices.
 
     This algorithm combines the two legacy data structures into a single hybrid
@@ -322,10 +322,10 @@ def build_hybrid_index_from_separate_indices(
 
 def compile_hybrid_shortcuts(
     shortcuts: ShortcutMapping,
-    unique_shortcuts: Dict[int, int],
+    unique_shortcuts: dict[int, int],
     zone_id_dtype: np.dtype,
     output_path: Path,
-) -> Dict[int, Union[int, list[int]]]:
+) -> dict[int, Union[int, list[int]]]:
     """Compile hybrid shortcuts combining legacy shortcuts and unique_shortcuts.
 
     Args:

@@ -9,7 +9,7 @@ to generate RST reports and handle CLI interfaces.
 import argparse
 import platform
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 import numpy as np
 
@@ -134,7 +134,7 @@ def print_progress(current: int, total: int, prefix: str = "Progress"):
             print(f"{prefix}: {percent}%")
 
 
-def get_system_status() -> Dict[str, Any]:
+def get_system_status() -> dict[str, Any]:
     """Get comprehensive system status information for benchmark reports."""
     tf_instance = TimezoneFinder()
 
@@ -152,7 +152,7 @@ def get_system_status() -> Dict[str, Any]:
 
 
 def add_system_status_section(
-    reporter: BenchmarkReporter, additional_info: Dict[str, Any] = None
+    reporter: BenchmarkReporter, additional_info: dict[str, Any] = None
 ):
     """Add a comprehensive system status section to a benchmark report."""
     system_info = get_system_status()

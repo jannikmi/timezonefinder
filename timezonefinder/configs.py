@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Tuple, Union
 
 import numpy as np
 
@@ -42,7 +42,7 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 IntegerLike = Union[int, np.integer]
 
 # hexagon id to list of polygon ids
-ShortcutMapping = Dict[int, np.ndarray]
+ShortcutMapping = dict[int, np.ndarray]
 CoordPairs = list[Tuple[float, float]]
 CoordLists = list[list[float]]
 IntLists = list[list[int]]
@@ -50,7 +50,7 @@ IntLists = list[list[int]]
 
 # zone id storage settings ---------------------------------------------------
 
-_ZONE_ID_DTYPE_ALIASES: Dict[str, "np.dtype[Any]"] = {
+_ZONE_ID_DTYPE_ALIASES: dict[str, "np.dtype[Any]"] = {
     "uint8": np.dtype("<u1"),
     "uint16": np.dtype("<u2"),
 }
