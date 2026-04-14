@@ -6,4 +6,4 @@ h3
 numpy
 Sphinx
 sphinx_rtd_theme
-urllib3<3
+urllib3<3zstandard

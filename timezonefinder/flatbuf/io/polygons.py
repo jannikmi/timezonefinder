@@ -18,6 +18,10 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollectionAddPolygons,
     PolygonCollectionStartPolygonsVector,
 )
+from timezonefinder.flatbuf.io.compression import (
+    compress_file,
+    decompress_mmap,
+)
 
 
 def flatten_polygon_coords(polygon: np.ndarray) -> np.ndarray:
@@ -51,8 +55,13 @@ def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
     return data_dir / "coordinates.fbs"
 
 
+def get_coordinate_path_compressed(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
+    """Return the path to the compressed boundaries flatbuffer file."""
+    return data_dir / "coordinates.fbs.zst"
+
+
 def write_polygon_collection_flatbuffer(
-    file_path: Path, polygons: List[np.ndarray]
+    file_path: Path, polygons: List[np.ndarray], compress: bool = True
 ) -> None:
     """Write a collection of polygons to a flatbuffer file using a single coordinate vector.
 
@@ -60,6 +69,7 @@ def write_polygon_collection_flatbuffer(
         file_path: Path to save the flatbuffer file
         polygons: List of polygon coordinates as numpy arrays with shape (2, N)
                   where the first row contains x coordinates and the second row contains y coordinates
+        compress: Whether to compress the output file using zstandard (default True)
 
     Returns:
         None
@@ -103,15 +113,40 @@ def write_polygon_collection_flatbuffer(
         buf = builder.Output()
         f.write(buf)
 
+    # Compress if requested
+    if compress:
+        compressed_path = Path(str(file_path) + ".zst")
+        compress_file(file_path, compressed_path)
+        print(f"Compressed {file_path} to {compressed_path}")
+        # Keep original uncompressed file for backwards compatibility
+        # (it will be used as fallback if decompression fails)
+
 
 def get_polygon_collection(buf: Union[bytes, mmap.mmap]) -> PolygonCollection:
-    """Load a PolygonCollection from a file path.
+    """Load a PolygonCollection from bytes or memory-mapped file.
+
+    Handles both compressed and uncompressed data transparently.
 
     Args:
-        buf: A binary stream or memory-mapped file containing the flatbuffer data.
+        buf: A binary stream, memory-mapped file, or bytes containing the flatbuffer data.
+             Can be compressed with zstandard or uncompressed.
 
     Returns: PolygonCollection
     """
+    # If it's a memory-mapped file, we may need to decompress it
+    if isinstance(buf, mmap.mmap):
+        # Check for zstandard magic number (0x28, 0xb5, 0x2f, 0xfd)
+        header = buf[:4]
+        if header == b'\x28\xb5\x2f\xfd':
+            # It's compressed, decompress it
+            buf = decompress_mmap(buf)
+    elif isinstance(buf, bytes):
+        # Check for zstandard magic number
+        if buf[:4] == b'\x28\xb5\x2f\xfd':
+            # It's compressed, decompress it
+            from timezonefinder.flatbuf.io.compression import decompress_bytes
+            buf = decompress_bytes(buf)
+
     return PolygonCollection.GetRootAs(buf, 0)
 
 
