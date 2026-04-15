@@ -6,7 +6,6 @@ TimezoneFinder in a multi-threaded environment, create separate TimezoneFinder i
 for each thread.
 """
 
-
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
 

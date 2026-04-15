@@ -52,7 +52,9 @@ DTYPE_FORMAT_F_NUMPY = "<f8"
 # Type aliases for better readability and conciseness
 CoordinateArray: TypeAlias = NDArray[np.int32]  # Polygon coordinate arrays
 PolygonList: TypeAlias = list[CoordinateArray]  # List of polygon coordinate arrays
-HoleRegistry: TypeAlias = dict[int, tuple[int, int]]  # Polygon ID -> (num_holes, first_hole_id)
+HoleRegistry: TypeAlias = dict[
+    int, tuple[int, int]
+]  # Polygon ID -> (num_holes, first_hole_id)
 ZoneIdArray: TypeAlias = NDArray[np.unsignedinteger]
 BoundaryArray: TypeAlias = NDArray[np.int32]  # Boundary coordinate array
 LengthList: TypeAlias = list[int]  # List of coordinate counts
