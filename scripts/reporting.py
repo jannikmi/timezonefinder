@@ -452,7 +452,7 @@ def print_shortcut_statistics(
     print_frequencies(stats["zones_per_shortcut"], "timezones/shortcut")
 
 
-def generate_metrics_rows(metric_type: str, metrics_dict: Dict) -> list[list]:
+def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
     """
     Generate additional metric rows for tables based on a dictionary of metrics.
 
@@ -538,7 +538,7 @@ def generate_polygon_statistics_table(
 
 def calculate_general_statistics(
     polygon_lengths: list[int], all_hole_lengths: list[int]
-) -> Dict:
+) -> dict:
     """
     Calculate general statistics about the dataset.
 
@@ -558,7 +558,7 @@ def calculate_general_statistics(
 
 def calculate_hole_metrics(
     nr_of_polygons: int, all_hole_lengths: list[int], polynrs_of_holes: list[int]
-) -> Dict:
+) -> dict:
     """
     Calculate statistics about holes in the dataset.
 
@@ -592,7 +592,7 @@ def calculate_timezone_metrics(
     nr_of_zones: int,
     nr_of_polygons: int,
     polygons_per_timezone: Counter,
-) -> Dict:
+) -> dict:
     """
     Calculate statistics about timezones in the dataset.
 

@@ -1,4 +1,3 @@
-from ast import List
 from collections.abc import Iterable
 import fnmatch
 import os
@@ -234,7 +233,7 @@ def ocean2land(test_locations):
         yield lat, lng, description, expected
 
 
-def check_geometry(geometry_obj: List):
+def check_geometry(geometry_obj: list):
     coords = geometry_obj[0][0]
     assert len(coords) == 2, (
         "the polygon does not consist of two latitude longitude lists"
@@ -248,7 +247,7 @@ def check_geometry(geometry_obj: List):
     )
 
 
-def check_pairwise_geometry(geometry_obj: List):
+def check_pairwise_geometry(geometry_obj: list):
     # list of all coord pairs of the first polygon
     cord_pairs = geometry_obj[0][0]
     assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"

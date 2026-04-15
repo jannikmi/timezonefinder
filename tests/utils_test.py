@@ -194,7 +194,7 @@ def test_clang_extension_loaded():
     "test_case",
     POINT_IN_POLYGON_TESTCASES,
 )
-def test_inside_polygon(inside_poly_func: Callable, test_case: Tuple):
+def test_inside_polygon(inside_poly_func: Callable, test_case: tuple):
     # print(f"\ntesting function {inside_poly_func.__name__}")
 
     # test for overflow:
