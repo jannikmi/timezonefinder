@@ -1,8 +1,9 @@
 """utility functions"""
 
+from collections.abc import Callable
 from pathlib import Path
 import re
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 

@@ -2,6 +2,20 @@
 Changelog
 =========
 
+
+TBA (TBA)
+------------------
+
+Internal:
+
+* modernized codebase with Python 3.11+ features and best practices:
+    * migrated from ``typing`` module imports to ``collections.abc`` for ``Iterable`` and ``Callable``
+    * added ``Self`` type annotation for context manager protocol
+    * replaced conditional dispatches with ``match/case`` statements for improved clarity and maintainability
+    * all changes maintain 100% backward compatibility
+* using python 3.10+ type hints. Thanks to `Marco Barbosa <https://github.com/aureliobarbosa>`__
+
+
 8.2.2 (2026-03-26)
 ------------------
 

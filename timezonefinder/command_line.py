@@ -3,7 +3,7 @@ import contextlib
 import os
 import sys
 import tempfile
-from typing import Callable, Generator
+from collections.abc import Callable, Generator
 
 from timezonefinder import (
     TimezoneFinderL,
@@ -43,20 +43,22 @@ def get_timezone_function(function_id: int) -> Callable:
     Uses global functions when available, otherwise creates instances as needed.
     """
     # Use global functions for TimezoneFinder methods
-    if function_id == 0:
-        return timezone_at
-    elif function_id == 1:
-        return certain_timezone_at
-    elif function_id == 5:
-        return timezone_at_land
-
-    # For TimezoneFinderL methods, still create an instance
-    tf_instance = TimezoneFinderL()
-    functions = {
-        3: tf_instance.timezone_at,
-        4: tf_instance.timezone_at_land,
-    }
-    return functions[function_id]
+    match function_id:
+        case 0:
+            return timezone_at
+        case 1:
+            return certain_timezone_at
+        case 5:
+            return timezone_at_land
+        case 3 | 4:
+            # For TimezoneFinderL methods, create an instance
+            tf_instance = TimezoneFinderL()
+            if function_id == 3:
+                return tf_instance.timezone_at
+            else:
+                return tf_instance.timezone_at_land
+        case _:
+            raise ValueError(f"Invalid function ID: {function_id}")
 
 
 def main() -> None:

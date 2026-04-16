@@ -1,7 +1,9 @@
 import json
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
+from typing import Self
+
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -178,15 +180,16 @@ class AbstractTimezoneFinder(ABC):
 
         # Handle shortcuts (hybrid structure) - if it's a zone ID, get all polygons for that zone
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return
-        elif isinstance(shortcut_value, int):
-            # Zone ID - get all boundary polygons for this zone
-            # Most polygons will be quickly ruled out by bbox check
-            yield from self._iter_boundary_ids_of_zone(shortcut_value)
-        else:
-            # Polygon array
-            yield from shortcut_value
+        match shortcut_value:
+            case None:
+                return
+            case int(zone_id):
+                # Zone ID - get all boundary polygons for this zone
+                # Most polygons will be quickly ruled out by bbox check
+                yield from self._iter_boundary_ids_of_zone(zone_id)
+            case polygon_array:
+                # Polygon array
+                yield from polygon_array
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
@@ -227,16 +230,15 @@ class AbstractTimezoneFinder(ABC):
 
         # Shortcuts behavior (hybrid structure with precomputed uniqueness)
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return None
-        elif isinstance(shortcut_value, int):
-            # Zone ID - this is a precomputed unique zone
-            unique_id = shortcut_value
-        else:
-            # Polygon array - by definition not unique (would be stored as int if unique)
-            return None
-
-        return self.zone_name_from_id(unique_id)
+        match shortcut_value:
+            case None:
+                return None
+            case int(unique_id):
+                # Zone ID - this is a precomputed unique zone
+                return self.zone_name_from_id(unique_id)
+            case _:
+                # Polygon array - by definition not unique (would be stored as int if unique)
+                return None
 
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
@@ -252,7 +254,7 @@ class AbstractTimezoneFinder(ABC):
         close_resource(getattr(self, "holes", None))
         # hole_registry is an in-memory dict only; nothing to close
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Enter the runtime context for the TimezoneFinder."""
         return self
 
@@ -292,20 +294,21 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return None
-        elif isinstance(shortcut_value, int):
-            # Zone ID - unique zone case
-            return self.zone_name_from_id(shortcut_value)
-        else:
-            # Polygon array - get the last polygon (most common zone)
-            if len(shortcut_value) == 0:
+        match shortcut_value:
+            case None:
                 return None
-            poly_of_biggest_zone = shortcut_value[-1]
-            # poly_of_biggest_zone is a numpy scalar from array indexing, but mypy sees it as ndarray
-            # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
-            most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
-            return self.zone_name_from_id(most_common_id)
+            case int(zone_id):
+                # Zone ID - unique zone case
+                return self.zone_name_from_id(zone_id)
+            case polygon_array if len(polygon_array) == 0:
+                return None
+            case polygon_array:
+                # Polygon array - get the last polygon (most common zone)
+                poly_of_biggest_zone = polygon_array[-1]
+                # poly_of_biggest_zone is a numpy scalar from array indexing, but mypy sees it as ndarray
+                # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
+                most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
+                return self.zone_name_from_id(most_common_id)
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -520,9 +523,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # NOTE: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
             return None
 
-        if isinstance(shortcut_value, int):
-            # Direct zone ID - optimal case for performance
-            return self.zone_name_from_id(shortcut_value)
+        match shortcut_value:
+            case int(zone_id):
+                # Direct zone ID - optimal case for performance
+                return self.zone_name_from_id(zone_id)
 
         # Polygon array case - need to check polygons
         possible_boundaries = shortcut_value
@@ -588,13 +592,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
-        if isinstance(shortcut_value, int):
-            # For zone IDs, iterate directly over boundary polygons for that zone
-            # Most polygons will be quickly ruled out by bbox check
-            boundary_ids = self._iter_boundary_ids_of_zone(shortcut_value)
-        else:
-            # Polygon array case - iterate directly over the array
-            boundary_ids = shortcut_value
+        match shortcut_value:
+            case int(zone_id):
+                # For zone IDs, iterate directly over boundary polygons for that zone
+                # Most polygons will be quickly ruled out by bbox check
+                boundary_ids = self._iter_boundary_ids_of_zone(zone_id)
+            case _:
+                # Polygon array case - iterate directly over the array
+                boundary_ids = shortcut_value
 
         for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):
