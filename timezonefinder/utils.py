@@ -55,6 +55,29 @@ else:
     inside_polygon = utils_numba.pt_in_poly_python
 
 
+def _validate_coordinate(
+    value: float,
+    validator: Callable[[float], bool],
+    name: str,
+    min_bound: float,
+    max_bound: float,
+) -> None:
+    """
+    Internal helper for coordinate validation.
+
+    :param value: The coordinate value to validate
+    :param validator: Function that returns True if coordinate is valid
+    :param name: Name of the coordinate (e.g., 'latitude', 'longitude')
+    :param min_bound: Minimum valid bound (for error message)
+    :param max_bound: Maximum valid bound (for error message)
+    :raises ValueError: If coordinate is outside valid bounds
+    """
+    if not validator(value):
+        raise ValueError(
+            f"Invalid {name} {value}: must be in range [{min_bound}, {max_bound}]"
+        )
+
+
 def validate_lat(lat: float) -> None:
     """
     Validate that a latitude value is within valid bounds.
@@ -62,8 +85,7 @@ def validate_lat(lat: float) -> None:
     :param lat: Latitude value to validate (must be in range [-90.0, 90.0])
     :raises ValueError: If latitude is outside valid bounds (-90 to 90)
     """
-    if not is_valid_lat(lat):
-        raise ValueError(f"Invalid latitude {lat}: must be in range [-90.0, 90.0]")
+    _validate_coordinate(lat, is_valid_lat, "latitude", -90.0, 90.0)
 
 
 def validate_lng(lng: float) -> None:
@@ -73,8 +95,7 @@ def validate_lng(lng: float) -> None:
     :param lng: Longitude value to validate (must be in range [-180.0, 180.0])
     :raises ValueError: If longitude is outside valid bounds (-180 to 180)
     """
-    if not is_valid_lng(lng):
-        raise ValueError(f"Invalid longitude {lng}: must be in range [-180.0, 180.0]")
+    _validate_coordinate(lng, is_valid_lng, "longitude", -180.0, 180.0)
 
 
 def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:

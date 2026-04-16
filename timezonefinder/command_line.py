@@ -78,7 +78,12 @@ def get_timezone_function(function_id: int) -> Callable[..., str | None]:
             )
 
 
-def main() -> None:
+def _parse_arguments() -> argparse.Namespace:
+    """
+    Parse and validate command-line arguments.
+
+    :return: Parsed command-line arguments
+    """
     parser = argparse.ArgumentParser(description="parse TimezoneFinder parameters")
     parser.add_argument("lng", type=float, help="longitude to be queried")
     parser.add_argument("lat", type=float, help="latitude to be queried")
@@ -97,31 +102,66 @@ def main() -> None:
         "4: TimezoneFinderL.timezone_at_land(), "
         "5: TimezoneFinder.timezone_at_land(), ",
     )
-    parsed_args = parser.parse_args()  # takes input from sys.argv
-    timezone_function = get_timezone_function(parsed_args.function)
+    return parser.parse_args()  # takes input from sys.argv
 
-    verbose_mode = parsed_args.v
+
+def _lookup_timezone(lng: float, lat: float, function_id: int) -> str | None:
+    """
+    Perform timezone lookup with the specified function.
+
+    :param lng: Longitude to query
+    :param lat: Latitude to query
+    :param function_id: The ID of the timezone function to use (0, 1, 3, 4, or 5)
+    :return: The timezone name or None if not found
+    """
+    timezone_function = get_timezone_function(function_id)
+    return timezone_function(lng=lng, lat=lat)
+
+
+def _print_lookup_details(
+    lng: float, lat: float, function_id: int, timezone_result: str | None
+) -> str:
+    """
+    Generate lookup details output.
+
+    :param lng: Longitude queried
+    :param lat: Latitude queried
+    :param function_id: The ID of the function used
+    :param timezone_result: The timezone result or None
+    :return: Formatted lookup details as a string
+    """
+    timezone_function = get_timezone_function(function_id)
+    lines = [
+        "\n" + "=" * 60,
+        "TIMEZONEFINDER LOOKUP DETAILS",
+        "-" * 60,
+        f"Coordinates: {lat:.6f}°, {lng:.6f}° (lat, lng)",
+        f"Function {timezone_function.__name__} (function ID: {function_id})",
+    ]
+
+    if timezone_result:
+        lines.append(f"Result: Found timezone '{timezone_result}'")
+    else:
+        lines.append("Result: No timezone found at this location")
+    lines.append("=" * 60)
+
+    return "\n".join(lines)
+
+
+def main() -> None:
+    """Main entry point for the CLI."""
+    args = _parse_arguments()
 
     # Always redirect stdout to a temp file
     with redirect_stdout_to_temp_file() as temp_file_path:
-        print("\n" + "=" * 60)
-        print("TIMEZONEFINDER LOOKUP DETAILS")
-        print("-" * 60)
-        print(f"Coordinates: {parsed_args.lat:.6f}°, {parsed_args.lng:.6f}° (lat, lng)")
-        print(
-            f"Function {timezone_function.__name__} (function ID: {parsed_args.function})"
-        )
+        # Perform lookup
+        tz = _lookup_timezone(args.lng, args.lat, args.function)
 
-        # Execute the timezone function
-        tz = timezone_function(lng=parsed_args.lng, lat=parsed_args.lat)
+        # Generate and print lookup details (captures to temp file)
+        details = _print_lookup_details(args.lng, args.lat, args.function, tz)
+        print(details)
 
-        if tz:
-            print(f"Result: Found timezone '{tz}'")
-        else:
-            print("Result: No timezone found at this location")
-        print("=" * 60)
-
-    if verbose_mode:
+    if args.v:
         # In verbose mode, print the contents of the temp file
         try:
             with open(temp_file_path, encoding="utf-8") as f:
