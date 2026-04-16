@@ -36,7 +36,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence, Union
+from typing import Any, Sequence
 
 import h3.api.numpy_int as h3
 import numpy as np

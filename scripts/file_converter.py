@@ -37,7 +37,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
 """
 
 from pathlib import Path
-from typing import Any, List, Tuple, Union
+from typing import Any
 from numpy.typing import NDArray
 
 import numpy as np
@@ -94,7 +94,7 @@ def create_and_write_hole_registry(data: TimezoneData, output_path: Path) -> Non
     write_json(data.hole_registry, path)
 
 
-def to_numpy_array(values: List[Any], dtype: str) -> NDArray[Any]:
+def to_numpy_array(values: list[Any], dtype: str) -> NDArray[Any]:
     """
     Converts a list of values to a numpy array with the specified dtype.
     Args:
@@ -106,23 +106,23 @@ def to_numpy_array(values: List[Any], dtype: str) -> NDArray[Any]:
     return np.array(values, dtype=dtype)
 
 
-def to_bbox_vector(values: List[int]) -> BoundaryArray:
+def to_bbox_vector(values: list[int]) -> BoundaryArray:
     return to_numpy_array(values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
 
 
 def convert_bboxes_to_numpy(
-    bboxes: List[Boundaries],
-) -> Tuple[BoundaryArray, BoundaryArray, BoundaryArray, BoundaryArray]:
+    bboxes: list[Boundaries],
+) -> tuple[BoundaryArray, BoundaryArray, BoundaryArray, BoundaryArray]:
     """Converts a list of Boundaries to numpy arrays for xmax, xmin, ymax, ymin.
     Args:
         bboxes: List of Boundaries objects
     Returns:
         Tuple of numpy arrays (xmax, xmin, ymax, ymin)
     """
-    xmax_list: List[int] = []
-    xmin_list: List[int] = []
-    ymax_list: List[int] = []
-    ymin_list: List[int] = []
+    xmax_list: list[int] = []
+    xmin_list: list[int] = []
+    ymax_list: list[int] = []
+    ymin_list: list[int] = []
     for bounds in bboxes:
         xmax_list.append(bounds.xmax)
         xmin_list.append(bounds.xmin)
@@ -135,7 +135,7 @@ def convert_bboxes_to_numpy(
     return xmax, xmin, ymax, ymin
 
 
-def _coerce_zone_id_dtype(zone_id_dtype: Union[str, np.dtype, None]) -> np.dtype:
+def _coerce_zone_id_dtype(zone_id_dtype: str | np.dtype | None) -> np.dtype:
     """Normalise zone id dtype configuration into a numpy dtype."""
 
     if zone_id_dtype is None:
@@ -236,9 +236,9 @@ def compile_data_files(data: TimezoneData, output_path: Path) -> None:
 
 @time_execution
 def parse_data(
-    input_path: Union[Path, str] = DEFAULT_INPUT_PATH,
-    output_path: Union[Path, str] = DEFAULT_DATA_DIR,
-    zone_id_dtype: Union[str, np.dtype, None] = ZONE_ID_DTYPE_NAME,
+    input_path: Path | str = DEFAULT_INPUT_PATH,
+    output_path: Path | str = DEFAULT_DATA_DIR,
+    zone_id_dtype: str | np.dtype | None = ZONE_ID_DTYPE_NAME,
 ) -> None:
     input_path_obj: Path = Path(input_path)
     output_path_obj: Path = Path(output_path)

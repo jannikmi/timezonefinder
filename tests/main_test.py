@@ -1,5 +1,4 @@
 from importlib.util import find_spec
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -78,7 +77,7 @@ class TestBaseTimezoneFinderClass:
         print(f"in_memory={self.in_memory_mode}")
         print(f"file location={self.bin_file_dir}\n")
 
-    def check_timezone_at_results(self, lng, lat, expected: Optional[str] = ""):
+    def check_timezone_at_results(self, lng, lat, expected: str | None = ""):
         # at the edges of the coordinate system the algorithms should still be well defined!
 
         print(

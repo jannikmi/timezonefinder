@@ -13,7 +13,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import zipfile
-from typing import Iterator, List, Set
+from typing import Iterator
 
 import pytest
 from tests.auxiliaries import (
@@ -119,7 +119,7 @@ WHEEL_EXCEPTION_PATTERNS = {
 }
 
 
-def load_gitignore_patterns() -> Set[str]:
+def load_gitignore_patterns() -> set[str]:
     """
     Load patterns from a .gitignore file.
 
@@ -189,7 +189,7 @@ def iter_expected_distribution_files() -> Iterator[Path]:
     return any_filter_paths(all_files, ESSENTIAL_SOURCE_PATTERNS, include_matches=True)
 
 
-def extract_archive(archive_path: Path) -> List[Path]:
+def extract_archive(archive_path: Path) -> list[Path]:
     """Extract the tar.gz archive in the given path and return a list of the contained files."""
     with tarfile.open(archive_path, "r:gz") as tar:
         # Get the name of the top-level directory in the archive
@@ -220,7 +220,7 @@ def extract_archive(archive_path: Path) -> List[Path]:
     return file_list
 
 
-def extract_wheel(wheel_path: Path) -> List[Path]:
+def extract_wheel(wheel_path: Path) -> list[Path]:
     """Extract the wheel (.whl) file in the given path and return a list of the contained files."""
     with zipfile.ZipFile(wheel_path) as wheel:
         # List all files in the wheel

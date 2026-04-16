@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, TypeAlias
 
 import numpy as np
 
@@ -39,18 +39,18 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 #  the functions due to caching!
 
 # Type alias for flexibility with integer types (pure int or numpy integer scalars)
-IntegerLike = Union[int, np.integer]
+IntegerLike: TypeAlias = int | np.integer
 
 # hexagon id to list of polygon ids
-ShortcutMapping = Dict[int, np.ndarray]
-CoordPairs = List[Tuple[float, float]]
-CoordLists = List[List[float]]
-IntLists = List[List[int]]
+ShortcutMapping: TypeAlias = dict[int, np.ndarray]
+CoordPairs: TypeAlias = list[tuple[float, float]]
+CoordLists: TypeAlias = list[list[float]]
+IntLists: TypeAlias = list[list[int]]
 
 
 # zone id storage settings ---------------------------------------------------
 
-_ZONE_ID_DTYPE_ALIASES: Dict[str, "np.dtype[Any]"] = {
+_ZONE_ID_DTYPE_ALIASES: dict[str, "np.dtype[Any]"] = {
     "uint8": np.dtype("<u1"),
     "uint16": np.dtype("<u2"),
 }
@@ -79,7 +79,7 @@ def zone_id_dtype_to_string(dtype: np.dtype) -> str:
     return dtype.newbyteorder("<").str
 
 
-def available_zone_id_dtype_names() -> Tuple[str, ...]:
+def available_zone_id_dtype_names() -> tuple[str, ...]:
     """Return the supported zone id dtype names."""
 
     return tuple(sorted(_ZONE_ID_DTYPE_ALIASES))

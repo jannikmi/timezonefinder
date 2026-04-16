@@ -1,7 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Iterable
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -47,14 +47,14 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
-    shortcut_mapping: Dict[int, Union[int, np.ndarray]]
+    shortcut_mapping: dict[int, int | np.ndarray]
     """
     List of attribute names that store opened binary data files.
     """
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         """
@@ -189,7 +189,7 @@ class AbstractTimezoneFinder(ABC):
             yield from shortcut_value
 
     @abstractmethod
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """looks up in which timezone the given coordinate is included in
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
@@ -198,7 +198,7 @@ class AbstractTimezoneFinder(ABC):
         """
         ...
 
-    def timezone_at_land(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at_land(self, *, lng: float, lat: float) -> str | None:
         """computes in which land timezone a point is included in
 
         Especially for large polygons it is expensive to check if a point is really included.
@@ -215,7 +215,7 @@ class AbstractTimezoneFinder(ABC):
             return None
         return tz_name
 
-    def unique_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def unique_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """returns the name of a unique zone within the corresponding shortcut
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
@@ -272,12 +272,12 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """instantly returns the name of the most common zone within the corresponding shortcut
 
         Note: 'most common' in this context means that the boundary polygons with the most coordinates in sum
@@ -333,7 +333,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
@@ -355,7 +355,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         except Exception:
             pass
 
-    def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
+    def _load_hole_registry(self) -> dict[int, tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
         """
@@ -408,7 +408,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_polygon(
         self, boundary_id: IntegerLike, coords_as_pairs: bool = False
-    ) -> List[Union[CoordPairs, CoordLists]]:
+    ) -> list[CoordPairs | CoordLists]:
         """
         Get the polygon coordinates of a given boundary polygon including its holes.
 
@@ -433,11 +433,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_geometry(
         self,
-        tz_name: Optional[str] = "",
-        tz_id: Optional[int] = 0,
+        tz_name: str | None = "",
+        tz_id: int | None = 0,
         use_id: bool = False,
         coords_as_pairs: bool = False,
-    ) -> List[List[Union[CoordPairs, CoordLists]]]:
+    ) -> list[list[CoordPairs | CoordLists]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
@@ -496,7 +496,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         return self.boundaries.pip(boundary_id, x, y)
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """
         Find the timezone for a given point using hybrid shortcuts, considering both land and ocean timezones.
 
@@ -559,7 +559,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         zone_id = zone_ids[-1]
         return self.zone_name_from_id(int(zone_id))
 
-    def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def certain_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts
 
         .. note:: this is only meaningful when you have compiled your own timezone data
