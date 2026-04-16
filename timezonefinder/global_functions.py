@@ -1,24 +1,44 @@
 """
-This module provides global functions that use a singleton instance of TimezoneFinder.
+Global singleton functions for TimezoneFinder.
 
-Note on thread safety: These global functions are not thread-safe. If you need to use
-TimezoneFinder in a multi-threaded environment, create separate TimezoneFinder instances
-for each thread.
+This module provides module-level timezone lookup functions that use a lazily-initialized
+singleton instance of TimezoneFinder. These functions are simpler to use than creating your own
+TimezoneFinder instance, but come with a thread-safety limitation.
+
+Thread Safety Warning:
+    These global functions use a shared singleton instance and are NOT thread-safe.
+    For multi-threaded environments, create separate TimezoneFinder instances for each thread.
+
+Example:
+    >>> from timezonefinder import timezone_at
+    >>> tz = timezone_at(lng=13.4, lat=52.5)
+    >>> print(tz)
+    'Europe/Berlin'
 """
 
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
+
+__all__ = [
+    "timezone_at",
+    "timezone_at_land",
+    "unique_timezone_at",
+    "certain_timezone_at",
+    "get_geometry",
+]
 
 # Use a global variable to store the singleton instance
 TF_INSTANCE: TimezoneFinder
 
 
 def _get_tf_instance() -> TimezoneFinder:
-    """Get or create the global TimezoneFinder instance
+    """Get or create the global TimezoneFinder instance.
 
-    Lazy initialization: delayed memory allocation until actually needed
-    required because, the package might be used with a user defined instance
-    and duplicate initialisation overhead must be avoided!
+    Implements lazy initialization to delay memory allocation until the first actual use.
+    This is important because the package might be used with a user-defined instance,
+    and we want to avoid wasting memory with duplicate initialization.
+
+    :return: The shared TimezoneFinder singleton instance
     """
     global TF_INSTANCE
     try:
@@ -31,68 +51,76 @@ def _get_tf_instance() -> TimezoneFinder:
 
 def timezone_at(*, lng: float, lat: float) -> str | None:
     """
-    Looks up in which timezone the given coordinate is included in.
-    Uses the global TimezoneFinder instance.
+    Look up the timezone for a geographic coordinate using the global singleton.
 
-    Note: This function is not thread-safe. For multi-threaded environments,
-    create separate TimezoneFinder instances.
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: The timezone name of a matching polygon, or None if no match found
 
-    :param lng: longitude of the point in degree (-180.0 to 180.0)
-    :param lat: latitude in degree (90.0 to -90.0)
-    :return: the timezone name of a matching polygon or None
+    Thread Safety:
+        This function is not thread-safe. See module docstring for alternatives.
+
+    Example:
+        >>> timezone_at(lng=13.4, lat=52.5)
+        'Europe/Berlin'
     """
     return _get_tf_instance().timezone_at(lng=lng, lat=lat)
 
 
 def timezone_at_land(*, lng: float, lat: float) -> str | None:
     """
-    Computes in which land timezone a point is included in.
-    Uses the global TimezoneFinder instance.
+    Look up the land timezone for a geographic coordinate using the global singleton.
 
-    Note: This function is not thread-safe. For multi-threaded environments,
-    create separate TimezoneFinder instances.
+    Returns None for ocean coordinates (which have fixed-offset timezones like Etc/GMT±XX).
 
-    :param lng: longitude of the point in degree (-180.0 to 180.0)
-    :param lat: latitude in degree (90.0 to -90.0)
-    :return: the timezone name of a matching polygon or
-        ``None`` when an ocean timezone ("Etc/GMT+-XX") has been matched.
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: The timezone name for land locations, or None for ocean areas
+
+    Thread Safety:
+        This function is not thread-safe. See module docstring for alternatives.
     """
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
 
 
 def unique_timezone_at(*, lng: float, lat: float) -> str | None:
     """
-    Returns the name of a unique zone within the corresponding shortcut.
-    Uses the global TimezoneFinder instance.
+    Get the timezone for a coordinate if the shortcut zone is unambiguous.
 
-    Note: This function is not thread-safe. For multi-threaded environments,
-    create separate TimezoneFinder instances.
+    Returns None if the H3 shortcut cell contains multiple timezones or no zones.
 
-    :param lng: longitude of the point in degree (-180.0 to 180.0)
-    :param lat: latitude in degree (90.0 to -90.0)
-    :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: The timezone name if the shortcut contains exactly one zone, None otherwise
+
+    Thread Safety:
+        This function is not thread-safe. See module docstring for alternatives.
+
+    Note:
+        This is faster than timezone_at() but may return None even for valid coordinates
+        if the H3 cell spans multiple timezones.
     """
     return _get_tf_instance().unique_timezone_at(lng=lng, lat=lat)
 
 
 def certain_timezone_at(*, lng: float, lat: float) -> str | None:
     """
-    Checks in which timezone polygon the point is certainly included in.
-    Uses the global TimezoneFinder instance.
+    Get the timezone for a coordinate with certainty (tests all polygons).
 
-    Note: This function is not thread-safe. For multi-threaded environments,
-    create separate TimezoneFinder instances.
+    This function checks if a point is contained in ANY timezone polygon. It is slower
+    than timezone_at() but useful when you have custom timezone data with areas of no coverage.
 
-    .. note:: this is only meaningful when you have compiled your own timezone data
-        where there are areas without timezone polygon coverage.
-        Otherwise, some timezone will always be matched and the functionality is equal to using `.timezone_at()`
-        -> useless to actually test all polygons.
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: The timezone name if definitely matched, None if not in any polygon
 
-    .. note:: using this function is less performant than `.timezone_at()`
+    Thread Safety:
+        This function is not thread-safe. See module docstring for alternatives.
 
-    :param lng: longitude of the point in degree
-    :param lat: latitude in degree
-    :return: the timezone name of the polygon the point is included in or `None`
+    Note:
+        For the standard global dataset, this is equivalent to timezone_at() since
+        all earth locations are covered by polygons (including ocean zones).
+        This is primarily useful with custom timezone data.
     """
     return _get_tf_instance().certain_timezone_at(lng=lng, lat=lat)
 

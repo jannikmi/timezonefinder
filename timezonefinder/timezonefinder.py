@@ -1,3 +1,16 @@
+"""
+Core TimezoneFinder implementation.
+
+This module provides the TimezoneFinder and TimezoneFinderL classes for offline
+timezone lookups from geographic coordinates. The module uses H3-based spatial
+shortcuts and optimized polygon-based algorithms for fast, accurate results.
+
+Core classes:
+    - AbstractTimezoneFinder: Base class with shared functionality
+    - TimezoneFinder: Full accuracy with all polygon boundaries checked
+    - TimezoneFinderL: Lightweight heuristic using shortcuts only
+"""
+
 import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -32,7 +45,22 @@ from timezonefinder.zone_names import read_zone_names
 class AbstractTimezoneFinder(ABC):
     # prevent dynamic attribute assignment (-> safe memory)
     """
-    Abstract base class for TimezoneFinder instances
+    Abstract base class for TimezoneFinder instances.
+
+    Provides shared functionality for timezone lookups including:
+    - Timezone name/ID mapping
+    - H3 spatial indexing for shortcut lookups
+    - Boundary polygon management
+    - Coordinate validation
+
+    This class should not be instantiated directly. Use TimezoneFinder
+    (full accuracy) or TimezoneFinderL (lightweight heuristic) instead.
+
+    Attributes:
+        timezone_names: List of all available timezone names
+        zone_ids: NumPy array mapping boundary polygons to timezone IDs
+        shortcut_mapping: H3-indexed dictionary for fast lookups
+        data_location: Path to the timezone data directory
     """
 
     __slots__ = [
@@ -61,8 +89,15 @@ class AbstractTimezoneFinder(ABC):
     ):
         """
         Initialize the AbstractTimezoneFinder.
-        :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
-        :param in_memory: ignored. All binary files will be read into memory (few MB). Only used for polygon coordinate data.
+
+        Loads timezone data from binary files, including shortcuts and polygon information.
+
+        :param bin_file_location: Path to the directory containing binary timezone data.
+                                 If None, uses the bundled package data directory.
+        :param in_memory: Ignored for polygon coordinate data (always uses memory-mapped file access).
+                         Kept for API compatibility.
+        :raises FileNotFoundError: If timezone data files cannot be found at the specified location
+        :raises ValueError: If timezone data files are corrupted or in an invalid format
         """
         if bin_file_location is None:
             bin_file_location = DEFAULT_DATA_DIR
@@ -125,16 +160,20 @@ class AbstractTimezoneFinder(ABC):
 
     def zone_id_of(self, boundary_id: IntegerLike) -> int:
         """
-        Get the zone ID of a polygon.
+        Get the timezone ID for a specific boundary polygon.
 
-        :param boundary_id: The ID of the polygon.
-        :type boundary_id: int
-        :rtype: int
+        :param boundary_id: The numeric identifier of the boundary polygon
+        :return: The timezone ID (index into timezone_names)
+        :raises ValueError: If zone_ids are not available or boundary_id is invalid
+        :raises TypeError: If boundary_id cannot be converted to an integer
         """
         try:
             return int(self.zone_ids[boundary_id])
-        except TypeError:
-            raise ValueError(f"zone_ids is not set in directory {self.data_location}.")
+        except (TypeError, IndexError) as e:
+            raise ValueError(
+                f"Cannot get zone ID for boundary {boundary_id}: "
+                f"ensure timezone data is properly loaded from {self.data_location}"
+            ) from e
 
     def zone_ids_of(self, boundary_ids: np.ndarray) -> np.ndarray:
         """
@@ -147,16 +186,26 @@ class AbstractTimezoneFinder(ABC):
 
     def zone_name_from_id(self, zone_id: int) -> str:
         """
-        Get the zone name from a zone ID.
+        Get the timezone name corresponding to a zone ID.
 
-        :param zone_id: The ID of the zone.
-        :return: The name of the zone.
-        :raises ValueError: If the timezone could not be found.
+        :param zone_id: The numeric ID of the timezone (0-based index)
+        :return: The IANA timezone name (e.g., 'Europe/Berlin')
+        :raises ValueError: If zone_id is out of range for the loaded dataset
+        :raises IndexError: If the zone_id index is invalid
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.zone_name_from_id(0)
+            'Africa/Abidjan'
         """
         try:
             return self.timezone_names[zone_id]
-        except IndexError:
-            raise ValueError("timezone could not be found. index error.")
+        except IndexError as e:
+            raise ValueError(
+                f"Zone ID {zone_id} is out of range. "
+                f"Valid range: 0-{len(self.timezone_names) - 1}. "
+                f"Loaded dataset has {self.nr_of_zones} timezones."
+            ) from e
 
     def zone_name_from_boundary_id(self, boundary_id: IntegerLike) -> str:
         """

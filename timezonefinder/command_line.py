@@ -1,8 +1,10 @@
 import argparse
 import contextlib
+import logging
 import os
 import sys
 import tempfile
+import warnings
 from collections.abc import Callable, Generator
 
 from timezonefinder import (
@@ -12,20 +14,25 @@ from timezonefinder import (
     timezone_at_land,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @contextlib.contextmanager
 def redirect_stdout_to_temp_file() -> Generator[str, None, None]:
     """
-    Context manager that redirects stdout to a temporary file for the duration of the context.
-    The temporary file is created but not deleted when the context exits.
-    Returns the path to the temporary file.
+    Context manager that redirects stdout to a temporary file.
+
+    The temporary file is created but not automatically deleted when the context exits,
+    allowing the caller to read or process the file after redirection stops.
+
+    :yield: The absolute path to the temporary file
     """
     # Save the original stdout
     original_stdout = sys.stdout
 
     # Create a temporary file that will NOT be automatically deleted
     temp_fd, temp_path = tempfile.mkstemp(text=True)
-    temp_file = os.fdopen(temp_fd, "w")
+    temp_file = os.fdopen(temp_fd, "w", encoding="utf-8")
 
     try:
         # Redirect stdout to the temporary file
@@ -37,10 +44,15 @@ def redirect_stdout_to_temp_file() -> Generator[str, None, None]:
         temp_file.close()
 
 
-def get_timezone_function(function_id: int) -> Callable:
+def get_timezone_function(function_id: int) -> Callable[..., str | None]:
     """
     Get the appropriate timezone function based on the function ID.
+
     Uses global functions when available, otherwise creates instances as needed.
+
+    :param function_id: The ID of the function to retrieve (0, 1, 3, 4, or 5)
+    :return: A callable that accepts lng and lat as keyword arguments and returns a timezone name or None
+    :raises ValueError: If function_id is not in the valid range [0, 1, 3, 4, 5]
     """
     # Use global functions for TimezoneFinder methods
     match function_id:
@@ -58,7 +70,12 @@ def get_timezone_function(function_id: int) -> Callable:
             else:
                 return tf_instance.timezone_at_land
         case _:
-            raise ValueError(f"Invalid function ID: {function_id}")
+            raise ValueError(
+                f"Invalid function ID: {function_id}. "
+                f"Valid choices are: 0 (timezone_at), 1 (certain_timezone_at), "
+                f"3 (TimezoneFinderL.timezone_at), 4 (TimezoneFinderL.timezone_at_land), "
+                f"5 (timezone_at_land)"
+            )
 
 
 def main() -> None:
@@ -107,12 +124,12 @@ def main() -> None:
     if verbose_mode:
         # In verbose mode, print the contents of the temp file
         try:
-            with open(temp_file_path) as f:
+            with open(temp_file_path, encoding="utf-8") as f:
                 captured_output = f.read().strip()
                 if captured_output:
                     print(captured_output)
-        except Exception as e:
-            print(f"Warning: Could not read captured output: {e}")
+        except (FileNotFoundError, OSError, UnicodeDecodeError) as e:
+            warnings.warn(f"Could not read captured output: {e}")
     else:
         # In non-verbose mode, just print the result
         print(tz if tz else "")
@@ -120,5 +137,9 @@ def main() -> None:
     # Always clean up the temp file
     try:
         os.remove(temp_file_path)
-    except Exception:
+    except FileNotFoundError:
+        # File was already deleted or never created
         pass
+    except OSError as e:
+        # Log cleanup failures but don't break program flow
+        logger.warning(f"Failed to clean up temporary file {temp_file_path}: {e}")
