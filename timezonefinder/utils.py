@@ -6,6 +6,7 @@ for timezone operations.
 
 from collections.abc import Callable
 from pathlib import Path
+import math
 import re
 from typing import Any
 
@@ -102,13 +103,13 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
     """
     Validate and convert coordinates to floats with bounds checking.
 
-    Validates both longitude and latitude are within acceptable ranges.
-    Accepts numeric types and converts them to float.
+    Validates both longitude and latitude are within acceptable ranges and are finite.
+    Accepts numeric types and converts them to float. Rejects NaN and infinity values.
 
     :param lng: Longitude value (-180.0 to 180.0)
     :param lat: Latitude value (-90.0 to 90.0)
     :return: Tuple of (lng, lat) as floats
-    :raises ValueError: If coordinates are invalid or out of bounds
+    :raises ValueError: If coordinates are invalid, out of bounds, or not finite (NaN/Inf)
     :raises TypeError: If coordinates cannot be converted to float
     """
     try:
@@ -118,6 +119,17 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
             f"Coordinates must be numeric. Got lng={type(lng).__name__}, "
             f"lat={type(lat).__name__}"
         ) from e
+
+    # Check for NaN and infinity before bounds checking
+    if math.isnan(lng) or math.isinf(lng):
+        raise ValueError(
+            f"Invalid longitude {lng}: coordinates must be finite numbers (not NaN or infinity)"
+        )
+    if math.isnan(lat) or math.isinf(lat):
+        raise ValueError(
+            f"Invalid latitude {lat}: coordinates must be finite numbers (not NaN or infinity)"
+        )
+
     validate_lng(lng)
     validate_lat(lat)
     return lng, lat
