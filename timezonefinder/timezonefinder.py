@@ -515,7 +515,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             try:
                 tz_id = self.timezone_names.index(tz_name)
             except ValueError:
-                raise ValueError("The timezone '", tz_name, "' does not exist.")
+                raise ValueError(f"The timezone '{tz_name}' does not exist.")
         if tz_id is None:
             raise ValueError("no timezone id given.")
 

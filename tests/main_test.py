@@ -316,6 +316,19 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
                 tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
             )
 
+    def test_get_geometry_invalid_timezone_error_message(self):
+        """Test that get_geometry raises clear error message for invalid timezone"""
+        invalid_tz = "Invalid/Timezone"
+
+        with pytest.raises(ValueError) as exc_info:
+            self.test_instance.get_geometry(tz_name=invalid_tz)
+
+        # Verify error message is a string, not a tuple
+        error_msg = str(exc_info.value)
+        assert isinstance(error_msg, str)
+        assert invalid_tz in error_msg
+        assert "does not exist" in error_msg
+
 
 class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):
     in_memory_mode = True
