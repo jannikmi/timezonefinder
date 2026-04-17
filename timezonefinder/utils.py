@@ -6,7 +6,6 @@ for timezone operations.
 
 from collections.abc import Callable
 from pathlib import Path
-import math
 import re
 from typing import Any
 
@@ -119,16 +118,6 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
             f"Coordinates must be numeric. Got lng={type(lng).__name__}, "
             f"lat={type(lat).__name__}"
         ) from e
-
-    # Check for NaN and infinity before bounds checking
-    if math.isnan(lng) or math.isinf(lng):
-        raise ValueError(
-            f"Invalid longitude {lng}: coordinates must be finite numbers (not NaN or infinity)"
-        )
-    if math.isnan(lat) or math.isinf(lat):
-        raise ValueError(
-            f"Invalid latitude {lat}: coordinates must be finite numbers (not NaN or infinity)"
-        )
 
     validate_lng(lng)
     validate_lat(lat)

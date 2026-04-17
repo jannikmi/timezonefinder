@@ -303,7 +303,7 @@ def test_rectify_coords_invalid(lng, lat):
 )
 def test_validate_coordinates_rejects_nan_and_inf(lng, lat):
     """Test that validate_coordinates rejects NaN and infinity values."""
-    with pytest.raises(ValueError, match="must be finite"):
+    with pytest.raises(ValueError):
         utils.validate_coordinates(lng=lng, lat=lat)
 
 

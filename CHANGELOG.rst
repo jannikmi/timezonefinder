@@ -12,14 +12,11 @@ Bug Fixes:
     * the global API functions (``timezone_at()``, ``timezone_at_land()``, etc.) are now safe for concurrent use from multiple threads
     * singleton instance is created exactly once, even under high concurrency with tens of simultaneous threads
     * fast-path optimization avoids lock contention on subsequent calls
-* **coordinate validation**: Enhanced ``validate_coordinates()`` to reject NaN and infinity values
-    * prevents silent acceptance of invalid coordinates that would produce incorrect results
-    * raises clear, specific error messages for non-finite values
-    * comprehensive test coverage with 37 test cases covering combinations of NaN, +Inf, -Inf, and overflow scenarios
 
 Internal:
 
 * reduced code duplication in coordinate validators: extracted common validation logic into a reusable ``_validate_coordinate()`` helper function
+* improved error handling and warning emission during ``__del__`` resource cleanup
 * refactored ``command_line.py`` for improved maintainability:
     * decomposed monolithic ``main()`` function into focused, independently testable components: ``_parse_arguments()``, ``_lookup_timezone()``, and ``_print_lookup_details()``
     * reduced cyclomatic complexity and improved separation of concerns
@@ -27,7 +24,6 @@ Internal:
     * migrated from ``typing`` module imports to ``collections.abc`` for ``Iterable`` and ``Callable``
     * added ``Self`` type annotation for context manager protocol
     * replaced conditional dispatches with ``match/case`` statements for improved clarity and maintainability
-    * all changes maintain 100% backward compatibility
 * using python 3.10+ type hints. Thanks to `Marco Barbosa <https://github.com/aureliobarbosa>`__
 * enhanced test coverage:
     * added 8 comprehensive thread safety tests for concurrent singleton initialization
