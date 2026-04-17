@@ -3,11 +3,15 @@ Global singleton functions for TimezoneFinder.
 
 This module provides module-level timezone lookup functions that use a lazily-initialized
 singleton instance of TimezoneFinder. These functions are simpler to use than creating your own
-TimezoneFinder instance, but come with a thread-safety limitation.
+TimezoneFinder instance.
 
-Thread Safety Warning:
-    These global functions use a shared singleton instance and are NOT thread-safe.
-    For multi-threaded environments, create separate TimezoneFinder instances for each thread.
+Thread Safety:
+    The global singleton instance is thread-safe for concurrent reads. Multiple threads can
+    safely call the global functions simultaneously. The singleton is initialized exactly once
+    using double-checked locking, even under high concurrency.
+
+    For write operations or custom configurations, create separate TimezoneFinder instances
+    for each thread.
 
 Example:
     >>> from timezonefinder import timezone_at
@@ -16,6 +20,7 @@ Example:
     'Europe/Berlin'
 """
 
+import threading
 from timezonefinder.timezonefinder import TimezoneFinder
 from timezonefinder.configs import CoordPairs, CoordLists
 
@@ -27,25 +32,36 @@ __all__ = [
     "get_geometry",
 ]
 
-# Use a global variable to store the singleton instance
-TF_INSTANCE: TimezoneFinder
+# Global singleton instance and lock for thread-safe initialization
+TF_INSTANCE: TimezoneFinder | None = None
+_TF_INSTANCE_LOCK = threading.Lock()
 
 
 def _get_tf_instance() -> TimezoneFinder:
-    """Get or create the global TimezoneFinder instance.
+    """Get or create the global TimezoneFinder instance (thread-safe).
 
-    Implements lazy initialization to delay memory allocation until the first actual use.
-    This is important because the package might be used with a user-defined instance,
-    and we want to avoid wasting memory with duplicate initialization.
+    Implements lazy initialization with thread-safe double-checked locking.
+    This ensures the singleton is created exactly once, even with concurrent access.
+
+    The first thread to call this function will acquire the lock and initialize
+    the instance. Subsequent calls (even from other threads) will return the
+    already-initialized instance without needing to acquire the lock.
 
     :return: The shared TimezoneFinder singleton instance
     """
     global TF_INSTANCE
-    try:
+
+    # First check (no lock): avoid lock contention on every call
+    if TF_INSTANCE is not None:
         return TF_INSTANCE
-    except NameError:
-        # If TF_INSTANCE is not defined, create it
-        TF_INSTANCE = TimezoneFinder()
+
+    # Second check (with lock): ensure only one thread initializes
+    with _TF_INSTANCE_LOCK:
+        # Check again inside the lock: another thread may have initialized
+        # the instance while we were waiting for the lock
+        if TF_INSTANCE is None:
+            TF_INSTANCE = TimezoneFinder()
+
     return TF_INSTANCE
 
 

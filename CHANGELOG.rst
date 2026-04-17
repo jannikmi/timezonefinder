@@ -6,6 +6,17 @@ Changelog
 TBA (TBA)
 ------------------
 
+Bug Fixes:
+
+* **thread safety**: Fixed race condition in global singleton initialization using double-checked locking pattern
+    * the global API functions (``timezone_at()``, ``timezone_at_land()``, etc.) are now safe for concurrent use from multiple threads
+    * singleton instance is created exactly once, even under high concurrency with tens of simultaneous threads
+    * fast-path optimization avoids lock contention on subsequent calls
+* **coordinate validation**: Enhanced ``validate_coordinates()`` to reject NaN and infinity values
+    * prevents silent acceptance of invalid coordinates that would produce incorrect results
+    * raises clear, specific error messages for non-finite values
+    * comprehensive test coverage with 37 test cases covering combinations of NaN, +Inf, -Inf, and overflow scenarios
+
 Internal:
 
 * reduced code duplication in coordinate validators: extracted common validation logic into a reusable ``_validate_coordinate()`` helper function
@@ -18,6 +29,9 @@ Internal:
     * replaced conditional dispatches with ``match/case`` statements for improved clarity and maintainability
     * all changes maintain 100% backward compatibility
 * using python 3.10+ type hints. Thanks to `Marco Barbosa <https://github.com/aureliobarbosa>`__
+* enhanced test coverage:
+    * added 8 comprehensive thread safety tests for concurrent singleton initialization
+    * added 37 coordinate validation tests covering edge cases (NaN, Inf, boundary values)
 * comprehensive code quality improvements for production-grade stability:
     * improved exception handling: replaced bare ``except`` clauses with specific exception types (``FileNotFoundError``, ``OSError``, ``IOError``), added proper exception chaining via ``from e``
     * enhanced type hints: added complete type annotations to public APIs, resolved type checking issues with mypy

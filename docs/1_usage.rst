@@ -27,13 +27,17 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
 
-.. warning::
-   Global functions share a single ``TimezoneFinder`` instance and are not thread-safe, due reading binary data on demand.
-   For multi-threaded applications, create separate ``TimezoneFinder`` instances per thread.
+.. note::
+   Global functions use a thread-safe singleton instance initialized on first access.
+   Multiple threads can safely call the global functions simultaneously for concurrent timezone lookups.
+   The singleton is created exactly once using double-checked locking, even under high concurrency.
+
+   For non-read-only operations or custom configurations (e.g., different data locations, in-memory mode),
+   create separate ``TimezoneFinder`` instances for each configuration.
 
 
 .. note::
-    Lazy initialisation: expect the first call to be slightly slower due to the instance creation.
+    Lazy initialisation: expect the first call to be slightly slower due to the instance creation and singleton initialization.
     This also introduces a small overhead for every function call to access the global instance.
     Consider using a custom TimezoneFinder instance for performance-critical applications.
 
