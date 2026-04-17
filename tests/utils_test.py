@@ -263,6 +263,79 @@ def test_rectify_coords_invalid(lng, lat):
 
 
 @pytest.mark.parametrize(
+    "lng, lat",
+    [
+        # NaN in longitude
+        (float("nan"), 0.0),
+        (float("nan"), 45.0),
+        (float("nan"), 90.0),
+        (float("nan"), -90.0),
+        # NaN in latitude
+        (0.0, float("nan")),
+        (45.0, float("nan")),
+        (180.0, float("nan")),
+        (-180.0, float("nan")),
+        # NaN in both
+        (float("nan"), float("nan")),
+        # Positive infinity in longitude
+        (float("inf"), 0.0),
+        (float("inf"), 45.0),
+        (float("inf"), -45.0),
+        # Negative infinity in longitude
+        (float("-inf"), 0.0),
+        (float("-inf"), -90.0),
+        # Positive infinity in latitude
+        (0.0, float("inf")),
+        (45.0, float("inf")),
+        (-180.0, float("inf")),
+        # Negative infinity in latitude
+        (0.0, float("-inf")),
+        (90.0, float("-inf")),
+        (180.0, float("-inf")),
+        # Infinity in both
+        (float("inf"), float("inf")),
+        (float("-inf"), float("-inf")),
+        (float("inf"), float("-inf")),
+        # Edge case: values that convert to infinity
+        (1e308 * 10, 0.0),  # Too large, overflows to infinity
+        (0.0, 1e308 * 10),  # Too large, overflows to infinity
+    ],
+)
+def test_validate_coordinates_rejects_nan_and_inf(lng, lat):
+    """Test that validate_coordinates rejects NaN and infinity values."""
+    with pytest.raises(ValueError, match="must be finite"):
+        utils.validate_coordinates(lng=lng, lat=lat)
+
+
+@pytest.mark.parametrize(
+    "lng, lat",
+    [
+        # Valid edge cases (boundaries)
+        (0.0, 0.0),
+        (180.0, 90.0),
+        (-180.0, -90.0),
+        (180.0, -90.0),
+        (-180.0, 90.0),
+        # Valid regular cases
+        (45.5, 22.5),
+        (-45.5, -22.5),
+        (165.123456, 75.987654),
+        (-165.123456, -75.987654),
+        # Very small numbers (near-zero, but finite)
+        (1e-10, 1e-10),
+        (-1e-10, -1e-10),
+        (1e-20, -1e-20),
+    ],
+)
+def test_validate_coordinates_accepts_finite_values(lng, lat):
+    """Test that validate_coordinates accepts all valid finite coordinates."""
+    result = utils.validate_coordinates(lng=lng, lat=lat)
+    assert result == (lng, lat)
+    assert isinstance(result[0], float)
+    assert isinstance(result[1], float)
+
+
+@pytest.mark.parametrize(
     "entry_list, expected",
     [
         ([], 0),
