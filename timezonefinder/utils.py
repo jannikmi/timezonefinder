@@ -102,13 +102,13 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
     """
     Validate and convert coordinates to floats with bounds checking.
 
-    Validates both longitude and latitude are within acceptable ranges.
-    Accepts numeric types and converts them to float.
+    Validates both longitude and latitude are within acceptable ranges and are finite.
+    Accepts numeric types and converts them to float. Rejects NaN and infinity values.
 
     :param lng: Longitude value (-180.0 to 180.0)
     :param lat: Latitude value (-90.0 to 90.0)
     :return: Tuple of (lng, lat) as floats
-    :raises ValueError: If coordinates are invalid or out of bounds
+    :raises ValueError: If coordinates are invalid, out of bounds, or not finite (NaN/Inf)
     :raises TypeError: If coordinates cannot be converted to float
     """
     try:
@@ -118,6 +118,7 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
             f"Coordinates must be numeric. Got lng={type(lng).__name__}, "
             f"lat={type(lat).__name__}"
         ) from e
+
     validate_lng(lng)
     validate_lat(lat)
     return lng, lat

@@ -12,6 +12,7 @@ Core classes:
 """
 
 import json
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
@@ -404,8 +405,17 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """Clean up resources when the object is destroyed."""
         try:
             self.cleanup()
-        except Exception:
+        except (AttributeError, FileNotFoundError, OSError, ValueError):
+            # Expected cleanup errors when resource is not fully initialized
+            # or already cleaned up. It's safe to ignore these.
             pass
+        except Exception as e:
+            # Unexpected errors during cleanup should not be silenced
+            warnings.warn(
+                f"Error during TimezoneFinder cleanup: {e}",
+                ResourceWarning,
+                stacklevel=2,
+            )
 
     def _load_hole_registry(self) -> dict[int, tuple[int, int]]:
         """
@@ -515,7 +525,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             try:
                 tz_id = self.timezone_names.index(tz_name)
             except ValueError:
-                raise ValueError("The timezone '", tz_name, "' does not exist.")
+                raise ValueError(f"The timezone '{tz_name}' does not exist.")
         if tz_id is None:
             raise ValueError("no timezone id given.")
 
