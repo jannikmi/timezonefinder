@@ -8,6 +8,8 @@ MANIFEST
 tmp.py
 tmp/
 .venv/
+.claude/
+.devcontainer/
 
 .mypy_cache/
 .ruff_cache/
