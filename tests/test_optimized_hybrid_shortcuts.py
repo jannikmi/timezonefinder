@@ -1,6 +1,7 @@
 """Comprehensive unit tests for optimized hybrid shortcuts FlatBuffer schemas."""
 
 import tempfile
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -28,8 +29,11 @@ class TestOptimizedHybridShortcuts:
 
     @pytest.fixture
     def temp_file_path(self, zone_id_dtype):
-        """Create a temporary file path for testing."""
-        return self._create_temp_file(zone_id_dtype)
+        """Return a factory that creates a unique temp file path per call (thread-safe)."""
+        def factory():
+            return self._create_temp_file(zone_id_dtype, str(threading.get_ident()))
+
+        yield factory
 
     def _create_test_data(self, zone_id_dtype):
         """Helper to create test data appropriate for the given dtype."""
@@ -87,13 +91,14 @@ class TestOptimizedHybridShortcuts:
         self, sample_hybrid_data, zone_id_dtype, temp_file_path
     ):
         """Test that data can be written and read back correctly."""
+        path = temp_file_path()
         try:
             read_data = self._write_and_read_roundtrip(
-                sample_hybrid_data, zone_id_dtype, temp_file_path
+                sample_hybrid_data, zone_id_dtype, path
             )
             self._validate_data_matches(sample_hybrid_data, read_data)
         finally:
-            temp_file_path.unlink(missing_ok=True)
+            path.unlink(missing_ok=True)
 
     def test_file_path_generation(self, zone_id_dtype):
         """Test that file paths are generated correctly based on dtype."""
@@ -109,6 +114,7 @@ class TestOptimizedHybridShortcuts:
 
     def test_zone_id_validation(self, zone_id_dtype, temp_file_path):
         """Test that zone IDs are validated against dtype limits."""
+        path = temp_file_path()
         try:
             max_value = (2 ** (zone_id_dtype.itemsize * 8)) - 1
 
@@ -119,22 +125,23 @@ class TestOptimizedHybridShortcuts:
 
             with pytest.raises(ValueError, match="exceeds.*maximum"):
                 write_hybrid_shortcuts_flatbuffers(
-                    invalid_data, zone_id_dtype, temp_file_path
+                    invalid_data, zone_id_dtype, path
                 )
 
         finally:
-            temp_file_path.unlink(missing_ok=True)
+            path.unlink(missing_ok=True)
 
     def test_empty_data(self, zone_id_dtype, temp_file_path):
         """Test handling of empty data."""
+        path = temp_file_path()
         try:
             empty_data = {}
             read_data = self._write_and_read_roundtrip(
-                empty_data, zone_id_dtype, temp_file_path
+                empty_data, zone_id_dtype, path
             )
             assert len(read_data) == 0
         finally:
-            temp_file_path.unlink(missing_ok=True)
+            path.unlink(missing_ok=True)
 
     def test_storage_efficiency(self, zone_id_dtype):
         """Test that the optimized schemas are space efficient."""
@@ -252,6 +259,7 @@ class TestOptimizedHybridShortcuts:
     def test_single_element_arrays_should_not_occur(
         self, zone_id_dtype, temp_file_path
     ):
+        path = temp_file_path()
         """Test documenting that single-element arrays currently occur but should be optimized.
 
         This test demonstrates that the current shortcut generation logic produces
@@ -279,7 +287,7 @@ class TestOptimizedHybridShortcuts:
 
             # Write and read the data
             read_data = self._write_and_read_roundtrip(
-                test_data, zone_id_dtype, temp_file_path
+                test_data, zone_id_dtype, path
             )
 
             # Verify current behavior: single-element arrays are preserved
@@ -318,7 +326,7 @@ class TestOptimizedHybridShortcuts:
             )
 
         finally:
-            temp_file_path.unlink(missing_ok=True)
+            path.unlink(missing_ok=True)
 
     def test_runtime_handling_of_single_element_arrays(self):
         """Test that the runtime code correctly handles single-element arrays.
