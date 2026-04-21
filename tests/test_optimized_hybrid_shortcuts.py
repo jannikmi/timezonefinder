@@ -30,6 +30,7 @@ class TestOptimizedHybridShortcuts:
     @pytest.fixture
     def temp_file_path(self, zone_id_dtype):
         """Return a factory that creates a unique temp file path per call (thread-safe)."""
+
         def factory():
             return self._create_temp_file(zone_id_dtype, str(threading.get_ident()))
 
@@ -125,9 +126,7 @@ class TestOptimizedHybridShortcuts:
             }
 
             with pytest.raises(ValueError, match="exceeds.*maximum"):
-                write_hybrid_shortcuts_flatbuffers(
-                    invalid_data, zone_id_dtype, path
-                )
+                write_hybrid_shortcuts_flatbuffers(invalid_data, zone_id_dtype, path)
 
         finally:
             path.unlink(missing_ok=True)
@@ -138,9 +137,7 @@ class TestOptimizedHybridShortcuts:
         path = temp_file_path()
         try:
             empty_data = {}
-            read_data = self._write_and_read_roundtrip(
-                empty_data, zone_id_dtype, path
-            )
+            read_data = self._write_and_read_roundtrip(empty_data, zone_id_dtype, path)
             assert len(read_data) == 0
         finally:
             path.unlink(missing_ok=True)
@@ -289,9 +286,7 @@ class TestOptimizedHybridShortcuts:
             }
 
             # Write and read the data
-            read_data = self._write_and_read_roundtrip(
-                test_data, zone_id_dtype, path
-            )
+            read_data = self._write_and_read_roundtrip(test_data, zone_id_dtype, path)
 
             # Verify current behavior: single-element arrays are preserved
             # (This documents the suboptimal behavior that should be fixed)
