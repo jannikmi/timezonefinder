@@ -1,7 +1,23 @@
+"""
+Core TimezoneFinder implementation.
+
+This module provides the TimezoneFinder and TimezoneFinderL classes for offline
+timezone lookups from geographic coordinates. The module uses H3-based spatial
+shortcuts and optimized polygon-based algorithms for fast, accurate results.
+
+Core classes:
+    - AbstractTimezoneFinder: Base class with shared functionality
+    - TimezoneFinder: Full accuracy with all polygon boundaries checked
+    - TimezoneFinderL: Lightweight heuristic using shortcuts only
+"""
+
 import json
+import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Self
+
 import numpy as np
 from h3.api import numpy_int as h3
 
@@ -30,7 +46,22 @@ from timezonefinder.zone_names import read_zone_names
 class AbstractTimezoneFinder(ABC):
     # prevent dynamic attribute assignment (-> safe memory)
     """
-    Abstract base class for TimezoneFinder instances
+    Abstract base class for TimezoneFinder instances.
+
+    Provides shared functionality for timezone lookups including:
+    - Timezone name/ID mapping
+    - H3 spatial indexing for shortcut lookups
+    - Boundary polygon management
+    - Coordinate validation
+
+    This class should not be instantiated directly. Use TimezoneFinder
+    (full accuracy) or TimezoneFinderL (lightweight heuristic) instead.
+
+    Attributes:
+        timezone_names: List of all available timezone names
+        zone_ids: NumPy array mapping boundary polygons to timezone IDs
+        shortcut_mapping: H3-indexed dictionary for fast lookups
+        data_location: Path to the timezone data directory
     """
 
     __slots__ = [
@@ -47,20 +78,27 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
-    shortcut_mapping: Dict[int, Union[int, np.ndarray]]
+    shortcut_mapping: dict[int, int | np.ndarray]
     """
     List of attribute names that store opened binary data files.
     """
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         """
         Initialize the AbstractTimezoneFinder.
-        :param bin_file_location: The path to the binary data files to use. If None, uses native package data.
-        :param in_memory: ignored. All binary files will be read into memory (few MB). Only used for polygon coordinate data.
+
+        Loads timezone data from binary files, including shortcuts and polygon information.
+
+        :param bin_file_location: Path to the directory containing binary timezone data.
+                                 If None, uses the bundled package data directory.
+        :param in_memory: Ignored for polygon coordinate data (always uses memory-mapped file access).
+                         Kept for API compatibility.
+        :raises FileNotFoundError: If timezone data files cannot be found at the specified location
+        :raises ValueError: If timezone data files are corrupted or in an invalid format
         """
         if bin_file_location is None:
             bin_file_location = DEFAULT_DATA_DIR
@@ -123,16 +161,20 @@ class AbstractTimezoneFinder(ABC):
 
     def zone_id_of(self, boundary_id: IntegerLike) -> int:
         """
-        Get the zone ID of a polygon.
+        Get the timezone ID for a specific boundary polygon.
 
-        :param boundary_id: The ID of the polygon.
-        :type boundary_id: int
-        :rtype: int
+        :param boundary_id: The numeric identifier of the boundary polygon
+        :return: The timezone ID (index into timezone_names)
+        :raises ValueError: If zone_ids are not available or boundary_id is invalid
+        :raises TypeError: If boundary_id cannot be converted to an integer
         """
         try:
             return int(self.zone_ids[boundary_id])
-        except TypeError:
-            raise ValueError(f"zone_ids is not set in directory {self.data_location}.")
+        except (TypeError, IndexError) as e:
+            raise ValueError(
+                f"Cannot get zone ID for boundary {boundary_id}: "
+                f"ensure timezone data is properly loaded from {self.data_location}"
+            ) from e
 
     def zone_ids_of(self, boundary_ids: np.ndarray) -> np.ndarray:
         """
@@ -145,16 +187,26 @@ class AbstractTimezoneFinder(ABC):
 
     def zone_name_from_id(self, zone_id: int) -> str:
         """
-        Get the zone name from a zone ID.
+        Get the timezone name corresponding to a zone ID.
 
-        :param zone_id: The ID of the zone.
-        :return: The name of the zone.
-        :raises ValueError: If the timezone could not be found.
+        :param zone_id: The numeric ID of the timezone (0-based index)
+        :return: The IANA timezone name (e.g., 'Europe/Berlin')
+        :raises ValueError: If zone_id is out of range for the loaded dataset
+        :raises IndexError: If the zone_id index is invalid
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.zone_name_from_id(0)
+            'Africa/Abidjan'
         """
         try:
             return self.timezone_names[zone_id]
-        except IndexError:
-            raise ValueError("timezone could not be found. index error.")
+        except IndexError as e:
+            raise ValueError(
+                f"Zone ID {zone_id} is out of range. "
+                f"Valid range: 0-{len(self.timezone_names) - 1}. "
+                f"Loaded dataset has {self.nr_of_zones} timezones."
+            ) from e
 
     def zone_name_from_boundary_id(self, boundary_id: IntegerLike) -> str:
         """
@@ -178,18 +230,19 @@ class AbstractTimezoneFinder(ABC):
 
         # Handle shortcuts (hybrid structure) - if it's a zone ID, get all polygons for that zone
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return
-        elif isinstance(shortcut_value, int):
-            # Zone ID - get all boundary polygons for this zone
-            # Most polygons will be quickly ruled out by bbox check
-            yield from self._iter_boundary_ids_of_zone(shortcut_value)
-        else:
-            # Polygon array
-            yield from shortcut_value
+        match shortcut_value:
+            case None:
+                return
+            case int(zone_id):
+                # Zone ID - get all boundary polygons for this zone
+                # Most polygons will be quickly ruled out by bbox check
+                yield from self._iter_boundary_ids_of_zone(zone_id)
+            case polygon_array:
+                # Polygon array
+                yield from polygon_array
 
     @abstractmethod
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """looks up in which timezone the given coordinate is included in
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
@@ -198,7 +251,7 @@ class AbstractTimezoneFinder(ABC):
         """
         ...
 
-    def timezone_at_land(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at_land(self, *, lng: float, lat: float) -> str | None:
         """computes in which land timezone a point is included in
 
         Especially for large polygons it is expensive to check if a point is really included.
@@ -215,7 +268,7 @@ class AbstractTimezoneFinder(ABC):
             return None
         return tz_name
 
-    def unique_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def unique_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """returns the name of a unique zone within the corresponding shortcut
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
@@ -227,16 +280,15 @@ class AbstractTimezoneFinder(ABC):
 
         # Shortcuts behavior (hybrid structure with precomputed uniqueness)
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return None
-        elif isinstance(shortcut_value, int):
-            # Zone ID - this is a precomputed unique zone
-            unique_id = shortcut_value
-        else:
-            # Polygon array - by definition not unique (would be stored as int if unique)
-            return None
-
-        return self.zone_name_from_id(unique_id)
+        match shortcut_value:
+            case None:
+                return None
+            case int(unique_id):
+                # Zone ID - this is a precomputed unique zone
+                return self.zone_name_from_id(unique_id)
+            case _:
+                # Polygon array - by definition not unique (would be stored as int if unique)
+                return None
 
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
@@ -252,7 +304,7 @@ class AbstractTimezoneFinder(ABC):
         close_resource(getattr(self, "holes", None))
         # hole_registry is an in-memory dict only; nothing to close
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Enter the runtime context for the TimezoneFinder."""
         return self
 
@@ -272,12 +324,12 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """instantly returns the name of the most common zone within the corresponding shortcut
 
         Note: 'most common' in this context means that the boundary polygons with the most coordinates in sum
@@ -292,20 +344,21 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         shortcut_value = self.shortcut_mapping.get(hex_id)
-        if shortcut_value is None:
-            return None
-        elif isinstance(shortcut_value, int):
-            # Zone ID - unique zone case
-            return self.zone_name_from_id(shortcut_value)
-        else:
-            # Polygon array - get the last polygon (most common zone)
-            if len(shortcut_value) == 0:
+        match shortcut_value:
+            case None:
                 return None
-            poly_of_biggest_zone = shortcut_value[-1]
-            # poly_of_biggest_zone is a numpy scalar from array indexing, but mypy sees it as ndarray
-            # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
-            most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
-            return self.zone_name_from_id(most_common_id)
+            case int(zone_id):
+                # Zone ID - unique zone case
+                return self.zone_name_from_id(zone_id)
+            case polygon_array if len(polygon_array) == 0:
+                return None
+            case polygon_array:
+                # Polygon array - get the last polygon (most common zone)
+                poly_of_biggest_zone = polygon_array[-1]
+                # poly_of_biggest_zone is a numpy scalar from array indexing, but mypy sees it as ndarray
+                # This is safe: array element access returns a numpy integer scalar compatible with IntegerLike
+                most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
+                return self.zone_name_from_id(most_common_id)
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -333,7 +386,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def __init__(
         self,
-        bin_file_location: Optional[Union[str, Path]] = None,
+        bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
         super().__init__(bin_file_location, in_memory)
@@ -352,10 +405,19 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """Clean up resources when the object is destroyed."""
         try:
             self.cleanup()
-        except Exception:
+        except (AttributeError, FileNotFoundError, OSError, ValueError):
+            # Expected cleanup errors when resource is not fully initialized
+            # or already cleaned up. It's safe to ignore these.
             pass
+        except Exception as e:
+            # Unexpected errors during cleanup should not be silenced
+            warnings.warn(
+                f"Error during TimezoneFinder cleanup: {e}",
+                ResourceWarning,
+                stacklevel=2,
+            )
 
-    def _load_hole_registry(self) -> Dict[int, Tuple[int, int]]:
+    def _load_hole_registry(self) -> dict[int, tuple[int, int]]:
         """
         Load and convert the hole registry from JSON file, converting keys to int.
         """
@@ -408,7 +470,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_polygon(
         self, boundary_id: IntegerLike, coords_as_pairs: bool = False
-    ) -> List[Union[CoordPairs, CoordLists]]:
+    ) -> list[CoordPairs | CoordLists]:
         """
         Get the polygon coordinates of a given boundary polygon including its holes.
 
@@ -433,11 +495,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
     def get_geometry(
         self,
-        tz_name: Optional[str] = "",
-        tz_id: Optional[int] = 0,
+        tz_name: str | None = "",
+        tz_id: int | None = 0,
         use_id: bool = False,
         coords_as_pairs: bool = False,
-    ) -> List[List[Union[CoordPairs, CoordLists]]]:
+    ) -> list[list[CoordPairs | CoordLists]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
         :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
@@ -463,7 +525,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             try:
                 tz_id = self.timezone_names.index(tz_name)
             except ValueError:
-                raise ValueError("The timezone '", tz_name, "' does not exist.")
+                raise ValueError(f"The timezone '{tz_name}' does not exist.")
         if tz_id is None:
             raise ValueError("no timezone id given.")
 
@@ -496,7 +558,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         return self.boundaries.pip(boundary_id, x, y)
 
-    def timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """
         Find the timezone for a given point using hybrid shortcuts, considering both land and ocean timezones.
 
@@ -520,9 +582,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # NOTE: hypothetical case, with ocean data every shortcut maps to at least one boundary polygon
             return None
 
-        if isinstance(shortcut_value, int):
-            # Direct zone ID - optimal case for performance
-            return self.zone_name_from_id(shortcut_value)
+        match shortcut_value:
+            case int(zone_id):
+                # Direct zone ID - optimal case for performance
+                return self.zone_name_from_id(zone_id)
 
         # Polygon array case - need to check polygons
         possible_boundaries = shortcut_value
@@ -559,7 +622,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         zone_id = zone_ids[-1]
         return self.zone_name_from_id(int(zone_id))
 
-    def certain_timezone_at(self, *, lng: float, lat: float) -> Optional[str]:
+    def certain_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts
 
         .. note:: this is only meaningful when you have compiled your own timezone data
@@ -588,13 +651,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
-        if isinstance(shortcut_value, int):
-            # For zone IDs, iterate directly over boundary polygons for that zone
-            # Most polygons will be quickly ruled out by bbox check
-            boundary_ids = self._iter_boundary_ids_of_zone(shortcut_value)
-        else:
-            # Polygon array case - iterate directly over the array
-            boundary_ids = shortcut_value
+        match shortcut_value:
+            case int(zone_id):
+                # For zone IDs, iterate directly over boundary polygons for that zone
+                # Most polygons will be quickly ruled out by bbox check
+                boundary_ids = self._iter_boundary_ids_of_zone(zone_id)
+            case _:
+                # Polygon array case - iterate directly over the array
+                boundary_ids = shortcut_value
 
         for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):

@@ -3,7 +3,7 @@ Hex-related utility functions that don't depend on classes.
 """
 
 from dataclasses import dataclass
-from typing import Set, Tuple, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -43,7 +43,7 @@ def surrounds_south_pole(hex_id: int) -> bool:
 
 def get_corrected_hex_boundaries(
     x_coords, y_coords, surr_n_pole, surr_s_pole
-) -> Tuple[Boundaries, bool]:
+) -> tuple[Boundaries, bool]:
     """boundaries of a hex cell used for pre-filtering the polygons
     which have to be checked with expensive point-in-polygon algorithm
 
@@ -104,9 +104,9 @@ class Hex:
     surr_n_pole: bool
     surr_s_pole: bool
     data: "TimezoneData"
-    _poly_candidates: Optional[PolyIdSet] = None
-    _polys_in_cell: Optional[PolyIdSet] = None
-    _zones_in_cell: Optional[ZoneIdSet] = None
+    _poly_candidates: PolyIdSet | None = None
+    _polys_in_cell: PolyIdSet | None = None
+    _zones_in_cell: ZoneIdSet | None = None
 
     @classmethod
     def from_id(cls, id: int, data: "TimezoneData"):
@@ -163,7 +163,7 @@ class Hex:
         return overlapping
 
     @property
-    def poly_candidates(self) -> Set[int]:
+    def poly_candidates(self) -> set[int]:
         candidates = self._poly_candidates
         if candidates is None:
             self._init_candidates()
@@ -203,14 +203,14 @@ class Hex:
         return overlap
 
     @property
-    def polys_in_cell(self) -> Set[int]:
+    def polys_in_cell(self) -> set[int]:
         if self._polys_in_cell is None:
             # lazy evaluation, caching
             self._polys_in_cell = set(filter(self.lies_in_cell, self.poly_candidates))
         return self._polys_in_cell
 
     @property
-    def zones_in_cell(self) -> Set[int]:
+    def zones_in_cell(self) -> set[int]:
         if self._zones_in_cell is None:
             # lazy evaluation, caching
             self._zones_in_cell = {

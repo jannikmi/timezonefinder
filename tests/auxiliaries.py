@@ -1,4 +1,3 @@
-from ast import List
 from collections.abc import Iterable
 import fnmatch
 import os
@@ -10,7 +9,7 @@ import shutil
 import subprocess
 import timeit
 from math import log10
-from typing import Callable, Iterator, Tuple, Union
+from typing import Callable, Iterator
 
 import numpy as np
 
@@ -130,7 +129,7 @@ def file_path_iterator(
             yield file_path
 
 
-def matches_pattern(path: Path, pattern: Union[str, Pattern, None]) -> bool:
+def matches_pattern(path: Path, pattern: str | Pattern | None) -> bool:
     r"""
     Check if a path matches a given pattern.
 
@@ -192,7 +191,7 @@ def matches_pattern(path: Path, pattern: Union[str, Pattern, None]) -> bool:
 
 def filter_paths(
     paths: Iterator[Path],
-    pattern: Union[str, Pattern, None] = None,
+    pattern: str | Pattern | None = None,
     include_matches: bool = True,
 ) -> Iterator[Path]:
     """
@@ -234,7 +233,7 @@ def ocean2land(test_locations):
         yield lat, lng, description, expected
 
 
-def check_geometry(geometry_obj: List):
+def check_geometry(geometry_obj: list):
     coords = geometry_obj[0][0]
     assert len(coords) == 2, (
         "the polygon does not consist of two latitude longitude lists"
@@ -248,7 +247,7 @@ def check_geometry(geometry_obj: List):
     )
 
 
-def check_pairwise_geometry(geometry_obj: List):
+def check_pairwise_geometry(geometry_obj: list):
     # list of all coord pairs of the first polygon
     cord_pairs = geometry_obj[0][0]
     assert len(cord_pairs) > 2, "a polygon must consist of more than 2 coordinates"
@@ -316,7 +315,7 @@ def time_preprocess(time):
     return str(round(time, digits_to_print)) + "s"
 
 
-def get_rnd_query_pt() -> Tuple[float, float]:
+def get_rnd_query_pt() -> tuple[float, float]:
     lng = random.uniform(-MAX_LNG_VAL, MAX_LNG_VAL)
     lat = random.uniform(-MAX_LAT_VAL, MAX_LAT_VAL)
     return lng, lat
@@ -340,7 +339,7 @@ def convert_inside_polygon_input(lng: float, lat: float):
     return x, y
 
 
-def get_pip_test_input() -> Tuple[int, int, np.ndarray]:
+def get_pip_test_input() -> tuple[int, int, np.ndarray]:
     # one test polygon + one query point
     lng, lat = get_rnd_query_pt()
     x, y = convert_inside_polygon_input(lng, lat)

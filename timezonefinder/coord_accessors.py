@@ -8,7 +8,6 @@ either directly from file or from preloaded memory.
 from abc import ABC, abstractmethod
 import mmap
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 
@@ -134,7 +133,7 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
         num_polygons = polygon_collection.PolygonsLength()
 
         # Preload all polygons
-        self.polygons: Dict[int, np.ndarray] = {}
+        self.polygons: dict[int, np.ndarray] = {}
         for idx in range(num_polygons):
             self.polygons[idx] = read_polygon_array_from_binary(polygon_collection, idx)
 
