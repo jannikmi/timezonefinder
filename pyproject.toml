@@ -49,6 +49,7 @@ test=[
     "pytz>=2022.7.1",
     # setuptoosl required for integration tests: building sdist and wheel
     "setuptools>=61",
+    "pytest-run-parallel>=0.8.2",
 ]
 dev = [
     "pre-commit",
