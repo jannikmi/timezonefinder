@@ -87,6 +87,7 @@ class TestOptimizedHybridShortcuts:
                 expected_array = np.array(expected_value, dtype=np.uint16)
                 np.testing.assert_array_equal(actual_value, expected_array)
 
+    @pytest.mark.parallel_threads_limit("auto")
     def test_write_read_roundtrip(
         self, sample_hybrid_data, zone_id_dtype, temp_file_path
     ):
@@ -131,6 +132,7 @@ class TestOptimizedHybridShortcuts:
         finally:
             path.unlink(missing_ok=True)
 
+    @pytest.mark.parallel_threads_limit("auto")
     def test_empty_data(self, zone_id_dtype, temp_file_path):
         """Test handling of empty data."""
         path = temp_file_path()
@@ -256,6 +258,7 @@ class TestOptimizedHybridShortcuts:
             uint8_path.unlink(missing_ok=True)
             uint16_path.unlink(missing_ok=True)
 
+    @pytest.mark.parallel_threads_limit("auto")
     def test_single_element_arrays_should_not_occur(
         self, zone_id_dtype, temp_file_path
     ):
