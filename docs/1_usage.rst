@@ -28,9 +28,15 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
 
 .. note::
-   Global functions use a thread-safe singleton instance initialized on first access.
-   Multiple threads can safely call the global functions simultaneously for concurrent timezone lookups.
-   The singleton is created exactly once using double-checked locking, even under high concurrency.
+   The global functions use a singleton instance with thread-safe initialization.
+   However, **the shared instance itself is NOT safe for concurrent reads**.
+
+   **For parallel workloads, you must create separate ``TimezoneFinder`` instances for each thread/process.**
+   This is the only way to guarantee thread-safe concurrent timezone lookups.
+
+   If you need the convenience of a global function in a single-threaded context, the global functions
+   are suitable. For any concurrent workload (threading, asyncio, multiprocessing), create independent
+   instances as shown in the warning box below.
 
    For non-read-only operations or custom configurations (e.g., different data locations, in-memory mode),
    create separate ``TimezoneFinder`` instances for each configuration.
@@ -38,8 +44,8 @@ The functionality of these global functions is equivalent to the respective meth
 
 .. note::
     Lazy initialisation: expect the first call to be slightly slower due to the instance creation and singleton initialization.
-    This also introduces a small overhead for every function call to access the global instance.
-    Consider using a custom TimezoneFinder instance for performance-critical applications.
+    This also introduces overhead for every function call to access the global instance.
+    **For any performance-critical or concurrent use, create your own TimezoneFinder instance instead.**
 
 
 
@@ -48,7 +54,7 @@ The functionality of these global functions is equivalent to the respective meth
 Instance Initialisation
 -----------------------
 
-For more control and thread safety, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
+For more control and better performance, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
 to be reused for multiple consequent timezone queries:
 
 .. code-block:: python
@@ -70,6 +76,31 @@ Use the argument ``bin_file_location`` to use data files from another location (
 .. code-block:: python
 
     tf = TimezoneFinder(bin_file_location="path/to/files")
+
+
+.. warning::
+
+    **For parallel computation (multiple threads/processes):** Each thread **must** have its own independent
+    ``TimezoneFinder`` instance. Do **not** share a single instance across threads. Creating one instance
+    per thread ensures proper isolation and avoids race conditions:
+
+    .. code-block:: python
+
+        import threading
+        from timezonefinder import TimezoneFinder
+
+
+        def lookup_in_thread(lng, lat):
+            # Each thread creates its own instance
+            tf = TimezoneFinder(in_memory=True)
+            return tf.timezone_at(lng=lng, lat=lat)
+
+
+        threads = [threading.Thread(target=lookup_in_thread, args=(13.4, 52.5))]
+        # ...
+
+    Alternatively, the global functions (``timezone_at()``, etc.) provide a thread-safe singleton
+    for simple concurrent read-only lookups, though they come with additional overhead per call.
 
 
 
