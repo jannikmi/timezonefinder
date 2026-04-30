@@ -18,7 +18,7 @@ Python Environment
 
 **Python Version**: 3.14.2 (CPython)
 
-**NumPy Version**: 2.3.5
+**NumPy Version**: 2.4.4
 
 **Platform**: Darwin arm64
 
@@ -87,11 +87,11 @@ Performance Results
      - Average Time (s)
      - Throughput (queries/sec)
    * - pt_in_poly_clang
-     - 6.6e-06
-     - 1.5e+05
+     - 6.3e-06
+     - 1.6e+05
    * - pt_in_poly_python
-     - 2.1e-06
-     - 4.8e+05
+     - 2.2e-06
+     - 4.5e+05
 
 
 
@@ -100,7 +100,7 @@ Performance Summary
 -------------------
 
 
-Python implementation WITH Numba is 2.2x faster than the C implementation
+Python implementation WITH Numba is 1.8x faster than the C implementation
 
 .. note::
 
