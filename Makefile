@@ -30,7 +30,7 @@ outdated:
 
 
 data:
-	# rm -rf tmp
+	rm -rf tmp
 	# choices:
 	# 1) Original full dataset
 	# 1) timezone data with oceans
@@ -56,7 +56,8 @@ testall:
 
 speedtest:
 	# pytest -s flag: output to console
-	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
+	uv run python scripts/check_speed_timezone_finding.py
+# 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 # 	@uv run pytest -s scripts/check_speed_initialisation.py -v
 
 
