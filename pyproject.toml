@@ -192,7 +192,15 @@ repair-wheel-command = [
   "uvx abi3audit --strict --summary {wheel}",
 ]
 
-# Pass the environment variable to build the abi3 support
+# Install build dependencies per container type
+[[tool.cibuildwheel.overrides]]
+select = "cp*-manylinux*"
+before-all = "yum install -y libffi-devel"
+
+[[tool.cibuildwheel.overrides]]
+select = "cp*-musllinux*"
+before-all = "apk add --no-cache libffi-dev"
+
 [[tool.cibuildwheel.overrides]]
 select = "*"
 inherit.environment = "append"
