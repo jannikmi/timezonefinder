@@ -57,6 +57,10 @@ class AbstractTimezoneFinder(ABC):
     This class should not be instantiated directly. Use TimezoneFinder
     (full accuracy) or TimezoneFinderL (lightweight heuristic) instead.
 
+    Thread Safety:
+        For parallel computation with multiple threads, each thread must create
+        its own independent instance. Do not share a single instance across threads.
+
     Attributes:
         timezone_names: List of all available timezone names
         zone_ids: NumPy array mapping boundary polygons to timezone IDs
@@ -315,11 +319,15 @@ class AbstractTimezoneFinder(ABC):
 
 
 class TimezoneFinderL(AbstractTimezoneFinder):
-    """a 'light' version of the TimezoneFinder class for quickly suggesting a timezone for a point on earth
+    """A lightweight version of TimezoneFinder for quick timezone suggestions.
 
     Instead of using timezone polygon data like ``TimezoneFinder``,
     this class only uses a precomputed 'shortcut' to suggest a probable result:
-    the most common zone in a rectangle of a half degree of latitude and one degree of longitude
+    the most common zone in a rectangle of a half degree of latitude and one degree of longitude.
+
+    Thread Safety:
+        Each thread that performs timezone lookups must create its own independent
+        TimezoneFinderL instance. Do not share a single instance across threads.
     """
 
     def __init__(
@@ -370,10 +378,22 @@ class TimezoneFinder(AbstractTimezoneFinder):
     For a detailed documentation of data management please refer to the code documentation of
     `file_converter.py <https://github.com/jannikmi/timezonefinder/blob/master/scripts/file_converter.py>`__
 
-    :ivar binary_data_attributes: the names of all attributes which store the opened binary data files
+    Thread Safety:
+        Each thread that performs timezone lookups must create its own independent
+        TimezoneFinder instance. Do not share a single instance across threads, as this can
+        lead to race conditions and incorrect results. Example:
 
-    :param bin_file_location: path to the binary data files to use, None if native package data should be used
-    :param in_memory: Whether to completely read and keep the coordinate data in memory as numpy arrays.
+            import threading
+            from timezonefinder import TimezoneFinder
+
+            def lookup_in_thread(lng, lat):
+                # Each thread creates its own instance
+                tf = TimezoneFinder(in_memory=True)
+                return tf.timezone_at(lng=lng, lat=lat)
+
+    Parameters:
+        :param bin_file_location: path to the binary data files to use, None if native package data should be used
+        :param in_memory: Whether to completely read and keep the coordinate data in memory as numpy arrays.
     """
 
     # __slots__ declared in parents are available in child classes. However, child subclasses will get a __dict__

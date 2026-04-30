@@ -258,14 +258,14 @@ def parse_data(
     print("Generating data report from binary files...")
     write_data_report_from_binary(output_path_obj, zone_id_dtype=resolved_zone_id_dtype)
 
-    print("Generating performance benchmark report...")
-    write_performance_report()
-
     print("Generating point-in-polygon benchmark report...")
     write_polygon_report(POLYGON_REPORT_FILE)
 
     print("Generating initialization benchmark report...")
     write_initialization_report(INITIALIZATION_REPORT_FILE, data_path=output_path_obj)
+
+    print("Generating performance benchmark report...")
+    write_performance_report()
 
 
 if __name__ == "__main__":

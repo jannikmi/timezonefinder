@@ -3,15 +3,11 @@ Changelog
 =========
 
 
-TBA (TBA)
+8.2.3 (2026-04-30)
 ------------------
 
-Bug Fixes:
-
-* **thread safety**: Fixed race condition in global singleton initialization using double-checked locking pattern
-    * the global API functions (``timezone_at()``, ``timezone_at_land()``, etc.) are now safe for concurrent use from multiple threads
-    * singleton instance is created exactly once, even under high concurrency with tens of simultaneous threads
-    * fast-path optimization avoids lock contention on subsequent calls
+* updated the data to `2026b <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026b>`__
+* added examples and documentation for using parallel processing with the timezonefinder libary.
 
 Internal:
 

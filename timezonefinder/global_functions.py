@@ -6,12 +6,24 @@ singleton instance of TimezoneFinder. These functions are simpler to use than cr
 TimezoneFinder instance.
 
 Thread Safety:
-    The global singleton instance is thread-safe for concurrent reads. Multiple threads can
-    safely call the global functions simultaneously. The singleton is initialized exactly once
-    using double-checked locking, even under high concurrency.
+    The global functions provide a thread-safe singleton instance for concurrent reads.
+    Multiple threads can safely call these functions simultaneously without explicit
+    synchronization. The singleton is initialized exactly once using double-checked locking,
+    even under high concurrency.
 
-    For write operations or custom configurations, create separate TimezoneFinder instances
-    for each thread.
+    However, for performance-critical parallel workloads, consider creating separate
+    TimezoneFinder instances for each thread to avoid singleton overhead:
+
+        import threading
+        from timezonefinder import TimezoneFinder
+
+        def lookup_in_thread(lng, lat):
+            # Each thread creates its own instance (faster for parallel work)
+            tf = TimezoneFinder(in_memory=True)
+            return tf.timezone_at(lng=lng, lat=lat)
+
+    For custom configurations (different data locations, etc.), create separate TimezoneFinder
+    instances as needed.
 
 Example:
     >>> from timezonefinder import timezone_at
@@ -74,7 +86,10 @@ def timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name of a matching polygon, or None if no match found
 
     Thread Safety:
-        This function is not thread-safe. See module docstring for alternatives.
+        This function is thread-safe for concurrent calls. The underlying global
+        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
+        performance-critical parallel workloads, create separate TimezoneFinder
+        instances per thread to avoid singleton overhead.
 
     Example:
         >>> timezone_at(lng=13.4, lat=52.5)
@@ -94,7 +109,10 @@ def timezone_at_land(*, lng: float, lat: float) -> str | None:
     :return: The timezone name for land locations, or None for ocean areas
 
     Thread Safety:
-        This function is not thread-safe. See module docstring for alternatives.
+        This function is thread-safe for concurrent calls. The underlying global
+        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
+        performance-critical parallel workloads, create separate TimezoneFinder
+        instances per thread to avoid singleton overhead.
     """
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
 
@@ -110,7 +128,10 @@ def unique_timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name if the shortcut contains exactly one zone, None otherwise
 
     Thread Safety:
-        This function is not thread-safe. See module docstring for alternatives.
+        This function is thread-safe for concurrent calls. The underlying global
+        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
+        performance-critical parallel workloads, create separate TimezoneFinder
+        instances per thread to avoid singleton overhead.
 
     Note:
         This is faster than timezone_at() but may return None even for valid coordinates
@@ -131,7 +152,10 @@ def certain_timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name if definitely matched, None if not in any polygon
 
     Thread Safety:
-        This function is not thread-safe. See module docstring for alternatives.
+        This function is thread-safe for concurrent calls. The underlying global
+        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
+        performance-critical parallel workloads, create separate TimezoneFinder
+        instances per thread to avoid singleton overhead.
 
     Note:
         For the standard global dataset, this is equivalent to timezone_at() since
