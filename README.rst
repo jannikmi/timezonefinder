@@ -60,12 +60,13 @@ It is recommended to install it together with the optional `Numba <https://numba
 
 .. code-block:: python
 
+    # use the global function for convenience:
     from timezonefinder import timezone_at
 
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
 
 
-    # For thread safety, increased performance and control, re-use an instance:
+    # For improved performance and control, create and reuse an instance:
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder(in_memory=True)  # reuse
