@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "8.2.3"
+version = "8.2.4"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -192,7 +192,15 @@ repair-wheel-command = [
   "uvx abi3audit --strict --summary {wheel}",
 ]
 
-# Pass the environment variable to build the abi3 support
+# Install build dependencies per container type
+[[tool.cibuildwheel.overrides]]
+select = "cp*-manylinux*"
+before-all = "yum install -y libffi-devel"
+
+[[tool.cibuildwheel.overrides]]
+select = "cp*-musllinux*"
+before-all = "apk add --no-cache libffi-dev"
+
 [[tool.cibuildwheel.overrides]]
 select = "*"
 inherit.environment = "append"

@@ -68,12 +68,23 @@ jobs:
         run: uv run tox -e ${{ matrix.tox-env }}
 
   make-wheels:
-    name: Make ${{ matrix.os }} ${{ matrix.cibw_arch }} wheels
+    name: Make ${{ matrix.os }} ${{ matrix.cibw_arch }} ${{ matrix.manylinux_tag }} wheels
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["ubuntu-latest"]
-        cibw_arch: ["native"]
+        include:
+          # manylinux2014 (glibc >= 2.17) + musllinux
+          - os: ubuntu-latest
+            cibw_arch: native
+            manylinux_image: quay.io/pypa/manylinux2014_x86_64:2026.04.25-0
+            manylinux_tag: manylinux2014
+            cibw_skip: ""
+          # manylinux_2_28 (glibc >= 2.28)
+          - os: ubuntu-latest
+            cibw_arch: native
+            manylinux_image: quay.io/pypa/manylinux_2_28_x86_64:2026.04.25-0
+            manylinux_tag: manylinux_2_28
+            cibw_skip: "*-musllinux*"
       fail-fast: false
 
     steps:
@@ -85,20 +96,19 @@ jobs:
         with:
           output-dir: dist
         env:
-          # https://github.com/pypa/cibuildwheel/blob/v2.23.1/cibuildwheel/resources/pinned_docker_images.cfg
-          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64:2025.03.09-1
+          # https://github.com/pypa/cibuildwheel/blob/v3.4.1/cibuildwheel/resources/pinned_docker_images.cfg
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
           CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024.10.26-1
           CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
+          CIBW_SKIP: ${{ matrix.cibw_skip }}
           CIBW_BUILD_FRONTEND: pip
-          CIBW_BEFORE_ALL_LINUX_MANYLINUX2014: yum install -y libffi-devel clang make
-          CIBW_BEFORE_ALL_LINUX_MUSLLINUX_1_1: apk add --no-cache libffi-dev clang make
           CIBW_BUILD_VERBOSITY: 1
 
       - name: "Upload wheel as artifact"
         uses: actions/upload-artifact@v7
         with:
-          name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-wheel
+          name: artifact-${{ matrix.os }}-${{ matrix.cibw_arch }}-${{ matrix.manylinux_tag }}-wheel
           path: "./**/dist/*.whl"
 
   make-sdist:
@@ -146,10 +156,18 @@ jobs:
         run: |
             find .
             uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
-            uv add ./dist/timezonefinder*manylinux*whl
+            uv add ./dist/timezonefinder*manylinux_2_28*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
             uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
+
+      # Checks issue #418
+      - name: Verify manylinux_2_28 wheel
+        run: |
+            pip download \
+              --platform manylinux_2_28_x86_64 --python-version 3.14 --implementation cp \
+              --only-binary :all: --no-index --find-links ./dist --no-deps -d /tmp/platform_test timezonefinder
+            ls /tmp/platform_test/timezonefinder*manylinux_2_28*.whl
 
   release:
     name: Create release and publish to TestPyPI

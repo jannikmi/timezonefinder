@@ -2,6 +2,11 @@
 Changelog
 =========
 
+8.2.4 (2026-05-01)
+------------------
+
+* added ``manylinux_2_28_x86_64`` wheel to releases, fixing the fallback to version 6.0.1 when pip resolves with ``--platform manylinux_2_28_x86_64`` (Python 3.14 + numpy 2.4). . Thanks to `theirix <https://github.com/theirix>`__ for the PR #420
+
 
 8.2.3 (2026-04-30)
 ------------------
