@@ -2,6 +2,11 @@
 Changelog
 =========
 
+8.2.4 (2026-05-01)
+------------------
+
+* added ``manylinux_2_28_x86_64`` wheel to releases, fixing the fallback to version 6.0.1 when pip resolves with ``--platform manylinux_2_28_x86_64`` (Python 3.14 + numpy 2.4). . Thanks to `theirix <https://github.com/theirix>`__ for the PR #420
+
 
 8.2.3 (2026-04-30)
 ------------------
@@ -32,7 +37,6 @@ Internal:
     * improved error messages: replaced vague errors with specific context including valid ranges, expected values, and data locations
     * fixed deprecated patterns: updated ``tempfile`` API usage to modern context managers, fixed import ordering (stdlib first)
     * enhanced validation: added type checking for string inputs, better coordinate validation with clear error messages
-* added ``manylinux_2_28_x86_64`` wheel to releases, fixing the fallback to version 6.0.1 when pip resolves with ``--platform manylinux_2_28_x86_64`` (Python 3.14 + numpy 2.4)
 
 
 8.2.2 (2026-03-26)
