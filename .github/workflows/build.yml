@@ -24,7 +24,7 @@ jobs:
     name: run pre-commit hooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Run pre-commit hook
         uses: pre-commit/action@v3.0.1
@@ -51,7 +51,7 @@ jobs:
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -89,7 +89,7 @@ jobs:
 
     steps:
       - name: "Checkout repo"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v4.0.0
@@ -115,7 +115,7 @@ jobs:
     name: Make source distribution
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install uv
       uses: astral-sh/setup-uv@v7
@@ -182,7 +182,7 @@ jobs:
         contents: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         # Fetch full history to check remote branches for verification.
         with:
           fetch-depth: 0
@@ -255,7 +255,7 @@ jobs:
         id-token: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
