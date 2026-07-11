@@ -127,7 +127,8 @@ known-local-folder = ["timezonefinder"]
 [tool.pytest.ini_options]
 markers = [
     "unit: mark test as a unit test",
-    "integration: mark test as an integration test"
+    "integration: mark test as an integration test",
+    "parallel_threads_limit: mark test with a thread limit for parallel execution"
 ]
 
 [tool.mypy]
