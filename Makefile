@@ -1,3 +1,32 @@
+# Makefile commands
+
+# These targets are intended for local development on the timezonefinder project.
+
+# Available targets:
+#   install    - install all dependencies using uv sync for the current project
+#   update     - update dependency pins and refresh pre-commit hooks
+#   lock       - lock dependencies from pyproject.toml to uv.lock
+#   force_update - force update dependencies by removing the lock file
+#   outdated   - check for outdated packages excluding constrained dependencies
+#   data       - regenerate timezone data under tmp with the full dataset
+#   parse      - run the file converter on the downloaded combined dataset
+#   testparse  - run the file converter on the test fixture JSON input
+#   test       - execute unit tests excluding integration and slow tests
+#   testint    - execute integration tests only
+#   testall    - execute all tests including slow ones
+#   speedtest  - run the timezone finding speed benchmark script
+#   tox        - run tox for all configured environments
+#   hook       - install and run pre-commit hooks on all files
+#   hookup     - update pre-commit hooks, then update dependencies
+#   hook3      - clean pre-commit hook state
+#   clean      - remove build/test caches and tox artifacts
+#   flatbuf    - compile FlatBuffers schemas to Python bindings
+#   builsdist  - build a single source distribution tarball
+#   build      - build wheels for supported Python versions
+#   release    - tag the current commit with the version number and push it
+#   rmtag      - remove the current version tag locally and remotely
+#   docs       - build Sphinx HTML documentation from docs/
+
 # https://stackoverflow.com/questions/38878088/activate-anaconda-python-environment-from-makefile
 # By default make uses sh to execute commands, and sh doesn't know `source`
 SHELL=/bin/bash
@@ -38,7 +67,7 @@ data:
 	printf '1\n1\n0\n' | bash parse_data.sh
 
 parse:
-	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans-now.json
+	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
 
 testparse:
 	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
@@ -60,6 +89,13 @@ speedtest:
 # 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 # 	@uv run pytest -s scripts/check_speed_initialisation.py -v
 
+benchmarks: speedtest
+	uv run python scripts/check_speed_initialisation.py
+	uv run python scripts/check_speed_inside_polygon.py
+
+
+reports: benchmarks
+	uv run scripts/reporting.py
 
 tox:
 	@uv run tox

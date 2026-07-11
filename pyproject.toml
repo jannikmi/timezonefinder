@@ -1,6 +1,6 @@
 [project]
 name = "timezonefinder"
-version = "8.2.4"
+version = "8.2.5"
 description = "python package for finding the timezone of any point on earth (coordinates) offline"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="MIT" with setuptools>=71
@@ -64,7 +64,9 @@ dev = [
 data = [
     "pydantic>=2.11.7",
 ]
+# Numba requires NumPy 2.3.x or lower; pin here to avoid incompatible NumPy 2.4 installs
 numba = [
+  "numpy<2.4",
   "numba>=0.60,<1",
 ]
 pytz = [
@@ -82,7 +84,9 @@ proto = [
 
 # Package extras
 [project.optional-dependencies]
+# Numba requires NumPy 2.3.x or lower; pin here to avoid incompatible NumPy 2.4 installs
 numba = [
+  "numpy<2.4",
   "numba>=0.60,<1",
 ]
 pytz = [
@@ -123,7 +127,8 @@ known-local-folder = ["timezonefinder"]
 [tool.pytest.ini_options]
 markers = [
     "unit: mark test as a unit test",
-    "integration: mark test as an integration test"
+    "integration: mark test as an integration test",
+    "parallel_threads_limit: mark test with a thread limit for parallel execution"
 ]
 
 [tool.mypy]

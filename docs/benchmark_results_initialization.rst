@@ -18,7 +18,7 @@ Python Environment
 
 **Python Version**: 3.14.2 (CPython)
 
-**NumPy Version**: 2.4.4
+**NumPy Version**: 2.3.5
 
 **Platform**: Darwin arm64
 
@@ -71,17 +71,17 @@ Initialization Performance Results
      - Average Time (ms)
      - Average Time (s)
    * - TimezoneFinder (File-Based)
-     - 212.2
-     - 0.212
+     - 380.2
+     - 0.380
    * - TimezoneFinder (In-Memory)
-     - 218.9
-     - 0.219
+     - 401.4
+     - 0.401
    * - TimezoneFinderL (File-Based)
-     - 206.6
-     - 0.207
+     - 379.3
+     - 0.379
    * - TimezoneFinderL (In-Memory)
-     - 209.5
-     - 0.209
+     - 390.5
+     - 0.390
 
 
 
@@ -90,14 +90,14 @@ Performance Analysis
 --------------------
 
 
-* **Fastest configuration**: TimezoneFinderL (File-Based) (206.6 ms)
+* **Fastest configuration**: TimezoneFinderL (File-Based) (379.3 ms)
 
-* **Slowest configuration**: TimezoneFinder (In-Memory) (218.9 ms)
+* **Slowest configuration**: TimezoneFinder (In-Memory) (401.4 ms)
 
 * **Performance difference**: 6% faster
 
 
-* **File-based mode** is 2% faster (209.4 ms vs 214.2 ms)
+* **File-based mode** is 4% faster (379.8 ms vs 395.9 ms)
 
 .. note::
 
