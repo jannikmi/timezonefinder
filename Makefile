@@ -85,13 +85,13 @@ testall:
 
 speedtest:
 	# pytest -s flag: output to console
-	uv run python scripts/check_speed_timezone_finding.py
+	uv run python scripts/check_speed_timezone_finding.py --rst
 # 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
 # 	@uv run pytest -s scripts/check_speed_initialisation.py -v
 
 benchmarks: speedtest
-	uv run python scripts/check_speed_initialisation.py
-	uv run python scripts/check_speed_inside_polygon.py
+	uv run python scripts/check_speed_initialisation.py --rst
+	uv run python scripts/check_speed_inside_polygon.py --rst
 
 
 reports: benchmarks
