@@ -20,7 +20,7 @@ The primary lookup flow converts query coordinates to scaled int32 values, colle
 
 ## Data Pipeline
 
-`parse_data.sh` downloads a chosen timezone-boundary-builder release (full or "now", optional ocean polygons), unpacks it to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets under `timezonefinder/data/`, runs `tox`, bumps the project version with `uv run --bump minor`, and offers to clean intermediates. The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata; adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags. When changing the datatype of shortcut-related FlatBuffers schemas (for example `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently.
+`parse_data.sh` downloads a chosen timezone-boundary-builder release (full or "now", optional ocean polygons), unpacks it to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets under `timezonefinder/data/`, runs `tox`, records the downloaded release tag in the `DATA_VERSION` file (checked weekly against upstream by `.github/workflows/check_data_updates.yml`), bumps the project version with `uv run --bump minor`, and offers to clean intermediates. The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata; adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags. When changing the datatype of shortcut-related FlatBuffers schemas (for example `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently.
 
 ## Development Workflow
 

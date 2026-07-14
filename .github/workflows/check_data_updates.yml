@@ -1,0 +1,62 @@
+name: Check for new timezone boundary data release
+
+on:
+  schedule:
+    # weekly on Sunday at 00:00 UTC, like the reference workflows
+    # (valhalla/valhalla check_tz_releases.yml, timezone-boundary-builder tz_update_check.yml)
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check_data_version:
+    name: Compare packaged data version with the latest upstream release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check for new release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          latest=$(gh api repos/evansiroky/timezone-boundary-builder/releases/latest --jq .tag_name)
+          if [[ ! "$latest" =~ ^[0-9]{4}[a-z]+$ ]]; then
+            echo "::error::unexpected release tag from the GitHub API: '$latest'"
+            exit 1
+          fi
+
+          current=$(cat DATA_VERSION)
+          echo "packaged data version: $current"
+          echo "latest available release: $latest"
+
+          if [[ "$latest" == "$current" ]]; then
+            echo "timezone boundary data is up to date"
+            exit 0
+          fi
+
+          title="New timezone boundary data available: $latest"
+
+          # avoid duplicate notifications: skip if an open issue already exists
+          existing=$(gh issue list --state open --limit 100 --json title \
+            --jq "[.[] | select(.title == \"$title\")] | length")
+          if [[ "$existing" -gt 0 ]]; then
+            echo "issue '$title' already exists, nothing to do"
+            exit 0
+          fi
+
+          body=$(cat <<EOF
+          A new timezone-boundary-builder release [\`$latest\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$latest) is available. The currently packaged data version is \`$current\`.
+
+          To update, regenerate the data with \`parse_data.sh\` (see the release process notes in \`Agents.md\`).
+
+          Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
+          EOF
+          )
+          gh issue create --title "$title" --body "$body"
+          echo "issue created: $title"

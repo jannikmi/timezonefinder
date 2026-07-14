@@ -4,6 +4,15 @@ Changelog
 
 
 
+8.2.6 (unreleased)
+------------------
+
+Internal:
+
+* added ``DATA_VERSION`` file tracking which timezone-boundary-builder release the packaged data was generated from, written automatically by ``parse_data.sh`` after a successful parse
+* added scheduled GitHub Actions workflow comparing ``DATA_VERSION`` against the latest timezone-boundary-builder release weekly and opening an issue when new boundary data is available (#273)
+
+
 8.2.5 (2026-07-11)
 ------------------
 
