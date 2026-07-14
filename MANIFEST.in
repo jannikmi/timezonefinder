@@ -1,6 +1,7 @@
 include README.rst
 include LICENSE
 include DATA_LICENSE
+include DATA_VERSION
 include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.npy *.fbs *.txt *.json *.c *.h
