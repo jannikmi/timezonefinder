@@ -79,38 +79,38 @@ Results for 'on land points' (points included in a land timezone)
      - Seconds/Query
      - Points/Second
    * - certain_timezone_at()
-     - 1.3e-04
+     - 1.2e-04
      - 8k
    * - TimezoneFinder.certain_timezone_at()
-     - 9.7e-05
-     - 10k
+     - 7.8e-05
+     - 13k
    * - timezone_at_land()
-     - 7.8e-06
-     - 128k
+     - 4.7e-06
+     - 214k
    * - TimezoneFinder.timezone_at_land()
-     - 7.9e-06
-     - 127k
+     - 4.6e-06
+     - 218k
    * - timezone_at()
-     - 7.9e-06
-     - 127k
+     - 4.3e-06
+     - 232k
    * - TimezoneFinder.timezone_at()
-     - 7.9e-06
-     - 127k
+     - 4.3e-06
+     - 234k
    * - unique_timezone_at()
-     - 1.3e-06
-     - 747k
+     - 7.0e-07
+     - 1425k
    * - TimezoneFinder.unique_timezone_at()
-     - 1.2e-06
-     - 847k
+     - 6.4e-07
+     - 1566k
    * - TimezoneFinderL.unique_timezone_at()
-     - 1.3e-06
-     - 777k
+     - 6.6e-07
+     - 1521k
    * - TimezoneFinderL.timezone_at_land()
-     - 1.9e-06
-     - 526k
+     - 9.7e-07
+     - 1032k
    * - TimezoneFinderL.timezone_at()
-     - 1.4e-06
-     - 725k
+     - 6.9e-07
+     - 1459k
 
 
 
@@ -128,38 +128,38 @@ Results for random points (anywhere on earth)
      - Seconds/Query
      - Points/Second
    * - certain_timezone_at()
-     - 9.3e-05
-     - 11k
+     - 8.5e-05
+     - 12k
    * - TimezoneFinder.certain_timezone_at()
-     - 9.0e-05
-     - 11k
+     - 7.4e-05
+     - 13k
    * - timezone_at_land()
-     - 5.3e-06
-     - 187k
+     - 3.3e-06
+     - 302k
    * - TimezoneFinder.timezone_at_land()
-     - 5.2e-06
-     - 191k
+     - 3.3e-06
+     - 307k
    * - timezone_at()
-     - 4.8e-06
-     - 207k
+     - 2.9e-06
+     - 342k
    * - TimezoneFinder.timezone_at()
-     - 4.8e-06
-     - 209k
+     - 2.9e-06
+     - 342k
    * - unique_timezone_at()
-     - 1.2e-06
-     - 831k
+     - 6.8e-07
+     - 1462k
    * - TimezoneFinder.unique_timezone_at()
-     - 1.1e-06
-     - 894k
+     - 6.4e-07
+     - 1573k
    * - TimezoneFinderL.unique_timezone_at()
-     - 1.1e-06
-     - 873k
+     - 6.8e-07
+     - 1472k
    * - TimezoneFinderL.timezone_at_land()
-     - 1.6e-06
-     - 610k
+     - 1.0e-06
+     - 966k
    * - TimezoneFinderL.timezone_at()
-     - 1.2e-06
-     - 861k
+     - 7.1e-07
+     - 1411k
 
 
 
@@ -187,17 +187,17 @@ Results for 'on land points' (points included in a land timezone)
      - Seconds/Query
      - Points/Second
    * - TimezoneFinder.certain_timezone_at()
-     - 9.2e-05
-     - 11k
+     - 7.2e-05
+     - 14k
    * - TimezoneFinder.timezone_at_land()
-     - 5.8e-06
-     - 173k
+     - 3.5e-06
+     - 289k
    * - TimezoneFinder.timezone_at()
-     - 5.3e-06
-     - 189k
+     - 3.1e-06
+     - 323k
    * - TimezoneFinder.unique_timezone_at()
-     - 1.1e-06
-     - 906k
+     - 6.3e-07
+     - 1598k
 
 
 
@@ -215,14 +215,14 @@ Results for random points (anywhere on earth)
      - Seconds/Query
      - Points/Second
    * - TimezoneFinder.certain_timezone_at()
-     - 9.3e-05
-     - 11k
+     - 6.1e-05
+     - 16k
    * - TimezoneFinder.timezone_at_land()
-     - 3.9e-06
-     - 257k
+     - 2.4e-06
+     - 415k
    * - TimezoneFinder.timezone_at()
-     - 3.4e-06
-     - 295k
+     - 2.1e-06
+     - 487k
    * - TimezoneFinder.unique_timezone_at()
-     - 1.1e-06
-     - 903k
+     - 6.3e-07
+     - 1577k
