@@ -3,6 +3,8 @@
 WORKING_FOLDER_NAME=tmp
 ARCHIVE_NAME=data_downloaded.zip
 ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
+DOWNLOADED_TAG_PATH=./$WORKING_FOLDER_NAME/downloaded_tag.txt
+RELEASE_API_URL=https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest
 JSON_PREFIX=combined
 JSON_SUFFIX=.json
 URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
@@ -51,6 +53,11 @@ else
         # install command mac:
         # brew install wget
         wget -O $ZIP_ARCHIVE_PATH $URL --tries=3
+
+        # record which release tag the "latest" download URL resolved to,
+        # so DATA_VERSION can be updated after a successful parse
+        curl -sL $RELEASE_API_URL | grep '"tag_name"' | cut -d'"' -f4 >"$DOWNLOADED_TAG_PATH"
+        echo "downloaded data release: $(cat "$DOWNLOADED_TAG_PATH")"
     fi
     echo "UNPACKING..."
     unzip $ZIP_ARCHIVE_PATH -d $WORKING_FOLDER_NAME
@@ -70,6 +77,15 @@ if ! uv run tox; then
     # assert that all tests are passing
     echo "tests failed!"
     exit 1
+fi
+
+# update DATA_VERSION to the release tag recorded at download time
+# (checked weekly against upstream by .github/workflows/check_data_updates.yml)
+if [ -s "$DOWNLOADED_TAG_PATH" ]; then
+    cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
+    echo "DATA_VERSION set to $(cat DATA_VERSION)"
+else
+    echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"
 fi
 
 # patch version bump
