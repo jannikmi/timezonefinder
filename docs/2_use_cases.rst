@@ -79,15 +79,17 @@ How to use the ``timezonefinder`` package with data files from another location 
 
 
 
-Data parsing shell script
-*************************
+Data update shell script
+************************
 
-The included ``parse_data.sh`` shell script simplifies downloading the latest version of
+The included ``update_data.sh`` shell script simplifies downloading the latest version of
 `timezone-boundary-builder <https://github.com/evansiroky/timezone-boundary-builder/releases>`__
 data and parsing in with ``file_converter.py``.
-It supports downloading and parsing the ``timezone-boundary-builder`` version WITHOUT ocean timezones.
-This is useful if you do not require ocean timezones and want to have smaller data files.
+It is non-interactive and controlled entirely via command line flags:
 
 ::
 
-    /bin/bash  /path/to/timezonefinder/parse_data.sh
+    /bin/bash /path/to/timezonefinder/update_data.sh [--dataset=full|same-since-now] [--with-oceans] [--rm-tmp]
+
+Without the ``--with-oceans`` flag the dataset WITHOUT ocean timezones is used.
+This is useful if you do not require ocean timezones and want to have smaller data files.

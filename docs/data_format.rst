@@ -39,18 +39,18 @@ The processing pipeline for this data involves:
 3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
-The script ``parse_data.sh`` automates this process.
+The script ``update_data.sh`` automates this process.
 
 Alternative Dataset Options
 ============================
 
-The ``parse_data.sh`` script also supports downloading the reduced ``timezones-now`` dataset, which merges timezones with identical behavior (as of now) into a single zone. This reduces the number of timezones from ~440 to ~90 and provides a smaller memory footprint. However, this dataset:
+The ``update_data.sh`` script also supports downloading the reduced ``timezones-now`` dataset (via ``--dataset=same-since-now``), which merges timezones with identical behavior (as of now) into a single zone. This reduces the number of timezones from ~440 to ~90 and provides a smaller memory footprint. However, this dataset:
 
 * Provides incorrect data for observed timekeeping methods in the past at certain locations
 * Loses location-specific information (e.g., ``Europe/Berlin`` becomes ``Europe/Paris``)
 * Reduces localization capabilities
 
-If your use case requires the reduced dataset, you can use the ``parse_data.sh`` script to download and process the ``timezones-with-oceans-now.geojson`` file.
+If your use case requires the reduced dataset, you can use the ``update_data.sh`` script to download and process the ``timezones-with-oceans-now.geojson`` file.
 
 
 

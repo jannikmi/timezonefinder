@@ -1,7 +1,7 @@
 """Tests for the DATA_VERSION file tracking the packaged boundary data release.
 
 The file is read by .github/workflows/check_data_updates.yml to detect new
-timezone-boundary-builder releases and written by parse_data.sh on data updates.
+timezone-boundary-builder releases and written by update_data.sh on data updates.
 """
 
 import re

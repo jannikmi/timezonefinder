@@ -60,11 +60,7 @@ outdated:
 
 data:
 	rm -rf tmp
-	# choices:
-	# 1) Original full dataset
-	# 1) timezone data with oceans
-	# 0) keep tmp files
-	printf '1\n1\n0\n' | bash parse_data.sh
+	bash update_data.sh --dataset=full --with-oceans
 
 parse:
 	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
