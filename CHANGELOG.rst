@@ -12,6 +12,7 @@ Internal:
 * added ``DATA_VERSION`` file tracking which timezone-boundary-builder release the packaged data was generated from, written automatically by the data update script after a successful parse. Thanks to `Lucas Hemkemeier <https://github.com/hemkdev>`__ for the PR #429
 * added scheduled GitHub Actions workflow comparing ``DATA_VERSION`` against the latest timezone-boundary-builder release weekly and opening an issue when new boundary data is available (solves issue #273)
 * made the data update script CI-ready and renamed it from ``parse_data.sh`` to ``update_data.sh``: interactive prompts replaced by command line flags (``--dataset=full|same-since-now``, ``--with-oceans``, ``--rm-tmp``) and the changelog entry for data updates is now generated automatically (issue #167)
+* added property-based tests (``hypothesis``) for coordinate validation (solves issue #143)
 
 
 8.2.5 (2026-07-11)
