@@ -141,7 +141,8 @@ jobs:
             --title "Data $LATEST" \
             --body "$body" \
             --head "data-update-$LATEST" \
-            --base master
+            --base master \
+            --reviewer "${{ github.repository_owner }}"
           echo "update PR created for $LATEST"
 
   open_notification_issue:
