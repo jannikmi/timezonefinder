@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 jobs:
   check_data_version:
@@ -26,6 +27,7 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -48,7 +50,7 @@ jobs:
           fi
 
           # avoid duplicate work: skip if an update PR for this release is already open
-          existing=$(gh pr list --state open --head "data-update-$latest" --json number --jq length)
+          existing=$(gh pr list --repo "$GH_REPO" --state open --head "data-update-$latest" --json number --jq length)
           if [[ "$existing" -gt 0 ]]; then
             echo "an update PR for $latest is already open, nothing to do"
             echo "update_needed=false" >> "$GITHUB_OUTPUT"
