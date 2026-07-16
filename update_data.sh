@@ -1,6 +1,6 @@
 #!/bin/bash
 # Download the latest timezone-boundary-builder release, regenerate the packaged
-# binary data, run the tests and prepare a release (version bump + changelog entry).
+# binary data and prepare a release (version bump + changelog entry).
 # Non-interactive: all behavior is controlled via command line flags (CI-ready).
 set -euo pipefail
 
@@ -93,13 +93,6 @@ echo "calling $SCRIPT_PATH:"
 # ensure Python can import the local 'scripts' package
 if ! PYTHONPATH=. uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"; then
     echo "file_converter.py failed!"
-    exit 1
-fi
-
-echo "runnings tests..."
-if ! uv run tox; then
-    # assert that all tests are passing
-    echo "tests failed!"
     exit 1
 fi
 

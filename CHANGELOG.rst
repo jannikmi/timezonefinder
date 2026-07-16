@@ -14,6 +14,7 @@ Internal:
 * made the data update script CI-ready and renamed it from ``parse_data.sh`` to ``update_data.sh``: interactive prompts replaced by command line flags (``--dataset=full|same-since-now``, ``--with-oceans``, ``--rm-tmp``) and the changelog entry for data updates is now generated automatically (issue #167)
 * added property-based tests (``hypothesis``) for coordinate validation (solves issue #143)
 * the weekly data check workflow now regenerates the data and opens a ready-to-review update PR when a new timezone-boundary-builder release is detected, falling back to the previous notification issue if the automated update fails (issue #167)
+* ``update_data.sh`` no longer runs the test suite via ``tox``: redundant with the CI/CD pipeline validating the automated update PRs
 
 
 8.2.5 (2026-07-11)
