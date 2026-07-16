@@ -62,7 +62,7 @@ UNWANTED_DIST_PATTERNS = {
     "CONTRIBUTING.*",
     "Agents.*",
     "Makefile",
-    "parse_data.sh",
+    "update_data.sh",
     "readthedocs.yaml",
     "test_musllinux_wheel.sh",
     "tox.ini",

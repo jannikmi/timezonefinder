@@ -53,7 +53,7 @@ jobs:
           body=$(cat <<EOF
           A new timezone-boundary-builder release [\`$latest\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$latest) is available. The currently packaged data version is \`$current\`.
 
-          To update, regenerate the data with \`parse_data.sh\` (see the release process notes in \`Agents.md\`).
+          To update, regenerate the data with \`update_data.sh\` (see the release process notes in \`Agents.md\`).
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF

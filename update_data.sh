@@ -1,4 +1,8 @@
 #!/bin/bash
+# Download the latest timezone-boundary-builder release, regenerate the packaged
+# binary data, run the tests and prepare a release (version bump + changelog entry).
+# Non-interactive: all behavior is controlled via command line flags (CI-ready).
+set -euo pipefail
 
 WORKING_FOLDER_NAME=tmp
 ARCHIVE_NAME=data_downloaded.zip
@@ -9,8 +13,46 @@ JSON_PREFIX=combined
 JSON_SUFFIX=.json
 URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
 URL_SUFFIX=.geojson.zip
+CHANGELOG_PATH=CHANGELOG.rst
+DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
 
-echo "TIME ZONE DATA PARSING SCRIPT"
+usage() {
+    cat <<EOF
+Usage: $0 [OPTIONS]
+
+Options:
+  --dataset=full             use the original full dataset (default)
+  --dataset=same-since-now   use the reduced "timezones-now" dataset, merging
+                             timezones with identical behavior from now on
+  --with-oceans              include ocean timezones (Etc/GMT+-XX)
+  --rm-tmp                   delete the temporary data folder ($WORKING_FOLDER_NAME) at the end
+  -h, --help                 show this help message and exit
+EOF
+}
+
+DATASET_SUFFIX=""
+INTERFIX=""
+RM_TMP=0
+
+for arg in "$@"; do
+    case $arg in
+    --dataset=full) DATASET_SUFFIX="" ;;
+    --dataset=same-since-now) DATASET_SUFFIX=-now ;;
+    --with-oceans) INTERFIX=-with-oceans ;;
+    --rm-tmp) RM_TMP=1 ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "ERROR: unknown option '$arg'" >&2
+        usage >&2
+        exit 1
+        ;;
+    esac
+done
+
+echo "TIME ZONE DATA UPDATE SCRIPT"
 
 # make script work independent of where you invoke it from
 parent_path=$(
@@ -20,24 +62,6 @@ parent_path=$(
 cd "$parent_path" || exit 1
 mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 
-echo "Which dataset version to download?"
-echo "1) Original full dataset"
-echo "2) Reduced timezones-now dataset"
-read -r DATASET_CHOICE
-
-if [ "$DATASET_CHOICE" -eq 2 ]; then
-    DATASET_SUFFIX=-now
-else
-    DATASET_SUFFIX=""
-fi
-
-echo "use timezone data with oceans (0: No, 1: Yes)? "
-read -r WITH_OCEANS
-if [ "$WITH_OCEANS" -eq 1 ]; then
-    INTERFIX=-with-oceans
-else
-    INTERFIX=""
-fi
 JSON_FILE_NAME=$JSON_PREFIX$INTERFIX$DATASET_SUFFIX$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_FILE_NAME
 
@@ -88,20 +112,27 @@ else
     echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"
 fi
 
-# patch version bump
+# patch version bump (data-only releases are patch releases)
 uv version --bump patch
+NEW_VERSION=$(uv version --short)
 
-# TODO
- read -r -p "should all temporary data files be deleted (0: No, 1: Yes)?" do_deletion
- if [ "$do_deletion" -eq 1 ]; then
+# prepend a changelog entry for the data update
+DATA_TAG=$(cat DATA_VERSION)
+ENTRY_TITLE="$NEW_VERSION ($(date +%Y-%m-%d))"
+ENTRY_UNDERLINE=$(printf '%*s' "${#ENTRY_TITLE}" '' | tr ' ' '-')
+{
+    # keep the changelog header (first 3 lines), insert the new entry below it
+    head -n 3 "$CHANGELOG_PATH"
+    printf '\n\n%s\n%s\n\n' "$ENTRY_TITLE" "$ENTRY_UNDERLINE"
+    printf '* updated the data to `%s <%s/releases/tag/%s>`__\n' "$DATA_TAG" "$DATA_REPO_URL" "$DATA_TAG"
+    tail -n +4 "$CHANGELOG_PATH"
+} >"$CHANGELOG_PATH.new"
+mv "$CHANGELOG_PATH.new" "$CHANGELOG_PATH"
+echo "added $CHANGELOG_PATH entry: $ENTRY_TITLE"
+
+if [ "$RM_TMP" -eq 1 ]; then
+    echo "deleting temporary data files..."
     rm -r "$WORKING_FOLDER_NAME"
 fi
 
-# TODO add changelog entry: keep title, current date, parse data version
-# $(uv version) (2022-12-06)
-#------------------
-#
-#* updated the data to `2022g <https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2022g>`__.
-#echo -e "DATA-Line-1\n$(cat input)" > input
-
-echo "SUCCESS! the new package version $(uv version) can now be released!"
+echo "SUCCESS! the new package version $NEW_VERSION can now be released!"

@@ -16,7 +16,7 @@ This Python library `timezonefinder` provides offline timezone lookups for WGS84
 
 - `timezonefinder/`: Core library with `TimezoneFinder` (full polygon search), `TimezoneFinderL` (shortcut-only heuristic), global helper functions, CLI entry point, and utilities
 - `timezonefinder/data/`: Packaged binary assets (FlatBuffers, NumPy arrays, zone names, shortcut index) consumed at runtime
-- `scripts/`: Tooling for regenerating data (`file_converter.py`, `parse_data.sh`), reporting, and helper configs
+- `scripts/`: Tooling for regenerating data (`file_converter.py`, `update_data.sh`), reporting, and helper configs
 - `tests/`: PyTest suite with unit tests and integration tests
 - `docs/`: Sphinx documentation; `docs/data_format.rst` is authoritative reference for binary layouts
 
@@ -95,7 +95,7 @@ Ocean zones (`Etc/GMT+/-XX`) guarantee a timezone match for all possible input c
 
 ## Data Pipeline
 
-- `parse_data.sh` downloads timezone-boundary-builder release, unpacks to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets
+- `update_data.sh` downloads timezone-boundary-builder release, unpacks to `tmp/`, executes `scripts/file_converter.py` to emit FlatBuffers/NumPy assets
 - The converter multiplies coordinates by 10^7, persists bboxes, hole registries, shortcut maps, and zone metadata
 - Adjust `scripts/configs.py` when experimenting with alternative resolutions or debugging flags
 - When changing the datatype of shortcut-related FlatBuffers schemas (e.g. `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they are regenerated consistently
