@@ -5,8 +5,6 @@ Uses ``hypothesis`` to exercise the full finite input space of
 complementing the example-based tests in ``tests/utils_test.py``.
 """
 
-import math
-
 import pytest
 from hypothesis import given, strategies as st
 
@@ -31,10 +29,10 @@ _OUT_OF_RANGE_LAT = st.floats(allow_nan=False, allow_infinity=False).filter(
     lambda x: not (-90.0 <= x <= 90.0)
 )
 
-# NaN values (allow_nan=True; the filter keeps only the NaN draws).
-_NAN = st.floats(allow_nan=True, allow_infinity=False).filter(math.isnan)
-# Infinity values (allow_infinity=True; the filter keeps only the Inf draws).
-_INF = st.floats(allow_nan=False, allow_infinity=True).filter(math.isinf)
+# NaN / Inf are only a few distinct values, so construct them directly instead
+# of generating many floats only to filter most of them away.
+_NAN = st.just(float("nan"))
+_INF = st.sampled_from([float("inf"), float("-inf")])
 
 # Pairs where at least one coordinate is NaN (resp. Inf); the other is valid.
 _NAN_PAIR = st.one_of(
