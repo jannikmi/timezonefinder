@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          latest=$(gh api repos/evansiroky/timezone-boundary-builder/releases/latest --jq .tag_name)
+          latest=$(curl -fsSL https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest | python -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
           if [[ ! "$latest" =~ ^[0-9]{4}[a-z]+$ ]]; then
             echo "::error::unexpected release tag from the GitHub API: '$latest'"
             exit 1
