@@ -12,6 +12,10 @@ Internal:
 * added ``DATA_VERSION`` file tracking which timezone-boundary-builder release the packaged data was generated from, written automatically by the data update script after a successful parse. Thanks to `Lucas Hemkemeier <https://github.com/hemkdev>`__ for the PR #429
 * added scheduled GitHub Actions workflow comparing ``DATA_VERSION`` against the latest timezone-boundary-builder release weekly and opening an issue when new boundary data is available (solves issue #273)
 * made the data update script CI-ready and renamed it from ``parse_data.sh`` to ``update_data.sh``: interactive prompts replaced by command line flags (``--dataset=full|same-since-now``, ``--with-oceans``, ``--rm-tmp``) and the changelog entry for data updates is now generated automatically (issue #167)
+* added property-based tests (``hypothesis``) for coordinate validation (solves issue #143)
+* the weekly data check workflow now regenerates the data and opens a ready-to-review update PR when a new timezone-boundary-builder release is detected, falling back to the previous notification issue if the automated update fails (issue #167)
+* ``update_data.sh`` no longer runs the test suite via ``tox``: redundant with the CI/CD pipeline validating the automated update PRs
+* automated update PRs are now merged and released automatically when their CI/CD pipeline passes: the version tag is pushed with a GitHub App token so the release pipeline is triggered; on CI failure the PR is labeled ``automation-failed`` and the maintainer is notified (issue #167)
 
 
 8.2.5 (2026-07-11)

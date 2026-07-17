@@ -10,37 +10,161 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 jobs:
   check_data_version:
     name: Compare packaged data version with the latest upstream release
     runs-on: ubuntu-latest
+    outputs:
+      update_needed: ${{ steps.check.outputs.update_needed }}
+      latest: ${{ steps.check.outputs.latest }}
+      current: ${{ steps.check.outputs.current }}
     steps:
       - uses: actions/checkout@v7
-
       - name: Check for new release
+        id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          latest=$(gh api repos/evansiroky/timezone-boundary-builder/releases/latest --jq .tag_name)
+          current=$(cat DATA_VERSION)
+          echo "packaged data version: $current"
+
+          latest=$(curl --retry 3 -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "User-Agent: github-actions" \
+            https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest \
+            | python -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
+          if [[ -z "$latest" ]]; then
+            echo "::warning::unable to determine the latest release tag from the GitHub API; skipping update check"
+            echo "latest=" >> "$GITHUB_OUTPUT"
+            echo "current=$current" >> "$GITHUB_OUTPUT"
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [[ ! "$latest" =~ ^[0-9]{4}[a-z]+$ ]]; then
             echo "::error::unexpected release tag from the GitHub API: '$latest'"
             exit 1
           fi
 
-          current=$(cat DATA_VERSION)
-          echo "packaged data version: $current"
           echo "latest available release: $latest"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
 
           if [[ "$latest" == "$current" ]]; then
             echo "timezone boundary data is up to date"
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          title="New timezone boundary data available: $latest"
+          # avoid duplicate work: skip if an update PR for this release is already open
+          existing=$(gh pr list --repo "$GH_REPO" --state open --head "data-update-$latest" --json number --jq length)
+          if [[ "$existing" -gt 0 ]]; then
+            echo "an update PR for $latest is already open, nothing to do"
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "update_needed=true" >> "$GITHUB_OUTPUT"
+
+  open_update_pr:
+    name: Regenerate the data and open an update PR
+    needs: check_data_version
+    if: needs.check_data_version.outputs.update_needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      LATEST: ${{ needs.check_data_version.outputs.latest }}
+      CURRENT: ${{ needs.check_data_version.outputs.current }}
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DATA_UPDATER_APP_ID }}
+          private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # NOTE: the App token (instead of the default GITHUB_TOKEN) is required so
+      # that the push and the created PR trigger the regular CI/CD workflows
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Regenerate the data
+        run: bash update_data.sh --dataset=full --with-oceans --rm-tmp
+
+      - name: Commit and push the update branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "data-update-$LATEST"
+          git add -A
+          git commit -m "Data $LATEST"
+          # force push: a leftover branch from a previous failed run must not block the update
+          git push --force origin "data-update-$LATEST"
+
+      - name: Open the update PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          new_version=$(uv version --short)
+          body=$(cat <<EOF
+          Automated update to the timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) (previously packaged: \`$CURRENT\`).
+
+          The data was regenerated with \`update_data.sh\` (full dataset with oceans) and the version was bumped to \`$new_version\` including the changelog entry. The CI/CD pipeline of this PR validates the new data against all supported Python versions.
+
+          Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
+          EOF
+          )
+          gh pr create \
+            --title "Data $LATEST" \
+            --body "$body" \
+            --head "data-update-$LATEST" \
+            --base master \
+            --reviewer "${{ github.repository_owner }}"
+          echo "update PR created for $LATEST"
+
+  open_notification_issue:
+    # fallback: keep the previous behavior of opening a notification issue
+    # in case the automated update could not be prepared
+    name: Fall back to a notification issue
+    needs: [check_data_version, open_update_pr]
+    if: failure() && needs.check_data_version.outputs.update_needed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      LATEST: ${{ needs.check_data_version.outputs.latest }}
+      CURRENT: ${{ needs.check_data_version.outputs.current }}
+    steps:
+      - name: Open notification issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          title="New timezone boundary data available: $LATEST"
 
           # avoid duplicate notifications: skip if an open issue already exists
           existing=$(gh issue list --state open --limit 100 --json title \
@@ -51,9 +175,9 @@ jobs:
           fi
 
           body=$(cat <<EOF
-          A new timezone-boundary-builder release [\`$latest\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$latest) is available. The currently packaged data version is \`$current\`.
+          A new timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) is available. The currently packaged data version is \`$CURRENT\`.
 
-          To update, regenerate the data with \`update_data.sh\` (see the release process notes in \`Agents.md\`).
+          The automated update job failed to prepare an update PR, so the data needs to be regenerated manually with \`update_data.sh\` (see the release process notes in \`Agents.md\`).
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF

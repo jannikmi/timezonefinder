@@ -46,8 +46,7 @@ docs = [
 test=[
     "tox",
     "pytest",
-    # property-based tests in tests/test_property_api.py
-    "hypothesis",
+    "hypothesis>=6",
     # used in example scripts
     "pytz>=2022.7.1",
     # setuptoosl required for integration tests: building sdist and wheel
