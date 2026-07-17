@@ -1,0 +1,121 @@
+name: Auto-release data update PRs
+
+# Full automation of data updates (issue #167, step 3): when the CI/CD pipeline
+# of an automated update PR (branch data-update-*, opened by
+# check_data_updates.yml) completes:
+# - on success: merge the PR and push the version tag, which triggers the
+#   release pipeline in build.yml
+# - on failure: label the PR and notify the maintainer
+#
+# NOTE: merging and tagging use the GitHub App token, since tags pushed with
+# the default GITHUB_TOKEN do not trigger other workflows.
+
+on:
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  merge_and_release:
+    name: Merge the update PR and tag the release
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'data-update-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.DATA_UPDATER_APP_ID }}
+          private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Merge the update PR
+        id: merge
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
+          if [[ -z "$pr_number" ]]; then
+            echo "no open update PR for branch $BRANCH, nothing to do"
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          gh pr merge "$pr_number" --squash
+          merge_sha=$(gh pr view "$pr_number" --json mergeCommit --jq .mergeCommit.oid)
+          echo "merged PR #$pr_number as $merge_sha"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.merge.outputs.merged == 'true'
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ steps.merge.outputs.merge_sha }}
+
+      - name: Install uv
+        if: steps.merge.outputs.merged == 'true'
+        uses: astral-sh/setup-uv@v7
+
+      - name: Tag the release
+        if: steps.merge.outputs.merged == 'true'
+        run: |
+          set -euo pipefail
+
+          version=$(uv version --short)
+          # mirror the manual release process ("make release": annotated tag on master)
+          git tag -a "$version" -m "Release $version"
+          git push origin "$version"
+          echo "pushed release tag $version, the release pipeline in build.yml takes over"
+
+  alert_failure:
+    name: Notify the maintainer about a failed update PR
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'data-update-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label the PR and mention the maintainer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          MAINTAINER: ${{ github.repository_owner }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+
+          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
+          if [[ -z "$pr_number" ]]; then
+            echo "no open update PR for branch $BRANCH, nothing to do"
+            exit 0
+          fi
+
+          gh label create automation-failed \
+            --description "the automated data update needs manual attention" \
+            --color D93F0B --force
+
+          gh pr edit "$pr_number" --add-label automation-failed
+
+          # avoid repeated notifications on CI re-runs
+          already_notified=$(gh pr view "$pr_number" --json comments \
+            --jq '[.comments[] | select(.body | contains("automated data update"))] | length')
+          if [[ "$already_notified" -gt 0 ]]; then
+            echo "failure comment already exists on PR #$pr_number, nothing to do"
+            exit 0
+          fi
+
+          gh pr comment "$pr_number" --body "@$MAINTAINER the CI/CD pipeline of this automated data update failed ([run]($RUN_URL)). Manual attention is needed; the PR will not be merged automatically."
