@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: read
 
 jobs:
   check_data_version:
@@ -21,22 +22,37 @@ jobs:
       current: ${{ steps.check.outputs.current }}
     steps:
       - uses: actions/checkout@v7
-
       - name: Check for new release
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          latest=$(gh api repos/evansiroky/timezone-boundary-builder/releases/latest --jq .tag_name)
+          current=$(cat DATA_VERSION)
+          echo "packaged data version: $current"
+
+          latest=$(curl --retry 3 -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "User-Agent: github-actions" \
+            https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest \
+            | python -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
+          if [[ -z "$latest" ]]; then
+            echo "::warning::unable to determine the latest release tag from the GitHub API; skipping update check"
+            echo "latest=" >> "$GITHUB_OUTPUT"
+            echo "current=$current" >> "$GITHUB_OUTPUT"
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           if [[ ! "$latest" =~ ^[0-9]{4}[a-z]+$ ]]; then
             echo "::error::unexpected release tag from the GitHub API: '$latest'"
             exit 1
           fi
 
-          current=$(cat DATA_VERSION)
-          echo "packaged data version: $current"
           echo "latest available release: $latest"
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "current=$current" >> "$GITHUB_OUTPUT"
@@ -48,7 +64,7 @@ jobs:
           fi
 
           # avoid duplicate work: skip if an update PR for this release is already open
-          existing=$(gh pr list --state open --head "data-update-$latest" --json number --jq length)
+          existing=$(gh pr list --repo "$GH_REPO" --state open --head "data-update-$latest" --json number --jq length)
           if [[ "$existing" -gt 0 ]]; then
             echo "an update PR for $latest is already open, nothing to do"
             echo "update_needed=false" >> "$GITHUB_OUTPUT"
