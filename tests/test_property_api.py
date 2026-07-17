@@ -6,9 +6,10 @@ with randomly generated coordinates, complementing the example-based
 tests in ``tests/main_test.py``.
 
 The lookup functions are comparatively expensive (polygon-in-point
-checks), so every test in this module is marked as ``slow`` and runs
-with ``max_examples=None`` for exhaustive coverage. ``_LOOKUP_SETTINGS``
-can still be used to reduce ``max_examples`` during local development.
+checks), so every test in this module is marked as ``slow``. The
+``_LOOKUP_SETTINGS`` keep the deadline permissive and silence the
+``too_slow`` health check; ``max_examples`` is left at the hypothesis
+default but can be reduced locally for faster feedback.
 """
 
 from __future__ import annotations
@@ -62,10 +63,10 @@ _INVALID_LAT = st.one_of(_OUT_OF_RANGE_LAT, _NAN, _INF)
 # A valid timezone name drawn from the known list.
 _TIMEZONE_NAME = st.sampled_from(sorted(_VALID_NAMES))
 
-# Exhaustive coverage in production (max_examples=None). Reduce max_examples
-# locally for faster feedback during development.
+# Use hypothesis defaults for max_examples. Reduce max_examples locally
+# for faster feedback during development.
 _LOOKUP_SETTINGS = settings(
-    max_examples=None,
+    # max_examples=None,
     deadline=None,
     suppress_health_check=(HealthCheck.too_slow,),
 )
