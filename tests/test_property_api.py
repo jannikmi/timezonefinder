@@ -6,7 +6,9 @@ with randomly generated coordinates, complementing the example-based
 tests in ``tests/main_test.py``.
 
 The lookup functions are comparatively expensive (polygon-in-point
-checks), so the example budgets are kept small via ``max_examples``.
+checks), so every test in this module is marked as ``slow`` and runs
+with ``max_examples=None`` for exhaustive coverage. ``_LOOKUP_SETTINGS``
+can still be used to reduce ``max_examples`` during local development.
 """
 
 from __future__ import annotations
@@ -22,6 +24,9 @@ from timezonefinder import (
     timezone_at_land,
     unique_timezone_at,
 )
+
+# Mark all tests in this module as slow
+pytestmark = pytest.mark.slow
 
 # A single shared TimezoneFinder instance gives access to the canonical list
 # of valid timezone names without paying for singleton lookups in every test.
@@ -57,9 +62,10 @@ _INVALID_LAT = st.one_of(_OUT_OF_RANGE_LAT, _NAN, _INF)
 # A valid timezone name drawn from the known list.
 _TIMEZONE_NAME = st.sampled_from(sorted(_VALID_NAMES))
 
-# Keep the example budget modest: polygon lookups are not cheap.
+# Exhaustive coverage in production (max_examples=None). Reduce max_examples
+# locally for faster feedback during development.
 _LOOKUP_SETTINGS = settings(
-    max_examples=50,
+    max_examples=None,
     deadline=None,
     suppress_health_check=(HealthCheck.too_slow,),
 )
@@ -170,7 +176,7 @@ def test_lookup_functions_reject_invalid_latitude(func, coord):
         func(lng=0.0, lat=coord)
 
 
-@settings(max_examples=25, deadline=None)
+@_LOOKUP_SETTINGS
 @given(name=_TIMEZONE_NAME, coords_as_pairs=st.booleans())
 def test_get_geometry_returns_non_empty_for_known_timezone(name, coords_as_pairs):
     """Every known timezone name has a non-empty polygon geometry."""
@@ -179,7 +185,7 @@ def test_get_geometry_returns_non_empty_for_known_timezone(name, coords_as_pairs
     assert len(result) > 0
 
 
-@settings(max_examples=25, deadline=None)
+@_LOOKUP_SETTINGS
 @given(name=_TIMEZONE_NAME)
 def test_get_geometry_by_id_matches_by_name(name):
     """Looking up by tz_id (index) returns the same geometry as by name."""
@@ -190,7 +196,7 @@ def test_get_geometry_by_id_matches_by_name(name):
     assert by_name == by_id
 
 
-@settings(max_examples=10, deadline=None)
+@_LOOKUP_SETTINGS
 @given(name=_TIMEZONE_NAME)
 def test_get_geometry_is_deterministic(name):
     """Repeated geometry lookups return identical structures."""
