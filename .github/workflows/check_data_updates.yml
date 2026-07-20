@@ -85,7 +85,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.DATA_UPDATER_APP_ID }}
           private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
