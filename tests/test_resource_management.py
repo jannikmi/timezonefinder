@@ -5,6 +5,7 @@ Test script to verify that the resource management improvements work correctly.
 
 import gc
 import sys
+import weakref
 
 import numpy as np
 import pytest
@@ -79,6 +80,28 @@ class TestNumpyViewOutlivesAccessor:
         # the view is still valid: suppressing the error kept the mapping alive
         assert coords.shape[0] == 2
         assert coords.size > 0
+
+    def test_cleanup_releases_mapping_once_the_view_is_dropped(self):
+        """A refused close must only defer the unmapping, not pin it to the accessor.
+
+        cleanup() drops its own references to the mmap, so the mapping goes away with
+        the last view even if the accessor itself is still alive.
+        """
+        accessor = self._accessor()
+        coords = accessor[0]
+        mmap_alive = weakref.ref(accessor.coord_buf)
+
+        accessor.cleanup()
+        assert mmap_alive() is not None, "view is alive, so the mapping must persist"
+
+        del coords
+        gc.collect()
+
+        assert mmap_alive() is None, (
+            "mapping still held after the last view was dropped"
+        )
+        # keep the accessor referenced to prove it is not what released the mapping
+        assert accessor is not None
 
     def test_repeated_cleanup_with_live_view_does_not_raise(self):
         """cleanup() runs again via __del__, so it must stay idempotent."""

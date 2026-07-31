@@ -136,8 +136,11 @@ def close_resource(obj: Any) -> None:
     exist") while zero-copy views onto the mapping are still alive - polygon
     coordinate arrays are such views (see ``flatbuf.io.polygons``). Refusing to close
     is a safety guarantee rather than a failure: unmapping while views reference the
-    memory would leave them dangling. The mapping is released as soon as the last view
-    is dropped, so suppressing this is safe and leaks nothing.
+    memory would leave them dangling. Closing is then merely deferred - the mapping is
+    released once the last view is dropped and nothing else references the mmap object.
+    Callers that suppress this must therefore also drop their own references to the
+    mmap, as ``FileCoordAccessor.cleanup()`` does, otherwise the mapping stays alive
+    for as long as the caller does.
 
     This is useful for cleanup operations where some resources may not exist or may fail
     to close without affecting program flow.

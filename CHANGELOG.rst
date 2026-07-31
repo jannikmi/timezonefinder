@@ -7,7 +7,8 @@ Changelog
 X.X.X (unreleased)
 ------------------
 
-* fixed a ``BufferError: cannot close exported pointers exist`` raised during resource cleanup in file mode (``in_memory=False``) whenever a polygon coordinate array obtained from ``coords_of()`` outlived the ``TimezoneFinder`` instance. Such arrays are zero-copy views onto the memory-mapped coordinate file, and ``mmap.close()`` refuses to unmap while they are alive. ``utils.close_resource()`` now treats ``BufferError`` like the other expected close errors: the mapping stays valid and is released once the last view is dropped
+* fixed a ``BufferError: cannot close exported pointers exist`` raised during resource cleanup in file mode (``in_memory=False``) whenever a polygon coordinate array obtained from ``coords_of()`` outlived the ``TimezoneFinder`` instance. Such arrays are zero-copy views onto the memory-mapped coordinate file, and ``mmap.close()`` refuses to unmap while they are alive. ``utils.close_resource()`` now treats ``BufferError`` like the other expected close errors, keeping the mapping valid instead of leaving the views dangling
+* ``FileCoordAccessor.cleanup()`` now releases its own references to the memory map, so a close deferred by the above is no longer pinned for the lifetime of the accessor: the mapping is freed as soon as the last coordinate view is dropped. The accessor must not be used after ``cleanup()``
 
 Internal:
 

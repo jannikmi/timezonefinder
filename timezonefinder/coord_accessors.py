@@ -99,7 +99,11 @@ class FileCoordAccessor(AbstractCoordAccessor):
         return read_polygon_array_from_binary(self.polygon_collection, idx)
 
     def cleanup(self) -> None:
-        """Clean up resources."""
+        """Clean up resources.
+
+        Safe to call repeatedly and on a partially initialised instance. The accessor
+        must not be used afterwards: the underlying buffers are released.
+        """
         # At termination utils may have been tidied up. If we're terminating we don't need to
         # worry about closing file handles so just avoid an exception.
         close_resource = getattr(utils, "close_resource", None)
@@ -107,13 +111,21 @@ class FileCoordAccessor(AbstractCoordAccessor):
             return
 
         # close_resource already ignores None and common close errors.
-        # Note: closing coord_buf is a no-op while polygon arrays handed out by
+        # Note: closing coord_buf is refused while polygon arrays handed out by
         # __getitem__ are still alive, since those are zero-copy views onto the mmap.
-        # close_resource suppresses the resulting BufferError; the mapping is released
-        # once the last view is dropped.
+        # close_resource suppresses the resulting BufferError (unmapping underneath a
+        # live view would leave it dangling).
         close_resource(getattr(self, "coord_file", None))
         close_resource(getattr(self, "coord_buf", None))
-        # polygon_collection is just a FlatBuffers view on coord_buf and owns no resources itself
+
+        # Drop our own references regardless of whether the close succeeded. If it was
+        # refused, these are the only remaining owners besides the caller's views, so
+        # releasing them lets the mapping go as soon as the last view is dropped rather
+        # than pinning it for the lifetime of this accessor.
+        # polygon_collection owns no resources itself, but keeps coord_buf alive.
+        for attr in ("polygon_collection", "coord_buf", "coord_file"):
+            if hasattr(self, attr):
+                delattr(self, attr)
 
 
 class MemoryCoordAccessor(AbstractCoordAccessor):
