@@ -130,7 +130,14 @@ def close_resource(obj: Any) -> None:
 
     Attempts to call the close() method on the given object. If the object is None
     or doesn't have a close() method, this is silently ignored. Expected errors during
-    closure (AttributeError, OSError, ValueError) are also suppressed.
+    closure (AttributeError, OSError, ValueError, BufferError) are also suppressed.
+
+    ``BufferError`` is raised by ``mmap.close()`` ("cannot close exported pointers
+    exist") while zero-copy views onto the mapping are still alive - polygon
+    coordinate arrays are such views (see ``flatbuf.io.polygons``). Refusing to close
+    is a safety guarantee rather than a failure: unmapping while views reference the
+    memory would leave them dangling. The mapping is released as soon as the last view
+    is dropped, so suppressing this is safe and leaks nothing.
 
     This is useful for cleanup operations where some resources may not exist or may fail
     to close without affecting program flow.
@@ -141,7 +148,7 @@ def close_resource(obj: Any) -> None:
         return
     try:
         obj.close()
-    except (AttributeError, OSError, ValueError):
+    except (AttributeError, OSError, ValueError, BufferError):
         # Suppress expected errors during resource closure
         pass
 

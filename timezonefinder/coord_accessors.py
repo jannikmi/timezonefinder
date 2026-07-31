@@ -106,7 +106,11 @@ class FileCoordAccessor(AbstractCoordAccessor):
         if close_resource is None:
             return
 
-        # close_resource already ignores None and common close errors
+        # close_resource already ignores None and common close errors.
+        # Note: closing coord_buf is a no-op while polygon arrays handed out by
+        # __getitem__ are still alive, since those are zero-copy views onto the mmap.
+        # close_resource suppresses the resulting BufferError; the mapping is released
+        # once the last view is dropped.
         close_resource(getattr(self, "coord_file", None))
         close_resource(getattr(self, "coord_buf", None))
         # polygon_collection is just a FlatBuffers view on coord_buf and owns no resources itself
