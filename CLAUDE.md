@@ -11,6 +11,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Optional Numba acceleration or clang-backed C extension for point-in-polygon tests
 - NumPy arrays for efficient coordinate handling
 
+## Target Audience & Runtime Constraints
+
+- Primary users are latency-sensitive services (web backends, geocoding pipelines, batch ETL) performing high-volume, possibly concurrent lookups, as well as simpler one-off CLI/script usage
+- Must run reliably in **containerised server deployments with limited hardware** (constrained CPU/memory, e.g. small cloud instances or serverless functions) — avoid design choices that assume abundant RAM or many cores
+- Must degrade gracefully when Numba/C-extension acceleration is unavailable — the pure-Python fallback path must stay correct, just slower
+- The `in_memory=False` (memory-mapped FlatBuffers) path must remain a viable low-memory option — don't assume the full dataset can be loaded into RAM
+
+### Non-Goals
+
+- Not intended for sub-centimeter precision — the ~1.1cm coordinate scaling is a deliberate accuracy ceiling, not a limitation to fix
+- Not a general-purpose polygon/geometry library — spatial operations exist only in service of timezone lookup
+
 ## Development Setup
 
 - **Package Manager**: Use `uv` for all dependency management (installed via `make install`)
