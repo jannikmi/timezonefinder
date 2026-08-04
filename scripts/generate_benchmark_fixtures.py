@@ -44,6 +44,7 @@ from timezonefinder.utils import coord2int  # noqa: E402
 DEFAULT_SEED = 42
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
 FIXTURE_VERSION = 1
+DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
 N_RANDOM_POINTS = 10_000
 N_ON_LAND_POINTS = 10_000
@@ -203,6 +204,7 @@ def generate(
         "fixture_version": FIXTURE_VERSION,
         "seed": seed,
         "debug": DEBUG,
+        "data_version": DATA_VERSION_FILE.read_text(encoding="utf-8").strip(),
         "shortcut_h3_res": SHORTCUT_H3_RES,
         "pip_strata": list(PIP_STRATA),
         "pip_strata_percentiles": list(PIP_STRATA_PERCENTILES),

@@ -37,6 +37,7 @@ PROJECT_ROOT = PACKAGE_DIR.parent
 DIST_DIR = PROJECT_ROOT / "dist"
 BENCHMARK_FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
 BENCHMARK_FIXTURES_METADATA_PATH = BENCHMARK_FIXTURES_DIR / "metadata.json"
+DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
 
 # Command constants
@@ -392,6 +393,16 @@ def _load_benchmark_fixture_metadata() -> dict:
         raise BenchmarkFixtureError(
             f"Benchmark fixtures were generated with scripts.configs.DEBUG={fixture_debug}, "
             f"but the current scripts.configs.DEBUG={DEBUG}. "
+            "Regenerate the fixtures with `make benchmark-fixtures`."
+        )
+    current_data_version = DATA_VERSION_FILE.read_text(encoding="utf-8").strip()
+    fixture_data_version = metadata.get("data_version")
+    if fixture_data_version != current_data_version:
+        raise BenchmarkFixtureError(
+            f"Benchmark fixtures were generated against timezone data version "
+            f"{fixture_data_version!r}, but the current DATA_VERSION is "
+            f"{current_data_version!r} (on_land/shortcut classification and pip_inputs "
+            "polygon ids are tied to the boundary data). "
             "Regenerate the fixtures with `make benchmark-fixtures`."
         )
     return metadata

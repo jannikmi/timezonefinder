@@ -116,6 +116,21 @@ def test_load_benchmark_points_debug_mismatch_raises(monkeypatch, tmp_path):
         load_benchmark_points("random_points")
 
 
+def test_load_benchmark_points_data_version_mismatch_raises(monkeypatch, tmp_path):
+    metadata_path = tmp_path / "metadata.json"
+    metadata_path.write_text(
+        json.dumps({"debug": False, "data_version": "2000a", "pip_strata": []})
+    )
+    (tmp_path / "random_points.npy").touch()
+    monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
+    monkeypatch.setattr(
+        "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH", metadata_path
+    )
+    monkeypatch.setattr("tests.auxiliaries.DEBUG", False)
+    with pytest.raises(BenchmarkFixtureError, match="data_version|DATA_VERSION"):
+        load_benchmark_points("random_points")
+
+
 @pytest.mark.parametrize(
     "name,expected_count",
     [

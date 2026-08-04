@@ -6,6 +6,7 @@
     "random_points": 10000,
     "unique_shortcut_points": 5000
   },
+  "data_version": "2026c",
   "debug": false,
   "fixture_version": 1,
   "pip_strata": [
