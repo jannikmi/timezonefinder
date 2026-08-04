@@ -207,9 +207,26 @@ def test_format_ratio(ratio: float, expected: str):
 
 
 def test_percent_faster_and_speedup_ratio():
-    # 1.0s vs 0.5s: the faster one took half the time -> 50% faster, 2x
-    assert percent_faster(slower_seconds=1.0, faster_seconds=0.5) == pytest.approx(50.0)
+    # 1.0s vs 0.5s: the faster one took half the time -> twice as fast ->
+    # 100% faster, 2x. percent_faster is anchored to the same "x times"
+    # scale as speedup_ratio (ratio=2 <=> 100%), not the percent *time
+    # reduction* ((slower-faster)/slower), which would give 50% here and,
+    # worse, asymptotes toward 100% for arbitrarily large speedups - e.g. it
+    # would report a 192x speedup as just "99% faster"
+    assert percent_faster(slower_seconds=1.0, faster_seconds=0.5) == pytest.approx(
+        100.0
+    )
     assert speedup_ratio(slower_seconds=1.0, faster_seconds=0.5) == pytest.approx(2.0)
+
+
+def test_percent_faster_stays_consistent_with_speedup_ratio_for_large_speedups():
+    # regression test for the bug this formula fixes: a large speedup must
+    # not read as a percentage that looks smaller than 100%
+    ratio = speedup_ratio(slower_seconds=53.8e-3, faster_seconds=280e-6)
+    pct = percent_faster(slower_seconds=53.8e-3, faster_seconds=280e-6)
+    assert ratio == pytest.approx(192.14, rel=1e-3)
+    assert pct == pytest.approx((ratio - 1) * 100)
+    assert pct > 100  # a >100x speedup must read as well over 100% faster
 
 
 def test_add_benchmark_table_extra_columns_are_appended():
@@ -239,8 +256,8 @@ def test_add_comparison_bullet_picks_the_actually_faster_bench():
 
     (text,) = _texts(reporter)
     assert "point-in-polygon (Python, Numba if available)" in text
-    # fast=0.001s took half the time of slow=0.002s -> 50% faster, 2x
-    assert "50% faster" in text
+    # fast=0.001s took half the time of slow=0.002s -> twice as fast -> 100% faster, 2x
+    assert "100% faster" in text
     assert "2.00x" in text
     # the slower one must still be named as the one being compared against
     assert "point-in-polygon (C/clang)" in text
@@ -308,4 +325,6 @@ def test_add_fastest_slowest_bullet_reports_both_ends():
     assert "Overall" in text
     assert "small polygons" in text
     assert "large polygons" in text
-    assert "98% faster" in text
+    # 0.001s vs 0.05s -> 50x -> 4900% faster (not the old, misleadingly-small
+    # 98% that (slower-faster)/slower would give for a 50x speedup)
+    assert "4900% faster" in text

@@ -182,14 +182,23 @@ def format_ratio(ratio: float) -> str:
 NEGLIGIBLE_DIFFERENCE_PCT = 2.0
 
 
-def percent_faster(slower_seconds: float, faster_seconds: float) -> float:
-    """How many percent faster ``faster_seconds`` is than ``slower_seconds``."""
-    return (slower_seconds - faster_seconds) / slower_seconds * 100
-
-
 def speedup_ratio(slower_seconds: float, faster_seconds: float) -> float:
     """How many times faster ``faster_seconds`` is than ``slower_seconds``."""
     return slower_seconds / faster_seconds
+
+
+def percent_faster(slower_seconds: float, faster_seconds: float) -> float:
+    """How many percent faster ``faster_seconds`` is than ``slower_seconds``.
+
+    Defined as ``(speedup_ratio - 1) * 100`` - i.e. anchored to the same
+    "x times" scale as :func:`speedup_ratio` (2x is exactly 100% faster) -
+    rather than the percent *time reduction* ``(slower-faster)/slower*100``.
+    The time-reduction formula asymptotically approaches but can never reach
+    100% no matter how large the speedup, which badly undersells a big one:
+    it would report a 192x speedup as "99% faster", directly contradicting
+    the "192x" printed right next to it.
+    """
+    return (speedup_ratio(slower_seconds, faster_seconds) - 1) * 100
 
 
 def load_benchmark_json(json_path: Path) -> dict[str, Any]:

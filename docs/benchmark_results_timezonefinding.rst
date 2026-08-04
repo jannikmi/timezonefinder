@@ -295,16 +295,16 @@ Performance Summary
 
 **In-memory vs file-based** (``TimezoneFinder.timezone_at()``):
 
-* Random points: **in-memory** is 28% faster (1.39x) than **file-based** (3.80ms vs 5.27ms)
+* Random points: **in-memory** is 39% faster (1.39x) than **file-based** (3.80ms vs 5.27ms)
 
-* On-land points: **in-memory** is 28% faster (1.40x) than **file-based** (4.90ms vs 6.85ms)
+* On-land points: **in-memory** is 40% faster (1.40x) than **file-based** (4.90ms vs 6.85ms)
 
 * Unique-shortcut points: **file-based** and **in-memory** perform about the same (1.14ms vs 1.15ms, 0.8% difference)
 
-* Ambiguous-shortcut points: **in-memory** is 32% faster (1.48x) than **file-based** (9.34ms vs 13.8ms)
+* Ambiguous-shortcut points: **in-memory** is 48% faster (1.48x) than **file-based** (9.34ms vs 13.8ms)
 
-* TimezoneFinder.timezone_at_land(): **in-memory** is 25% faster (1.33x) than **file-based** (5.48ms vs 7.26ms)
+* TimezoneFinder.timezone_at_land(): **in-memory** is 33% faster (1.33x) than **file-based** (5.48ms vs 7.26ms)
 
 * Ambiguous-shortcut points are 8.1x slower than unique-shortcut points (in-memory): a unique shortcut resolves directly from the H3 index, while an ambiguous one falls through to the full point-in-polygon check.
 
-* Overall: fastest is **TimezoneFinder.timezone_at() - unique-shortcut points, file-based** (1.14ms), slowest is **TimezoneFinder.timezone_at() - ambiguous-shortcut points, file-based** (13.8ms) - 92% faster (12.1x)
+* Overall: fastest is **TimezoneFinder.timezone_at() - unique-shortcut points, file-based** (1.14ms), slowest is **TimezoneFinder.timezone_at() - ambiguous-shortcut points, file-based** (13.8ms) - 1109% faster (12.1x)
