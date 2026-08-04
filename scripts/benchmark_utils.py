@@ -118,6 +118,7 @@ def add_system_status_section(
     reporter: BenchmarkReporter,
     system_info: dict[str, Any],
     additional_info: dict[str, Any] = None,
+    provenance: dict[str, Any] = None,
 ):
     """Add a comprehensive system status section to a benchmark report.
 
@@ -126,6 +127,12 @@ def add_system_status_section(
     produced the numbers - e.g. ``scripts/render_benchmark_reports.py`` reads
     it back out of a pytest-benchmark JSON file's ``machine_info`` instead of
     describing whichever machine happens to be rendering the report.
+
+    ``provenance`` (shape:
+    ``tests.auxiliaries.benchmark_fixture_provenance``) states which fixture
+    set and boundary data the timings describe, so a regenerated fixture set
+    or a data update leaves the committed report visibly - rather than
+    silently - out of date.
     """
     reporter.add_section("System Status")
 
@@ -163,6 +170,12 @@ def add_system_status_section(
 
     for opt in optimizations:
         reporter.add_text(f"* {opt}")
+
+    # Which workload the numbers describe (fixture set + boundary data)
+    if provenance:
+        reporter.add_section("Benchmark Input Provenance", level=2)
+        reporter.add_text(f"**Fixture Version**: {provenance['fixture_version']}")
+        reporter.add_text(f"**Timezone Data Version**: {provenance['data_version']}")
 
     # Additional benchmark-specific information
     if additional_info:

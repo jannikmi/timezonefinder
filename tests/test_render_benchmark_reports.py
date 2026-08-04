@@ -2,8 +2,9 @@
 
 import pytest
 
-from scripts.benchmark_utils import BenchmarkReporter
+from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
 from scripts.render_benchmark_reports import (
+    PROVENANCE_FIELDS,
     add_benchmark_table,
     add_comparison_bullet,
     add_fastest_slowest_bullet,
@@ -11,6 +12,7 @@ from scripts.render_benchmark_reports import (
     format_ratio,
     format_rate,
     get_batch_size,
+    get_fixture_provenance,
     humanize_benchmark_name,
     percent_faster,
     speedup_ratio,
@@ -35,8 +37,24 @@ def _fake_bench(name: str, mean: float = 1.0, rounds: int = 1) -> dict:
     }
 
 
+# minimal shape of scripts.benchmark_utils.get_system_status(), enough for
+# add_system_status_section() to render the parts this module asserts on
+_FAKE_SYSTEM_INFO = {
+    "python_version": "3.13.0",
+    "python_implementation": "CPython",
+    "platform_system": "Linux",
+    "platform_machine": "x86_64",
+    "platform_processor": "Unknown",
+    "numpy_version": "2.0.0",
+    "using_clang_pip": True,
+    "using_numba": False,
+}
+
+
 def _texts(reporter: BenchmarkReporter) -> list[str]:
-    return [text for kind, text in reporter.content if kind == "text"]
+    # content items are heterogeneous tuples (sections carry a level, tables
+    # carry headers and rows), so index rather than unpack
+    return [item[1] for item in reporter.content if item[0] == "text"]
 
 
 @pytest.mark.parametrize(
@@ -310,6 +328,45 @@ def test_get_batch_size_reads_the_value_the_json_recorded():
 def test_get_batch_size_missing_raises_a_clear_error():
     with pytest.raises(ValueError, match="batch_size"):
         get_batch_size({"using_numba": True})
+
+
+def test_get_fixture_provenance_reads_what_the_json_recorded():
+    # same reasoning as the batch size above: the report must state the
+    # fixture set and boundary data of the *measured run*, not those of
+    # whichever checkout renders it
+    system_info = {"fixture_version": 2, "data_version": "2026c", "batch_size": 1}
+
+    assert get_fixture_provenance(system_info) == {
+        "fixture_version": 2,
+        "data_version": "2026c",
+    }
+
+
+@pytest.mark.parametrize("missing_field", PROVENANCE_FIELDS)
+def test_get_fixture_provenance_missing_raises_a_clear_error(missing_field):
+    system_info = {"fixture_version": 2, "data_version": "2026c"}
+    del system_info[missing_field]
+
+    with pytest.raises(ValueError, match=missing_field):
+        get_fixture_provenance(system_info)
+
+
+def test_rendered_system_status_stamps_the_input_provenance():
+    # the point of the stamp: regenerating the fixtures or updating the
+    # boundary data must leave the committed docs/benchmark_results_*.rst
+    # visibly describing the older workload, instead of silently claiming to
+    # describe the new one
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    add_system_status_section(
+        reporter,
+        _FAKE_SYSTEM_INFO,
+        provenance={"fixture_version": 2, "data_version": "2026c"},
+    )
+
+    texts = _texts(reporter)
+    assert "**Fixture Version**: 2" in texts
+    assert "**Timezone Data Version**: 2026c" in texts
 
 
 def test_add_fastest_slowest_bullet_reports_both_ends():

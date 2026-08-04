@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 from math import asin, degrees, log10
-from typing import Iterator
+from typing import Any, Iterator
 
 import numpy as np
 
@@ -501,6 +501,26 @@ def load_benchmark_points(name: str) -> list[tuple[float, float]]:
     """
     arr = _load_benchmark_fixture_array(name)
     return [(float(lng), float(lat)) for lng, lat in arr]
+
+
+def benchmark_fixture_provenance() -> dict[str, Any]:
+    """Which fixture generation and boundary data the benchmark inputs came from.
+
+    Recorded into the benchmark JSON by ``benchmarks/conftest.py`` so the
+    rendered ``docs/benchmark_results_*.rst`` state the workload their numbers
+    describe. Without that stamp, regenerated fixtures or updated boundary data
+    leave the committed reports silently describing a workload that no longer
+    exists - the numbers stay plausible, so nothing flags them as stale.
+
+    Read through :func:`_load_benchmark_fixture_metadata` rather than off the
+    file directly, so the values are the *validated* ones: a fixture set out of
+    sync with this checkout raises here instead of being stamped into a report.
+    """
+    metadata = _load_benchmark_fixture_metadata()
+    return {
+        "fixture_version": metadata["fixture_version"],
+        "data_version": metadata["data_version"],
+    }
 
 
 def load_pip_inputs() -> list[tuple[int, int, int]]:

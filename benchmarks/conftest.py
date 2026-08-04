@@ -18,6 +18,7 @@ from tests.auxiliaries import (
     PIP_INPUTS_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
+    benchmark_fixture_provenance,
     boundaries,
     load_benchmark_points,
     load_pip_inputs,
@@ -47,13 +48,19 @@ BATCH_SIZE = 2_500
 
 
 def pytest_benchmark_update_machine_info(config, machine_info) -> None:
-    """Record numba/clang availability and BATCH_SIZE from the run that
-    *produced* the measurements, not whichever checkout later renders the
-    JSON into RST (scripts/render_benchmark_reports.py reads this back out).
-    Without this, rendering an older stored JSON against a checkout where
-    BATCH_SIZE has since changed would silently derive Time/Query and
-    Throughput from the wrong batch size."""
-    machine_info["timezonefinder"] = {**get_system_status(), "batch_size": BATCH_SIZE}
+    """Record numba/clang availability, BATCH_SIZE and the fixture/data
+    provenance from the run that *produced* the measurements, not whichever
+    checkout later renders the JSON into RST
+    (scripts/render_benchmark_reports.py reads this back out). Without this,
+    rendering an older stored JSON against a checkout where BATCH_SIZE has
+    since changed would silently derive Time/Query and Throughput from the
+    wrong batch size, and the report would not say which fixture set and
+    boundary data the timings actually describe."""
+    machine_info["timezonefinder"] = {
+        **get_system_status(),
+        **benchmark_fixture_provenance(),
+        "batch_size": BATCH_SIZE,
+    }
 
 
 @pytest.fixture(autouse=True, scope="session")
