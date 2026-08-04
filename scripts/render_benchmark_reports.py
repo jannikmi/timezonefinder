@@ -22,12 +22,15 @@ changed.
 """
 
 import argparse
-import json
 import re
 from pathlib import Path
 from typing import Any, Callable
 
-from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
+from scripts.benchmark_utils import (
+    BenchmarkReporter,
+    add_system_status_section,
+    load_benchmark_json,
+)
 from scripts.configs import (
     INITIALIZATION_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
@@ -199,11 +202,6 @@ def percent_faster(slower_seconds: float, faster_seconds: float) -> float:
     the "192x" printed right next to it.
     """
     return (speedup_ratio(slower_seconds, faster_seconds) - 1) * 100
-
-
-def load_benchmark_json(json_path: Path) -> dict[str, Any]:
-    with open(json_path) as f:
-        return json.load(f)
 
 
 def get_system_info(data: dict[str, Any]) -> dict[str, Any]:

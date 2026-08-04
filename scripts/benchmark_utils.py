@@ -6,9 +6,10 @@ This module contains common functionality used by various benchmark scripts
 to generate RST reports and handle CLI interfaces.
 """
 
+import json
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, get_args
 
 import numpy as np
 
@@ -18,6 +19,24 @@ from scripts.reporting import (
     rst_title,
 )
 from timezonefinder import TimezoneFinder
+
+# Which pytest-benchmark ``stats`` field is treated as *the* number for a
+# benchmark. Defined here rather than in each consumer because the CI
+# normalisation step and the noise analysis must agree on it - see
+# scripts/normalize_benchmark_json.py and scripts/benchmark_noise.py.
+BenchmarkEstimator = Literal["min", "median", "mean"]
+BENCHMARK_ESTIMATORS: tuple[str, ...] = get_args(BenchmarkEstimator)
+# min is the least noise-sensitive estimator for this workload: every round
+# performs the exact same fixed batch of work (see benchmarks/conftest.py's
+# BATCH_SIZE), so the fastest round is the one least perturbed by whatever
+# else the shared, virtualised CI machine happened to be doing.
+DEFAULT_BENCHMARK_ESTIMATOR: BenchmarkEstimator = "min"
+
+
+def load_benchmark_json(json_path: Path) -> dict[str, Any]:
+    """Load a JSON file produced by ``pytest benchmarks/ --benchmark-json=...``."""
+    with open(json_path) as f:
+        return json.load(f)
 
 
 class BenchmarkReporter:

@@ -4,8 +4,8 @@ Each benchmark times one pass over a fixed batch of points (see
 `benchmarks/conftest.py`) rather than a single call, so every round performs
 identical work and results are comparable across commits.
 
-Benchmark node ids are the join key for a future historical trend chart
-(plans/03, not yet implemented) - a rename silently orphans that metric's
+Benchmark node ids are the join key for the historical trend chart
+(.github/workflows/benchmark.yml) - a rename silently orphans that metric's
 history. `tests/test_benchmark_names.py` pins the exact expected set of
 names collected from this package, so a rename fails loudly instead.
 """

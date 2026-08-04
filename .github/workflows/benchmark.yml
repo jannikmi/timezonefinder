@@ -1,0 +1,224 @@
+name: benchmark
+
+# Continuous benchmarking (issue #150). Deliberately kept separate from
+# build.yml: benchmarking must never be entangled with the release/publish
+# pipeline, in either direction.
+#
+# Triggers:
+# - push to master:   record the result and update the gh-pages trend chart
+# - pull_request:     measure only, upload the result as an artifact. This job
+#                     runs untrusted PR code and therefore holds NO write
+#                     permissions and no secrets, so it behaves identically for
+#                     branch PRs and fork PRs. The comparison comment is posted
+#                     by the separate, privileged benchmark-comment.yml, which
+#                     is triggered by workflow_run and runs the *base* repo's
+#                     workflow definition. See CONTRIBUTING.md.
+# - workflow_dispatch: repeat the identical measurement N times to characterise
+#                     the runner noise floor, from which the alert threshold is
+#                     derived (never guessed).
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      repetitions:
+        description: >-
+          How many times to repeat the identical core measurement, each on a
+          fresh runner, to measure the noise floor. Minimum 5.
+        required: false
+        default: "5"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# least privilege by default; every job re-declares exactly what it needs
+permissions: {}
+
+env:
+  # a benchmark's *name* is the join key of its trend history, and the numba
+  # and clang point-in-polygon paths are completely different implementations
+  # whose numbers are not comparable. Keeping the acceleration path in the
+  # suite name means a numba-tracked suite could never silently overwrite this
+  # one's history - it would simply be a different chart.
+  BENCHMARK_SUITE_NAME: "timezone lookup (clang, min)"
+  # DERIVED FROM MEASUREMENT, not from the action's default: 5 runs of
+  # identical code on 5 separate ubuntu-latest runners spread 119.6%
+  # (CV 6.0%) on the tracked min, so 130% = worst observed spread + 20%
+  # headroom. Re-derive with a workflow_dispatch noise run (see
+  # CONTRIBUTING.md) whenever the runner image or the core set changes.
+  # `fail-on-alert` deliberately stays false until the trend chart confirms
+  # this holds over time - a noisy gate everyone learns to ignore is worse
+  # than no gate.
+  ALERT_THRESHOLD: "130%"
+  # filename the measurement is staged under inside its artifact. GitHub
+  # workflows cannot import constants, so this literal is repeated in
+  # .github/workflows/benchmark-comment.yml - keep the two in sync.
+  REPORT_FILENAME: "benchmark-report.json"
+
+jobs:
+  plan:
+    name: plan repetitions
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      repetitions: ${{ steps.plan.outputs.repetitions }}
+    steps:
+      # push/PR record exactly one measurement; only the noise run repeats.
+      # (The repetition index is *not* a runner matrix - tracked numbers always
+      # come from a single pinned `ubuntu-latest`, never several runner images.)
+      - name: Build the repetition list
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPETITIONS: ${{ inputs.repetitions }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            echo 'repetitions=["1"]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$REPETITIONS" in
+            ''|*[!0-9]*) echo "repetitions must be a positive integer, got '$REPETITIONS'" >&2; exit 1 ;;
+          esac
+          if [ "$REPETITIONS" -lt 5 ]; then
+            echo "at least 5 repetitions are needed to characterise a noise floor, got $REPETITIONS" >&2
+            exit 1
+          fi
+          seq 1 "$REPETITIONS" | jq -R . | jq -sc . | sed 's/^/repetitions=/' >> "$GITHUB_OUTPUT"
+
+  measure:
+    name: measure (run ${{ matrix.repetition }})
+    needs: [plan]
+    # pinned, never a matrix of runner images: tracked numbers must all come
+    # from the same runner class or the trend chart compares apples to oranges
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        repetition: ${{ fromJSON(needs.plan.outputs.repetitions) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # NOTE: the `numba` group is deliberately NOT installed. The tracked
+      # configuration is the no-numba / clang C extension one, which is what a
+      # plain `pip install timezonefinder` gives you and what the constrained
+      # container audience in CLAUDE.md actually runs.
+      - name: Install dependencies (without numba)
+        run: uv sync --group test
+
+      # assert rather than assume: a numba dependency sneaking in via a
+      # transitive dependency or a lockfile change would silently corrupt the
+      # entire trend history instead of failing here
+      - name: Assert the tracked acceleration path is active
+        # UV_NO_SYNC: keep the environment exactly as synced above, so `uv run`
+        # cannot quietly re-resolve it out from under the measurement
+        env:
+          UV_NO_SYNC: "1"
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.assert_acceleration_path \
+            --expect "$(make -s print-benchmark-acceleration-path)"
+
+      # `make benchmarks-ci` owns the pytest invocation, the round count and
+      # the estimator normalisation - see the Makefile, not this file
+      - name: Run the core benchmark set
+        env:
+          UV_NO_SYNC: "1"
+        run: make benchmarks-ci
+
+      # the Makefile owns where the report lands; the artifact exposes it under
+      # a stable name so the consuming jobs don't have to know that path
+      - name: Stage the report for upload
+        run: |
+          set -euo pipefail
+          mkdir -p benchmark-report
+          cp "$(make -s print-ci-benchmark-json)" "benchmark-report/$REPORT_FILENAME"
+
+      - name: Upload the benchmark report
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-core-${{ matrix.repetition }}
+          path: benchmark-report/${{ env.REPORT_FILENAME }}
+          if-no-files-found: error
+          retention-days: 14
+
+  track:
+    name: record trend
+    needs: [measure]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      # push the updated benchmark data to the gh-pages branch
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download the benchmark report
+        uses: actions/download-artifact@v8
+        with:
+          name: benchmark-core-1
+          path: benchmark-report
+
+      # github-action-benchmark owns storage, charting, comparison and
+      # alerting. The report it consumes is an ordinary pytest-benchmark JSON
+      # whose tracked value was rewritten from the mean to the min by
+      # scripts/normalize_benchmark_json.py (see that module for why).
+      - name: Store the result and update the trend chart
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: ${{ env.BENCHMARK_SUITE_NAME }}
+          tool: pytest
+          output-file-path: benchmark-report/${{ env.REPORT_FILENAME }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
+          auto-push: true
+          alert-threshold: ${{ env.ALERT_THRESHOLD }}
+          # master must never be blocked by a benchmark result, and the
+          # threshold is provisional besides
+          fail-on-alert: false
+          comment-on-alert: false
+          summary-always: true
+          max-items-in-chart: 250
+
+  noise:
+    name: report noise floor
+    needs: [measure]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Download every repetition
+        uses: actions/download-artifact@v8
+        with:
+          pattern: benchmark-core-*
+          path: noise-runs
+          merge-multiple: false
+
+      # each repetition ran on its own fresh runner, so this is the spread the
+      # alert threshold actually has to clear - not just within-process jitter
+      - name: Report the spread and the derived threshold
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.benchmark_noise \
+            "noise-runs"/*/"$REPORT_FILENAME" \
+            --markdown-out "$GITHUB_STEP_SUMMARY"

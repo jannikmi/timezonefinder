@@ -19,6 +19,8 @@
 #   testall    - execute all tests including slow ones
 #   speedtest  - run just the tracked core pytest-benchmark subset (quick, no JSON output)
 #   benchmarks - run the full pytest-benchmark suite (benchmarks/), writing tmp/benchmark.json
+#   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
+#   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
 #   reports    - benchmarks + render docs/benchmark_results_*.rst + the data report
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
@@ -108,6 +110,59 @@ reports: benchmarks
 	uv run python -m scripts.render_benchmark_reports --benchmark-json=$(BENCHMARK_JSON)
 	uv run python -m scripts.reporting
 
+# --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
+# These paths/flags are declared here only; the workflow asks make for them
+# (`make -s print-ci-benchmark-json`) instead of repeating the literals.
+
+# raw pytest-benchmark output of the core subset, with the full statistics
+RAW_CORE_BENCHMARK_JSON := tmp/benchmark-core-raw.json
+# the report actually handed to benchmark-action/github-action-benchmark, with
+# the tracked value rewritten from the mean to $(BENCHMARK_ESTIMATOR).
+# Overridable on the command line so `benchmark-noise` can collect several runs.
+CI_BENCHMARK_JSON := tmp/benchmark-core-tracked.json
+# min is the least noise-sensitive estimator here - see scripts/benchmark_utils.py
+BENCHMARK_ESTIMATOR := min
+# enough rounds that pytest-benchmark's calibration has something to work with
+# and the tracked min is drawn from a decent sample. The core subset is a few
+# milliseconds per round, so this stays far below the CI time budget.
+BENCHMARK_MIN_ROUNDS := 50
+# the acceleration path CI tracks: what a plain `pip install timezonefinder`
+# gives you. Numbers from the numba path are not comparable (see CONTRIBUTING.md).
+BENCHMARK_ACCELERATION_PATH := clang
+NOISE_RUNS_DIR := tmp/benchmark-noise
+NOISE_RUNS := 5
+
+print-ci-benchmark-json:
+	@echo $(CI_BENCHMARK_JSON)
+
+print-benchmark-acceleration-path:
+	@echo $(BENCHMARK_ACCELERATION_PATH)
+
+# the exact measurement CI records: core subset only, tracked estimator applied
+benchmarks-ci:
+	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
+	uv run pytest benchmarks -m benchmark_core \
+		--benchmark-min-rounds=$(BENCHMARK_MIN_ROUNDS) \
+		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON)
+	uv run python -m scripts.normalize_benchmark_json \
+		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON) \
+		--output=$(CI_BENCHMARK_JSON) \
+		--estimator=$(BENCHMARK_ESTIMATOR)
+
+# repeat the CI measurement on unchanged code to characterise the noise floor.
+# NOTE: locally this only captures single-machine noise and understates the CI
+# spread, where every repetition lands on a different shared runner - run the
+# `benchmark` workflow via workflow_dispatch for the number that ships.
+benchmark-noise:
+	@rm -rf $(NOISE_RUNS_DIR)
+	@mkdir -p $(NOISE_RUNS_DIR)
+	@for i in $$(seq 1 $(NOISE_RUNS)); do \
+		echo "--- noise run $$i/$(NOISE_RUNS) ---"; \
+		$(MAKE) benchmarks-ci CI_BENCHMARK_JSON=$(NOISE_RUNS_DIR)/run-$$i.json || exit 1; \
+	done
+	uv run python -m scripts.benchmark_noise $(NOISE_RUNS_DIR)/run-*.json \
+		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS)
+
 tox:
 	@uv run tox
 
@@ -170,4 +225,6 @@ rmtag:
 docs:
 	(cd docs && make html)
 
-.PHONY: clean test testint testall build docs speedtest benchmarks reports
+.PHONY: clean test testint testall build docs speedtest benchmarks reports \
+	benchmarks-ci benchmark-noise print-ci-benchmark-json \
+	print-benchmark-acceleration-path

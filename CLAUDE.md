@@ -39,6 +39,10 @@ Most modules are self-describing; the non-obvious ones:
 - `timezonefinder/data/`: binary assets (FlatBuffers polygons/shortcuts, NumPy arrays), generated
 - `scripts/file_converter.py`: ingests timezone-boundary-builder GeoJSON, emits the binary assets
 - `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`
+- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py`:
+  benchmark CI helpers — make the trend chart track `min` instead of the noise-sensitive `mean`,
+  derive the alert threshold from repeated identical runs, and guard the history against a silent
+  numba/clang switch
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
 
 ## Common Commands
@@ -50,6 +54,8 @@ Most modules are self-describing; the non-obvious ones:
 | All tests | `make testall` |
 | Single test / pattern | `uv run pytest tests/…::test_name` / `-k pattern` |
 | Benchmarks | `make speedtest` |
+| Reproduce the CI benchmark measurement | `make benchmarks-ci` |
+| Measure the benchmark noise floor | `make benchmark-noise` |
 | Pre-commit validation | `make hook` |
 | Full test matrix | `make tox` |
 | Regenerate timezone data | `make data` (downloads full dataset) |
