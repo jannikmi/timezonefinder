@@ -45,17 +45,21 @@ env:
   # one's history - it would simply be a different chart.
   BENCHMARK_SUITE_NAME: "timezone lookup (clang, min)"
   # DERIVED FROM MEASUREMENT, not from the action's default: 5 runs of
-  # identical code on 5 separate ubuntu-latest runners spread 119.6%
-  # (CV 6.0%) on the tracked min, so 130% = worst observed spread + 20%
-  # headroom. Re-derive with a workflow_dispatch noise run (see
-  # CONTRIBUTING.md) whenever the runner image or the core set changes.
-  # `fail-on-alert` deliberately stays false until the trend chart confirms
-  # this holds over time - a noisy gate everyone learns to ignore is worse
-  # than no gate.
-  ALERT_THRESHOLD: "130%"
+  # identical code on 5 separate ubuntu-latest runners spread at most 106.8%
+  # across the three tracked benchmarks (random 106.8% / CV 2.7%, unique
+  # 105.0% / 1.6%, ambiguous 104.9% / 1.7%) on the tracked min. Worst spread
+  # + 20% headroom rounds to 110%, which is also the floor
+  # scripts/benchmark_noise.py will suggest.
+  # Re-derive with a workflow_dispatch noise run (see CONTRIBUTING.md)
+  # whenever the runner image or the core set changes. `fail-on-alert`
+  # deliberately stays false until the trend chart confirms this holds over
+  # time - a noisy gate everyone learns to ignore is worse than no gate.
+  ALERT_THRESHOLD: "110%"
   # filename the measurement is staged under inside its artifact. GitHub
   # workflows cannot import constants, so this literal is repeated in
-  # .github/workflows/benchmark-comment.yml - keep the two in sync.
+  # .github/workflows/benchmark-comment.yml - as are BENCHMARK_SUITE_NAME and
+  # ALERT_THRESHOLD above. tests/test_benchmark_workflows.py fails if the
+  # copies drift.
   REPORT_FILENAME: "benchmark-report.json"
 
 jobs:

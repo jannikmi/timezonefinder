@@ -24,13 +24,19 @@ on:
 permissions: {}
 
 env:
+  # every constant below is duplicated from .github/workflows/benchmark.yml
+  # because workflows cannot import constants from each other.
+  # tests/test_benchmark_workflows.py enforces that the copies agree, so a
+  # one-sided edit fails the test suite instead of silently comparing against
+  # nothing.
+  #
   # must match BENCHMARK_SUITE_NAME in .github/workflows/benchmark.yml - it is
   # the key the stored trend data is filed under, so a mismatch would compare
   # against nothing
   BENCHMARK_SUITE_NAME: "timezone lookup (clang, min)"
   # must match ALERT_THRESHOLD in .github/workflows/benchmark.yml, which
   # documents where the number comes from
-  ALERT_THRESHOLD: "130%"
+  ALERT_THRESHOLD: "110%"
   # must match REPORT_FILENAME in .github/workflows/benchmark.yml
   REPORT_FILENAME: "benchmark-report.json"
 

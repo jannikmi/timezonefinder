@@ -28,10 +28,11 @@ from timezonefinder import TimezoneFinder, TimezoneFinderL
 # how much of a real query load it actually helps.
 #
 # The two per-class cases are tracked alongside it because the headline alone
-# cannot attribute a change. An ambiguous lookup costs ~7.4x a unique one, so
-# ambiguous work takes ~72% of the wall clock despite being ~25% of the
-# queries - meaning a unique-path improvement moves the headline by only
-# ~0.28x its true size. The per-class benchmarks show it undiluted.
+# cannot attribute a change. On the clang configuration CI tracks, an
+# ambiguous lookup costs ~14x a unique one (~7x with Numba), so ambiguous work
+# takes ~83% of the wall clock despite being ~25% of the queries - meaning a
+# unique-path improvement moves the headline by only ~0.17x its true size.
+# The per-class benchmarks show it undiluted.
 #
 # in_memory only: the file-based mode has its own I/O noise profile and would
 # widen the single shared alert threshold for everything.

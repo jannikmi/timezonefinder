@@ -80,9 +80,10 @@ local-to-local and CI-to-CI only.
   unique- and ambiguous-shortcut queries in their real ratio (~25.5%
   ambiguous), so a change is weighted by how much real query load it helps.
   `unique_shortcut-in_memory` and `ambiguous_shortcut-in_memory` are tracked
-  alongside it as diagnostics: an ambiguous lookup costs ~7.4x a unique one and
-  so takes ~72% of the wall clock despite being ~25% of the queries, meaning a
-  unique-path win moves the headline by only ~0.28x its true size. The
+  alongside it as diagnostics: on the tracked clang configuration an ambiguous
+  lookup costs ~14x a unique one (~7x with Numba), so ambiguous work takes
+  ~83% of the wall clock despite being ~25% of the queries - meaning a
+  unique-path win moves the headline by only ~0.17x its true size. The
   per-class benchmarks show it undiluted and attribute a change to a path.
   The full suite is for the docs, on demand - it is not run per PR.
 - Only the **no-Numba / clang C extension** configuration, because that is what
@@ -125,13 +126,16 @@ local-to-local and CI-to-CI only.
    the merge base and compare those two - local-to-local, as above.
 3. `ALERT_THRESHOLD` is **derived from a measurement**, not from the action's
    default: five runs of identical code on five separate `ubuntu-latest`
-   runners spread 119.6% (CV 6.0%) on the tracked `min`, so the threshold is
-   130% - the worst observed spread plus 20% headroom. Re-derive it whenever
-   the runner image or the core set changes: trigger the `benchmark` workflow
+   runners spread at most 106.8% across the three tracked benchmarks (random
+   106.8% / CV 2.7%, unique 105.0% / 1.6%, ambiguous 104.9% / 1.7%) on the
+   tracked `min`. Worst spread plus 20% headroom rounds to the shipped 110%.
+   Re-derive it whenever the runner image or the core set changes: trigger the `benchmark` workflow
    via `workflow_dispatch` with `repetitions: 5` (or more), read the derived
    threshold off the "report noise floor" job summary, and set
    `ALERT_THRESHOLD` from it in **both** `benchmark.yml` and
-   `benchmark-comment.yml`.
+   `benchmark-comment.yml`. `tests/test_benchmark_workflows.py` fails if you
+   only update one of them - the same holds for `BENCHMARK_SUITE_NAME`,
+   `REPORT_FILENAME` and the artifact/trend-storage names.
 4. Alerts are currently **non-blocking** (`fail-on-alert: false`). Only tighten
    that once the trend chart confirms the gate does not fire on unchanged code
    over time - five runs bound the spread loosely, and a noisy gate everyone
