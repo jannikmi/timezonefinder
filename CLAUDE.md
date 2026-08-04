@@ -112,6 +112,23 @@ sub-list. This is easy to forget for changes that don't touch `timezonefinder/` 
 `scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md` or
 `CONTRIBUTING.md` alone.
 
+The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
+state**, never the path taken to it:
+
+- **Amend, don't append.** When a follow-up commit, review round, or fix changes something already
+  described in the unreleased section, edit that bullet so it describes where the code landed.
+  Adding a second bullet that corrects, tunes, or extends the first one is what makes the section
+  unreadable — a released version should read as if the feature arrived in one step.
+- **One bullet per user-visible change**, not per commit or per PR. A feature delivered over
+  several commits (with its tests, docs, CI wiring and follow-up tuning) is one bullet.
+- Keep the *why* only when it's decision-relevant for a reader — a deliberate trade-off, a
+  non-obvious constraint, a gotcha. Drop tuning history ("raised from X to Y, then to Z" → state
+  the final value), superseded intermediate states, and self-review narration.
+- Keep bullets to a few sentences. Details that belong to contributors, not users, go in
+  `CONTRIBUTING.md` or a docstring, and the bullet points there.
+- Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
+  the same feature, merge them.
+
 ## Data Pipeline & Versioning
 
 - `update_data.sh` downloads a timezone-boundary-builder release into `tmp/` and runs
