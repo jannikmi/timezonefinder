@@ -116,6 +116,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Prefer pure functions; clearly delimit side effects
 - Use dependency injection instead of module-level state
 - Treat concurrency as a first-class concern (global helper functions are NOT thread-safe; prefer explicit `TimezoneFinder(in_memory=True)` instances for concurrent workloads)
+- **Declare path/filename constants once and reuse them** — when a path, directory, or filename is needed in more than one file, define it as a named constant in whichever module owns that resource and `import` it everywhere else; never re-derive the same path (e.g. `PROJECT_ROOT / "some" / "dir"`) or retype the same filename string in a second file. This extends the existing "define types centrally" rule above to paths/names. Example: `tests/auxiliaries.py` defines `BENCHMARK_FIXTURES_DIR`, `BENCHMARK_FIXTURES_METADATA_PATH`, `DATA_VERSION_FILE`, and per-fixture name constants (`RANDOM_POINTS_FIXTURE`, `PIP_INPUTS_FIXTURE`, etc.); `scripts/generate_benchmark_fixtures.py`, `scripts/check_speed_*.py`, and the corresponding tests all import these instead of hardcoding `"random_points"`, `"pip_inputs"`, `"metadata.json"`, etc. a second time. Two independently-typed copies of the same path/name are a drift risk waiting to happen — one gets renamed, the other silently doesn't.
 
 ### Testing
 - Add targeted unit tests for every behavioral change under `tests/`

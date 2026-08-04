@@ -37,6 +37,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 - Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
 - Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
 - all types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
+- the same applies to path/filename constants anywhere in the repo, not just `timezonefinder/`: define a directory or filename once, in the module that owns the resource, and import it elsewhere instead of retyping the literal (see `tests/auxiliaries.py`'s `BENCHMARK_FIXTURES_DIR` and fixture-name constants, reused by `scripts/generate_benchmark_fixtures.py` and `scripts/check_speed_*.py`)
 
 ### Performance & Memory Discipline
 
