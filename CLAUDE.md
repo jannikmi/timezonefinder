@@ -38,7 +38,10 @@ Most modules are self-describing; the non-obvious ones:
   the two acceleration backends
 - `timezonefinder/data/`: binary assets (FlatBuffers polygons/shortcuts, NumPy arrays), generated
 - `scripts/file_converter.py`: ingests timezone-boundary-builder GeoJSON, emits the binary assets
-- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`
+- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`.
+  The CI-tracked `benchmark_core` set is the uniformly-random headline plus the unique/ambiguous
+  per-class diagnostics; fixtures are sampled area-uniformly, unlike the test suite's pole-biased
+  `get_rnd_query_pt` — see `CONTRIBUTING.md`
 - `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py`:
   benchmark CI helpers — make the trend chart track `min` instead of the noise-sensitive `mean`,
   derive the alert threshold from repeated identical runs, and guard the history against a silent

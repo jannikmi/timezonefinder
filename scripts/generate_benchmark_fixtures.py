@@ -13,6 +13,15 @@ Usage:
 Running the script twice with the same seed and output directory must
 produce byte-identical files (verified by ``tests/test_benchmark_fixtures.py``).
 
+Every query point is drawn with ``get_rnd_query_pt_area_weighted``, which is
+uniform per unit of *surface area* - deliberately not the ``get_rnd_query_pt``
+the rest of the test suite uses, whose uniform-in-latitude draw oversamples the
+poles ~2.5x. A benchmark must represent real query load, while correctness
+tests benefit from the polar edge cases; see both docstrings in
+``tests/auxiliaries.py``. Changing the sampler (or the counts, or the order in
+which the generators consume the shared ``rng``) invalidates every committed
+fixture and requires bumping ``FIXTURE_VERSION``, which the loader enforces.
+
 The on-land/shortcut classification and ``pip_inputs`` polygon IDs are derived
 from the currently installed boundary data, so the fixtures are pinned to the
 repo-root ``DATA_VERSION`` file (recorded in ``metadata.json``). ``tests/auxiliaries.py``'s
@@ -42,13 +51,14 @@ from tests.auxiliaries import (
     BENCHMARK_FIXTURES_DIR,
     BENCHMARK_FIXTURES_METADATA_PATH,
     DATA_VERSION_FILE,
+    FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
     PIP_INPUTS_FIXTURE,
     PIP_STRATA_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
     boundaries,
-    get_rnd_query_pt,
+    get_rnd_query_pt_area_weighted,
 )
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import SHORTCUT_H3_RES
@@ -56,8 +66,12 @@ from timezonefinder.utils import coord2int
 
 DEFAULT_SEED = 42
 DEFAULT_OUTPUT_DIR = BENCHMARK_FIXTURES_DIR
-FIXTURE_VERSION = 1
 
+# NOTE: these counts are an upper bound on `benchmarks/conftest.py`'s
+# BATCH_SIZE, which slices the first BATCH_SIZE entries out of each fixture.
+# N_UNIQUE/N_AMBIGUOUS cap it at 5,000; N_PIP_INPUTS is the binding one at
+# 10,000 / 3 strata = 3,333 per stratum. Exceeding either surfaces only as a
+# ValueError from benchmarks/conftest.py at benchmark time.
 N_RANDOM_POINTS = 10_000
 N_ON_LAND_POINTS = 10_000
 N_UNIQUE_SHORTCUT_POINTS = 5_000
@@ -72,7 +86,7 @@ PIP_STRATA_PERCENTILES = (50, 90)
 
 def generate_random_points(rng: random.Random, n: int) -> list[tuple[float, float]]:
     print(f"generating {n:,} random points...")
-    return [get_rnd_query_pt(rng) for _ in range(n)]
+    return [get_rnd_query_pt_area_weighted(rng) for _ in range(n)]
 
 
 def generate_on_land_points(
@@ -84,7 +98,7 @@ def generate_on_land_points(
     points: list[tuple[float, float]] = []
     attempts = 0
     while len(points) < n:
-        lng, lat = get_rnd_query_pt(rng)
+        lng, lat = get_rnd_query_pt_area_weighted(rng)
         attempts += 1
         if tf.timezone_at_land(lng=lng, lat=lat) is not None:
             points.append((lng, lat))
@@ -108,7 +122,7 @@ def generate_shortcut_points(
     ambiguous_points: list[tuple[float, float]] = []
     attempts = 0
     while len(unique_points) < n_unique or len(ambiguous_points) < n_ambiguous:
-        lng, lat = get_rnd_query_pt(rng)
+        lng, lat = get_rnd_query_pt_area_weighted(rng)
         attempts += 1
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
         shortcut_value = tf.shortcut_mapping.get(hex_id)
@@ -157,7 +171,7 @@ def generate_pip_inputs(rng: random.Random, n: int) -> tuple[np.ndarray, np.ndar
         stratum_code = i % len(PIP_STRATA)
         stratum_name = PIP_STRATA[stratum_code]
         poly_id = rng.choice(strata[stratum_name])
-        lng, lat = get_rnd_query_pt(rng)
+        lng, lat = get_rnd_query_pt_area_weighted(rng)
         x, y = coord2int(lng), coord2int(lat)
         pip_inputs[i] = (x, y, poly_id)
         pip_strata[i] = stratum_code
@@ -216,6 +230,9 @@ def generate(
 
     metadata = {
         "fixture_version": FIXTURE_VERSION,
+        # referenced, never retyped: the loader validates against the same
+        # __name__, so the two sides cannot drift apart
+        "point_sampler": get_rnd_query_pt_area_weighted.__name__,
         "seed": seed,
         "debug": DEBUG,
         "data_version": DATA_VERSION_FILE.read_text(encoding="utf-8").strip(),

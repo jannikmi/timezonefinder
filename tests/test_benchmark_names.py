@@ -40,10 +40,14 @@ EXPECTED_BENCHMARK_NAMES = {
     "benchmarks/test_timezone_finding.py::test_timezone_at_timezonefinderl",
 }
 
-# the one benchmark the benchmark CI workflow tracks on every PR -
-# see the `marks=pytest.mark.benchmark_core` on this case in
-# benchmarks/test_timezone_finding.py for why this specific one was picked
+# the benchmarks the CI workflow tracks on every PR: the globally
+# representative `random` headline plus the two per-class diagnostics that
+# attribute a change to the unique- or ambiguous-shortcut path - see the
+# comment above `TIMEZONE_AT_CASES` in benchmarks/test_timezone_finding.py
+# for why exactly these three
 EXPECTED_CORE_BENCHMARK_NAMES = {
+    "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+    "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
 }
 

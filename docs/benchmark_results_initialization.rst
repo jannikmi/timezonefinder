@@ -79,32 +79,32 @@ Initialization
      - Max
      - Rounds
    * - TimezoneFinder, file-based
-     - 391ms
-     - 392ms
-     - 3.43ms
-     - 384ms
+     - 398ms
      - 396ms
+     - 6.53ms
+     - 391ms
+     - 428ms
      - 30
    * - TimezoneFinder, in-memory
-     - 410ms
-     - 410ms
-     - 4.09ms
-     - 403ms
-     - 426ms
+     - 418ms
+     - 417ms
+     - 6.81ms
+     - 414ms
+     - 453ms
      - 30
    * - TimezoneFinderL, file-based
-     - 389ms
-     - 388ms
-     - 9.14ms
-     - 382ms
-     - 435ms
+     - 397ms
+     - 394ms
+     - 10.3ms
+     - 392ms
+     - 437ms
      - 30
    * - TimezoneFinderL, in-memory
-     - 388ms
-     - 388ms
-     - 2.94ms
-     - 382ms
-     - 393ms
+     - 394ms
+     - 394ms
+     - 1.52ms
+     - 391ms
+     - 397ms
      - 30
 
 
@@ -114,8 +114,8 @@ Performance Summary
 ~~~~~~~~~~~~~~~~~~~
 
 
-* TimezoneFinder: **file-based** is 5% faster (1.05x) than **in-memory** (391ms vs 410ms)
+* TimezoneFinder: **file-based** is 5% faster (1.05x) than **in-memory** (398ms vs 418ms)
 
-* TimezoneFinderL: **in-memory** and **file-based** perform about the same (388ms vs 389ms, 0.2% difference)
+* TimezoneFinderL: **in-memory** and **file-based** perform about the same (394ms vs 397ms, 0.8% difference)
 
-* Overall: fastest is **Initialization - TimezoneFinderL, in-memory** (388ms), slowest is **Initialization - TimezoneFinder, in-memory** (410ms) - 6% faster (1.06x)
+* Overall: fastest is **Initialization - TimezoneFinderL, in-memory** (394ms), slowest is **Initialization - TimezoneFinder, in-memory** (418ms) - 6% faster (1.06x)
