@@ -1,0 +1,23 @@
+{
+  "counts": {
+    "ambiguous_shortcut_points": 5000,
+    "on_land_points": 10000,
+    "pip_inputs": 10000,
+    "random_points": 10000,
+    "unique_shortcut_points": 5000
+  },
+  "data_version": "2026c",
+  "debug": false,
+  "fixture_version": 1,
+  "pip_strata": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "pip_strata_percentiles": [
+    50,
+    90
+  ],
+  "seed": 42,
+  "shortcut_h3_res": 3
+}

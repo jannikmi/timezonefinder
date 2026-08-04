@@ -19,7 +19,8 @@ from scripts.benchmark_utils import (
 )
 from scripts.configs import POLYGON_REPORT_FILE
 from tests.auxiliaries import (
-    get_pip_test_input,
+    boundaries,
+    load_pip_inputs,
     timefunc,
 )
 from timezonefinder import utils, utils_clang, utils_numba
@@ -34,8 +35,20 @@ warnings.filterwarnings("error")
 nr_of_runs = int(1e4)
 
 
-def gen_test_input():
-    return get_pip_test_input()
+def gen_test_inputs(n_runs: int) -> list[tuple[int, int, np.ndarray]]:
+    # deterministic (x, y, polygon_id) triples from the committed benchmark
+    # fixtures, resolved to the actual polygon coordinate arrays
+    pip_inputs = load_pip_inputs()
+    if n_runs > len(pip_inputs):
+        raise ValueError(
+            f"requested {n_runs:,} PIP inputs but the committed fixture only has "
+            f"{len(pip_inputs):,}. Regenerate the fixtures with a larger count via "
+            "scripts/generate_benchmark_fixtures.py if more are needed."
+        )
+    return [
+        (x, y, boundaries.coords_of(polygon_id))
+        for x, y, polygon_id in pip_inputs[:n_runs]
+    ]
 
 
 def check_inside_polygon_speed():
@@ -46,7 +59,7 @@ def check_inside_polygon_speed():
     print(f"Python implementation using Numba JIT compilation: {utils.using_numba}")
 
     # reuse the same inputs for comparable results
-    test_inputs = [gen_test_input() for _ in range(nr_of_runs)]
+    test_inputs = gen_test_inputs(nr_of_runs)
 
     def time_inside_poly_func(inside_poly_func: Callable, test_inputs: Iterable):
         for test_input in test_inputs:
@@ -79,7 +92,7 @@ def run_benchmark_for_rst(n_runs: int = nr_of_runs) -> dict:
     print(f"Running {n_runs:,} point-in-polygon queries...")
 
     # Generate test inputs
-    test_inputs = [gen_test_input() for _ in range(n_runs)]
+    test_inputs = gen_test_inputs(n_runs)
 
     def time_inside_poly_func(inside_poly_func: Callable, test_inputs: Iterable):
         for test_input in test_inputs:

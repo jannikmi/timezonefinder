@@ -37,6 +37,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 - Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
 - Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
 - all types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
+- the same applies to path/filename constants anywhere in the repo, not just `timezonefinder/`: define a directory or filename once, in the module that owns the resource, and import it elsewhere instead of retyping the literal (see `tests/auxiliaries.py`'s `BENCHMARK_FIXTURES_DIR` and fixture-name constants, reused by `scripts/generate_benchmark_fixtures.py` and `scripts/check_speed_*.py`)
 
 ### Performance & Memory Discipline
 
@@ -61,8 +62,8 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 
 ### Documentation & Communication
 
-- Update `README.rst`, `docs/`, and changelog entries (`CHANGELOG.rst`) when behaviour, flags, or datasets change.
-- For data regeneration, document the timezone boundary release used, update reports via `scripts/reporting.py`, and note version bumps initiated with `uv version`.
+- Update `README.rst`, `docs/`, and changelog entries (`CHANGELOG.rst`) when behaviour, flags, or datasets change. This includes internal/dev-tooling changes with no public API impact (new scripts, test infrastructure, CI, refactors)—add those under the `Internal:` sub-list of the unreleased entry rather than skipping the changelog because nothing user-facing changed.
+- For data regeneration, document the timezone boundary release used, update reports via `scripts/reporting.py`, and note version bumps initiated with `uv version`. `update_data.sh` also regenerates the committed benchmark fixtures (`tests/fixtures/benchmarks/`) since they're pinned to `DATA_VERSION`—if you bump `DATA_VERSION` any other way, run `make benchmark-fixtures` too, or the benchmark fixture tests will fail with `BenchmarkFixtureError`.
 - Keep comments succinct but informative, especially around geometry calculations, numerical tolerances, and shortcut heuristics.
 
 ## Tooling & Quality Gates

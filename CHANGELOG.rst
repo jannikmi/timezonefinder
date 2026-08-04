@@ -19,6 +19,9 @@ Internal:
 * the weekly data check workflow now regenerates the data and opens a ready-to-review update PR when a new timezone-boundary-builder release is detected, falling back to the previous notification issue if the automated update fails (issue #167). Thanks to `Lucas Hemkemeier <https://github.com/hemkdev>`__ for the PR #434
 * ``update_data.sh`` no longer runs the test suite via ``tox``: redundant with the CI/CD pipeline validating the automated update PRs. Thanks to `Lucas Hemkemeier <https://github.com/hemkdev>`__ for the PR #434
 * automated update PRs are now merged and released automatically when their CI/CD pipeline passes: the version tag is pushed with a GitHub App token so the release pipeline is triggered; on CI failure the PR is labeled ``automation-failed`` and the maintainer is notified (issue #167). Thanks to `Lucas Hemkemeier <https://github.com/hemkdev>`__ for the PR #436
+* added deterministic, committed benchmark input fixtures (``tests/fixtures/benchmarks/``, generated via ``scripts/generate_benchmark_fixtures.py`` / ``make benchmark-fixtures``) so two runs of the same commit execute the exact same workload instead of drawing fresh random points and polygons every time; ``scripts/check_speed_timezone_finding.py`` and ``scripts/check_speed_inside_polygon.py`` now load from these fixtures instead of generating input on the fly
+* the point-in-polygon benchmark fixture is stratified by polygon vertex count (small/medium/large), so the benchmark no longer hides the cost of the largest polygons behind an unweighted average over the mostly-small polygon population
+* the benchmark fixtures are pinned to the packaged ``DATA_VERSION``: the loader (``tests/auxiliaries.py``) refuses to load fixtures generated against a different data version or an out-of-range polygon id, and ``update_data.sh`` regenerates the fixtures automatically right after bumping ``DATA_VERSION`` so a data update keeps both in sync
 
 
 8.2.5 (2026-07-11)
