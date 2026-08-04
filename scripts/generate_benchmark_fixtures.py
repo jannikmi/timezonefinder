@@ -8,7 +8,7 @@ with a fixed seed, and writes it to ``tests/fixtures/benchmarks/`` so it can
 be committed and reused verbatim by ``scripts/check_speed_*.py``.
 
 Usage:
-    uv run python scripts/generate_benchmark_fixtures.py [--seed N] [--output-dir PATH]
+    uv run python -m scripts.generate_benchmark_fixtures [--seed N] [--output-dir PATH]
 
 Running the script twice with the same seed and output directory must
 produce byte-identical files (verified by ``tests/test_benchmark_fixtures.py``).
@@ -25,7 +25,6 @@ just the fixtures (not the boundary data) need refreshing.
 import argparse
 import json
 import random
-import sys
 import warnings
 from pathlib import Path
 
@@ -37,14 +36,8 @@ import numpy as np
 # here or every lookup below would silently miss.
 from h3.api import numpy_int as h3
 
-# allow running this script directly (`python scripts/generate_benchmark_fixtures.py`)
-# without the project root being on sys.path already
-_PROJECT_ROOT_STR = str(Path(__file__).resolve().parent.parent)
-if _PROJECT_ROOT_STR not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT_STR)
-
-from scripts.configs import DEBUG  # noqa: E402
-from tests.auxiliaries import (  # noqa: E402
+from scripts.configs import DEBUG
+from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_DIR,
     BENCHMARK_FIXTURES_METADATA_PATH,
@@ -57,9 +50,9 @@ from tests.auxiliaries import (  # noqa: E402
     boundaries,
     get_rnd_query_pt,
 )
-from timezonefinder import TimezoneFinder  # noqa: E402
-from timezonefinder.configs import SHORTCUT_H3_RES  # noqa: E402
-from timezonefinder.utils import coord2int  # noqa: E402
+from timezonefinder import TimezoneFinder
+from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.utils import coord2int
 
 DEFAULT_SEED = 42
 DEFAULT_OUTPUT_DIR = BENCHMARK_FIXTURES_DIR
@@ -247,7 +240,8 @@ def generate(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate deterministic benchmark input fixtures."
+        prog="python -m scripts.generate_benchmark_fixtures",
+        description="Generate deterministic benchmark input fixtures.",
     )
     parser.add_argument(
         "--seed",

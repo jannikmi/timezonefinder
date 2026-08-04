@@ -75,7 +75,7 @@ testparse:
 # since they are pinned to DATA_VERSION; only run this target directly when just
 # the fixtures (not the boundary data) need refreshing.
 benchmark-fixtures:
-	uv run python scripts/generate_benchmark_fixtures.py
+	uv run python -m scripts.generate_benchmark_fixtures
 
 test:
 # 	@uv run pytest

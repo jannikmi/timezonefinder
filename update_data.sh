@@ -88,11 +88,9 @@ else
 fi
 
 echo "START PARSING..."
-SCRIPT_PATH=./scripts/file_converter.py
-echo "calling $SCRIPT_PATH:"
-# ensure Python can import the local 'scripts' package
-if ! PYTHONPATH=. uv run python "$SCRIPT_PATH" -inp "$JSON_PATH"; then
-    echo "file_converter.py failed!"
+echo "calling scripts.file_converter:"
+if ! uv run python -m scripts.file_converter -inp "$JSON_PATH"; then
+    echo "file_converter failed!"
     exit 1
 fi
 
@@ -111,8 +109,8 @@ fi
 # classification, pip_inputs polygon ids) - they must be regenerated together
 # or the benchmark fixture tests fail after this data update
 echo "REGENERATING BENCHMARK FIXTURES..."
-if ! PYTHONPATH=. uv run python scripts/generate_benchmark_fixtures.py; then
-    echo "generate_benchmark_fixtures.py failed!"
+if ! uv run python -m scripts.generate_benchmark_fixtures; then
+    echo "generate_benchmark_fixtures failed!"
     exit 1
 fi
 
