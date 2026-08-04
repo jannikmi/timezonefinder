@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Installation**: `make install` or `uv sync --all-groups`
 - **Dependency Lock**: When Python versions or dependencies change, update `uv.lock` via `make lock`
 - **Pre-commit Hooks**: Must run `make hook` after code changes to validate formatting and linting before committing
+- **Command Prefixes**: Avoid a redundant `cd /Users/Jannik.Kissinger/github/timezonefinder` in suggested commands; only add `cd` when running from a different subdirectory actually matters
 
 ## Project Structure
 
@@ -54,8 +55,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **`scripts/`**: Data generation and testing utilities
   - `file_converter.py`: Ingests timezone-boundary-builder GeoJSON and emits FlatBuffers + NumPy assets
   - `update_data.sh`: Downloads timezone-boundary-builder release and runs the converter
-  - `check_speed_*.py`: Performance benchmarks
-  - `reporting.py`: Generates `docs/data_report.rst` from benchmarks
+  - `benchmark_utils.py`: Shared `BenchmarkReporter`/`get_system_status` used by the RST renderer
+  - `render_benchmark_reports.py`: Renders `docs/benchmark_results_*.rst` from a pytest-benchmark JSON file
+  - `reporting.py`: Generates `docs/data_report.rst` from binary data
+
+- **`benchmarks/`**: `pytest-benchmark` suites (`test_timezone_finding.py`, `test_inside_polygon.py`,
+  `test_initialization.py`); excluded from `make test`/`make testall` via `testpaths`, run explicitly
+  via `make benchmarks`/`make speedtest`
 
 - **`tests/`**: pytest suite with unit, integration, and slow test markers
   - `auxiliaries.py`: Test fixtures (edge coordinates, hole test cases)
@@ -99,6 +105,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Define all types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Types should reflect runtime behavior—avoid `Any` unless truly justified
 - Run `uv run mypy` locally to verify type compliance
+- Do **not** add `from __future__ import annotations` to new files. `requires-python = ">=3.11,<4"` (see `pyproject.toml`) already supports PEP 604 unions (`X | Y`) and lowercase builtin generics (`list[...]`, `dict[...]`, `tuple[...]`) natively at runtime, so the import adds nothing. It's also not the codebase's convention—only a couple of pre-existing files have it, seemingly by accident, not by design. Before adding *any* version-gated import, `__future__` feature, or compatibility shim (not just this one), check `requires-python` first and confirm the feature actually needs it on the minimum supported version rather than defaulting to a habit from other codebases.
 
 ### Performance & Correctness
 - Preserve the fast lookup path; profile hot code (polygon math, shortcut lookups) when modifying
@@ -109,14 +116,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Public API & Backward Compatibility
 - External API (public functions and classes) should not break between minor versions
 - Internal code, data formats, and binary assets are versioned together with the package and do NOT need backward compatibility
-- Maintain `__all__` definitions in `__init__.py` files—they define the public API surface
+- Maintain `__all__` definitions in `__init__.py` files—they define the public API surface and are checked by tests, so do not remove them
 
 ### Code Quality
 - Write complete solutions without placeholder TODOs or commented-out experiments
 - Prefer pure functions; clearly delimit side effects
 - Use dependency injection instead of module-level state
 - Treat concurrency as a first-class concern (global helper functions are NOT thread-safe; prefer explicit `TimezoneFinder(in_memory=True)` instances for concurrent workloads)
-- **Declare path/filename constants once and reuse them** — when a path, directory, or filename is needed in more than one file, define it as a named constant in whichever module owns that resource and `import` it everywhere else; never re-derive the same path (e.g. `PROJECT_ROOT / "some" / "dir"`) or retype the same filename string in a second file. This extends the existing "define types centrally" rule above to paths/names. Example: `tests/auxiliaries.py` defines `BENCHMARK_FIXTURES_DIR`, `BENCHMARK_FIXTURES_METADATA_PATH`, `DATA_VERSION_FILE`, and per-fixture name constants (`RANDOM_POINTS_FIXTURE`, `PIP_INPUTS_FIXTURE`, etc.); `scripts/generate_benchmark_fixtures.py`, `scripts/check_speed_*.py`, and the corresponding tests all import these instead of hardcoding `"random_points"`, `"pip_inputs"`, `"metadata.json"`, etc. a second time. Two independently-typed copies of the same path/name are a drift risk waiting to happen — one gets renamed, the other silently doesn't.
+- **Declare path/filename constants once and reuse them** — when a path, directory, or filename is needed in more than one file, define it as a named constant in whichever module owns that resource and `import` it everywhere else; never re-derive the same path (e.g. `PROJECT_ROOT / "some" / "dir"`) or retype the same filename string in a second file. This extends the existing "define types centrally" rule above to paths/names. Example: `tests/auxiliaries.py` defines `BENCHMARK_FIXTURES_DIR`, `BENCHMARK_FIXTURES_METADATA_PATH`, `DATA_VERSION_FILE`, and per-fixture name constants (`RANDOM_POINTS_FIXTURE`, `PIP_INPUTS_FIXTURE`, etc.); `scripts/generate_benchmark_fixtures.py`, `benchmarks/conftest.py`, and the corresponding tests all import these instead of hardcoding `"random_points"`, `"pip_inputs"`, `"metadata.json"`, etc. a second time. Two independently-typed copies of the same path/name are a drift risk waiting to happen — one gets renamed, the other silently doesn't.
 
 ### Testing
 - Add targeted unit tests for every behavioral change under `tests/`
@@ -158,13 +165,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   `Internal:` bullets go at the end of that list). This is easy to forget for changes that don't
   touch `timezonefinder/` at all (docs, `scripts/`, CI config, test fixtures) — those still need
   an entry. Do this as part of finishing the change, not as an afterthought once a reviewer asks.
-- If you also touched `CLAUDE.md`, `Agents.md`, or `CONTRIBUTING.md` themselves, that's usually
-  small enough to fold into the same changelog entry rather than needing its own.
+- If you also touched `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/`, or `CONTRIBUTING.md`
+  themselves, that's usually small enough to fold into the same changelog entry rather
+  than needing its own.
 
 ## Important Runtime Details
 
 - **Numba Optional**: When `numba` is installed, `utils.pt_in_poly_python` uses Numba JIT compilation for 10–50× speedup. If absent, the CFFI-backed clang C extension is used as a fallback.
-- **TimezoneFinderL**: Heuristic-only implementation using shortcuts; prefer full `TimezoneFinder` when correctness matters.
+- **TimezoneFinderL**: Heuristic-only implementation using shortcuts; prefer full `TimezoneFinder` when correctness matters. Document any behavior changes in `docs/2_use_cases.rst`.
 - **Global State**: `global_functions.py` delays instantiation of the default finder to avoid side effects before first use.
 - **Thread Safety**: Global helper functions like `timezone_at()` are NOT thread-safe. For concurrent workloads, create explicit `TimezoneFinder(in_memory=True)` instances per thread.
 - **Dataset Variants**: The reduced "now" dataset (used via `update_data.sh --dataset=now`) loses historical names; the full dataset preserves all 440+ timezone identifiers.
@@ -172,6 +180,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Data Pipeline & Versioning
 
 - **Data Regeneration**: `update_data.sh` downloads a timezone-boundary-builder release, unpacks to `tmp/`, then runs `scripts/file_converter.py` to emit FlatBuffers and NumPy arrays
+- **Automated Data Update CI**: `.github/workflows/check_data_updates.yml` compares `DATA_VERSION` against the latest upstream timezone-boundary-builder release weekly and, when a new release exists, runs `update_data.sh` and opens a ready-to-review update PR (falling back to a notification issue if the automated update fails). When that PR's CI passes, `.github/workflows/release_data_update.yml` merges it and pushes the version tag using a GitHub App token (the default `GITHUB_TOKEN` would not trigger the release pipeline in `build.yml`); on failure it labels the PR `automation-failed` and notifies the maintainer
 - **Coordinate Scaling**: The converter multiplies all coordinates by 10^7 to preserve 7 decimal places (∼1.1 cm precision) as int32 values
 - **Benchmark Fixtures Are Data-Version-Pinned**: `tests/fixtures/benchmarks/` (committed, seeded benchmark inputs, see `scripts/generate_benchmark_fixtures.py`) records the `DATA_VERSION` it was generated against; `tests/auxiliaries.py`'s loader refuses to load fixtures generated against a different data version or polygon count. `update_data.sh` regenerates them automatically after bumping `DATA_VERSION`, so `make data` alone is sufficient — only run `make benchmark-fixtures` directly when just the fixtures need refreshing
 - **Schema Changes**: When modifying FlatBuffers schemas (e.g., `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they regenerate consistently
@@ -196,6 +205,10 @@ The repository uses pre-commit for automated checks. Always run `make hook` afte
 
 Failures must be fixed before committing or submitting PRs.
 
-## Cursor Rules Integration
+## Canonical Instructions File
 
-This CLAUDE.md incorporates key guidance from `.cursorrules`. The Cursor rules file contains additional detail on specific patterns (e.g., data pipeline configs, FlatBuffers compilation) and should be consulted for nuanced design decisions.
+This `CLAUDE.md` is the single source of truth for coding-agent instructions in this
+repository. `AGENTS.md` and `.cursor/rules/repo-instructions.mdc` are thin pointer stubs
+that exist only so tools which look for those exact filenames (Codex CLI, Amp, Cursor,
+etc.) find their way here — they carry no independent content. When updating project
+guidance, edit this file only; do not let the pointer stubs accumulate their own copies.

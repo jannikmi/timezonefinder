@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-These guidelines describe how maintainers, contributors, and coding agents collaborate on timezonefinder. They extend the repository tour in `Agents.md` and focus on delivering production-ready features with strong guarantees around correctness, performance, and maintainability.
+These guidelines describe how maintainers, contributors, and coding agents collaborate on timezonefinder. They extend the repository tour in `CLAUDE.md` and focus on delivering production-ready features with strong guarantees around correctness, performance, and maintainability.
 
 ## Mission & Expectations
 

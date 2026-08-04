@@ -22,6 +22,7 @@ Internal:
 * added deterministic, committed benchmark input fixtures (``tests/fixtures/benchmarks/``, generated via ``scripts/generate_benchmark_fixtures.py`` / ``make benchmark-fixtures``) so two runs of the same commit execute the exact same workload instead of drawing fresh random points and polygons every time; ``scripts/check_speed_timezone_finding.py`` and ``scripts/check_speed_inside_polygon.py`` now load from these fixtures instead of generating input on the fly
 * the point-in-polygon benchmark fixture is stratified by polygon vertex count (small/medium/large), so the benchmark no longer hides the cost of the largest polygons behind an unweighted average over the mostly-small polygon population
 * the benchmark fixtures are pinned to the packaged ``DATA_VERSION``: the loader (``tests/auxiliaries.py``) refuses to load fixtures generated against a different data version or an out-of-range polygon id, and ``update_data.sh`` regenerates the fixtures automatically right after bumping ``DATA_VERSION`` so a data update keeps both in sync
+* consolidated the three overlapping coding-agent instruction files into one canonical source: ``CLAUDE.md`` now holds all guidance, ``Agents.md`` is renamed to ``AGENTS.md`` and reduced to a pointer stub, and the legacy ``.cursorrules`` is replaced by ``.cursor/rules/repo-instructions.mdc`` (also a pointer stub), removing the drift risk of maintaining three near-duplicate copies
 
 
 8.2.5 (2026-07-11)

@@ -1,0 +1,8 @@
+---
+description: Canonical project instructions live in CLAUDE.md
+alwaysApply: true
+---
+
+The canonical coding-agent instructions for this repository live in `CLAUDE.md` — read
+that file first. This rule exists only so Cursor always surfaces that pointer; it carries
+no separate guidance of its own. Do not add content here — update `CLAUDE.md` instead.
