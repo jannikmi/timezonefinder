@@ -10,6 +10,7 @@ from scripts.render_benchmark_reports import (
     format_duration,
     format_ratio,
     format_rate,
+    get_batch_size,
     humanize_benchmark_name,
     percent_faster,
     speedup_ratio,
@@ -278,6 +279,20 @@ def test_add_comparison_bullet_negligible_difference_does_not_declare_a_winner()
     (text,) = _texts(reporter)
     assert "about the same" in text
     assert "% faster" not in text
+
+
+def test_get_batch_size_reads_the_value_the_json_recorded():
+    # regression test: rendering must use the batch size the *measured run*
+    # recorded, not whatever benchmarks.conftest.BATCH_SIZE happens to be in
+    # the checkout doing the rendering - that's what makes it safe to render
+    # an older stored JSON after BATCH_SIZE has since changed
+    assert get_batch_size({"batch_size": 500}) == 500
+    assert get_batch_size({"batch_size": 1_000}) == 1_000
+
+
+def test_get_batch_size_missing_raises_a_clear_error():
+    with pytest.raises(ValueError, match="batch_size"):
+        get_batch_size({"using_numba": True})
 
 
 def test_add_fastest_slowest_bullet_reports_both_ends():

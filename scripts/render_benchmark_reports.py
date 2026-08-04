@@ -11,10 +11,14 @@ docs can be regenerated from a stored JSON without re-running anything.
 
 Reuses ``BenchmarkReporter`` / ``add_system_status_section``
 (scripts/benchmark_utils.py) rather than a second RST-rendering
-implementation. The reported numba/clang/version flags describe the
-environment that *produced* the JSON - captured at benchmark-run time by
-``benchmarks/conftest.py``'s ``pytest_benchmark_update_machine_info`` hook -
-not whichever environment happens to run this script.
+implementation. The reported numba/clang/version flags and batch size
+describe the environment/run that *produced* the JSON - captured at
+benchmark-run time by ``benchmarks/conftest.py``'s
+``pytest_benchmark_update_machine_info`` hook, not whichever checkout
+happens to render this script. Importing ``BATCH_SIZE`` from
+``benchmarks.conftest`` directly would be wrong here: a stored JSON must
+render correctly even from a checkout where that constant has since
+changed.
 """
 
 import argparse
@@ -23,7 +27,6 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-from benchmarks.conftest import BATCH_SIZE
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
 from scripts.configs import (
     INITIALIZATION_REPORT_FILE,
@@ -206,6 +209,25 @@ def get_system_info(data: dict[str, Any]) -> dict[str, Any]:
     return system_info
 
 
+def get_batch_size(system_info: dict[str, Any]) -> int:
+    """Read back the ``BATCH_SIZE`` that produced these measurements.
+
+    Reading this from the JSON (rather than importing ``benchmarks.conftest.
+    BATCH_SIZE`` directly) is what makes it safe to render a JSON stored from
+    an older run against a checkout where that constant has since changed -
+    the reported batch size and the derived Time/Query/Throughput columns
+    must reflect the measured run, not the current code.
+    """
+    batch_size = system_info.get("batch_size")
+    if batch_size is None:
+        raise ValueError(
+            "benchmark JSON's machine_info['timezonefinder'] is missing 'batch_size' "
+            "- it was produced before this field was added. Regenerate it with "
+            "`pytest benchmarks/` (`make benchmarks`)."
+        )
+    return batch_size
+
+
 def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str, Any]]:
     prefix = f"benchmarks/{file_stem}.py::"
     matches = [b for b in data["benchmarks"] if b["fullname"].startswith(prefix)]
@@ -336,26 +358,28 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
     reporter = BenchmarkReporter(
         title="Timezone Finding Performance Benchmark", output_path=output_path
     )
+    system_info = get_system_info(data)
+    batch_size = get_batch_size(system_info)
     add_system_status_section(
         reporter,
-        get_system_info(data),
+        system_info,
         {
             "benchmark_source": "pytest-benchmark",
-            "batch_size": BATCH_SIZE,
+            "batch_size": batch_size,
         },
     )
     reporter.add_text(
-        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed query "
+        f"Each benchmark times one pass over {batch_size:,} fixed, committed query "
         "points (see benchmarks/conftest.py). Mean/Median/StdDev/Min/Max below are "
-        f"for the full {BATCH_SIZE:,}-query batch; Time/Query and Throughput divide "
+        f"for the full {batch_size:,}-query batch; Time/Query and Throughput divide "
         "and scale that out to a per-query figure."
     )
 
     benches = benchmarks_from_file(data, "test_timezone_finding")
     by_name = {b["name"]: b for b in benches}
     extra_columns: tuple[ExtraColumn, ...] = (
-        ("Time/Query", lambda b: format_duration(b["stats"]["mean"] / BATCH_SIZE)),
-        ("Throughput", lambda b: format_rate(BATCH_SIZE / b["stats"]["mean"])),
+        ("Time/Query", lambda b: format_duration(b["stats"]["mean"] / batch_size)),
+        ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
     )
 
     in_memory = [b for b in benches if b["name"].endswith("in_memory]")]
@@ -425,27 +449,29 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         title="Point-in-Polygon Algorithm Performance Benchmark",
         output_path=output_path,
     )
+    system_info = get_system_info(data)
+    batch_size = get_batch_size(system_info)
     add_system_status_section(
         reporter,
-        get_system_info(data),
+        system_info,
         {
             "benchmark_source": "pytest-benchmark",
-            "batch_size": BATCH_SIZE,
+            "batch_size": batch_size,
             "polygon_strata": "small / medium / large (by vertex count percentile)",
         },
     )
     reporter.add_text(
-        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed (point, "
+        f"Each benchmark times one pass over {batch_size:,} fixed, committed (point, "
         "polygon) pairs drawn from a single polygon-size stratum, so the cost of the "
         "largest polygons isn't hidden behind an unweighted average. Mean/Median/"
-        f"StdDev/Min/Max are for the full {BATCH_SIZE:,}-pair batch; Throughput is "
+        f"StdDev/Min/Max are for the full {batch_size:,}-pair batch; Throughput is "
         "queries/second for that batch."
     )
 
     benches = benchmarks_from_file(data, "test_inside_polygon")
     by_name = {b["name"]: b for b in benches}
     extra_columns: tuple[ExtraColumn, ...] = (
-        ("Throughput", lambda b: format_rate(BATCH_SIZE / b["stats"]["mean"])),
+        ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
     )
 
     reporter.add_section("Results", level=2)

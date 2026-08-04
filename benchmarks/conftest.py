@@ -32,10 +32,13 @@ BATCH_SIZE = 1_000
 
 
 def pytest_benchmark_update_machine_info(config, machine_info) -> None:
-    """Record numba/clang availability under the machine that *ran* the
-    benchmarks, not whichever machine later renders the JSON into RST
-    (scripts/render_benchmark_reports.py reads this back out)."""
-    machine_info["timezonefinder"] = get_system_status()
+    """Record numba/clang availability and BATCH_SIZE from the run that
+    *produced* the measurements, not whichever checkout later renders the
+    JSON into RST (scripts/render_benchmark_reports.py reads this back out).
+    Without this, rendering an older stored JSON against a checkout where
+    BATCH_SIZE has since changed would silently derive Time/Query and
+    Throughput from the wrong batch size."""
+    machine_info["timezonefinder"] = {**get_system_status(), "batch_size": BATCH_SIZE}
 
 
 @pytest.fixture(autouse=True, scope="session")

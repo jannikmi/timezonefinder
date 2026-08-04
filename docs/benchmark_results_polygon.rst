@@ -84,29 +84,29 @@ point-in-polygon (C/clang)
      - Rounds
      - Throughput
    * - large polygons
-     - 53.8ms
-     - 53.8ms
-     - 141µs
-     - 53.7ms
-     - 54.3ms
+     - 55.8ms
+     - 55.6ms
+     - 569µs
+     - 55.1ms
+     - 57.2ms
      - 18
-     - 18.6k/s
+     - 17.9k/s
    * - medium polygons
-     - 5.59ms
-     - 5.61ms
-     - 120µs
-     - 5.34ms
-     - 6.23ms
+     - 5.77ms
+     - 5.73ms
+     - 258µs
+     - 5.37ms
+     - 6.35ms
      - 152
-     - 179k/s
+     - 173k/s
    * - small polygons
-     - 1.42ms
-     - 1.41ms
-     - 26.2µs
+     - 1.50ms
+     - 1.45ms
+     - 117µs
      - 1.40ms
-     - 1.83ms
-     - 376
-     - 705k/s
+     - 1.93ms
+     - 275
+     - 666k/s
 
 
 
@@ -129,29 +129,29 @@ point-in-polygon (Python, Numba if available)
      - Rounds
      - Throughput
    * - large polygons
-     - 23.9ms
-     - 23.9ms
-     - 71.5µs
-     - 23.8ms
-     - 24.2ms
-     - 42
-     - 41.8k/s
+     - 25.2ms
+     - 25.2ms
+     - 281µs
+     - 24.7ms
+     - 25.7ms
+     - 40
+     - 39.7k/s
    * - medium polygons
-     - 1.93ms
-     - 1.92ms
-     - 40.6µs
+     - 2.07ms
+     - 2.03ms
+     - 142µs
      - 1.91ms
-     - 2.12ms
-     - 479
-     - 517k/s
+     - 2.51ms
+     - 436
+     - 483k/s
    * - small polygons
-     - 280µs
-     - 279µs
-     - 3.09µs
+     - 285µs
      - 278µs
-     - 301µs
-     - 305
-     - 3.57M/s
+     - 17.3µs
+     - 277µs
+     - 394µs
+     - 157
+     - 3.51M/s
 
 
 
@@ -160,10 +160,10 @@ Performance Summary
 ~~~~~~~~~~~~~~~~~~~
 
 
-* Small polygons: **point-in-polygon (Python, Numba if available)** is 80% faster (5.07x) than **point-in-polygon (C/clang)** (280µs vs 1.42ms)
+* Small polygons: **point-in-polygon (Python, Numba if available)** is 81% faster (5.27x) than **point-in-polygon (C/clang)** (285µs vs 1.50ms)
 
-* Medium polygons: **point-in-polygon (Python, Numba if available)** is 65% faster (2.89x) than **point-in-polygon (C/clang)** (1.93ms vs 5.59ms)
+* Medium polygons: **point-in-polygon (Python, Numba if available)** is 64% faster (2.79x) than **point-in-polygon (C/clang)** (2.07ms vs 5.77ms)
 
-* Large polygons: **point-in-polygon (Python, Numba if available)** is 56% faster (2.25x) than **point-in-polygon (C/clang)** (23.9ms vs 53.8ms)
+* Large polygons: **point-in-polygon (Python, Numba if available)** is 55% faster (2.21x) than **point-in-polygon (C/clang)** (25.2ms vs 55.8ms)
 
-* Overall: fastest is **point-in-polygon (Python, Numba if available) - small polygons** (280µs), slowest is **point-in-polygon (C/clang) - large polygons** (53.8ms) - 99% faster (192x)
+* Overall: fastest is **point-in-polygon (Python, Numba if available) - small polygons** (285µs), slowest is **point-in-polygon (C/clang) - large polygons** (55.8ms) - 99% faster (196x)
