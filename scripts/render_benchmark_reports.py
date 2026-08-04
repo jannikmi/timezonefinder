@@ -21,7 +21,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from benchmarks.conftest import BATCH_SIZE
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
@@ -109,6 +109,86 @@ def humanize_benchmark_name(name: str) -> str:
     return f"{func_label} - {params_label}"
 
 
+def _decimals_for_magnitude(value: float) -> int:
+    """Decimal places giving ~3 significant figures for ``value``.
+
+    Fewer digits as the value grows (0 decimals at >=100, 1 at >=10, else 2),
+    so a table doesn't show false precision on a large number (``"192.30x"``)
+    or too few significant digits on a small one. This is the "human
+    friendly rounding" shared by every formatter below.
+    """
+    abs_value = abs(value)
+    if abs_value >= 100:
+        return 0
+    if abs_value >= 10:
+        return 1
+    return 2
+
+
+def format_duration(seconds: float) -> str:
+    """Format a duration using the most readable unit for its magnitude.
+
+    Milliseconds/microseconds/nanoseconds below one second, so batch and
+    per-query times read naturally instead of forcing scientific notation on
+    every cell, rounded to ~3 significant figures (see
+    :func:`_decimals_for_magnitude`) instead of a fixed number of decimals -
+    "414ms" and "8.47ms" are both more readable than "414.000ms"/"8.475ms".
+    Falls back to scientific notation only outside the ns-s range, which
+    shouldn't occur for these benchmarks.
+    """
+    abs_seconds = abs(seconds)
+    if abs_seconds == 0:
+        return "0ms"
+    if abs_seconds >= 1:
+        value, unit = seconds, "s"
+    elif abs_seconds >= 1e-3:
+        value, unit = seconds * 1e3, "ms"
+    elif abs_seconds >= 1e-6:
+        value, unit = seconds * 1e6, "µs"
+    elif abs_seconds >= 1e-9:
+        value, unit = seconds * 1e9, "ns"
+    else:
+        return f"{seconds:.3e}s"
+    return f"{value:.{_decimals_for_magnitude(value)}f}{unit}"
+
+
+def format_rate(rate: float) -> str:
+    """Format an operations-per-second rate with a k/M suffix and ~3
+    significant figures, so a throughput column scans as quickly as the
+    duration columns instead of a long run of digits (``"3.57M/s"`` rather
+    than ``"3,573,050/s"``).
+    """
+    abs_rate = abs(rate)
+    if abs_rate >= 1e6:
+        value, suffix = rate / 1e6, "M"
+    elif abs_rate >= 1e3:
+        value, suffix = rate / 1e3, "k"
+    else:
+        value, suffix = rate, ""
+    return f"{value:.{_decimals_for_magnitude(value)}f}{suffix}/s"
+
+
+def format_ratio(ratio: float) -> str:
+    """Format a speedup ratio to ~3 significant figures (``"192x"`` rather
+    than ``"192.30x"``, but ``"1.39x"`` unchanged for a small ratio)."""
+    return f"{ratio:.{_decimals_for_magnitude(ratio)}f}x"
+
+
+# below this relative difference, "X% faster" reads as a false signal -
+# treat it as measurement noise instead of declaring an arbitrary winner
+NEGLIGIBLE_DIFFERENCE_PCT = 2.0
+
+
+def percent_faster(slower_seconds: float, faster_seconds: float) -> float:
+    """How many percent faster ``faster_seconds`` is than ``slower_seconds``."""
+    return (slower_seconds - faster_seconds) / slower_seconds * 100
+
+
+def speedup_ratio(slower_seconds: float, faster_seconds: float) -> float:
+    """How many times faster ``faster_seconds`` is than ``slower_seconds``."""
+    return slower_seconds / faster_seconds
+
+
 def load_benchmark_json(json_path: Path) -> dict[str, Any]:
     with open(json_path) as f:
         return json.load(f)
@@ -137,24 +217,31 @@ def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str,
     return sorted(matches, key=lambda b: b["name"])
 
 
-def stats_row(label: str, bench: dict[str, Any], divisor: float = 1.0) -> list[str]:
+ExtraColumn = tuple[str, Callable[[dict[str, Any]], str]]
+
+
+def stats_row(
+    label: str, bench: dict[str, Any], extra_columns: tuple[ExtraColumn, ...] = ()
+) -> list[str]:
     stats = bench["stats"]
-    return [
+    row = [
         label,
-        f"{stats['mean'] / divisor:.2e}s",
-        f"{stats['median'] / divisor:.2e}s",
-        f"{stats['stddev'] / divisor:.2e}s",
-        f"{stats['min'] / divisor:.2e}s",
-        f"{stats['max'] / divisor:.2e}s",
+        format_duration(stats["mean"]),
+        format_duration(stats["median"]),
+        format_duration(stats["stddev"]),
+        format_duration(stats["min"]),
+        format_duration(stats["max"]),
         str(stats["rounds"]),
     ]
+    row.extend(column_fn(bench) for _, column_fn in extra_columns)
+    return row
 
 
 def add_benchmark_table(
     reporter: BenchmarkReporter,
     benches: list[dict[str, Any]],
     section_level: int,
-    divisor: float = 1.0,
+    extra_columns: tuple[ExtraColumn, ...] = (),
 ) -> None:
     """Add one table per function label found in ``benches``.
 
@@ -162,8 +249,10 @@ def add_benchmark_table(
     ``FUNCTION_LABELS`` prefix (e.g. ``"TimezoneFinder.timezone_at() - ..."``
     in every row); grouping by function and hoisting that shared prefix into
     a section heading removes the redundancy instead of showing it in every
-    row's "Configuration" cell.
+    row's "Configuration" cell. ``extra_columns`` appends derived metrics
+    (e.g. per-query time, throughput) beyond the raw pytest-benchmark stats.
     """
+    headers = [*CONFIG_HEADERS, *(name for name, _ in extra_columns)]
     groups: dict[str, list[dict[str, Any]]] = {}
     for bench in benches:
         func_label, _ = split_benchmark_label(bench["name"])
@@ -174,8 +263,73 @@ def add_benchmark_table(
         rows = []
         for bench in sorted(group, key=lambda b: b["name"]):
             _, params_label = split_benchmark_label(bench["name"])
-            rows.append(stats_row(params_label or "-", bench, divisor))
-        reporter.add_table(CONFIG_HEADERS, rows)
+            rows.append(stats_row(params_label or "-", bench, extra_columns))
+        reporter.add_table(headers, rows)
+
+
+def _full_label(bench: dict[str, Any]) -> str:
+    return humanize_benchmark_name(bench["name"])
+
+
+def _function_label(bench: dict[str, Any]) -> str:
+    func_label, _ = split_benchmark_label(bench["name"])
+    return func_label
+
+
+def _memory_mode_label(bench: dict[str, Any]) -> str:
+    return "in-memory" if bench["name"].endswith("in_memory]") else "file-based"
+
+
+def add_comparison_bullet(
+    reporter: BenchmarkReporter,
+    context: str,
+    bench_a: dict[str, Any],
+    bench_b: dict[str, Any],
+    label_fn: Callable[[dict[str, Any]], str] = _full_label,
+) -> None:
+    """Add one bullet comparing two benchmarks' mean time.
+
+    Which one is faster is determined from the JSON at render time, never
+    assumed - flipping which implementation wins on a given machine still
+    produces a correct sentence. A difference under ``NEGLIGIBLE_DIFFERENCE_PCT``
+    is reported as "about the same" rather than declaring an arbitrary
+    winner - below that threshold the gap is noise, not signal (it's smaller
+    than the stddev typically seen between rounds of the same benchmark).
+    """
+    mean_a, mean_b = bench_a["stats"]["mean"], bench_b["stats"]["mean"]
+    if mean_a <= mean_b:
+        faster, slower, faster_t, slower_t = bench_a, bench_b, mean_a, mean_b
+    else:
+        faster, slower, faster_t, slower_t = bench_b, bench_a, mean_b, mean_a
+    pct = percent_faster(slower_t, faster_t)
+    ratio = speedup_ratio(slower_t, faster_t)
+    if pct < NEGLIGIBLE_DIFFERENCE_PCT:
+        reporter.add_text(
+            f"* {context}: **{label_fn(faster)}** and **{label_fn(slower)}** perform "
+            f"about the same ({format_duration(faster_t)} vs {format_duration(slower_t)}, "
+            f"{pct:.1f}% difference)"
+        )
+        return
+    reporter.add_text(
+        f"* {context}: **{label_fn(faster)}** is {pct:.0f}% faster ({format_ratio(ratio)}) than "
+        f"**{label_fn(slower)}** ({format_duration(faster_t)} vs {format_duration(slower_t)})"
+    )
+
+
+def add_fastest_slowest_bullet(
+    reporter: BenchmarkReporter, benches: list[dict[str, Any]], context: str = "Overall"
+) -> None:
+    fastest = min(benches, key=lambda b: b["stats"]["mean"])
+    slowest = max(benches, key=lambda b: b["stats"]["mean"])
+    fastest_t, slowest_t = fastest["stats"]["mean"], slowest["stats"]["mean"]
+    pct = percent_faster(slowest_t, fastest_t)
+    ratio = speedup_ratio(slowest_t, fastest_t)
+    reporter.add_text(
+        f"* {context}: fastest is **{humanize_benchmark_name(fastest['name'])}** "
+        f"({format_duration(fastest_t)}), slowest is "
+        f"**{humanize_benchmark_name(slowest['name'])}** ({format_duration(slowest_t)}) "
+        f"- {pct:.0f}% faster ({format_ratio(ratio)})"
+    )
 
 
 def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
@@ -191,12 +345,19 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
         },
     )
     reporter.add_text(
-        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed "
-        "query points (see benchmarks/conftest.py); rows below report "
-        "seconds-per-batch. Divide by the batch size for seconds-per-query."
+        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed query "
+        "points (see benchmarks/conftest.py). Mean/Median/StdDev/Min/Max below are "
+        f"for the full {BATCH_SIZE:,}-query batch; Time/Query and Throughput divide "
+        "and scale that out to a per-query figure."
     )
 
     benches = benchmarks_from_file(data, "test_timezone_finding")
+    by_name = {b["name"]: b for b in benches}
+    extra_columns: tuple[ExtraColumn, ...] = (
+        ("Time/Query", lambda b: format_duration(b["stats"]["mean"] / BATCH_SIZE)),
+        ("Throughput", lambda b: format_rate(BATCH_SIZE / b["stats"]["mean"])),
+    )
+
     in_memory = [b for b in benches if b["name"].endswith("in_memory]")]
     file_based = [b for b in benches if b["name"].endswith("file_based]")]
     other = [b for b in benches if b not in in_memory and b not in file_based]
@@ -208,7 +369,9 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
         if not group:
             continue
         reporter.add_section(section_title, level=2)
-        add_benchmark_table(reporter, group, section_level=3)
+        add_benchmark_table(
+            reporter, group, section_level=3, extra_columns=extra_columns
+        )
 
     if other:
         reporter.add_section("TimezoneFinderL (heuristic-only)", level=2)
@@ -216,7 +379,43 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
             "TimezoneFinderL does not support in-memory mode; shortcuts are always "
             "loaded from disk."
         )
-        add_benchmark_table(reporter, other, section_level=3)
+        add_benchmark_table(
+            reporter, other, section_level=3, extra_columns=extra_columns
+        )
+
+    reporter.add_section("Performance Summary", level=2)
+    reporter.add_text("**In-memory vs file-based** (``TimezoneFinder.timezone_at()``):")
+    for point_type in ("random", "on_land", "unique_shortcut", "ambiguous_shortcut"):
+        in_mem = by_name.get(f"test_timezone_at[{point_type}-in_memory]")
+        file_b = by_name.get(f"test_timezone_at[{point_type}-file_based]")
+        if in_mem and file_b:
+            context = PARAM_LABELS.get(point_type, point_type).capitalize()
+            add_comparison_bullet(
+                reporter, context, in_mem, file_b, label_fn=_memory_mode_label
+            )
+
+    land_in_mem = by_name.get("test_timezone_at_land[in_memory]")
+    land_file_b = by_name.get("test_timezone_at_land[file_based]")
+    if land_in_mem and land_file_b:
+        add_comparison_bullet(
+            reporter,
+            "TimezoneFinder.timezone_at_land()",
+            land_in_mem,
+            land_file_b,
+            label_fn=_memory_mode_label,
+        )
+
+    unique = by_name.get("test_timezone_at[unique_shortcut-in_memory]")
+    ambiguous = by_name.get("test_timezone_at[ambiguous_shortcut-in_memory]")
+    if unique and ambiguous:
+        ratio = speedup_ratio(ambiguous["stats"]["mean"], unique["stats"]["mean"])
+        reporter.add_text(
+            f"* Ambiguous-shortcut points are {ratio:.1f}x slower than unique-shortcut "
+            "points (in-memory): a unique shortcut resolves directly from the H3 index, "
+            "while an ambiguous one falls through to the full point-in-polygon check."
+        )
+
+    add_fastest_slowest_bullet(reporter, benches)
 
     reporter.write_report()
 
@@ -236,14 +435,35 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         },
     )
     reporter.add_text(
-        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed "
-        "(point, polygon) pairs drawn from a single polygon-size stratum, so the "
-        "cost of the largest polygons isn't hidden behind an unweighted average."
+        f"Each benchmark times one pass over {BATCH_SIZE:,} fixed, committed (point, "
+        "polygon) pairs drawn from a single polygon-size stratum, so the cost of the "
+        "largest polygons isn't hidden behind an unweighted average. Mean/Median/"
+        f"StdDev/Min/Max are for the full {BATCH_SIZE:,}-pair batch; Throughput is "
+        "queries/second for that batch."
     )
 
     benches = benchmarks_from_file(data, "test_inside_polygon")
+    by_name = {b["name"]: b for b in benches}
+    extra_columns: tuple[ExtraColumn, ...] = (
+        ("Throughput", lambda b: format_rate(BATCH_SIZE / b["stats"]["mean"])),
+    )
+
     reporter.add_section("Results", level=2)
-    add_benchmark_table(reporter, benches, section_level=3)
+    add_benchmark_table(reporter, benches, section_level=3, extra_columns=extra_columns)
+
+    reporter.add_section("Performance Summary", level=2)
+    for stratum in ("small", "medium", "large"):
+        clang = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
+        python = by_name.get(f"test_pt_in_poly_python[{stratum}]")
+        if clang and python:
+            add_comparison_bullet(
+                reporter,
+                PARAM_LABELS[stratum].capitalize(),
+                clang,
+                python,
+                label_fn=_function_label,
+            )
+    add_fastest_slowest_bullet(reporter, benches)
 
     reporter.write_report()
 
@@ -266,18 +486,19 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
     )
 
     benches = benchmarks_from_file(data, "test_initialization")
+    by_name = {b["name"]: b for b in benches}
     reporter.add_section("Results", level=2)
     add_benchmark_table(reporter, benches, section_level=3)
 
-    fastest = min(benches, key=lambda b: b["stats"]["mean"])
-    slowest = max(benches, key=lambda b: b["stats"]["mean"])
-    reporter.add_section("Performance Analysis", level=2)
-    reporter.add_text(
-        f"* **Fastest configuration**: {humanize_benchmark_name(fastest['name'])}"
-    )
-    reporter.add_text(
-        f"* **Slowest configuration**: {humanize_benchmark_name(slowest['name'])}"
-    )
+    reporter.add_section("Performance Summary", level=2)
+    for cls in ("TimezoneFinder", "TimezoneFinderL"):
+        in_mem = by_name.get(f"test_initialization[{cls}-in_memory]")
+        file_b = by_name.get(f"test_initialization[{cls}-file_based]")
+        if in_mem and file_b:
+            add_comparison_bullet(
+                reporter, cls, in_mem, file_b, label_fn=_memory_mode_label
+            )
+    add_fastest_slowest_bullet(reporter, benches)
 
     reporter.write_report()
 
