@@ -39,6 +39,17 @@ BENCHMARK_FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
 BENCHMARK_FIXTURES_METADATA_PATH = BENCHMARK_FIXTURES_DIR / "metadata.json"
 DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
+# benchmark fixture names: shared as both the ``.npy`` file stem under
+# BENCHMARK_FIXTURES_DIR and the matching key in metadata.json's "counts".
+# Reused by the generator (scripts/generate_benchmark_fixtures.py) and the
+# loader below so the two can't silently drift apart.
+RANDOM_POINTS_FIXTURE = "random_points"
+ON_LAND_POINTS_FIXTURE = "on_land_points"
+UNIQUE_SHORTCUT_POINTS_FIXTURE = "unique_shortcut_points"
+AMBIGUOUS_SHORTCUT_POINTS_FIXTURE = "ambiguous_shortcut_points"
+PIP_INPUTS_FIXTURE = "pip_inputs"
+PIP_STRATA_FIXTURE = "pip_strata"
+
 
 # Command constants
 BUILD_SDIST_CMD = ["uv", "build", "-v", "--sdist"]
@@ -422,8 +433,8 @@ def _load_benchmark_fixture_array(name: str) -> np.ndarray:
 def load_benchmark_points(name: str) -> list[tuple[float, float]]:
     """Load a committed (lng, lat) point fixture by name.
 
-    ``name`` is one of ``random_points``, ``on_land_points``,
-    ``unique_shortcut_points``, ``ambiguous_shortcut_points``.
+    ``name`` is one of :data:`RANDOM_POINTS_FIXTURE`, :data:`ON_LAND_POINTS_FIXTURE`,
+    :data:`UNIQUE_SHORTCUT_POINTS_FIXTURE`, :data:`AMBIGUOUS_SHORTCUT_POINTS_FIXTURE`.
     """
     arr = _load_benchmark_fixture_array(name)
     return [(float(lng), float(lat)) for lng, lat in arr]
@@ -436,7 +447,7 @@ def load_pip_inputs() -> list[tuple[int, int, int]]:
     query coordinates. Use :func:`load_pip_strata` for the matching
     small/medium/large size classification of ``polygon_id``.
     """
-    arr = _load_benchmark_fixture_array("pip_inputs")
+    arr = _load_benchmark_fixture_array(PIP_INPUTS_FIXTURE)
     poly_ids = arr[:, 2]
     max_poly_id = len(boundaries) - 1
     out_of_range = poly_ids[(poly_ids < 0) | (poly_ids > max_poly_id)]
@@ -447,7 +458,7 @@ def load_pip_inputs() -> list[tuple[int, int, int]]:
         # directly, in case the recorded data_version is somehow stale
         # without having been bumped (e.g. hand-edited data).
         raise BenchmarkFixtureError(
-            f"Benchmark fixture 'pip_inputs' references polygon id "
+            f"Benchmark fixture {PIP_INPUTS_FIXTURE!r} references polygon id "
             f"{int(out_of_range[0])}, outside the valid range (0-{max_poly_id}) "
             "for the currently loaded boundary data. The fixtures were likely "
             "generated against a different timezone data version. "
@@ -459,7 +470,7 @@ def load_pip_inputs() -> list[tuple[int, int, int]]:
 def load_pip_strata() -> list[str]:
     """Load the polygon-size stratum ("small"/"medium"/"large") for each
     entry returned by :func:`load_pip_inputs`, in the same order."""
-    arr = _load_benchmark_fixture_array("pip_strata")
+    arr = _load_benchmark_fixture_array(PIP_STRATA_FIXTURE)
     metadata = _load_benchmark_fixture_metadata()
     stratum_names = metadata["pip_strata"]
     return [stratum_names[code] for code in arr]

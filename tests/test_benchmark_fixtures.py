@@ -18,7 +18,11 @@ import pytest
 
 from scripts import generate_benchmark_fixtures as fixture_gen
 from tests.auxiliaries import (
-    BENCHMARK_FIXTURES_DIR,
+    AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    BENCHMARK_FIXTURES_METADATA_PATH,
+    ON_LAND_POINTS_FIXTURE,
+    RANDOM_POINTS_FIXTURE,
+    UNIQUE_SHORTCUT_POINTS_FIXTURE,
     BenchmarkFixtureError,
     boundaries,
     get_pip_test_input,
@@ -87,57 +91,57 @@ def test_load_benchmark_points_missing_fixture_raises(monkeypatch, tmp_path):
     monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
     monkeypatch.setattr(
         "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH",
-        tmp_path / "metadata.json",
+        tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name,
     )
     with pytest.raises(BenchmarkFixtureError, match="make benchmark-fixtures"):
-        load_benchmark_points("random_points")
+        load_benchmark_points(RANDOM_POINTS_FIXTURE)
 
 
 def test_load_pip_inputs_missing_fixture_raises(monkeypatch, tmp_path):
     monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
     monkeypatch.setattr(
         "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH",
-        tmp_path / "metadata.json",
+        tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name,
     )
     with pytest.raises(BenchmarkFixtureError, match="make benchmark-fixtures"):
         load_pip_inputs()
 
 
 def test_load_benchmark_points_debug_mismatch_raises(monkeypatch, tmp_path):
-    metadata_path = tmp_path / "metadata.json"
+    metadata_path = tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name
     metadata_path.write_text(json.dumps({"debug": True, "pip_strata": []}))
-    (tmp_path / "random_points.npy").touch()
+    (tmp_path / f"{RANDOM_POINTS_FIXTURE}.npy").touch()
     monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
     monkeypatch.setattr(
         "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH", metadata_path
     )
     monkeypatch.setattr("tests.auxiliaries.DEBUG", False)
     with pytest.raises(BenchmarkFixtureError, match="DEBUG"):
-        load_benchmark_points("random_points")
+        load_benchmark_points(RANDOM_POINTS_FIXTURE)
 
 
 def test_load_benchmark_points_data_version_mismatch_raises(monkeypatch, tmp_path):
-    metadata_path = tmp_path / "metadata.json"
+    metadata_path = tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name
     metadata_path.write_text(
         json.dumps({"debug": False, "data_version": "2000a", "pip_strata": []})
     )
-    (tmp_path / "random_points.npy").touch()
+    (tmp_path / f"{RANDOM_POINTS_FIXTURE}.npy").touch()
     monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
     monkeypatch.setattr(
         "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH", metadata_path
     )
     monkeypatch.setattr("tests.auxiliaries.DEBUG", False)
     with pytest.raises(BenchmarkFixtureError, match="data_version|DATA_VERSION"):
-        load_benchmark_points("random_points")
+        load_benchmark_points(RANDOM_POINTS_FIXTURE)
 
 
 @pytest.mark.parametrize(
     "name,expected_count",
     [
-        ("random_points", 10_000),
-        ("on_land_points", 10_000),
-        ("unique_shortcut_points", 5_000),
-        ("ambiguous_shortcut_points", 5_000),
+        (RANDOM_POINTS_FIXTURE, 10_000),
+        (ON_LAND_POINTS_FIXTURE, 10_000),
+        (UNIQUE_SHORTCUT_POINTS_FIXTURE, 5_000),
+        (AMBIGUOUS_SHORTCUT_POINTS_FIXTURE, 5_000),
     ],
 )
 def test_load_benchmark_points_loads_committed_fixtures(name, expected_count):
@@ -180,7 +184,7 @@ def test_load_pip_strata_matches_pip_inputs():
 
 def test_benchmark_fixtures_dir_is_committed():
     # sanity check that the fixtures actually live where the loader expects
-    assert (BENCHMARK_FIXTURES_DIR / "metadata.json").exists()
+    assert BENCHMARK_FIXTURES_METADATA_PATH.exists()
 
 
 #######################
@@ -220,6 +224,7 @@ def test_generator_differs_for_different_seed(tmp_path):
     fixture_gen.generate(seed=1, output_dir=out_a, **kwargs)
     fixture_gen.generate(seed=2, output_dir=out_b, **kwargs)
 
-    assert (out_a / "random_points.npy").read_bytes() != (
-        out_b / "random_points.npy"
+    random_points_filename = f"{RANDOM_POINTS_FIXTURE}.npy"
+    assert (out_a / random_points_filename).read_bytes() != (
+        out_b / random_points_filename
     ).read_bytes()

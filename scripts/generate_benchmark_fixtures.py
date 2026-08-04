@@ -45,8 +45,15 @@ if _PROJECT_ROOT_STR not in sys.path:
 
 from scripts.configs import DEBUG  # noqa: E402
 from tests.auxiliaries import (  # noqa: E402
+    AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_DIR,
+    BENCHMARK_FIXTURES_METADATA_PATH,
     DATA_VERSION_FILE,
+    ON_LAND_POINTS_FIXTURE,
+    PIP_INPUTS_FIXTURE,
+    PIP_STRATA_FIXTURE,
+    RANDOM_POINTS_FIXTURE,
+    UNIQUE_SHORTCUT_POINTS_FIXTURE,
     boundaries,
     get_rnd_query_pt,
 )
@@ -197,20 +204,22 @@ def generate(
     tf = TimezoneFinder(in_memory=True)
 
     random_points = generate_random_points(rng, n_random)
-    write_points_fixture(output_dir, "random_points", random_points)
+    write_points_fixture(output_dir, RANDOM_POINTS_FIXTURE, random_points)
 
     on_land_points = generate_on_land_points(tf, rng, n_on_land)
-    write_points_fixture(output_dir, "on_land_points", on_land_points)
+    write_points_fixture(output_dir, ON_LAND_POINTS_FIXTURE, on_land_points)
 
     unique_points, ambiguous_points = generate_shortcut_points(
         tf, rng, n_unique, n_ambiguous
     )
-    write_points_fixture(output_dir, "unique_shortcut_points", unique_points)
-    write_points_fixture(output_dir, "ambiguous_shortcut_points", ambiguous_points)
+    write_points_fixture(output_dir, UNIQUE_SHORTCUT_POINTS_FIXTURE, unique_points)
+    write_points_fixture(
+        output_dir, AMBIGUOUS_SHORTCUT_POINTS_FIXTURE, ambiguous_points
+    )
 
     pip_inputs, pip_strata = generate_pip_inputs(rng, n_pip)
-    np.save(output_dir / "pip_inputs.npy", pip_inputs)
-    np.save(output_dir / "pip_strata.npy", pip_strata)
+    np.save(output_dir / f"{PIP_INPUTS_FIXTURE}.npy", pip_inputs)
+    np.save(output_dir / f"{PIP_STRATA_FIXTURE}.npy", pip_strata)
 
     metadata = {
         "fixture_version": FIXTURE_VERSION,
@@ -221,14 +230,14 @@ def generate(
         "pip_strata": list(PIP_STRATA),
         "pip_strata_percentiles": list(PIP_STRATA_PERCENTILES),
         "counts": {
-            "random_points": len(random_points),
-            "on_land_points": len(on_land_points),
-            "unique_shortcut_points": len(unique_points),
-            "ambiguous_shortcut_points": len(ambiguous_points),
-            "pip_inputs": len(pip_inputs),
+            RANDOM_POINTS_FIXTURE: len(random_points),
+            ON_LAND_POINTS_FIXTURE: len(on_land_points),
+            UNIQUE_SHORTCUT_POINTS_FIXTURE: len(unique_points),
+            AMBIGUOUS_SHORTCUT_POINTS_FIXTURE: len(ambiguous_points),
+            PIP_INPUTS_FIXTURE: len(pip_inputs),
         },
     }
-    metadata_path = output_dir / "metadata.json"
+    metadata_path = output_dir / BENCHMARK_FIXTURES_METADATA_PATH.name
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2, sort_keys=True)
         f.write("\n")

@@ -18,7 +18,12 @@ from scripts.benchmark_utils import (
     add_system_status_section,
 )
 from scripts.configs import DOC_ROOT, PERFORMANCE_REPORT_FILE, DEBUG
-from tests.auxiliaries import load_benchmark_points, timefunc
+from tests.auxiliaries import (
+    ON_LAND_POINTS_FIXTURE,
+    RANDOM_POINTS_FIXTURE,
+    load_benchmark_points,
+    timefunc,
+)
 from tests.locations import TEST_LOCATIONS_AT_LAND
 from timezonefinder import (
     TimezoneFinder,
@@ -49,7 +54,7 @@ def get_on_land_pts(length: int):
         )
         return _KNOWN_LAND_POINTS[: min(length, len(_KNOWN_LAND_POINTS))]
 
-    on_land_points = load_benchmark_points("on_land_points")
+    on_land_points = load_benchmark_points(ON_LAND_POINTS_FIXTURE)
     if length > len(on_land_points):
         raise ValueError(
             f"requested {length:,} on-land points but the committed fixture only "
@@ -60,7 +65,7 @@ def get_on_land_pts(length: int):
 
 
 def get_random_points(length: int) -> list[tuple[float, float]]:
-    random_points = load_benchmark_points("random_points")
+    random_points = load_benchmark_points(RANDOM_POINTS_FIXTURE)
     if length > len(random_points):
         raise ValueError(
             f"requested {length:,} random points but the committed fixture only "
