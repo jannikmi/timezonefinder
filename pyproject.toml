@@ -57,6 +57,8 @@ test=[
     # `--parallel-threads` in the same run - concurrent execution makes
     # timings meaningless (see CONTRIBUTING.md)
     "pytest-benchmark>=5,<6",
+    # parsing the CI workflow definitions in tests/test_benchmark_workflows.py
+    "PyYAML>=6",
 ]
 dev = [
     "pre-commit",
