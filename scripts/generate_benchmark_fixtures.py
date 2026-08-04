@@ -5,7 +5,7 @@
 Benchmark numbers are only comparable between two runs (or two commits) if
 they execute the exact same workload. This script draws that workload once,
 with a fixed seed, and writes it to ``tests/fixtures/benchmarks/`` so it can
-be committed and reused verbatim by ``scripts/check_speed_*.py``.
+be committed and reused verbatim by the ``benchmarks/`` pytest-benchmark suites.
 
 Usage:
     uv run python -m scripts.generate_benchmark_fixtures [--seed N] [--output-dir PATH]

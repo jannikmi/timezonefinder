@@ -17,7 +17,9 @@
 #   test       - execute unit tests excluding integration and slow tests
 #   testint    - execute integration tests only
 #   testall    - execute all tests including slow ones
-#   speedtest  - run the timezone finding speed benchmark script
+#   speedtest  - run just the tracked core pytest-benchmark subset (quick, no JSON output)
+#   benchmarks - run the full pytest-benchmark suite (benchmarks/), writing tmp/benchmark.json
+#   reports    - benchmarks + render docs/benchmark_results_*.rst + the data report
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -88,19 +90,23 @@ testint:
 testall:
 	@uv run pytest
 
+# path is relative to the repo root; tmp/ is already gitignored build/data scratch space
+BENCHMARK_JSON := tmp/benchmark.json
+
+# quick local sanity check: just the small, high-signal core subset, no JSON output
 speedtest:
-	# pytest -s flag: output to console
-	uv run python scripts/check_speed_timezone_finding.py --rst
-# 	@uv run pytest -s scripts/check_speed_timezone_finding.py::test_timezone_finding_speed -v
-# 	@uv run pytest -s scripts/check_speed_initialisation.py -v
+	uv run pytest benchmarks -m benchmark_core -v
 
-benchmarks: speedtest
-	uv run python scripts/check_speed_initialisation.py --rst
-	uv run python scripts/check_speed_inside_polygon.py --rst
-
+# the full benchmark suite (all of benchmarks/), producing the JSON that
+# scripts/render_benchmark_reports.py turns into docs/benchmark_results_*.rst.
+# never combine with pytest-run-parallel's `--parallel-threads` (see CONTRIBUTING.md)
+benchmarks:
+	@mkdir -p tmp
+	uv run pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
 
 reports: benchmarks
-	uv run scripts/reporting.py
+	uv run python -m scripts.render_benchmark_reports --benchmark-json=$(BENCHMARK_JSON)
+	uv run python -m scripts.reporting
 
 tox:
 	@uv run tox
@@ -164,4 +170,4 @@ rmtag:
 docs:
 	(cd docs && make html)
 
-.PHONY: clean test build docs
+.PHONY: clean test testint testall build docs speedtest benchmarks reports

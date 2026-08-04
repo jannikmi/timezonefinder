@@ -50,8 +50,6 @@ from scripts.configs import (
     DEFAULT_INPUT_PATH,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
-    INITIALIZATION_REPORT_FILE,
-    POLYGON_REPORT_FILE,
     ZONE_ID_DTYPE,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
@@ -59,9 +57,6 @@ from scripts.configs import (
     resolve_zone_id_dtype,
 )
 from scripts.reporting import write_data_report_from_binary
-from scripts.check_speed_timezone_finding import write_performance_report
-from scripts.check_speed_inside_polygon import write_polygon_report
-from scripts.check_speed_initialisation import write_initialization_report
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -258,14 +253,13 @@ def parse_data(
     print("Generating data report from binary files...")
     write_data_report_from_binary(output_path_obj, zone_id_dtype=resolved_zone_id_dtype)
 
-    print("Generating point-in-polygon benchmark report...")
-    write_polygon_report(POLYGON_REPORT_FILE)
-
-    print("Generating initialization benchmark report...")
-    write_initialization_report(INITIALIZATION_REPORT_FILE, data_path=output_path_obj)
-
-    print("Generating performance benchmark report...")
-    write_performance_report()
+    # the pytest-benchmark reports (docs/benchmark_results_*.rst) are NOT
+    # regenerated here: they need the committed benchmark fixtures pinned to
+    # DATA_VERSION, which isn't updated until after this script returns.
+    # update_data.sh runs `make reports` automatically once DATA_VERSION and
+    # the fixtures are back in sync; a standalone `make parse`/`make testparse`
+    # invocation of this script does not, and must be followed by `make
+    # reports` manually if the reports need to reflect the newly parsed data.
 
 
 if __name__ == "__main__":

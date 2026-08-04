@@ -52,6 +52,11 @@ test=[
     # setuptoosl required for integration tests: building sdist and wheel
     "setuptools>=61",
     "pytest-run-parallel>=0.8.2",
+    # statistically sound benchmark measurement (calibration, warmup, outlier
+    # detection); see benchmarks/. Never combine with pytest-run-parallel's
+    # `--parallel-threads` in the same run - concurrent execution makes
+    # timings meaningless (see CONTRIBUTING.md)
+    "pytest-benchmark>=5,<6",
 ]
 dev = [
     "pre-commit",
@@ -126,10 +131,16 @@ src = ["timezonefinder", "tests", "build.py"]
 known-local-folder = ["timezonefinder"]
 
 [tool.pytest.ini_options]
+# excludes benchmarks/ (pytest-benchmark suites) from default collection: `make
+# test`/`make testall` must not run or even collect them. `make benchmarks`
+# passes the path explicitly, which overrides testpaths.
+testpaths = ["tests"]
 markers = [
     "unit: mark test as a unit test",
     "integration: mark test as an integration test",
-    "parallel_threads_limit: mark test with a thread limit for parallel execution"
+    "parallel_threads_limit: mark test with a thread limit for parallel execution",
+    "benchmark: mark a pytest-benchmark test (select the whole suite via `-m benchmark`); also accepts pytest-benchmark's own group/min_rounds/etc. kwargs",
+    "benchmark_core: mark a benchmark as part of the small, CI-tracked core subset (see plans/03, not yet implemented) - pick for signal, not coverage",
 ]
 
 [tool.mypy]
