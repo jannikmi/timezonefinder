@@ -38,7 +38,14 @@ Most modules are self-describing; the non-obvious ones:
   the two acceleration backends
 - `timezonefinder/data/`: binary assets (FlatBuffers polygons/shortcuts, NumPy arrays), generated
 - `scripts/file_converter.py`: ingests timezone-boundary-builder GeoJSON, emits the binary assets
-- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`
+- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`.
+  The CI-tracked `benchmark_core` set is the uniformly-random headline plus the unique/ambiguous
+  per-class diagnostics; fixtures are sampled area-uniformly, unlike the test suite's pole-biased
+  `get_rnd_query_pt` — see `CONTRIBUTING.md`
+- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py`:
+  benchmark CI helpers — make the trend chart track `min` instead of the noise-sensitive `mean`,
+  derive the alert threshold from repeated identical runs, and guard the history against a silent
+  numba/clang switch
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
 
 ## Common Commands
@@ -50,6 +57,8 @@ Most modules are self-describing; the non-obvious ones:
 | All tests | `make testall` |
 | Single test / pattern | `uv run pytest tests/…::test_name` / `-k pattern` |
 | Benchmarks | `make speedtest` |
+| Reproduce the CI benchmark measurement | `make benchmarks-ci` |
+| Measure the benchmark noise floor | `make benchmark-noise` |
 | Pre-commit validation | `make hook` |
 | Full test matrix | `make tox` |
 | Regenerate timezone data | `make data` (downloads full dataset) |
@@ -102,6 +111,23 @@ the main bullet list, dev tooling / refactors / CI / test infrastructure appende
 sub-list. This is easy to forget for changes that don't touch `timezonefinder/` at all (docs,
 `scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md` or
 `CONTRIBUTING.md` alone.
+
+The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
+state**, never the path taken to it:
+
+- **Amend, don't append.** When a follow-up commit, review round, or fix changes something already
+  described in the unreleased section, edit that bullet so it describes where the code landed.
+  Adding a second bullet that corrects, tunes, or extends the first one is what makes the section
+  unreadable — a released version should read as if the feature arrived in one step.
+- **One bullet per user-visible change**, not per commit or per PR. A feature delivered over
+  several commits (with its tests, docs, CI wiring and follow-up tuning) is one bullet.
+- Keep the *why* only when it's decision-relevant for a reader — a deliberate trade-off, a
+  non-obvious constraint, a gotcha. Drop tuning history ("raised from X to Y, then to Z" → state
+  the final value), superseded intermediate states, and self-review narration.
+- Keep bullets to a few sentences. Details that belong to contributors, not users, go in
+  `CONTRIBUTING.md` or a docstring, and the bullet points there.
+- Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
+  the same feature, merge them.
 
 ## Data Pipeline & Versioning
 

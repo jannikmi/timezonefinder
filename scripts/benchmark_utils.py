@@ -6,9 +6,10 @@ This module contains common functionality used by various benchmark scripts
 to generate RST reports and handle CLI interfaces.
 """
 
+import json
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, get_args
 
 import numpy as np
 
@@ -18,6 +19,24 @@ from scripts.reporting import (
     rst_title,
 )
 from timezonefinder import TimezoneFinder
+
+# Which pytest-benchmark ``stats`` field is treated as *the* number for a
+# benchmark. Defined here rather than in each consumer because the CI
+# normalisation step and the noise analysis must agree on it - see
+# scripts/normalize_benchmark_json.py and scripts/benchmark_noise.py.
+BenchmarkEstimator = Literal["min", "median", "mean"]
+BENCHMARK_ESTIMATORS: tuple[str, ...] = get_args(BenchmarkEstimator)
+# min is the least noise-sensitive estimator for this workload: every round
+# performs the exact same fixed batch of work (see benchmarks/conftest.py's
+# BATCH_SIZE), so the fastest round is the one least perturbed by whatever
+# else the shared, virtualised CI machine happened to be doing.
+DEFAULT_BENCHMARK_ESTIMATOR: BenchmarkEstimator = "min"
+
+
+def load_benchmark_json(json_path: Path) -> dict[str, Any]:
+    """Load a JSON file produced by ``pytest benchmarks/ --benchmark-json=...``."""
+    with open(json_path) as f:
+        return json.load(f)
 
 
 class BenchmarkReporter:
@@ -99,6 +118,7 @@ def add_system_status_section(
     reporter: BenchmarkReporter,
     system_info: dict[str, Any],
     additional_info: dict[str, Any] = None,
+    provenance: dict[str, Any] = None,
 ):
     """Add a comprehensive system status section to a benchmark report.
 
@@ -107,6 +127,12 @@ def add_system_status_section(
     produced the numbers - e.g. ``scripts/render_benchmark_reports.py`` reads
     it back out of a pytest-benchmark JSON file's ``machine_info`` instead of
     describing whichever machine happens to be rendering the report.
+
+    ``provenance`` (shape:
+    ``tests.auxiliaries.benchmark_fixture_provenance``) states which fixture
+    set and boundary data the timings describe, so a regenerated fixture set
+    or a data update leaves the committed report visibly - rather than
+    silently - out of date.
     """
     reporter.add_section("System Status")
 
@@ -144,6 +170,12 @@ def add_system_status_section(
 
     for opt in optimizations:
         reporter.add_text(f"* {opt}")
+
+    # Which workload the numbers describe (fixture set + boundary data)
+    if provenance:
+        reporter.add_section("Benchmark Input Provenance", level=2)
+        reporter.add_text(f"**Fixture Version**: {provenance['fixture_version']}")
+        reporter.add_text(f"**Timezone Data Version**: {provenance['data_version']}")
 
     # Additional benchmark-specific information
     if additional_info:

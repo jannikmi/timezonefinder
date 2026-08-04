@@ -18,6 +18,7 @@ from tests.auxiliaries import (
     PIP_INPUTS_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
+    benchmark_fixture_provenance,
     boundaries,
     load_benchmark_points,
     load_pip_inputs,
@@ -28,17 +29,38 @@ from tests.auxiliaries import (
 # points/inputs. Every round then performs identical work, which is what
 # makes rounds within a benchmark (and the benchmark across commits)
 # comparable. Changing this number invalidates historical trend data.
-BATCH_SIZE = 1_000
+#
+# Sized for the shortest tracked benchmark: unique-shortcut lookups are ~7x
+# cheaper than ambiguous ones, so that batch is the noisiest in relative terms
+# - and since one alert threshold covers every tracked benchmark, the noisiest
+# one sets it. More *rounds* would not help (the tracked estimator is the min,
+# whose variance comes from the runner's best-case state, not the sample
+# size); per-round resolution is the lever, so this is it.
+#
+# Hard ceilings, enforced only as a ValueError below:
+#   - `_load_batch` needs BATCH_SIZE points per fixture -> 5,000
+#     (N_UNIQUE_SHORTCUT_POINTS / N_AMBIGUOUS_SHORTCUT_POINTS)
+#   - `pip_inputs_by_stratum` needs BATCH_SIZE *per stratum*, and
+#     N_PIP_INPUTS=10,000 split three ways -> 3,333, the binding one
+# Raising past either means bumping the matching N_* in
+# scripts/generate_benchmark_fixtures.py and regenerating.
+BATCH_SIZE = 2_500
 
 
 def pytest_benchmark_update_machine_info(config, machine_info) -> None:
-    """Record numba/clang availability and BATCH_SIZE from the run that
-    *produced* the measurements, not whichever checkout later renders the
-    JSON into RST (scripts/render_benchmark_reports.py reads this back out).
-    Without this, rendering an older stored JSON against a checkout where
-    BATCH_SIZE has since changed would silently derive Time/Query and
-    Throughput from the wrong batch size."""
-    machine_info["timezonefinder"] = {**get_system_status(), "batch_size": BATCH_SIZE}
+    """Record numba/clang availability, BATCH_SIZE and the fixture/data
+    provenance from the run that *produced* the measurements, not whichever
+    checkout later renders the JSON into RST
+    (scripts/render_benchmark_reports.py reads this back out). Without this,
+    rendering an older stored JSON against a checkout where BATCH_SIZE has
+    since changed would silently derive Time/Query and Throughput from the
+    wrong batch size, and the report would not say which fixture set and
+    boundary data the timings actually describe."""
+    machine_info["timezonefinder"] = {
+        **get_system_status(),
+        **benchmark_fixture_provenance(),
+        "batch_size": BATCH_SIZE,
+    }
 
 
 @pytest.fixture(autouse=True, scope="session")

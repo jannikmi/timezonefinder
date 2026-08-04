@@ -2172,6 +2172,7 @@ test = [
     { name = "pytest-benchmark" },
     { name = "pytest-run-parallel" },
     { name = "pytz" },
+    { name = "pyyaml" },
     { name = "setuptools" },
     { name = "tox" },
 ]
@@ -2221,6 +2222,7 @@ test = [
     { name = "pytest-benchmark", specifier = ">=5,<6" },
     { name = "pytest-run-parallel", specifier = ">=0.8.2" },
     { name = "pytz", specifier = ">=2022.7.1" },
+    { name = "pyyaml", specifier = ">=6" },
     { name = "setuptools", specifier = ">=61" },
     { name = "tox" },
 ]

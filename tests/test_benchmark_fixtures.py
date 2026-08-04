@@ -11,6 +11,7 @@ Covers:
 """
 
 import json
+import math
 import random
 
 import numpy as np
@@ -20,6 +21,8 @@ from scripts import generate_benchmark_fixtures as fixture_gen
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_METADATA_PATH,
+    DATA_VERSION_FILE,
+    FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
@@ -28,6 +31,7 @@ from tests.auxiliaries import (
     get_pip_test_input,
     get_rnd_poly_int,
     get_rnd_query_pt,
+    get_rnd_query_pt_area_weighted,
     load_benchmark_points,
     load_pip_inputs,
     load_pip_strata,
@@ -133,6 +137,66 @@ def test_load_benchmark_points_data_version_mismatch_raises(monkeypatch, tmp_pat
     monkeypatch.setattr("tests.auxiliaries.DEBUG", False)
     with pytest.raises(BenchmarkFixtureError, match="data_version|DATA_VERSION"):
         load_benchmark_points(RANDOM_POINTS_FIXTURE)
+
+
+def _write_metadata(tmp_path, monkeypatch, **overrides):
+    """Metadata that clears the DEBUG and data_version checks, so the
+    rejection under test is the one that fires rather than an earlier one."""
+    metadata_path = tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name
+    metadata = {
+        "debug": False,
+        "data_version": DATA_VERSION_FILE.read_text(encoding="utf-8").strip(),
+        "fixture_version": FIXTURE_VERSION,
+        "point_sampler": get_rnd_query_pt_area_weighted.__name__,
+        "pip_strata": [],
+    }
+    metadata.update(overrides)
+    metadata_path.write_text(json.dumps(metadata))
+    (tmp_path / f"{RANDOM_POINTS_FIXTURE}.npy").touch()
+    monkeypatch.setattr("tests.auxiliaries.BENCHMARK_FIXTURES_DIR", tmp_path)
+    monkeypatch.setattr(
+        "tests.auxiliaries.BENCHMARK_FIXTURES_METADATA_PATH", metadata_path
+    )
+    monkeypatch.setattr("tests.auxiliaries.DEBUG", False)
+
+
+def test_load_benchmark_points_fixture_version_mismatch_raises(monkeypatch, tmp_path):
+    # fixtures produced by older generation logic (different sampler, counts
+    # or rng ordering) describe a workload the current code does not assume
+    _write_metadata(tmp_path, monkeypatch, fixture_version=FIXTURE_VERSION - 1)
+    with pytest.raises(BenchmarkFixtureError, match="fixture logic version"):
+        load_benchmark_points(RANDOM_POINTS_FIXTURE)
+
+
+def test_load_benchmark_points_sampler_mismatch_raises(monkeypatch, tmp_path):
+    _write_metadata(tmp_path, monkeypatch, point_sampler="get_rnd_query_pt")
+    with pytest.raises(BenchmarkFixtureError, match="point sampler"):
+        load_benchmark_points(RANDOM_POINTS_FIXTURE)
+
+
+# Share of an area-uniform sample lying above |60| latitude: 1 - sin(60 deg).
+# The naive uniform-in-latitude sampler yields 33.3% instead, so this is what
+# actually catches a regression to `get_rnd_query_pt` in the generator -
+# `test_load_benchmark_points_loads_committed_fixtures` below only bounds
+# checks the coordinates and cannot notice a distribution change at all.
+EXPECTED_HIGH_LAT_SHARE = 1 - math.sin(math.radians(60))
+# ~4 sigma over 10,000 points: fails on the naive sampler by a mile, but
+# never flakes on a legitimate reseed
+HIGH_LAT_SHARE_TOLERANCE = 0.015
+
+
+def test_committed_random_points_are_area_uniform():
+    points = load_benchmark_points(RANDOM_POINTS_FIXTURE)
+    high_lat_share = sum(1 for _, lat in points if abs(lat) > 60) / len(points)
+    assert high_lat_share == pytest.approx(
+        EXPECTED_HIGH_LAT_SHARE, abs=HIGH_LAT_SHARE_TOLERANCE
+    ), (
+        f"{high_lat_share:.1%} of the committed random points lie above |60| "
+        f"latitude, but an area-uniform sample gives {EXPECTED_HIGH_LAT_SHARE:.1%}. "
+        "The fixtures were probably generated with `get_rnd_query_pt` (uniform "
+        "in latitude, oversamples the poles ~2.5x) rather than "
+        "`get_rnd_query_pt_area_weighted`."
+    )
 
 
 @pytest.mark.parametrize(

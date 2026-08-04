@@ -57,6 +57,8 @@ test=[
     # `--parallel-threads` in the same run - concurrent execution makes
     # timings meaningless (see CONTRIBUTING.md)
     "pytest-benchmark>=5,<6",
+    # parsing the CI workflow definitions in tests/test_benchmark_workflows.py
+    "PyYAML>=6",
 ]
 dev = [
     "pre-commit",
@@ -140,7 +142,7 @@ markers = [
     "integration: mark test as an integration test",
     "parallel_threads_limit: mark test with a thread limit for parallel execution",
     "benchmark: mark a pytest-benchmark test (select the whole suite via `-m benchmark`); also accepts pytest-benchmark's own group/min_rounds/etc. kwargs",
-    "benchmark_core: mark a benchmark as part of the small, CI-tracked core subset (see plans/03, not yet implemented) - pick for signal, not coverage",
+    "benchmark_core: mark a benchmark as part of the small, CI-tracked core subset (see .github/workflows/benchmark.yml) - pick for signal, not coverage",
 ]
 
 [tool.mypy]

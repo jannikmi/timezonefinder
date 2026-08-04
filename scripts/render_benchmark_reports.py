@@ -22,12 +22,15 @@ changed.
 """
 
 import argparse
-import json
 import re
 from pathlib import Path
 from typing import Any, Callable
 
-from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
+from scripts.benchmark_utils import (
+    BenchmarkReporter,
+    add_system_status_section,
+    load_benchmark_json,
+)
 from scripts.configs import (
     INITIALIZATION_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
@@ -201,11 +204,6 @@ def percent_faster(slower_seconds: float, faster_seconds: float) -> float:
     return (speedup_ratio(slower_seconds, faster_seconds) - 1) * 100
 
 
-def load_benchmark_json(json_path: Path) -> dict[str, Any]:
-    with open(json_path) as f:
-        return json.load(f)
-
-
 def get_system_info(data: dict[str, Any]) -> dict[str, Any]:
     system_info = data.get("machine_info", {}).get("timezonefinder")
     if system_info is None:
@@ -235,6 +233,27 @@ def get_batch_size(system_info: dict[str, Any]) -> int:
             "`pytest benchmarks/` (`make benchmarks`)."
         )
     return batch_size
+
+
+PROVENANCE_FIELDS = ("fixture_version", "data_version")
+
+
+def get_fixture_provenance(system_info: dict[str, Any]) -> dict[str, Any]:
+    """Read back which fixture set and boundary data produced these measurements.
+
+    Missing fields are an error rather than a silently omitted section: a
+    report that simply leaves out its provenance is exactly the stale-report
+    failure this stamp exists to prevent (see
+    ``tests.auxiliaries.benchmark_fixture_provenance``).
+    """
+    missing = [f for f in PROVENANCE_FIELDS if system_info.get(f) is None]
+    if missing:
+        raise ValueError(
+            f"benchmark JSON's machine_info['timezonefinder'] is missing {missing} "
+            "- it was produced before these fields were added. Regenerate it with "
+            "`pytest benchmarks/` (`make benchmarks`)."
+        )
+    return {f: system_info[f] for f in PROVENANCE_FIELDS}
 
 
 def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str, Any]]:
@@ -376,6 +395,7 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
             "benchmark_source": "pytest-benchmark",
             "batch_size": batch_size,
         },
+        provenance=get_fixture_provenance(system_info),
     )
     reporter.add_text(
         f"Each benchmark times one pass over {batch_size:,} fixed, committed query "
@@ -468,6 +488,7 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
             "batch_size": batch_size,
             "polygon_strata": "small / medium / large (by vertex count percentile)",
         },
+        provenance=get_fixture_provenance(system_info),
     )
     reporter.add_text(
         f"Each benchmark times one pass over {batch_size:,} fixed, committed (point, "
@@ -508,10 +529,12 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
         title="TimezoneFinder Initialization Performance Benchmark",
         output_path=output_path,
     )
+    system_info = get_system_info(data)
     add_system_status_section(
         reporter,
-        get_system_info(data),
+        system_info,
         {"benchmark_source": "pytest-benchmark"},
+        provenance=get_fixture_provenance(system_info),
     )
     reporter.add_text(
         "Each round constructs one fresh instance (cold construction); "

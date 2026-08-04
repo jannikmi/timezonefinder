@@ -114,8 +114,10 @@ if ! uv run python -m scripts.generate_benchmark_fixtures; then
     exit 1
 fi
 
-# docs/benchmark_results_*.rst report performance against the binary data
-# that was just replaced above, so they are now stale. Only regenerate them
+# docs/benchmark_results_*.rst are measured over the benchmark fixtures and
+# the binary data, both of which were just replaced above, so they are now
+# stale. (Regenerating the fixtures alone is enough to stale them - the rule
+# is fixtures-changed, not DATA_VERSION-changed.) Only regenerate them
 # here, after DATA_VERSION and the fixtures are back in sync (running the
 # pytest-benchmark suite earlier, e.g. from scripts/file_converter.py itself,
 # would either reject the mismatched fixtures with BenchmarkFixtureError or -
