@@ -44,6 +44,8 @@ The primary lookup flow converts query coordinates to scaled int32 values, colle
 
 Unit tests rely on fixture polygons plus scripts under `tests/auxiliaries.py`. Integration tests spin up disposable venvs and install built artifacts, which is slow but catches missing runtime dependencies - skip unless you change packaging or compiled assets. Performance harnesses live in `scripts/check_speed_*.py` and can be invoked via `make speedtest` when altering hotspots.
 
+`slow`-marked tests are excluded from `make test` because they're exhaustive, not general-purpose: they iterate every polygon/timezone/shortcut cell (`main_test.py`'s `test_coords_of`/`test_holes_of_poly`/`test_get_geometry`, `global_functions_test.py::test_get_geometry`, `shortcut_test.py`'s completeness/consistency checks - relevant after touching `polygon_array.py`, shortcut generation, or the data converter) or hypothesis-fuzz the lookup API (`test_property_api.py` - relevant after touching the lookup path itself). Default to targeted `pytest` runs or `make test` while iterating; only run `make testall` (or the specific slow tests that match what you changed) before finishing a PR.
+
 ## Release Touchpoints
 
 Regenerating data changes the binary blobs in `timezonefinder/data/` and typically warrants a minor version bump via `uv version`. Update `CHANGELOG.rst`, regenerate `docs/data_report.rst` through `scripts/reporting.py`, and tag releases with `make release`.

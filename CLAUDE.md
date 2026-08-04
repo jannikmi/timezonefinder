@@ -124,6 +124,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Integration tests validate packaging/build processes
 - For performance-sensitive changes, run `make speedtest` or individual benchmarks
 
+**Test-running strategy — don't default to the full suite:**
+- While iterating on a change, run only the specific test file/pattern you're touching
+  (`uv run pytest tests/path/to/test_file.py -k pattern`). Use `make test` (excludes
+  `integration` and `slow`, ~30s) as a fast broader check before moving on.
+- `@pytest.mark.slow` tests are exhaustive, not general-purpose regression tests — they
+  iterate the *entire* dataset (all polygons, all timezones, or all shortcut cells) or run
+  hypothesis-based fuzzing, which is why they're excluded by default. Only run them when the
+  change could plausibly affect what they check:
+  - Per-polygon/per-timezone/per-shortcut validation — `main_test.py::test_coords_of`,
+    `::test_holes_of_poly`, `::test_get_geometry`, `global_functions_test.py::test_get_geometry`,
+    `shortcut_test.py::test_shortcut_completeness`, `::test_unused_polygons`,
+    `::test_unique_shortcut_consistency`. Relevant after touching `polygon_array.py`,
+    `coord_accessors.py`, shortcut generation (`scripts/shortcuts.py`, `scripts/hex_utils.py`),
+    the data converter (`scripts/file_converter.py`, `scripts/timezone_data.py`), or after
+    `make data`.
+  - Hypothesis-based fuzzing of the lookup API — `test_property_api.py` (whole module).
+    Relevant after touching `timezonefinder.py`, `utils.py`, `utils_numba.py`, `utils_clang.py`,
+    or coordinate scaling/validation.
+  - Benchmark-fixture generator idempotency — `test_benchmark_fixtures.py`'s two
+    `test_generator_*` tests. Relevant after touching `scripts/generate_benchmark_fixtures.py`.
+  - For anything else (docs, unrelated scripts, CI/tooling config, benchmark reporting code),
+    skip them — they add wall-clock time without adding signal.
+- Run `make testall` (or `uv run tox`) once as a final gate before finishing a PR, not after
+  every intermediate change.
+
 ## Important Runtime Details
 
 - **Numba Optional**: When `numba` is installed, `utils.pt_in_poly_python` uses Numba JIT compilation for 10–50× speedup. If absent, the CFFI-backed clang C extension is used as a fallback.
