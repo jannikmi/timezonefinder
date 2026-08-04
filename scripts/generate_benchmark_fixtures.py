@@ -44,15 +44,19 @@ if _PROJECT_ROOT_STR not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT_STR)
 
 from scripts.configs import DEBUG  # noqa: E402
-from tests.auxiliaries import PROJECT_ROOT, boundaries, get_rnd_query_pt  # noqa: E402
+from tests.auxiliaries import (  # noqa: E402
+    BENCHMARK_FIXTURES_DIR,
+    DATA_VERSION_FILE,
+    boundaries,
+    get_rnd_query_pt,
+)
 from timezonefinder import TimezoneFinder  # noqa: E402
 from timezonefinder.configs import SHORTCUT_H3_RES  # noqa: E402
 from timezonefinder.utils import coord2int  # noqa: E402
 
 DEFAULT_SEED = 42
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
+DEFAULT_OUTPUT_DIR = BENCHMARK_FIXTURES_DIR
 FIXTURE_VERSION = 1
-DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
 N_RANDOM_POINTS = 10_000
 N_ON_LAND_POINTS = 10_000
