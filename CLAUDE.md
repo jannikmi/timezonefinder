@@ -150,6 +150,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run `make testall` (or `uv run tox`) once as a final gate before finishing a PR, not after
   every intermediate change.
 
+### Documentation
+- **Every PR that changes behavior — including internal/dev-tooling changes with no public API
+  impact — needs a `CHANGELOG.rst` entry**, not just ones that trigger a release. Add it to the
+  `X.X.X (unreleased)` section at the top: under the main bullet list for user-facing changes, or
+  under the `Internal:` sub-list for dev tooling, refactors, CI, or test infrastructure (new
+  `Internal:` bullets go at the end of that list). This is easy to forget for changes that don't
+  touch `timezonefinder/` at all (docs, `scripts/`, CI config, test fixtures) — those still need
+  an entry. Do this as part of finishing the change, not as an afterthought once a reviewer asks.
+- If you also touched `CLAUDE.md`, `Agents.md`, or `CONTRIBUTING.md` themselves, that's usually
+  small enough to fold into the same changelog entry rather than needing its own.
+
 ## Important Runtime Details
 
 - **Numba Optional**: When `numba` is installed, `utils.pt_in_poly_python` uses Numba JIT compilation for 10–50× speedup. If absent, the CFFI-backed clang C extension is used as a fallback.
