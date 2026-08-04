@@ -62,7 +62,7 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 ### Documentation & Communication
 
 - Update `README.rst`, `docs/`, and changelog entries (`CHANGELOG.rst`) when behaviour, flags, or datasets change.
-- For data regeneration, document the timezone boundary release used, update reports via `scripts/reporting.py`, and note version bumps initiated with `uv version`.
+- For data regeneration, document the timezone boundary release used, update reports via `scripts/reporting.py`, and note version bumps initiated with `uv version`. `update_data.sh` also regenerates the committed benchmark fixtures (`tests/fixtures/benchmarks/`) since they're pinned to `DATA_VERSION`—if you bump `DATA_VERSION` any other way, run `make benchmark-fixtures` too, or the benchmark fixture tests will fail with `BenchmarkFixtureError`.
 - Keep comments succinct but informative, especially around geometry calculations, numerical tolerances, and shortcut heuristics.
 
 ## Tooling & Quality Gates

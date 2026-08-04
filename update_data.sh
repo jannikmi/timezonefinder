@@ -105,6 +105,17 @@ else
     echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"
 fi
 
+# the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
+# DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
+# from the boundary data just regenerated above (on-land/shortcut
+# classification, pip_inputs polygon ids) - they must be regenerated together
+# or the benchmark fixture tests fail after this data update
+echo "REGENERATING BENCHMARK FIXTURES..."
+if ! PYTHONPATH=. uv run python scripts/generate_benchmark_fixtures.py; then
+    echo "generate_benchmark_fixtures.py failed!"
+    exit 1
+fi
+
 # patch version bump (data-only releases are patch releases)
 uv version --bump patch
 NEW_VERSION=$(uv version --short)

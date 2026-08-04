@@ -12,6 +12,8 @@
 #   parse      - run the file converter on the downloaded combined dataset
 #   testparse  - run the file converter on the test fixture JSON input
 #   benchmark-fixtures - regenerate the committed, seeded benchmark input fixtures
+#                        (already run by `data`/update_data.sh after a data update;
+#                        run this directly only if just the fixtures need refreshing)
 #   test       - execute unit tests excluding integration and slow tests
 #   testint    - execute integration tests only
 #   testall    - execute all tests including slow ones
@@ -69,6 +71,9 @@ parse:
 testparse:
 	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
 
+# NOTE: `data` (update_data.sh) already regenerates these fixtures automatically
+# since they are pinned to DATA_VERSION; only run this target directly when just
+# the fixtures (not the boundary data) need refreshing.
 benchmark-fixtures:
 	uv run python scripts/generate_benchmark_fixtures.py
 

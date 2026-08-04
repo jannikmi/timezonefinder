@@ -39,7 +39,7 @@ The processing pipeline for this data involves:
 3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
-The script ``update_data.sh`` automates this process.
+The script ``update_data.sh`` automates this process. It also records the release tag in the ``DATA_VERSION`` file and regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
 
 Alternative Dataset Options
 ============================

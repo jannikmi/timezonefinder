@@ -12,6 +12,14 @@ Usage:
 
 Running the script twice with the same seed and output directory must
 produce byte-identical files (verified by ``tests/test_benchmark_fixtures.py``).
+
+The on-land/shortcut classification and ``pip_inputs`` polygon IDs are derived
+from the currently installed boundary data, so the fixtures are pinned to the
+repo-root ``DATA_VERSION`` file (recorded in ``metadata.json``). ``tests/auxiliaries.py``'s
+loader refuses to load fixtures generated against a different data version.
+``update_data.sh`` calls this script automatically after regenerating the
+data, so ``make data`` keeps both in sync; run this script directly only when
+just the fixtures (not the boundary data) need refreshing.
 """
 
 import argparse

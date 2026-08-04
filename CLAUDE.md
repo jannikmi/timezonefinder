@@ -136,6 +136,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Data Regeneration**: `update_data.sh` downloads a timezone-boundary-builder release, unpacks to `tmp/`, then runs `scripts/file_converter.py` to emit FlatBuffers and NumPy arrays
 - **Coordinate Scaling**: The converter multiplies all coordinates by 10^7 to preserve 7 decimal places (∼1.1 cm precision) as int32 values
+- **Benchmark Fixtures Are Data-Version-Pinned**: `tests/fixtures/benchmarks/` (committed, seeded benchmark inputs, see `scripts/generate_benchmark_fixtures.py`) records the `DATA_VERSION` it was generated against; `tests/auxiliaries.py`'s loader refuses to load fixtures generated against a different data version or polygon count. `update_data.sh` regenerates them automatically after bumping `DATA_VERSION`, so `make data` alone is sufficient — only run `make benchmark-fixtures` directly when just the fixtures need refreshing
 - **Schema Changes**: When modifying FlatBuffers schemas (e.g., `hybrid_shortcuts_uint16.fbs`), delete any previously generated `.fbs` binary artifacts so they regenerate consistently
 - **Data Versioning**: Regenerating data typically warrants a minor version bump; update `CHANGELOG.rst` and tag releases via `make release`
 - **Auto-generated Docs**: `scripts/reporting.py` updates `docs/data_report.rst` with benchmark results
