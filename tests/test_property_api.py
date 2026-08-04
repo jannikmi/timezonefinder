@@ -12,8 +12,6 @@ checks), so every test in this module is marked as ``slow``. The
 default but can be reduced locally for faster feedback.
 """
 
-from __future__ import annotations
-
 import pytest
 from hypothesis import HealthCheck, given, settings, strategies as st
 
