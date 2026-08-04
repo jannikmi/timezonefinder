@@ -18,7 +18,7 @@ from scripts.benchmark_utils import (
     add_system_status_section,
 )
 from scripts.configs import DOC_ROOT, PERFORMANCE_REPORT_FILE, DEBUG
-from tests.auxiliaries import get_rnd_query_pt, timefunc
+from tests.auxiliaries import load_benchmark_points, timefunc
 from tests.locations import TEST_LOCATIONS_AT_LAND
 from timezonefinder import (
     TimezoneFinder,
@@ -41,34 +41,33 @@ _KNOWN_LAND_POINTS: list[tuple[float, float]] = [
 
 
 def get_on_land_pts(length: int):
-    # create an array of points where timezone_finder finds something (on_land queries)
+    # points where timezone_finder finds something (on_land queries),
+    # drawn from the committed, deterministic benchmark fixtures
     if DEBUG:
         warnings.warn(
             "DEBUG mode: Dataset lacks land coverage - using test fixture locations"
         )
         return _KNOWN_LAND_POINTS[: min(length, len(_KNOWN_LAND_POINTS))]
 
-    print(f"collecting and storing {N:,} on land points for the tests...")
-    on_land_points = []
-    ps_for_10percent = int(N / 10)
-    percent_done = 0
-
-    i = 0
-    while i < length:
-        lng, lat = get_rnd_query_pt()
-        if tf_instance.timezone_at_land(lng=lng, lat=lat) is not None:
-            i += 1
-            on_land_points.append((lng, lat))
-            if i % ps_for_10percent == 0:
-                percent_done += 10
-                print(percent_done, "%")
-
-    print("Done.\n")
-    return on_land_points
+    on_land_points = load_benchmark_points("on_land_points")
+    if length > len(on_land_points):
+        raise ValueError(
+            f"requested {length:,} on-land points but the committed fixture only "
+            f"has {len(on_land_points):,}. Regenerate the fixtures with a larger "
+            "count via scripts/generate_benchmark_fixtures.py if more are needed."
+        )
+    return on_land_points[:length]
 
 
 def get_random_points(length: int) -> list[tuple[float, float]]:
-    return [get_rnd_query_pt() for _ in range(length)]
+    random_points = load_benchmark_points("random_points")
+    if length > len(random_points):
+        raise ValueError(
+            f"requested {length:,} random points but the committed fixture only "
+            f"has {len(random_points):,}. Regenerate the fixtures with a larger "
+            "count via scripts/generate_benchmark_fixtures.py if more are needed."
+        )
+    return random_points[:length]
 
 
 # Test data will be generated lazily when needed

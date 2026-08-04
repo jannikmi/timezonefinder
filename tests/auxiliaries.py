@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import fnmatch
+import json
 import os
 from pathlib import Path
 import random
@@ -13,6 +14,7 @@ from typing import Callable, Iterator
 
 import numpy as np
 
+from scripts.configs import DEBUG
 from scripts.utils import validate_coord_array_shape
 from tests.locations import REDUCED_TIMEZONE_MAPPING
 from timezonefinder import utils
@@ -33,6 +35,8 @@ from timezonefinder.utils_numba import convert2coords
 
 PROJECT_ROOT = PACKAGE_DIR.parent
 DIST_DIR = PROJECT_ROOT / "dist"
+BENCHMARK_FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
+BENCHMARK_FIXTURES_METADATA_PATH = BENCHMARK_FIXTURES_DIR / "metadata.json"
 
 
 # Command constants
@@ -315,15 +319,28 @@ def time_preprocess(time):
     return str(round(time, digits_to_print)) + "s"
 
 
-def get_rnd_query_pt() -> tuple[float, float]:
-    lng = random.uniform(-MAX_LNG_VAL, MAX_LNG_VAL)
-    lat = random.uniform(-MAX_LAT_VAL, MAX_LAT_VAL)
+def get_rnd_query_pt(rng: random.Random | None = None) -> tuple[float, float]:
+    """Draw a uniformly random (lng, lat) point.
+
+    Pass a seeded ``random.Random`` for reproducible sequences (fixture
+    generation, benchmarks). Leaving ``rng`` as ``None`` keeps drawing from
+    the global, unseeded ``random`` module, which is what the regular test
+    suite (including hypothesis-adjacent code) relies on.
+    """
+    _rng = rng if rng is not None else random
+    lng = _rng.uniform(-MAX_LNG_VAL, MAX_LNG_VAL)
+    lat = _rng.uniform(-MAX_LAT_VAL, MAX_LAT_VAL)
     return lng, lat
 
 
-def get_rnd_poly_int() -> np.ndarray:
+def get_rnd_poly_int(rng: random.Random | None = None) -> np.ndarray:
+    """Pick the coordinates of a uniformly random polygon.
+
+    See :func:`get_rnd_query_pt` for the ``rng`` seeding convention.
+    """
+    _rng = rng if rng is not None else random
     max_poly_id = len(boundaries) - 1
-    poly_id = random.randint(0, max_poly_id)
+    poly_id = _rng.randint(0, max_poly_id)
     poly = boundaries.coords_of(poly_id)
     return poly
 
@@ -339,12 +356,86 @@ def convert_inside_polygon_input(lng: float, lat: float):
     return x, y
 
 
-def get_pip_test_input() -> tuple[int, int, np.ndarray]:
-    # one test polygon + one query point
-    lng, lat = get_rnd_query_pt()
+def get_pip_test_input(
+    rng: random.Random | None = None,
+) -> tuple[int, int, np.ndarray]:
+    """One test polygon + one query point.
+
+    See :func:`get_rnd_query_pt` for the ``rng`` seeding convention.
+    """
+    lng, lat = get_rnd_query_pt(rng)
     x, y = convert_inside_polygon_input(lng, lat)
-    poly_int = get_rnd_poly_int()
+    poly_int = get_rnd_poly_int(rng)
     return x, y, poly_int
+
+
+#######################
+# BENCHMARK FIXTURE LOADING
+#######################
+
+
+class BenchmarkFixtureError(RuntimeError):
+    """Raised when committed benchmark fixtures are missing or stale."""
+
+
+def _load_benchmark_fixture_metadata() -> dict:
+    if not BENCHMARK_FIXTURES_METADATA_PATH.exists():
+        raise BenchmarkFixtureError(
+            "Benchmark fixtures are missing "
+            f"(expected metadata at {BENCHMARK_FIXTURES_METADATA_PATH}). "
+            "Generate them with `make benchmark-fixtures`."
+        )
+    with open(BENCHMARK_FIXTURES_METADATA_PATH) as f:
+        metadata = json.load(f)
+    fixture_debug = metadata.get("debug")
+    if fixture_debug != DEBUG:
+        raise BenchmarkFixtureError(
+            f"Benchmark fixtures were generated with scripts.configs.DEBUG={fixture_debug}, "
+            f"but the current scripts.configs.DEBUG={DEBUG}. "
+            "Regenerate the fixtures with `make benchmark-fixtures`."
+        )
+    return metadata
+
+
+def _load_benchmark_fixture_array(name: str) -> np.ndarray:
+    path = BENCHMARK_FIXTURES_DIR / f"{name}.npy"
+    if not path.exists():
+        raise BenchmarkFixtureError(
+            f"Benchmark fixture '{name}' not found at {path}. "
+            "Generate it with `make benchmark-fixtures`."
+        )
+    _load_benchmark_fixture_metadata()  # validates fixture/runtime consistency
+    return np.load(path)
+
+
+def load_benchmark_points(name: str) -> list[tuple[float, float]]:
+    """Load a committed (lng, lat) point fixture by name.
+
+    ``name`` is one of ``random_points``, ``on_land_points``,
+    ``unique_shortcut_points``, ``ambiguous_shortcut_points``.
+    """
+    arr = _load_benchmark_fixture_array(name)
+    return [(float(lng), float(lat)) for lng, lat in arr]
+
+
+def load_pip_inputs() -> list[tuple[int, int, int]]:
+    """Load the committed point-in-polygon benchmark inputs.
+
+    Returns ``(x, y, polygon_id)`` triples of already ``coord2int``-scaled
+    query coordinates. Use :func:`load_pip_strata` for the matching
+    small/medium/large size classification of ``polygon_id``.
+    """
+    arr = _load_benchmark_fixture_array("pip_inputs")
+    return [(int(x), int(y), int(poly_id)) for x, y, poly_id in arr]
+
+
+def load_pip_strata() -> list[str]:
+    """Load the polygon-size stratum ("small"/"medium"/"large") for each
+    entry returned by :func:`load_pip_inputs`, in the same order."""
+    arr = _load_benchmark_fixture_array("pip_strata")
+    metadata = _load_benchmark_fixture_metadata()
+    stratum_names = metadata["pip_strata"]
+    return [stratum_names[code] for code in arr]
 
 
 def convert_to_reduced_timezone(timezone: str) -> str:

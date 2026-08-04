@@ -11,6 +11,7 @@
 #   data       - regenerate timezone data under tmp with the full dataset
 #   parse      - run the file converter on the downloaded combined dataset
 #   testparse  - run the file converter on the test fixture JSON input
+#   benchmark-fixtures - regenerate the committed, seeded benchmark input fixtures
 #   test       - execute unit tests excluding integration and slow tests
 #   testint    - execute integration tests only
 #   testall    - execute all tests including slow ones
@@ -67,6 +68,9 @@ parse:
 
 testparse:
 	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
+
+benchmark-fixtures:
+	uv run python scripts/generate_benchmark_fixtures.py
 
 test:
 # 	@uv run pytest
