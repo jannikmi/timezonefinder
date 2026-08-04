@@ -437,6 +437,22 @@ def load_pip_inputs() -> list[tuple[int, int, int]]:
     small/medium/large size classification of ``polygon_id``.
     """
     arr = _load_benchmark_fixture_array("pip_inputs")
+    poly_ids = arr[:, 2]
+    max_poly_id = len(boundaries) - 1
+    out_of_range = poly_ids[(poly_ids < 0) | (poly_ids > max_poly_id)]
+    if len(out_of_range) > 0:
+        # belt-and-suspenders on top of the data_version check in
+        # _load_benchmark_fixture_metadata(): catch a mismatch between the
+        # fixture's polygon ids and the currently loaded boundary data
+        # directly, in case the recorded data_version is somehow stale
+        # without having been bumped (e.g. hand-edited data).
+        raise BenchmarkFixtureError(
+            f"Benchmark fixture 'pip_inputs' references polygon id "
+            f"{int(out_of_range[0])}, outside the valid range (0-{max_poly_id}) "
+            "for the currently loaded boundary data. The fixtures were likely "
+            "generated against a different timezone data version. "
+            "Regenerate them with `make benchmark-fixtures`."
+        )
     return [(int(x), int(y), int(poly_id)) for x, y, poly_id in arr]
 
 

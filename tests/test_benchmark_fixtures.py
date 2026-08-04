@@ -158,6 +158,19 @@ def test_load_pip_inputs_loads_committed_fixture():
         assert 0 <= poly_id <= max_poly_id
 
 
+def test_load_pip_inputs_rejects_out_of_range_polygon_ids(monkeypatch):
+    # simulate the currently loaded boundary data having fewer polygons than
+    # the committed fixture references (e.g. after a data update where
+    # DATA_VERSION was, hypothetically, not bumped)
+    class _TinyBoundaries:
+        def __len__(self):
+            return 1
+
+    monkeypatch.setattr("tests.auxiliaries.boundaries", _TinyBoundaries())
+    with pytest.raises(BenchmarkFixtureError, match="polygon id"):
+        load_pip_inputs()
+
+
 def test_load_pip_strata_matches_pip_inputs():
     pip_inputs = load_pip_inputs()
     strata = load_pip_strata()
