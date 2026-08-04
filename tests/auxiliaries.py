@@ -8,9 +8,8 @@ from re import Pattern
 import re
 import shutil
 import subprocess
-import timeit
 from math import log10
-from typing import Callable, Iterator
+from typing import Iterator
 
 import numpy as np
 
@@ -299,16 +298,6 @@ def validate_polygon_coordinates(coords: np.ndarray):
 
     assert is_valid_lng_int_vec(x_coords)
     assert is_valid_lat_int_vec(y_coords)
-
-
-def timefunc(function: Callable, *args):
-    def wrap():
-        function(*args)
-
-    timer = timeit.Timer(wrap)
-    nr_runs = 1
-    t_in_sec = timer.timeit(nr_runs)
-    return t_in_sec
 
 
 def proto_test_case(data, fct):

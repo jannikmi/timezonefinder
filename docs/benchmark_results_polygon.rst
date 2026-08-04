@@ -50,58 +50,120 @@ Benchmark Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
-**Test Queries**: 10,000
+**Benchmark Source**: pytest-benchmark
 
-**Algorithm Type**: Point-in-Polygon
+**Batch Size**: 1,000
 
-**Test Data Type**: Random timezone boundary polygons with random query points
+**Polygon Strata**: small / medium / large (by vertex count percentile)
 
-**Polygon Source**: TimezoneFinder's timezone boundary dataset
-
-
-
-Test Methodology
-----------------
-
-
-**Polygons Used**: Random timezone boundary polygons from TimezoneFinder's dataset
-
-**Query Points**: Random geographic coordinates (longitude, latitude)
-
-**Test Process**: Each test iteration selects a random polygon from the timezone boundary dataset and a random query point, then measures the time to determine if the point lies within the polygon
-
-**Polygon Characteristics**: Real-world timezone boundaries with varying complexity, from simple rectangular shapes to highly detailed coastlines and political boundaries
+Each benchmark times one pass over 1,000 fixed, committed (point, polygon) pairs drawn from a single polygon-size stratum, so the cost of the largest polygons isn't hidden behind an unweighted average. Mean/Median/StdDev/Min/Max are for the full 1,000-pair batch; Throughput is queries/second for that batch.
 
 
 
-Performance Results
--------------------
+Results
+~~~~~~~
+
+
+
+
+point-in-polygon (C/clang)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 
 .. list-table::
    :header-rows: 1
-   :widths: 33 33 33
+   :widths: 24 10 10 10 10 10 10 16
 
-   * - Implementation
-     - Average Time (s)
-     - Throughput (queries/sec)
-   * - pt_in_poly_clang
-     - 5.4e-06
-     - 1.9e+05
-   * - pt_in_poly_python
-     - 2.3e-06
-     - 4.4e+05
+   * - Configuration
+     - Mean
+     - Median
+     - StdDev
+     - Min
+     - Max
+     - Rounds
+     - Throughput
+   * - large polygons
+     - 55.8ms
+     - 55.6ms
+     - 569µs
+     - 55.1ms
+     - 57.2ms
+     - 18
+     - 17.9k/s
+   * - medium polygons
+     - 5.77ms
+     - 5.73ms
+     - 258µs
+     - 5.37ms
+     - 6.35ms
+     - 152
+     - 173k/s
+   * - small polygons
+     - 1.50ms
+     - 1.45ms
+     - 117µs
+     - 1.40ms
+     - 1.93ms
+     - 275
+     - 666k/s
+
+
+
+
+point-in-polygon (Python, Numba if available)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 10 10 10 10 10 10 16
+
+   * - Configuration
+     - Mean
+     - Median
+     - StdDev
+     - Min
+     - Max
+     - Rounds
+     - Throughput
+   * - large polygons
+     - 25.2ms
+     - 25.2ms
+     - 281µs
+     - 24.7ms
+     - 25.7ms
+     - 40
+     - 39.7k/s
+   * - medium polygons
+     - 2.07ms
+     - 2.03ms
+     - 142µs
+     - 1.91ms
+     - 2.51ms
+     - 436
+     - 483k/s
+   * - small polygons
+     - 285µs
+     - 278µs
+     - 17.3µs
+     - 277µs
+     - 394µs
+     - 157
+     - 3.51M/s
 
 
 
 
 Performance Summary
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 
-Python implementation WITH Numba is 1.4x faster than the C implementation
+* Small polygons: **point-in-polygon (Python, Numba if available)** is 427% faster (5.27x) than **point-in-polygon (C/clang)** (285µs vs 1.50ms)
 
-.. note::
+* Medium polygons: **point-in-polygon (Python, Numba if available)** is 179% faster (2.79x) than **point-in-polygon (C/clang)** (2.07ms vs 5.77ms)
 
-   Performance results may vary based on system configuration, compiler optimizations, runtime conditions, and the complexity of the randomly selected timezone boundary polygons used in each test run.
+* Large polygons: **point-in-polygon (Python, Numba if available)** is 121% faster (2.21x) than **point-in-polygon (C/clang)** (25.2ms vs 55.8ms)
+
+* Overall: fastest is **point-in-polygon (Python, Numba if available) - small polygons** (285µs), slowest is **point-in-polygon (C/clang) - large polygons** (55.8ms) - 19496% faster (196x)

@@ -6,7 +6,6 @@ This module contains common functionality used by various benchmark scripts
 to generate RST reports and handle CLI interfaces.
 """
 
-import argparse
 import platform
 from pathlib import Path
 from typing import Any
@@ -79,61 +78,6 @@ class BenchmarkReporter:
                     print()
 
 
-def create_cli_parser(
-    description: str, script_name: str = None
-) -> argparse.ArgumentParser:
-    """Create a standardized CLI parser for benchmark scripts."""
-    parser = argparse.ArgumentParser(
-        description=description,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s                    # Run benchmarks with console output
-  %(prog)s --rst             # Generate RST report file
-        """,
-    )
-
-    parser.add_argument(
-        "--rst",
-        action="store_true",
-        help="Generate RST format report file instead of console output",
-        default=True,
-    )
-
-    return parser
-
-
-def format_performance_result(
-    name: str, time_per_query: float, queries_per_second: float
-) -> list[str]:
-    """Format performance results for table display."""
-    return [
-        name,
-        f"{time_per_query:.1e}",
-        f"{queries_per_second:.1e}"
-        if queries_per_second >= 1000
-        else f"{queries_per_second / 1000:.0f}k",
-    ]
-
-
-def calculate_speedup(time1: float, time2: float, name1: str, name2: str) -> str:
-    """Calculate and format speedup comparison between two implementations."""
-    if time1 < time2:
-        speedup = (time2 / time1) - 1
-        return f"{name1} is {speedup:.1f}x faster than {name2}"
-    else:
-        speedup = (time1 / time2) - 1
-        return f"{name2} is {speedup:.1f}x faster than {name1}"
-
-
-def print_progress(current: int, total: int, prefix: str = "Progress"):
-    """Print progress updates during long-running operations."""
-    if total > 0:
-        percent = int((current / total) * 100)
-        if percent % 10 == 0 and current > 0:
-            print(f"{prefix}: {percent}%")
-
-
 def get_system_status() -> dict[str, Any]:
     """Get comprehensive system status information for benchmark reports."""
     tf_instance = TimezoneFinder()
@@ -152,11 +96,18 @@ def get_system_status() -> dict[str, Any]:
 
 
 def add_system_status_section(
-    reporter: BenchmarkReporter, additional_info: dict[str, Any] = None
+    reporter: BenchmarkReporter,
+    system_info: dict[str, Any],
+    additional_info: dict[str, Any] = None,
 ):
-    """Add a comprehensive system status section to a benchmark report."""
-    system_info = get_system_status()
+    """Add a comprehensive system status section to a benchmark report.
 
+    ``system_info`` (shape: :func:`get_system_status`) is accepted rather than
+    computed here so callers can report the environment that actually
+    produced the numbers - e.g. ``scripts/render_benchmark_reports.py`` reads
+    it back out of a pytest-benchmark JSON file's ``machine_info`` instead of
+    describing whichever machine happens to be rendering the report.
+    """
     reporter.add_section("System Status")
 
     # Python environment

@@ -50,55 +50,72 @@ Benchmark Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
-**Test Runs Per Configuration**: 100
+**Benchmark Source**: pytest-benchmark
 
-**Algorithm Type**: Class Initialization
-
-**Test Configurations**: TimezoneFinder and TimezoneFinderL with file-based and in-memory modes
+Each round constructs one fresh instance (cold construction); `benchmark.pedantic(..., warmup_rounds=0)` disables pytest-benchmark's usual calibration warmup so it cannot touch the on-disk data ahead of the measured rounds (see benchmarks/test_initialization.py).
 
 
 
-Initialization Performance Results
-----------------------------------
+Results
+~~~~~~~
+
+
+
+
+Initialization
+^^^^^^^^^^^^^^
 
 
 
 .. list-table::
    :header-rows: 1
-   :widths: 33 33 33
+   :widths: 40 10 10 10 10 10 10
 
    * - Configuration
-     - Average Time (ms)
-     - Average Time (s)
-   * - TimezoneFinder (File-Based)
-     - 216.9
-     - 0.217
-   * - TimezoneFinder (In-Memory)
-     - 225.0
-     - 0.225
-   * - TimezoneFinderL (File-Based)
-     - 212.8
-     - 0.213
-   * - TimezoneFinderL (In-Memory)
-     - 210.4
-     - 0.210
+     - Mean
+     - Median
+     - StdDev
+     - Min
+     - Max
+     - Rounds
+   * - TimezoneFinder, file-based
+     - 391ms
+     - 392ms
+     - 3.43ms
+     - 384ms
+     - 396ms
+     - 30
+   * - TimezoneFinder, in-memory
+     - 410ms
+     - 410ms
+     - 4.09ms
+     - 403ms
+     - 426ms
+     - 30
+   * - TimezoneFinderL, file-based
+     - 389ms
+     - 388ms
+     - 9.14ms
+     - 382ms
+     - 435ms
+     - 30
+   * - TimezoneFinderL, in-memory
+     - 388ms
+     - 388ms
+     - 2.94ms
+     - 382ms
+     - 393ms
+     - 30
 
 
 
 
-Performance Analysis
---------------------
+Performance Summary
+~~~~~~~~~~~~~~~~~~~
 
 
-* **Fastest configuration**: TimezoneFinderL (In-Memory) (210.4 ms)
+* TimezoneFinder: **file-based** is 5% faster (1.05x) than **in-memory** (391ms vs 410ms)
 
-* **Slowest configuration**: TimezoneFinder (In-Memory) (225.0 ms)
+* TimezoneFinderL: **in-memory** and **file-based** perform about the same (388ms vs 389ms, 0.2% difference)
 
-* **Performance difference**: 6% faster
-
-
-* **File-based mode** is 1% faster (214.9 ms vs 217.7 ms)
-
-.. note::
-
-   Initialization times may vary based on system I/O performance, available memory, and background system activity. In-memory mode loads all data into RAM during initialization, while file-based mode opens files but defers data loading.
+* Overall: fastest is **Initialization - TimezoneFinderL, in-memory** (388ms), slowest is **Initialization - TimezoneFinder, in-memory** (410ms) - 6% faster (1.06x)

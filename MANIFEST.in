@@ -6,9 +6,10 @@ include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.npy *.fbs *.txt *.json *.c *.h
 recursive-exclude prototypes *.py
-exclude Agents.md
+exclude AGENTS.md
 exclude CONTRIBUTING.md
 exclude CLAUDE.md
+recursive-exclude .cursor *
 graft tests
 prune tests/.pytest_cache
 prune .git

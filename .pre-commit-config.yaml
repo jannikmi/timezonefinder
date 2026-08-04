@@ -54,14 +54,14 @@ repos:
         rev: v2.2.0
         hooks:
             -   id: mypy
-                exclude: ^((tests|prototypes|scripts|docs)/)
+                exclude: ^((tests|prototypes|scripts|docs|benchmarks)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
     -   repo: https://github.com/mgedmin/check-manifest
         rev: "0.51"
         hooks:
             -   id: check-manifest
-                args: [ "--no-build-isolation", "--ignore",  ".*,.*/*,docs/*,examples/*,scripts/*,*.sh,CHANGELOG.rst,CONTRIBUTING.rst,Makefile,publish.py,readthedocs.yml,uv.lock,tox.ini" ]
+                args: [ "--no-build-isolation", "--ignore",  ".*,.*/*,docs/*,examples/*,scripts/*,benchmarks/*,*.sh,CHANGELOG.rst,CONTRIBUTING.rst,Makefile,publish.py,readthedocs.yml,uv.lock,tox.ini" ]
                 additional_dependencies: [ numpy, uv, cffi ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format

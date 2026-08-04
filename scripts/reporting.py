@@ -183,17 +183,41 @@ def rst_title(title: str, level: int = 0) -> str:
     return f"\n\n{title}\n{sep * len(title)}\n"
 
 
+def compute_column_widths(
+    headers: list[str], rows: list[list[str]], min_width: int = 6
+) -> list[int]:
+    """Compute RST ``list-table`` ``:widths:`` (summing to 100) proportional
+    to each column's longest cell, floored at ``min_width`` so no column
+    (e.g. a short "Rounds" count) becomes unreadably thin next to a wide one
+    (e.g. a benchmark name) and long cells don't wrap.
+    """
+    col_count = len(headers)
+    max_lens = [len(str(h)) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            max_lens[i] = max(max_lens[i], len(str(cell)))
+    max_lens = [max(x, min_width) for x in max_lens]
+    total = sum(max_lens)
+    widths = [max(1, round(x / total * 100)) for x in max_lens]
+    drift = 100 - sum(widths)
+    if drift:
+        widest_col = max(range(col_count), key=lambda i: widths[i])
+        widths[widest_col] += drift
+    return widths
+
+
 def print_rst_table(headers: list[str], rows: list[list[str]]):
     """
     Print a table in restructured text (.rst) format using list-table directive
 
+    Column widths are proportional to content (see
+    :func:`compute_column_widths`) rather than split evenly, so the rendered
+    table doesn't wrap on typical documentation page widths.
+
     :param headers: List of column headers
     :param rows: List of rows, each row is a list of values
     """
-    # Calculate appropriate column widths based on content
-    col_count = len(headers)
-    default_width = 100 // col_count
-    widths = [default_width] * col_count
+    widths = compute_column_widths(headers, rows)
 
     # Start the list-table directive
     print("\n.. list-table::")

@@ -114,6 +114,19 @@ if ! uv run python -m scripts.generate_benchmark_fixtures; then
     exit 1
 fi
 
+# docs/benchmark_results_*.rst report performance against the binary data
+# that was just replaced above, so they are now stale. Only regenerate them
+# here, after DATA_VERSION and the fixtures are back in sync (running the
+# pytest-benchmark suite earlier, e.g. from scripts/file_converter.py itself,
+# would either reject the mismatched fixtures with BenchmarkFixtureError or -
+# worse - silently benchmark the new data against fixtures pinned to the old
+# DATA_VERSION)
+echo "REGENERATING PERFORMANCE REPORTS..."
+if ! make reports; then
+    echo "make reports failed!"
+    exit 1
+fi
+
 # patch version bump (data-only releases are patch releases)
 uv version --bump patch
 NEW_VERSION=$(uv version --short)
