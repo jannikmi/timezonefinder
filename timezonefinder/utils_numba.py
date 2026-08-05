@@ -31,11 +31,11 @@ except ImportError:
     from timezonefinder._numba_replacements import njit, boolean, Array, i4, f8
 
 
-# For Fortran-ordered arrays (F-contiguous), use the 'order="F"' in the Numba signature
-# F order is natural for the used coordinate schema:
-# coords = [x_coords, y_coords]
-# x_coords = coords[0]
-CoordType = Array(i4, 2, "F", True, aligned=True)
+# Coordinates are stored one axis at a time ([x0...xN-1, y0...yN-1]), so a (2, N)
+# polygon view is C-contiguous and so is each of its rows. The signature is eager:
+# an F-ordered array is rejected with a TypeError at call time rather than silently
+# copied, which is what keeps the dense single-axis scan below honest.
+CoordType = Array(i4, 2, "C", True, aligned=True)
 
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')

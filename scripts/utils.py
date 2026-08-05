@@ -96,8 +96,8 @@ def convert_polygon(coords, validate: bool = True) -> np.ndarray:
         assert is_valid_lng_vec(x_coords), "encountered invalid longitude values."
         assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
     x_ints, y_ints = convert2ints(coords)
-    # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
-    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="F")
+    # NOTE: jit compiled functions expect C ordered arrays (CoordType). signatures must match
+    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="C")
     return poly
 
 

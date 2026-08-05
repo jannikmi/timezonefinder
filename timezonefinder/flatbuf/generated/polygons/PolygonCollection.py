@@ -23,6 +23,12 @@ class PolygonCollection:
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
 
+    @classmethod
+    def PolygonCollectionBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x5a\x46\x50", size_prefixed=size_prefixed
+        )
+
     # PolygonCollection
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -53,9 +59,18 @@ class PolygonCollection:
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+    # PolygonCollection
+    def LayoutVersion(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
+        return 0
+
 
 def PolygonCollectionStart(builder):
-    builder.StartObject(1)
+    builder.StartObject(2)
 
 
 def Start(builder):
@@ -78,6 +93,14 @@ def PolygonCollectionStartPolygonsVector(builder, numElems):
 
 def StartPolygonsVector(builder, numElems):
     return PolygonCollectionStartPolygonsVector(builder, numElems)
+
+
+def PolygonCollectionAddLayoutVersion(builder, layoutVersion):
+    builder.PrependUint16Slot(1, layoutVersion, 0)
+
+
+def AddLayoutVersion(builder, layoutVersion):
+    PolygonCollectionAddLayoutVersion(builder, layoutVersion)
 
 
 def PolygonCollectionEnd(builder):

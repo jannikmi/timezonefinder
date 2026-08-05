@@ -78,6 +78,14 @@ Use the argument ``bin_file_location`` to use data files from another location (
     tf = TimezoneFinder(bin_file_location="path/to/files")
 
 
+.. note::
+
+    The binary data format is versioned with the package: a directory passed to ``bin_file_location``
+    must have been compiled by the same ``timezonefinder`` version that reads it. Mismatched coordinate
+    data raises a ``ValueError`` naming the file; regenerate it with ``scripts/file_converter.py`` from
+    the matching checkout after upgrading.
+
+
 .. warning::
 
     **For parallel computation (multiple threads/processes):** Each thread **must** have its own independent

@@ -229,6 +229,34 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: tuple):
     assert nr_mistakes == 0
 
 
+@pytest.mark.unit
+def test_pt_in_poly_clang_rejects_strided_rows():
+    """The C extension must refuse a strided row instead of quietly copying it.
+
+    ``ascontiguousarray`` used to sit here and made a strided producer look correct
+    while allocating a full polygon copy on every point in polygon test - a regression
+    no result-based test could observe. The loud failure is the point.
+    """
+    coords_int = convert_polygon(POINT_IN_POLYGON_TESTCASES[0][0])
+    strided = np.asfortranarray(coords_int)
+    assert not strided[0].flags["C_CONTIGUOUS"]
+
+    with pytest.raises(ValueError, match="not C-contiguous"):
+        utils_clang.pt_in_poly_clang(0, 0, strided)
+
+
+@pytest.mark.unit
+def test_convert_polygon_is_c_contiguous():
+    """The build-time producer must match the kernels' C-ordered signature.
+
+    A mismatch here surfaces only as a Numba ``TypeError`` deep inside ``make parse``.
+    """
+    coords_int = convert_polygon(POINT_IN_POLYGON_TESTCASES[0][0])
+    assert coords_int.flags["C_CONTIGUOUS"]
+    assert coords_int[0].flags["C_CONTIGUOUS"]
+    assert coords_int[1].flags["C_CONTIGUOUS"]
+
+
 @pytest.mark.parametrize(
     "lng, lat",
     [

@@ -75,7 +75,7 @@ All coordinates (longitude and latitude) from the timezone polygons are converte
 * Requires significantly less storage space
 * Maintains high accuracy (minimum accuracy at the equator is still ~1 cm)
 
-The integer coordinates are stored in a columnar format, with x (longitude) and y (latitude) coordinates stored separately, which improves memory access patterns and computational efficiency for the raycasting point in polygon algorithm.
+Each polygon's integer coordinates are stored one axis at a time inside a single ``int32`` vector: all x (longitude) values followed by all y (latitude) values (``[x0...xN-1, y0...yN-1]``). The raycasting point in polygon algorithm scans a single axis per iteration, so contiguous per-axis blocks keep every loaded cache line fully used and let both acceleration backends read an axis without copying it first.
 
 Data Files
 ==========
@@ -116,7 +116,9 @@ FlatBuffers Schema
 ==================
 
 The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
-The schemas are defined in the ``timezonefinder/flatbuf/*.fbs`` files.
+The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
+
+``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding. Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file. A data directory therefore has to be produced by the same ``timezonefinder`` version that reads it: regenerate custom data with ``scripts/file_converter.py`` from the matching checkout after upgrading.
 
 
 Spatial Indexing with H3 Hexagons

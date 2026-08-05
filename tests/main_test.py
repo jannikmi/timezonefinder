@@ -195,6 +195,22 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         assert res > 0
         assert res < THRES_DTYPE_H
 
+    @pytest.mark.unit
+    def test_packaged_coordinate_layout(self):
+        """Every packaged polygon must decode to longitudes in row 0, latitudes in row 1.
+
+        Coordinates are stored one axis at a time; reading a file written in the old
+        interleaved layout produces a correctly shaped array of nonsense, which the
+        range checks below catch. Deliberately not marked ``slow``: a stale or
+        unmigrated ``coordinates.fbs`` should fail in ``make test``, and sweeping the
+        whole dataset without the per-polygon printing below costs well under a second.
+        """
+        for polygons in (self.test_instance.boundaries, self.test_instance.holes):
+            for poly_id in range(len(polygons)):
+                coords = polygons.coords_of(poly_id)
+                assert coords.flags["C_CONTIGUOUS"]
+                validate_polygon_coordinates(coords)
+
     # test if all polygon coordinates can be retrieved
     # NOTE: too many polygons, so this test is not parametrized
     @pytest.mark.slow

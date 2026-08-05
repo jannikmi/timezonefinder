@@ -74,15 +74,20 @@ def test_coordinate_transformation_functions(polygon):
         "Reconstructed polygon does not match the original after flattening and reshaping.",
     )
 
-    # Verify the flattened structure: [x0, y0, x1, y1, ...]
-    expected_flat = np.array([])
-    for i in range(polygon.shape[1]):
-        expected_flat = np.append(expected_flat, [polygon[0, i], polygon[1, i]])
-
+    # Verify the flattened structure: [x0...xN-1, y0...yN-1]
+    expected_flat = np.concatenate([polygon[0], polygon[1]])
     np.testing.assert_array_equal(
         flattened,
         expected_flat,
-        "Flattened array structure does not match expected [x0, y0, x1, y1, ...] pattern.",
+        "Flattened array structure does not match expected [x0...xN-1, y0...yN-1] pattern.",
+    )
+
+    n = polygon.shape[1]
+    np.testing.assert_array_equal(
+        flattened[:n], polygon[0], "Leading block is not the x coordinates."
+    )
+    np.testing.assert_array_equal(
+        flattened[n:], polygon[1], "Trailing block is not the y coordinates."
     )
 
     # Verify dimensions
@@ -92,6 +97,48 @@ def test_coordinate_transformation_functions(polygon):
     assert reconstructed.shape == polygon.shape, (
         "Reconstructed shape does not match original"
     )
+
+    # Both acceleration backends require contiguous rows: the C extension rejects a
+    # strided row, the Numba kernel's eager signature demands C order.
+    assert reconstructed.flags["C_CONTIGUOUS"], "Reconstructed array is not contiguous"
+    assert reconstructed[0].flags["C_CONTIGUOUS"], "x row is not contiguous"
+    assert reconstructed[1].flags["C_CONTIGUOUS"], "y row is not contiguous"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "polygons",
+    [
+        [
+            np.array([[0, 1, 2], [3, 4, 5]]),
+            np.array([[100, 200], [300, 400]]),
+            np.array([[-10, -20, -30, -40, -50], [60, 70, 80, 90, 100]]),
+        ],
+    ],
+)
+def test_on_disk_coordinate_layout(tmp_path, polygons):
+    """The bytes on disk hold one axis after the other, checked without the reader.
+
+    Going through ``read_polygon_array_from_binary`` cannot catch a flatten/reshape
+    pair that is wrong in mutually cancelling ways - every round trip still passes.
+    Reading the raw vector back is the only thing that pins the wire format down.
+    """
+    output_file = tmp_path / "polygons.fbs"
+    write_polygon_collection_flatbuffer(output_file, polygons)
+
+    with open(output_file, "rb") as file:
+        buffer = file.read()
+    poly_collection = get_polygon_collection(buffer)
+
+    for idx, polygon in enumerate(polygons):
+        raw = poly_collection.Polygons(idx).CoordsAsNumpy()
+        np.testing.assert_array_equal(
+            raw,
+            np.concatenate([polygon[0], polygon[1]]),
+            "On-disk coordinate vector is not stored one axis at a time.",
+        )
+
+    close_resource(buffer)
 
 
 if __name__ == "__main__":

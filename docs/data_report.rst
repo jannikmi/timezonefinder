@@ -13,7 +13,7 @@ Data Statistics
 
 .. list-table::
    :header-rows: 1
-   :widths: 50 50
+   :widths: 79 21
 
    * - General Metric
      - Value
@@ -28,7 +28,7 @@ Boundary Polygon Statistics
 
 .. list-table::
    :header-rows: 1
-   :widths: 50 50
+   :widths: 82 18
 
    * - Boundary Metric
      - Value
@@ -53,7 +53,7 @@ Hole Polygon Statistics
 
 .. list-table::
    :header-rows: 1
-   :widths: 50 50
+   :widths: 87 13
 
    * - Hole Metric
      - Value
@@ -84,7 +84,7 @@ Timezone Statistics
 
 .. list-table::
    :header-rows: 1
-   :widths: 50 50
+   :widths: 86 14
 
    * - Timezone Metric
      - Value
@@ -107,7 +107,7 @@ Polygons per Timezone Distribution
 
 .. list-table::
    :header-rows: 1
-   :widths: 25 25 25 25
+   :widths: 25 26 14 35
 
    * - Number of Polygons
      - Number of Timezones
@@ -219,7 +219,7 @@ Shortcut Index Overview
 
 .. list-table::
    :header-rows: 1
-   :widths: 50 50
+   :widths: 85 15
 
    * - Shortcut Index Metric
      - Value
@@ -274,7 +274,7 @@ Shortcut Entry Distributions
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20
+   :widths: 31 17 15 20 17
 
    * - polygons/shortcut
      - Frequency
@@ -365,7 +365,7 @@ Shortcut Entry Distributions
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 20 20 20
+   :widths: 33 16 15 20 16
 
    * - timezones/shortcut
      - Frequency
@@ -421,7 +421,7 @@ Binary File Sizes
 
 .. list-table::
    :header-rows: 1
-   :widths: 33 33 33
+   :widths: 53 22 25
 
    * - File Type
      - Size (MB)
