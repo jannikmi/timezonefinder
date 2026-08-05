@@ -54,7 +54,7 @@ class PolygonArray:
         # Initialize the appropriate coordinate accessor based on memory mode
         self.coordinates = create_coord_accessor(coordinate_file_path, self.in_memory)
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
         del self.coordinates
         del self.xmin

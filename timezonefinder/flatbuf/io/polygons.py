@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 from typing import Final
 
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,
@@ -181,7 +181,7 @@ def get_polygon_collection(
 
 
 def read_polygon_array_from_binary(
-    poly_collection: PolygonCollection, idx: int
+    poly_collection: PolygonCollection, idx: IntegerLike
 ) -> np.ndarray:
     """Read a polygon's coordinates from a FlatBuffers collection."""
     # value checks not required as this is a private function
