@@ -8,10 +8,12 @@ either directly from file or from preloaded memory.
 from abc import ABC, abstractmethod
 import mmap
 from pathlib import Path
+from typing import BinaryIO
 
 import numpy as np
 
 from timezonefinder import utils
+from timezonefinder.configs import IntegerLike
 from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
 )
@@ -35,19 +37,22 @@ class AbstractCoordAccessor(ABC):
         pass
 
     @abstractmethod
-    def __getitem__(self, idx: int) -> np.ndarray:
+    def __getitem__(self, idx: IntegerLike) -> np.ndarray:
         """
         Get the polygon coordinates for the given index.
 
         Args:
-            idx: The polygon index
+            idx: The polygon index. Numpy integers are accepted as well as
+                ``int``: polygon ids reach this call straight out of the
+                shortcut arrays, so requiring ``int`` would mean an added
+                conversion per candidate polygon on the lookup fast path.
 
         Returns:
             A numpy array containing the polygon coordinates
         """
         pass
 
-    def __del__(self):
+    def __del__(self) -> None:
         """
         Ensure resources are cleaned up when the object is destroyed.
         """
@@ -73,7 +78,7 @@ class FileCoordAccessor(AbstractCoordAccessor):
         # Initialize file resources using proper resource management.
         try:
             # Use memory-mapped file for on-demand reading
-            self.coord_file: object = open(self.coordinate_file_path, "rb")
+            self.coord_file: BinaryIO = open(self.coordinate_file_path, "rb")
             # Create memory map
             self.coord_buf: mmap.mmap = mmap.mmap(
                 self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
@@ -86,7 +91,7 @@ class FileCoordAccessor(AbstractCoordAccessor):
             self.cleanup()
             raise
 
-    def __getitem__(self, idx: int) -> np.ndarray:
+    def __getitem__(self, idx: IntegerLike) -> np.ndarray:
         """
         Get the polygon coordinates for the given index.
 
@@ -148,15 +153,17 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
         # Get number of polygons
         num_polygons = polygon_collection.PolygonsLength()
 
-        # Preload all polygons
-        self.polygons: dict[int, np.ndarray] = {}
+        # Preload all polygons. The key type mirrors __getitem__: numpy integers
+        # hash and compare equal to the plain ints stored here, so a np.int64
+        # lookup hits the same entry without a conversion.
+        self.polygons: dict[IntegerLike, np.ndarray] = {}
         for idx in range(num_polygons):
             self.polygons[idx] = read_polygon_array_from_binary(polygon_collection, idx)
 
         # Once polygons are loaded, we don't need to keep polygon_collection or coord_buf references
         # They'll be garbage collected
 
-    def __getitem__(self, idx: int) -> np.ndarray:
+    def __getitem__(self, idx: IntegerLike) -> np.ndarray:
         """
         Get the polygon coordinates for the given index.
 

@@ -38,8 +38,12 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     y_coords = coords[1]
     nr_coords = len(x_coords)
 
-    x_coords_ffi = ffi.from_buffer(INT_LIST_REP, x_coords)
-    y_coords_ffi = ffi.from_buffer(INT_LIST_REP, y_coords)
+    # The ignores below work around a stub gap, not a real mismatch: `types-cffi`
+    # declares `from_buffer`'s second argument as `_typeshed.Buffer`, which the
+    # numpy stubs do not advertise on `np.ndarray` even though it implements the
+    # buffer protocol at runtime.
+    x_coords_ffi = ffi.from_buffer(INT_LIST_REP, x_coords)  # type: ignore[call-overload]
+    y_coords_ffi = ffi.from_buffer(INT_LIST_REP, y_coords)  # type: ignore[call-overload]
     contained = inside_polygon_ext.lib.inside_polygon_int(
         x, y, nr_coords, x_coords_ffi, y_coords_ffi
     )
