@@ -113,7 +113,9 @@ def test_pre_guard_buffer_is_rejected(tmp_path):
     message = str(excinfo.value)
     assert "file_converter.py" in message, "error must name the way to regenerate"
     assert str(path) in message, "error must name the offending file"
-    assert f"found {0}" in message, "a pre-guard file is layout version 0, not corrupt"
+    assert "layout version 0" in message, (
+        "a pre-guard file is layout version 0, not corrupt"
+    )
 
 
 @pytest.mark.unit
@@ -127,7 +129,7 @@ def test_newer_layout_version_is_rejected():
 
     message = str(excinfo.value)
     assert "file_converter.py" in message
-    assert f"found {POLYGON_LAYOUT_VERSION + 1}" in message
+    assert f"layout version {POLYGON_LAYOUT_VERSION + 1}" in message
 
 
 @pytest.mark.unit

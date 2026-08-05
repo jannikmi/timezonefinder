@@ -27,6 +27,11 @@ POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 # Encoding of the `coords` vectors. Absent in pre-guard files, which read back as
 # the FlatBuffers default 0, so those files self-identify without special casing.
 # 1 = per-axis blocks [x0...xN-1, y0...yN-1]; 0 = interleaved [x0, y0, x1, y1, ...]
+#
+# Deliberately NOT tied to the package version: bump it only when the coordinate
+# encoding itself changes, never for an ordinary release. Data compiled by any
+# version that writes a given layout stays readable by any version that reads it,
+# so a `bin_file_location` directory does not have to be regenerated on upgrade.
 POLYGON_LAYOUT_VERSION: Final[int] = 1
 
 
@@ -133,11 +138,12 @@ def _incompatible_layout_error(
     """Build the error raised for coordinate data this version cannot read."""
     location = f" {file_path}" if file_path is not None else ""
     return ValueError(
-        f"the polygon coordinate file{location} was written by an incompatible "
-        f"timezonefinder version: expected coordinate layout version "
-        f"{POLYGON_LAYOUT_VERSION}, found {found_version}. Reading it would yield "
-        f"wrong timezones rather than an error, so it is rejected. Regenerate the "
-        f"data directory with scripts/file_converter.py from the current checkout."
+        f"the polygon coordinate file{location} uses coordinate layout version "
+        f"{found_version}, but this timezonefinder reads layout version "
+        f"{POLYGON_LAYOUT_VERSION}. The coordinate encoding changed between the two, "
+        f"and reading it anyway would yield wrong timezones rather than an error, so "
+        f"it is rejected. Regenerate this data directory with "
+        f"scripts/file_converter.py from the current checkout."
     )
 
 

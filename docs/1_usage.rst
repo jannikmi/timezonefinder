@@ -80,10 +80,11 @@ Use the argument ``bin_file_location`` to use data files from another location (
 
 .. note::
 
-    The binary data format is versioned with the package: a directory passed to ``bin_file_location``
-    must have been compiled by the same ``timezonefinder`` version that reads it. Mismatched coordinate
-    data raises a ``ValueError`` naming the file; regenerate it with ``scripts/file_converter.py`` from
-    the matching checkout after upgrading.
+    Compiled data does **not** have to be regenerated on every upgrade. The coordinate files record
+    the encoding they use, and a directory stays valid for as long as that encoding is unchanged -
+    which is across most releases. When it does change, the changelog says so and loading raises a
+    ``ValueError`` naming the file, rather than silently returning wrong timezones; regenerate with
+    ``scripts/file_converter.py`` from the current checkout at that point.
 
 
 .. warning::
