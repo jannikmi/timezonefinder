@@ -81,7 +81,9 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
   code, data formats, and binary assets are versioned with the package and need no compatibility
-- Keep `__all__` in `__init__.py` files — they define the public API surface and are test-checked
+- Keep `__all__` in `__init__.py` files — they define the public API surface. Nothing asserts
+  their contents directly; the only incidental protection is that `tests/conftest.py` imports
+  from the top-level package, so emptying `timezonefinder/__init__.py` fails collection outright
 - Prefer dependency injection over module-level state; global helper functions are NOT thread-safe,
   concurrent workloads should use per-thread `TimezoneFinder(in_memory=True)` instances
 - **Declare each path/filename constant once** in the module that owns the resource and import it
