@@ -22,8 +22,10 @@ bug), and general-purpose geometry — spatial code exists only in service of ti
 
 - Use `uv` for all dependency management; run every Python command via `uv run`
 - `make install` to set up, `make lock` when Python versions or dependencies change
-- Run `make hook` (pre-commit: ruff format/check, mypy, file integrity, custom FlatBuffers and
-  unused-Numba checks) after code changes; failures must be fixed before committing
+- Run `make hook` (pre-commit: ruff format/check, pyupgrade, mypy, rstcheck, check-manifest,
+  clang-format, plus the stock file-integrity hooks) after code changes; failures must be fixed
+  before committing. Also run it after regenerating anything, *before* reading the diff — see
+  *Generated Files*
 - Don't prefix suggested commands with a redundant `cd` into the project root
 
 ## Project Structure
@@ -130,6 +132,28 @@ state**, never the path taken to it:
   `CONTRIBUTING.md` or a docstring, and the bullet points there.
 - Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
   the same feature, merge them.
+
+## Generated Files
+
+Every generated file committed here is **generator output _after_ the pre-commit pipeline**, never
+raw generator output. So a `git diff` / `git status` taken straight after regenerating does not
+compare like with like, and misreads in both directions: real changes drown in formatting churn, and
+files nothing touched show up as modified. Known normalisations:
+
+| generator | hook that rewrites its output |
+|---|---|
+| `make flatbuf` | `ruff-format` (quote style), `pyupgrade` (drops the redundant `object` base) |
+| `scripts/file_converter.py` | `pretty-format-json` sorts `hole_registry.json` (the converter emits insertion order) |
+| `scripts/reporting.py` | `trailing-whitespace`, `end-of-file-fixer` on `docs/data_report.rst` |
+
+**Run `make hook` before reading any diff meant to prove a regeneration changed nothing** — that is
+the only comparison that means anything. This matters most for the lossless check after a re-parse
+(`git status --short timezonefinder/data` should list only genuinely changed binaries) and when
+checking whether `flatc` codegen drifted. `make flatbuf` normalises its own output for this reason;
+the data pipeline does not, so normalise by hand there.
+
+Corollary: don't "fix" a generated file by editing it. Change the generator or the schema and
+regenerate, then normalise.
 
 ## Data Pipeline & Versioning
 
