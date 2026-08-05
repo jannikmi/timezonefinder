@@ -83,7 +83,7 @@ Benchmark Results
 
    All performance reports are generated automatically and may vary based on hardware configuration and dataset version.
 
-
+The tables below are a snapshot, measured once per data update. For how the timings develop over time, see the `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__, which CI appends to on every push to ``master``. It tracks the default installation (C extension, no Numba) on GitHub-hosted runners, so its absolute numbers are not comparable to the tables here.
 
 
 Timezone Finding

@@ -113,8 +113,11 @@ local-to-local and CI-to-CI only.
   job's summary.
 - The comment lists, per benchmark, the current value, the previous value and
   their ratio, in `iter/sec` (batches per second - higher is better).
-- On a push to `master` the result is appended to the trend chart published on
-  the `gh-pages` branch under `dev/bench`.
+- On a push to `master` the result is appended to the [trend
+  chart](https://jannikmi.github.io/timezonefinder/dev/bench/), published on the
+  `gh-pages` branch under `dev/bench` (`benchmark-data-dir-path`). The GitHub
+  Pages root itself is only a redirect to that path - the action owns everything
+  below it, so don't hand-edit `dev/bench`.
 
 **When an alert fires**
 

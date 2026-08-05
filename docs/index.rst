@@ -16,6 +16,7 @@ References
 * `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 * `download stats <https://pepy.tech/project/timezonefinder>`__
 * `online GUI and API <https://timezonefinder.michelfe.it>`__
+* `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__
 * `GUI repository <https://github.com/jannikmi/timezonefinder_gui>`__
 * `ruby port <https://github.com/gunyarakun/timezone_finder>`__
 
