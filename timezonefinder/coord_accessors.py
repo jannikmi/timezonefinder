@@ -79,7 +79,7 @@ class FileCoordAccessor(AbstractCoordAccessor):
                 self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
             )
             self.polygon_collection: PolygonCollection = get_polygon_collection(
-                self.coord_buf
+                self.coord_buf, self.coordinate_file_path
             )
         except Exception:
             # Clean up any partially initialized resources
@@ -143,7 +143,7 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
             coord_buf = f.read()
 
         # Initialize polygon collection
-        polygon_collection = get_polygon_collection(coord_buf)
+        polygon_collection = get_polygon_collection(coord_buf, coordinate_file_path)
 
         # Get number of polygons
         num_polygons = polygon_collection.PolygonsLength()

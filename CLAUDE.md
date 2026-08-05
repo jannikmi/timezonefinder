@@ -22,8 +22,10 @@ bug), and general-purpose geometry — spatial code exists only in service of ti
 
 - Use `uv` for all dependency management; run every Python command via `uv run`
 - `make install` to set up, `make lock` when Python versions or dependencies change
-- Run `make hook` (pre-commit: ruff format/check, mypy, file integrity, custom FlatBuffers and
-  unused-Numba checks) after code changes; failures must be fixed before committing
+- Run `make hook` (pre-commit: ruff format/check, pyupgrade, mypy, rstcheck, check-manifest,
+  clang-format, plus the stock file-integrity hooks) after code changes; failures must be fixed
+  before committing. Also run it after regenerating anything, *before* reading the diff — see
+  *Generated Files*
 - Don't prefix suggested commands with a redundant `cd` into the project root
 
 ## Project Structure
@@ -81,7 +83,9 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
   code, data formats, and binary assets are versioned with the package and need no compatibility
-- Keep `__all__` in `__init__.py` files — they define the public API surface and are test-checked
+- Keep `__all__` in `__init__.py` files — they define the public API surface. Nothing asserts
+  their contents directly; the only incidental protection is that `tests/conftest.py` imports
+  from the top-level package, so emptying `timezonefinder/__init__.py` fails collection outright
 - Prefer dependency injection over module-level state; global helper functions are NOT thread-safe,
   concurrent workloads should use per-thread `TimezoneFinder(in_memory=True)` instances
 - **Declare each path/filename constant once** in the module that owns the resource and import it
@@ -128,6 +132,30 @@ state**, never the path taken to it:
   `CONTRIBUTING.md` or a docstring, and the bullet points there.
 - Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
   the same feature, merge them.
+
+## Generated Files
+
+**Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and
+diffing compares like with like. Keep it that way — when it breaks, a re-parse shows spurious diffs
+that look like converter drift, or real changes drown in formatting churn, and the lossless check
+after a data regeneration (`git status --short timezonefinder/data` listing only genuinely changed
+binaries) stops meaning anything.
+
+What it takes to hold, for anything you add:
+
+- `scripts/utils.py` `write_json` stringifies keys before `sort_keys`, matching `pretty-format-json`.
+  Sorting int keys directly gives numeric order; the hook re-reads the file, where JSON keys are
+  strings, and sorts lexicographically
+- `scripts/reporting.py` emits no trailing whitespace on empty table cells and exactly one final
+  newline, matching `trailing-whitespace` / `end-of-file-fixer`
+- `make flatbuf` runs the formatters itself, since `flatc` output differs from the committed
+  bindings under `ruff-format` and `pyupgrade`
+
+Both normalisations are covered by tests in `tests/utils_test.py`. If a generated file still comes
+out dirty, fix the generator rather than committing the hook's repair — the repair is invisible and
+the next regeneration undoes it.
+
+Corollary: don't edit a generated file directly. Change the generator or the schema and regenerate.
 
 ## Data Pipeline & Versioning
 

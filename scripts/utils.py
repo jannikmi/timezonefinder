@@ -42,8 +42,18 @@ def write_json(obj, path: Path):
     print(
         f"writing json to {repr(path)}",
     )
+    # Emit exactly what the pretty-format-json pre-commit hook would impose, so a
+    # re-parse is byte-comparable against the committed file instead of showing a
+    # spurious diff of reordered keys.
+    #
+    # The keys must be stringified *before* sorting: json already coerces them on
+    # write, but sort_keys would otherwise order int keys numerically (16, 26, 1165)
+    # while the hook re-reads the file - where keys are strings - and orders them
+    # lexicographically ("1165", "16", "26").
+    if isinstance(obj, dict):
+        obj = {str(key): value for key, value in obj.items()}
     with open(abspath(path), "w") as json_file:
-        json.dump(obj, json_file, indent=2)
+        json.dump(obj, json_file, indent=2, sort_keys=True)
         # write a newline at the end of the file
         json_file.write("\n")
 
@@ -96,8 +106,8 @@ def convert_polygon(coords, validate: bool = True) -> np.ndarray:
         assert is_valid_lng_vec(x_coords), "encountered invalid longitude values."
         assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
     x_ints, y_ints = convert2ints(coords)
-    # NOTE: jit compiled functions expect fortran ordered arrays. signatures must match
-    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="F")
+    # NOTE: jit compiled functions expect C ordered arrays (CoordType). signatures must match
+    poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="C")
     return poly
 
 

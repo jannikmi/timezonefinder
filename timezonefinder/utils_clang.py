@@ -22,8 +22,12 @@ INT_LIST_REP: Final[str] = "int []"
 def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     """wrapper of the point in polygon test algorithm C extension
 
-    ATTENTION: the input numpy arrays must have a C_CONTIGUOUS memory layout
-    https://numpy.org/doc/stable/reference/generated/numpy.ascontiguousarray.html?highlight=ascontiguousarray#numpy.ascontiguousarray
+    ATTENTION: both rows of ``coords`` must be C-contiguous, which the per-axis
+    coordinate layout ([x0...xN-1, y0...yN-1]) gives for free. Read-only input is
+    fine - the buffer is only read. A strided row raises
+    ``ValueError: ndarray is not C-contiguous`` instead of being copied into shape:
+    a silent copy here would reintroduce a per-call allocation on every point in
+    polygon test with no test able to observe it.
     """
     if ffi is None:
         raise ValueError(
@@ -34,8 +38,6 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
     y_coords = coords[1]
     nr_coords = len(x_coords)
 
-    y_coords = np.ascontiguousarray(y_coords)
-    x_coords = np.ascontiguousarray(x_coords)
     x_coords_ffi = ffi.from_buffer(INT_LIST_REP, x_coords)
     y_coords_ffi = ffi.from_buffer(INT_LIST_REP, y_coords)
     contained = inside_polygon_ext.lib.inside_polygon_int(

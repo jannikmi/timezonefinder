@@ -6,6 +6,7 @@ Contains functions for reporting various metrics about timezone polygons, holes,
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Callable
@@ -206,6 +207,19 @@ def compute_column_widths(
     return widths
 
 
+def _format_table_row(cells: Iterable[str]) -> str:
+    """Render one ``list-table`` row, without trailing whitespace on empty cells.
+
+    Spacer rows carry empty cells, which would otherwise emit ``"   * - "`` with a
+    dangling space - stripped by the trailing-whitespace pre-commit hook, so the
+    generated report never matched the committed one until the hook had run.
+    """
+    return "\n".join(
+        f"{'   * -' if i == 0 else '     -'} {cell}".rstrip()
+        for i, cell in enumerate(cells)
+    )
+
+
 def print_rst_table(headers: list[str], rows: list[list[str]]):
     """
     Print a table in restructured text (.rst) format using list-table directive
@@ -226,13 +240,12 @@ def print_rst_table(headers: list[str], rows: list[list[str]]):
     print("")
 
     # Print headers
-    print("   * - " + "\n     - ".join(str(h) for h in headers))
+    print(_format_table_row(str(h) for h in headers))
 
     # Print rows
     for row in rows:
         # Convert all cells to strings
-        str_cells = [str(cell) for cell in row]
-        print("   * - " + "\n     - ".join(str_cells))
+        print(_format_table_row(str(cell) for cell in row))
 
     print("")
 
@@ -836,6 +849,13 @@ def write_data_report_from_binary(
     )
     print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
     report_file_sizes(data["output_path"], zone_id_dtype)
+
+    # Each table ends with a blank line, so the last one leaves the file with a
+    # trailing one. end-of-file-fixer strips it, which used to make every freshly
+    # generated report differ from the committed one until the hook had run.
+    DATA_REPORT_FILE.write_text(
+        DATA_REPORT_FILE.read_text().rstrip("\n") + "\n", encoding="utf-8"
+    )
 
 
 def main() -> None:

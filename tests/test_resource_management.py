@@ -70,6 +70,24 @@ class TestNumpyViewOutlivesAccessor:
         finally:
             accessor.cleanup()
 
+    def test_returned_array_rows_are_contiguous(self):
+        """Coordinates are stored one axis at a time, so each row is a dense block.
+
+        Both acceleration backends depend on it: the C extension rejects a strided row
+        outright, and the Numba kernel's eager signature is C-ordered. A view whose rows
+        went back to being strided would reintroduce a per-call copy silently.
+        """
+        accessor = self._accessor()
+        try:
+            coords = accessor[0]
+            assert coords.dtype == np.int32
+            assert coords.flags["C_CONTIGUOUS"]
+            assert coords[0].flags["C_CONTIGUOUS"]
+            assert coords[1].flags["C_CONTIGUOUS"]
+        finally:
+            del coords
+            accessor.cleanup()
+
     def test_cleanup_with_live_view_does_not_raise(self):
         """Explicit cleanup() must not propagate the BufferError from mmap.close()."""
         accessor = self._accessor()
