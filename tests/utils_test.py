@@ -1,10 +1,12 @@
+import json
 from typing import Callable
 
 import numpy as np
 import pytest
 
+from scripts import reporting
 from scripts.configs import ZONE_ID_DTYPE
-from scripts.utils import convert2ints, convert_polygon
+from scripts.utils import convert2ints, convert_polygon, write_json
 from tests.auxiliaries import (
     convert_inside_polygon_input,
     get_rnd_poly,
@@ -380,6 +382,45 @@ def test_validate_coordinates_accepts_finite_values(lng, lat):
 def test_get_last_change_idx(entry_list, expected):
     array = np.array(entry_list, dtype=ZONE_ID_DTYPE)
     assert utils.get_last_change_idx(array) == expected
+
+
+@pytest.mark.unit
+def test_write_json_output_is_pre_commit_clean(tmp_path):
+    """Generated JSON must already be what pretty-format-json would produce.
+
+    Otherwise a re-parse shows a spurious diff of reordered keys against the
+    committed file, which looks like converter drift. The subtle part is that the
+    registry keys are ints in memory: sorting those directly gives numeric order,
+    while the hook re-reads the file - where keys are strings - and sorts
+    lexicographically.
+    """
+    path = tmp_path / "registry.json"
+    write_json({1165: [1, 2], 16: [3, 4], 26: [5, 6], 1184: [7, 8]}, path)
+
+    written = path.read_text()
+    reparsed = json.loads(written)
+    normalized = json.dumps(reparsed, indent=2, sort_keys=True) + "\n"
+
+    assert written == normalized, "output is not what pretty-format-json would emit"
+    assert list(reparsed) == ["1165", "1184", "16", "26"], "keys not sorted as strings"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "cells, expected",
+    [
+        (["a", "b"], "   * - a\n     - b"),
+        (["", ""], "   * -\n     -"),  # spacer row: no trailing whitespace
+        (["only"], "   * - only"),
+    ],
+)
+def test_format_table_row_has_no_trailing_whitespace(cells, expected):
+    """Spacer rows used to emit '   * - ' with a dangling space.
+
+    The trailing-whitespace hook stripped it, so a freshly generated
+    docs/data_report.rst never matched the committed one until the hook had run.
+    """
+    assert reporting._format_table_row(cells) == expected
 
 
 if __name__ == "__main__":

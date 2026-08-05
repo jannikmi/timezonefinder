@@ -135,25 +135,27 @@ state**, never the path taken to it:
 
 ## Generated Files
 
-Every generated file committed here is **generator output _after_ the pre-commit pipeline**, never
-raw generator output. So a `git diff` / `git status` taken straight after regenerating does not
-compare like with like, and misreads in both directions: real changes drown in formatting churn, and
-files nothing touched show up as modified. Known normalisations:
+**Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and
+diffing compares like with like. Keep it that way — when it breaks, a re-parse shows spurious diffs
+that look like converter drift, or real changes drown in formatting churn, and the lossless check
+after a data regeneration (`git status --short timezonefinder/data` listing only genuinely changed
+binaries) stops meaning anything.
 
-| generator | hook that rewrites its output |
-|---|---|
-| `make flatbuf` | `ruff-format` (quote style), `pyupgrade` (drops the redundant `object` base) |
-| `scripts/file_converter.py` | `pretty-format-json` sorts `hole_registry.json` (the converter emits insertion order) |
-| `scripts/reporting.py` | `trailing-whitespace`, `end-of-file-fixer` on `docs/data_report.rst` |
+What it takes to hold, for anything you add:
 
-**Run `make hook` before reading any diff meant to prove a regeneration changed nothing** — that is
-the only comparison that means anything. This matters most for the lossless check after a re-parse
-(`git status --short timezonefinder/data` should list only genuinely changed binaries) and when
-checking whether `flatc` codegen drifted. `make flatbuf` normalises its own output for this reason;
-the data pipeline does not, so normalise by hand there.
+- `scripts/utils.py` `write_json` stringifies keys before `sort_keys`, matching `pretty-format-json`.
+  Sorting int keys directly gives numeric order; the hook re-reads the file, where JSON keys are
+  strings, and sorts lexicographically
+- `scripts/reporting.py` emits no trailing whitespace on empty table cells and exactly one final
+  newline, matching `trailing-whitespace` / `end-of-file-fixer`
+- `make flatbuf` runs the formatters itself, since `flatc` output differs from the committed
+  bindings under `ruff-format` and `pyupgrade`
 
-Corollary: don't "fix" a generated file by editing it. Change the generator or the schema and
-regenerate, then normalise.
+Both normalisations are covered by tests in `tests/utils_test.py`. If a generated file still comes
+out dirty, fix the generator rather than committing the hook's repair — the repair is invisible and
+the next regeneration undoes it.
+
+Corollary: don't edit a generated file directly. Change the generator or the schema and regenerate.
 
 ## Data Pipeline & Versioning
 
