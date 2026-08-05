@@ -593,6 +593,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the matched polygon, or None if no match is found.
         """
         # NOTE: performance critical code. avoid helper function call overhead as much as possible
+        import time
+
+        time.sleep(1e-5)  # DELIBERATE REGRESSION - benchmark alert smoke test, do not merge
         lng, lat = utils.validate_coordinates(lng, lat)
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
