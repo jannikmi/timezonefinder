@@ -2,10 +2,8 @@
 
 ## Project Overview
 
-`timezonefinder` is a Python library for offline timezone lookups by WGS84 coordinates. It
-prioritises accuracy at timezone borders (no geometry simplification) while staying fast and
-broadly runtime-compatible: FlatBuffers polygon data, H3 spatial shortcuts for candidate pruning,
-optional Numba/clang acceleration for point-in-polygon, NumPy for coordinate handling.
+`timezonefinder` provides offline timezone lookups by WGS84 coordinates, prioritising accuracy at
+timezone borders (no geometry simplification) over raw speed.
 
 Constraints that shape design decisions:
 
@@ -21,11 +19,10 @@ bug), and general-purpose geometry — spatial code exists only in service of ti
 ## Development Setup
 
 - Use `uv` for all dependency management; run every Python command via `uv run`
-- `make install` to set up, `make lock` when Python versions or dependencies change
-- Run `make hook` (pre-commit: ruff format/check, pyupgrade, mypy, rstcheck, check-manifest,
-  clang-format, plus the stock file-integrity hooks) after code changes; failures must be fixed
-  before committing. Also run it after regenerating anything, *before* reading the diff — see
-  *Generated Files*
+- Run `make hook` after code changes; failures must be fixed before committing. Also run it after
+  regenerating anything, *before* reading the diff — see *Generated Files*
+- The `Makefile` header comment documents every target. Where the *choice* between targets is the
+  non-obvious part, it is covered under *Testing* below and in `CONTRIBUTING.md`
 - Don't prefix suggested commands with a redundant `cd` into the project root
 
 ## Project Structure
@@ -34,46 +31,20 @@ Most modules are self-describing; the non-obvious ones:
 
 - `timezonefinder/configs.py`: central type definitions and runtime constants (coordinate scaling,
   FlatBuffers layout)
-- `timezonefinder/timezonefinder.py`: `TimezoneFinder` (full polygon search) and `TimezoneFinderL`
-  (shortcut-only heuristic)
 - `timezonefinder/utils.py` / `utils_numba.py` / `utils_clang.py`: polygon math, pure-Python plus
-  the two acceleration backends
-- `timezonefinder/data/`: binary assets (FlatBuffers polygons/shortcuts, NumPy arrays), generated
-- `scripts/file_converter.py`: ingests timezone-boundary-builder GeoJSON, emits the binary assets
-- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`.
-  The CI-tracked `benchmark_core` set is the uniformly-random headline plus the unique/ambiguous
-  per-class diagnostics; fixtures are sampled area-uniformly, unlike the test suite's pole-biased
-  `get_rnd_query_pt` — see `CONTRIBUTING.md`. **Timing only**: memory is measured by
-  `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across pytest-benchmark's
-  calibration rounds distorts the timings. Its subprocess probe must never import
-  `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import
+  the two acceleration backends. `utils.py` picks the implementation **at import time**, so the
+  backends are entirely separate code paths whose timings are not comparable
+- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via
+  `testpaths` — they are collected only when `benchmarks/` is passed explicitly. **Timing only**:
+  memory is measured by `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across
+  pytest-benchmark's calibration rounds distorts the timings. Its subprocess probe must never
+  import `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import
 - `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
-  `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers — make the
-  trend chart track `min` instead of the noise-sensitive `mean` (and stamp the CPU into the one
-  field that reaches it), derive the alert threshold from repeated identical runs, guard the
-  history against a silent numba/clang switch, compare a PR's head against its merge base measured
-  on the same runner, and report which machine a run drew. `ubuntu-latest` pins the runner *image*,
-  not the CPU: the pool spreads up to ~1.58x on unchanged code, so any two CI runs are
-  incomparable unless they name the same CPU
+  `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers.
+  `ubuntu-latest` pins the runner *image*, not the CPU: the pool spreads up to ~1.58x on unchanged
+  code, so any two CI runs are incomparable unless they name the same CPU. `CONTRIBUTING.md` holds
+  the methodology these scripts implement
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
-
-## Common Commands
-
-| Task | Command |
-|------|---------|
-| Unit tests (fast, excludes integration/slow) | `make test` |
-| Integration tests | `make testint` |
-| All tests | `make testall` |
-| Single test / pattern | `uv run pytest tests/…::test_name` / `-k pattern` |
-| Benchmarks | `make speedtest` |
-| Reproduce the CI benchmark measurement | `make benchmarks-ci` |
-| Measure the benchmark noise floor | `make benchmark-noise` |
-| Pre-commit validation | `make hook` |
-| Full test matrix | `make tox` |
-| Regenerate timezone data | `make data` (downloads full dataset) |
-| Build docs | `make docs` |
-| Compile FlatBuffers schemas | `make flatbuf` |
-| Tag + push release | `make release` |
 
 ## Runtime Lookup Flow
 
@@ -123,10 +94,6 @@ sub-list. This is easy to forget for changes that don't touch `timezonefinder/` 
 `scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md` or
 `CONTRIBUTING.md` alone.
 
-`CHANGELOG.rst` is linted by `rstcheck` (unlike `docs/`, which it excludes), so it must be valid
-*standalone* RST: a Sphinx role (`:doc:`, `:ref:`) fails the hook. Link with an absolute
-`https://timezonefinder.readthedocs.io/…` URL instead.
-
 The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
 state**, never the path taken to it:
 
@@ -170,12 +137,33 @@ the next regeneration undoes it.
 
 Corollary: don't edit a generated file directly. Change the generator or the schema and regenerate.
 
+## Documentation Files
+
+- **`README.rst` and `CHANGELOG.rst` must be valid *standalone* RST.** Both are linted by the
+  `rstcheck` pre-commit hook, unlike `docs/`, which it excludes — a Sphinx role (`:doc:`, `:ref:`)
+  works in the docs build but fails the hook here, and additionally breaks the PyPI page for
+  `README.rst`, which is the long description (`readme` in `pyproject.toml`). Link with an
+  absolute `https://timezonefinder.readthedocs.io/…` URL instead
+- **The badge block is duplicated in `README.rst` and `docs/badges.rst` on purpose** — the docs
+  include it, but an `include` does not render on PyPI. This is a deliberate exception to the
+  declare-once rule above; edit both copies or they drift
+- `docs/` pages are Sphinx-built. A new page needs a `docs/index.rst` toctree entry or it is
+  orphaned and unreachable from the sidebar. `make docs` must build without new warnings —
+  `rstcheck` will not catch a broken cross-reference there
+- Generated docs: `docs/benchmark_results_*.rst` (`scripts/render_benchmark_reports.py`) and
+  `docs/data_report.rst` (`scripts/reporting.py`). The don't-hand-edit corollary above applies
+- **`make reports` re-runs the whole benchmark suite** (it has `benchmarks` as a prerequisite), so
+  it rewrites every committed figure with a fresh measurement. To change only the *rendering*,
+  invoke the renderer directly against a stored JSON — measurement and rendering are decoupled:
+  `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json`.
+  Confirm the JSON is the one behind the committed reports by re-rendering *before* your change
+  and checking that `git diff docs/benchmark_results_*.rst` is empty
+
 ## Data Pipeline & Versioning
 
 - `update_data.sh` downloads a timezone-boundary-builder release into `tmp/` and runs
   `scripts/file_converter.py`, which scales coordinates by 10^7 into int32. Regenerating data
   warrants a minor version bump
-- The reduced `--dataset=now` variant loses historical zone names; the full dataset keeps all 440+
 - Benchmark fixtures in `tests/fixtures/benchmarks/` are pinned to the `DATA_VERSION` they were
   generated against and the loader refuses mismatches. `make data` regenerates them; use
   `make benchmark-fixtures` only when just the fixtures need refreshing
@@ -187,11 +175,32 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 
 ## Release Process
 
-From `master` only: update `CHANGELOG.rst`, ensure `make hook` and `make testall` pass, then
-`make release` to tag and push.
+From `master` only — `make release` enforces it and its `Makefile` comments carry the tag/push
+ordering constraints.
 
 ## Canonical Instructions File
 
 This file is the single source of truth for coding-agent instructions. `AGENTS.md` and
 `.cursor/rules/repo-instructions.mdc` are pointer stubs for tools that look for those filenames —
 update this file only, and don't let the stubs accumulate their own copies.
+
+**Keep it current.** When you discover a durable repo fact that isn't written down here, add it as
+part of the work that surfaced it. The bar is all three of:
+
+- **durable** — still true next month; not a detail of the change you happen to be making
+- **non-obvious** — it cost you a cross-reference, a failed hook, or a wrong guess to learn.
+  Anything visible in the file you are already editing does not qualify
+- **it has a failure mode** — you can name what silently breaks for someone who doesn't know it
+
+Counter-pressure, because this file is loaded into every session and a bloated one gets skimmed:
+
+- Amend an existing section rather than opening a new one — the same rule as *Changelog* above,
+  for the same reason
+- If the fact belongs at the point of decision (a `Makefile` comment, a docstring, a comment next
+  to the constant), put it *there* and don't copy it here. Every duplicated line is a line that
+  will drift
+- Correct or delete entries once they go stale. A confidently wrong instruction costs more than a
+  missing one
+- Don't restate what the code, `git log`, or another section already says
+
+An edit confined to this file needs no changelog entry, so recording a fact is cheap.
