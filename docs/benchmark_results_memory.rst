@@ -85,20 +85,20 @@ Results
      - RSS after init
      - RSS after workload
    * - TimezoneFinderL
-     - 7.12 MiB
-     - 7.12 MiB
-     - 14.8 MiB
-     - 14.9 MiB
+     - 4.47 MiB
+     - 4.47 MiB
+     - 13.1 MiB
+     - 13.2 MiB
    * - TimezoneFinder[file_based]
-     - 7.43 MiB
-     - 8.32 MiB
-     - 15.0 MiB
-     - 47.8 MiB
+     - 4.77 MiB
+     - 5.67 MiB
+     - 13.6 MiB
+     - 46.4 MiB
    * - TimezoneFinder[in_memory]
-     - 70.5 MiB
-     - 71.4 MiB
-     - 78.2 MiB
-     - 80.0 MiB
+     - 67.8 MiB
+     - 68.7 MiB
+     - 76.6 MiB
+     - 78.1 MiB
 
 
 
@@ -107,13 +107,13 @@ Summary
 ~~~~~~~
 
 
-* Importing the package costs **95.9 MiB** of resident memory before any timezone data is touched.
+* Importing the package costs **95.7 MiB** of resident memory before any timezone data is touched.
 
-* ``in_memory=True`` holds **71.4 MiB** on the heap against **8.32 MiB** for the default file-based mode (8.58x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
+* ``in_memory=True`` holds **68.7 MiB** on the heap against **5.67 MiB** for the default file-based mode (12.1x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
-* The file-based mode's resident set grows from **15.0 MiB** at construction to **47.8 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
+* The file-based mode's resident set grows from **13.6 MiB** at construction to **46.4 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
 
-* ``TimezoneFinderL`` holds **7.12 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
+* ``TimezoneFinderL`` holds **4.47 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
 
 .. note::
 
