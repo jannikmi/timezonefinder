@@ -176,11 +176,15 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
         return self.polygons[idx]
 
     def cleanup(self) -> None:
-        """Clean up resources."""
+        """Drop the preloaded polygons. Unlike the file-backed sibling, nothing to close.
+
+        Not safe to call twice, and not safe on a partially initialised instance: both
+        raise ``AttributeError``, which ``__del__`` turns into an ignored-exception
+        message on stderr. ``FileCoordAccessor.cleanup`` tolerates both (see
+        ``test_repeated_cleanup_with_live_view_does_not_raise``); aligning this one is a
+        behaviour change, so it is left as is until something actually needs it.
+        """
         del self.polygons
-        # Just clear the dictionary, no file resources to clean up
-        if hasattr(self, "polygons"):
-            self.polygons.clear()
 
 
 def create_coord_accessor(
