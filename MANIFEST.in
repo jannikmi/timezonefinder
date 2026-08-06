@@ -9,6 +9,7 @@ recursive-exclude prototypes *.py
 exclude AGENTS.md
 exclude CONTRIBUTING.md
 exclude CLAUDE.md
+exclude potential-improvements.md
 recursive-exclude .cursor *
 graft tests
 prune tests/.pytest_cache
