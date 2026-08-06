@@ -23,6 +23,7 @@ changed.
 
 import argparse
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Callable
 
@@ -243,6 +244,77 @@ def get_fixture_provenance(system_info: dict[str, Any]) -> dict[str, Any]:
     return {f: system_info[f] for f in PROVENANCE_FIELDS}
 
 
+def acceleration_path_label(system_info: dict[str, Any]) -> str:
+    """Name the point-in-polygon implementation that actually produced the numbers.
+
+    ``timezonefinder/utils.py`` binds the implementation at import time and
+    prefers Numba over the C extension when both are importable, so the two
+    recorded flags are not two independent choices - only one path ran. The
+    "System Status" section prints both flags; this collapses them to the one
+    fact a reader needs above the fold.
+    """
+    if system_info.get("using_numba"):
+        return "Numba JIT"
+    if system_info.get("using_clang_pip"):
+        return "C extension (clang)"
+    return "pure Python"
+
+
+def is_ci_tracked_configuration(system_info: dict[str, Any]) -> bool:
+    """Whether these numbers come from the configuration CI tracks.
+
+    CI measures the C extension without Numba, because that is what a plain
+    ``pip install timezonefinder`` gives you (see .github/workflows/benchmark.yml
+    and docs/benchmarking_methodology.rst). Derived from the JSON rather than
+    assumed, so a report rendered from a CI run says so and one rendered from a
+    laptop carries the warning instead.
+    """
+    return bool(system_info.get("using_clang_pip")) and not system_info.get(
+        "using_numba"
+    )
+
+
+def add_headline_section(
+    reporter: BenchmarkReporter,
+    system_info: dict[str, Any],
+    headlines: Sequence[str],
+) -> None:
+    """Put the report's answer, and the configuration behind it, above the fold.
+
+    Without this a reader has to parse four tables before learning how fast the
+    library is, and never learns which acceleration path produced the figures -
+    the reports are usually rendered from a developer machine whose
+    configuration is neither the default install nor the CI-tracked one, so an
+    unqualified table invites a comparison against the trend chart that is not
+    a comparison at all.
+
+    Every figure passed in ``headlines`` must be derived from the same parsed
+    JSON as the tables below it; nothing here may be hardcoded, or the block
+    goes stale exactly when the numbers change.
+    """
+    for headline in headlines:
+        reporter.add_text(headline)
+
+    platform = f"{system_info['platform_system']} {system_info['platform_machine']}"
+    banner = (
+        f"*Measured on {platform}, Python {system_info['python_version']}, "
+        f"using the {acceleration_path_label(system_info)} point-in-polygon path.*"
+    )
+    if is_ci_tracked_configuration(system_info):
+        banner += (
+            " This is the configuration continuous integration tracks - what a plain "
+            "``pip install timezonefinder`` gives you."
+        )
+    else:
+        banner += (
+            " Continuous integration tracks a different one - the C extension without "
+            "Numba, what a plain ``pip install timezonefinder`` gives you - so these "
+            "figures are not comparable to the trend chart."
+        )
+    banner += " See :doc:`benchmarking_methodology`."
+    reporter.add_text(banner)
+
+
 def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str, Any]]:
     prefix = f"benchmarks/{file_stem}.py::"
     matches = [b for b in data["benchmarks"] if b["fullname"].startswith(prefix)]
@@ -375,6 +447,25 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
     )
     system_info = get_system_info(data)
     batch_size = get_batch_size(system_info)
+    benches = benchmarks_from_file(data, "test_timezone_finding")
+    by_name = {b["name"]: b for b in benches}
+
+    # the headline is the random-point workload, not the fastest one: uniformly
+    # random queries are the only globally representative mix (see
+    # docs/benchmarking_methodology.rst), so quoting unique-shortcut points here
+    # would answer "how fast is it" with the best case
+    headline_bench = by_name.get("test_timezone_at[random-in_memory]")
+    headlines = []
+    if headline_bench is not None:
+        headline_mean = headline_bench["stats"]["mean"]
+        headlines.append(
+            f"**~{format_duration(headline_mean / batch_size)} per lookup, "
+            f"~{format_rate(batch_size / headline_mean)}** - "
+            "``TimezoneFinder.timezone_at()`` over uniformly random query points in "
+            "memory, the workload closest to a real query mix."
+        )
+    add_headline_section(reporter, system_info, headlines)
+
     add_system_status_section(
         reporter,
         system_info,
@@ -391,8 +482,6 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
         "and scale that out to a per-query figure."
     )
 
-    benches = benchmarks_from_file(data, "test_timezone_finding")
-    by_name = {b["name"]: b for b in benches}
     extra_columns: tuple[ExtraColumn, ...] = (
         ("Time/Query", lambda b: format_duration(b["stats"]["mean"] / batch_size)),
         ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
@@ -467,6 +556,34 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
     )
     system_info = get_system_info(data)
     batch_size = get_batch_size(system_info)
+    benches = benchmarks_from_file(data, "test_inside_polygon")
+    by_name = {b["name"]: b for b in benches}
+
+    # per-check cost of the faster backend in each stratum. The spread between
+    # the smallest and largest stratum *is* the finding this suite exists to
+    # report, so it is the headline rather than any single number.
+    per_check = {}
+    for stratum in ("small", "large"):
+        measured = [
+            by_name[name]["stats"]["mean"]
+            for name in (
+                f"test_pt_in_poly_clang[{stratum}]",
+                f"test_pt_in_poly_python[{stratum}]",
+            )
+            if name in by_name
+        ]
+        if measured:
+            per_check[stratum] = min(measured) / batch_size
+    headlines = []
+    if "small" in per_check and "large" in per_check:
+        headlines.append(
+            f"**~{format_duration(per_check['small'])} per check on a small polygon, "
+            f"~{format_duration(per_check['large'])} on the largest** "
+            f"({format_ratio(per_check['large'] / per_check['small'])}) - which is why "
+            "this suite is stratified by vertex count instead of averaged."
+        )
+    add_headline_section(reporter, system_info, headlines)
+
     add_system_status_section(
         reporter,
         system_info,
@@ -485,8 +602,6 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         "queries/second for that batch."
     )
 
-    benches = benchmarks_from_file(data, "test_inside_polygon")
-    by_name = {b["name"]: b for b in benches}
     extra_columns: tuple[ExtraColumn, ...] = (
         ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
     )
@@ -517,6 +632,35 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
         output_path=output_path,
     )
     system_info = get_system_info(data)
+    benches = benchmarks_from_file(data, "test_initialization")
+    by_name = {b["name"]: b for b in benches}
+
+    # the default construction (no in_memory argument) is the one a reader is
+    # actually choosing between; TimezoneFinderL is quoted beside it because
+    # "how much do I save by giving up the polygons" is the decision this page
+    # informs
+    default_init = by_name.get("test_initialization[TimezoneFinder-file_based]")
+    lite_init = by_name.get("test_initialization[TimezoneFinderL-file_based]")
+    headlines = []
+    if default_init is not None:
+        # RST inline markup does not nest: a ``literal`` inside **bold** renders
+        # its backticks verbatim, so the two never overlap in these headlines
+        headline = (
+            f"**~{format_duration(default_init['stats']['mean'])}** to construct a "
+            "``TimezoneFinder`` in the default file-based mode"
+        )
+        if lite_init is not None:
+            headline += (
+                f", **~{format_duration(lite_init['stats']['mean'])}** for "
+                "``TimezoneFinderL``"
+            )
+        headline += (
+            ". This is paid once per process - build one instance and reuse it "
+            "rather than constructing per lookup."
+        )
+        headlines.append(headline)
+    add_headline_section(reporter, system_info, headlines)
+
     add_system_status_section(
         reporter,
         system_info,
@@ -530,8 +674,6 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
         "the measured rounds (see benchmarks/test_initialization.py)."
     )
 
-    benches = benchmarks_from_file(data, "test_initialization")
-    by_name = {b["name"]: b for b in benches}
     reporter.add_section("Results", level=2)
     add_benchmark_table(reporter, benches, section_level=3)
 
@@ -605,6 +747,23 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
     )
     system_info = get_system_info(data)
     workload_size = system_info.get("memory_workload_size")
+    by_config = memory_values_by_config(data)
+
+    # the two modes a deployment actually chooses between, on the heap metric -
+    # the only one that is charted, because RSS residency is decided by
+    # machine-wide pressure (see docs/benchmarking_methodology.rst)
+    file_based = by_config.get("TimezoneFinder[file_based]", {})
+    in_memory = by_config.get("TimezoneFinder[in_memory]", {})
+    headlines = []
+    if "steady_heap" in file_based and "steady_heap" in in_memory:
+        headlines.append(
+            f"**~{format_bytes(file_based['steady_heap'])}** allocated in the default "
+            f"mode, **~{format_bytes(in_memory['steady_heap'])}** with "
+            "``in_memory=True`` - the default maps the coordinate data instead of "
+            "reading it, which is what keeps it viable in a constrained container."
+        )
+    add_headline_section(reporter, system_info, headlines)
+
     add_system_status_section(
         reporter,
         system_info,
@@ -634,7 +793,6 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
         "process resident set, which additionally counts memory-mapped pages."
     )
 
-    by_config = memory_values_by_config(data)
     metrics = list(MEMORY_METRIC_LABELS)
     headers = ["Configuration", *(MEMORY_METRIC_LABELS[m] for m in metrics)]
     rows = [
@@ -656,8 +814,6 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
             "before any timezone data is touched."
         )
 
-    in_memory = by_config.get("TimezoneFinder[in_memory]", {})
-    file_based = by_config.get("TimezoneFinder[file_based]", {})
     if "steady_heap" in in_memory and "steady_heap" in file_based:
         ratio = in_memory["steady_heap"] / file_based["steady_heap"]
         reporter.add_text(

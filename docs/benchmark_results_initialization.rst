@@ -4,6 +4,10 @@ TimezoneFinder Initialization Performance Benchmark
 ===================================================
 
 
+**~389ms** to construct a ``TimezoneFinder`` in the default file-based mode, **~383ms** for ``TimezoneFinderL``. This is paid once per process - build one instance and reuse it rather than constructing per lookup.
+
+*Measured on Darwin arm64, Python 3.14.2, using the Numba JIT point-in-polygon path.* Continuous integration tracks a different one - the C extension without Numba, what a plain ``pip install timezonefinder`` gives you - so these figures are not comparable to the trend chart. See :doc:`benchmarking_methodology`.
+
 
 
 System Status
