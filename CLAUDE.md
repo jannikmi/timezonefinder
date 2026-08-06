@@ -42,8 +42,9 @@ Most modules are self-describing; the non-obvious ones:
 - `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
   `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers.
   `ubuntu-latest` pins the runner *image*, not the CPU: the pool spreads up to ~1.58x on unchanged
-  code, so any two CI runs are incomparable unless they name the same CPU. `CONTRIBUTING.md` holds
-  the methodology these scripts implement
+  code, so any two CI runs are incomparable unless they name the same CPU.
+  `docs/benchmarking_methodology.rst` holds the methodology these scripts implement;
+  `CONTRIBUTING.md` keeps only the operational instructions and links to it
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
 
 ## Runtime Lookup Flow

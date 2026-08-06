@@ -6,7 +6,7 @@ Data Format
 
 This document describes the data format used by ``timezonefinder`` library, including the data sources, design rationales, and performance optimizations.
 
-For detailed statistics of the current dataset in use, see :doc:`data_report`.
+For detailed statistics of the current dataset in use, see :doc:`data_report`. For how these structures are consumed at query time - and for the design decisions behind them - see :doc:`architecture`.
 
 
 Data Source
@@ -159,11 +159,19 @@ This hybrid approach provides several performance benefits:
 H3 Resolution Selection
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The library uses H3 resolution 3 with 41k hexagons for its spatial index, which offers a good balance between:
+The library uses H3 resolution 3 with 41k hexagons for its spatial index. That is a measured
+choice, not an assumption: ``prototypes/single_resolution_bench.py`` builds a separate index at
+every resolution from 0 upwards and benchmarks each against a common set of globally random query
+points.
 
-* **Precision**: Enough to significantly reduce the search space
-* **Memory Efficiency**: Not too many cells to store
-* **Lookup Speed**: Quick to determine which cell contains a point
+The finding is a size cliff. At resolution 3 the hybrid index is about **1.6 MB**. Resolution 4
+would be much larger - it would account for **more than 10 % of the packaged timezone polygon
+data** - and the lookup gains it buys do not justify that. Resolutions above 5 are excluded
+outright, since the index size explodes. Below resolution 3, cells cover too much area and too
+many of them turn out ambiguous, which pushes work back onto the expensive point-in-polygon path.
+
+Resolution 3 is therefore the largest index that still costs a small fraction of the data it
+indexes.
 
 The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
 

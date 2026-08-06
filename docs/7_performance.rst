@@ -88,6 +88,8 @@ Benchmark Results
 
 The tables below are a snapshot, measured once per data update. For how the timings develop over time, see the `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__, which CI appends to on every push to ``master``. It tracks the default installation (C extension, no Numba) on GitHub-hosted runners, so its absolute numbers are not comparable to the tables here.
 
+:doc:`benchmarking_methodology` documents how all of these numbers are produced and what they can and cannot tell you - in particular why two CI runs are not comparable to each other, and where every alert threshold comes from.
+
 
 Timezone Finding
 ~~~~~~~~~~~~~~~~
