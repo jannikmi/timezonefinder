@@ -269,6 +269,23 @@ def _read_hybrid_shortcuts_with_schema(
     collection = schema.collection.HybridShortcutCollection.GetRootAs(buf, 0)
 
     hybrid_mapping: dict[int, int | np.ndarray] = {}
+    # `PolyIdsAsNumpy()` is `np.frombuffer` under the hood, i.e. a view onto `buf`.
+    # Keeping those views would pin the whole file (~1.5 MB) for the lifetime of every
+    # finder instance although only ~47 KB of poly ids are ever read. So copy each one
+    # out as it is decoded and let it die immediately, accumulating the payload in
+    # `poly_id_payload`; the entries are filled in with slices of it below.
+    #
+    # The copy has to happen here, in the same iteration that decodes the view. Holding
+    # the views to concatenate them afterwards frees `buf` just as well, but then the
+    # whole set of views is alive while the replacement arrays are being built, and that
+    # transient peak (measured: 8.98 MiB against 7.09 MiB for the pinning version) ends
+    # up as permanent RSS - the allocator does not return the pages. Heap and resident
+    # set move in opposite directions, which is the wrong trade for the constrained
+    # containers this saves memory for.
+    poly_id_payload = bytearray()
+    poly_id_dtype: np.dtype | None = None
+    poly_id_hex_ids: list[int] = []
+    poly_id_lengths: list[int] = []
     for i in range(collection.EntriesLength()):
         entry = collection.Entries(i)
         hex_id = entry.HexId()
@@ -287,9 +304,27 @@ def _read_hybrid_shortcuts_with_schema(
             polygon_list = schema.polygon_list.PolygonList()
             polygon_list.Init(value.Bytes, value.Pos)
             poly_ids = polygon_list.PolyIdsAsNumpy()
-            hybrid_mapping[hex_id] = poly_ids
+            poly_id_dtype = poly_ids.dtype
+            poly_id_payload += poly_ids.tobytes()
+            poly_id_hex_ids.append(hex_id)
+            poly_id_lengths.append(len(poly_ids))
+            # placeholder, replaced below - claims the key's position in the mapping so
+            # that it keeps being iterated in file order (`test_shortcut_sorting`,
+            # `scripts/reporting.py`), which overwriting an existing key preserves
+            hybrid_mapping[hex_id] = 0
 
         else:
             raise ValueError(f"Unknown ShortcutValue type: {value_type}")
+
+    if poly_id_dtype is not None:
+        # `np.frombuffer` on `bytes` yields exactly what the entries held before: a
+        # read-only view, so no cell can write into a neighbour's block - only now the
+        # object behind them is 47 KB rather than the whole file.
+        flat = np.frombuffer(bytes(poly_id_payload), dtype=poly_id_dtype)
+        offset = 0
+        for hex_id, length in zip(poly_id_hex_ids, poly_id_lengths):
+            end = offset + length
+            hybrid_mapping[hex_id] = flat[offset:end]
+            offset = end
 
     return hybrid_mapping
