@@ -101,48 +101,121 @@ local-to-local and CI-to-CI only.
   round performs an identical fixed batch of work, the fastest round is the one
   least perturbed by whatever else the shared runner happened to be doing.
 
+**`ubuntu-latest` does not pin the CPU**
+
+This is the single most important thing to know about these numbers.
+`runs-on: ubuntu-latest` guarantees a runner *image*, not hardware. This
+project's runs have landed on AMD EPYC 9V74, AMD EPYC 7763 and Intel Xeon
+Platinum 8573C parts between 2.30 and 3.69 GHz, and the clock varies run to run
+even within one model. Measured across eleven recorded runs whose lookup path
+was **unchanged**, the tracked `min` spread 134-158% - larger than most changes
+worth reviewing.
+
+Two consequences, which shape everything below:
+
+- Comparing two *different* CI runs tells you as much about which machine each
+  drew as about the code. A merged change that was a genuine 1.5x improvement
+  once appeared on the chart as a 21% regression for exactly this reason.
+- Therefore a pull request is measured **against its own merge base, in the
+  same job, on the same runner**, and the cross-machine trend chart is treated
+  as the weak signal it is.
+
+Every run says which machine it drew: the `measure` job prints the CPU, the
+acceleration path and the workload provenance to its job summary
+(`scripts/describe_benchmark_machine.py`), and
+`scripts/normalize_benchmark_json.py` stamps the same label into the one field
+that reaches the trend chart, so hovering a data point shows the CPU behind it
+long after the artifact has expired.
+
 **Reading the benchmark CI report**
 
-- On a **pull request** the measuring job only measures and uploads an artifact;
-  it holds no write permissions and no secrets, so it behaves identically for
+- On a **pull request** the measuring job checks out the PR's merge base
+  alongside the head, installs and measures both, and uploads two artifacts. It
+  holds no write permissions and no secrets, so it behaves identically for
   branch PRs and fork PRs and a fork PR never fails for want of a token. The
-  comparison against the `master` baseline is posted by the separate
-  `benchmark-comment` workflow (triggered by `workflow_run`, running the base
-  repository's own definition) as a **comment on the PR's head commit**, which
-  appears in the PR conversation timeline. The same table is written to that
-  job's summary.
-- The comment lists, per benchmark, the current value, the previous value and
-  their ratio, in `iter/sec` (batches per second - higher is better).
+  base is measured twice, once before and once after the head, so a runner that
+  drifts over the job's lifetime shows up in the base's own spread instead of
+  looking like a code change; the two passes are reduced by `min`. This roughly
+  doubles the job (~2-3 min), almost all of it the second checkout, `uv sync`
+  and C extension build - the measurement itself is seconds.
+- The comparison table is written to the `measure` job's own summary
+  immediately, and posted by the separate `benchmark-comment` workflow
+  (triggered by `workflow_run`, running the base repository's own definition)
+  as a **comment on the PR's head commit**, which appears in the PR
+  conversation timeline.
+- The table lists, per benchmark, the base and head duration of the tracked
+  estimator, the signed change (negative is faster) and the `base / head`
+  factor. `scripts/compare_benchmark_runs.py` renders it, and it *verifies*
+  rather than assumes that both sides ran on one machine - if they did not, or
+  if the batch size, fixtures, boundary data or acceleration path differ
+  between the two sides, the table carries a warning saying so.
 - On a push to `master` the result is appended to the [trend
   chart](https://jannikmi.github.io/timezonefinder/dev/bench/), published on the
   `gh-pages` branch under `dev/bench` (`benchmark-data-dir-path`). The GitHub
   Pages root itself is only a redirect to that path - the action owns everything
   below it, so don't hand-edit `dev/bench`.
+- The trend chart is **not** used to judge a pull request. It is cross-machine
+  by construction, and `benchmark-comment.yml` deliberately does not compare
+  against it (`tests/test_benchmark_workflows.py` enforces that).
 
-**When an alert fires**
+**Judging a pull request's numbers**
 
-1. **Re-run the workflow first.** GitHub-hosted runners are shared and
-   virtualised; run-to-run variation on *identical* code is the normal
-   explanation for a modest alert, not a regression. An alert that does not
-   reproduce across re-runs is noise.
-2. If it does reproduce, run `make benchmarks-ci` locally on your branch and on
-   the merge base and compare those two - local-to-local, as above.
-3. `ALERT_THRESHOLD` is **derived from a measurement**, not from the action's
-   default: five runs of identical code on five separate `ubuntu-latest`
-   runners spread at most 106.8% across the three tracked benchmarks (random
-   106.8% / CV 2.7%, unique 105.0% / 1.6%, ambiguous 104.9% / 1.7%) on the
-   tracked `min`. Worst spread plus 20% headroom rounds to the shipped 110%.
-   Re-derive it whenever the runner image or the core set changes: trigger the `benchmark` workflow
-   via `workflow_dispatch` with `repetitions: 5` (or more), read the derived
-   threshold off the "report noise floor" job summary, and set
-   `ALERT_THRESHOLD` from it in **both** `benchmark.yml` and
-   `benchmark-comment.yml`. `tests/test_benchmark_workflows.py` fails if you
-   only update one of them - the same holds for `BENCHMARK_SUITE_NAME`,
-   `REPORT_FILENAME` and the artifact/trend-storage names.
-4. Alerts are currently **non-blocking** (`fail-on-alert: false`). Only tighten
-   that once the trend chart confirms the gate does not fire on unchanged code
-   over time - five runs bound the spread loosely, and a noisy gate everyone
-   learns to ignore is worse than no gate.
+1. Check the warning block first. A different CPU between the two sides, or a
+   changed batch size / fixture set, makes the ratios meaningless - re-run the
+   workflow, or accept that this PR's numbers cannot be compared.
+2. Same-runner measurement removes the machine-to-machine term but not the
+   runner's own jitter, so a few percent either way is still noise. Rows are
+   flagged at `REGRESSION_THRESHOLD_PCT` (110%) in
+   `scripts/compare_benchmark_runs.py`. That number comes from the closest
+   thing there is to a same-runner measurement: a five-run study that spread
+   only 106.8%, against a pool that spreads up to 158% across machines - so
+   those five must have drawn near-identical hardware. It was mistaken for a
+   cross-runner bound when it set the trend threshold; as a stand-in for
+   single-machine jitter it is defensible, and an upper bound on it either way.
+3. The comparison is **reporting only** - `--fail-on-regression` exists but is
+   not passed. Turn it on once a single-runner noise study (`make
+   benchmark-noise` on one CI runner) has said what the residual floor actually
+   is; until then a gate would fire on noise, and a gate everyone learns to
+   ignore is worse than no gate.
+4. To reproduce locally, run `make benchmarks-ci` on your branch and on the
+   merge base, then compare the two reports directly:
+
+   ```
+   uv run python -m scripts.compare_benchmark_runs --base base.json --head head.json
+   ```
+
+   Local-to-local only, as above.
+
+**When a trend chart alert fires**
+
+1. **Check which CPU each run drew** before anything else - the job summary of
+   both runs says so, as does the chart tooltip. A step change that coincides
+   with a change of CPU model is not a code change.
+2. **Re-run the workflow.** GitHub-hosted runners are shared and virtualised;
+   run-to-run variation on identical code is the normal explanation for a
+   modest alert. An alert that does not reproduce across re-runs is noise.
+3. `ALERT_THRESHOLD` is **derived from a measurement**: across eleven recorded
+   runs whose lookup path was identical the tracked `min` spread 134-158%
+   (unique 134.3%, random 145.9%, ambiguous 158.4%) purely because of the
+   hardware each run drew. Worst spread plus 20% headroom rounds to the
+   shipped **180%**. Be honest about what that buys - at 180% the chart
+   catches only a catastrophic regression and is blind to the 10-30% changes
+   actually worth reviewing.
+   That is not a gap to close by tightening the number: a cross-machine chart
+   cannot resolve better than the machines it spans. The same-runner PR
+   comparison is the real gate; the trend alert is a deliberately weak backstop
+   for `master`, which nothing else watches.
+4. Re-derive it whenever the runner pool or the core set changes: trigger the
+   `benchmark` workflow via `workflow_dispatch` with `repetitions: 5` (or
+   more), read the derived threshold off the "report noise floor" job summary,
+   and set `ALERT_THRESHOLD` in `benchmark.yml`. Note what that job measures:
+   each repetition runs on a *different* machine, so it characterises the
+   runner pool's spread, not a single runner's jitter.
+5. Alerts are **non-blocking** (`fail-on-alert: false`) and stay that way:
+   `master` must never be blocked on which machine a run drew.
+6. `REPORT_FILENAME` and the artifact names are duplicated across
+   `benchmark.yml` and `benchmark-comment.yml` because workflows cannot import
+   constants; `tests/test_benchmark_workflows.py` fails if the copies drift.
 
 ### Backward Compability & Stability
 

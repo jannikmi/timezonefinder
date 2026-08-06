@@ -44,10 +44,14 @@ Most modules are self-describing; the non-obvious ones:
   The CI-tracked `benchmark_core` set is the uniformly-random headline plus the unique/ambiguous
   per-class diagnostics; fixtures are sampled area-uniformly, unlike the test suite's pole-biased
   `get_rnd_query_pt` — see `CONTRIBUTING.md`
-- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py`:
-  benchmark CI helpers — make the trend chart track `min` instead of the noise-sensitive `mean`,
-  derive the alert threshold from repeated identical runs, and guard the history against a silent
-  numba/clang switch
+- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
+  `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers — make the
+  trend chart track `min` instead of the noise-sensitive `mean` (and stamp the CPU into the one
+  field that reaches it), derive the alert threshold from repeated identical runs, guard the
+  history against a silent numba/clang switch, compare a PR's head against its merge base measured
+  on the same runner, and report which machine a run drew. `ubuntu-latest` pins the runner *image*,
+  not the CPU: the pool spreads up to ~1.58x on unchanged code, so any two CI runs are
+  incomparable unless they name the same CPU
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
 
 ## Common Commands

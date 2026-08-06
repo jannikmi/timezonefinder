@@ -26,6 +26,9 @@ the action still parses natively. ``stats.stddev`` is deliberately left
 untouched: the action shows it as the ``range: ±`` annotation, where the
 *observed* within-run spread is exactly the useful thing to see.
 
+It also stamps the CPU into ``stats.rounds`` - see
+:func:`annotate_machine_identity` for why that is the only place it can go.
+
 Usage::
 
     uv run python -m scripts.normalize_benchmark_json \\
@@ -48,6 +51,7 @@ from scripts.benchmark_utils import (
     DEFAULT_BENCHMARK_ESTIMATOR,
     BenchmarkEstimator,
     load_benchmark_json,
+    machine_label,
 )
 
 # recorded at the top level of the rewritten file so a stored report says for
@@ -92,6 +96,45 @@ def normalize_benchmark_data(
     return normalized
 
 
+def annotate_machine_identity(data: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of ``data`` whose ``stats.rounds`` also names the CPU.
+
+    A trend chart that spans machines is only readable if every point says
+    which machine it came from, and ``runs-on: ubuntu-latest`` pins the runner
+    image rather than the CPU: the pool's spread on *unchanged* code reaches
+    ~1.58x, enough to invent regressions that never happened. pytest-benchmark
+    already captures the CPU under ``machine_info``, but that never leaves the
+    build artifact - and artifacts expire after two weeks while the chart is
+    forever.
+
+    The extractor the action uses builds each stored point from five fields
+    only::
+
+        const range = `stddev: ${stats.stddev}`;
+        const extra = `mean: ${mean} ${meanUnit}\\nrounds: ${stats.rounds}`;
+
+    ``name`` is the trend history's join key and must never move,
+    ``value``/``mean`` are the measurement and ``range`` carries the observed
+    within-run spread, which leaves ``rounds`` as the one field that is
+    interpolated verbatim and whose meaning nothing downstream depends on. So
+    the round count keeps its leading position and gains the machine after it,
+    which is what surfaces in the chart's tooltip.
+
+    Only the rewritten report is annotated; the raw pytest-benchmark JSON
+    keeps a plain integer ``rounds``. A report without a recorded CPU is
+    returned unchanged rather than annotated with a placeholder.
+    """
+    machine = machine_label(data)
+    if machine is None:
+        return data
+    annotated = copy.deepcopy(data)
+    for bench in annotated.get("benchmarks", []):
+        stats = bench["stats"]
+        if "rounds" in stats:
+            stats["rounds"] = f"{stats['rounds']} on {machine}"
+    return annotated
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -127,12 +170,15 @@ def main() -> None:
         )
 
     data = load_benchmark_json(args.benchmark_json)
-    normalized = normalize_benchmark_data(data, args.estimator)
+    normalized = annotate_machine_identity(
+        normalize_benchmark_data(data, args.estimator)
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(normalized))
     print(
         f"Wrote {args.output} tracking '{args.estimator}' for "
-        f"{len(normalized['benchmarks'])} benchmark(s)"
+        f"{len(normalized['benchmarks'])} benchmark(s), "
+        f"measured on {machine_label(normalized) or 'an unrecorded CPU'}"
     )
 
 

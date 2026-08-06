@@ -32,11 +32,68 @@ BENCHMARK_ESTIMATORS: tuple[str, ...] = get_args(BenchmarkEstimator)
 # else the shared, virtualised CI machine happened to be doing.
 DEFAULT_BENCHMARK_ESTIMATOR: BenchmarkEstimator = "min"
 
+# Fields of ``machine_info["timezonefinder"]`` (written by
+# ``benchmarks/conftest.py``'s ``pytest_benchmark_update_machine_info``) that
+# two reports must agree on before their numbers may be compared at all:
+# a different batch size or fixture set means a different amount of work, and
+# a different acceleration path means a different implementation. Deliberately
+# *not* including ``timezonefinder_version`` - comparing two versions is the
+# whole point of a base/head comparison.
+COMPARABILITY_KEYS: tuple[str, ...] = (
+    "batch_size",
+    "fixture_version",
+    "data_version",
+    "using_clang_pip",
+    "using_numba",
+)
+
 
 def load_benchmark_json(json_path: Path) -> dict[str, Any]:
     """Load a JSON file produced by ``pytest benchmarks/ --benchmark-json=...``."""
     with open(json_path) as f:
         return json.load(f)
+
+
+def cpu_model(data: dict[str, Any]) -> str | None:
+    """The CPU model that produced ``data``, or ``None`` if not recorded.
+
+    This is the field to compare two reports on. The measured clock is
+    deliberately excluded: ``hz_actual`` is sampled once per pytest-benchmark
+    startup and jitters by a megahertz or so between two runs *on the same
+    machine*, so requiring it to match would report a machine change on every
+    single comparison.
+    """
+    cpu = data.get("machine_info", {}).get("cpu") or {}
+    return str(cpu.get("brand_raw") or "").strip() or None
+
+
+def machine_label(data: dict[str, Any]) -> str | None:
+    """Name the machine that produced ``data``, model and measured clock.
+
+    ``runs-on: ubuntu-latest`` pins the runner *image*, not the hardware: the
+    pool serves several CPU models whose clocks differ by up to ~1.6x, which
+    is far more than any change this project is likely to make. Every report
+    therefore has to say which machine it came from, and this is the one-line
+    form of that (``machine_info["cpu"]``, captured by pytest-benchmark). Use
+    :func:`cpu_model` to compare two reports; this one is for display.
+    """
+    model = cpu_model(data)
+    if model is None:
+        return None
+    cpu = data.get("machine_info", {}).get("cpu") or {}
+    clock = str(cpu.get("hz_actual_friendly") or "").strip()
+    return f"{model} @ {clock}" if clock else model
+
+
+def comparability_info(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract the :data:`COMPARABILITY_KEYS` recorded in ``data``.
+
+    Missing keys are reported as ``None`` rather than dropped, so a report
+    written before a key existed compares unequal against one that has it
+    instead of silently agreeing.
+    """
+    recorded = data.get("machine_info", {}).get("timezonefinder") or {}
+    return {key: recorded.get(key) for key in COMPARABILITY_KEYS}
 
 
 class BenchmarkReporter:
