@@ -21,7 +21,10 @@
 #   benchmarks - run the full pytest-benchmark suite (benchmarks/), writing tmp/benchmark.json
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
-#   reports    - benchmarks + render docs/benchmark_results_*.rst + the data report
+#   memory     - measure the memory footprint of each finder configuration
+#   memory-ci  - the exact memory measurement the benchmark CI workflow records
+#   memory-noise - repeat memory-ci on unchanged code and report the noise floor
+#   reports    - benchmarks + memory + render docs/benchmark_results_*.rst + the data report
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -94,6 +97,11 @@ testall:
 
 # path is relative to the repo root; tmp/ is already gitignored build/data scratch space
 BENCHMARK_JSON := tmp/benchmark.json
+MEMORY_JSON := tmp/memory.json
+# a footprint has no run-to-run variance worth averaging out the way a timing
+# does; these repetitions exist to catch a measurement that failed to settle,
+# not to build a distribution
+MEMORY_REPETITIONS := 3
 
 # quick local sanity check: just the small, high-signal core subset, no JSON output
 speedtest:
@@ -106,8 +114,17 @@ benchmarks:
 	@mkdir -p tmp
 	uv run pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
 
-reports: benchmarks
-	uv run python -m scripts.render_benchmark_reports --benchmark-json=$(BENCHMARK_JSON)
+# the memory counterpart of `benchmarks`. Separate because pytest-benchmark
+# measures wall clock only, and running tracemalloc across its rounds would
+# distort the very timings above (see scripts/measure_memory.py)
+memory:
+	@mkdir -p tmp
+	uv run python -m scripts.measure_memory --output=$(MEMORY_JSON) \
+		--repetitions=$(MEMORY_REPETITIONS)
+
+reports: benchmarks memory
+	uv run python -m scripts.render_benchmark_reports \
+		--benchmark-json=$(BENCHMARK_JSON) --memory-json=$(MEMORY_JSON)
 	uv run python -m scripts.reporting
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
@@ -132,8 +149,23 @@ BENCHMARK_ACCELERATION_PATH := clang
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
 
+# raw and normalized memory reports, mirroring the two above
+RAW_MEMORY_JSON := tmp/memory-raw.json
+CI_MEMORY_JSON := tmp/memory-tracked.json
+# what benchmark-action/github-action-benchmark actually stores for the memory
+# chart: its pytest extractor only understands durations, so the tracked
+# metrics are re-shaped for `tool: customSmallerIsBetter`
+MEMORY_CHART_JSON := tmp/memory-chart.json
+NOISE_MEMORY_RUNS_DIR := tmp/memory-noise
+
 print-ci-benchmark-json:
 	@echo $(CI_BENCHMARK_JSON)
+
+print-ci-memory-json:
+	@echo $(CI_MEMORY_JSON)
+
+print-memory-chart-json:
+	@echo $(MEMORY_CHART_JSON)
 
 print-benchmark-acceleration-path:
 	@echo $(BENCHMARK_ACCELERATION_PATH)
@@ -164,6 +196,34 @@ benchmark-noise:
 	done
 	uv run python -m scripts.benchmark_noise $(NOISE_RUNS_DIR)/run-*.json \
 		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS)
+
+# the exact memory measurement CI records, plus the chart-shaped export
+memory-ci:
+	@mkdir -p $(dir $(CI_MEMORY_JSON))
+	uv run python -m scripts.measure_memory \
+		--output=$(RAW_MEMORY_JSON) \
+		--repetitions=$(MEMORY_REPETITIONS)
+	uv run python -m scripts.normalize_benchmark_json \
+		--benchmark-json=$(RAW_MEMORY_JSON) \
+		--output=$(CI_MEMORY_JSON) \
+		--estimator=$(BENCHMARK_ESTIMATOR)
+	uv run python -m scripts.export_memory_chart_json \
+		--memory-json=$(CI_MEMORY_JSON) \
+		--output=$(MEMORY_CHART_JSON)
+
+# the memory analogue of `benchmark-noise`, and the only honest source for the
+# memory chart's alert threshold. Unlike timings, the tracked heap metrics come
+# from tracemalloc and should barely move at all - a wide spread here means the
+# measurement is wrong, not that the machine is busy.
+memory-noise:
+	@rm -rf $(NOISE_MEMORY_RUNS_DIR)
+	@mkdir -p $(NOISE_MEMORY_RUNS_DIR)
+	@for i in $$(seq 1 $(NOISE_RUNS)); do \
+		echo "--- memory noise run $$i/$(NOISE_RUNS) ---"; \
+		$(MAKE) memory-ci CI_MEMORY_JSON=$(NOISE_MEMORY_RUNS_DIR)/run-$$i.json || exit 1; \
+	done
+	uv run python -m scripts.benchmark_noise $(NOISE_MEMORY_RUNS_DIR)/run-*.json \
+		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS) --metric=memory
 
 tox:
 	@uv run tox
@@ -248,4 +308,5 @@ docs:
 
 .PHONY: clean test testint testall build docs speedtest benchmarks reports \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
-	print-benchmark-acceleration-path
+	print-benchmark-acceleration-path \
+	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json

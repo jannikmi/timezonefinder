@@ -79,6 +79,29 @@ env:
   REPORT_FILENAME: "benchmark-report.json"
   REPORT_DIR: "benchmark-report"
   BASE_REPORT_DIR: "benchmark-base-report"
+  # --- memory footprint (scripts/measure_memory.py) ---------------------------
+  # A second suite in the same gh-pages data file: `dev/bench/data.js` keys its
+  # entries by suite name, so this renders as its own chart on the same page
+  # rather than colliding with the timing history.
+  MEMORY_SUITE_NAME: "memory footprint (heap, min)"
+  # Unlike the timing threshold above, this one is not fighting the runner
+  # pool. The charted metrics are `tracemalloc` figures, and the same code
+  # allocates the same bytes on every machine: `make memory-noise` over 5 runs
+  # measured a spread of exactly 100.0% (coefficient of variation 0.0%) for all
+  # six charted metrics. So the threshold is set at the floor
+  # scripts/benchmark_noise.py will suggest for a zero-spread measurement,
+  # which still leaves a 10% margin for an allocator difference between Python
+  # builds. RSS metrics - the ones that did vary, 102-111% - are deliberately
+  # not charted (see scripts/export_memory_chart_json.py).
+  #
+  # Re-derive from CI rather than locally if this ever fires spuriously: a
+  # workflow_dispatch noise run draws a fresh runner per repetition.
+  MEMORY_ALERT_THRESHOLD: "110%"
+  # staged alongside the timing report inside the same artifacts. Repeated in
+  # .github/workflows/benchmark-comment.yml; tests/test_benchmark_workflows.py
+  # fails if the copies drift.
+  MEMORY_REPORT_FILENAME: "memory-report.json"
+  MEMORY_CHART_FILENAME: "memory-chart.json"
 
 jobs:
   plan:
@@ -233,6 +256,41 @@ jobs:
           make benchmarks-ci
           cp "$(make -s print-ci-benchmark-json)" "../$BASE_REPORT_DIR/pass-2.json"
 
+      # --- memory footprint, strictly after every timing measurement above
+      #
+      # ORDER MATTERS: the memory harness reads the whole boundary dataset,
+      # which warms the OS file cache. benchmarks/test_initialization.py goes
+      # out of its way to disable pytest-benchmark's warmup precisely so it can
+      # measure *cold* construction, and running this first would hand it a hot
+      # cache instead. Nothing below this line may move above it.
+      #
+      # Only one merge-base pass, unlike the two the timings need: that
+      # sandwich exists to catch a runner drifting over the job's lifetime, and
+      # an allocation count does not drift - `make memory-noise` measures a
+      # 0.0% coefficient of variation for the charted metrics.
+      - name: Measure the memory footprint
+        env:
+          UV_NO_SYNC: "1"
+        run: make memory-ci
+
+      - name: Measure the merge base's memory footprint
+        if: github.event_name == 'pull_request'
+        working-directory: base
+        env:
+          UV_NO_SYNC: "1"
+        run: |
+          set -euo pipefail
+          # a merge base from before this harness existed has nothing to
+          # measure; the comparison step below then skips too, rather than
+          # failing the pull request that introduces it
+          if [ ! -f scripts/measure_memory.py ]; then
+            echo "::notice::merge base predates the memory harness - skipping its measurement"
+            exit 0
+          fi
+          make memory-ci
+          mkdir -p "../$BASE_REPORT_DIR"
+          cp "$(make -s print-ci-memory-json)" "../$BASE_REPORT_DIR/memory-pass-1.json"
+
       # the Makefile owns where the report lands; the artifact exposes it under
       # a stable name so the consuming jobs don't have to know that path
       - name: Stage the report for upload
@@ -240,6 +298,8 @@ jobs:
           set -euo pipefail
           mkdir -p "$REPORT_DIR"
           cp "$(make -s print-ci-benchmark-json)" "$REPORT_DIR/$REPORT_FILENAME"
+          cp "$(make -s print-ci-memory-json)" "$REPORT_DIR/$MEMORY_REPORT_FILENAME"
+          cp "$(make -s print-memory-chart-json)" "$REPORT_DIR/$MEMORY_CHART_FILENAME"
 
       # which machine this run drew, in the Actions UI, without downloading an
       # artifact. Artifacts expire after 14 days; a step summary is as durable
@@ -255,6 +315,11 @@ jobs:
             "$REPORT_DIR/$REPORT_FILENAME" \
             --title "$RUN_TITLE" \
             --markdown-out "$GITHUB_STEP_SUMMARY"
+          uv run python -m scripts.describe_benchmark_machine \
+            "$REPORT_DIR/$MEMORY_REPORT_FILENAME" \
+            --title "$RUN_TITLE" \
+            --metric memory \
+            --markdown-out "$GITHUB_STEP_SUMMARY"
 
       # the same table benchmark-comment.yml posts on the pull request, but
       # available immediately in this job's own summary. This job has no write
@@ -265,16 +330,40 @@ jobs:
           UV_NO_SYNC: "1"
         run: |
           set -euo pipefail
+          # `pass-*` rather than `*`: the merge base directory also holds the
+          # memory report, which is compared separately below and would
+          # otherwise be fed into the duration comparison
           uv run python -m scripts.compare_benchmark_runs \
-            --base "$BASE_REPORT_DIR"/*.json \
+            --base "$BASE_REPORT_DIR"/pass-*.json \
             --head "$REPORT_DIR/$REPORT_FILENAME" \
             --markdown-out "$GITHUB_STEP_SUMMARY"
 
+      - name: Compare the head's memory against the merge base
+        if: github.event_name == 'pull_request'
+        env:
+          UV_NO_SYNC: "1"
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          base_reports=("$BASE_REPORT_DIR"/memory-pass-*.json)
+          if [ ${#base_reports[@]} -eq 0 ]; then
+            echo "::notice::no merge base memory report - skipping the memory comparison"
+            exit 0
+          fi
+          uv run python -m scripts.compare_benchmark_runs \
+            --base "${base_reports[@]}" \
+            --head "$REPORT_DIR/$MEMORY_REPORT_FILENAME" \
+            --metric memory \
+            --markdown-out "$GITHUB_STEP_SUMMARY"
+
+      # the whole directory, so the memory report and its chart export travel
+      # with the timing report instead of needing artifacts of their own -
+      # tests/test_benchmark_workflows.py pins the artifact count
       - name: Upload the benchmark report
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-core-${{ matrix.repetition }}
-          path: ${{ env.REPORT_DIR }}/${{ env.REPORT_FILENAME }}
+          path: ${{ env.REPORT_DIR }}/
           if-no-files-found: error
           retention-days: 14
 
@@ -326,6 +415,31 @@ jobs:
           summary-always: true
           max-items-in-chart: 250
 
+      # A second suite, not a second job: both steps push to `gh-pages`, so
+      # they have to run in sequence within one job or they would race for the
+      # same branch. `dev/bench/data.js` keys its entries by suite name, so the
+      # two coexist and the page renders a chart for each.
+      #
+      # `customSmallerIsBetter` rather than `pytest`: the pytest extractor
+      # tracks `stats.ops` in iter/sec, where bigger is better - the wrong unit
+      # and the wrong direction for a footprint. See
+      # scripts/export_memory_chart_json.py.
+      - name: Store the memory footprint and update its trend chart
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: ${{ env.MEMORY_SUITE_NAME }}
+          tool: customSmallerIsBetter
+          output-file-path: benchmark-report/${{ env.MEMORY_CHART_FILENAME }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
+          auto-push: true
+          alert-threshold: ${{ env.MEMORY_ALERT_THRESHOLD }}
+          fail-on-alert: false
+          comment-on-alert: false
+          summary-always: true
+          max-items-in-chart: 250
+
   noise:
     name: report noise floor
     needs: [measure]
@@ -353,4 +467,15 @@ jobs:
           set -euo pipefail
           uv run python -m scripts.benchmark_noise \
             "noise-runs"/*/"$REPORT_FILENAME" \
+            --markdown-out "$GITHUB_STEP_SUMMARY"
+
+      # the same treatment for the footprint, and the only honest source for
+      # MEMORY_ALERT_THRESHOLD: each repetition drew its own runner, so this
+      # reports whether the charted heap metrics really are machine-independent
+      - name: Report the memory spread and the derived threshold
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.benchmark_noise \
+            "noise-runs"/*/"$MEMORY_REPORT_FILENAME" \
+            --metric memory \
             --markdown-out "$GITHUB_STEP_SUMMARY"

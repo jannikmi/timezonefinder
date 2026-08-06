@@ -8,8 +8,9 @@ to generate RST reports and handle CLI interfaces.
 
 import json
 import platform
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, get_args
+from typing import Any, Callable, Literal, get_args
 
 import numpy as np
 
@@ -45,7 +46,129 @@ COMPARABILITY_KEYS: tuple[str, ...] = (
     "data_version",
     "using_clang_pip",
     "using_numba",
+    # how many lookups a memory measurement performed before its steady-state
+    # footprint was read (scripts/measure_memory.py). Absent from timing
+    # reports, where it compares equal as None on both sides.
+    "memory_workload_size",
 )
+
+
+def decimals_for_magnitude(value: float) -> int:
+    """Decimal places giving ~3 significant figures for ``value``.
+
+    Fewer digits as the value grows (0 decimals at >=100, 1 at >=10, else 2),
+    so a table doesn't show false precision on a large number (``"192.30x"``)
+    or too few significant digits on a small one. This is the "human
+    friendly rounding" shared by every formatter in this project.
+    """
+    abs_value = abs(value)
+    if abs_value >= 100:
+        return 0
+    if abs_value >= 10:
+        return 1
+    return 2
+
+
+def format_bytes(num_bytes: float) -> str:
+    """Format a byte count in the most readable binary unit.
+
+    Binary units (KiB/MiB) rather than decimal ones, because every figure
+    these reports carry is either an allocation or a page count, and both are
+    powers of two - reporting a 64 MiB mapping as "67.1 MB" invites the reader
+    to compare it against a file size that was never measured that way.
+    """
+    abs_bytes = abs(num_bytes)
+    if abs_bytes >= 1024**3:
+        value, unit = num_bytes / 1024**3, "GiB"
+    elif abs_bytes >= 1024**2:
+        value, unit = num_bytes / 1024**2, "MiB"
+    elif abs_bytes >= 1024:
+        value, unit = num_bytes / 1024, "KiB"
+    else:
+        return f"{num_bytes:.0f} B"
+    return f"{value:.{decimals_for_magnitude(value)}f} {unit}"
+
+
+@dataclass(frozen=True)
+class MetricSpec:
+    """What a tracked number *is*, for the scripts that only ratio it.
+
+    ``scripts.compare_benchmark_runs`` and
+    ``scripts.describe_benchmark_machine`` do nothing that depends on the unit:
+    they reduce repeated passes, divide head by base, and check that both sides
+    came off the same machine. Only the rendering knows about seconds. Passing
+    one of these in is what lets the memory report reuse that machinery -
+    including the same-runner check and the fork-trust-boundary name
+    sanitisation - instead of growing a parallel copy of it for bytes.
+    """
+
+    key: str
+    #: heading a rendered report is titled with
+    heading: str
+    #: what one row of a comparison table is ("benchmark", "metric")
+    row_noun: str
+    #: renders one measured value for a markdown cell
+    format_value: Callable[[float], str]
+    #: what an increase means, and what a decrease means
+    worse: str
+    better: str
+    #: names the estimator's origin; formatted with ``estimator=``
+    estimator_phrase: str
+    #: one sentence explaining the `change` and `x` columns of a comparison
+    change_help: str
+    #: the caveat a reader needs before acting on a small difference
+    noise_note: str
+
+
+DURATION_METRIC = MetricSpec(
+    key="duration",
+    heading="Benchmark",
+    row_noun="benchmark",
+    # kept as a fixed-precision millisecond value rather than routed through
+    # `format_duration`: this is the form every stored comparison has used, and
+    # a rendering that does not move is easier to read across runs
+    format_value=lambda seconds: f"{seconds * 1e3:.3f} ms",
+    worse="slower",
+    better="faster",
+    estimator_phrase="tracking pytest-benchmark's `{estimator}`",
+    change_help=(
+        "`change` is the head duration relative to base - negative is faster. "
+        "The `x` factor is `base / head`, so 1.20x means head does the same "
+        "work in 1.20 times fewer seconds."
+    ),
+    noise_note=(
+        "Same-runner comparison removes the machine-to-machine term but not "
+        "the runner's own jitter, so a change of a few percent is still noise. "
+        "See CONTRIBUTING.md."
+    ),
+)
+
+MEMORY_METRIC = MetricSpec(
+    key="memory",
+    heading="Memory footprint",
+    row_noun="metric",
+    format_value=format_bytes,
+    worse="larger",
+    better="smaller",
+    estimator_phrase="tracking the `{estimator}` of repeated measurements",
+    change_help=(
+        "`change` is the head footprint relative to base - negative is smaller. "
+        "The `x` factor is `base / head`, so 1.20x means head holds 1.20 times "
+        "fewer bytes."
+    ),
+    noise_note=(
+        "`*_heap` metrics come from `tracemalloc` and are near-deterministic, "
+        "so a change there is signal rather than jitter. `*_rss` reflects the "
+        "resident set, which also counts memory-mapped pages the kernel may "
+        "reclaim under pressure - read it as an order of magnitude, not an "
+        "exact figure. See CONTRIBUTING.md."
+    ),
+)
+
+METRIC_SPECS: dict[str, MetricSpec] = {
+    spec.key: spec for spec in (DURATION_METRIC, MEMORY_METRIC)
+}
+DEFAULT_METRIC_KEY = DURATION_METRIC.key
 
 
 def load_benchmark_json(json_path: Path) -> dict[str, Any]:
@@ -152,6 +275,15 @@ class BenchmarkReporter:
                     print()
                     print(f"   {text}")
                     print()
+
+        # Every section ends with a blank line, so the last one leaves the file
+        # with a trailing one that end-of-file-fixer then strips - which made
+        # every freshly rendered report differ from the committed one until the
+        # hook had run, hiding real changes behind a repair nobody sees. Same
+        # normalisation as scripts/reporting.py applies to the data report.
+        self.output_path.write_text(
+            self.output_path.read_text().rstrip("\n") + "\n", encoding="utf-8"
+        )
 
 
 def get_system_status() -> dict[str, Any]:

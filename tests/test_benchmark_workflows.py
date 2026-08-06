@@ -17,6 +17,9 @@ only the trend chart goes through `benchmark-action/github-action-benchmark`.
 That last one is a design decision, not a detail - comparing a pull request
 against the stored gh-pages baseline measures the runner pool rather than the
 change (see the `measure` job's comment in benchmark.yml).
+
+Timing and memory are measured in the same job and travel in the same two
+artifacts, so the counts pinned below cover both.
 """
 
 from pathlib import Path
@@ -40,6 +43,8 @@ BENCHMARK_COMMENT_WORKFLOW = WORKFLOW_DIR / "benchmark-comment.yml"
 SHARED_ENV_KEYS = (
     # the filename the head measurement is staged under inside its artifact
     "REPORT_FILENAME",
+    # and the memory measurement, which rides in the same artifact
+    "MEMORY_REPORT_FILENAME",
 )
 
 
@@ -106,10 +111,15 @@ def test_only_the_trend_chart_uses_the_benchmark_action(
     merge base, measured on the same runner
     (`scripts/compare_benchmark_runs.py`). Re-introducing the action into the
     comment workflow would quietly restore the confound.
+
+    Two steps, not one: the timing suite and the memory suite are separate
+    charts sharing one `dev/bench` data file. They must stay in this single
+    job and therefore sequential - both push to `gh-pages`, so splitting them
+    across parallel jobs would race for the branch.
     """
-    assert len(_steps_using(benchmark_workflow, "track", BENCHMARK_ACTION)) == 1, (
-        f"expected exactly one github-action-benchmark step in "
-        f"{BENCHMARK_WORKFLOW.name}'s 'track' job, which owns the trend chart"
+    assert len(_steps_using(benchmark_workflow, "track", BENCHMARK_ACTION)) == 2, (
+        f"expected exactly two github-action-benchmark steps in "
+        f"{BENCHMARK_WORKFLOW.name}'s 'track' job, which owns both trend charts"
     )
     for job in comment_workflow["jobs"]:
         assert not _steps_using(comment_workflow, job, BENCHMARK_ACTION), (

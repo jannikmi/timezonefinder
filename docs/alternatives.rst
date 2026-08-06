@@ -51,8 +51,8 @@ Both packages will likely coexist as they serve different use cases:
      - ~28 MB
      - ~6 MB
    * - Memory Usage
-     - TBA
-     - TBA
+     - ~8 MiB allocated by default (polygon data is memory mapped), ~71 MiB with ``in_memory=True`` - see :doc:`benchmark_results_memory`
+     - Not measured here
    * - Spatial Index
      - H3 hexagon-based index with ~41k cells (resolution 3)
      - Hierarchical tree of ~80k rectangles with fallback to simplified polygon data
@@ -116,14 +116,14 @@ In comparison most notably initialisation time and memory usage are significantl
 ``pytzwhere`` is using up to 450MB of RAM (with ``shapely`` and ``numpy`` active),
 because it is parsing and keeping all the timezone polygons in the memory.
 This uses unnecessary time/ computation/ memory and this was the reason I created this package in the first place.
-This package uses at most 40MB (= encountered memory consumption of the python process) and has some more advantages:
+This package allocates ~8 MiB for its data structures by default, because the polygon coordinates stay memory mapped rather than being parsed into Python objects (:doc:`benchmark_results_memory` reports the measured figures for every mode). It has some more advantages:
 
 **Differences:**
 
 -  highly decreased memory usage
 -  highly reduced start up time
 -  usage of 32bit int (instead of 64+bit float) reduces computing time and memory consumption. The accuracy of 32bit int is still high enough. According to my calculations the worst accuracy is 1cm at the equator. This is far more precise than the discrete polygons in the data.
--  the data is stored in memory friendly binary files (approx. 41MB in total, original data 120MB .json)
+-  the data is stored in memory friendly binary files (:doc:`data_report` lists their sizes; the original data is a 120MB .json)
 -  data is only being read on demand (not completely read into memory if not needed)
 -  precomputed shortcuts are included to quickly look up which polygons have to be checked
 - function ``get_geometry()`` enables querying timezones for their geometric shape (= multipolygon with holes)

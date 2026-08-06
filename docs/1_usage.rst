@@ -64,7 +64,7 @@ to be reused for multiple consequent timezone queries:
     tf = TimezoneFinder()  # reuse
 
 
-Use the ``in_memory`` argument to read all polygon data into memory for faster access at the cost of memory consumption and initialisation time:
+Use the ``in_memory`` argument to read all polygon data into memory for faster access at the cost of memory consumption and initialisation time (see :doc:`benchmark_results_memory` for what each mode costs):
 
 .. code-block:: python
 
