@@ -45,7 +45,10 @@ from typing import Any, Iterable
 from scripts.benchmark_utils import (
     BENCHMARK_ESTIMATORS,
     DEFAULT_BENCHMARK_ESTIMATOR,
+    DEFAULT_METRIC_KEY,
+    METRIC_SPECS,
     BenchmarkEstimator,
+    MetricSpec,
     load_benchmark_json,
 )
 
@@ -166,7 +169,10 @@ def suggest_alert_threshold(stats: Iterable[NoiseStats]) -> int:
 
 
 def render_markdown(
-    stats: list[NoiseStats], estimator: BenchmarkEstimator, threshold_pct: int
+    stats: list[NoiseStats],
+    estimator: BenchmarkEstimator,
+    threshold_pct: int,
+    metric: MetricSpec = METRIC_SPECS[DEFAULT_METRIC_KEY],
 ) -> str:
     """Render a report for a PR description or a GitHub job summary."""
     run_counts = {s.runs for s in stats}
@@ -174,19 +180,20 @@ def render_markdown(
         str(next(iter(run_counts))) if len(run_counts) == 1 else "varying numbers of"
     )
     lines = [
-        "## Benchmark noise floor",
+        f"## {metric.heading} noise floor",
         "",
         f"Spread of the `{estimator}` estimator across **{runs_label} runs of "
         "identical code**. `spread` is `max / min`, directly comparable to "
         "`github-action-benchmark`'s `alert-threshold`.",
         "",
-        "| benchmark | runs | min | median | max | spread | CV |",
+        f"| {metric.row_noun} | runs | min | median | max | spread | CV |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for s in stats:
         lines.append(
-            f"| `{s.name}` | {s.runs} | {s.minimum:.4g}s | {s.median:.4g}s | "
-            f"{s.maximum:.4g}s | {s.spread_pct:.1f}% | {s.cv_pct:.1f}% |"
+            f"| `{s.name}` | {s.runs} | {metric.format_value(s.minimum)} | "
+            f"{metric.format_value(s.median)} | {metric.format_value(s.maximum)} | "
+            f"{s.spread_pct:.1f}% | {s.cv_pct:.1f}% |"
         )
     lines += [
         "",
@@ -233,6 +240,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--metric",
+        choices=sorted(METRIC_SPECS),
+        default=DEFAULT_METRIC_KEY,
+        help=(
+            "what the reports measure, which selects the units of the rendered "
+            f"table (default: {DEFAULT_METRIC_KEY})"
+        ),
+    )
+    parser.add_argument(
         "--markdown-out",
         type=Path,
         help="also write the report to this file (e.g. $GITHUB_STEP_SUMMARY)",
@@ -256,7 +272,9 @@ def main() -> None:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    report = render_markdown(stats, args.estimator, threshold)
+    report = render_markdown(
+        stats, args.estimator, threshold, METRIC_SPECS[args.metric]
+    )
     print(report)
     if args.markdown_out is not None:
         with open(args.markdown_out, "a") as f:

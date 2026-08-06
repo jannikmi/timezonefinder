@@ -29,10 +29,13 @@ from typing import Any, Callable
 from scripts.benchmark_utils import (
     BenchmarkReporter,
     add_system_status_section,
+    decimals_for_magnitude,
+    format_bytes,
     load_benchmark_json,
 )
 from scripts.configs import (
     INITIALIZATION_REPORT_FILE,
+    MEMORY_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
     POLYGON_REPORT_FILE,
 )
@@ -115,29 +118,13 @@ def humanize_benchmark_name(name: str) -> str:
     return f"{func_label} - {params_label}"
 
 
-def _decimals_for_magnitude(value: float) -> int:
-    """Decimal places giving ~3 significant figures for ``value``.
-
-    Fewer digits as the value grows (0 decimals at >=100, 1 at >=10, else 2),
-    so a table doesn't show false precision on a large number (``"192.30x"``)
-    or too few significant digits on a small one. This is the "human
-    friendly rounding" shared by every formatter below.
-    """
-    abs_value = abs(value)
-    if abs_value >= 100:
-        return 0
-    if abs_value >= 10:
-        return 1
-    return 2
-
-
 def format_duration(seconds: float) -> str:
     """Format a duration using the most readable unit for its magnitude.
 
     Milliseconds/microseconds/nanoseconds below one second, so batch and
     per-query times read naturally instead of forcing scientific notation on
     every cell, rounded to ~3 significant figures (see
-    :func:`_decimals_for_magnitude`) instead of a fixed number of decimals -
+    :func:`decimals_for_magnitude`) instead of a fixed number of decimals -
     "414ms" and "8.47ms" are both more readable than "414.000ms"/"8.475ms".
     Falls back to scientific notation only outside the ns-s range, which
     shouldn't occur for these benchmarks.
@@ -155,7 +142,7 @@ def format_duration(seconds: float) -> str:
         value, unit = seconds * 1e9, "ns"
     else:
         return f"{seconds:.3e}s"
-    return f"{value:.{_decimals_for_magnitude(value)}f}{unit}"
+    return f"{value:.{decimals_for_magnitude(value)}f}{unit}"
 
 
 def format_rate(rate: float) -> str:
@@ -171,13 +158,13 @@ def format_rate(rate: float) -> str:
         value, suffix = rate / 1e3, "k"
     else:
         value, suffix = rate, ""
-    return f"{value:.{_decimals_for_magnitude(value)}f}{suffix}/s"
+    return f"{value:.{decimals_for_magnitude(value)}f}{suffix}/s"
 
 
 def format_ratio(ratio: float) -> str:
     """Format a speedup ratio to ~3 significant figures (``"192x"`` rather
     than ``"192.30x"``, but ``"1.39x"`` unchanged for a small ratio)."""
-    return f"{ratio:.{_decimals_for_magnitude(ratio)}f}x"
+    return f"{ratio:.{decimals_for_magnitude(ratio)}f}x"
 
 
 # below this relative difference, "X% faster" reads as a false signal -
@@ -561,6 +548,151 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
     reporter.write_report()
 
 
+# Display labels and column order for the metrics `scripts/measure_memory.py`
+# emits. Kept here rather than imported from that module for the same reason
+# `batch_size` is read out of the JSON: a stored report must still render from
+# a checkout whose metric set has moved on.
+MEMORY_METRIC_LABELS = {
+    "init_heap": "Heap after init",
+    "steady_heap": "Heap after workload",
+    "init_rss": "RSS after init",
+    "steady_rss": "RSS after workload",
+}
+
+MEMORY_NAME_PATTERN = re.compile(r"^memory::(?P<config>.+)::(?P<metric>[^:]+)$")
+
+# the one metric that is not per configuration - see scripts/measure_memory.py
+MEMORY_IMPORT_NAME = "memory::import::rss"
+
+MEMORY_UNAVAILABLE = "n/a"
+
+
+def memory_values_by_config(data: dict[str, Any]) -> dict[str, dict[str, float]]:
+    """Group a memory report's metrics into ``{config: {metric: bytes}}``.
+
+    The tracked ``min`` is used rather than the mean: every repetition measures
+    the same construction, so the spread between them is the measurement
+    settling, not a distribution worth averaging.
+    """
+    grouped: dict[str, dict[str, float]] = {}
+    for bench in data.get("benchmarks", []):
+        match = MEMORY_NAME_PATTERN.match(bench["fullname"])
+        if match is None or bench["fullname"] == MEMORY_IMPORT_NAME:
+            continue
+        config = grouped.setdefault(match["config"], {})
+        config[match["metric"]] = bench["stats"]["min"]
+    if not grouped:
+        raise ValueError(
+            "memory JSON contains no per-configuration metrics - was it produced "
+            "by `scripts.measure_memory` (`make memory`)?"
+        )
+    return grouped
+
+
+def _memory_cell(values: dict[str, float], metric: str) -> str:
+    """Render one measurement, or mark it unavailable.
+
+    RSS is omitted entirely on platforms exposing neither ``/proc/self/status``
+    nor ``getrusage``, so a cell can legitimately have no number behind it.
+    """
+    value = values.get(metric)
+    return MEMORY_UNAVAILABLE if value is None else format_bytes(value)
+
+
+def render_memory(data: dict[str, Any], output_path: Path) -> None:
+    reporter = BenchmarkReporter(
+        title="TimezoneFinder Memory Footprint", output_path=output_path
+    )
+    system_info = get_system_info(data)
+    workload_size = system_info.get("memory_workload_size")
+    add_system_status_section(
+        reporter,
+        system_info,
+        {
+            "measurement_source": "scripts/measure_memory.py",
+            "workload_size": workload_size or "unknown",
+        },
+        provenance=get_fixture_provenance(system_info),
+    )
+    reporter.add_text(
+        "Every figure below is a **delta**, measured in a fresh subprocess per "
+        "configuration against a baseline taken once the package is imported. "
+        "The import itself dominates any of them and is reported separately: it "
+        "is the cost of NumPy and H3, paid once per process whichever finder "
+        "you build."
+    )
+    reporter.add_text(
+        "``Heap`` is what ``tracemalloc`` accounts for - Python and NumPy "
+        "allocations. ``RSS`` is the process resident set, which additionally "
+        "counts memory-mapped pages. The two differ by design and the gap is "
+        "the point: with ``in_memory=False`` the coordinate data is mapped "
+        f"rather than read, so it becomes resident only as the {workload_size:,} "
+        "lookups of the workload fault its pages in - which is why the "
+        "``after init`` and ``after workload`` columns are both shown."
+        if workload_size
+        else "``Heap`` is what ``tracemalloc`` accounts for; ``RSS`` is the "
+        "process resident set, which additionally counts memory-mapped pages."
+    )
+
+    by_config = memory_values_by_config(data)
+    metrics = list(MEMORY_METRIC_LABELS)
+    headers = ["Configuration", *(MEMORY_METRIC_LABELS[m] for m in metrics)]
+    rows = [
+        [config, *(_memory_cell(by_config[config], m) for m in metrics)]
+        for config in sorted(by_config)
+    ]
+
+    reporter.add_section("Results", level=2)
+    reporter.add_table(headers, rows)
+
+    reporter.add_section("Summary", level=2)
+    import_bench = next(
+        (b for b in data["benchmarks"] if b["fullname"] == MEMORY_IMPORT_NAME), None
+    )
+    if import_bench is not None:
+        reporter.add_text(
+            f"* Importing the package costs "
+            f"**{format_bytes(import_bench['stats']['min'])}** of resident memory "
+            "before any timezone data is touched."
+        )
+
+    in_memory = by_config.get("TimezoneFinder[in_memory]", {})
+    file_based = by_config.get("TimezoneFinder[file_based]", {})
+    if "steady_heap" in in_memory and "steady_heap" in file_based:
+        ratio = in_memory["steady_heap"] / file_based["steady_heap"]
+        reporter.add_text(
+            f"* ``in_memory=True`` holds **{format_bytes(in_memory['steady_heap'])}** "
+            f"on the heap against **{format_bytes(file_based['steady_heap'])}** for "
+            f"the default file-based mode ({format_ratio(ratio)} more). That is the "
+            "price of the speedup documented in :doc:`benchmark_results_timezonefinding`."
+        )
+    if "init_rss" in file_based and "steady_rss" in file_based:
+        reporter.add_text(
+            f"* The file-based mode's resident set grows from "
+            f"**{format_bytes(file_based['init_rss'])}** at construction to "
+            f"**{format_bytes(file_based['steady_rss'])}** once the workload has "
+            "run, as the kernel faults in the mapped coordinate pages actually "
+            "queried. Unlike the in-memory mode's allocation, these pages are "
+            "reclaimable under memory pressure."
+        )
+    finder_l = by_config.get("TimezoneFinderL", {})
+    if "steady_heap" in finder_l:
+        reporter.add_text(
+            f"* ``TimezoneFinderL`` holds **{format_bytes(finder_l['steady_heap'])}**: "
+            "it consults only the shortcut index and loads no polygon data at all, "
+            "which is why it takes no ``in_memory`` variant here."
+        )
+
+    reporter.add_note(
+        "These numbers describe the data structures this package builds, not a "
+        "container sizing recommendation: add the interpreter and the import cost "
+        "above, and note that RSS attribution of memory-mapped pages is "
+        "platform-specific."
+    )
+
+    reporter.write_report()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Render docs/benchmark_results_*.rst from a pytest-benchmark JSON file."
@@ -571,16 +703,25 @@ def main() -> None:
         required=True,
         help="Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`",
     )
+    parser.add_argument(
+        "--memory-json",
+        type=Path,
+        help=(
+            "Path to a JSON file produced by `scripts.measure_memory` "
+            "(`make memory`). Omit to leave the memory report untouched."
+        ),
+    )
     args = parser.parse_args()
 
     data = load_benchmark_json(args.benchmark_json)
     render_timezone_finding(data, PERFORMANCE_REPORT_FILE)
     render_polygon(data, POLYGON_REPORT_FILE)
     render_initialization(data, INITIALIZATION_REPORT_FILE)
-    print(
-        f"Wrote {PERFORMANCE_REPORT_FILE}, {POLYGON_REPORT_FILE}, "
-        f"{INITIALIZATION_REPORT_FILE}"
-    )
+    written = [PERFORMANCE_REPORT_FILE, POLYGON_REPORT_FILE, INITIALIZATION_REPORT_FILE]
+    if args.memory_json is not None:
+        render_memory(load_benchmark_json(args.memory_json), MEMORY_REPORT_FILE)
+        written.append(MEMORY_REPORT_FILE)
+    print(f"Wrote {', '.join(str(path) for path in written)}")
 
 
 if __name__ == "__main__":

@@ -35,7 +35,10 @@ from typing import Any
 from scripts.benchmark_utils import (
     BENCHMARK_ESTIMATORS,
     DEFAULT_BENCHMARK_ESTIMATOR,
+    DEFAULT_METRIC_KEY,
+    METRIC_SPECS,
     BenchmarkEstimator,
+    MetricSpec,
     load_benchmark_json,
     machine_label,
 )
@@ -59,31 +62,52 @@ def acceleration_label(data: dict[str, Any]) -> str:
     return "pure Python"
 
 
-def render_markdown(data: dict[str, Any], title: str) -> str:
+def workload_label(provenance: dict[str, Any]) -> str:
+    """Describe the amount of work the measurements cover.
+
+    A timing report records the ``batch_size`` one round performs; a memory
+    report records how many lookups preceded the steady-state reading
+    (``memory_workload_size``, see :mod:`scripts.measure_memory`). Reporting
+    whichever the file actually carries keeps one renderer honest for both
+    instead of printing ``batch size ?`` for half of them.
+    """
+    if "memory_workload_size" in provenance:
+        size = f"workload {provenance['memory_workload_size']}"
+    else:
+        size = f"batch size {provenance.get('batch_size', '?')}"
+    return (
+        f"{size}, fixtures {provenance.get('fixture_version', '?')}, "
+        f"timezone data {provenance.get('data_version', '?')}"
+    )
+
+
+def render_markdown(
+    data: dict[str, Any],
+    title: str,
+    metric: MetricSpec = METRIC_SPECS[DEFAULT_METRIC_KEY],
+) -> str:
     """Render the machine, the acceleration path and the tracked values."""
     estimator: BenchmarkEstimator = data.get(ESTIMATOR_KEY, DEFAULT_BENCHMARK_ESTIMATOR)
     provenance = data.get("machine_info", {}).get("timezonefinder") or {}
     lines = [
-        f"## Benchmark run: {title}",
+        f"## {metric.heading} run: {title}",
         "",
         f"- **CPU**: {machine_label(data) or 'not recorded'}",
         f"- **Acceleration path**: {acceleration_label(data)}",
         f"- **Tracked estimator**: `{estimator}`",
-        f"- **Workload**: batch size {provenance.get('batch_size', '?')}, "
-        f"fixtures {provenance.get('fixture_version', '?')}, "
-        f"timezone data {provenance.get('data_version', '?')}",
+        f"- **Workload**: {workload_label(provenance)}",
         "",
         "> `ubuntu-latest` pins the runner image, not the CPU. Two runs on "
         "different CPUs from this pool differ by more than most code changes "
         "do, so never read a difference between two runs without checking this "
         "line on both.",
         "",
-        f"| benchmark | {estimator} |",
+        f"| {metric.row_noun} | {estimator} |",
         "| --- | ---: |",
     ]
     for bench in data.get("benchmarks", []):
         value = bench["stats"][estimator]
-        lines.append(f"| `{bench['fullname']}` | {value * 1e3:.3f} ms |")
+        lines.append(f"| `{bench['fullname']}` | {metric.format_value(value)} |")
     return "\n".join(lines) + "\n"
 
 
@@ -114,6 +138,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--metric",
+        choices=sorted(METRIC_SPECS),
+        default=DEFAULT_METRIC_KEY,
+        help=(
+            "what the listed numbers measure, which selects their units and the "
+            f"heading (default: {DEFAULT_METRIC_KEY})"
+        ),
+    )
+    parser.add_argument(
         "--markdown-out",
         type=Path,
         help="also append the block to this file (e.g. $GITHUB_STEP_SUMMARY)",
@@ -123,7 +156,7 @@ def main() -> None:
     data = load_benchmark_json(args.benchmark_json)
     data.setdefault(ESTIMATOR_KEY, args.estimator)
     try:
-        report = render_markdown(data, args.title)
+        report = render_markdown(data, args.title, METRIC_SPECS[args.metric])
     except KeyError as exc:
         print(
             f"ERROR: {args.benchmark_json} has no {exc} statistic to report",

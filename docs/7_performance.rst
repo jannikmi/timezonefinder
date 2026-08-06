@@ -73,6 +73,9 @@ This causes all binary files to be read into memory.
     tf = TimezoneFinder(in_memory=True)
 
 
+By default the coordinate data is memory mapped instead, so only the pages a lookup actually touches become resident - which is what keeps the default mode viable in a memory-constrained container. See :doc:`benchmark_results_memory` for the measured cost of each mode.
+
+
 
 .. _speed-tests:
 
@@ -103,3 +106,9 @@ Initialization Time
 ~~~~~~~~~~~~~~~~~~~
 
 See :doc:`benchmark_results_initialization` for detailed TimezoneFinder initialization performance comparison across different classes and modes, auto-generated from the ``benchmarks/test_initialization.py`` pytest-benchmark suite (``make reports``)
+
+
+Memory Footprint
+~~~~~~~~~~~~~~~~
+
+See :doc:`benchmark_results_memory` for the measured footprint of each class and mode, auto-generated from the ``scripts/measure_memory.py`` harness (``make reports``). Memory is measured separately from the suites above rather than by ``pytest-benchmark``, which times code and would have its timings distorted by the allocation tracking.

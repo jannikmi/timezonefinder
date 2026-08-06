@@ -39,6 +39,9 @@ env:
   # for the artifact names below. The merge base's passes are consumed by
   # glob, so this workflow needs no constant for them.
   REPORT_FILENAME: "benchmark-report.json"
+  # must likewise match MEMORY_REPORT_FILENAME in benchmark.yml. It rides in
+  # the same two artifacts as the timing report rather than its own.
+  MEMORY_REPORT_FILENAME: "memory-report.json"
 
 jobs:
   comment:
@@ -83,10 +86,23 @@ jobs:
       - name: Render the comparison
         run: |
           set -euo pipefail
+          shopt -s nullglob
+          # `pass-*` rather than `*`: the merge base artifact also carries its
+          # memory report, which is compared separately below
           uv run python -m scripts.compare_benchmark_runs \
-            --base base-report/*.json \
+            --base base-report/pass-*.json \
             --head "head-report/$REPORT_FILENAME" \
             --markdown-out comparison.md
+          # a merge base predating the memory harness has no report to compare
+          # against; the timing table above still gets posted
+          base_memory=(base-report/memory-pass-*.json)
+          if [ ${#base_memory[@]} -gt 0 ]; then
+            uv run python -m scripts.compare_benchmark_runs \
+              --base "${base_memory[@]}" \
+              --head "head-report/$MEMORY_REPORT_FILENAME" \
+              --metric memory \
+              --markdown-out comparison.md
+          fi
           cat comparison.md >> "$GITHUB_STEP_SUMMARY"
 
       # `head_sha` comes from the trusted workflow_run payload, not from the

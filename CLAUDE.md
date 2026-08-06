@@ -43,7 +43,10 @@ Most modules are self-describing; the non-obvious ones:
 - `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths`.
   The CI-tracked `benchmark_core` set is the uniformly-random headline plus the unique/ambiguous
   per-class diagnostics; fixtures are sampled area-uniformly, unlike the test suite's pole-biased
-  `get_rnd_query_pt` — see `CONTRIBUTING.md`
+  `get_rnd_query_pt` — see `CONTRIBUTING.md`. **Timing only**: memory is measured by
+  `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across pytest-benchmark's
+  calibration rounds distorts the timings. Its subprocess probe must never import
+  `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import
 - `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
   `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers — make the
   trend chart track `min` instead of the noise-sensitive `mean` (and stamp the CPU into the one
@@ -120,6 +123,10 @@ sub-list. This is easy to forget for changes that don't touch `timezonefinder/` 
 `scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md` or
 `CONTRIBUTING.md` alone.
 
+`CHANGELOG.rst` is linted by `rstcheck` (unlike `docs/`, which it excludes), so it must be valid
+*standalone* RST: a Sphinx role (`:doc:`, `:ref:`) fails the hook. Link with an absolute
+`https://timezonefinder.readthedocs.io/…` URL instead.
+
 The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
 state**, never the path taken to it:
 
@@ -151,7 +158,9 @@ What it takes to hold, for anything you add:
   Sorting int keys directly gives numeric order; the hook re-reads the file, where JSON keys are
   strings, and sorts lexicographically
 - `scripts/reporting.py` emits no trailing whitespace on empty table cells and exactly one final
-  newline, matching `trailing-whitespace` / `end-of-file-fixer`
+  newline, matching `trailing-whitespace` / `end-of-file-fixer`. `BenchmarkReporter.write_report`
+  (`scripts/benchmark_utils.py`) applies the same final-newline normalisation for every
+  `docs/benchmark_results_*.rst`
 - `make flatbuf` runs the formatters itself, since `flatc` output differs from the committed
   bindings under `ruff-format` and `pyupgrade`
 

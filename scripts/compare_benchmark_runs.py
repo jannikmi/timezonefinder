@@ -51,7 +51,10 @@ from scripts.benchmark_utils import (
     BENCHMARK_ESTIMATORS,
     COMPARABILITY_KEYS,
     DEFAULT_BENCHMARK_ESTIMATOR,
+    DEFAULT_METRIC_KEY,
+    METRIC_SPECS,
     BenchmarkEstimator,
+    MetricSpec,
     comparability_info,
     cpu_model,
     load_benchmark_json,
@@ -224,11 +227,13 @@ def _render_name(name: str) -> str:
     return f"`{cleaned}`"
 
 
-def _verdict(comparison: BenchmarkComparison, threshold_pct: float) -> str:
+def _verdict(
+    comparison: BenchmarkComparison, threshold_pct: float, metric: MetricSpec
+) -> str:
     if comparison.ratio_pct >= threshold_pct:
-        return "🔴 slower"
+        return f"🔴 {metric.worse}"
     if comparison.factor * 100.0 >= threshold_pct:
-        return "🟢 faster"
+        return f"🟢 {metric.better}"
     return "⚪ unchanged"
 
 
@@ -248,40 +253,36 @@ def render_markdown(
     threshold_pct: float = REGRESSION_THRESHOLD_PCT,
     base_label: str = "base",
     head_label: str = "head",
+    metric: MetricSpec = METRIC_SPECS[DEFAULT_METRIC_KEY],
 ) -> str:
     """Render the comparison for a job summary or a pull request comment."""
     lines = [
-        "## Benchmark: head vs merge base (same runner)",
+        f"## {metric.heading}: head vs merge base (same runner)",
         "",
         f"Both sides measured in one job on **{machine or 'an unrecorded CPU'}**, "
-        f"tracking pytest-benchmark's `{estimator}`. Comparing on one machine is "
-        "what makes these numbers meaningful: `ubuntu-latest` pins the runner "
-        "image, not the CPU, and the pool's spread on unchanged code is larger "
-        "than most real changes.",
+        f"{metric.estimator_phrase.format(estimator=estimator)}. Comparing on one "
+        "machine is what makes these numbers meaningful: `ubuntu-latest` pins the "
+        "runner image, not the CPU, and the pool's spread on unchanged code is "
+        "larger than most real changes.",
         "",
     ]
     for warning in warnings:
         lines += ["> [!WARNING]", f"> {warning}", ""]
     lines += [
-        f"| benchmark | {base_label} | {head_label} | change | |",
+        f"| {metric.row_noun} | {base_label} | {head_label} | change | |",
         "| --- | ---: | ---: | ---: | --- |",
     ]
     for c in comparisons:
         lines.append(
-            f"| {_render_name(c.name)} | {c.base * 1e3:.3f} ms | "
-            f"{c.head * 1e3:.3f} ms | {c.change_pct:+.1f}% ({c.factor:.2f}x) | "
-            f"{_verdict(c, threshold_pct)} |"
+            f"| {_render_name(c.name)} | {metric.format_value(c.base)} | "
+            f"{metric.format_value(c.head)} | {c.change_pct:+.1f}% ({c.factor:.2f}x) | "
+            f"{_verdict(c, threshold_pct, metric)} |"
         )
     lines += [
         "",
-        "`change` is the head duration relative to base - negative is faster. "
-        "The `x` factor is `base / head`, so 1.20x means head does the same "
-        "work in 1.20 times fewer seconds. Rows are flagged at "
-        f"{threshold_pct:.0f}%.",
+        f"{metric.change_help} Rows are flagged at {threshold_pct:.0f}%.",
         "",
-        "> Same-runner comparison removes the machine-to-machine term but not "
-        "the runner's own jitter, so a change of a few percent is still noise. "
-        "See CONTRIBUTING.md.",
+        f"> {metric.noise_note}",
     ]
     return "\n".join(lines) + "\n"
 
@@ -331,6 +332,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--metric",
+        choices=sorted(METRIC_SPECS),
+        default=DEFAULT_METRIC_KEY,
+        help=(
+            "what the compared numbers measure, which selects the units and "
+            f"wording of the rendered table (default: {DEFAULT_METRIC_KEY}). The "
+            "comparison itself is unit-agnostic - see scripts/measure_memory.py"
+        ),
+    )
+    parser.add_argument(
         "--markdown-out",
         type=Path,
         help="also append the report to this file (e.g. $GITHUB_STEP_SUMMARY)",
@@ -363,17 +374,20 @@ def main() -> None:
         machine=machine_label(head_runs[0]),
         warnings=warnings,
         threshold_pct=args.threshold_pct,
+        metric=METRIC_SPECS[args.metric],
     )
     print(report)
     if args.markdown_out is not None:
         with open(args.markdown_out, "a") as f:
             f.write(report)
 
-    slower = regressions(comparisons, args.threshold_pct)
-    if slower and args.fail_on_regression:
-        names = ", ".join(c.name for c in slower)
+    worse = regressions(comparisons, args.threshold_pct)
+    if worse and args.fail_on_regression:
+        names = ", ".join(c.name for c in worse)
         print(
-            f"ERROR: benchmark(s) slower than the threshold: {names}", file=sys.stderr
+            f"ERROR: {METRIC_SPECS[args.metric].row_noun}(s) "
+            f"{METRIC_SPECS[args.metric].worse} than the threshold: {names}",
+            file=sys.stderr,
         )
         sys.exit(1)
 
