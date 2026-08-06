@@ -4,7 +4,14 @@ timezonefinder
 
 .. include:: ./badges.rst
 
-a fast and lightweight python package for looking up the corresponding timezone for given coordinates on earth entirely offline.
+
+.. image:: hero_banner.jpeg
+   :alt: Coordinate to IANA timezone lookup
+   :align: center
+
+This is a python package providing offline timezone lookups for WGS84 coordinates.
+In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
+It combines preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
 
 
 

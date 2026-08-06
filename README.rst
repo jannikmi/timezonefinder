@@ -32,10 +32,19 @@ timezonefinder
    :target: https://anaconda.org/conda-forge/timezonefinder
    :alt: latest version on conda-forge
 
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
+.. image:: https://img.shields.io/pypi/pyversions/timezonefinder.svg
+    :alt: supported python versions
+    :target: https://pypi.python.org/pypi/timezonefinder
+
+.. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+    :alt: linted and formatted with ruff
+    :target: https://github.com/astral-sh/ruff
 
 
+.. image:: https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg
+   :alt: Coordinate to IANA timezone lookup
+   :target: https://timezonefinder.readthedocs.io/en/latest/
+   :align: center
 
 
 This is a python package providing offline timezone lookups for WGS84 coordinates.
