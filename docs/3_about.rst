@@ -16,6 +16,8 @@ For detailed information about the data format in use, see :doc:`data_format`.
 
 Among other tweaks this index makes ``timezonefinder`` efficient (also check the :ref:`performance chapter <performance>`).
 
+:doc:`architecture` walks through the lookup pipeline end to end, the three point-in-polygon backends and the trade-offs that were deliberately *not* taken.
+
 
 References
 ----------

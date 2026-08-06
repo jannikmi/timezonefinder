@@ -37,10 +37,12 @@ References
    Usage <1_usage>
    Use Cases <2_use_cases>
    Performance <7_performance>
+   Benchmarking Methodology <benchmarking_methodology>
    Timezone Finding Benchmarks <benchmark_results_timezonefinding>
    Point-in-Polygon Benchmarks <benchmark_results_polygon>
    Initialization Benchmarks <benchmark_results_initialization>
    Memory Benchmarks <benchmark_results_memory>
+   Architecture <architecture>
    Data Format <data_format>
    Data Report <data_report>
    About <3_about>
