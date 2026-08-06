@@ -150,9 +150,11 @@ benchmarks-ci:
 		--estimator=$(BENCHMARK_ESTIMATOR)
 
 # repeat the CI measurement on unchanged code to characterise the noise floor.
-# NOTE: locally this only captures single-machine noise and understates the CI
-# spread, where every repetition lands on a different shared runner - run the
-# `benchmark` workflow via workflow_dispatch for the number that ships.
+# NOTE: locally this captures single-machine jitter only - the residual the
+# same-runner pull request comparison has to clear. The trend chart's
+# ALERT_THRESHOLD has to clear something much larger, the spread of the whole
+# `ubuntu-latest` pool (several CPU models, up to ~1.58x on unchanged code);
+# run the `benchmark` workflow via workflow_dispatch for the number that ships.
 benchmark-noise:
 	@rm -rf $(NOISE_RUNS_DIR)
 	@mkdir -p $(NOISE_RUNS_DIR)

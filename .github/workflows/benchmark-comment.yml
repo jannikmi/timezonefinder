@@ -5,17 +5,25 @@ name: benchmark-comment
 # Why this is a separate workflow (issue #150's comments flag exactly this):
 # a PR from a fork gets a read-only GITHUB_TOKEN and no secrets, so the
 # measuring job in benchmark.yml cannot comment - and it must not fail because
-# of that. So benchmark.yml only measures and uploads an artifact (identical
+# of that. So benchmark.yml only measures and uploads artifacts (identical
 # behaviour for fork and branch PRs), and this workflow does the privileged
 # part.
 #
 # `workflow_run` workflows always execute the definition on the repository's
 # default branch, never the PR's version, and check out no PR code at all.
 # The only thing crossing the trust boundary is the benchmark JSON, which is
-# read as data by the benchmark action. `pull_request_target` was rejected
+# read as data by scripts/compare_benchmark_runs.py - never executed, and the
+# benchmark names it renders into the comment are sanitised there because they
+# originate in the pull request. `pull_request_target` was rejected
 # deliberately: it would run with write permissions in the same context as
 # untrusted PR code, which is not a trade this project should make given it
 # publishes to PyPI.
+#
+# What is compared: the pull request's head against *its own merge base*, both
+# measured in the same benchmark.yml job on the same runner. The stored
+# gh-pages baseline is deliberately NOT used - it was measured on a different
+# machine, and `ubuntu-latest` does not pin the CPU (see benchmark.yml), so
+# that comparison was dominated by which hardware each run happened to draw.
 on:
   workflow_run:
     workflows: ["benchmark"]
@@ -24,20 +32,12 @@ on:
 permissions: {}
 
 env:
-  # every constant below is duplicated from .github/workflows/benchmark.yml
-  # because workflows cannot import constants from each other.
-  # tests/test_benchmark_workflows.py enforces that the copies agree, so a
-  # one-sided edit fails the test suite instead of silently comparing against
-  # nothing.
-  #
-  # must match BENCHMARK_SUITE_NAME in .github/workflows/benchmark.yml - it is
-  # the key the stored trend data is filed under, so a mismatch would compare
-  # against nothing
-  BENCHMARK_SUITE_NAME: "timezone lookup (clang, min)"
-  # must match ALERT_THRESHOLD in .github/workflows/benchmark.yml, which
-  # documents where the number comes from
-  ALERT_THRESHOLD: "110%"
-  # must match REPORT_FILENAME in .github/workflows/benchmark.yml
+  # must match REPORT_FILENAME in .github/workflows/benchmark.yml - the name
+  # the head measurement is staged under inside its artifact. GitHub workflows
+  # cannot import constants from each other, so this literal is duplicated;
+  # tests/test_benchmark_workflows.py fails if the copies drift, as it does
+  # for the artifact names below. The merge base's passes are consumed by
+  # glob, so this workflow needs no constant for them.
   REPORT_FILENAME: "benchmark-report.json"
 
 jobs:
@@ -48,45 +48,55 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
-      # createCommitComment (the action's fallback outside a pull_request
-      # context) is a contents-scoped write
+      # createCommitComment (the pull request's head commit, which surfaces in
+      # the conversation timeline) is a contents-scoped write
       contents: write
-      # download an artifact from the triggering workflow run
+      # download the artifacts from the triggering workflow run
       actions: read
     steps:
-      # the base repo at its default branch - never the PR's code
+      # the base repo at its default branch - never the PR's code. The
+      # comparison script that runs below is therefore always this
+      # repository's version, not one the pull request could have edited.
       - uses: actions/checkout@v7
 
-      - name: Download the benchmark report
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Download the head measurement
         uses: actions/download-artifact@v8
         with:
           name: benchmark-core-1
-          path: benchmark-report
+          path: head-report
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # `ref` points the comparison and its comment at the PR's head commit
-      # (taken from the trusted workflow_run payload, not from the artifact),
-      # which is how the comment surfaces in the PR's conversation timeline.
-      # `save-data-file: false` + `auto-push: false` keep PR measurements out
-      # of the trend history: only master pushes write to it.
-      - name: Compare against the master baseline and comment
-        uses: benchmark-action/github-action-benchmark@v1
+      - name: Download the merge base measurement
+        uses: actions/download-artifact@v8
         with:
-          name: ${{ env.BENCHMARK_SUITE_NAME }}
-          tool: pytest
-          output-file-path: benchmark-report/${{ env.REPORT_FILENAME }}
+          name: benchmark-base-1
+          path: base-report
+          run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.event.workflow_run.head_sha }}
-          gh-pages-branch: gh-pages
-          benchmark-data-dir-path: dev/bench
-          auto-push: false
-          save-data-file: false
-          comment-always: true
-          summary-always: true
-          alert-threshold: ${{ env.ALERT_THRESHOLD }}
-          # deliberately non-blocking until the trend chart confirms the
-          # measured threshold holds over time: a noisy gate everyone learns
-          # to ignore is worse than no gate. See CONTRIBUTING.md before
-          # flipping this to true.
-          fail-on-alert: false
+
+      # the script verifies that both sides really did come from one machine
+      # rather than assuming it, and says so in the table it renders
+      - name: Render the comparison
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.compare_benchmark_runs \
+            --base base-report/*.json \
+            --head "head-report/$REPORT_FILENAME" \
+            --markdown-out comparison.md
+          cat comparison.md >> "$GITHUB_STEP_SUMMARY"
+
+      # `head_sha` comes from the trusted workflow_run payload, not from the
+      # artifact. jq builds the request body so the markdown is passed as JSON
+      # data and can never be reinterpreted as gh arguments.
+      - name: Comment the comparison on the pull request's head commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          jq -Rs '{body: .}' comparison.md \
+            | gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/comments" --input -

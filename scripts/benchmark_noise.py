@@ -14,14 +14,22 @@ directly comparable to ``benchmark-action/github-action-benchmark``'s
 50% worse than its baseline, so a threshold at or below the observed noise
 spread would fire on unchanged code.
 
+There are two different noise floors, and this script measures whichever one
+it is fed:
+
+* **one machine, repeated** (``make benchmark-noise``) is the residual the
+  same-runner base/head comparison has to clear - see
+  :mod:`scripts.compare_benchmark_runs`.
+* **many machines** (the ``benchmark`` workflow via ``workflow_dispatch``,
+  where every repetition lands on a fresh runner) is the spread of the
+  ``ubuntu-latest`` pool itself, which is what the cross-machine trend chart's
+  ``ALERT_THRESHOLD`` has to clear. It is by far the larger of the two: the
+  pool serves several CPU models, and the measured spread on unchanged code
+  reached 158%.
+
 Usage::
 
-    # locally (single machine, understates CI noise - see the caveat printed
-    # in the report):
     make benchmark-noise
-
-    # on CI (each repetition on a fresh runner, which is the spread that
-    # actually matters): run the `benchmark` workflow via workflow_dispatch
 
     uv run python -m scripts.benchmark_noise tmp/benchmark-noise/run-*.json
 """
@@ -187,10 +195,11 @@ def render_markdown(
         f"headroom, rounded up to a multiple of {THRESHOLD_ROUNDING_PCT}).",
         "",
         "> A threshold at or below the observed spread would fire on unchanged "
-        "code. Numbers measured on a developer machine understate the CI noise "
-        "floor: GitHub-hosted runners are shared and vary between runs of the "
-        "same job, so derive the threshold that actually ships from a CI "
-        "measurement (`benchmark` workflow, `workflow_dispatch`).",
+        "code. Repeats on one machine measure only that machine's jitter; the "
+        "trend chart spans the whole `ubuntu-latest` pool, which serves "
+        "several CPU models and spreads far wider. Derive the threshold that "
+        "actually ships from a CI measurement (`benchmark` workflow, "
+        "`workflow_dispatch`), where each repetition draws a fresh runner.",
     ]
     return "\n".join(lines) + "\n"
 
