@@ -2,6 +2,13 @@
 timezonefinder
 ==============
 
+.. image:: https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg
+   :alt: Coordinate to IANA timezone lookup
+   :target: https://timezonefinder.readthedocs.io/en/latest/
+   :align: center
+
+**Offline timezone lookup for WGS84 coordinates, with no polygon simplification - so the answer
+stays correct at timezone borders.**
 
 ..
     Note: can't include the badges file from the docs here, as it won't render on PyPI -> sync manually
@@ -41,20 +48,8 @@ timezonefinder
     :target: https://github.com/astral-sh/ruff
 
 
-.. image:: https://raw.githubusercontent.com/jannikmi/timezonefinder/master/docs/hero_banner.jpeg
-   :alt: Coordinate to IANA timezone lookup
-   :target: https://timezonefinder.readthedocs.io/en/latest/
-   :align: center
-
-
-This is a python package providing offline timezone lookups for WGS84 coordinates.
-In comparison to other alternatives this package aims at maximum accuracy around timezone borders (no geometry simplifications) while offering fast lookup performance and compatibility with many (Python) runtime environments.
+In comparison to other alternatives this package aims at maximum accuracy around timezone borders while offering fast lookup performance and compatibility with many (Python) runtime environments.
 It combines preprocessed polygon data, H3-based spatial shortcuts, and optional acceleration via Numba or a clang-backed point-in-polygon routine.
-
-
-
-Notice: Looking for maintainers. Reach out if you want to contribute!
----------------------------------------------------------------------
 
 
 Quick Guide
@@ -85,11 +80,62 @@ It is recommended to install it together with the optional `Numba <https://numba
         tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
 
 
-
 **Note:** This library uses the full original timezone dataset with all >440 timezone names, providing full localization capabilities and historical timezone accuracy. For applications that prefer a smaller memory footprint, the reduced "timezones-now" dataset is available via the ``update_data.sh`` script (cf. `Documentation <https://timezonefinder.readthedocs.io/en/latest/data_format.html#alternative-dataset-options>`__).
 
 
+How it works
+------------
+
+A lookup scales the coordinates to 32-bit integers (x 10^7, ~1 cm resolution), finds the point's
+H3 hexagon at resolution 3, and reads a precomputed shortcut for that cell. Most cells are covered
+by a single timezone, so the answer is returned immediately with no geometry touched at all. Only
+an ambiguous cell falls through to the polygons it lists: bounding-box rejection first, then a
+ray-casting point-in-polygon test - holes before the outer ring, since holes are smaller and can
+reject the polygon outright.
+
+The central trade-off: **the boundary polygons are never simplified**, so border accuracy is limited
+only by the source dataset. The H3 index is what makes carrying full-resolution geometry affordable.
+
+Since the dataset includes ocean zones, every coordinate on earth matches some timezone - use
+``timezone_at_land()`` when you need to tell land from sea.
+
+
+Performance
+-----------
+
+Roughly **286k lookups per second on one core** for uniformly random query points, measured with
+Numba enabled and the C extension disabled on macOS arm64 - configuration matters here, so no single
+number describes every install.
+
+The point-in-polygon routine has three interchangeable backends, selected at import time: a
+clang-compiled C extension (built automatically when a compiler is available), Numba JIT
+compilation (preferred when the optional dependency is installed), and pure Python. The pure-Python
+fallback is ~400x slower and always correct - a missing compiler costs speed, never results.
+
+* `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__ - appended to on every push to ``master``
+* `benchmark reports <https://timezonefinder.readthedocs.io/en/latest/7_performance.html>`__ - lookup, point-in-polygon, initialization and memory
+* `benchmarking methodology <https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html>`__ - how these numbers are produced and what they can and cannot tell you
+
+
+Engineering notes
+-----------------
+
+* `Architecture <https://timezonefinder.readthedocs.io/en/latest/architecture.html>`__ - the lookup pipeline, the acceleration backends, and the ceilings this package deliberately does not exceed
+* `Data Format <https://timezonefinder.readthedocs.io/en/latest/data_format.html>`__ - binary layouts, coordinate scaling and the H3 index
+* `Benchmarking Methodology <https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html>`__ - the measurement design and where every threshold comes from
+* `Alternatives <https://timezonefinder.readthedocs.io/en/latest/alternatives.html>`__ - the trade-offs against ``tzfpy``, and when to choose it instead
+* `Changelog <https://github.com/jannikmi/timezonefinder/blob/master/CHANGELOG.rst>`__
+
+
 **Alternative:** Need maximum speed at the cost of accuracy? Check out `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - a fast and lightweight alternative based on Rust.
+
+
+Contributing
+------------
+
+**Looking for maintainers. Reach out if you want to contribute!**
+
+Contribution guidelines, the development workflow and the testing/benchmarking gates are documented in `CONTRIBUTING.md <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`__.
 
 
 References
@@ -100,7 +146,6 @@ References
 * `conda-forge feedstock <https://github.com/conda-forge/timezonefinder-feedstock>`__
 * `download stats <https://pepy.tech/project/timezonefinder>`__
 * `online GUI and API <https://timezonefinder.michelfe.it>`__
-* `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__
 * `GUI repository <https://github.com/jannikmi/timezonefinder_gui>`__
 * `ruby port <https://github.com/gunyarakun/timezone_finder>`__
 
