@@ -9,11 +9,8 @@ import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.timezone_data import TimezoneData
-from scripts.helper_classes import Boundaries
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
-    MAX_LAT,
-    MAX_LNG,
     HexIdSet,
     SHORTCUT_H3_RES,
     ShortcutMapping,
@@ -26,7 +23,7 @@ from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
     write_hybrid_shortcuts_flatbuffers,
 )
-from timezonefinder.utils_numba import coord2int, int2coord, using_numba
+from timezonefinder.utils_numba import using_numba
 
 
 try:
@@ -35,58 +32,6 @@ except NameError:  # pragma: no cover - used only during profiling
 
     def profile(func):
         return func
-
-
-def get_corrected_hex_boundaries(
-    x_coords, y_coords, surr_n_pole, surr_s_pole
-) -> tuple["Boundaries", bool]:
-    """boundaries of a hex cell used for pre-filtering the polygons
-    which have to be checked with expensive point-in-polygon algorithm
-
-    ATTENTION: a h3 polygon may cross the boundaries of the lat/lng coordinate plane (only in lng=x direction)
-    -> cannot use usual geometry assumptions (polygon algorithm, min max boundary check etc.)
-    -> rectify boundaries
-
-    ATTENTION: only using coordinates converted to integers!
-    NOTE: convert to regular int type to prevent overflow
-
-    Observation: except for cells close to the poles,
-        h3 hexagons can usually only span a fraction of the globe (<< 360 degree lng)
-    high longitude difference observed without surrounding a pole
-    -> indicates crossing the +-180 deg lng boundary
-    ATTENTION: min and max of the coordinates would only  pick the points closest to the +-180 deg lng boundary,
-        but not the points furthest apart!
-    getting this "pre-filtering" based on boundaries right across the +-180 deg lng boundary is tricky
-        -> do not exclude any longitudes for simplicity and correctness
-    this is only relevant for a fraction of hex cells plus filtering will still happen based on the latitude!
-    """
-    xmax0, xmin0, ymax0, ymin0 = (
-        int(max(x_coords)),
-        int(min(x_coords)),
-        int(max(y_coords)),
-        int(min(y_coords)),
-    )
-    max_latitude = coord2int(MAX_LAT)
-    max_longitude = coord2int(MAX_LNG)
-
-    delta_y = abs(ymax0 - ymin0)
-    assert delta_y < max_latitude, f"longitude difference {int2coord(delta_y)} too high"
-    delta_x = abs(xmax0 - xmin0)
-    x_overflow = delta_x > max_longitude
-
-    if surr_n_pole:
-        # clip to max lat
-        ymax0 = max_latitude
-    elif surr_s_pole:
-        # clip to min lat
-        ymin0 = -max_latitude
-
-    if surr_n_pole or surr_s_pole or x_overflow:
-        # search all lngs for cells close to the poles or crossing the +-180 deg lng boundary
-        xmin0 = -max_longitude
-        xmax0 = max_longitude
-
-    return Boundaries(xmax0, xmin0, ymax0, ymin0), x_overflow
 
 
 @profile

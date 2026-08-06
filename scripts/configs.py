@@ -29,8 +29,6 @@ SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
-MAX_LAT = 90.0
-MAX_LNG = 180.0
 HexIdSet: TypeAlias = set[int]
 PolyIdSet: TypeAlias = set[int]
 ZoneIdSet: TypeAlias = set[int]
