@@ -11,6 +11,7 @@ exclude CONTRIBUTING.md
 exclude CLAUDE.md
 exclude potential-improvements.md
 recursive-exclude .cursor *
+recursive-exclude .claude *
 graft tests
 prune tests/.pytest_cache
 prune .git
