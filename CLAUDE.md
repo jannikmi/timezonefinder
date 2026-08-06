@@ -144,6 +144,15 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   works in the docs build but fails the hook here, and additionally breaks the PyPI page for
   `README.rst`, which is the long description (`readme` in `pyproject.toml`). Link with an
   absolute `https://timezonefinder.readthedocs.io/…` URL instead
+- **Every target in `README.rst` must be absolute, and an `.. image::` source is a target too.**
+  A repo-relative `docs/…` path is a real location on GitHub and no location at all on PyPI,
+  which serves the long description without the repository — and `docs/` is excluded from the
+  sdist by the `check-manifest` ignore list, so the file is not even shipped. Point images at
+  `https://raw.githubusercontent.com/jannikmi/timezonefinder/master/…`. Neither `rstcheck` nor
+  `make docs` catches this: both accept a valid directive whose target does not resolve, so
+  verify with `uv run --with readme-renderer python -m readme_renderer README.rst -o tmp/readme.html`
+  and open it. `docs/index.rst` is the opposite case — it sits next to the images, so its paths
+  stay relative
 - **The badge block is duplicated in `README.rst` and `docs/badges.rst` on purpose** — the docs
   include it, but an `include` does not render on PyPI. This is a deliberate exception to the
   declare-once rule above; edit both copies or they drift
@@ -152,11 +161,13 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   `rstcheck` will not catch a broken cross-reference there
 - Generated docs: `docs/benchmark_results_*.rst` (`scripts/render_benchmark_reports.py`) and
   `docs/data_report.rst` (`scripts/reporting.py`). The don't-hand-edit corollary above applies
-- **`make reports` re-runs the whole benchmark suite** (it has `benchmarks` as a prerequisite), so
-  it rewrites every committed figure with a fresh measurement. To change only the *rendering*,
-  invoke the renderer directly against a stored JSON — measurement and rendering are decoupled:
-  `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json`.
-  Confirm the JSON is the one behind the committed reports by re-rendering *before* your change
+- **`make reports` re-measures everything** — it has both `benchmarks` and `memory` as
+  prerequisites — so it rewrites every committed figure on all four report pages. To change only
+  the *rendering*, invoke the renderer directly against the stored JSONs; measurement and
+  rendering are decoupled:
+  `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json --memory-json=tmp/memory.json`
+  (omit `--memory-json` to leave `docs/benchmark_results_memory.rst` untouched).
+  Confirm the JSONs are the ones behind the committed reports by re-rendering *before* your change
   and checking that `git diff docs/benchmark_results_*.rst` is empty
 
 ## Data Pipeline & Versioning

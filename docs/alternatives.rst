@@ -39,8 +39,8 @@ Both packages will likely coexist as they serve different use cases:
      - Requires initialization time
      - No startup time (immediate)
    * - Avg. Lookup Speed Queries per Second
-     - >500k in a single CPU of a new Macbook Pro M5 ults_timezonefinding`
-     - `~320k <https://github.com/ringsaturn/tz-benchmark>`__
+     - ~286k on one core, uniformly random query points, Numba enabled, macOS arm64 - see :doc:`benchmark_results_timezonefinding`
+     - `~320k <https://github.com/ringsaturn/tz-benchmark>`__ reported by a third-party benchmark on unstated hardware
    * - Data Representation
      - Complete, non-simplified timezone polygons
      - Simplified timezone polygons
