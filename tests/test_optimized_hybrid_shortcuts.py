@@ -8,10 +8,19 @@ import numpy as np
 import pytest
 
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    SHORTCUT_SCHEMAS,
+    ShortcutSchema,
     get_hybrid_shortcut_file_path,
     read_hybrid_shortcuts_binary,
     write_hybrid_shortcuts_flatbuffers,
 )
+
+SCHEMA_IDS = [schema.dtype_name for schema in SHORTCUT_SCHEMAS]
+
+
+def schema_of(zone_id_dtype: np.dtype) -> ShortcutSchema:
+    """Return the registry entry for a dtype, so no test restates a zone id limit."""
+    return next(s for s in SHORTCUT_SCHEMAS if s.zone_id_dtype == zone_id_dtype)
 
 
 class TestOptimizedHybridShortcuts:
@@ -38,7 +47,7 @@ class TestOptimizedHybridShortcuts:
 
     def _create_test_data(self, zone_id_dtype):
         """Helper to create test data appropriate for the given dtype."""
-        max_zone_id = 255 if zone_id_dtype.itemsize == 1 else 65535
+        max_zone_id = schema_of(zone_id_dtype).max_zone_id
 
         # Create test data that fits within the dtype limits
         base_zone_id = min(42, max_zone_id)
@@ -61,7 +70,8 @@ class TestOptimizedHybridShortcuts:
     def _create_temp_file(self, zone_id_dtype, suffix_prefix=""):
         """Helper to create a temporary file path for testing."""
         suffix = f"_{suffix_prefix}" if suffix_prefix else ""
-        suffix += "_uint8.fbs" if zone_id_dtype.itemsize == 1 else "_uint16.fbs"
+        # the reader picks its schema from this marker, hence not a plain ".fbs"
+        suffix += f"_{schema_of(zone_id_dtype).dtype_name}.fbs"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
             return Path(tmp_file.name)
 
@@ -113,6 +123,32 @@ class TestOptimizedHybridShortcuts:
             assert file_path.name == "hybrid_shortcuts_uint16.fbs"
 
         assert file_path.parent == test_dir
+
+    @pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+    def test_generated_file_name_round_trips(self, schema, tmp_path):
+        """A file written to its generated path must be readable from that path.
+
+        Every other round-trip test names its own scratch file, so the two halves of
+        this contract were never checked against each other: the writer derives the
+        name from the zone id width, and the reader recovers that width from the name.
+        Drop the marker from one side and the failure only shows up at load time, on
+        the shipped binary.
+
+        Storing ``max_zone_id`` also pins the registry's limit to what the schema can
+        actually hold - a value one too large would be rejected by the writer.
+        """
+        unique_hex, list_hex = 0x85283473FFFFFFF, 0x8528344FFFFFFFF
+        data = {unique_hex: schema.max_zone_id, list_hex: [1, 2, 3]}
+
+        path = get_hybrid_shortcut_file_path(schema.zone_id_dtype, tmp_path)
+        assert path.name == schema.file_name
+        write_hybrid_shortcuts_flatbuffers(data, schema.zone_id_dtype, path)
+
+        read_back = read_hybrid_shortcuts_binary(path)
+        assert int(read_back[unique_hex]) == schema.max_zone_id
+        np.testing.assert_array_equal(
+            read_back[list_hex], np.array([1, 2, 3], dtype=np.uint16)
+        )
 
     def test_zone_id_validation(self, zone_id_dtype, temp_file_path):
         """Test that zone IDs are validated against dtype limits."""
@@ -206,7 +242,7 @@ class TestOptimizedHybridShortcuts:
 
     def _create_large_test_data(self, zone_id_dtype, size):
         """Helper to create large test datasets."""
-        max_zone_id = 255 if zone_id_dtype.itemsize == 1 else 65535
+        max_zone_id = schema_of(zone_id_dtype).max_zone_id
 
         large_data = {}
         for i in range(size):

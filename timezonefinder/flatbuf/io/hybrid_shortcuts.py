@@ -1,141 +1,137 @@
 """Utilities for working with optimized hybrid shortcut FlatBuffer data."""
 
-from pathlib import Path
-from typing import Any, Callable
 from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
 
 import flatbuffers
 import numpy as np
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
 
-# Static imports for uint8 schema
-from timezonefinder.flatbuf.generated.shortcuts_uint8.HybridShortcutCollection import (
-    HybridShortcutCollection as HybridShortcutCollectionUint8,
-    HybridShortcutCollectionAddEntries as HybridShortcutCollectionAddEntriesUint8,
-    HybridShortcutCollectionEnd as HybridShortcutCollectionEndUint8,
-    HybridShortcutCollectionStart as HybridShortcutCollectionStartUint8,
-    HybridShortcutCollectionStartEntriesVector as HybridShortcutCollectionStartEntriesVectorUint8,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint8.HybridShortcutEntry import (
-    HybridShortcutEntryAddHexId as HybridShortcutEntryAddHexIdUint8,
-    HybridShortcutEntryAddValue as HybridShortcutEntryAddValueUint8,
-    HybridShortcutEntryAddValueType as HybridShortcutEntryAddValueTypeUint8,
-    HybridShortcutEntryEnd as HybridShortcutEntryEndUint8,
-    HybridShortcutEntryStart as HybridShortcutEntryStartUint8,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint8.UniqueZone import (
-    UniqueZone as UniqueZoneUint8,
-    UniqueZoneAddZoneId as UniqueZoneAddZoneIdUint8,
-    UniqueZoneEnd as UniqueZoneEndUint8,
-    UniqueZoneStart as UniqueZoneStartUint8,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint8.PolygonList import (
-    PolygonList as PolygonListUint8,
-    PolygonListAddPolyIds as PolygonListAddPolyIdsUint8,
-    PolygonListEnd as PolygonListEndUint8,
-    PolygonListStart as PolygonListStartUint8,
-    PolygonListStartPolyIdsVector as PolygonListStartPolyIdsVectorUint8,
+# The two generated packages describe the same tables and differ only in the width of
+# `UniqueZone.zone_id` (ubyte vs ushort), so they export identically named symbols.
+# Bind the generated *modules* (each holds a table class next to its builder helpers)
+# instead of re-aliasing every symbol per width: one SHORTCUT_SCHEMAS entry below is
+# then all a zone id width needs.
+from timezonefinder.flatbuf.generated.shortcuts_uint8 import (
+    HybridShortcutCollection as _uint8_collection,
+    HybridShortcutEntry as _uint8_entry,
+    PolygonList as _uint8_polygon_list,
+    UniqueZone as _uint8_unique_zone,
 )
 from timezonefinder.flatbuf.generated.shortcuts_uint8.ShortcutValue import (
-    ShortcutValue as ShortcutValueUint8,
+    ShortcutValue as _Uint8ShortcutValue,
 )
-
-# Static imports for uint16 schema
-from timezonefinder.flatbuf.generated.shortcuts_uint16.HybridShortcutCollection import (
-    HybridShortcutCollection as HybridShortcutCollectionUint16,
-    HybridShortcutCollectionAddEntries as HybridShortcutCollectionAddEntriesUint16,
-    HybridShortcutCollectionEnd as HybridShortcutCollectionEndUint16,
-    HybridShortcutCollectionStart as HybridShortcutCollectionStartUint16,
-    HybridShortcutCollectionStartEntriesVector as HybridShortcutCollectionStartEntriesVectorUint16,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint16.HybridShortcutEntry import (
-    HybridShortcutEntryAddHexId as HybridShortcutEntryAddHexIdUint16,
-    HybridShortcutEntryAddValue as HybridShortcutEntryAddValueUint16,
-    HybridShortcutEntryAddValueType as HybridShortcutEntryAddValueTypeUint16,
-    HybridShortcutEntryEnd as HybridShortcutEntryEndUint16,
-    HybridShortcutEntryStart as HybridShortcutEntryStartUint16,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint16.UniqueZone import (
-    UniqueZone as UniqueZoneUint16,
-    UniqueZoneAddZoneId as UniqueZoneAddZoneIdUint16,
-    UniqueZoneEnd as UniqueZoneEndUint16,
-    UniqueZoneStart as UniqueZoneStartUint16,
-)
-from timezonefinder.flatbuf.generated.shortcuts_uint16.PolygonList import (
-    PolygonList as PolygonListUint16,
-    PolygonListAddPolyIds as PolygonListAddPolyIdsUint16,
-    PolygonListEnd as PolygonListEndUint16,
-    PolygonListStart as PolygonListStartUint16,
-    PolygonListStartPolyIdsVector as PolygonListStartPolyIdsVectorUint16,
+from timezonefinder.flatbuf.generated.shortcuts_uint16 import (
+    HybridShortcutCollection as _uint16_collection,
+    HybridShortcutEntry as _uint16_entry,
+    PolygonList as _uint16_polygon_list,
+    UniqueZone as _uint16_unique_zone,
 )
 from timezonefinder.flatbuf.generated.shortcuts_uint16.ShortcutValue import (
-    ShortcutValue as ShortcutValueUint16,
+    ShortcutValue as _Uint16ShortcutValue,
 )
 
 
-@dataclass
-class SchemaImports:
-    """Container for schema-specific imports to eliminate magic strings."""
+@dataclass(frozen=True)
+class ShortcutSchema:
+    """Everything that differs between the hybrid shortcut schemas.
 
-    # Collection functions
-    collection_start: Callable[..., Any]
-    collection_add_entries: Callable[..., Any]
-    collection_end: Callable[..., Any]
-    collection_start_entries_vector: Callable[..., Any]
+    One instance per supported zone id width. The generated modules carry both the
+    table classes used when reading and the ``<Table><Verb>`` builder helpers used
+    when writing.
+    """
 
-    # Entry functions
-    entry_start: Callable[..., Any]
-    entry_add_hex_id: Callable[..., Any]
-    entry_add_value_type: Callable[..., Any]
-    entry_add_value: Callable[..., Any]
-    entry_end: Callable[..., Any]
+    #: width of the zone ids this schema stores; the single source of the width
+    zone_id_dtype: np.dtype
+    collection: ModuleType
+    entry: ModuleType
+    unique_zone: ModuleType
+    polygon_list: ModuleType
+    #: ``ShortcutValue`` union tags, as stored in and read back from ``entry.ValueType()``
+    unique_zone_tag: int
+    polygon_list_tag: int
 
-    # UniqueZone functions
-    unique_zone_start: Callable[..., Any]
-    unique_zone_add_zone_id: Callable[..., Any]
-    unique_zone_end: Callable[..., Any]
+    @property
+    def dtype_name(self) -> str:
+        """``"uint8"`` / ``"uint16"`` - the marker embedded in the binary's file name."""
+        return self.zone_id_dtype.name
 
-    # PolygonList functions
-    polygon_list_start: Callable[..., Any]
-    polygon_list_add_poly_ids: Callable[..., Any]
-    polygon_list_end: Callable[..., Any]
-    polygon_list_start_poly_ids_vector: Callable[..., Any]
+    @property
+    def file_name(self) -> str:
+        """Name of the shortcut binary written with this schema."""
+        return f"hybrid_shortcuts_{self.dtype_name}.fbs"
 
-    # ShortcutValue enum
-    shortcut_value: Any
-
-    # Validation parameters
-    max_zone_id: int
-    dtype_name: str
+    @property
+    def max_zone_id(self) -> int:
+        """Largest zone id representable in this schema."""
+        return int(np.iinfo(self.zone_id_dtype).max)
 
 
-@dataclass
-class ReadSchemaImports:
-    """Container for read-specific schema imports."""
+#: Supported zone id widths, narrowest first. `_schema_for_file_name` scans this in
+#: order, so a name matching several markers resolves to the narrowest - as the
+#: previous `if "uint8" ... elif "uint16" ...` chain did.
+SHORTCUT_SCHEMAS: tuple[ShortcutSchema, ...] = (
+    ShortcutSchema(
+        zone_id_dtype=np.dtype("<u1"),
+        collection=_uint8_collection,
+        entry=_uint8_entry,
+        unique_zone=_uint8_unique_zone,
+        polygon_list=_uint8_polygon_list,
+        unique_zone_tag=_Uint8ShortcutValue.UniqueZone,
+        polygon_list_tag=_Uint8ShortcutValue.PolygonList,
+    ),
+    ShortcutSchema(
+        zone_id_dtype=np.dtype("<u2"),
+        collection=_uint16_collection,
+        entry=_uint16_entry,
+        unique_zone=_uint16_unique_zone,
+        polygon_list=_uint16_polygon_list,
+        unique_zone_tag=_Uint16ShortcutValue.UniqueZone,
+        polygon_list_tag=_Uint16ShortcutValue.PolygonList,
+    ),
+)
 
-    collection: Any
-    unique_zone: Any
-    polygon_list: Any
-    shortcut_value: Any
+_SUPPORTED_DTYPE_NAMES = ", ".join(f"'{s.dtype_name}'" for s in SHORTCUT_SCHEMAS)
+
+
+def _schema_for_zone_id_width(zone_id_dtype: np.dtype) -> ShortcutSchema:
+    """Select the schema storing zone ids of the same width as ``zone_id_dtype``."""
+    for schema in SHORTCUT_SCHEMAS:
+        if schema.zone_id_dtype.itemsize == zone_id_dtype.itemsize:
+            return schema
+    raise ValueError(
+        f"Unsupported zone_id_dtype: {zone_id_dtype}. "
+        f"Supported: {_SUPPORTED_DTYPE_NAMES}."
+    )
+
+
+def _schema_for_file_name(file_name: str) -> ShortcutSchema:
+    """Detect which schema a shortcut binary uses from the zone id width in its name.
+
+    Matches the ``uintN`` marker anywhere in the name rather than requiring
+    ``ShortcutSchema.file_name`` exactly, so binaries written to a scratch path
+    (as the tests do) are still readable.
+    """
+    for schema in SHORTCUT_SCHEMAS:
+        if schema.dtype_name in file_name:
+            return schema
+    raise ValueError(
+        f"Cannot determine schema from filename: {file_name}. "
+        f"Filename must include one of: {_SUPPORTED_DTYPE_NAMES}."
+    )
 
 
 def get_hybrid_shortcut_file_path(
     zone_id_dtype: np.dtype, output_path: Path = DEFAULT_DATA_DIR
 ) -> Path:
     """Return the path to the appropriate hybrid shortcut FlatBuffer binary file."""
-    if zone_id_dtype.itemsize == 1:
-        return output_path / "hybrid_shortcuts_uint8.fbs"
-    elif zone_id_dtype.itemsize == 2:
-        return output_path / "hybrid_shortcuts_uint16.fbs"
-    else:
-        raise ValueError(
-            f"Unsupported zone_id_dtype: {zone_id_dtype}. Use uint8 or uint16."
-        )
+    return output_path / _schema_for_zone_id_width(zone_id_dtype).file_name
 
 
-def _validate_zone_id_dtype(zone_id_dtype: np.dtype) -> np.dtype:
-    """Validate and normalize zone ID dtype."""
+def _schema_for_zone_ids(zone_id_dtype: np.dtype) -> ShortcutSchema:
+    """Validate a zone ID dtype and return the schema that can store it."""
     dtype = np.dtype(zone_id_dtype)
     if dtype.kind != "u":
         raise ValueError(f"Zone id dtype must be unsigned integer, got {dtype}")
@@ -143,7 +139,7 @@ def _validate_zone_id_dtype(zone_id_dtype: np.dtype) -> np.dtype:
         raise ValueError(
             f"Zone id dtype must be 1 or 2 bytes, got {dtype.itemsize} bytes"
         )
-    return dtype.newbyteorder("<")
+    return _schema_for_zone_id_width(dtype)
 
 
 def write_hybrid_shortcuts_flatbuffers(
@@ -163,72 +159,16 @@ def write_hybrid_shortcuts_flatbuffers(
     """
     print(f"Writing {len(hybrid_mapping)} optimized hybrid shortcuts to {output_file}")
 
-    dtype = _validate_zone_id_dtype(zone_id_dtype)
-    _write_hybrid_shortcuts_generic(hybrid_mapping, dtype, output_file)
-
-
-def _write_hybrid_shortcuts_generic(
-    hybrid_mapping: dict[int, int | list[int]],
-    zone_id_dtype: np.dtype,
-    output_file: Path,
-) -> None:
-    """Write hybrid shortcuts using the appropriate schema based on dtype."""
-    if zone_id_dtype.itemsize == 1:
-        # uint8 schema imports
-        schema = SchemaImports(
-            collection_start=HybridShortcutCollectionStartUint8,
-            collection_add_entries=HybridShortcutCollectionAddEntriesUint8,
-            collection_end=HybridShortcutCollectionEndUint8,
-            collection_start_entries_vector=HybridShortcutCollectionStartEntriesVectorUint8,
-            entry_start=HybridShortcutEntryStartUint8,
-            entry_add_hex_id=HybridShortcutEntryAddHexIdUint8,
-            entry_add_value_type=HybridShortcutEntryAddValueTypeUint8,
-            entry_add_value=HybridShortcutEntryAddValueUint8,
-            entry_end=HybridShortcutEntryEndUint8,
-            unique_zone_start=UniqueZoneStartUint8,
-            unique_zone_add_zone_id=UniqueZoneAddZoneIdUint8,
-            unique_zone_end=UniqueZoneEndUint8,
-            polygon_list_start=PolygonListStartUint8,
-            polygon_list_add_poly_ids=PolygonListAddPolyIdsUint8,
-            polygon_list_end=PolygonListEndUint8,
-            polygon_list_start_poly_ids_vector=PolygonListStartPolyIdsVectorUint8,
-            shortcut_value=ShortcutValueUint8,
-            max_zone_id=255,
-            dtype_name="uint8",
-        )
-    else:
-        # uint16 schema imports
-        schema = SchemaImports(
-            collection_start=HybridShortcutCollectionStartUint16,
-            collection_add_entries=HybridShortcutCollectionAddEntriesUint16,
-            collection_end=HybridShortcutCollectionEndUint16,
-            collection_start_entries_vector=HybridShortcutCollectionStartEntriesVectorUint16,
-            entry_start=HybridShortcutEntryStartUint16,
-            entry_add_hex_id=HybridShortcutEntryAddHexIdUint16,
-            entry_add_value_type=HybridShortcutEntryAddValueTypeUint16,
-            entry_add_value=HybridShortcutEntryAddValueUint16,
-            entry_end=HybridShortcutEntryEndUint16,
-            unique_zone_start=UniqueZoneStartUint16,
-            unique_zone_add_zone_id=UniqueZoneAddZoneIdUint16,
-            unique_zone_end=UniqueZoneEndUint16,
-            polygon_list_start=PolygonListStartUint16,
-            polygon_list_add_poly_ids=PolygonListAddPolyIdsUint16,
-            polygon_list_end=PolygonListEndUint16,
-            polygon_list_start_poly_ids_vector=PolygonListStartPolyIdsVectorUint16,
-            shortcut_value=ShortcutValueUint16,
-            max_zone_id=65535,
-            dtype_name="uint16",
-        )
-
+    schema = _schema_for_zone_ids(zone_id_dtype)
     _write_hybrid_shortcuts_with_schema(hybrid_mapping, output_file, schema)
 
 
 def _write_hybrid_shortcuts_with_schema(
     hybrid_mapping: dict[int, int | list[int]],
     output_file: Path,
-    schema: SchemaImports,
+    schema: ShortcutSchema,
 ) -> None:
-    """Write hybrid shortcuts using the provided schema imports."""
+    """Write hybrid shortcuts using the provided schema."""
     builder = flatbuffers.Builder(0)
     entry_offsets = []
 
@@ -242,48 +182,55 @@ def _write_hybrid_shortcuts_with_schema(
     for hex_id, value in hybrid_mapping.items():
         if isinstance(value, int):
             # Create UniqueZone with direct storage
-            schema.unique_zone_start(builder)
-            schema.unique_zone_add_zone_id(builder, value)
-            unique_zone_offset = schema.unique_zone_end(builder)
+            schema.unique_zone.UniqueZoneStart(builder)
+            schema.unique_zone.UniqueZoneAddZoneId(builder, value)
+            unique_zone_offset = schema.unique_zone.UniqueZoneEnd(builder)
 
             # Create entry with UniqueZone
-            schema.entry_start(builder)
-            schema.entry_add_hex_id(builder, hex_id)
-            schema.entry_add_value_type(builder, schema.shortcut_value.UniqueZone)
-            schema.entry_add_value(builder, unique_zone_offset)
-            entry_offset = schema.entry_end(builder)
+            schema.entry.HybridShortcutEntryStart(builder)
+            schema.entry.HybridShortcutEntryAddHexId(builder, hex_id)
+            schema.entry.HybridShortcutEntryAddValueType(
+                builder, schema.unique_zone_tag
+            )
+            schema.entry.HybridShortcutEntryAddValue(builder, unique_zone_offset)
+            entry_offset = schema.entry.HybridShortcutEntryEnd(builder)
 
         else:
-            # Create PolygonList
+            # Create PolygonList. `poly_ids` is `[ushort]` in both schemas - only the
+            # width of `UniqueZone.zone_id` varies - hence the fixed PrependUint16.
             poly_ids = list(value)
-            schema.polygon_list_start_poly_ids_vector(builder, len(poly_ids))
+            schema.polygon_list.PolygonListStartPolyIdsVector(builder, len(poly_ids))
             for i in range(len(poly_ids) - 1, -1, -1):
                 builder.PrependUint16(poly_ids[i])
             poly_ids_vector = builder.EndVector()
 
-            schema.polygon_list_start(builder)
-            schema.polygon_list_add_poly_ids(builder, poly_ids_vector)
-            polygon_list_offset = schema.polygon_list_end(builder)
+            schema.polygon_list.PolygonListStart(builder)
+            schema.polygon_list.PolygonListAddPolyIds(builder, poly_ids_vector)
+            polygon_list_offset = schema.polygon_list.PolygonListEnd(builder)
 
             # Create entry with PolygonList
-            schema.entry_start(builder)
-            schema.entry_add_hex_id(builder, hex_id)
-            schema.entry_add_value_type(builder, schema.shortcut_value.PolygonList)
-            schema.entry_add_value(builder, polygon_list_offset)
-            entry_offset = schema.entry_end(builder)
+            schema.entry.HybridShortcutEntryStart(builder)
+            schema.entry.HybridShortcutEntryAddHexId(builder, hex_id)
+            schema.entry.HybridShortcutEntryAddValueType(
+                builder, schema.polygon_list_tag
+            )
+            schema.entry.HybridShortcutEntryAddValue(builder, polygon_list_offset)
+            entry_offset = schema.entry.HybridShortcutEntryEnd(builder)
 
         entry_offsets.append(entry_offset)
 
     # Create entries vector
-    schema.collection_start_entries_vector(builder, len(entry_offsets))
+    schema.collection.HybridShortcutCollectionStartEntriesVector(
+        builder, len(entry_offsets)
+    )
     for offset in reversed(entry_offsets):
         builder.PrependUOffsetTRelative(offset)
     entries_vector = builder.EndVector()
 
     # Create HybridShortcutCollection
-    schema.collection_start(builder)
-    schema.collection_add_entries(builder, entries_vector)
-    collection = schema.collection_end(builder)
+    schema.collection.HybridShortcutCollectionStart(builder)
+    schema.collection.HybridShortcutCollectionAddEntries(builder, entries_vector)
+    collection = schema.collection.HybridShortcutCollectionEnd(builder)
 
     builder.Finish(collection)
 
@@ -308,39 +255,18 @@ def read_hybrid_shortcuts_binary(
         - int: unique zone ID (when all polygons share same zone)
         - np.ndarray: array of polygon IDs (when multiple zones)
     """
-    # Determine schema type from filename and select appropriate imports
-    if "uint8" in file_path.name:
-        schema = ReadSchemaImports(
-            collection=HybridShortcutCollectionUint8,
-            unique_zone=UniqueZoneUint8,
-            polygon_list=PolygonListUint8,
-            shortcut_value=ShortcutValueUint8,
-        )
-    elif "uint16" in file_path.name:
-        schema = ReadSchemaImports(
-            collection=HybridShortcutCollectionUint16,
-            unique_zone=UniqueZoneUint16,
-            polygon_list=PolygonListUint16,
-            shortcut_value=ShortcutValueUint16,
-        )
-    else:
-        raise ValueError(
-            f"Cannot determine schema from filename: {file_path.name}. "
-            "Filename must include 'uint8' or 'uint16'."
-        )
-
+    schema = _schema_for_file_name(file_path.name)
     return _read_hybrid_shortcuts_with_schema(file_path, schema)
 
 
 def _read_hybrid_shortcuts_with_schema(
-    file_path: Path, schema: ReadSchemaImports
+    file_path: Path, schema: ShortcutSchema
 ) -> dict[int, int | np.ndarray]:
-    """Read hybrid shortcuts using the provided schema imports."""
+    """Read hybrid shortcuts using the provided schema."""
     with open(file_path, "rb") as f:
         buf = f.read()
 
-    # mypy: GetRootAs is a class method on FlatBuffers classes
-    collection = schema.collection.GetRootAs(buf, 0)  # type: ignore
+    collection = schema.collection.HybridShortcutCollection.GetRootAs(buf, 0)
 
     hybrid_mapping: dict[int, int | np.ndarray] = {}
     for i in range(collection.EntriesLength()):
@@ -351,14 +277,14 @@ def _read_hybrid_shortcuts_with_schema(
         value_type = entry.ValueType()
         value = entry.Value()
 
-        if value_type == schema.shortcut_value.UniqueZone:
-            unique_zone = schema.unique_zone()  # type: ignore
+        if value_type == schema.unique_zone_tag:
+            unique_zone = schema.unique_zone.UniqueZone()
             unique_zone.Init(value.Bytes, value.Pos)
             zone_id = unique_zone.ZoneId()  # Direct zone ID, no lookup needed
             hybrid_mapping[hex_id] = int(zone_id)
 
-        elif value_type == schema.shortcut_value.PolygonList:
-            polygon_list = schema.polygon_list()  # type: ignore
+        elif value_type == schema.polygon_list_tag:
+            polygon_list = schema.polygon_list.PolygonList()
             polygon_list.Init(value.Bytes, value.Pos)
             poly_ids = polygon_list.PolyIdsAsNumpy()
             hybrid_mapping[hex_id] = poly_ids
