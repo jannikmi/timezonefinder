@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785974650316,
+  "lastUpdate": 1786000031692,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -180,6 +180,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0003958112982050958",
             "extra": "mean: 40.92345000000108 msec\nrounds: 50"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3d9c1f7d6801e10a670d42cfaf590a381a772e84",
+          "message": "Collapse the uint8/uint16 shortcut schema dispatch into one registry (#461)",
+          "timestamp": "2026-08-06T09:05:56+02:00",
+          "tree_id": "dcaebafeb3ecbc5a0683acf2ca8edafac1e25565",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3d9c1f7d6801e10a670d42cfaf590a381a772e84"
+        },
+        "date": 1786000030780,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 73.54273597793839,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015409488121831012",
+            "extra": "mean: 13.597536000020227 msec\nrounds: 61"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 231.00540714274769,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008987398869743909",
+            "extra": "mean: 4.328903000015316 msec\nrounds: 195"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.112727265791364,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00037062811069100786",
+            "extra": "mean: 39.820445999993126 msec\nrounds: 50"
           }
         ]
       }
