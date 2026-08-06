@@ -21,7 +21,7 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
-def test_single_shortcut_binary_exists(zone_id_dtype, hybrid_shortcut_file_path):
+def test_single_shortcut_binary_exists(hybrid_shortcut_file_path):
     """Test that only a single .fbs binary file for the shortcut index exists in the data folder."""
     data_dir = DEFAULT_DATA_DIR
 

@@ -31,6 +31,7 @@ from timezonefinder.np_binary_helpers import (
     read_per_polygon_vector,
 )
 from timezonefinder.utils import (
+    get_hole_registry_path,
     get_holes_dir,
     get_boundaries_dir,
 )
@@ -121,7 +122,7 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
     hole_coord_path = get_coordinate_path(holes_dir)
 
     # Load hole registry to get polynrs_of_holes
-    hole_registry_path = data_path / "hole_registry.json"
+    hole_registry_path = get_hole_registry_path(data_path)
     polynrs_of_holes = []
     all_hole_lengths = []
 

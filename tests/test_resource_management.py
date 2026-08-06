@@ -10,10 +10,41 @@ import weakref
 import numpy as np
 import pytest
 
-from timezonefinder import TimezoneFinder
+from timezonefinder import TimezoneFinder, TimezoneFinderL
 from timezonefinder.coord_accessors import FileCoordAccessor
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
 from timezonefinder.utils import close_resource, get_boundaries_dir
+
+
+@pytest.mark.unit
+def test_declared_slots_are_assigned():
+    """Every declared slot must be assigned by some finder.
+
+    ``__slots__`` is here to forbid stray attributes, so a slot no code ever assigns is
+    not merely dead - it re-permits the one attribute it names, punching a hole in that
+    guarantee. Four leftovers (``in_memory``, ``_fromfile``, ``_boundaries_file``,
+    ``_holes_file``) survived a refactor because nothing checked.
+
+    The union is taken across both concrete classes on purpose: the base declares slots
+    that only ``TimezoneFinder`` assigns, so neither class satisfies the list alone.
+    """
+    finder_classes = (TimezoneFinder, TimezoneFinderL)
+
+    declared = {
+        name
+        for finder_cls in finder_classes
+        for klass in finder_cls.__mro__
+        for name in getattr(klass, "__slots__", ())
+    }
+
+    assigned = set()
+    for finder_cls in finder_classes:
+        with finder_cls() as finder:
+            assigned |= {name for name in declared if hasattr(finder, name)}
+
+    assert declared == assigned, (
+        f"slots declared but never assigned: {sorted(declared - assigned)}"
+    )
 
 
 def test_context_manager_usage():

@@ -44,7 +44,6 @@ from timezonefinder.zone_names import read_zone_names
 
 
 class AbstractTimezoneFinder(ABC):
-    # prevent dynamic attribute assignment (-> safe memory)
     """
     Abstract base class for TimezoneFinder instances.
 
@@ -68,11 +67,12 @@ class AbstractTimezoneFinder(ABC):
         data_location: Path to the timezone data directory
     """
 
+    # prevent dynamic attribute assignment (-> safe memory). Every name here must be
+    # assigned by this class or a subclass; an unassigned one is just a hole in that
+    # guarantee, so `test_declared_slots_are_assigned` pins the list against instances.
     __slots__ = [
         "data_location",
         "shortcut_mapping",
-        "in_memory",
-        "_fromfile",
         "timezone_names",
         "zone_ids",
         "holes_dir",
@@ -83,9 +83,6 @@ class AbstractTimezoneFinder(ABC):
 
     zone_ids: np.ndarray
     shortcut_mapping: dict[int, int | np.ndarray]
-    """
-    List of attribute names that store opened binary data files.
-    """
 
     def __init__(
         self,
@@ -110,16 +107,15 @@ class AbstractTimezoneFinder(ABC):
 
         self.timezone_names = read_zone_names(self.data_location)
 
-        # Load hybrid shortcut file - contains both zone IDs (for unique zones) and polygon arrays (for ambiguous zones)
-        zone_ids_path = get_zone_ids_path(self.data_location)
-        zone_ids_temp = read_per_polygon_vector(zone_ids_path)
-        zone_id_dtype = zone_ids_temp.dtype
+        self.zone_ids = read_per_polygon_vector(get_zone_ids_path(self.data_location))
 
-        path2shortcut = get_hybrid_shortcut_file_path(zone_id_dtype, self.data_location)
+        # The zone id width picks the shortcut schema: the hybrid shortcut file stores
+        # unique zone ids inline (and polygon arrays for ambiguous cells), so it is
+        # written per width and both files have to agree on it.
+        path2shortcut = get_hybrid_shortcut_file_path(
+            self.zone_ids.dtype, self.data_location
+        )
         self.shortcut_mapping = read_hybrid_shortcuts_binary(path2shortcut)
-
-        zone_ids_path = get_zone_ids_path(self.data_location)
-        self.zone_ids = read_per_polygon_vector(zone_ids_path)
 
     def _iter_boundary_ids_of_zone(self, zone_id: int) -> Iterable[int]:
         """
@@ -400,8 +396,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
     # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
     __slots__ = [
         "hole_registry",
-        "_boundaries_file",
-        "_holes_file",
     ]
 
     def __init__(
