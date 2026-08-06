@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 import h3.api.numpy_int as h3
 import numpy as np
 
-from scripts.configs import MAX_LAT, MAX_LNG, HexIdSet, PolyIdSet, ZoneIdSet
+from scripts.configs import HexIdSet, PolyIdSet, ZoneIdSet
 from scripts.helper_classes import Boundaries
 from scripts.utils import to_numpy_polygon_repr
 from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
+from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
 from timezonefinder.utils_numba import coord2int, int2coord
 
 if TYPE_CHECKING:
@@ -33,12 +34,12 @@ def lies_in_h3_cell(h: int, lng: float, lat: float) -> bool:
 
 def surrounds_north_pole(hex_id: int) -> bool:
     """Check if a hex cell surrounds the north pole."""
-    return lies_in_h3_cell(hex_id, lng=0.0, lat=MAX_LAT)
+    return lies_in_h3_cell(hex_id, lng=0.0, lat=MAX_LAT_VAL)
 
 
 def surrounds_south_pole(hex_id: int) -> bool:
     """Check if a hex cell surrounds the south pole."""
-    return lies_in_h3_cell(hex_id, lng=0.0, lat=-MAX_LAT)
+    return lies_in_h3_cell(hex_id, lng=0.0, lat=-MAX_LAT_VAL)
 
 
 def get_corrected_hex_boundaries(
@@ -71,11 +72,11 @@ def get_corrected_hex_boundaries(
         int(max(y_coords)),
         int(min(y_coords)),
     )
-    max_latitude = coord2int(MAX_LAT)
-    max_longitude = coord2int(MAX_LNG)
+    max_latitude = coord2int(MAX_LAT_VAL)
+    max_longitude = coord2int(MAX_LNG_VAL)
 
     delta_y = abs(ymax0 - ymin0)
-    assert delta_y < max_latitude, f"longitude difference {int2coord(delta_y)} too high"
+    assert delta_y < max_latitude, f"latitude difference {int2coord(delta_y)} too high"
     delta_x = abs(xmax0 - xmin0)
     x_overflow = delta_x > max_longitude
 
