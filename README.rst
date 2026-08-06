@@ -36,6 +36,9 @@ timezonefinder
     :target: https://github.com/psf/black
 
 
+.. image:: docs/hero_banner.jpeg
+   :alt: Coordinate to IANA timezone lookup
+   :align: center
 
 
 This is a python package providing offline timezone lookups for WGS84 coordinates.
