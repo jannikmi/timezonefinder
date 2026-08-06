@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786018109329,
+  "lastUpdate": 1786018450535,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -360,6 +360,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00023993728126517593",
             "extra": "mean: 32.38277799999878 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "85ca39ceca8311e423a9ba679445e08e6566e6b1",
+          "message": "Add code-quality-pass agent skill with a persistent findings ledger (#466)\n\nTurns the standalone quality-pass prompt into a Claude Code skill so it\ntriggers on request instead of having to be pasted in.\n\nThe pass is meant to be run repeatedly, so its findings now accumulate in\npotential-improvements.md at the repository root: tracked and committed,\nso it reaches the next pass through master, and read before any source\nfile so earlier triage is reused rather than repeated. Statuses keep a\nshipped or rejected candidate from being raised again.\n\nThe skill names no files or suspected defects on purpose - an example in\nthe instructions would anchor every run on the same handful of findings.\nIt also does not restate CLAUDE.md or CONTRIBUTING.md, which would drift.\n\n.claude/skills/ is un-ignored (the rest of .claude/ stays local) and\nexcluded from the sdist alongside .cursor.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-06T14:11:27+02:00",
+          "tree_id": "c57d023b844fcb9465ac2626b78f218f48cce8c5",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/85ca39ceca8311e423a9ba679445e08e6566e6b1"
+        },
+        "date": 1786018450008,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 75.25513371708776,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001716472962295132",
+            "extra": "mean: 13.288129999999398 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 245.3123869262154,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010734150322608228",
+            "extra": "mean: 4.076435000001766 msec\nrounds: 187 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.98995342756224,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003037061885494187",
+            "extra": "mean: 38.47640600000091 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
           }
         ]
       }
