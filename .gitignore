@@ -9,7 +9,11 @@ tmp.py
 tmp/
 .venv/
 list/
-.claude/
+# local Claude Code state stays ignored; the shared skills are tracked.
+# git cannot descend into an ignored directory, so the parent must be `.claude/*`
+# rather than `.claude/` for the negation below to have any effect
+.claude/*
+!.claude/skills/
 .devcontainer/
 
 .mypy_cache/

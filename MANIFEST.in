@@ -10,6 +10,7 @@ exclude AGENTS.md
 exclude CONTRIBUTING.md
 exclude CLAUDE.md
 recursive-exclude .cursor *
+recursive-exclude .claude *
 graft tests
 prune tests/.pytest_cache
 prune .git
