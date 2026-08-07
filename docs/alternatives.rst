@@ -65,7 +65,7 @@ difference is in what they do with that dataset's geometry.
      - ~286k queries/s on one core for uniformly random points, with Numba and without the C extension, on macOS arm64 (:doc:`benchmark_results_timezonefinding`)
      - `~320k queries/s <https://github.com/ringsaturn/tz-benchmark>`__ reported by a third-party benchmark on unstated hardware
    * - Memory Usage
-     - ~8 MiB allocated by default (polygon data stays memory-mapped), ~71 MiB with ``in_memory=True`` (:doc:`benchmark_results_memory`)
+     - ~6 MiB allocated by default (polygon data stays memory-mapped), ~69 MiB with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
    * - Distribution Size
      - ~52 MB per wheel for 8.2.5 on PyPI; ~64 MB of binary data once installed (:doc:`data_report`)
@@ -91,7 +91,7 @@ difference is in what they do with that dataset's geometry.
    would require benchmarking both under one harness, which nobody has done.
 
    The same applies in reverse to memory: ``tzfpy``'s footprint has not been measured here, so the
-   ~8 MiB figure describes this package only and is not a claim about the comparison.
+   ~6 MiB figure describes this package only and is not a claim about the comparison.
 
 
 When to choose which package
@@ -141,7 +141,7 @@ Against that, the design decisions below are all the same decision made repeated
   equator, far finer than the discrete polygons in the source data, so the extra precision was
   paying for nothing.
 - Memory-friendly binary files instead of text, read on demand rather than parsed up front.
-  This package allocates **~8 MiB** for its data structures by default, because the polygon
+  This package allocates **~6 MiB** for its data structures by default, because the polygon
   coordinates stay memory-mapped (:doc:`benchmark_results_memory` reports every mode).
 - Precomputed shortcuts shipped with the package instead of rebuilt at every startup.
 
