@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786109511859,
+  "lastUpdate": 1786109514366,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -674,6 +674,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d36ebdee0912f7752492bade84a392800e55446b",
+          "message": "Restructure the README around what the library does (#472)\n\nThe only page guaranteed to be read spent its budget on badges, a\nmaintainer-wanted notice, a six-line quickstart and a link list: one\nsentence on how the library works, zero numbers.\n\nThree short sections are added, all of it prose that already existed\nelsewhere in the repository:\n\n- *How it works* - the lookup pipeline, and the trade-off it exists to\n  serve: the polygons are never simplified, and the H3 index is what\n  makes carrying them affordable\n- *Performance* - one throughput figure with its configuration named,\n  the three point-in-polygon backends, and the pure-Python fallback that\n  costs speed but never results. Links to the trend chart, the reports\n  and the methodology\n- *Engineering notes* - architecture, data format, benchmarking\n  methodology, alternatives, changelog. The block that converts a\n  browsing reader into a reading one\n\nThe top of the page is reordered: banner, one-sentence positioning,\nbadges, quickstart. A reader now reaches a technical sentence within one\nscreen instead of ~10 badges and a maintainer notice.\n\nThe maintainers-wanted notice moves out of the first heading after the\nintro into a Contributing section at the bottom. The message is\nunchanged - as the second thing a reader saw it landed as \"this project\nis being wound down\" before any technical content. That section also\nlinks CONTRIBUTING.md, which the README did not link at all.\n\nEvery link and image source is absolute; verified by rendering the file\nthe way PyPI does rather than by rstcheck alone, which passes a valid\ndirective whose target does not resolve.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-07T15:30:32+02:00",
+          "tree_id": "afa08109f4d0c26466740a712a90f84bbc43155e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d36ebdee0912f7752492bade84a392800e55446b"
+        },
+        "date": 1786109513858,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466550827026367,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466713905334473,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529166221618652,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537917137145996,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.8499402999878,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85868263244629,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1976 GHz"
           }
         ]
       }
