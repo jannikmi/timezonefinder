@@ -77,6 +77,11 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   `integration`, or `slow`. Shared fixtures live in `tests/auxiliaries.py`
 - While iterating, run only the file/pattern you're touching; `make test` (~30 s) as a broader
   check; `make testall` once as a final gate before finishing a PR, not after every change
+- **`git fetch` and rebase onto the latest `master` *before* the final gate, not after.** Other
+  work merges while yours is open, and a rebase after the fact invalidates the run — it tested a
+  tree that never existed. Doing it in the wrong order costs a second full `make testall`, and a
+  rebase that pulls in a real conflict (a regenerated report, a changed constant) costs one
+  anyway. Re-run the gate whenever a rebase actually moves your branch's base
 - `slow` tests are exhaustive sweeps of the whole dataset or hypothesis fuzzing, not general
   regression tests. Run them only when the change plausibly affects what they cover:
   - `main_test.py`, `shortcut_test.py`, `global_functions_test.py` slow cases — after touching
