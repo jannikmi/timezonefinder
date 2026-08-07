@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786110948353,
+  "lastUpdate": 1786110951738,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -896,6 +896,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48ac98ba0b2e93f018220e9ab17155248131ddaa",
+          "message": "Post the benchmark comparison where reviewers can see it (#476)\n\nThe comparison was posted with `POST /repos/{owner}/{repo}/commits/{sha}/comments`,\non the assumption - written into the workflow and CONTRIBUTING.md - that a\ncommit comment surfaces in the pull request's conversation timeline. It does\nnot. GitHub renders issue comments, reviews and review comments there; a commit\ncomment appears only on the commit's own page.\n\nSo the job went green, the API call returned 201, and the table reached nobody.\nConfirmed on PR #472: commitcomment-195337089 exists on its head commit with the\nfull body, while the pull request's timeline holds no `commit_commented` event\nat all.\n\nIt is now an issue comment on the pull request:\n\n- the number is resolved from the trusted `workflow_run.head_sha` via\n  `GET /commits/{sha}/pulls`, not read from `workflow_run.pull_requests`, which\n  is empty for fork pull requests - the case this split workflow exists to serve\n- a marker identifies the workflow's own comment so each run edits it in place.\n  Commit comments were one per commit; issue comments would otherwise stack a\n  full table on every push\n- no open pull request for the SHA exits 0 with a notice, so a comparison\n  landing after a merge does not fail the run\n\n`contents` drops from write to read - that write bought nothing but\ncreateCommitComment - and `pull-requests: write` takes its place.\n\n`tests/test_benchmark_workflows.py` pins the endpoint and the permission.\nNothing failed while the comparison was being posted somewhere invisible, which\nis exactly the class of silent breakage that module exists to catch.\n\nNo changelog entry: the unreleased bullet already describes posting the\ncomparison on the pull request, which this makes true.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-07T15:54:16+02:00",
+          "tree_id": "e9e0dc06060e7819e2599ab77f71a99906293f5b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/48ac98ba0b2e93f018220e9ab17155248131ddaa"
+        },
+        "date": 1786110950863,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466645240783691,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466808319091797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529207229614258,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.5379743576049805,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.84999752044678,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85881614685059,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
