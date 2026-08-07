@@ -168,8 +168,10 @@ def main() -> None:
                 captured_output = f.read().strip()
                 if captured_output:
                     print(captured_output)
-        except (FileNotFoundError, OSError, UnicodeDecodeError) as e:
-            warnings.warn(f"Could not read captured output: {e}")
+        # OSError already covers FileNotFoundError; UnicodeDecodeError does not
+        # derive from it and has to be listed separately.
+        except (OSError, UnicodeDecodeError) as e:
+            warnings.warn(f"Could not read captured output {temp_file_path}: {e}")
     else:
         # In non-verbose mode, just print the result
         print(tz if tz else "")

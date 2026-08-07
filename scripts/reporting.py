@@ -108,7 +108,7 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
     with open(boundary_coord_path, "rb") as f:
         coord_buf = f.read()
 
-    polygon_collection = get_polygon_collection(coord_buf)
+    polygon_collection = get_polygon_collection(coord_buf, boundary_coord_path)
     nr_of_polygons = polygon_collection.PolygonsLength()
 
     # Calculate polygon lengths from FlatBuffer data
@@ -134,7 +134,9 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
         with open(hole_coord_path, "rb") as f:
             hole_coord_buf = f.read()
 
-        hole_polygon_collection = get_polygon_collection(hole_coord_buf)
+        hole_polygon_collection = get_polygon_collection(
+            hole_coord_buf, hole_coord_path
+        )
 
         # Build polynrs_of_holes list from hole registry
         hole_index = 0

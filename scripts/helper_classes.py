@@ -52,7 +52,10 @@ class Boundaries(NamedTuple):
 
     def overlaps(self, other: "Boundaries") -> bool:
         if not isinstance(other, Boundaries):
-            raise TypeError
+            raise TypeError(
+                f"can only test overlap against another Boundaries, "
+                f"got {type(other).__name__}: {other!r}"
+            )
         if self.xmin > other.xmax:
             return False
         if self.xmax < other.xmin:

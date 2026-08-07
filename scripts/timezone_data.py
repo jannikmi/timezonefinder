@@ -174,7 +174,12 @@ class PolygonCollection(BaseModel):
             return res_cache[poly_nr]
         except KeyError:
             if self.original_polygons is None:
-                raise RuntimeError("original polygon coordinates missing")
+                # deliberately unchained: the caught KeyError is the cache miss that
+                # got us here, not the cause of the missing coordinates
+                raise RuntimeError(
+                    f"original polygon coordinates missing, "
+                    f"cannot compute vertex hexes of polygon {poly_nr} at resolution {res}"
+                ) from None
             coords = self.original_polygons[poly_nr]
             vertex_hexes = {h3.latlng_to_cell(lat, lng, res) for lng, lat in coords.T}
             res_cache[poly_nr] = vertex_hexes
