@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786110951738,
+  "lastUpdate": 1786111548965,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -630,6 +630,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0020280056685056938",
             "extra": "mean: 42.27379400001041 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1478c266bf0eb7b930ba5096ce4ae73c5b64fe74",
+          "message": "Stop restating generated figures in hand-written docs (#478)\n\n* Stop restating generated figures in hand-written docs\n\nExact numbers copied out of the generated pages go stale the moment the\ndata or the code moves, and nothing catches it. That had already\nhappened: #467 changed the memory footprint, leaving `~8 MiB`/`~71 MiB`\nwrong in `alternatives.rst` (twice), in the pytzwhere comparison and in\nthe changelog bullet describing the memory report.\n\nRemoved from the prose, with a link to the page that carries the live\nvalue instead:\n\n- the dataset counts - 7,925,313 boundary vertices, 1,322 polygons, 756\n  holes - from `alternatives.rst` and `architecture.rst`. These change\n  on every boundary-data update; `data_report.rst` is generated from the\n  packaged data\n- the shortcut index size, the wheel and installed sizes, and the\n  version-pinned `8.2.5`/`1.3.2` distribution figures\n- the memory footprints, now \"single-digit MiB\" against \"an order of\n  magnitude more\"\n- the lookup throughput, now \"hundreds of thousands of queries/s\", in\n  both the README and the comparison table\n\nThe tzfpy speed row becomes qualitative on both sides rather than a\nside-by-side of two numbers nobody measured together - which is what the\nnote under the table already told the reader to do with it.\n\nKept: figures fixed by a constant rather than by the data (`~1 cm`\nfollows from `COORD2INT_FACTOR`, `~41k` cells from H3 resolution 3, the\n`~400x` pure-Python penalty), and the pytzwhere figures, which describe a\npackage that has not moved since 2016.\n\nThe H3 resolution study in `data_format.rst` keeps its finding - the\n`>10 %` ratio that made resolution 4 not worth it - but drops the\nabsolute index size, which read as a current measurement and was already\noff. `CLAUDE.md` gains the rule under *Documentation Files*.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Round the ambiguous-query ratio, and rebase before the final test gate\n\nTwo follow-ups on the same theme as this branch.\n\n`~25.5 %` ambiguous queries in the benchmarking methodology page is\ndataset-derived and drifts with every boundary-data update. The argument\nit supports - that uniformly random points are the only globally\nrepresentative workload - does not need the decimal, so it is now `~25 %`,\nmatching the figure the same section already uses two paragraphs down.\n\n`CLAUDE.md` gains the ordering rule under *Testing*: fetch and rebase\nonto the latest `master` before running the final gate, not after. Other\nwork merges while a PR is open, and a rebase afterwards invalidates the\nrun - it tested a tree that never existed - so the wrong order costs a\nsecond `make testall`.\n\nAlso amends the package-comparison changelog bullet, which still\ndescribed the `Distribution Size` figure and the two-number speed row\nthat the previous commit removed. Per the amend-don't-append rule the\nunreleased section has to read as one end state.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-07T16:04:17+02:00",
+          "tree_id": "f9c6d02acd45e209e22f5fd7bac50d050d575c84",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1478c266bf0eb7b930ba5096ce4ae73c5b64fe74"
+        },
+        "date": 1786111548221,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 75.00028312610048,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002715624293672008",
+            "extra": "mean: 13.333282999994367 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 233.3849736486208,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000027752635016094322",
+            "extra": "mean: 4.2847659999978305 msec\nrounds: 193 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.894087898098597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005169994933174523",
+            "extra": "mean: 38.61885400000631 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
