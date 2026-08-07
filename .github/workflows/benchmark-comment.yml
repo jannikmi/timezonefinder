@@ -51,11 +51,18 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
-      # createCommitComment (the pull request's head commit, which surfaces in
-      # the conversation timeline) is a contents-scoped write
-      contents: write
+      # checking out the base repository is all this needs - nothing writes to it
+      contents: read
       # download the artifacts from the triggering workflow run
       actions: read
+      # comment on the pull request's conversation. This was a commit comment
+      # on the head commit first, on the assumption that those surface in the
+      # conversation timeline. They do not: GitHub renders issue comments,
+      # reviews and review comments there, and a commit comment appears only on
+      # the commit's own page - so the job stayed green while the comparison
+      # was invisible. A force push would orphan one besides. Do not move this
+      # back to createCommitComment; tests/test_benchmark_workflows.py fails.
+      pull-requests: write
     steps:
       # the base repo at its default branch - never the PR's code. The
       # comparison script that runs below is therefore always this
@@ -108,11 +115,39 @@ jobs:
       # `head_sha` comes from the trusted workflow_run payload, not from the
       # artifact. jq builds the request body so the markdown is passed as JSON
       # data and can never be reinterpreted as gh arguments.
-      - name: Comment the comparison on the pull request's head commit
+      - name: Comment the comparison on the pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          # identifies this workflow's own comment among the pull request's,
+          # so every run edits the same one in place. Without it each push
+          # would append another full table to the conversation.
+          MARKER: "<!-- benchmark-comparison -->"
         run: |
           set -euo pipefail
-          jq -Rs '{body: .}' comparison.md \
-            | gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/comments" --input -
+          # The pull request number is resolved from the head SHA rather than
+          # read from `workflow_run.pull_requests`: that array is empty for
+          # fork pull requests, which are precisely the case this split
+          # workflow exists to serve. A fork's head commit is reachable in the
+          # base repository as `refs/pull/N/head`, so this endpoint resolves it.
+          pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/pulls" \
+                 --jq '[.[] | select(.state == "open")][0].number // empty')
+          if [ -z "$pr" ]; then
+            echo "::notice::no open pull request for $HEAD_SHA - nothing to comment on"
+            exit 0
+          fi
+          jq -Rs --arg marker "$MARKER" '{body: ($marker + "\n\n" + .)}' \
+            comparison.md > body.json
+          existing=$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/issues/$pr/comments" \
+            --jq '[.[]
+                   | select(.user.login == "github-actions[bot]")
+                   | select(.body | startswith(env.MARKER))][0].id // empty')
+          # --paginate applies the filter per page, so keep the first hit only
+          existing=${existing%%$'\n'*}
+          if [ -n "$existing" ]; then
+            gh api --method PATCH \
+              "repos/$GITHUB_REPOSITORY/issues/comments/$existing" --input body.json
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$pr/comments" --input body.json
+          fi

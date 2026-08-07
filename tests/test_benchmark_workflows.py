@@ -195,3 +195,46 @@ def test_the_comment_job_compares_head_against_the_merge_base(
         f"{BENCHMARK_COMMENT_WORKFLOW.name} downloads {downloaded}; it needs "
         "both the head and the merge base measurement to compare them."
     )
+
+
+# `POST /repos/{owner}/{repo}/issues/{number}/comments` - a pull request's
+# conversation is an issue timeline, so its comments live under `issues`
+PR_COMMENT_ENDPOINT = re.compile(r"issues/[^/\s]+/comments")
+# `POST /repos/{owner}/{repo}/commits/{sha}/comments` - a different thing
+# entirely. The `commits/{sha}/pulls` lookup in the same script is not matched.
+COMMIT_COMMENT_ENDPOINT = re.compile(r"commits/[^/\s]+/comments")
+
+
+@pytest.mark.unit
+def test_the_comparison_is_posted_to_the_pull_request_conversation(
+    comment_workflow: dict[str, Any],
+) -> None:
+    """The comparison must be a pull request comment, not a commit comment.
+
+    It was a commit comment on the head commit first, on the assumption -
+    written into the workflow and CONTRIBUTING.md - that those surface in the
+    pull request's conversation timeline. They do not: GitHub renders issue
+    comments, reviews and review comments there, while a commit comment only
+    ever appears on the commit's own page, and a force push orphans it
+    besides. The API call succeeded, the job went green, and the table reached
+    nobody. That is the failure mode this module exists to catch, so the
+    endpoint and the permission it needs are pinned here.
+    """
+    job = comment_workflow["jobs"]["comment"]
+    permissions = job["permissions"]
+    assert permissions.get("pull-requests") == "write", (
+        "commenting on a pull request's conversation needs "
+        f"`pull-requests: write`, but the comment job declares {permissions}. "
+        "`contents: write` only buys a commit comment, which is invisible there."
+    )
+    scripts = "\n".join(str(step.get("run", "")) for step in job["steps"])
+    assert PR_COMMENT_ENDPOINT.search(scripts), (
+        f"no step in {BENCHMARK_COMMENT_WORKFLOW.name} posts to the pull "
+        "request's `issues/{number}/comments` endpoint, so the comparison "
+        "reaches no one who reviews the pull request."
+    )
+    assert not COMMIT_COMMENT_ENDPOINT.search(scripts), (
+        f"{BENCHMARK_COMMENT_WORKFLOW.name} posts a commit comment "
+        "(`commits/{sha}/comments`). Those do not appear in a pull request's "
+        "conversation timeline - use `issues/{number}/comments` instead."
+    )
