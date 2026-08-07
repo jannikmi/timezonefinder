@@ -133,7 +133,7 @@ on demand; it is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
-ratio (~25.5 % ambiguous), so a change is weighted by how much real query load it actually helps.
+ratio (~25 % ambiguous), so a change is weighted by how much real query load it actually helps.
 
 ``unique_shortcut-in_memory`` and ``ambiguous_shortcut-in_memory`` are tracked alongside it as
 diagnostics, because the headline alone cannot attribute a change to a code path. On the tracked

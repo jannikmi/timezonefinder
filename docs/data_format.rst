@@ -164,11 +164,12 @@ choice, not an assumption: ``prototypes/single_resolution_bench.py`` builds a se
 every resolution from 0 upwards and benchmarks each against a common set of globally random query
 points.
 
-The finding is a size cliff. At resolution 3 the hybrid index is about **1.6 MB**. Resolution 4
-would be much larger - it would account for **more than 10 % of the packaged timezone polygon
-data** - and the lookup gains it buys do not justify that. Resolutions above 5 are excluded
-outright, since the index size explodes. Below resolution 3, cells cover too much area and too
-many of them turn out ambiguous, which pushes work back onto the expensive point-in-polygon path.
+The finding is a size cliff. At resolution 3 the hybrid index costs a low single-digit percentage
+of the packaged polygon data (:doc:`data_report` lists the current sizes). When the study was run,
+resolution 4 would have accounted for **more than 10 %** of it, for lookup gains that do not
+justify the increase. Resolutions above 5 are excluded outright, since the index size explodes.
+Below resolution 3, cells cover too much area and too many of them turn out ambiguous, which pushes
+work back onto the expensive point-in-polygon path.
 
 Resolution 3 is therefore the largest index that still costs a small fraction of the data it
 indexes.

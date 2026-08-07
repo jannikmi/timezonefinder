@@ -103,9 +103,10 @@ Since the dataset includes ocean zones, every coordinate on earth matches some t
 Performance
 -----------
 
-Roughly **286k lookups per second on one core** for uniformly random query points, measured with
-Numba enabled and the C extension disabled on macOS arm64 - configuration matters here, so no single
-number describes every install.
+**Hundreds of thousands of lookups per second on a single core** for uniformly random query points.
+The exact figure depends on the acceleration backend, the machine and the dataset version, so the
+benchmark reports below carry it - each states the configuration it was measured in - rather than
+this page, which would go stale.
 
 The point-in-polygon routine has three interchangeable backends, selected at import time: a
 clang-compiled C extension (built automatically when a compiler is available), Numba JIT
