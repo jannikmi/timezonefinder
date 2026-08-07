@@ -1,19 +1,24 @@
 """Unit tests for the RST-report benchmark-name humanization and stats formatting."""
 
+import re
+
 import pytest
 
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
 from scripts.render_benchmark_reports import (
     PROVENANCE_FIELDS,
+    acceleration_path_label,
     add_benchmark_table,
     add_comparison_bullet,
     add_fastest_slowest_bullet,
+    add_headline_section,
     format_duration,
     format_ratio,
     format_rate,
     get_batch_size,
     get_fixture_provenance,
     humanize_benchmark_name,
+    is_ci_tracked_configuration,
     percent_faster,
     speedup_ratio,
     split_benchmark_label,
@@ -367,6 +372,96 @@ def test_rendered_system_status_stamps_the_input_provenance():
     texts = _texts(reporter)
     assert "**Fixture Version**: 2" in texts
     assert "**Timezone Data Version**: 2026c" in texts
+
+
+@pytest.mark.parametrize(
+    "using_numba, using_clang_pip, expected",
+    [
+        # utils.py prefers Numba when both are importable, so "both true" is
+        # the Numba path and not an ambiguous state
+        (True, True, "Numba JIT"),
+        (True, False, "Numba JIT"),
+        (False, True, "C extension (clang)"),
+        (False, False, "pure Python"),
+    ],
+)
+def test_acceleration_path_label_collapses_the_two_flags_to_the_live_path(
+    using_numba, using_clang_pip, expected
+):
+    system_info = {"using_numba": using_numba, "using_clang_pip": using_clang_pip}
+
+    assert acceleration_path_label(system_info) == expected
+
+
+@pytest.mark.parametrize(
+    "using_numba, using_clang_pip, expected",
+    [
+        (False, True, True),  # what a plain `pip install timezonefinder` gives you
+        (True, True, False),  # a numba install would make this a different path
+        (True, False, False),
+        (False, False, False),
+    ],
+)
+def test_is_ci_tracked_configuration(using_numba, using_clang_pip, expected):
+    system_info = {"using_numba": using_numba, "using_clang_pip": using_clang_pip}
+
+    assert is_ci_tracked_configuration(system_info) is expected
+
+
+def test_headline_section_warns_when_the_run_is_not_the_ci_tracked_one():
+    # the committed reports are rendered from a developer machine, so this is
+    # the branch that ships: a reader must not compare these tables against the
+    # trend chart, which measures a different implementation
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    add_headline_section(reporter, _FAKE_SYSTEM_INFO | {"using_numba": True}, [])
+
+    (banner,) = _texts(reporter)
+    assert "Numba JIT" in banner
+    assert "not comparable to the trend chart" in banner
+    assert ":doc:`benchmarking_methodology`" in banner
+
+
+def test_headline_section_says_so_when_the_run_is_the_ci_tracked_one():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    # _FAKE_SYSTEM_INFO is clang-without-numba, i.e. the tracked configuration
+    add_headline_section(reporter, _FAKE_SYSTEM_INFO, [])
+
+    (banner,) = _texts(reporter)
+    assert "C extension (clang)" in banner
+    assert "This is the configuration continuous integration tracks" in banner
+    assert "not comparable" not in banner
+
+
+def test_headline_section_describes_the_measured_environment():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    add_headline_section(reporter, _FAKE_SYSTEM_INFO, ["**~1.00ms** per thing"])
+
+    headline, banner = _texts(reporter)
+    assert headline == "**~1.00ms** per thing"
+    # the environment named is the one recorded in the JSON, not the one
+    # rendering the report
+    assert "Linux x86_64" in banner
+    assert "Python 3.13.0" in banner
+
+
+def test_headline_markup_never_nests_bold_and_literals():
+    # RST inline markup does not nest: a ``literal`` inside **bold** renders
+    # its backticks verbatim in the HTML instead of becoming a code span. This
+    # shipped once and only showed up in the built docs, which emit no warning.
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    add_headline_section(
+        reporter,
+        _FAKE_SYSTEM_INFO,
+        ["**~389ms** to construct a ``TimezoneFinder`` in the default mode"],
+    )
+
+    for text in _texts(reporter):
+        for bold_span in re.findall(r"\*\*(.+?)\*\*", text):
+            assert "``" not in bold_span, f"nested literal in bold: {bold_span!r}"
 
 
 def test_add_fastest_slowest_bullet_reports_both_ends():

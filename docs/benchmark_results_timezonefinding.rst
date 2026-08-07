@@ -4,6 +4,10 @@ Timezone Finding Performance Benchmark
 ======================================
 
 
+**~3.50µs per lookup, ~286k/s** - ``TimezoneFinder.timezone_at()`` over uniformly random query points in memory, the workload closest to a real query mix.
+
+*Measured on Darwin arm64, Python 3.14.2, using the Numba JIT point-in-polygon path.* Continuous integration tracks a different one - the C extension without Numba, what a plain ``pip install timezonefinder`` gives you - so these figures are not comparable to the trend chart. See :doc:`benchmarking_methodology`.
+
 
 
 System Status

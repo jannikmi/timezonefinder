@@ -4,6 +4,10 @@ Point-in-Polygon Algorithm Performance Benchmark
 ================================================
 
 
+**~277ns per check on a small polygon, ~22.3µs on the largest** (80.5x) - which is why this suite is stratified by vertex count instead of averaged.
+
+*Measured on Darwin arm64, Python 3.14.2, using the Numba JIT point-in-polygon path.* Continuous integration tracks a different one - the C extension without Numba, what a plain ``pip install timezonefinder`` gives you - so these figures are not comparable to the trend chart. See :doc:`benchmarking_methodology`.
+
 
 
 System Status
