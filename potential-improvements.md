@@ -1,92 +1,138 @@
 # Potential improvements
 
-Findings from a code-quality triage pass over `timezonefinder/`, `scripts/`, `tests/` and
-`benchmarks/`. None of these are bugs users can hit today: everything here is internal quality —
-duplication that will drift, diagnostics that get discarded, docstrings that describe code that no
-longer exists, and dead definitions.
+Working ledger of internal code-quality findings for `timezonefinder`. It is committed so that it
+reaches the next quality pass through `master`: every pass reads it before touching a source file,
+re-verifies the open entries against the current code, and writes back what it found, shipped or
+rejected.
 
-Each entry names a location, the defect, and why it is worth doing. Line numbers are against the
-commit this file was added on and will drift; the descriptions are written to survive that.
+None of these are bugs users can hit today. Everything here is internal quality — diagnostics that
+get discarded, duplication that will drift, docstrings describing code that no longer exists, dead
+definitions, annotations that contradict their call sites.
 
-The items are ordered by expected value per line of review, following the same ranking used to
-pick them: **defects that will cause a real bug later > duplication that will drift > readability**.
+**How to read an entry.** Locations are given by file plus a code anchor (a function or symbol
+name), never a line number, so they survive reformatting. `Size` is a rough count of changed lines.
+`Status` is one of `open`, `shipped (PR #N)`, `rejected (reason)`, `out of scope (reason)`,
+`withdrawn (reason)`. Entries that are shipped, rejected or out of scope are **closed** — do not
+re-litigate them and do not re-add them under a new id.
 
-> Already addressed in [#464](https://github.com/jannikmi/timezonefinder/pull/464): the duplicated
-> `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG` declaration in
-> `scripts/configs.py`, and the mislabelled latitude assertion. Not repeated below.
+Order within each section is by expected value per line of review, following the ranking used to
+pick work: **defects that will cause a real bug later > duplication that will drift > readability**.
 
----
-
-## 1. Error paths that discard their own diagnostics
-
-### 1.1 `run_command` throws away the subprocess output it just collected
-
-`tests/auxiliaries.py` (~line 91), in `run_command`'s `except subprocess.CalledProcessError` block.
-
-It builds `error_msg` by appending the child's stdout and stderr, then raises a **fresh**
-`CalledProcessError` that never uses `error_msg`, with `from None` suppressing the original as
-well. Every diagnostic the handler gathered is dropped on the floor.
-
-`run_command` is what `build_wheel` and `build_sdist` use, so a packaging failure under
-`make testint` reports an exit code and nothing about the cause — the one situation where the
-build log is the whole point. Either raise with the assembled message or drop the dead assembly;
-re-raising the original with `raise` would preserve the traceback too.
-
-*Small — one function.*
-
-### 1.2 The report generator hides which file it choked on
-
-`scripts/reporting.py`, in `load_binary_data`: `get_polygon_collection(coord_buf)` and
-`get_polygon_collection(hole_coord_buf)`.
-
-`get_polygon_collection`'s optional `file_path` argument exists solely so an incompatible-layout
-`ValueError` can name the offending file — the runtime accessors in
-`timezonefinder/coord_accessors.py` both pass it. These two call sites do not, although
-`boundary_coord_path` / `hole_coord_path` are in scope on the adjacent lines. Running
-`make reports` against a stale data directory therefore produces an error that cannot say which of
-the two files was wrong.
-
-*Two lines.*
-
-### 1.3 Exception chaining dropped in two places
-
-- `timezonefinder/timezonefinder.py`, `get_geometry`: `raise ValueError(f"The timezone '{tz_name}' does not exist.")`
-  inside `except ValueError` — no `from`, so the chain is silently swallowed rather than marked
-  intentional.
-- `scripts/timezone_data.py` (~line 177): `raise RuntimeError("original polygon coordinates missing")`
-  inside `except KeyError`, likewise.
-
-Ruff flags both under `B904`. `raise ... from None` is fine if the chaining is unwanted — the point
-is to say so.
-
-### 1.4 Error paths that name nothing
-
-- `scripts/helper_classes.py`, `Boundaries.overlaps`: bare `raise TypeError` with no message and no
-  mention of what was actually passed.
-- `timezonefinder/command_line.py`, in `main`: `except (FileNotFoundError, OSError, UnicodeDecodeError)`
-  — `FileNotFoundError` is a subclass of `OSError`, so listing it changes nothing and implies a
-  distinction that does not exist.
+Closed before this ledger existed, in [#464](https://github.com/jannikmi/timezonefinder/pull/464):
+the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG` declaration in
+`scripts/configs.py`, and the mislabelled latitude assertion. Not listed below.
 
 ---
 
-## 2. Wasted work and misleading names in the CLI
+## Error reporting
 
-`timezonefinder/command_line.py`.
+### ERR-1 — `run_command` throws away the subprocess output it just collected
 
-`get_timezone_function(function_id)` is called twice per invocation: once by `_lookup_timezone` to
-do the lookup, and again by `_print_lookup_details` purely to read `__name__` off the result. For
-`-f 3` and `-f 4` that constructs a **second** `TimezoneFinderL`, loading the shortcut binary all
-over again, only to discard it. Resolving the function once in `main` and passing it down removes
-the duplicate load and the duplicate dispatch.
+- **Location:** `tests/auxiliaries.py`, `run_command`, the `except subprocess.CalledProcessError`
+  block.
+- **Defect:** built `error_msg` from the child's stdout and stderr, then raised a *fresh*
+  `CalledProcessError` that never used it, with `from None` suppressing the original as well.
+- **Fix:** echo the captured streams, then re-raise the original with a bare `raise` (keeps the
+  traceback and the attached streams). Size: ~10 lines.
+- **Value:** `run_command` is what `build_wheel` / `build_sdist` use, so a packaging failure under
+  `make testint` reported an exit code and nothing about the cause — the one situation where the
+  build log is the whole point.
+- **Status:** shipped (PR #475)
+- **Last touched:** 2026-08-07 — shipped.
 
-In the same file, `_print_lookup_details` does not print — it returns a formatted string, and
-`main` prints it. The name says the opposite of what it does.
+### ERR-2 — the report generator hides which file it choked on
 
-*Small, self-contained, no behaviour change.*
+- **Location:** `scripts/reporting.py`, `load_binary_data`, the two `get_polygon_collection` calls.
+- **Defect:** neither passed the optional `file_path`, which exists solely so an
+  incompatible-layout `ValueError` can name the offending file — the runtime accessors in
+  `timezonefinder/coord_accessors.py` both pass it, and `boundary_coord_path` / `hole_coord_path`
+  were in scope on the adjacent lines.
+- **Fix:** pass them. Size: 2 lines.
+- **Value:** `make reports` against a stale data directory produced an error that could not say
+  which of the two files was wrong.
+- **Status:** shipped (PR #475)
+- **Last touched:** 2026-08-07 — shipped, with a test that mirrors the packaged data directory by
+  symlink and replaces only the boundary coordinate file.
+
+### ERR-3 — exception chaining left implicit in two places
+
+- **Location:** `timezonefinder/timezonefinder.py`, `get_geometry` (the
+  `self.timezone_names.index` lookup); `scripts/timezone_data.py`,
+  `PolygonCollection.polygon_vertex_hexes`.
+- **Defect:** both re-raise inside an `except` without `from`, which ruff flags as `B904`. Both
+  suppressions are wanted; nothing said so, making them indistinguishable from a forgotten `from`.
+- **Fix:** `raise ... from None` plus a comment naming the reason. Size: ~8 lines.
+- **Status:** shipped (PR #475)
+- **Last touched:** 2026-08-07 — shipped.
+
+### ERR-4 — error paths that name nothing
+
+- **Location:** `scripts/helper_classes.py`, `Boundaries.overlaps` (bare `raise TypeError`);
+  `scripts/timezone_data.py`, `polygon_vertex_hexes` (`RuntimeError("original polygon coordinates
+  missing")`, naming no polygon).
+- **Fix:** interpolate the offending value / index into the message. Size: ~8 lines.
+- **Status:** shipped (PR #475)
+- **Last touched:** 2026-08-07 — shipped.
+
+### ERR-5 — `except` tuple listing a subclass next to its base
+
+- **Location:** `timezonefinder/command_line.py`, `main`, the temp-file read:
+  `except (FileNotFoundError, OSError, UnicodeDecodeError)`.
+- **Defect:** `FileNotFoundError` is a subclass of `OSError`, so listing it changes nothing and
+  implies a distinction that does not exist. (`UnicodeDecodeError` derives from `ValueError` and
+  does have to be listed.)
+- **Fix:** drop the redundant entry, note why the third stays. Size: 3 lines.
+- **Status:** shipped (PR #475)
+- **Last touched:** 2026-08-07 — shipped.
 
 ---
 
-## 3. The coordinate bounds are still declared three times
+## Command line interface
+
+### CLI-1 — the lookup function is resolved twice per invocation
+
+- **Location:** `timezonefinder/command_line.py`, `get_timezone_function`, called from both
+  `_lookup_timezone` and `_print_lookup_details`.
+- **Defect:** `_print_lookup_details` calls `get_timezone_function` purely to read `__name__` off
+  the result. For `-f 3` and `-f 4` that constructs a **second** `TimezoneFinderL`, loading the
+  shortcut binary all over again, only to discard it.
+- **Fix:** resolve the function once in `main` and pass it down. Size: ~15 lines.
+- **Value:** removes a duplicated data load from every verbose CLI call on those two function ids.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### CLI-2 — `_print_lookup_details` does not print
+
+- **Location:** `timezonefinder/command_line.py`, `_print_lookup_details`.
+- **Defect:** it returns a formatted string; `main` prints it. The name says the opposite of what
+  it does.
+- **Fix:** rename to `_format_lookup_details`. It is a private helper, so no API surface moves.
+  Size: 3 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### CLI-3 — `main` writes its own output to a temp file and reads it back
+
+- **Location:** `timezonefinder/command_line.py`, `main` and `redirect_stdout_to_temp_file`.
+- **Defect:** `main` redirects stdout to a temp file, prints `details` into it, then (verbose only)
+  re-opens the file, reads it, strips it and prints it — for a string it still holds in a local
+  variable. Nothing else inside the redirected block writes to stdout: the lookup functions do not
+  print. The temp file, the `mkstemp`, the read-back, the `warnings.warn` on read failure and the
+  `os.remove` cleanup are an elaborate route to `if args.v: print(details.strip())`.
+- **Fix:** print the string directly and delete the context manager, or — if the redirection is
+  meant to catch output from *library* code that might print in future — say so in a comment and
+  keep it. Deciding which is the judgement call. `redirect_stdout_to_temp_file` has exactly one
+  caller (`main`) and is not exported, so removing it moves no API surface. Size: ~40 lines removed.
+- **Value:** removes the file-system round trip and the two error paths that only exist because of
+  it (ERR-5 was one of them) from every CLI invocation.
+- **Status:** open
+- **Last touched:** 2026-08-07 — found this pass.
+
+---
+
+## Duplication
+
+### DUP-1 — the coordinate bounds are declared three times
 
 `±90` / `±180` appear as literals in executable code in three places:
 
@@ -96,30 +142,43 @@ In the same file, `_print_lookup_details` does not print — it returns a format
 | `timezonefinder/utils_numba.py` — `is_valid_lat` / `is_valid_lng` | the actual bounds check |
 | `timezonefinder/utils.py` — `validate_lat` / `validate_lng` | literals passed to `_validate_coordinate` **only** to build the error message |
 
-The third copy is the uncomfortable one: `_validate_coordinate`'s `min_bound` / `max_bound`
-parameters are never compared against anything, they are interpolated into an f-string. The
-validator and the message describing it are independent, so they can disagree with nothing to catch
-it.
+- **Defect:** `_validate_coordinate`'s `min_bound` / `max_bound` are never compared against
+  anything — they are interpolated into an f-string. The validator and the message describing it
+  are independent and can disagree with nothing to catch it.
+- **Fix:** import the constants. Size: ~6 lines.
+- **Value:** low. Unlike a file name or an H3 resolution, ±90/±180 are physical facts about the
+  coordinate system and will never change; the duplication is real but the drift risk is close to
+  nil.
+- **Cost, and why this is still open:** both remaining copies sit on the lookup fast path.
+  `validate_coordinates` runs on every query, and in the tracked no-numba configuration `njit` is a
+  no-op, so `is_valid_lat` is plain Python — the substitution trades two `LOAD_CONST` for two
+  `LOAD_GLOBAL` plus a negation, per call. Per `CONTRIBUTING.md` this needs a before/after
+  measurement in a no-numba environment (`uv sync --group test`, then `make benchmark-noise`).
+  Worth doing only if that comes back neutral. **No measurement has been taken yet** — do not
+  retry blind, record the numbers here when you do.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-**Why this was left alone rather than fixed:** both remaining copies sit on the lookup fast path —
-`validate_coordinates` runs on every query, and in the tracked no-numba configuration `njit` is a
-no-op, so `is_valid_lat` is plain Python. Substituting the constants trades two `LOAD_CONST` for two
-`LOAD_GLOBAL` plus a negation, per call. Justifying that needs a before/after measurement in a
-no-numba environment (`uv sync --group test`, then `make benchmark-noise`), per `CONTRIBUTING.md`.
+### DUP-2 — `file_converter.py` recomputes and re-creates its output directories
 
-Weigh that against the payoff, which is smaller than it looks: unlike a file name or an H3
-resolution, ±90/±180 are physical facts about the coordinate system and will never change. The
-duplication is real; the drift risk is close to nil. Worth doing only if the benchmark comes back
-neutral, which it plausibly will.
+- **Location:** `scripts/file_converter.py`, `write_numpy_binaries` and `write_flatbuffer_files`.
+- **Defect:** each recomputes `holes_dir` / `boundaries_dir` and `mkdir`s them.
+  `write_numpy_binaries` also calls `np.save` directly for the zone ids while using
+  `store_per_polygon_vector` for everything else, so that one file is written without the progress
+  line the others print.
+- **Fix:** hoist the directory setup to the caller; route the zone ids through the same helper.
+  Size: ~25 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ---
 
-## 4. Docstrings that describe code that no longer exists
+## Docstrings that describe code that no longer exists
 
 Cheap to fix, and actively misleading while they stand — a `:param:` for an argument that does not
 exist reads as a feature someone removed by accident.
 
-### 4.1 Parameters that were removed
+### DOC-1 — documented parameters that were removed
 
 | Location | Documents | Actual signature |
 |---|---|---|
@@ -129,40 +188,53 @@ exist reads as a feature someone removed by accident.
 | `tests/auxiliaries.py` — `convert_to_reduced_timezone` | `mapping` | `timezone` |
 | `tests/test_package_contents.py` — `load_gitignore_patterns` | `gitignore_path` | *(none)* |
 
-The two `shortcuts.py` entries are leftovers from a parallel implementation that was removed; the
-prose above them still discusses thread pools and worker counts that no longer exist.
+- **Defect:** the two `shortcuts.py` entries are leftovers from a parallel implementation that was
+  removed; the prose above them still discusses thread pools and worker counts that no longer exist.
+- **Fix:** delete the stale `:param:` lines and the parallelism prose. Size: ~20 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### 4.2 Statements that contradict the code
+### DOC-2 — docstring statements that contradict the code
 
 - **`timezone_names.json` does not exist.** `timezonefinder/timezonefinder.py` (`get_geometry`) and
   `timezonefinder/global_functions.py` (`get_geometry`) both tell users the zone names live in
   `timezone_names.json`. The file is `timezone_names.txt` — see `timezonefinder/zone_names.py`.
-  These are public API docstrings.
-- **`in_memory` is not ignored.** `AbstractTimezoneFinder.__init__`'s docstring says
-  *"Ignored for polygon coordinate data (always uses memory-mapped file access). Kept for API
-  compatibility."* `TimezoneFinder.__init__` passes it straight into both `PolygonArray`
-  constructors, which is exactly what selects `MemoryCoordAccessor` over `FileCoordAccessor`.
-  `docs/1_usage.rst` documents it as working. True only for `TimezoneFinderL`, which has no polygon
-  data at all.
+  These are **public API docstrings**.
+- **`in_memory` is not ignored.** `AbstractTimezoneFinder.__init__`'s docstring says *"Ignored for
+  polygon coordinate data (always uses memory-mapped file access). Kept for API compatibility."*
+  `TimezoneFinder.__init__` passes it straight into both `PolygonArray` constructors, which is
+  exactly what selects `MemoryCoordAccessor` over `FileCoordAccessor`, and `docs/1_usage.rst`
+  documents it as working. The claim is true only for `TimezoneFinderL`, which has no polygon data.
 - **`read_zone_names` does not return an empty list.** `timezonefinder/zone_names.py` documents
   *":return: List of timezone names (empty list if file not found)"*; the body calls `open()`
   unguarded and raises `FileNotFoundError`.
+- **Fix:** correct the three statements. Size: ~8 lines.
+- **Value:** highest of the docstring items — the first two are read by users, not just
+  contributors, and the `in_memory` one contradicts the usage docs.
+- **Status:** open
+- **Last touched:** 2026-08-07 — all three re-verified, unchanged.
 
 ---
 
-## 5. Dead definitions
+## Dead and inert code
 
-All confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/`, `docs/`
-and `prototypes/`.
+### DEAD-1 — unreferenced definitions
 
-- `scripts/utils.py` — `load_json`, `load_pickle`, `write_pickle`. No callers. The pickle pair also
-  keeps `import pickle` alive in a data-generation path.
+Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/`, `docs/` and
+`prototypes/`.
+
+- `scripts/utils.py` — `load_json`, `load_pickle`, `write_pickle`. The pickle pair also keeps
+  `import pickle` alive in a data-generation path.
 - `timezonefinder/_numba_replacements.py` — `i8`. The shim exists to mirror the numba names the
   package actually imports; an extra one is an unexercised claim.
-- `tests/auxiliaries.py` — `convert_to_reduced_timezone`, self-documented as
-  *"NOTE: unused, but kept for future reference"*. Git history is the mechanism for that.
+- `tests/auxiliaries.py` — `convert_to_reduced_timezone`, self-documented as *"NOTE: unused, but
+  kept for future reference"*. Git history is the mechanism for that.
+- **Fix:** delete. Size: ~40 lines removed.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified all five still present and still unreferenced (PR #463
+  swept a different set).
 
-Related leftovers that are not unreferenced but are inert:
+### DEAD-2 — leftovers that are referenced but inert
 
 - `scripts/shortcuts.py` — `has_coherent_sequences` builds `lst_iter = iter(lst)` solely to take
   `next()` as the initial `prev`, then loops over `lst` from the start. Correct (the first
@@ -172,59 +244,121 @@ Related leftovers that are not unreferenced but are inert:
 - `scripts/shortcuts.py` — `process_single_hex` returns the `hex_id` it was handed, so its only
   caller writes `hex_id, polys_optimised = process_single_hex(hex_id, data)`, reassigning the loop
   variable to itself (ruff `PLW2901`). Vestigial from the parallel-map version.
+- **Fix:** simplify each in place. Size: ~15 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ---
 
-## 6. Type annotations that do not match reality
+## Type annotations that do not match reality
 
-- `scripts/shortcuts.py` — the production call chain has both annotations backwards:
-  `check_shortcut_sorting(polygon_ids: np.ndarray, ...)` is handed a `list[int]` by
-  `process_single_hex`, and it in turn hands an `np.ndarray` to
-  `has_coherent_sequences(lst: list[int])`. (`tests/shortcut_test.py` does call the latter with
-  real lists, so a widened annotation is the fix rather than a straight swap.)
-- `scripts/benchmark_utils.py` — `additional_info: dict[str, Any] = None` and
-  `provenance: dict[str, Any] = None`; `scripts/reporting.py` —
-  `additional_rows: list = None`. Implicit `Optional`, which PEP 484 forbids and ruff flags as
-  `RUF013`. Note `no_implicit_optional = true` is already set in `[tool.mypy]`; these live in
-  `scripts/`, which the mypy hook does not currently cover.
-- `scripts/reporting.py` — `load_binary_data(...) -> dict` returns a nine-key bag
-  (`shortcuts`, `nr_of_polygons`, `nr_of_zones`, `polygon_lengths`, `all_hole_lengths`,
-  `polynrs_of_holes`, `poly_zone_ids`, `all_tz_names`, `output_path`) that is then indexed by string
-  literal across the rest of the module. A `TypedDict` or dataclass would make a typo a type error
-  instead of a `KeyError` at report time.
-- `scripts/file_converter.py` — `for dir, bounds in boundary_sources:` shadows the `dir` builtin
-  (ruff `A001`).
+### TYPE-1 — the shortcut compilation chain has both annotations backwards
+
+- **Location:** `scripts/shortcuts.py` — `check_shortcut_sorting(polygon_ids: np.ndarray, ...)` is
+  handed a `list[int]` by `process_single_hex`, and it in turn hands an `np.ndarray` to
+  `has_coherent_sequences(lst: list[int])`.
+- **Fix:** widen both rather than swapping them — `tests/shortcut_test.py` does call the latter with
+  real lists. Size: ~6 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### TYPE-2 — implicit `Optional` (ruff `RUF013`)
+
+- **Location:** `scripts/benchmark_utils.py` — `additional_info: dict[str, Any] = None`,
+  `provenance: dict[str, Any] = None`; `scripts/reporting.py` — `additional_rows: list = None`.
+- **Defect:** PEP 484 forbids implicit `Optional`. `no_implicit_optional = true` is already set in
+  `[tool.mypy]`, but these live in `scripts/`, which the mypy hook does not currently cover.
+- **Fix:** annotate `| None`. Size: 3 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### TYPE-3 — `load_binary_data` returns an untyped nine-key bag
+
+- **Location:** `scripts/reporting.py`, `load_binary_data(...) -> dict`.
+- **Defect:** returns `shortcuts`, `nr_of_polygons`, `nr_of_zones`, `polygon_lengths`,
+  `all_hole_lengths`, `polynrs_of_holes`, `poly_zone_ids`, `all_tz_names`, `output_path`, then the
+  rest of the module indexes it by string literal.
+- **Fix:** a `TypedDict` or dataclass, making a typo a type error instead of a `KeyError` at report
+  time. Size: ~30 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### TYPE-4 — `dir` builtin shadowed
+
+- **Location:** `scripts/file_converter.py`, `for dir, bounds in boundary_sources:` (ruff `A001`).
+- **Fix:** rename the loop variable. Size: ~4 lines.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ---
 
-## 7. Larger, needs a judgement call first
+## Larger, needs a judgement call first
 
-- **`_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call.**
-  `timezonefinder/timezonefinder.py` calls `np.load(..., mmap_mode="r")` per invocation, under a
-  comment reading *"load only on demand"*. It is off the `timezone_at` hot path but on
-  `certain_timezone_at`'s and `get_geometry`'s. Caching it would be a memory/latency trade — and
-  `CLAUDE.md` is explicit that the memory-mapped path must stay viable for constrained containers —
-  so this needs a decision, not just a refactor.
-- **`calculate_shortcut_index_stats` is 13 branches / 57 statements** (`scripts/reporting.py`),
-  over ruff's `PLR0912` / `PLR0915` defaults. It computes coverage, uniqueness, storage and
-  frequency metrics in one pass; splitting it along those seams is straightforward but touches a
-  function whose output is committed in `docs/data_report.rst`, so it needs a regenerate-and-diff to
-  prove it neutral.
-- **`scripts/file_converter.py` duplication.** `write_numpy_binaries` and `write_flatbuffer_files`
-  each recompute `holes_dir` / `boundaries_dir` and `mkdir` them. `write_numpy_binaries` also calls
-  `np.save` directly for the zone ids while using `store_per_polygon_vector` for everything else,
-  so that one file is written without the progress line the others print.
+### BIG-1 — `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call
+
+- **Location:** `timezonefinder/timezonefinder.py`, `_iter_boundary_ids_of_zone`.
+- **Defect:** calls `np.load(..., mmap_mode="r")` per invocation, under a comment reading *"load
+  only on demand"*. Off the `timezone_at` hot path but on `certain_timezone_at`'s and
+  `get_geometry`'s.
+- **Why it is not a straight refactor:** caching it is a memory/latency trade, and `CLAUDE.md` is
+  explicit that the memory-mapped path must stay viable for constrained containers. Needs a
+  decision plus a benchmark, not just an edit.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### BIG-2 — `calculate_shortcut_index_stats` is 13 branches / 57 statements
+
+- **Location:** `scripts/reporting.py`, `calculate_shortcut_index_stats`. Over ruff's `PLR0912` /
+  `PLR0915` defaults.
+- **Defect:** computes coverage, uniqueness, storage and frequency metrics in one pass.
+- **Fix:** split along those four seams. Straightforward, but its output is committed in
+  `docs/data_report.rst`, so it needs a regenerate-and-diff to prove neutral. Size: ~80 lines moved.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ---
 
-## Notes on scope
+## Tooling
 
-`prototypes/` was excluded throughout — it carries its own crop of ruff findings
-(`RUF012` mutable class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are
-appropriate to leave in exploratory code.
+### TOOL-1 — ruff runs close to its default rule set
 
-Ruff currently runs close to its default rule set — `[tool.ruff]` in `pyproject.toml` sets no
-`lint.select`. Several items above (`B904`, `RUF013`, `A001`, `PLW2901`, `PLR09xx`) were surfaced by
-ad-hoc `uv run ruff check --select ...` runs and will not be caught by CI as configured. Enabling a
-subset deliberately is itself a candidate improvement, best done after the existing findings are
-cleared so the first run is not a wall of noise.
+- **Location:** `pyproject.toml`, `[tool.ruff]` — no `lint.select`.
+- **Defect:** several findings in this ledger (`B904`, `RUF013`, `A001`, `PLW2901`, `PLR09xx`) were
+  surfaced by ad-hoc `uv run ruff check --select ...` runs and are not caught by CI as configured.
+- **Fix:** enable a chosen subset. Best done *after* the existing findings are cleared, so the first
+  run is not a wall of noise. Note that `TRY003` / `EM101` / `EM102` fire in the hundreds across
+  `scripts/` and are not worth adopting — pick deliberately rather than taking a whole family.
+- **Status:** open
+- **Last touched:** 2026-08-07 — re-verified; ERR-3 cleared the last two `B904` hits, so `B904` is
+  now clean and could be enabled on its own.
+
+---
+
+## Scope notes
+
+`prototypes/` is excluded throughout — it carries its own crop of ruff findings (`RUF012` mutable
+class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave
+in exploratory code.
+
+`timezonefinder/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited
+directly; findings there belong against the generator or the schema instead.
+
+---
+
+## Coverage log
+
+| Pass | Date | Swept | Not reached |
+|---|---|---|---|
+| 1 | 2026-08-06 | `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` — broad triage, findings above | `prototypes/` (deliberate), `docs/`, `.github/workflows/` |
+| 2 (error diagnostics) | 2026-08-07 | Every `raise` and `except` site in `timezonefinder/` and `scripts/` (via `rg` plus ruff `B904`/`BLE`/`TRY`/`EM`/`RSE`/`S110`/`S112`); `timezonefinder/command_line.py` read in full | `docs/`, `.github/workflows/`, `benchmarks/`, `scripts/` report-rendering internals |
+
+Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
+start: `benchmarks/` beyond `conftest.py`, the `scripts/` benchmark-CI helpers
+(`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`,
+`render_benchmark_reports.py`, `describe_benchmark_machine.py`) and `timezonefinder/np_binary_helpers.py`.
+
+Deliberately checked and found sound this pass, so do not re-raise them: the broad `except
+Exception` in `MemoryCoordAccessor`/`FileCoordAccessor.__init__` (cleans up partial state and
+re-raises), `utils.close_resource`'s suppression list (documented at length, `BufferError` included
+on purpose), `TimezoneFinder.__del__`'s two-tier handler (warns on the unexpected case), and
+`scripts/reporting.py`'s `main` catching `Exception` to print a traceback and return an exit code.

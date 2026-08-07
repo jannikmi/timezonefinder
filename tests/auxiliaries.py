@@ -89,15 +89,15 @@ def run_command(
             cwd=str(cwd),
         )
     except subprocess.CalledProcessError as e:
-        # Include the stdout/stderr in the error message if available
-        error_msg = str(e)
-        if capture_output and e.stdout:
-            error_msg += f"\nStdout: {e.stdout}"
-        if capture_output and e.stderr:
-            error_msg += f"\nStderr: {e.stderr}"
-        raise subprocess.CalledProcessError(
-            e.returncode, e.cmd, e.output, e.stderr
-        ) from None
+        # ``CalledProcessError.__str__`` reports the exit code and nothing else, and
+        # with capture_output the child's streams never reached the terminal either.
+        # Echo them before re-raising, otherwise a packaging failure under
+        # ``make testint`` says only that the build exited non-zero.
+        if capture_output:
+            for stream_name, stream in (("Stdout", e.stdout), ("Stderr", e.stderr)):
+                if stream:
+                    print(f"{stream_name} of failed command:\n{stream}")
+        raise
 
 
 def build_wheel(clean_dist: bool = True) -> Path:
