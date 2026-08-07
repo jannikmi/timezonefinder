@@ -27,8 +27,9 @@ A single ``timezone_at()`` call runs this sequence:
    all. This is the majority case and it is why the package is fast despite carrying full-resolution
    polygons.
 3. **Candidate list.** Otherwise the cell stores the ids of the polygons that intersect it - a
-   handful, out of 1,322. Their zone ids are fetched, and the scan stops at the last zone change:
-   once no *other* zone can still be matched, the remaining polygons need not be tested.
+   handful, out of the thousand-odd the dataset contains. Their zone ids are fetched, and the scan
+   stops at the last zone change: once no *other* zone can still be matched, the remaining polygons
+   need not be tested.
 4. **Bounding-box rejection.** Each candidate's precomputed bbox is checked first, which rejects most
    of them for the cost of four integer comparisons.
 5. **Holes before the outer ring.** Holes are far smaller than the boundary they sit in, so testing

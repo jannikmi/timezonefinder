@@ -162,6 +162,14 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   `rstcheck` will not catch a broken cross-reference there
 - Generated docs: `docs/benchmark_results_*.rst` (`scripts/render_benchmark_reports.py`) and
   `docs/data_report.rst` (`scripts/reporting.py`). The don't-hand-edit corollary above applies
+- **Never copy an exact figure out of a generated page into hand-written prose** — vertex/polygon
+  counts, index or wheel sizes, MiB footprints, queries/s. Regeneration updates the generated page
+  and silently leaves every hand-written copy wrong, with nothing to catch it: this bit the
+  `~8 MiB`/`~71 MiB` memory figures, which a shortcut-loader change made stale in four places at
+  once. State the magnitude that survives a data update ("single-digit MiB", "hundreds of
+  thousands of queries/s") and link the generated page for the current number. Figures fixed by a
+  constant rather than by the data are fine to state exactly — `~1 cm` resolution follows from
+  `COORD2INT_FACTOR`, `~41k` H3 cells from resolution 3
 - **`make reports` re-measures everything** — it has both `benchmarks` and `memory` as
   prerequisites — so it rewrites every committed figure on all four report pages. To change only
   the *rendering*, invoke the renderer directly against the stored JSONs; measurement and

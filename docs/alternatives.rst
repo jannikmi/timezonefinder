@@ -6,9 +6,10 @@ The position in one paragraph
 -----------------------------
 
 ``timezonefinder`` optimises for **correctness at timezone borders**. It stores the boundary
-polygons exactly as the source dataset provides them - 7,925,313 boundary vertices across 1,322
-polygons, plus 756 holes, at ~1 cm coordinate resolution (see :doc:`data_report`) - and never
-simplifies them. Speed is the constraint that work is done under, not the goal: the H3 spatial
+polygons exactly as the source dataset provides them - every vertex of every polygon and every
+hole, at ~1 cm coordinate resolution - and never simplifies them. :doc:`data_report` is generated
+from the packaged data and carries the current counts. Speed is the constraint that work is done
+under, not the goal: the H3 spatial
 index, the integer coordinate representation and the optional acceleration backends exist to make
 full-resolution geometry affordable, not to shave the last microsecond off a lookup.
 
@@ -50,26 +51,26 @@ difference is in what they do with that dataset's geometry.
      - Full original dataset (>440 timezones)
      - Full original dataset (>440 timezones)
    * - Data Representation
-     - Complete, non-simplified polygons: 7,925,313 boundary vertices across 1,322 polygons at ~1 cm coordinate resolution (:doc:`data_report`)
+     - Complete, non-simplified polygons at ~1 cm coordinate resolution; :doc:`data_report` lists the current vertex, polygon and hole counts
      - Simplified polygons, by design
    * - Border Accuracy
      - Limited only by the source dataset
      - Reduced near borders, in proportion to the simplification
    * - Spatial Index
-     - H3 hexagons at resolution 3, ~41k cells, 1.49 MB (:doc:`data_report`)
+     - H3 hexagons at resolution 3 (~41k cells); :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
    * - Startup Time
      - Requires initialization; measured per class and mode in :doc:`benchmark_results_initialization`
      - None (immediate)
    * - Avg. Lookup Speed
-     - ~286k queries/s on one core for uniformly random points, with Numba and without the C extension, on macOS arm64 (:doc:`benchmark_results_timezonefinding`)
-     - `~320k queries/s <https://github.com/ringsaturn/tz-benchmark>`__ reported by a third-party benchmark on unstated hardware
+     - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
+     - Faster per query, per a `third-party benchmark <https://github.com/ringsaturn/tz-benchmark>`__ on unstated hardware
    * - Memory Usage
-     - ~6 MiB allocated by default (polygon data stays memory-mapped), ~69 MiB with ``in_memory=True`` (:doc:`benchmark_results_memory`)
+     - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
    * - Distribution Size
-     - ~52 MB per wheel for 8.2.5 on PyPI; ~64 MB of binary data once installed (:doc:`data_report`)
-     - ~4-5 MB per wheel for 1.3.2 on PyPI
+     - Tens of MB per wheel, nearly all of it the packaged boundary data (:doc:`data_report` lists the installed binary sizes)
+     - A few MB per wheel
    * - Build & Platform Coverage
      - Builds without a Rust toolchain; the C extension is optional and its absence only costs speed
      - Requires Rust to build wheels on platforms or Python versions without a prebuilt one
@@ -82,16 +83,17 @@ difference is in what they do with that dataset's geometry.
 
 .. note::
 
-   **The two speed figures are indicative, not a like-for-like measurement.** They come from
-   different machines, different acceleration paths and different query workloads. This project
-   documents at length why two measurements taken on different hardware cannot be compared - see
+   **The speed row is deliberately qualitative.** The two packages have never been benchmarked
+   under one harness, and the published figures come from different machines, different
+   acceleration paths and different query workloads. This project documents at length why two
+   measurements taken on different hardware cannot be compared - see
    :doc:`benchmarking_methodology`, where an unchanged lookup path spread 134-158 % across CI
-   runners alone - and that caveat applies just as much to this table. Read the row as "the two
-   packages are in the same order of magnitude, and ``tzfpy`` is the faster one"; anything finer
-   would require benchmarking both under one harness, which nobody has done.
+   runners alone - and that caveat applies just as much here. Both packages are in the same order
+   of magnitude and ``tzfpy`` is the faster one; anything finer would need a measurement nobody has
+   made.
 
    The same applies in reverse to memory: ``tzfpy``'s footprint has not been measured here, so the
-   ~6 MiB figure describes this package only and is not a claim about the comparison.
+   figures linked above describe this package only and are not a claim about the comparison.
 
 
 When to choose which package
@@ -141,8 +143,8 @@ Against that, the design decisions below are all the same decision made repeated
   equator, far finer than the discrete polygons in the source data, so the extra precision was
   paying for nothing.
 - Memory-friendly binary files instead of text, read on demand rather than parsed up front.
-  This package allocates **~6 MiB** for its data structures by default, because the polygon
-  coordinates stay memory-mapped (:doc:`benchmark_results_memory` reports every mode).
+  This package allocates **single-digit MiB** for its data structures by default, because the
+  polygon coordinates stay memory-mapped (:doc:`benchmark_results_memory` reports every mode).
 - Precomputed shortcuts shipped with the package instead of rebuilt at every startup.
 
 Two capabilities came along the way: ``get_geometry()`` for querying a timezone's shape (a
