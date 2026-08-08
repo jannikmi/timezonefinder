@@ -92,12 +92,16 @@ class AbstractTimezoneFinder(ABC):
         """
         Initialize the AbstractTimezoneFinder.
 
-        Loads timezone data from binary files, including shortcuts and polygon information.
+        Loads the zone names, the per-polygon zone ids and the shortcut index. These are
+        always held in memory; only the polygon coordinate data a subclass may load is
+        subject to ``in_memory``.
 
         :param bin_file_location: Path to the directory containing binary timezone data.
                                  If None, uses the bundled package data directory.
-        :param in_memory: Ignored for polygon coordinate data (always uses memory-mapped file access).
-                         Kept for API compatibility.
+        :param in_memory: Whether to read the polygon coordinate data into memory instead of
+                         accessing it through a memory-mapped file. Selects the access mode of
+                         ``TimezoneFinder``'s boundary and hole data; ``TimezoneFinderL`` loads
+                         no polygon data at all, so it is without effect there.
         :raises FileNotFoundError: If timezone data files cannot be found at the specified location
         :raises ValueError: If timezone data files are corrupted or in an invalid format
         """
@@ -165,8 +169,10 @@ class AbstractTimezoneFinder(ABC):
 
         :param boundary_id: The numeric identifier of the boundary polygon
         :return: The timezone ID (index into timezone_names)
-        :raises ValueError: If zone_ids are not available or boundary_id is invalid
-        :raises TypeError: If boundary_id cannot be converted to an integer
+        :raises ValueError: If ``boundary_id`` does not select exactly one zone id - out of
+            range, not usable as an index, or selecting several. The underlying ``IndexError``
+            and ``TypeError`` are both re-raised as ``ValueError``, so that is the only type
+            callers have to handle.
         """
         try:
             return int(self.zone_ids[boundary_id])
@@ -191,8 +197,9 @@ class AbstractTimezoneFinder(ABC):
 
         :param zone_id: The numeric ID of the timezone (0-based index)
         :return: The IANA timezone name (e.g., 'Europe/Berlin')
-        :raises ValueError: If zone_id is out of range for the loaded dataset
-        :raises IndexError: If the zone_id index is invalid
+        :raises ValueError: If ``zone_id`` is out of range for the loaded dataset. The
+            underlying ``IndexError`` is re-raised as ``ValueError``.
+        :raises TypeError: If ``zone_id`` is not an integer.
 
         Example:
             >>> tf = TimezoneFinder()
@@ -516,7 +523,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
     ) -> list[list[CoordPairs | CoordLists]]:
         """retrieves the geometry of a timezone: multiple boundary polygons with holes
 
-        :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
+        :param tz_name: one of the names in ``timezone_names.txt`` or ``self.timezone_names``
         :param tz_id: the id of the timezone (=index in ``self.timezone_names``)
         :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
         :param coords_as_pairs: determines the structure of the polygon representation

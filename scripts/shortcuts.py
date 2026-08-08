@@ -132,8 +132,6 @@ def compile_h3_map(data: TimezoneData, candidates: set[int]) -> ShortcutMapping:
     Args:
         data: TimezoneData instance
         candidates: Set of hex IDs to process
-        use_parallel: Whether to use parallel processing (default: True)
-        max_workers: Maximum number of worker threads (default: optimal based on benchmarks)
     """
     if not using_numba:
         print(
@@ -171,23 +169,19 @@ def all_res_candidates(res: int) -> HexIdSet:
 def compile_shortcut_mapping(
     data: TimezoneData,
 ) -> ShortcutMapping:
-    """compiles h3 hexagon shortcut mapping with optimized parallel processing
-
-    Cold cache benchmarks show sequential processing is fastest for first-time compilation,
-    but parallel processing provides benefits for warm cache scenarios.
+    """compiles the h3 hexagon shortcut mapping
 
     Args:
         data: TimezoneData instance containing polygon and timezone information
-        use_parallel: Whether to use parallel processing (default: True)
-        max_workers: Override automatic worker selection (default: None for auto-selection)
 
     Returns:
         mapping from hexagon id to list of polygon ids
 
     cf. https://eng.uber.com/h3/
 
-    NOTE: benchmarking parallel execution revealed no significant speedup (baseline: 13s for 40k hexes)
-        -> probably because of the fast per-hex processing time and the overhead of managing threads
+    NOTE: the compilation is sequential. Benchmarking parallel execution revealed no
+        significant speedup (baseline: 13s for 40k hexes) -> probably because of the fast
+        per-hex processing time and the overhead of managing threads
     """
     print("\n\ncomputing timezone polygon index ('shortcuts')...")
 
