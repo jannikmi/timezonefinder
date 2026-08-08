@@ -184,7 +184,10 @@ def test_clang_extension_loaded():
     assert utils.clang_extension_loaded, "the clang extension not loaded, "
 
 
-# TODO test equal results of both implementation
+# NOTE: these call the kernels directly, on hand-built arrays. That the two agree on
+# the *real* data, reached through the real coordinate accessors, is covered by
+# tests/test_acceleration_paths.py - which also explains why only one of them is ever
+# the bound `utils.inside_polygon` locally.
 @pytest.mark.parametrize(
     "inside_poly_func",
     [

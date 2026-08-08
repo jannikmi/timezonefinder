@@ -22,7 +22,10 @@ Usage::
 
 import argparse
 import sys
+from collections.abc import Callable
 from typing import Literal, get_args
+
+import numpy as np
 
 from timezonefinder import utils, utils_clang, utils_numba
 
@@ -30,8 +33,11 @@ AccelerationPath = Literal["clang", "numba"]
 ACCELERATION_PATHS: tuple[str, ...] = get_args(AccelerationPath)
 
 # the concrete function object `utils.inside_polygon` is bound to per path -
-# checking the flags alone would not catch a mis-wired dispatch in utils.py
-_IMPLEMENTATIONS = {
+# checking the flags alone would not catch a mis-wired dispatch in utils.py.
+# Public because tests/test_acceleration_paths.py binds these deliberately to
+# cover the path this environment did *not* select at import time; keep the
+# mapping declared here only.
+ACCELERATION_IMPLEMENTATIONS: dict[str, Callable[[int, int, np.ndarray], bool]] = {
     "clang": utils_clang.pt_in_poly_clang,
     "numba": utils_numba.pt_in_poly_python,
 }
@@ -65,7 +71,7 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
             "pure-Python fallback would be benchmarked instead. Build the "
             "extension (`uv sync`) before benchmarking."
         )
-    expected_impl = _IMPLEMENTATIONS[expected]
+    expected_impl = ACCELERATION_IMPLEMENTATIONS[expected]
     if utils.inside_polygon is not expected_impl:
         raise RuntimeError(
             f"the {expected!r} acceleration path is active, but "
