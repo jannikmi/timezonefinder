@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786229101480,
+  "lastUpdate": 1786229230639,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -810,6 +810,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002630245569745943",
             "extra": "mean: 42.51042900000357 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0a68875e457105cab72a71b600de329bf74d533",
+          "message": "Let several quality passes run at once without colliding (#484)\n\nTwo passes running concurrently shared one repository, one ledger and one\nchangelog with nothing arranging that between them, and the skill actively made\nit worse: it hardcoded a single worktree path, so the second pass could not even\ncreate its tree, and it said nothing about when to push, so a branch became\nvisible only once the work was already done. Nothing stopped two passes from\npicking the same theme and doing it twice.\n\nThe remote branch list is now the coordination mechanism, used at two defined\nmoments: survey it before creating a worktree, and claim a theme by pushing the\nbranch the instant triage picks one - a slug that names the theme, pushed while\nit still points at master. First push wins a collision; the loser takes its\nnext-ranked candidate rather than racing. Worktree and branch names are per-pass.\n\nThe two files that collide regardless are named, with their resolutions: the\nchangelog, where both bullets are kept, and the ledger, whose remaining overlap\nis one entry both passes re-verified.\n\nThe ledger becomes a to-do list rather than a history: an entry is deleted by the\npull request that ships it, since the code is the evidence and git log keeps the\ntext. Only rejected, out-of-scope and withdrawn entries stay, because those\nencode a dead end worth not rediscovering. Shipped entries interleaved with live\nones were the ledger's largest conflict surface.\n\nThe changelog bullet is amended rather than appended, per CLAUDE.md - the skill\narrived in this same unreleased section.",
+          "timestamp": "2026-08-09T00:45:45+02:00",
+          "tree_id": "5b15034089463f4db849a2dae15ad8f4eab1580d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c0a68875e457105cab72a71b600de329bf74d533"
+        },
+        "date": 1786229229679,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 73.1513644375189,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007713968759963417",
+            "extra": "mean: 13.670285000003446 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 221.45318911433432,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000047389617343983655",
+            "extra": "mean: 4.515626999996414 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.82648891033347,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002417173662867126",
+            "extra": "mean: 40.27955799999461 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
           }
         ]
       }
