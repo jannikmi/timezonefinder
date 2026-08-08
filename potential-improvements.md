@@ -98,8 +98,10 @@ the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG`
   shortcut binary all over again, only to discard it.
 - **Fix:** resolve the function once in `main` and pass it down. Size: ~15 lines.
 - **Value:** removes a duplicated data load from every verbose CLI call on those two function ids.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
+- **Status:** shipped (PR #480)
+- **Last touched:** 2026-08-07 — shipped. `main` resolves the callable and hands it to
+  `_format_lookup_details`; `_lookup_timezone` was deleted, since its only job was to pair the
+  resolution with the call.
 
 ### CLI-2 — `_print_lookup_details` does not print
 
@@ -108,8 +110,8 @@ the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG`
   it does.
 - **Fix:** rename to `_format_lookup_details`. It is a private helper, so no API surface moves.
   Size: 3 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
+- **Status:** shipped (PR #480)
+- **Last touched:** 2026-08-07 — shipped.
 
 ### CLI-3 — `main` writes its own output to a temp file and reads it back
 
@@ -125,8 +127,37 @@ the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG`
   caller (`main`) and is not exported, so removing it moves no API surface. Size: ~40 lines removed.
 - **Value:** removes the file-system round trip and the two error paths that only exist because of
   it (ERR-5 was one of them) from every CLI invocation.
-- **Status:** open
-- **Last touched:** 2026-08-07 — found this pass.
+- **Status:** shipped (PR #480)
+- **Last touched:** 2026-08-07 — shipped, removed. The judgement call went to removal: `rg` over
+  `timezonefinder/` finds prints only in data *write* paths, never on a lookup; and in verbose mode
+  the redirect re-emitted the captured output rather than suppressing it, so it was never a
+  suppression mechanism to begin with. What it did provide — a guarantee that non-verbose stdout is
+  only the result — is now an asserted contract (`test_lookup_prints_the_zone_name_and_nothing_else`)
+  rather than an implementation side effect. Output verified byte-identical across 5 function ids ×
+  2 modes × 4 coordinates, plus `--help` and a rejected id.
+
+### CLI-4 — the CLI test asserted against output it had already mangled
+
+- **Location:** `tests/cli_test.py`, `test_main` (the only test the file contained).
+- **Defect:** it passed the captured stdout through `rstrip("\n\x1b[0m")`. `str.rstrip` takes a
+  **set of characters**, not a suffix, so that strips any trailing `\n`, `\x1b`, `[`, `0` or `m` —
+  truncating 12 of the 444 packaged zone names (`Europe/Amsterdam` → `Europe/Amsterda`,
+  `Etc/GMT+10` → `Etc/GMT+1`). The assertion held only because the four hardcoded coordinates
+  happened to miss all twelve; a coordinate in Amsterdam would have failed on correct output. Two
+  further asserts were vacuous: `res == "None"` can never match, since the CLI prints an empty line
+  rather than the string `None` — and that dead branch masked exactly the regression of printing
+  `None` — while `assert not res.endswith("command not found")` is unreachable, because `check=True`
+  already raises on the shell's exit 127.
+- **Fix:** assert the printed name verbatim; add the missing coverage — verbose mode, the empty
+  line printed when no timezone is found, and the rejected function id had none at all. Size: ~120
+  lines.
+- **Value:** the file was the only thing standing between the CLI and an unnoticed output change,
+  and it could not see one.
+- **Status:** shipped (PR #480)
+- **Last touched:** 2026-08-07 — found and shipped this pass. The replacements were mutation-checked
+  (print `None` instead of the empty line; emit a stray line during the lookup; re-resolve the
+  function inside the details): each mutation fails at least one test, and the first is one the old
+  assertion passed.
 
 ---
 
@@ -283,12 +314,51 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### TYPE-4 — `dir` builtin shadowed
+### TYPE-4 — builtins shadowed
 
-- **Location:** `scripts/file_converter.py`, `for dir, bounds in boundary_sources:` (ruff `A001`).
-- **Fix:** rename the loop variable. Size: ~4 lines.
+- **Location:** `scripts/file_converter.py`, `for dir, bounds in boundary_sources:` (ruff `A001`);
+  `scripts/hex_utils.py`, `HexIdSet.from_id(cls, id: int, ...)` (ruff `A002`).
+- **Fix:** rename the loop variable and the parameter. `from_id` has one call site
+  (`scripts/timezone_data.py`, `Hex.from_id(hex_id, data)`) and passes it positionally, so renaming
+  it moves nothing. Size: ~6 lines.
 - **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
+- **Last touched:** 2026-08-07 — re-verified; the `A002` site added this pass, same defect and same
+  fix, so it belongs here rather than in an entry of its own.
+
+---
+
+## Test quality
+
+### TEST-1 — the benchmark fixture loader pairs two files with a silent `zip`
+
+- **Location:** `benchmarks/conftest.py`, `pip_inputs_by_stratum`, the
+  `zip(inputs, strata)` (ruff `B905`).
+- **Defect:** `inputs` and `strata` are loaded from two separate fixture files and zipped without
+  `strict=`. If they ever disagree in length, `zip` truncates to the shorter one without a word.
+  The per-stratum count check below it catches only the case where a bucket ends up short — a
+  *misaligned* pairing that still fills every bucket labels each point with the wrong stratum, and
+  the per-stratum benchmark report then attributes costs to the wrong polygon sizes while looking
+  entirely healthy.
+- **Fix:** `strict=True`. Size: 1 line. Both files come from one generator run and are pinned by
+  `FIXTURE_VERSION`, so this is defence in depth against corrupt fixtures rather than a live bug —
+  but it is the difference between a loud failure and a quietly wrong report.
+- **Status:** open
+- **Last touched:** 2026-08-07 — found this pass.
+
+### TEST-2 — a cleanup test closes over its loop variable
+
+- **Location:** `tests/main_test.py`, `test_cleanup_does_not_raise_to_user` (ruff `B023`).
+- **Defect:** the `TestTimezoneFinder.cleanup` defined inside the loop raises `error`, which is
+  looked up when `cleanup` runs, not when it is defined. Within one iteration that is the intended
+  value, so the test is not wrong today; but each iteration's `tf` is collected later, re-entering
+  `__del__` with whatever `error` has become. The failure message names `error_type` as though the
+  binding were fixed, which is what makes it read as correct.
+- **Fix:** bind the exception as a default argument (or build the subclass from a factory). Size:
+  ~4 lines.
+- **Value:** low as a live defect, but the test's whole subject is `__del__` at collection time,
+  which is exactly when the binding stops meaning what the message says.
+- **Status:** open
+- **Last touched:** 2026-08-07 — found this pass.
 
 ---
 
@@ -351,14 +421,30 @@ directly; findings there belong against the generator or the schema instead.
 |---|---|---|---|
 | 1 | 2026-08-06 | `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` — broad triage, findings above | `prototypes/` (deliberate), `docs/`, `.github/workflows/` |
 | 2 (error diagnostics) | 2026-08-07 | Every `raise` and `except` site in `timezonefinder/` and `scripts/` (via `rg` plus ruff `B904`/`BLE`/`TRY`/`EM`/`RSE`/`S110`/`S112`); `timezonefinder/command_line.py` read in full | `docs/`, `.github/workflows/`, `benchmarks/`, `scripts/` report-rendering internals |
+| 3 (CLI output path) | 2026-08-07 | `timezonefinder/command_line.py` and `tests/cli_test.py` (rewritten); the previously-unswept `timezonefinder/np_binary_helpers.py`, `benchmarks/conftest.py` and the `scripts/` benchmark-CI helpers (`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`) read in full; a repo-wide ruff `--select ALL` triage pass over everything but `prototypes/` and the generated bindings | `docs/`, `.github/workflows/`, `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py`, `benchmarks/test_*.py` |
 
 Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
-start: `benchmarks/` beyond `conftest.py`, the `scripts/` benchmark-CI helpers
-(`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`,
-`render_benchmark_reports.py`, `describe_benchmark_machine.py`) and `timezonefinder/np_binary_helpers.py`.
+start: `scripts/render_benchmark_reports.py` (884 lines, the largest unswept module),
+`scripts/describe_benchmark_machine.py`, and the three `benchmarks/test_*.py` suites.
 
-Deliberately checked and found sound this pass, so do not re-raise them: the broad `except
-Exception` in `MemoryCoordAccessor`/`FileCoordAccessor.__init__` (cleans up partial state and
-re-raises), `utils.close_resource`'s suppression list (documented at length, `BufferError` included
-on purpose), `TimezoneFinder.__del__`'s two-tier handler (warns on the unexpected case), and
-`scripts/reporting.py`'s `main` catching `Exception` to print a traceback and return an exit code.
+The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
+of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
+via `-m`), `S311` (the fixture samplers are not cryptographic), `S603`/`S607` (subprocess calls in
+tests and build scripts with fixed argument lists), `RUF022`/`RUF023` (`__all__` ordering — the
+current order groups by meaning, which is more useful than alphabetical) and the `TD`/`FIX` family.
+
+Deliberately checked and found sound, so do not re-raise them:
+
+- Pass 2: the broad `except Exception` in `MemoryCoordAccessor`/`FileCoordAccessor.__init__` (cleans
+  up partial state and re-raises), `utils.close_resource`'s suppression list (documented at length,
+  `BufferError` included on purpose), `TimezoneFinder.__del__`'s two-tier handler (warns on the
+  unexpected case), and `scripts/reporting.py`'s `main` catching `Exception` to print a traceback
+  and return an exit code.
+- Pass 3: `coord_accessors.py`'s bare `open()` (ruff `SIM115`) — the handle deliberately outlives
+  the call and is closed by `cleanup()`; the `profile` name probes in `scripts/hex_utils.py` and
+  `scripts/shortcuts.py` (ruff `B018`) — the standard `line_profiler` idiom, not a stray
+  expression; `scripts/measure_memory.py`'s `subprocess.run` without `check=` (ruff `PLW1510`) —
+  it inspects `returncode` on the next line and raises with the child's output, which is strictly
+  better than `CalledProcessError`; and `np_binary_helpers.py`'s six near-identical `get_*_path`
+  helpers — collapsing them into a mapping would trade six importable names for one lookup key and
+  works against the declare-each-path-once rule.
