@@ -75,6 +75,11 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 
 - Add targeted tests under `tests/` for every behavioural change; mark them `@pytest.mark.unit`,
   `integration`, or `slow`. Shared fixtures live in `tests/auxiliaries.py`
+- The point-in-polygon backend is bound at **import** time and Numba wins whenever it is
+  importable — which `uv sync --all-groups` makes it, and `uv run` syncs inexactly so it stays.
+  A local run therefore exercises the numba path while CI's bare tox envs exercise the clang one.
+  A test that cares about the C extension must bind it explicitly rather than assume it is active;
+  `tests/test_acceleration_paths.py` does that for the whole lookup stack
 - While iterating, run only the file/pattern you're touching; `make test` (~30 s) as a broader
   check; `make testall` once as a final gate before finishing a PR, not after every change
 - **`git fetch` and rebase onto the latest `master` *before* the final gate, not after.** Other
