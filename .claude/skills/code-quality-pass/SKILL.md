@@ -12,9 +12,10 @@ repository owner to review, plus an updated findings ledger.
 Work to completion without stopping to ask questions. Where something is ambiguous, apply §8 and
 record the call you made in the PR description.
 
-This pass is designed to be run many times. Most of its value comes from §4: the ledger is what
-turns a series of one-off passes into cumulative progress, so treat reading and updating it as part
-of the deliverable, not bookkeeping.
+This pass is designed to be run many times, **and several may be in flight at once**. Most of its
+value comes from §4: the ledger is what turns a series of one-off passes into cumulative progress,
+so treat reading and updating it as part of the deliverable, not bookkeeping. §2.1 is what keeps
+concurrent passes off each other's ground — read it before you pick anything to work on.
 
 ## 1. Ground rules
 
@@ -26,20 +27,26 @@ Two of their rules outrank everything else for *this* task, so treat them as har
 guidance: the changelog entry is mandatory (yours belongs in the `Internal:` sub-list), and the
 lookup fast path is not to be traded away for elegance (§5).
 
-## 2. Isolate from the maintainer's working tree
+## 2. Isolate before you edit
+
+Two things to stay clear of: the maintainer's uncommitted work (below) and any pass already
+running (§2.1).
 
 The checkout may contain unrelated uncommitted work. **Your PR must not contain any of it.**
 
-1. `git status --short`.
-2. Clean tree: `git fetch origin && git checkout -b quality/<short-slug> origin/master`.
-3. Dirty tree: do **not** stash, reset, or commit the maintainer's changes. Work in an isolated
-   worktree branched from the pushed baseline, and do everything from there:
+1. `git status --short`, and the survey in §2.1.
+2. Work in an isolated worktree branched from the pushed baseline, and do everything from there:
    ```
    git fetch origin
-   git worktree add ../tzf-quality -b quality/<short-slug> origin/master
+   git worktree add ../tzf-<slug> -b quality/<slug> origin/master
    ```
-4. Install into whichever tree you are working in.
-5. Record a baseline **before** editing: run `make test` and `make hook` on the untouched branch.
+   A worktree rather than `git checkout -b` even on a clean tree: the checkout may sit on someone
+   else's branch, and switching it out from under a concurrent session breaks that session. **Both
+   names must be unique to this pass** — a fixed path collides the moment a second pass runs. The
+   theme is not settled until §5, so a provisional slug is fine here; rename the branch with
+   `git branch -m quality/<theme-slug>` when you claim it, before the first push.
+3. Install into that worktree.
+4. Record a baseline **before** editing: run `make test` and `make hook` on the untouched branch.
    Anything already failing there is pre-existing — note it, do not fix it in this pass, do not let
    it block you.
 
@@ -50,6 +57,53 @@ The checkout may also hold untracked scratch material — notes, plans, working 
 `.gitignore` does not cover, so a blanket `git add -A` would sweep it into your PR. Stage paths
 explicitly; never `git add -A`. The findings ledger is the deliberate exception: it is a tracked
 file at the repository root that you do commit (§4).
+
+### 2.1 Isolate from the other passes
+
+Several passes may run at once. They share one repository, one ledger and one changelog, so assume
+a sibling exists. There is no lock — the remote branch list is the whole coordination mechanism, so
+it only works if every pass both reads it and writes to it, at the right two moments.
+
+**Survey, before you create your worktree:**
+
+```
+git fetch origin
+git branch -r --list 'origin/quality/*'
+gh pr list --state open
+```
+
+For each live branch, `git log origin/master..origin/<branch> --stat` shows the ground it has
+already taken, and `git show origin/<branch>:potential-improvements.md` its ledger (§4).
+
+**Claim, the moment you pick a theme in §5** — before you edit a single file:
+
+```
+git branch -m quality/<theme-slug>      # if you branched under a provisional name
+git push -u origin quality/<theme-slug>
+```
+
+Pushing a branch that still points at `master` costs nothing and is instantly visible to every
+sibling. The slug *is* the claim, so make it name the theme (`quality/docstring-contracts`, not
+`quality/pass-4`). A pass that works for an hour and pushes at the end has claimed nothing.
+
+**Resolving a collision.** If a sibling's branch already covers your theme or the files you were
+going to touch, it wins — it pushed first. Take the next candidate off your triage ranking rather
+than racing it, and say in your PR which theme you yielded and to whom. Two passes converging on
+one theme is the expensive failure here: both do the work, only one PR can land, and the ledger
+entry gets closed twice.
+
+**What will conflict anyway, and how to resolve it.** These are expected, not mistakes:
+
+- `CHANGELOG.rst` — every pass appends a bullet to the end of the same `Internal:` sub-list, so
+  two passes always conflict there. **Keep both bullets**, in the order the PRs merged. Never drop
+  a sibling's bullet to make the conflict go away.
+- `potential-improvements.md` — mostly avoided by §4's rules (delete what shipped, append new
+  entries at the end of their section, never renumber). What remains is usually one entry both
+  passes re-verified: take the later, more specific note.
+- Source files — should not happen if you honoured the claim above. If it does, rebase and re-read
+  the sibling's change before resolving; it may have already fixed what you were about to.
+
+Rebase onto `master` and re-run the gate (§7) whenever a sibling lands ahead of you.
 
 ## 3. Scope: what "code quality" means here
 
@@ -93,12 +147,20 @@ arrives with the checkout or worktree, and it reaches the next pass through `mas
 the ledger is public and the owner reads it — write it for a contributor who has never seen this
 skill.
 
-Because it travels through `master`, a pass starting while an earlier quality PR is still open will
-read a ledger missing that PR's updates. Before triaging, check for unmerged work
-(`git branch -r --list 'origin/quality/*'`, `gh pr list --state open`); if a newer ledger exists on
-one of those branches, read it (`git show origin/<branch>:potential-improvements.md`) and fold its
-entries into yours. Do not branch off the open PR — branch off `master` as in §2 and reconcile the
-content.
+Because it travels through `master`, a pass starting while a sibling's PR is still open will read a
+ledger missing that PR's updates. From the survey you already ran in §2.1, read each live branch's
+copy (`git show origin/<branch>:potential-improvements.md`) and fold its entries into yours. Do not
+branch off the sibling — branch off `master` as in §2 and reconcile the content.
+
+**The ledger is a to-do list, not a history.** An entry you ship is **deleted** in the same PR, not
+kept with a `shipped` status. The code is the evidence it is done, the changelog says what changed,
+and `git log -- potential-improvements.md` still has the text if anyone wants it. Left in, they are
+dead weight every later pass reads past, interleaved with the live entries — and the ledger's
+largest source of conflict between concurrent passes.
+
+The deletion rule is **only** for shipped work. Entries you *rejected*, ruled *out of scope* or
+*withdrew* stay, with their one line of reason: they encode a dead end, and re-discovering one
+costs a whole pass. So does the "deliberately checked and found sound" list.
 
 ### 4.1 Reading it
 
@@ -107,11 +169,13 @@ Entries from earlier passes are evidence, not gospel — the code has moved sinc
 - Treat every open entry as a candidate that has already paid its discovery cost. Re-verify it
   against the current code before spending time on it, and re-locate it by content rather than by
   the recorded line number.
-- If an entry no longer describes reality — already fixed, refactored away, or simply wrong — mark
-  it resolved or withdrawn with one line of reason. Do not silently delete it; a rediscovered dead
-  end costs a whole pass.
-- Entries marked shipped, rejected or out of scope are **closed**. Do not re-litigate them, and do
-  not re-add them under a new name.
+- If an entry no longer describes reality, work out which case it is. **Already fixed** — by you,
+  by a sibling pass, or by unrelated work: delete it. **Wrong, or a dead end**: keep it, marked
+  `withdrawn` with one line of reason, so it is not rediscovered at full price.
+- Entries marked rejected, out of scope or withdrawn are **closed**. Do not re-litigate them, and
+  do not re-add them under a new name. (Anything shipped is gone from the file entirely; if you
+  find yourself about to re-raise something, `git log -S'<id>' -- potential-improvements.md`
+  tells you whether a past pass already dealt with it.)
 - Spend your fresh discovery effort on parts of the repo the ledger shows no coverage of yet.
   Record which areas you swept, so the next pass knows where not to start.
 
@@ -128,12 +192,17 @@ One entry per finding, with at least:
 - the concrete defect — what is actually wrong, not a style opinion;
 - the proposed fix and a rough size in changed lines;
 - value: what breaks, drifts or misleads if it stays;
-- status: `open`, `shipped (PR #N)`, `rejected (reason)`, `out of scope (reason)`, or
-  `withdrawn (reason)`;
+- status: `open`, `rejected (reason)`, `out of scope (reason)`, or `withdrawn (reason)` — there is
+  no `shipped`, because shipped entries are deleted;
 - the pass that last touched the entry (date + short note).
 
 Also keep a short section recording the sweep itself: which areas or modules this pass examined,
 and which it did not reach. Coverage notes are what make the next pass cheap.
+
+Write so a sibling pass's edits merge cleanly beside yours: **append** new entries at the end of
+their section rather than interleaving, **never renumber** an existing id, and leave the wording of
+entries you did not act on alone. Reflowing a paragraph you did not change turns a clean merge into
+a conflict for no gain.
 
 Keep it terse and scannable. It is a working ledger, not a report — no narration of your process,
 no restating the repo rules.
@@ -157,6 +226,11 @@ pre-commit hook configures can surface things CI never will. When a construct lo
 lines with a single story. If triage surfaces several good themes, implement the best one and leave
 the rest in the ledger as `open` — do not open several PRs, do not bundle unrelated themes.
 
+Rank the whole list before you claim, not just the winner: if §2.1 shows a sibling already holds
+your first choice, you want the second one ready rather than a fresh triage. **Claim the theme by
+pushing your branch (§2.1) the moment you have picked it** — that is the step that makes running
+several passes at once safe, and it is worthless done later.
+
 Prefer: defects that will cause a real bug later > duplication that will drift > readability. A
 cosmetic-only PR is not worth the owner's review time; if triage genuinely finds nothing above that
 bar, do not invent a change to justify the pass — open a **ledger-only PR** instead, carrying just
@@ -179,6 +253,9 @@ with no test exercising the new seam is not finished.
 
 All of these, with output you have actually read:
 
+- [ ] `git fetch origin && git rebase origin/master` **first** — a sibling pass may have landed
+      while you worked, and `CLAUDE.md` is explicit that a rebase after the gate invalidates it.
+      Resolve per §2.1 and start the list again if the rebase moved your base.
 - [ ] `make hook` clean, modulo the pre-existing failures recorded in §2.
 - [ ] `make test` green.
 - [ ] Whichever `slow` / `integration` suites your change maps to — green.
@@ -187,8 +264,8 @@ All of these, with output you have actually read:
 - [ ] `git diff origin/master --stat` shows only files you intended to touch — no stray scratch
       files, and `potential-improvements.md` present.
 - [ ] `CHANGELOG.rst` entry present.
-- [ ] `potential-improvements.md` updated and committed: this pass's findings recorded, statuses of
-      the entries you acted on changed, coverage noted.
+- [ ] `potential-improvements.md` updated and committed: this pass's findings recorded, the entries
+      you shipped **deleted**, the ones you rejected or withdrew kept with a reason, coverage noted.
 
 If a gate fails and you cannot fix it, do not open the PR — report what failed and stop. Still
 commit the ledger and push the branch, and name that branch in your report: the findings outlive
@@ -207,13 +284,19 @@ the failed change, and a branch left unpushed loses them.
 - **A comment contradicts the code?** The code is the truth for behaviour; fix the comment. Never
   change code to match a comment.
 - **An old ledger entry contradicts what you see?** The code wins. Correct the entry.
+- **A sibling pass holds the theme you wanted?** It pushed first, so it keeps it (§2.1). Take your
+  next-ranked candidate; do not open a competing PR on the same ground.
+- **A sibling landed while you worked and your change is now partly redundant?** Rebase, keep only
+  what is still a defect, and say in the PR what its change already covered. A shrunken PR is fine;
+  a PR that re-applies what is already on `master` is not.
 
 ## 9. Open the PR
 
-`gh` is authenticated as the repository owner, so the branch goes to `origin`, not a fork:
+`gh` is authenticated as the repository owner, so the branch goes to `origin`, not a fork. The
+branch is already pushed — you claimed it in §2.1 — so this is a second push and the PR:
 
 ```
-git push -u origin quality/<short-slug>
+git push origin quality/<short-slug>
 gh pr create --base master --title "<title>" --body "<body>"
 ```
 
@@ -237,7 +320,8 @@ Commands run and their outcome. Benchmark before/after plus noise spread, if the
 was touched.
 
 ## Judgement calls
-Anything ambiguous you decided yourself, and what you decided.
+Anything ambiguous you decided yourself, and what you decided. Name any sibling pass you yielded
+to, or whose landed change shrank this one.
 
 ## Deferred
 Candidates found during triage and deliberately left out, one line of reason each. Full detail is
@@ -248,8 +332,9 @@ in `potential-improvements.md`, updated in this PR.
 
 In chat: the PR URL; the theme in one sentence and why it beat the alternatives; the exact
 verification commands and their results — failures stated plainly, including anything skipped and
-why; what changed in the ledger this pass (new entries, statuses moved, areas swept); and whether
-you left a `git worktree` behind, with its path.
+why; what changed in the ledger this pass (new entries, entries deleted as shipped, closures, areas
+swept); which sibling passes were in flight and how you stayed clear of them; and whether you left
+a `git worktree` behind, with its path.
 
 A small, verified, correctly-scoped PR is the goal. A large one that "probably works" is a failure.
 A pass that ships nothing but leaves the ledger better than it found it is still worth something.
