@@ -560,13 +560,12 @@ def load_pip_strata() -> list[str]:
 
 def convert_to_reduced_timezone(timezone: str) -> str:
     """
-    Convert a timezone to its reduced version using the provided mapping.
+    Convert a timezone to its reduced version using ``REDUCED_TIMEZONE_MAPPING``.
 
     NOTE: unused, but kept for future reference
 
     Args:
         timezone: The original timezone string.
-        mapping: A dictionary mapping original timezones to their reduced versions.
 
     Returns:
         The reduced timezone if found in the mapping, otherwise the original timezone.

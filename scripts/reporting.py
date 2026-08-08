@@ -674,7 +674,6 @@ def calculate_timezone_metrics(
         nr_of_zones: Number of timezone zones
         nr_of_polygons: Number of boundary polygons
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
-        all_tz_names: List of timezone names
 
     Returns:
         Dictionary of timezone metrics

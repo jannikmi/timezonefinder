@@ -178,7 +178,7 @@ def get_geometry(
     Note: This function is not thread-safe. For multi-threaded environments,
     create separate TimezoneFinder instances.
 
-    :param tz_name: one of the names in ``timezone_names.json`` or ``self.timezone_names``
+    :param tz_name: one of the names in ``timezone_names.txt`` or ``self.timezone_names``
     :param tz_id: the id of the timezone (=index in ``self.timezone_names``)
     :param use_id: if ``True`` uses ``tz_id`` instead of ``tz_name``
     :param coords_as_pairs: determines the structure of the polygon representation

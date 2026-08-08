@@ -122,10 +122,9 @@ WHEEL_EXCEPTION_PATTERNS = {
 
 def load_gitignore_patterns() -> set[str]:
     """
-    Load patterns from a .gitignore file.
+    Load patterns from the repository's .gitignore (``GITIGNORE_PATH``).
 
-    Args:
-        gitignore_path: Path to the .gitignore file (default: PROJECT_ROOT/.gitignore)
+    Comment lines and blank lines are skipped.
 
     Returns:
         A set of patterns loaded from the .gitignore file.
