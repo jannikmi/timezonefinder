@@ -423,5 +423,29 @@ def test_format_table_row_has_no_trailing_whitespace(cells, expected):
     assert reporting._format_table_row(cells) == expected
 
 
+@pytest.mark.unit
+def test_print_frequencies_labels_the_zero_bucket(capsys):
+    """A zero bucket can mean something other than "zero of them".
+
+    In the shortcut distribution it counts H3 cells needing no
+    point-in-polygon test at all, which the bare "0" reported as cells holding
+    no polygons - impossible for data whose ocean zones cover the globe.
+    """
+    reporting.print_frequencies([0, 0, 2, 3], "Polygons to test", "none (unique zone)")
+
+    table = capsys.readouterr().out
+    assert "- none (unique zone)" in table
+    assert "\n   * - 0\n" not in table
+    # only the zero row is relabelled
+    assert "- 2" in table and "- 3" in table
+
+
+@pytest.mark.unit
+def test_print_frequencies_keeps_the_bare_zero_without_a_label(capsys):
+    reporting.print_frequencies([0, 2], "Polygons to test")
+
+    assert "   * - 0\n" in capsys.readouterr().out
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

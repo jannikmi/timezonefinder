@@ -5,6 +5,13 @@ import re
 import pytest
 
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
+from scripts.configs import (
+    INITIALIZATION_REPORT_FILE,
+    MEMORY_REPORT_FILE,
+    PERFORMANCE_REPORT_FILE,
+    POLYGON_REPORT_FILE,
+)
+from scripts.reporting import DATA_VERSION_LABEL, FIXTURE_VERSION_LABEL
 from scripts.render_benchmark_reports import (
     PROVENANCE_FIELDS,
     acceleration_path_label,
@@ -20,9 +27,14 @@ from scripts.render_benchmark_reports import (
     humanize_benchmark_name,
     is_ci_tracked_configuration,
     percent_faster,
+    render_initialization,
+    render_memory,
+    render_polygon,
+    render_timezone_finding,
     speedup_ratio,
     split_benchmark_label,
 )
+from tests.auxiliaries import benchmark_fixture_provenance
 from tests.test_benchmark_names import EXPECTED_BENCHMARK_NAMES
 
 pytestmark = pytest.mark.unit
@@ -445,6 +457,90 @@ def test_headline_section_describes_the_measured_environment():
     # rendering the report
     assert "Linux x86_64" in banner
     assert "Python 3.13.0" in banner
+
+
+# one benchmark per renderer, enough to exercise the full render path: the
+# renderers tolerate a missing benchmark (headline blocks are conditional), so
+# a minimal JSON still reaches the point where provenance is - or isn't -
+# stamped
+_RENDERERS = {
+    "timezonefinding": (
+        render_timezone_finding,
+        "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+    ),
+    "polygon": (
+        render_polygon,
+        "benchmarks/test_inside_polygon.py::test_pt_in_poly_clang[small]",
+    ),
+    "initialization": (
+        render_initialization,
+        "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-file_based]",
+    ),
+    "memory": (render_memory, "memory::TimezoneFinder[file_based]::steady_heap"),
+}
+
+
+def _fake_benchmark_json(fullname: str) -> dict:
+    return {
+        "machine_info": {
+            "timezonefinder": {
+                **_FAKE_SYSTEM_INFO,
+                "batch_size": 100,
+                "fixture_version": 2,
+                "data_version": "2026c",
+            }
+        },
+        "benchmarks": [
+            {**_fake_bench(fullname.split("::", 1)[1]), "fullname": fullname}
+        ],
+    }
+
+
+@pytest.mark.parametrize("render, fullname", _RENDERERS.values(), ids=list(_RENDERERS))
+def test_every_renderer_stamps_the_provenance_into_the_written_report(
+    tmp_path, render, fullname
+):
+    # asserting on the file each renderer writes, not on
+    # add_system_status_section() in isolation: a renderer that simply forgets
+    # to pass `provenance=` still produces a complete, plausible-looking report,
+    # and that omission is what leaves a page silently describing a workload
+    # that no longer exists
+    output_path = tmp_path / "report.rst"
+
+    render(_fake_benchmark_json(fullname), output_path)
+
+    text = output_path.read_text(encoding="utf-8")
+    assert f"{FIXTURE_VERSION_LABEL}: 2" in text
+    assert f"{DATA_VERSION_LABEL}: 2026c" in text
+
+
+@pytest.mark.parametrize(
+    "report_path",
+    [
+        PERFORMANCE_REPORT_FILE,
+        POLYGON_REPORT_FILE,
+        INITIALIZATION_REPORT_FILE,
+        MEMORY_REPORT_FILE,
+    ],
+    ids=lambda path: path.name,
+)
+def test_committed_report_describes_the_current_benchmark_inputs(report_path):
+    # the staleness alarm itself: regenerating the fixtures or updating the
+    # boundary data without re-running `make reports` leaves these pages
+    # describing the previous workload, and every number on them stays
+    # plausible, so nothing else catches it
+    provenance = benchmark_fixture_provenance()
+    text = report_path.read_text(encoding="utf-8")
+
+    for label, field in (
+        (FIXTURE_VERSION_LABEL, "fixture_version"),
+        (DATA_VERSION_LABEL, "data_version"),
+    ):
+        assert f"{label}: {provenance[field]}" in text, (
+            f"{report_path.name} does not state {label}: {provenance[field]}. It was "
+            "rendered from benchmark measurements taken against different inputs - "
+            "re-measure and re-render with `make reports`."
+        )
 
 
 def test_headline_markup_never_nests_bold_and_literals():

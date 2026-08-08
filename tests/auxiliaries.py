@@ -13,7 +13,7 @@ from typing import Any, Iterator
 
 import numpy as np
 
-from scripts.configs import DEBUG
+from scripts.configs import DEBUG, read_data_version
 from scripts.utils import validate_coord_array_shape
 from tests.locations import REDUCED_TIMEZONE_MAPPING
 from timezonefinder import utils
@@ -36,7 +36,6 @@ PROJECT_ROOT = PACKAGE_DIR.parent
 DIST_DIR = PROJECT_ROOT / "dist"
 BENCHMARK_FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
 BENCHMARK_FIXTURES_METADATA_PATH = BENCHMARK_FIXTURES_DIR / "metadata.json"
-DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
 # benchmark fixture names: shared as both the ``.npy`` file stem under
 # BENCHMARK_FIXTURES_DIR and the matching key in metadata.json's "counts".
@@ -445,7 +444,7 @@ def _load_benchmark_fixture_metadata() -> dict:
             f"but the current scripts.configs.DEBUG={DEBUG}. "
             "Regenerate the fixtures with `make benchmark-fixtures`."
         )
-    current_data_version = DATA_VERSION_FILE.read_text(encoding="utf-8").strip()
+    current_data_version = read_data_version()
     fixture_data_version = metadata.get("data_version")
     if fixture_data_version != current_data_version:
         raise BenchmarkFixtureError(

@@ -15,6 +15,8 @@ from typing import Any, Callable, Literal, get_args
 import numpy as np
 
 from scripts.reporting import (
+    DATA_VERSION_LABEL,
+    FIXTURE_VERSION_LABEL,
     redirect_output_to_file_contextmanager,
     print_rst_table,
     rst_title,
@@ -363,8 +365,8 @@ def add_system_status_section(
     # Which workload the numbers describe (fixture set + boundary data)
     if provenance:
         reporter.add_section("Benchmark Input Provenance", level=2)
-        reporter.add_text(f"**Fixture Version**: {provenance['fixture_version']}")
-        reporter.add_text(f"**Timezone Data Version**: {provenance['data_version']}")
+        reporter.add_text(f"{FIXTURE_VERSION_LABEL}: {provenance['fixture_version']}")
+        reporter.add_text(f"{DATA_VERSION_LABEL}: {provenance['data_version']}")
 
     # Additional benchmark-specific information
     if additional_info:

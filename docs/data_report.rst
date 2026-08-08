@@ -5,6 +5,8 @@
 Data Report
 ===========
 
+**Timezone Data Version**: 2026c
+
 
 
 Data Statistics
@@ -271,17 +273,21 @@ Shortcut Index Overview
 Shortcut Entry Distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+How much work a lookup in one H3 cell costs. A cell covered by a single timezone stores that zone id directly and needs no point-in-polygon test at all; the rest store the candidate polygons a lookup has to test.
+
+No cell needs exactly one test: a single candidate is unambiguous, so it is stored as a direct zone id instead.
+
 
 .. list-table::
    :header-rows: 1
-   :widths: 31 17 15 20 17
+   :widths: 33 16 15 20 16
 
-   * - polygons/shortcut
+   * - Polygons to test
      - Frequency
      - Relative
      - Accumulated
      - Remaining
-   * - 0
+   * - none (unique zone)
      - 30651
      - 74.46%
      - 74.46%
@@ -365,9 +371,9 @@ Shortcut Entry Distributions
 
 .. list-table::
    :header-rows: 1
-   :widths: 33 16 15 20 16
+   :widths: 31 17 15 20 17
 
-   * - timezones/shortcut
+   * - Timezones in cell
      - Frequency
      - Relative
      - Accumulated

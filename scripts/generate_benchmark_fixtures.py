@@ -45,12 +45,11 @@ import numpy as np
 # here or every lookup below would silently miss.
 from h3.api import numpy_int as h3
 
-from scripts.configs import DEBUG
+from scripts.configs import DEBUG, read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_DIR,
     BENCHMARK_FIXTURES_METADATA_PATH,
-    DATA_VERSION_FILE,
     FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
     PIP_INPUTS_FIXTURE,
@@ -235,7 +234,7 @@ def generate(
         "point_sampler": get_rnd_query_pt_area_weighted.__name__,
         "seed": seed,
         "debug": DEBUG,
-        "data_version": DATA_VERSION_FILE.read_text(encoding="utf-8").strip(),
+        "data_version": read_data_version(),
         "shortcut_h3_res": SHORTCUT_H3_RES,
         "pip_strata": list(PIP_STRATA),
         "pip_strata_percentiles": list(PIP_STRATA_PERCENTILES),

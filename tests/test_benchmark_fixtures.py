@@ -18,10 +18,10 @@ import numpy as np
 import pytest
 
 from scripts import generate_benchmark_fixtures as fixture_gen
+from scripts.configs import read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_METADATA_PATH,
-    DATA_VERSION_FILE,
     FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
     RANDOM_POINTS_FIXTURE,
@@ -145,7 +145,7 @@ def _write_metadata(tmp_path, monkeypatch, **overrides):
     metadata_path = tmp_path / BENCHMARK_FIXTURES_METADATA_PATH.name
     metadata = {
         "debug": False,
-        "data_version": DATA_VERSION_FILE.read_text(encoding="utf-8").strip(),
+        "data_version": read_data_version(),
         "fixture_version": FIXTURE_VERSION,
         "point_sampler": get_rnd_query_pt_area_weighted.__name__,
         "pip_strata": [],

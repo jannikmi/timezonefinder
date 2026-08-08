@@ -182,7 +182,10 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json --memory-json=tmp/memory.json`
   (omit `--memory-json` to leave `docs/benchmark_results_memory.rst` untouched).
   Confirm the JSONs are the ones behind the committed reports by re-rendering *before* your change
-  and checking that `git diff docs/benchmark_results_*.rst` is empty
+  and checking that `git diff docs/benchmark_results_*.rst` is empty.
+  `docs/data_report.rst` is the exception among the four: it needs no measurement at all, so
+  `uv run python -m scripts.reporting` regenerates it from the packaged binaries in seconds —
+  never reach for `make reports` to update it
 
 ## Data Pipeline & Versioning
 

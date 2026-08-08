@@ -251,6 +251,12 @@ def parse_data(
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     print("Generating data report from binary files...")
+    # NOTE: the report's provenance stamp reads the *current* DATA_VERSION,
+    # which update_data.sh does not write until this script has returned - so
+    # the report written here still names the previous release. That is why
+    # update_data.sh re-runs this generator via `make reports` afterwards, and
+    # why a standalone `make parse` of a newer dataset leaves a report stamped
+    # with the old version until DATA_VERSION is updated and it is re-run.
     write_data_report_from_binary(output_path_obj, zone_id_dtype=resolved_zone_id_dtype)
 
     # the pytest-benchmark reports (docs/benchmark_results_*.rst) are NOT
