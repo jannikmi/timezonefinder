@@ -22,6 +22,20 @@ INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 MEMORY_REPORT_FILE = DOC_ROOT / "benchmark_results_memory.rst"
 DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 
+# The timezone-boundary-builder release the packaged binary data was built
+# from, written by update_data.sh once a parse has succeeded. Declared here
+# because three unrelated consumers stamp or validate against it - the
+# benchmark fixture metadata (scripts/generate_benchmark_fixtures.py), the data
+# report (scripts/reporting.py) and the fixture loader (tests/auxiliaries.py) -
+# and a second copy of the path would silently stop tracking this one.
+DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
+
+
+def read_data_version() -> str:
+    """The release tag of the boundary data currently packaged, e.g. ``"2026c"``."""
+    return DATA_VERSION_FILE.read_text(encoding="utf-8").strip()
+
+
 DEBUG = False
 # DEBUG = True
 

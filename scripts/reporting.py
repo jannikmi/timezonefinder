@@ -17,6 +17,7 @@ from scripts.configs import (
     DATA_REPORT_FILE,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
+    read_data_version,
     resolve_zone_id_dtype,
 )
 from scripts.utils import percent
@@ -36,6 +37,16 @@ from timezonefinder.utils import (
     get_boundaries_dir,
 )
 from timezonefinder.zone_names import read_zone_names
+
+
+# Provenance stamp labels, shared by both generated report families: the data
+# report below and the benchmark reports rendered through
+# ``scripts/benchmark_utils.py`` (which imports these - it depends on this
+# module, never the other way round). Every generated page states which inputs
+# it describes in identical wording, and the tests asserting the committed
+# pages carry that stamp match against these same constants.
+FIXTURE_VERSION_LABEL = "**Fixture Version**"
+DATA_VERSION_LABEL = "**Timezone Data Version**"
 
 
 # decorator to reroute the output of a function to a file
@@ -253,7 +264,14 @@ def print_rst_table(headers: list[str], rows: list[list[str]]):
     print("")
 
 
-def print_frequencies(counts: list[int], label: str):
+def print_frequencies(counts: list[int], label: str, zero_label: str | None = None):
+    """Print how often each value in ``counts`` occurs, as an RST table.
+
+    ``zero_label`` replaces the literal ``0`` in the first row's label. A zero
+    can carry a meaning the bare digit misreports - see the caller in
+    :func:`print_shortcut_statistics`, where it counts cells that need no
+    polygon test at all rather than cells holding no polygons.
+    """
     max_val = max(*counts)
     frequencies = [counts.count(i) for i in range(max_val + 1)]
 
@@ -269,7 +287,7 @@ def print_frequencies(counts: list[int], label: str):
         # Skip rows with an amount of 0
         if amount > 0 and i < len(acc):
             row = [
-                i,  # Amount
+                zero_label if i == 0 and zero_label is not None else i,  # Amount
                 amount,  # Frequency
                 f"{percent(amount, total_count)}%",  # Relative %
                 f"{acc[i]}%",  # Accumulated %
@@ -488,8 +506,24 @@ def print_shortcut_statistics(
     # Print frequency distributions
     print(rst_title("Shortcut Entry Distributions", level=2))
 
-    print_frequencies(stats["polygons_per_shortcut"], "polygons/shortcut")
-    print_frequencies(stats["zones_per_shortcut"], "timezones/shortcut")
+    print(
+        "How much work a lookup in one H3 cell costs. A cell covered by a single "
+        "timezone stores that zone id directly and needs no point-in-polygon test "
+        "at all; the rest store the candidate polygons a lookup has to test."
+    )
+    print(
+        "\nNo cell needs exactly one test: a single candidate is unambiguous, so "
+        "it is stored as a direct zone id instead.\n"
+    )
+
+    # a direct-zone cell is recorded as 0 candidates, which read as a cell
+    # containing no polygons - impossible for the packaged data, whose ocean
+    # zones cover the globe. Compiled without them a cell genuinely can be
+    # empty, and the bucket then holds both kinds, so say which applies rather
+    # than asserting the packaged case for every dataset this script runs on.
+    zero_label = "none (unique zone)" if not stats["empty_entries"] else "none"
+    print_frequencies(stats["polygons_per_shortcut"], "Polygons to test", zero_label)
+    print_frequencies(stats["zones_per_shortcut"], "Timezones in cell")
 
 
 def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
@@ -743,6 +777,14 @@ def report_data_statistics(
     """
     print(".. _data_report:\n")
     print(rst_title("Data Report", level=0))
+
+    # Which upstream boundary release every figure below describes. Without the
+    # stamp a report regenerated from new data is indistinguishable from a stale
+    # one: the counts all shift, but each remains plausible on its own, so
+    # nothing flags the page as out of date. Same wording as the benchmark
+    # reports' provenance section, for the same reason.
+    print(f"{DATA_VERSION_LABEL}: {read_data_version()}\n")
+
     print(rst_title("Data Statistics", level=1))
 
     # General statistics section
