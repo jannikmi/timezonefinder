@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786227405680,
+  "lastUpdate": 1786229098507,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -765,6 +765,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002996697201997306",
             "extra": "mean: 42.734382999995546 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d65001fe3c0feb2daf965ee47cdc3f331a0f629b",
+          "message": "Make the docstrings describe the code that exists (#481)\n\n* Make the docstrings describe the code that exists\n\nSix docstrings documented something the implementation contradicts, and five\nmore documented parameters that no longer exist.\n\nThe consequential ones are public API. AbstractTimezoneFinder.__init__ called\nin_memory inert and \"kept for API compatibility\" when it is exactly what selects\nmemory-mapped against in-memory coordinate access - and since\nTimezoneFinder.__init__ carries no docstring of its own, inspect.getdoc inherits\nthat claim, so help(TimezoneFinder.__init__) told users the opposite of\ndocs/1_usage.rst. Both get_geometry docstrings named a timezone_names.json that\nhas never existed under that name. read_zone_names promised an empty list for a\nmissing file where it raises FileNotFoundError, and illustrated itself with a\nhardcoded zone count the packaged data had outgrown by three. zone_id_of and\nzone_name_from_id each advertised an exception type their handler converts away,\nsending callers to write an except clause that can never fire while omitting the\none that will.\n\nThe remaining five are :param:/Args: entries in scripts/ and tests/ for\narguments removed along with the parallel shortcut compilation they belonged to;\ncompile_shortcut_mapping's summary still claimed \"optimized parallel processing\"\nthat the NOTE at the foot of its own docstring contradicts.\n\ntests/test_documented_contracts.py pins the claims that are behaviour: the\nexception types both finder methods raise, and that in_memory really does select\nthe coordinate accessor. Every assertion was mutation-checked.\n\n* Record pass 4 in the findings ledger, and drop what has shipped\n\nThe ledger is a to-do list, not a history: entries a pass ships are deleted in\nthe same PR rather than kept with a `shipped` status. The code is the evidence\nthey are done, the changelog says what changed, and git log still has the text.\nRejected, out-of-scope and withdrawn entries stay, because those encode a dead\nend worth not re-discovering. That removes the ERR-*, CLI-* and DOC-* sections -\nevery entry in them had shipped - and takes the file from 575 lines to 384.\n\nAlso cuts the ledger's largest source of merge conflicts between concurrent\npasses: a shipped entry is dead weight that every later pass has to carry past.\n\nPass 4 itself: DOC-1 and DOC-2 shipped (and so removed), plus a first sweep of\nscripts/render_benchmark_reports.py, scripts/describe_benchmark_machine.py and\nthe benchmarks/test_*.py suites - the areas the previous pass flagged as\nuncovered. Adds a Behaviour defects section for the two findings a quality pass\nmay not act on: a negative id silently returns the last zone from both\nzone_id_of and zone_name_from_id, and AbstractTimezoneFinder.__init__ accepts an\nin_memory it never reads.",
+          "timestamp": "2026-08-09T00:43:07+02:00",
+          "tree_id": "6e99e58e0a9ddbb4cac04532645879bbf2a8b03c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d65001fe3c0feb2daf965ee47cdc3f331a0f629b"
+        },
+        "date": 1786229097257,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 68.23223715291515,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006818031513835209",
+            "extra": "mean: 14.655828999991627 msec\nrounds: 58 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 226.48820302201892,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006766843630032412",
+            "extra": "mean: 4.415241000003789 msec\nrounds: 179 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 23.523639340358482,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002630245569745943",
+            "extra": "mean: 42.51042900000357 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
           }
         ]
       }
