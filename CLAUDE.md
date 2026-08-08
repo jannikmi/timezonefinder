@@ -82,6 +82,16 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   tree that never existed. Doing it in the wrong order costs a second full `make testall`, and a
   rebase that pulls in a real conflict (a regenerated report, a changed constant) costs one
   anyway. Re-run the gate whenever a rebase actually moves your branch's base
+- **A green local gate is one point in a matrix, and cannot fail on what varies across the rest.**
+  `make test`/`make testall` run one interpreter with one set of optional dependencies; tox spans
+  `py{311,312,313,314}{,-numba,-pytz}`. Two axes bite in practice. Interpreter-generated text
+  differs by version — argparse renders a rejected choice bare on 3.11 and quoted from 3.12 on — so
+  assert what you actually mean (an exit code, an empty stdout) rather than wording another project
+  owns and revises. And the default dev environment installs numba, so via the import-time dispatch
+  in `utils.py` a local run exercises the numba `inside_polygon` and *never* the C extension, which
+  is what the bare CI envs use. When a change depends on one of these axes, test that axis instead
+  of re-running the whole gate; one file elsewhere costs seconds and needs no tox env:
+  `uv run --python 3.11 --all-groups --isolated pytest tests/<file>.py`
 - `slow` tests are exhaustive sweeps of the whole dataset or hypothesis fuzzing, not general
   regression tests. Run them only when the change plausibly affects what they cover:
   - `main_test.py`, `shortcut_test.py`, `global_functions_test.py` slow cases — after touching

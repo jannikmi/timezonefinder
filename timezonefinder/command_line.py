@@ -1,11 +1,5 @@
 import argparse
-import contextlib
-import logging
-import os
-import sys
-import tempfile
-import warnings
-from collections.abc import Callable, Generator
+from collections.abc import Callable
 
 from timezonefinder import (
     TimezoneFinderL,
@@ -14,34 +8,11 @@ from timezonefinder import (
     timezone_at_land,
 )
 
-logger = logging.getLogger(__name__)
-
-
-@contextlib.contextmanager
-def redirect_stdout_to_temp_file() -> Generator[str, None, None]:
-    """
-    Context manager that redirects stdout to a temporary file.
-
-    The temporary file is created but not automatically deleted when the context exits,
-    allowing the caller to read or process the file after redirection stops.
-
-    :yield: The absolute path to the temporary file
-    """
-    # Save the original stdout
-    original_stdout = sys.stdout
-
-    # Create a temporary file that will NOT be automatically deleted
-    temp_fd, temp_path = tempfile.mkstemp(text=True)
-    temp_file = os.fdopen(temp_fd, "w", encoding="utf-8")
-
-    try:
-        # Redirect stdout to the temporary file
-        sys.stdout = temp_file
-        yield temp_path
-    finally:
-        # Restore the original stdout and close the file
-        sys.stdout = original_stdout
-        temp_file.close()
+# The lookup functions this CLI dispatches to return their result, they never
+# print. Nothing else writes to stdout between argument parsing and the final
+# print either, so the only output is the one `main` emits deliberately -
+# which is what lets a caller pipe the non-verbose output straight into
+# another command. `tests/cli_test.py` pins that contract.
 
 
 def get_timezone_function(function_id: int) -> Callable[..., str | None]:
@@ -105,34 +76,27 @@ def _parse_arguments() -> argparse.Namespace:
     return parser.parse_args()  # takes input from sys.argv
 
 
-def _lookup_timezone(lng: float, lat: float, function_id: int) -> str | None:
-    """
-    Perform timezone lookup with the specified function.
-
-    :param lng: Longitude to query
-    :param lat: Latitude to query
-    :param function_id: The ID of the timezone function to use (0, 1, 3, 4, or 5)
-    :return: The timezone name or None if not found
-    """
-    timezone_function = get_timezone_function(function_id)
-    return timezone_function(lng=lng, lat=lat)
-
-
-def _print_lookup_details(
-    lng: float, lat: float, function_id: int, timezone_result: str | None
+def _format_lookup_details(
+    lng: float,
+    lat: float,
+    function_id: int,
+    timezone_function: Callable[..., str | None],
+    timezone_result: str | None,
 ) -> str:
     """
-    Generate lookup details output.
+    Format the details of a completed lookup for the verbose output.
 
     :param lng: Longitude queried
     :param lat: Latitude queried
     :param function_id: The ID of the function used
+    :param timezone_function: The function that produced ``timezone_result``.
+        Passed in rather than re-resolved from ``function_id``, since resolving
+        ids 3 and 4 constructs a ``TimezoneFinderL`` and loads its shortcut data.
     :param timezone_result: The timezone result or None
     :return: Formatted lookup details as a string
     """
-    timezone_function = get_timezone_function(function_id)
     lines = [
-        "\n" + "=" * 60,
+        "=" * 60,
         "TIMEZONEFINDER LOOKUP DETAILS",
         "-" * 60,
         f"Coordinates: {lat:.6f}°, {lng:.6f}° (lat, lng)",
@@ -152,36 +116,16 @@ def main() -> None:
     """Main entry point for the CLI."""
     args = _parse_arguments()
 
-    # Always redirect stdout to a temp file
-    with redirect_stdout_to_temp_file() as temp_file_path:
-        # Perform lookup
-        tz = _lookup_timezone(args.lng, args.lat, args.function)
-
-        # Generate and print lookup details (captures to temp file)
-        details = _print_lookup_details(args.lng, args.lat, args.function, tz)
-        print(details)
+    timezone_function = get_timezone_function(args.function)
+    tz = timezone_function(lng=args.lng, lat=args.lat)
 
     if args.v:
-        # In verbose mode, print the contents of the temp file
-        try:
-            with open(temp_file_path, encoding="utf-8") as f:
-                captured_output = f.read().strip()
-                if captured_output:
-                    print(captured_output)
-        # OSError already covers FileNotFoundError; UnicodeDecodeError does not
-        # derive from it and has to be listed separately.
-        except (OSError, UnicodeDecodeError) as e:
-            warnings.warn(f"Could not read captured output {temp_file_path}: {e}")
+        print(
+            _format_lookup_details(
+                args.lng, args.lat, args.function, timezone_function, tz
+            )
+        )
     else:
-        # In non-verbose mode, just print the result
+        # an empty line when no timezone was found, so that a caller reading
+        # one line per query stays in step with its inputs
         print(tz if tz else "")
-
-    # Always clean up the temp file
-    try:
-        os.remove(temp_file_path)
-    except FileNotFoundError:
-        # File was already deleted or never created
-        pass
-    except OSError as e:
-        # Log cleanup failures but don't break program flow
-        logger.warning(f"Failed to clean up temporary file {temp_file_path}: {e}")
