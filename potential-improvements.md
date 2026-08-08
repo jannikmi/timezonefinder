@@ -2,162 +2,68 @@
 
 Working ledger of internal code-quality findings for `timezonefinder`. It is committed so that it
 reaches the next quality pass through `master`: every pass reads it before touching a source file,
-re-verifies the open entries against the current code, and writes back what it found, shipped or
-rejected.
+re-verifies the open entries against the current code, and writes back what it found.
 
-None of these are bugs users can hit today. Everything here is internal quality — diagnostics that
-get discarded, duplication that will drift, docstrings describing code that no longer exists, dead
-definitions, annotations that contradict their call sites.
+**This is a to-do list, not a history.** A pass that ships an entry *deletes* it in the same pull
+request — the code is the evidence that it is done, the changelog says what changed, and
+`git log -- potential-improvements.md` still has the text. Entries that were *rejected*, ruled *out
+of scope* or *withdrawn* stay: they encode a dead end, and re-discovering one costs a whole pass.
+So does the *Deliberately checked and found sound* list at the foot.
+
+Almost everything here is internal quality — diagnostics that get discarded, duplication that will
+drift, docstrings describing code that no longer exists, dead definitions, annotations that
+contradict their call sites. The exception is the *Behaviour defects* section: entries a quality
+pass is not allowed to fix, recorded where they will not be lost.
 
 **How to read an entry.** Locations are given by file plus a code anchor (a function or symbol
 name), never a line number, so they survive reformatting. `Size` is a rough count of changed lines.
-`Status` is one of `open`, `shipped (PR #N)`, `rejected (reason)`, `out of scope (reason)`,
-`withdrawn (reason)`. Entries that are shipped, rejected or out of scope are **closed** — do not
-re-litigate them and do not re-add them under a new id.
+`Status` is one of `open`, `rejected (reason)`, `out of scope (reason)` or `withdrawn (reason)` —
+everything still written down is unfinished or deliberately declined. Do not re-litigate a closed
+entry and do not re-add it under a new id.
 
 Order within each section is by expected value per line of review, following the ranking used to
 pick work: **defects that will cause a real bug later > duplication that will drift > readability**.
 
-Closed before this ledger existed, in [#464](https://github.com/jannikmi/timezonefinder/pull/464):
-the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG` declaration in
-`scripts/configs.py`, and the mislabelled latitude assertion. Not listed below.
-
 ---
 
-## Error reporting
+## Behaviour defects
 
-### ERR-1 — `run_command` throws away the subprocess output it just collected
+Out of scope for a quality pass by definition — fixing one changes observable behaviour. Recorded
+here because the alternative is losing them; each needs the maintainer's call, not an agent's.
 
-- **Location:** `tests/auxiliaries.py`, `run_command`, the `except subprocess.CalledProcessError`
-  block.
-- **Defect:** built `error_msg` from the child's stdout and stderr, then raised a *fresh*
-  `CalledProcessError` that never used it, with `from None` suppressing the original as well.
-- **Fix:** echo the captured streams, then re-raise the original with a bare `raise` (keeps the
-  traceback and the attached streams). Size: ~10 lines.
-- **Value:** `run_command` is what `build_wheel` / `build_sdist` use, so a packaging failure under
-  `make testint` reported an exit code and nothing about the cause — the one situation where the
-  build log is the whole point.
-- **Status:** shipped (PR #475)
-- **Last touched:** 2026-08-07 — shipped.
+### BUG-1 — a negative zone or boundary id silently returns the wrong zone
 
-### ERR-2 — the report generator hides which file it choked on
+- **Location:** `timezonefinder/timezonefinder.py`, `AbstractTimezoneFinder.zone_id_of` and
+  `zone_name_from_id`.
+- **Defect:** both index a Python list / numpy array directly, so a negative id is a valid index
+  counting from the end rather than an error. Measured against the packaged data:
+  `zone_name_from_id(-1)` returns `Etc/GMT+12` and `zone_id_of(-1)` returns `443`, with
+  `nr_of_zones == 444`. `zone_name_from_id` explicitly range-checks in its `except IndexError`
+  handler, which a negative id never reaches, so the guard reads as complete and is not.
+- **Value:** a caller propagating a `-1` sentinel — the conventional "not found" from an index
+  lookup — gets a plausible timezone name back instead of an exception. Both are public API.
+- **Fix:** reject `< 0` explicitly in both, alongside the existing upper-bound check. Size: ~6
+  lines. **This is a behaviour change** (a call that returns today would raise), so it wants a
+  maintainer decision and a changelog bullet in the main list, not a quality pass.
+- **Status:** open — out of scope for the quality pass that found it.
+- **Last touched:** 2026-08-08 — found and measured this pass, while correcting the `:raises:`
+  lines of the same two methods (DOC-2).
 
-- **Location:** `scripts/reporting.py`, `load_binary_data`, the two `get_polygon_collection` calls.
-- **Defect:** neither passed the optional `file_path`, which exists solely so an
-  incompatible-layout `ValueError` can name the offending file — the runtime accessors in
-  `timezonefinder/coord_accessors.py` both pass it, and `boundary_coord_path` / `hole_coord_path`
-  were in scope on the adjacent lines.
-- **Fix:** pass them. Size: 2 lines.
-- **Value:** `make reports` against a stale data directory produced an error that could not say
-  which of the two files was wrong.
-- **Status:** shipped (PR #475)
-- **Last touched:** 2026-08-07 — shipped, with a test that mirrors the packaged data directory by
-  symlink and replaces only the boundary coordinate file.
+### API-1 — `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses
 
-### ERR-3 — exception chaining left implicit in two places
-
-- **Location:** `timezonefinder/timezonefinder.py`, `get_geometry` (the
-  `self.timezone_names.index` lookup); `scripts/timezone_data.py`,
-  `PolygonCollection.polygon_vertex_hexes`.
-- **Defect:** both re-raise inside an `except` without `from`, which ruff flags as `B904`. Both
-  suppressions are wanted; nothing said so, making them indistinguishable from a forgotten `from`.
-- **Fix:** `raise ... from None` plus a comment naming the reason. Size: ~8 lines.
-- **Status:** shipped (PR #475)
-- **Last touched:** 2026-08-07 — shipped.
-
-### ERR-4 — error paths that name nothing
-
-- **Location:** `scripts/helper_classes.py`, `Boundaries.overlaps` (bare `raise TypeError`);
-  `scripts/timezone_data.py`, `polygon_vertex_hexes` (`RuntimeError("original polygon coordinates
-  missing")`, naming no polygon).
-- **Fix:** interpolate the offending value / index into the message. Size: ~8 lines.
-- **Status:** shipped (PR #475)
-- **Last touched:** 2026-08-07 — shipped.
-
-### ERR-5 — `except` tuple listing a subclass next to its base
-
-- **Location:** `timezonefinder/command_line.py`, `main`, the temp-file read:
-  `except (FileNotFoundError, OSError, UnicodeDecodeError)`.
-- **Defect:** `FileNotFoundError` is a subclass of `OSError`, so listing it changes nothing and
-  implies a distinction that does not exist. (`UnicodeDecodeError` derives from `ValueError` and
-  does have to be listed.)
-- **Fix:** drop the redundant entry, note why the third stays. Size: 3 lines.
-- **Status:** shipped (PR #475)
-- **Last touched:** 2026-08-07 — shipped.
-
----
-
-## Command line interface
-
-### CLI-1 — the lookup function is resolved twice per invocation
-
-- **Location:** `timezonefinder/command_line.py`, `get_timezone_function`, called from both
-  `_lookup_timezone` and `_print_lookup_details`.
-- **Defect:** `_print_lookup_details` calls `get_timezone_function` purely to read `__name__` off
-  the result. For `-f 3` and `-f 4` that constructs a **second** `TimezoneFinderL`, loading the
-  shortcut binary all over again, only to discard it.
-- **Fix:** resolve the function once in `main` and pass it down. Size: ~15 lines.
-- **Value:** removes a duplicated data load from every verbose CLI call on those two function ids.
-- **Status:** shipped (PR #480)
-- **Last touched:** 2026-08-07 — shipped. `main` resolves the callable and hands it to
-  `_format_lookup_details`; `_lookup_timezone` was deleted, since its only job was to pair the
-  resolution with the call.
-
-### CLI-2 — `_print_lookup_details` does not print
-
-- **Location:** `timezonefinder/command_line.py`, `_print_lookup_details`.
-- **Defect:** it returns a formatted string; `main` prints it. The name says the opposite of what
-  it does.
-- **Fix:** rename to `_format_lookup_details`. It is a private helper, so no API surface moves.
-  Size: 3 lines.
-- **Status:** shipped (PR #480)
-- **Last touched:** 2026-08-07 — shipped.
-
-### CLI-3 — `main` writes its own output to a temp file and reads it back
-
-- **Location:** `timezonefinder/command_line.py`, `main` and `redirect_stdout_to_temp_file`.
-- **Defect:** `main` redirects stdout to a temp file, prints `details` into it, then (verbose only)
-  re-opens the file, reads it, strips it and prints it — for a string it still holds in a local
-  variable. Nothing else inside the redirected block writes to stdout: the lookup functions do not
-  print. The temp file, the `mkstemp`, the read-back, the `warnings.warn` on read failure and the
-  `os.remove` cleanup are an elaborate route to `if args.v: print(details.strip())`.
-- **Fix:** print the string directly and delete the context manager, or — if the redirection is
-  meant to catch output from *library* code that might print in future — say so in a comment and
-  keep it. Deciding which is the judgement call. `redirect_stdout_to_temp_file` has exactly one
-  caller (`main`) and is not exported, so removing it moves no API surface. Size: ~40 lines removed.
-- **Value:** removes the file-system round trip and the two error paths that only exist because of
-  it (ERR-5 was one of them) from every CLI invocation.
-- **Status:** shipped (PR #480)
-- **Last touched:** 2026-08-07 — shipped, removed. The judgement call went to removal: `rg` over
-  `timezonefinder/` finds prints only in data *write* paths, never on a lookup; and in verbose mode
-  the redirect re-emitted the captured output rather than suppressing it, so it was never a
-  suppression mechanism to begin with. What it did provide — a guarantee that non-verbose stdout is
-  only the result — is now an asserted contract (`test_lookup_prints_the_zone_name_and_nothing_else`)
-  rather than an implementation side effect. Output verified byte-identical across 5 function ids ×
-  2 modes × 4 coordinates, plus `--help` and a rejected id.
-
-### CLI-4 — the CLI test asserted against output it had already mangled
-
-- **Location:** `tests/cli_test.py`, `test_main` (the only test the file contained).
-- **Defect:** it passed the captured stdout through `rstrip("\n\x1b[0m")`. `str.rstrip` takes a
-  **set of characters**, not a suffix, so that strips any trailing `\n`, `\x1b`, `[`, `0` or `m` —
-  truncating 12 of the 444 packaged zone names (`Europe/Amsterdam` → `Europe/Amsterda`,
-  `Etc/GMT+10` → `Etc/GMT+1`). The assertion held only because the four hardcoded coordinates
-  happened to miss all twelve; a coordinate in Amsterdam would have failed on correct output. Two
-  further asserts were vacuous: `res == "None"` can never match, since the CLI prints an empty line
-  rather than the string `None` — and that dead branch masked exactly the regression of printing
-  `None` — while `assert not res.endswith("command not found")` is unreachable, because `check=True`
-  already raises on the shell's exit 127.
-- **Fix:** assert the printed name verbatim; add the missing coverage — verbose mode, the empty
-  line printed when no timezone is found, and the rejected function id had none at all. Size: ~120
-  lines.
-- **Value:** the file was the only thing standing between the CLI and an unnoticed output change,
-  and it could not see one.
-- **Status:** shipped (PR #480)
-- **Last touched:** 2026-08-07 — found and shipped this pass. The replacements were mutation-checked
-  (print `None` instead of the empty line; emit a stray line during the lookup; re-resolve the
-  function inside the details): each mutation fails at least one test, and the first is one the old
-  assertion passed.
+- **Location:** `timezonefinder/timezonefinder.py`, `AbstractTimezoneFinder.__init__`.
+- **Defect:** the parameter is accepted and then not read; `TimezoneFinder.__init__` applies its
+  *own* copy of the argument to the two `PolygonArray` constructors after calling `super()`. The
+  base class loads only data it always keeps in memory, so there is nothing for it to select. This
+  is what the docstring corrected in DOC-2 was groping at when it called the parameter inert.
+- **Fix:** either drop it from the base signature (subclasses stop forwarding it) or have the base
+  store it for subclasses to read. Size: ~10 lines.
+- **Why it is not a straight refactor:** `AbstractTimezoneFinder` is importable from the package
+  root, so a signature change is public API surface, and `TimezoneFinderL` accepts `in_memory`
+  purely to forward it. Needs a decision on whether that parameter should exist at all.
+- **Status:** open
+- **Last touched:** 2026-08-08 — found this pass. Documented accurately rather than changed; see
+  DOC-2.
 
 ---
 
@@ -201,49 +107,6 @@ the duplicated `get_corrected_hex_boundaries`, the duplicate `MAX_LAT`/`MAX_LNG`
   Size: ~25 lines.
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
-
----
-
-## Docstrings that describe code that no longer exists
-
-Cheap to fix, and actively misleading while they stand — a `:param:` for an argument that does not
-exist reads as a feature someone removed by accident.
-
-### DOC-1 — documented parameters that were removed
-
-| Location | Documents | Actual signature |
-|---|---|---|
-| `scripts/shortcuts.py` — `compile_h3_map` | `use_parallel`, `max_workers` | `data`, `candidates` |
-| `scripts/shortcuts.py` — `compile_shortcut_mapping` | `use_parallel`, `max_workers` | `data` |
-| `scripts/reporting.py` — `calculate_timezone_metrics` | `all_tz_names` | `nr_of_polygons`, `nr_of_zones`, `polygons_per_timezone` |
-| `tests/auxiliaries.py` — `convert_to_reduced_timezone` | `mapping` | `timezone` |
-| `tests/test_package_contents.py` — `load_gitignore_patterns` | `gitignore_path` | *(none)* |
-
-- **Defect:** the two `shortcuts.py` entries are leftovers from a parallel implementation that was
-  removed; the prose above them still discusses thread pools and worker counts that no longer exist.
-- **Fix:** delete the stale `:param:` lines and the parallelism prose. Size: ~20 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
-
-### DOC-2 — docstring statements that contradict the code
-
-- **`timezone_names.json` does not exist.** `timezonefinder/timezonefinder.py` (`get_geometry`) and
-  `timezonefinder/global_functions.py` (`get_geometry`) both tell users the zone names live in
-  `timezone_names.json`. The file is `timezone_names.txt` — see `timezonefinder/zone_names.py`.
-  These are **public API docstrings**.
-- **`in_memory` is not ignored.** `AbstractTimezoneFinder.__init__`'s docstring says *"Ignored for
-  polygon coordinate data (always uses memory-mapped file access). Kept for API compatibility."*
-  `TimezoneFinder.__init__` passes it straight into both `PolygonArray` constructors, which is
-  exactly what selects `MemoryCoordAccessor` over `FileCoordAccessor`, and `docs/1_usage.rst`
-  documents it as working. The claim is true only for `TimezoneFinderL`, which has no polygon data.
-- **`read_zone_names` does not return an empty list.** `timezonefinder/zone_names.py` documents
-  *":return: List of timezone names (empty list if file not found)"*; the body calls `open()`
-  unguarded and raises `FileNotFoundError`.
-- **Fix:** correct the three statements. Size: ~8 lines.
-- **Value:** highest of the docstring items — the first two are read by users, not just
-  contributors, and the `in_memory` one contradicts the usage docs.
-- **Status:** open
-- **Last touched:** 2026-08-07 — all three re-verified, unchanged.
 
 ---
 
@@ -343,7 +206,24 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
   `FIXTURE_VERSION`, so this is defence in depth against corrupt fixtures rather than a live bug —
   but it is the difference between a loud failure and a quietly wrong report.
 - **Status:** open
-- **Last touched:** 2026-08-07 — found this pass.
+- **Last touched:** 2026-08-08 — re-verified, unchanged. Worth fixing together with TEST-3 below,
+  which is the same fixture and the same silent-hole shape.
+
+### TEST-3 — a wholly missing stratum passes the fixture completeness check
+
+- **Location:** `benchmarks/conftest.py`, `pip_inputs_by_stratum`, the
+  `for stratum, bucket in grouped.items()` check.
+- **Defect:** the check iterates `grouped`, which only ever holds strata the fixture actually
+  contained. A stratum missing from the fixture entirely never becomes a key, so the check passes
+  and the failure surfaces later as a bare `KeyError: 'large'` from
+  `pip_inputs_by_stratum[stratum]` inside the benchmark — the one place the carefully worded
+  "regenerate the fixtures via `make benchmark-fixtures`" message would have been useful.
+- **Fix:** check against the expected stratum names (`STRATA` in
+  `benchmarks/test_inside_polygon.py`, or the stratum set the generator writes) rather than
+  against what was found. Size: ~5 lines. Note the declare-once rule — the names exist in
+  `scripts/generate_benchmark_fixtures.py` already, so import rather than retype them.
+- **Status:** open
+- **Last touched:** 2026-08-08 — found this pass.
 
 ### TEST-2 — a cleanup test closes over its loop variable
 
@@ -388,6 +268,50 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 
 ---
 
+## Report rendering
+
+First sweep of `scripts/render_benchmark_reports.py` — the largest module no earlier pass had read.
+Nothing in it is wrong; these three are readability and drift.
+
+### REND-1 — a conditional expression hides inside a paragraph of prose
+
+- **Location:** `scripts/render_benchmark_reports.py`, `render_memory`, the second
+  `reporter.add_text(...)` call.
+- **Defect:** the argument is `"<12 lines of implicitly concatenated prose>" if workload_size else
+  "<3 more lines>"`, with the `if`/`else` buried in the middle of what reads as one string literal.
+  Correct — the conditional guards the `{workload_size:,}` interpolation that would otherwise fail
+  on `None` — but a reader editing the long branch has no reason to look for a ternary at its foot,
+  and moving a sentence across it changes which report gets it.
+- **Fix:** two named locals, or an `if`/`else` statement around two `add_text` calls. Size: ~15
+  lines. Covered by `tests/test_render_benchmark_reports.py`, so a regression is visible.
+- **Status:** open
+- **Last touched:** 2026-08-08 — found this pass.
+
+### REND-2 — the two memory-mode labels are written down twice
+
+- **Location:** `scripts/render_benchmark_reports.py`, `_memory_mode_label` returns the literals
+  `"in-memory"` / `"file-based"`, which `PARAM_LABELS` already maps from `in_memory` /
+  `file_based`.
+- **Defect:** `PARAM_LABELS` is the module's declared display vocabulary and every other label goes
+  through it. Renaming a label there leaves this function rendering the old wording into the
+  comparison bullets while the tables above use the new one.
+- **Fix:** look the labels up in `PARAM_LABELS`. Size: ~5 lines.
+- **Status:** open
+- **Last touched:** 2026-08-08 — found this pass.
+
+### REND-3 — set membership expressed as a scan over lists of dicts
+
+- **Location:** `scripts/render_benchmark_reports.py`, `render_timezone_finding`:
+  `other = [b for b in benches if b not in in_memory and b not in file_based]`.
+- **Defect:** `in` over a list of dicts compares by value, so this is a deep-equality scan to
+  answer a question the two lines above already answered by name suffix. Harmless at ~14
+  benchmarks, but it reads as though identity mattered and it does not.
+- **Fix:** classify on the suffix directly, as the two lines above do. Size: ~3 lines.
+- **Status:** open
+- **Last touched:** 2026-08-08 — found this pass.
+
+---
+
 ## Tooling
 
 ### TOOL-1 — ruff runs close to its default rule set
@@ -422,10 +346,13 @@ directly; findings there belong against the generator or the schema instead.
 | 1 | 2026-08-06 | `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` — broad triage, findings above | `prototypes/` (deliberate), `docs/`, `.github/workflows/` |
 | 2 (error diagnostics) | 2026-08-07 | Every `raise` and `except` site in `timezonefinder/` and `scripts/` (via `rg` plus ruff `B904`/`BLE`/`TRY`/`EM`/`RSE`/`S110`/`S112`); `timezonefinder/command_line.py` read in full | `docs/`, `.github/workflows/`, `benchmarks/`, `scripts/` report-rendering internals |
 | 3 (CLI output path) | 2026-08-07 | `timezonefinder/command_line.py` and `tests/cli_test.py` (rewritten); the previously-unswept `timezonefinder/np_binary_helpers.py`, `benchmarks/conftest.py` and the `scripts/` benchmark-CI helpers (`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`) read in full; a repo-wide ruff `--select ALL` triage pass over everything but `prototypes/` and the generated bindings | `docs/`, `.github/workflows/`, `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py`, `benchmarks/test_*.py` |
+| 4 (docstring contracts) | 2026-08-08 | The three previously-unswept modules — `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py` and all three `benchmarks/test_*.py` — read in full; `timezonefinder/timezonefinder.py`, `utils.py`, `zone_names.py`, `polygon_array.py`, `global_functions.py` re-read for docstring/behaviour agreement, every `:raises:`/`:return:` claim in `timezonefinder/` checked against the running code | `docs/`, `.github/workflows/`, `scripts/timezone_data.py`, `scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, the larger `tests/` modules |
 
 Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
-start: `scripts/render_benchmark_reports.py` (884 lines, the largest unswept module),
-`scripts/describe_benchmark_machine.py`, and the three `benchmarks/test_*.py` suites.
+start: `docs/` prose, `.github/workflows/`, `scripts/timezone_data.py` (592 lines),
+`scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, and the larger test modules
+(`tests/main_test.py`, `tests/test_benchmark_ci_tooling.py`,
+`tests/test_optimized_hybrid_shortcuts.py`).
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -448,3 +375,10 @@ Deliberately checked and found sound, so do not re-raise them:
   better than `CalledProcessError`; and `np_binary_helpers.py`'s six near-identical `get_*_path`
   helpers — collapsing them into a mapping would trade six importable names for one lookup key and
   works against the declare-each-path-once rule.
+- Pass 4: `scripts/describe_benchmark_machine.py` (read in full, nothing found); the three
+  `benchmarks/test_*.py` suites (thin by design — parametrize tables plus a `_run_over` loop, and
+  the shared `_run_over` in two of them is deliberately not hoisted into `conftest.py`, since an
+  import would put a function call between the benchmark and the code it times);
+  `render_benchmark_reports.py`'s four `render_*` functions sharing a load/headline/table/summary
+  shape — extracting it would trade four readable functions for a framework, and the differences
+  are exactly the report-specific parts.
