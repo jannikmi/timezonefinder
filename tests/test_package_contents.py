@@ -3,6 +3,9 @@
 This module tests that:
 1. All required files are included in both source (sdist) and binary (wheel) distributions
 2. No unwanted files are included (cache, .env, temporary files, etc.) in either distribution type
+3. Every hand-written "unwanted" pattern still names a path that exists here - the two
+   checks above pass for a pattern that matches nothing, so nothing else would notice
+   one going stale
 
 The module uses parameterized tests and global constants to minimize code
 duplication and make the tests more maintainable. It builds both distribution types
@@ -26,8 +29,10 @@ from tests.auxiliaries import (
     matches_pattern,
 )
 
-# Mark all tests in this module as integration tests
-pytestmark = pytest.mark.integration
+# NOTE: no module-level ``integration`` mark. Building a distribution is what makes a
+# test in here an integration test, and the pattern checks need no build - marking the
+# whole module would keep them out of ``make test``, which is where a mistyped pattern
+# should surface.
 
 GITIGNORE_PATH = PROJECT_ROOT / ".gitignore"
 
@@ -41,14 +46,19 @@ DIST_TYPES = [SDIST_TYPE, WHEEL_TYPE]
 # FILE PATTERN CONSTANTS
 #######################
 
-# Additional patterns to ignore beyond what's in .gitignore
-# TODO test
-# no files matching these patterns should be included in the distribution
+# Additional patterns to ignore beyond what's in .gitignore.
+# No file matching one of these may appear in a distribution. A pattern naming a
+# directory needs its trailing slash - ``matches_pattern`` appends the wildcard only
+# for those - and one naming a file has to spell it exactly, since ``fnmatch`` is
+# case-sensitive on POSIX. Get either wrong and the entry silently guards nothing,
+# which is what ``test_every_unwanted_pattern_matches_a_project_file`` now catches.
+# ``build/`` and the other build artefacts are not listed here: .gitignore already
+# contributes them below.
 UNWANTED_DIST_PATTERNS = {
-    ".github",
+    ".github/",
     ".git/*",
     ".vscode/",
-    "build/",
+    ".cursor/",
     "examples/",
     "docs/",
     "scripts/",
@@ -61,14 +71,22 @@ UNWANTED_DIST_PATTERNS = {
     ".pre-commit-config.yaml",
     "CHANGELOG*",
     "CONTRIBUTING.*",
-    "Agents.*",
+    # the agent instruction files MANIFEST.in excludes by name
+    "AGENTS.md",
+    "CLAUDE.md",
+    "potential-improvements.md",
     "Makefile",
     "update_data.sh",
-    "readthedocs.yaml",
+    "readthedocs.yml",
     "test_musllinux_wheel.sh",
     "tox.ini",
     "uv.lock",
 }
+
+# ``.git`` holds repository metadata rather than project files, and in a linked
+# worktree it is a file instead of a directory - so this one pattern matches nothing
+# in the working tree by design, and is exempt from the check above.
+PATTERNS_WITHOUT_PROJECT_FILES = {".git/*"}
 
 ALLOWED_IGNORED_PATTERNS = {
     "*.egg-info/",
@@ -79,13 +97,6 @@ ALLOWED_IGNORED_PATTERNS = {
 #######################
 # ESSENTIAL PATTERNS
 #######################
-
-# TODO test
-# these files are not part of the source code, but must be included in the distribution
-EXPECTED_DIST_PATTERNS = {
-    "PKG-INFO",
-} | ALLOWED_IGNORED_PATTERNS
-
 
 # all files matching these patterns should be included in source distribution
 ESSENTIAL_SOURCE_PATTERNS = {
@@ -105,7 +116,6 @@ ESSENTIAL_SOURCE_PATTERNS = {
     # data files:
     "*.npy",  # Numpy binary data files
     "*.fbs",  # Flatbuffer schema files
-    # FIXME: does not catch missing hole_registry.json
     "*.json",  # used for hole registry
     "*.txt",  # Text files (used for timezone names)
 }
@@ -122,16 +132,21 @@ WHEEL_EXCEPTION_PATTERNS = {
 
 def load_gitignore_patterns() -> set[str]:
     """
-    Load patterns from the repository's .gitignore (``GITIGNORE_PATH``).
+    Load the exclusion patterns from the repository's .gitignore (``GITIGNORE_PATH``).
 
-    Comment lines and blank lines are skipped.
+    Comments, blank lines and ``!`` re-includes are skipped. A re-include is not an
+    exclusion, and kept verbatim it becomes a pattern beginning with ``!`` that
+    matches no path at all - a parametrised case that can never fail. Dropping it
+    leaves the enclosing exclusion in force, which is the right answer here: what
+    git re-includes for version control (``.claude/skills/``) is still excluded from
+    the distribution by ``MANIFEST.in``.
 
     Returns:
         A set of patterns loaded from the .gitignore file.
     """
     with open(GITIGNORE_PATH, encoding="utf-8") as f:
-        # Read lines and strip whitespace
-        return {line.strip() for line in f if line.strip() and not line.startswith("#")}
+        lines = (line.strip() for line in f)
+        return {line for line in lines if line and not line.startswith(("#", "!"))}
 
 
 # any file not under version control should not be included in the distribution
@@ -159,6 +174,12 @@ def filter_ignore_patterns(paths: Iterator[Path]) -> Iterator[Path]:
     return any_filter_paths(paths, IGNORED_PATTERNS, include_matches=False)
 
 
+# One walk of the working tree, shared by the essential-file parametrisation and the
+# pattern check below. Walking a developer checkout means descending into .venv/,
+# .tox/ and the build artefacts, which is not cheap enough to repeat.
+ALL_PROJECT_FILES = tuple(file_path_iterator(PROJECT_ROOT, relative=True))
+
+
 def get_distributable_files() -> Iterator[Path]:
     """
     Get all files that should be included in the distribution.
@@ -168,10 +189,8 @@ def get_distributable_files() -> Iterator[Path]:
     Returns:
         Iterator of Path objects for files that should be included in the distribution
     """
-    all_files = file_path_iterator(PROJECT_ROOT, relative=True)
-
     # Filter out ignored files
-    return filter_ignore_patterns(all_files)
+    return filter_ignore_patterns(iter(ALL_PROJECT_FILES))
 
 
 def iter_expected_distribution_files() -> Iterator[Path]:
@@ -292,6 +311,34 @@ fixtures = {SDIST_TYPE: sdist_fixture, WHEEL_TYPE: wheel_fixture}
 # parameterised pytest test case for testing that all distribution files do not match any of the unwanted patterns
 
 
+@pytest.mark.unit
+def test_every_unwanted_pattern_matches_a_project_file():
+    """A pattern matching nothing here can never catch that thing being packaged.
+
+    ``test_no_unwanted_files_in_distribution`` only ever asserts that *nothing*
+    matched, so it passes for a mistyped pattern exactly as it does for a correct
+    one. Three had drifted from the paths they name and were guarding nothing:
+    ``.github`` without the trailing slash a directory pattern needs, ``Agents.*``
+    after the file became ``AGENTS.md``, and ``readthedocs.yaml`` against a file
+    that has always been ``readthedocs.yml``.
+
+    Only the hand-written set is checked. The patterns read out of ``.gitignore``
+    legitimately name build artefacts and caches that need not exist in any given
+    checkout, so requiring them to match something would be flaky.
+    """
+    unmatched = sorted(
+        pattern
+        for pattern in UNWANTED_DIST_PATTERNS - PATTERNS_WITHOUT_PROJECT_FILES
+        if not any(matches_pattern(path, pattern) for path in ALL_PROJECT_FILES)
+    )
+    assert not unmatched, (
+        f"unwanted-file patterns matching nothing under {PROJECT_ROOT}: {unmatched}. "
+        "A pattern that matches no path cannot fail, so the files it names are not "
+        "guarded against being packaged - correct it, or drop it if the file is gone."
+    )
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("pattern", UNWANTED_DIST_PATTERNS_FINAL)
 @pytest.mark.parametrize("dist_type", DIST_TYPES)
 def test_no_unwanted_files_in_distribution(
@@ -316,6 +363,7 @@ def test_no_unwanted_files_in_distribution(
 
 
 # parameterised pytest test case for testing that all essential source files are included in the distribution
+@pytest.mark.integration
 @pytest.mark.parametrize("expected_file", iter_expected_distribution_files())
 @pytest.mark.parametrize("dist_type", DIST_TYPES)
 def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
