@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786229233240,
+  "lastUpdate": 1786251780277,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -855,6 +855,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.002417173662867126",
             "extra": "mean: 40.27955799999461 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed54d346e509d33850542929b19feef375293ff3",
+          "message": "Make the checks that cannot fail actually fail (#485)",
+          "timestamp": "2026-08-09T07:01:24+02:00",
+          "tree_id": "9ef73291fd7953132aeedb4a3fbf2764fd47e078",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ed54d346e509d33850542929b19feef375293ff3"
+        },
+        "date": 1786251779019,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 73.06862276245806,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017799155828772975",
+            "extra": "mean: 13.685764999991079 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 231.23311998261576,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004570490879777784",
+            "extra": "mean: 4.324639999992996 msec\nrounds: 188 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.415193400839367,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003545780800055254",
+            "extra": "mean: 39.34654300002194 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
