@@ -248,10 +248,14 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
   `test_overflow` request it. Size: ~15 lines.
 - **Value:** a leaked global makes an unrelated later test's failure depend on collection order,
   which is the hardest kind of test failure to attribute.
+- **Second site, same defect:** `tests/utils_test.py`, `test_inside_polygon` does the same two
+  calls, and is parametrized over 2 kernels x 3 cases, so it leaks six times over. Whichever of the
+  two modules pytest collects first decides the state the other runs under. Fix both together.
 - **Status:** open
 - **Last touched:** 2026-08-09 — found this pass, while splitting the dead `pytest.raises` blocks
   in the same file. Deliberately left out of that change: leaked state is a different defect from a
   check that cannot fail, and the fix crosses `tests/` and `benchmarks/`.
+  2026-08-10 — second site in `tests/utils_test.py` added; entry otherwise unchanged.
 
 ### TEST-5 — eight cleanup tests differ only in which exception they raise
 
@@ -296,6 +300,65 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Fix:** delete both lines. Size: 2 lines.
 - **Status:** open
 - **Last touched:** 2026-08-09 — found this pass.
+
+### TEST-8 — a test whose docstring is not a docstring, under a name that says the opposite
+
+- **Location:** `tests/test_optimized_hybrid_shortcuts.py`,
+  `test_single_element_arrays_should_not_occur`.
+- **Defect:** the body opens with `path = temp_file_path()` and only *then* the triple-quoted
+  string, so that string is a discarded expression statement rather than a docstring — it does not
+  reach `--collect-only`, `-rA` output or any IDE. The name says single-element arrays should not
+  occur; the assertions require that they do (`assert single_element_count == 2`). The string
+  itself explains that it documents current, suboptimal behaviour, and carries a bare `TODO`.
+- **Fix:** move the string above the first statement and rename to what it verifies (that the
+  format round-trips a one-element array). Size: ~6 lines. The runtime side of the same behaviour
+  is already covered by `TestSingleElementShortcutArraysAtRuntime` below it.
+- **Value:** the one line a reader sees in a failure report is the name, and here it contradicts
+  the assertion that failed.
+- **Status:** open
+- **Last touched:** 2026-08-10 — found this pass.
+
+### TEST-9 — the out-of-range coordinate table is written out twice
+
+- **Location:** `tests/main_test.py`, `OUT_OF_RANGE_COORDINATES`; `tests/utils_test.py`, the
+  `parametrize` list of `test_rectify_coords_invalid`.
+- **Defect:** the same seven `(lng, lat)` tuples, verbatim, both built from `INT2COORD_FACTOR`.
+  Only the `main_test.py` copy carries the comment explaining what makes them interesting (one
+  representable step outside the valid range, per axis and at every corner). Adding a corner to one
+  copy leaves the other testing a smaller set, with nothing to notice.
+- **Fix:** export the constant from one module — `tests/locations.py` already holds the shared
+  coordinate tables — and import it in both. Size: ~15 lines.
+- **Status:** open
+- **Last touched:** 2026-08-10 — found this pass.
+
+### TEST-10 — two tests named after a function that does not exist
+
+- **Location:** `tests/utils_test.py`, `test_rectify_coords_valid` and
+  `test_rectify_coords_invalid`.
+- **Defect:** both call `utils.validate_coordinates`; there is no `rectify_coords` anywhere in the
+  package. `test_rectify_coords_valid` is additionally subsumed by
+  `test_validate_coordinates_accepts_finite_values` in the same file, which covers all four of its
+  distinct corners *and* asserts the return value — the older test's own list repeats three of its
+  seven cases and asserts nothing beyond "does not raise".
+- **Fix:** delete `test_rectify_coords_valid`, rename `test_rectify_coords_invalid` after
+  `validate_coordinates`. Size: ~20 lines removed. Pairs naturally with TEST-9, which touches the
+  same parametrize list.
+- **Status:** open
+- **Last touched:** 2026-08-10 — found this pass.
+
+### TEST-11 — nothing checks that the files a distribution must *add* are present
+
+- **Location:** `tests/test_package_contents.py`.
+- **Defect:** `test_essential_files_in_distribution` covers files that exist in the checkout, so it
+  cannot cover what only the build produces — `PKG-INFO`, the `.dist-info` metadata. A dead
+  `EXPECTED_DIST_PATTERNS` set naming `PKG-INFO` sat in the module unreferenced, with a `TODO test`
+  above it; it was deleted this pass rather than left to read as coverage that exists.
+- **Fix:** assert those names against the built archives, next to the two checks already there.
+  Size: ~15 lines.
+- **Value:** low — an sdist without `PKG-INFO` fails at upload, so the failure is loud elsewhere.
+  Recorded so the deleted constant is not rediscovered as a gap nobody knew about.
+- **Status:** open
+- **Last touched:** 2026-08-10 — found this pass.
 
 ---
 
@@ -414,6 +477,21 @@ Nothing in it is wrong; these three are readability and drift.
   FlatBuffers message, so this needs a corrupt file to happen at all — but it is the one site where
   the failure mode is a wrong answer.
 
+### TOOL-2 — the `check-manifest` ignore list names two files that do not exist
+
+- **Location:** `.pre-commit-config.yaml`, the `check-manifest` hook's `--ignore` argument.
+- **Defect:** it lists `CONTRIBUTING.rst` (the file is `CONTRIBUTING.md`) and `publish.py` (gone
+  from the repository). Both are inert — an ignore entry that matches nothing only fails to
+  suppress a report — so this is tidiness, not a hole. The same argument also carries `.*` and
+  `.*/*`, which exempt every dotfile and dot-directory from `check-manifest` entirely; that is what
+  leaves `tests/test_package_contents.py` as the only guard over `.github/`, `.vscode/` and
+  `.cursor/`.
+- **Fix:** drop the two stale entries. Size: 1 line. Re-run `make hook` afterwards — the point of
+  the list is that `check-manifest` stays green.
+- **Status:** open
+- **Last touched:** 2026-08-10 — found this pass, while correcting the same class of defect in the
+  packaging test.
+
 ---
 
 ## Scope notes
@@ -435,14 +513,12 @@ directly; findings there belong against the generator or the schema instead.
 | 2 (error diagnostics) | 2026-08-07 | Every `raise` and `except` site in `timezonefinder/` and `scripts/` (via `rg` plus ruff `B904`/`BLE`/`TRY`/`EM`/`RSE`/`S110`/`S112`); `timezonefinder/command_line.py` read in full | `docs/`, `.github/workflows/`, `benchmarks/`, `scripts/` report-rendering internals |
 | 3 (CLI output path) | 2026-08-07 | `timezonefinder/command_line.py` and `tests/cli_test.py` (rewritten); the previously-unswept `timezonefinder/np_binary_helpers.py`, `benchmarks/conftest.py` and the `scripts/` benchmark-CI helpers (`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`) read in full; a repo-wide ruff `--select ALL` triage pass over everything but `prototypes/` and the generated bindings | `docs/`, `.github/workflows/`, `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py`, `benchmarks/test_*.py` |
 | 4 (docstring contracts) | 2026-08-08 | The three previously-unswept modules — `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py` and all three `benchmarks/test_*.py` — read in full; `timezonefinder/timezonefinder.py`, `utils.py`, `zone_names.py`, `polygon_array.py`, `global_functions.py` re-read for docstring/behaviour agreement, every `:raises:`/`:return:` claim in `timezonefinder/` checked against the running code | `docs/`, `.github/workflows/`, `scripts/timezone_data.py`, `scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, the larger `tests/` modules |
-
 | 5 (checks that cannot fail) | 2026-08-09 | `tests/main_test.py`, `scripts/timezone_data.py`, `scripts/measure_memory.py` and `scripts/generate_benchmark_fixtures.py` read in full — the four previously unswept modules named by pass 4; every multi-statement `pytest.raises`/`pytest.warns` block in `tests/` and `benchmarks/` enumerated with an AST scan (all four were in `tests/main_test.py`, all four now split) | `docs/`, `.github/workflows/`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py` |
+| 6 (packaging guard patterns) | 2026-08-10 | The five test modules pass 5 left unread — `tests/test_package_contents.py`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py`, `tests/utils_test.py` — plus `tests/auxiliaries.py` and `tests/main_test.py` re-read; every `UNWANTED_DIST_PATTERNS` entry matched against the working tree, and `MANIFEST.in` / the `check-manifest` ignore list compared against it | `docs/`, `.github/workflows/` |
 
 Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
-start: `docs/` prose, `.github/workflows/`, and the larger test modules
-(`tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`,
-`tests/test_render_benchmark_reports.py`, `tests/utils_test.py`,
-`tests/test_package_contents.py`).
+start: `docs/` prose and `.github/workflows/`. Every module under `tests/` has now been read at
+least once.
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -479,3 +555,9 @@ Deliberately checked and found sound, so do not re-raise them:
   `tests/main_test.py`'s `test_edge_shortcut_validity`, which asserts nothing beyond "does not
   raise" on the base class — that *is* its subject, and `test_edge_shortcut_result` covers the
   expected values for the class that has polygon data.
+- Pass 6: `tests/test_benchmark_ci_tooling.py` and `tests/test_render_benchmark_reports.py` (both
+  read in full, nothing found — each assertion names why it exists); `tests/auxiliaries.py`'s
+  `matches_pattern`, whose `fnmatch` semantics (`*` crosses `/`, POSIX case sensitivity) are what
+  the packaging patterns depend on and are correct as documented; the `.git/*` entry in
+  `UNWANTED_DIST_PATTERNS`, which matches nothing in a working tree by design and is exempted
+  rather than removed.
