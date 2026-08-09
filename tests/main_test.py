@@ -35,6 +35,18 @@ all_timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
+# (lng, lat) one representable step outside the valid WGS84 range: each axis on
+# its own, and both at once, at every corner of the coordinate system
+OUT_OF_RANGE_COORDINATES = [
+    (180.0 + INT2COORD_FACTOR, 90.0),
+    (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
+    (-180.0, 90.0 + INT2COORD_FACTOR),
+    (180.0 + INT2COORD_FACTOR, -90.0),
+    (180.0, -90.0 - INT2COORD_FACTOR),
+    (-180.0 - INT2COORD_FACTOR, -90.0),
+    (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
+]
+
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
 class TestBaseTimezoneFinderClass:
@@ -44,6 +56,8 @@ class TestBaseTimezoneFinderClass:
     bin_file_dir = None
     on_land_pt_fct_name = "timezone_at"
     test_locations = BASIC_TEST_LOCATIONS
+    # the lookup methods this class exposes that take lng/lat keyword-only
+    keyword_only_methods = ("timezone_at", "timezone_at_land")
 
     @pytest.fixture(scope="class", autouse=True)
     def _init_test_instance(
@@ -100,29 +114,24 @@ class TestBaseTimezoneFinderClass:
         for lng, lat, _expected in EDGE_TEST_CASES:
             self.check_timezone_at_results(lng, lat)
 
+    @pytest.mark.parametrize("lng, lat", OUT_OF_RANGE_COORDINATES)
+    def test_out_of_range_coordinates_rejected(self, lng, lat):
+        """One test case per coordinate: sharing a ``pytest.raises`` block would
+        leave it at the first coordinate to raise and never reach the others."""
         with pytest.raises(ValueError):
-            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=90.0)
-            self.check_timezone_at_results(
-                lng=-180.0 - INT2COORD_FACTOR, lat=90.0 + INT2COORD_FACTOR
-            )
-            self.check_timezone_at_results(lng=-180.0, lat=90.0 + INT2COORD_FACTOR)
-            self.check_timezone_at_results(lng=180.0 + INT2COORD_FACTOR, lat=-90.0)
-            self.check_timezone_at_results(lng=180.0, lat=-90.0 - INT2COORD_FACTOR)
-            self.check_timezone_at_results(lng=-180.0 - INT2COORD_FACTOR, lat=-90.0)
-            self.check_timezone_at_results(
-                lng=-180.0 - INT2COORD_FACTOR, lat=-90.01 - INT2COORD_FACTOR
-            )
+            self.test_instance.timezone_at(lng=lng, lat=lat)
 
-    def test_kwargs_only(self):
-        # calling timezonefinder fcts without keyword arguments should raise an error
+    def test_kwargs_only(self, method_name):
+        """lng/lat are keyword-only, so every positional call shape must be
+        rejected - each in its own ``pytest.raises`` block, since the first one
+        to raise ends the block."""
+        method = getattr(self.test_instance, method_name)
         with pytest.raises(TypeError):
-            self.test_instance.timezone_at(23.0, 42.0)
-            self.test_instance.timezone_at(23.0, lng=42.0)
-            self.test_instance.timezone_at(23.0, lat=42.0)
-
-            self.test_instance.timezone_at_land(23.0, 42.0)
-            self.test_instance.timezone_at_land(23.0, lng=42.0)
-            self.test_instance.timezone_at_land(23.0, lat=42.0)
+            method(23.0, 42.0)
+        with pytest.raises(TypeError):
+            method(23.0, lng=42.0)
+        with pytest.raises(TypeError):
+            method(23.0, lat=42.0)
 
     @staticmethod
     def run_location_tests(test_fct, lat, lng, loc, expected_orig):
@@ -139,6 +148,8 @@ class TestBaseTimezoneFinderClass:
             )
         elif metafunc.function.__name__ == "test_unambiguous_timezone_at":
             metafunc.parametrize("lat, lng, loc, expected", BASIC_TEST_LOCATIONS)
+        elif metafunc.function.__name__ == "test_kwargs_only":
+            metafunc.parametrize("method_name", cls.keyword_only_methods)
 
     def test_timezone_at(self, lat, lng, loc, expected):
         self.run_location_tests(self.test_instance.timezone_at, lat, lng, loc, expected)
@@ -180,14 +191,10 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
     class_under_test = TimezoneFinder
     on_land_pt_fct_name = "timezone_at_land"
     test_locations = TEST_LOCATIONS
-
-    def test_kwargs_only(self):
-        super().test_kwargs_only()
-
-        with pytest.raises(TypeError):
-            self.test_instance.certain_timezone_at(23.0, 42.0)
-            self.test_instance.certain_timezone_at(23.0, lng=42.0)
-            self.test_instance.certain_timezone_at(23.0, lat=42.0)
+    keyword_only_methods = (
+        *TestBaseTimezoneFinderClass.keyword_only_methods,
+        "certain_timezone_at",
+    )
 
     def test_nr_of_polygons(self):
         res = self.test_instance.nr_of_polygons
@@ -309,28 +316,29 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         check_pairwise_geometry(geometry_from_id)
         check_pairwise_geometry(geometry_from_name)
 
-    def test_get_geometry_error_handling(self):
-        """Test error handling for get_geometry() with invalid inputs"""
+    # with use_id=False the zone is looked up by name and tz_id is irrelevant,
+    # so an unknown name must be rejected whether or not an id accompanies it
+    @pytest.mark.parametrize("tz_id", [None, 0])
+    @pytest.mark.parametrize("tz_name", ["", "wrong_tz_name"])
+    def test_get_geometry_rejects_unknown_zone_name(self, tz_name, tz_id):
+        with pytest.raises(ValueError):
+            self.test_instance.get_geometry(
+                tz_name=tz_name, tz_id=tz_id, use_id=False, coords_as_pairs=False
+            )
+
+    def test_get_geometry_rejects_zone_id_past_the_last_zone(self):
         nr_timezones = len(self.test_instance.timezone_names)
         with pytest.raises(ValueError):
             self.test_instance.get_geometry(
-                tz_name="", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="", tz_id=0, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=None, use_id=False, coords_as_pairs=False
-            )
-            self.test_instance.get_geometry(
-                tz_name="wrong_tz_name", tz_id=0, use_id=False, coords_as_pairs=False
-            )
-            # id does not exist
-            self.test_instance.get_geometry(
                 tz_name=None, tz_id=nr_timezones, use_id=True, coords_as_pairs=False
             )
+
+    def test_get_geometry_rejects_negative_zone_id(self):
+        """A negative id is a valid Python index into the zone list, so the range
+        check has to reject it rather than relying on the lookup to fail."""
+        with pytest.raises(ValueError):
             self.test_instance.get_geometry(
-                tz_name="", tz_id=-1, use_id=True, coords_as_pairs=False
+                tz_name=None, tz_id=-1, use_id=True, coords_as_pairs=False
             )
 
     def test_get_geometry_invalid_timezone_error_message(self):
@@ -506,7 +514,10 @@ class TestTimezonefinderCleanup:
             error_type = type(error).__name__
 
             class TestTimezoneFinder(TimezoneFinder):
-                def cleanup(self):
+                # bound as a default argument, not captured from the loop: each
+                # instance is collected (re-entering __del__) after the loop has
+                # moved on, and a closure would raise whatever `error` is by then
+                def cleanup(self, error=error):
                     raise error
 
             tf = TestTimezoneFinder()

@@ -53,6 +53,7 @@ from tests.auxiliaries import (
     FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
     PIP_INPUTS_FIXTURE,
+    PIP_STRATA,
     PIP_STRATA_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
@@ -77,9 +78,7 @@ N_UNIQUE_SHORTCUT_POINTS = 5_000
 N_AMBIGUOUS_SHORTCUT_POINTS = 5_000
 N_PIP_INPUTS = 10_000
 
-# order matters: index is the integer code stored in pip_strata.npy
-PIP_STRATA = ("small", "medium", "large")
-# polygon vertex-count percentiles splitting polygons into the strata above
+# polygon vertex-count percentiles splitting polygons into PIP_STRATA
 PIP_STRATA_PERCENTILES = (50, 90)
 
 
@@ -149,10 +148,14 @@ def stratify_polygons_by_size() -> dict[str, np.ndarray]:
         count=n_polygons,
     )
     p_low, p_high = np.percentile(sizes, PIP_STRATA_PERCENTILES)
-    small_ids = np.where(sizes <= p_low)[0]
-    medium_ids = np.where((sizes > p_low) & (sizes <= p_high))[0]
-    large_ids = np.where(sizes > p_high)[0]
-    strata = {"small": small_ids, "medium": medium_ids, "large": large_ids}
+    # unpacked rather than retyped, so a change to PIP_STRATA fails here instead
+    # of leaving this dict keyed by names nothing looks up any more
+    small, medium, large = PIP_STRATA
+    strata = {
+        small: np.where(sizes <= p_low)[0],
+        medium: np.where((sizes > p_low) & (sizes <= p_high))[0],
+        large: np.where(sizes > p_high)[0],
+    }
     for name, ids in strata.items():
         print(f"  stratum '{name}': {len(ids):,} polygons")
     return strata

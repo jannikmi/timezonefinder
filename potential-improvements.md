@@ -108,6 +108,22 @@ here because the alternative is losing them; each needs the maintainer's call, n
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
+### DUP-3 — the zone-id ordering rule is enforced twice, in two classes' worth of code
+
+- **Location:** `scripts/timezone_data.py`, `ZoneCollection.validate_structure` and
+  `ZoneCollection.zone_positions`.
+- **Defect:** both walk `poly_zone_ids` element by element checking it is non-decreasing, and both
+  raise the same message (`"Zone IDs must be in non-decreasing order, found {} after {}"`) built
+  from their own locals. `validate_structure` runs at construction, so by the time
+  `zone_positions` runs the invariant is already guaranteed — its copy can only fire if a caller
+  mutated the array in place.
+- **Fix:** keep the validator's scan and drop the one in `zone_positions`, or express both through
+  one helper. Size: ~10 lines.
+- **Value:** two Python-level passes over every polygon during data generation, and two places to
+  edit if the ordering rule ever changes.
+- **Status:** open
+- **Last touched:** 2026-08-09 — found this pass.
+
 ---
 
 ## Dead and inert code
@@ -141,6 +157,18 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Fix:** simplify each in place. Size: ~15 lines.
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### DEAD-3 — a negative-zone-id guard that the dtype check above it makes unreachable
+
+- **Location:** `scripts/timezone_data.py`, `ZoneCollection.validate_structure`, the
+  `if min_zone_id < 0` branch.
+- **Defect:** the same method rejects any `poly_zone_ids` whose `dtype.kind != "u"` a dozen lines
+  earlier, so the array is unsigned by the time `.min()` is taken and the branch cannot fire. It
+  reads as the guard against negative ids, which is what makes it worth removing rather than
+  leaving: the real negative-id exposure is BUG-1, elsewhere and still open.
+- **Fix:** delete the branch (and the now-unused `min_zone_id`). Size: ~4 lines.
+- **Status:** open
+- **Last touched:** 2026-08-09 — found this pass.
 
 ---
 
@@ -188,57 +216,86 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Last touched:** 2026-08-07 — re-verified; the `A002` site added this pass, same defect and same
   fix, so it belongs here rather than in an entry of its own.
 
+### TYPE-5 — generator functions with no return annotation
+
+- **Location:** `scripts/timezone_data.py` — `HoleCollection.holes_in_poly` and
+  `TimezoneData.holes_in_poly`; `scripts/generate_benchmark_fixtures.py` —
+  `write_points_fixture`.
+- **Defect:** the two `holes_in_poly` are generators returning polygon arrays and are annotated
+  with nothing at all, so a caller cannot tell from the signature that iterating is required. Every
+  neighbouring method in both classes is annotated, which is what makes these read as oversights
+  rather than as a choice.
+- **Fix:** `Iterator[np.ndarray]` and `None`. Size: ~4 lines.
+- **Status:** open
+- **Last touched:** 2026-08-09 — found this pass.
+
 ---
 
 ## Test quality
 
-### TEST-1 — the benchmark fixture loader pairs two files with a silent `zip`
+### TEST-4 — `test_overflow` leaves numpy's error state changed for the rest of the session
 
-- **Location:** `benchmarks/conftest.py`, `pip_inputs_by_stratum`, the
-  `zip(inputs, strata)` (ruff `B905`).
-- **Defect:** `inputs` and `strata` are loaded from two separate fixture files and zipped without
-  `strict=`. If they ever disagree in length, `zip` truncates to the shorter one without a word.
-  The per-stratum count check below it catches only the case where a bucket ends up short — a
-  *misaligned* pairing that still fills every bucket labels each point with the wrong stratum, and
-  the per-stratum benchmark report then attributes costs to the wrong polygon sizes while looking
-  entirely healthy.
-- **Fix:** `strict=True`. Size: 1 line. Both files come from one generator run and are pinned by
-  `FIXTURE_VERSION`, so this is defence in depth against corrupt fixtures rather than a live bug —
-  but it is the difference between a loud failure and a quietly wrong report.
+- **Location:** `tests/main_test.py`, `TestTimezonefinderClass.test_overflow`.
+- **Defect:** calls `np.seterr(all="warn")` and never restores it, so every later test in the same
+  process runs with `under` promoted from `ignore` to `warn`. Its `warnings.filterwarnings("error")`
+  *is* undone, but only because pytest's warnings plugin wraps each test in `catch_warnings()` —
+  the test does not scope it itself. It also re-imports `warnings` inside the function body, which
+  the module already imports at the top.
+- **Fix:** the correct pattern already exists as `strict_numpy_warnings` in
+  `benchmarks/conftest.py`, whose docstring says in as many words that it is per-test *so it
+  cannot leak into other modules collected in the same session*. Move that fixture somewhere both
+  suites can use (`tests/auxiliaries.py` is where the other shared benchmark helpers live) and have
+  `test_overflow` request it. Size: ~15 lines.
+- **Value:** a leaked global makes an unrelated later test's failure depend on collection order,
+  which is the hardest kind of test failure to attribute.
 - **Status:** open
-- **Last touched:** 2026-08-08 — re-verified, unchanged. Worth fixing together with TEST-3 below,
-  which is the same fixture and the same silent-hole shape.
+- **Last touched:** 2026-08-09 — found this pass, while splitting the dead `pytest.raises` blocks
+  in the same file. Deliberately left out of that change: leaked state is a different defect from a
+  check that cannot fail, and the fix crosses `tests/` and `benchmarks/`.
 
-### TEST-3 — a wholly missing stratum passes the fixture completeness check
+### TEST-5 — eight cleanup tests differ only in which exception they raise
 
-- **Location:** `benchmarks/conftest.py`, `pip_inputs_by_stratum`, the
-  `for stratum, bucket in grouped.items()` check.
-- **Defect:** the check iterates `grouped`, which only ever holds strata the fixture actually
-  contained. A stratum missing from the fixture entirely never becomes a key, so the check passes
-  and the failure surfaces later as a bare `KeyError: 'large'` from
-  `pip_inputs_by_stratum[stratum]` inside the benchmark — the one place the carefully worded
-  "regenerate the fixtures via `make benchmark-fixtures`" message would have been useful.
-- **Fix:** check against the expected stratum names (`STRATA` in
-  `benchmarks/test_inside_polygon.py`, or the stratum set the generator writes) rather than
-  against what was found. Size: ~5 lines. Note the declare-once rule — the names exist in
-  `scripts/generate_benchmark_fixtures.py` already, so import rather than retype them.
+- **Location:** `tests/main_test.py`, `TestTimezonefinderCleanup` — every test from
+  `test_cleanup_attribute_error_suppressed` through `test_cleanup_type_error_warned`.
+- **Defect:** each defines the same `TimezoneFinder` subclass overriding `cleanup` to raise one
+  exception, then repeats the same `catch_warnings` block and the same `ResourceWarning` filter.
+  The only things that vary are the exception and whether zero or one warning is expected. Adding a
+  ninth exception to `__del__`'s suppression list means copying the block a ninth time, and a copy
+  that asserts the wrong count is invisible.
+- **Fix:** one parametrized test over `(exception, expected_warning_count)`, plus the two that
+  additionally assert the message. Size: ~90 lines removed.
 - **Status:** open
-- **Last touched:** 2026-08-08 — found this pass.
+- **Last touched:** 2026-08-09 — found this pass.
 
-### TEST-2 — a cleanup test closes over its loop variable
+### TEST-7 — the wheel install test builds and installs with two different interpreters
 
-- **Location:** `tests/main_test.py`, `test_cleanup_does_not_raise_to_user` (ruff `B023`).
-- **Defect:** the `TestTimezoneFinder.cleanup` defined inside the loop raises `error`, which is
-  looked up when `cleanup` runs, not when it is defined. Within one iteration that is the intended
-  value, so the test is not wrong today; but each iteration's `tf` is collected later, re-entering
-  `__del__` with whatever `error` has become. The failure message names `error_type` as though the
-  binding were fixed, which is what makes it read as correct.
-- **Fix:** bind the exception as a default argument (or build the subclass from a factory). Size:
-  ~4 lines.
-- **Value:** low as a live defect, but the test's whole subject is `__del__` at collection time,
-  which is exactly when the binding stops meaning what the message says.
+- **Location:** `tests/test_integration.py`, `test_install_from_artifacts[wheel]`, via
+  `tests/auxiliaries.py`'s `BUILD_WHEEL_CMD` and `setup_venv`.
+- **Defect:** `uv build --wheel` picks its own interpreter, while `setup_venv` creates the target
+  venv from `sys.executable` — the one running pytest. When those differ, the ABI-tagged wheel
+  (`cp3XY-cp3XY-…`) is rejected by the venv's pip and the test fails with *"is not a supported
+  wheel on this platform"*, which reads like a packaging bug rather than a mismatched pair of
+  interpreters. The sdist half of the same test passes, because an sdist has no ABI tag.
+- **Reproduced:** on unmodified `origin/master` (c0a6887), on a machine whose default `python3` is
+  3.14 while the project venv is 3.12: `uv build` produces `cp314`, `setup_venv` builds a 3.12
+  venv. CI never sees it, since there the two are the same interpreter. **A local `make testall`
+  therefore cannot be fully green on such a machine** — treat this one failure as pre-existing.
+- **Fix:** build for the interpreter the test will install into — `uv build --wheel --python
+  {sys.executable}`. Size: ~5 lines.
 - **Status:** open
-- **Last touched:** 2026-08-07 — found this pass.
+- **Last touched:** 2026-08-09 — found this pass, as the only failure in the final `make testall`
+  gate; confirmed pre-existing by running the same test on unmodified `origin/master`.
+
+### TEST-6 — a stale two-line comment closes `tests/main_test.py`
+
+- **Location:** `tests/main_test.py`, the last two lines of the file.
+- **Defect:** the same comment (*"TEST equality for all results. in_memory_mode = True/False must
+  not change the results"*) appears twice, and it reads as a to-do for something
+  `TestTimezonefinderClassTestMEM` already does — it re-runs the whole `TestTimezonefinderClass`
+  suite with `in_memory_mode = True`.
+- **Fix:** delete both lines. Size: 2 lines.
+- **Status:** open
+- **Last touched:** 2026-08-09 — found this pass.
 
 ---
 
@@ -265,6 +322,28 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
   `docs/data_report.rst`, so it needs a regenerate-and-diff to prove neutral. Size: ~80 lines moved.
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### BIG-3 — the GeoJSON parser threads nine accumulator lists through three call levels
+
+- **Location:** `scripts/timezone_data.py`, `TimezoneData.from_geojson` and the three classmethods
+  below it: `_process_timezone_feature` (12 parameters), `_process_polygon_with_holes` (12),
+  `_process_hole` (8).
+- **Defect:** `from_geojson` declares nine empty lists plus two counters and passes them down two
+  levels for the callees to append to. `poly_id` and `nr_of_holes` are additionally returned and
+  reassigned at each level, so each function both mutates shared state and threads a counter — and
+  which arguments are inputs and which are outputs is visible only by reading the bodies. The
+  parameter order also has to match at three call sites with nothing checking it: several
+  neighbouring parameters share a type (`PolygonList` appears twice, `list[int]` three times), so
+  a transposition type-checks.
+- **Fix:** one mutable accumulator (a dataclass with the nine lists and two counters) passed once,
+  turning the three signatures into `(accumulator, <the thing being parsed>)`. Size: ~120 lines
+  touched, no logic moved.
+- **Why it is not a straight refactor:** this is the data converter, and the only thing that proves
+  it neutral is regenerating the binaries and confirming `git status --short timezonefinder/data`
+  is empty — which needs a timezone-boundary-builder download (`update_data.sh`), not just a test
+  run. Worth doing, but the verification is the expensive part, so it should be its own pass.
+- **Status:** open
+- **Last touched:** 2026-08-09 — found this pass.
 
 ---
 
@@ -323,8 +402,17 @@ Nothing in it is wrong; these three are readability and drift.
   run is not a wall of noise. Note that `TRY003` / `EM101` / `EM102` fire in the hundreds across
   `scripts/` and are not worth adopting — pick deliberately rather than taking a whole family.
 - **Status:** open
-- **Last touched:** 2026-08-07 — re-verified; ERR-3 cleared the last two `B904` hits, so `B904` is
-  now clean and could be enabled on its own.
+- **Last touched:** 2026-08-09 — `B904` and `B023` are now both clean repo-wide (excluding
+  `prototypes/`) and could be enabled on their own. `B905` is down to 9 sites: two in
+  `scripts/timezone_data.py`'s validators and one in `tests/utils_test.py` where the lengths are
+  checked on the line above, the rest genuinely paired by construction. The one worth looking at
+  on its own merits is `timezonefinder/flatbuf/io/hybrid_shortcuts.py`'s
+  `zip(poly_id_hex_ids, poly_id_lengths)` — the only one on the library's own load path. A
+  truncation there drops shortcut entries silently, and `_iter_boundaries_in_shortcut` treats a
+  missing hex id as "no candidate polygons" (`shortcut_mapping.get(hex_id)` is `None` → `return`),
+  so those coordinates would answer `None` rather than raise. Both arrays come out of one
+  FlatBuffers message, so this needs a corrupt file to happen at all — but it is the one site where
+  the failure mode is a wrong answer.
 
 ---
 
@@ -348,11 +436,13 @@ directly; findings there belong against the generator or the schema instead.
 | 3 (CLI output path) | 2026-08-07 | `timezonefinder/command_line.py` and `tests/cli_test.py` (rewritten); the previously-unswept `timezonefinder/np_binary_helpers.py`, `benchmarks/conftest.py` and the `scripts/` benchmark-CI helpers (`normalize_benchmark_json.py`, `compare_benchmark_runs.py`, `benchmark_noise.py`) read in full; a repo-wide ruff `--select ALL` triage pass over everything but `prototypes/` and the generated bindings | `docs/`, `.github/workflows/`, `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py`, `benchmarks/test_*.py` |
 | 4 (docstring contracts) | 2026-08-08 | The three previously-unswept modules — `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py` and all three `benchmarks/test_*.py` — read in full; `timezonefinder/timezonefinder.py`, `utils.py`, `zone_names.py`, `polygon_array.py`, `global_functions.py` re-read for docstring/behaviour agreement, every `:raises:`/`:return:` claim in `timezonefinder/` checked against the running code | `docs/`, `.github/workflows/`, `scripts/timezone_data.py`, `scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, the larger `tests/` modules |
 
+| 5 (checks that cannot fail) | 2026-08-09 | `tests/main_test.py`, `scripts/timezone_data.py`, `scripts/measure_memory.py` and `scripts/generate_benchmark_fixtures.py` read in full — the four previously unswept modules named by pass 4; every multi-statement `pytest.raises`/`pytest.warns` block in `tests/` and `benchmarks/` enumerated with an AST scan (all four were in `tests/main_test.py`, all four now split) | `docs/`, `.github/workflows/`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py` |
+
 Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
-start: `docs/` prose, `.github/workflows/`, `scripts/timezone_data.py` (592 lines),
-`scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, and the larger test modules
-(`tests/main_test.py`, `tests/test_benchmark_ci_tooling.py`,
-`tests/test_optimized_hybrid_shortcuts.py`).
+start: `docs/` prose, `.github/workflows/`, and the larger test modules
+(`tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`,
+`tests/test_render_benchmark_reports.py`, `tests/utils_test.py`,
+`tests/test_package_contents.py`).
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -382,3 +472,10 @@ Deliberately checked and found sound, so do not re-raise them:
   `render_benchmark_reports.py`'s four `render_*` functions sharing a load/headline/table/summary
   shape — extracting it would trade four readable functions for a framework, and the differences
   are exactly the report-specific parts.
+- Pass 5: `scripts/measure_memory.py` (read in full, nothing found); `benchmarks/test_inside_polygon.py`'s
+  `STRATA` list, which repeats the `PIP_STRATA` names as explicit `pytest.param` ids — deliberate,
+  since `CONTRIBUTING.md` requires benchmark ids to be written out rather than derived, and
+  deriving them from a data file would let a fixture regeneration silently reset chart history;
+  `tests/main_test.py`'s `test_edge_shortcut_validity`, which asserts nothing beyond "does not
+  raise" on the base class — that *is* its subject, and `test_edge_shortcut_result` covers the
+  expected values for the class that has polygon data.

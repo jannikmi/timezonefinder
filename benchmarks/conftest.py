@@ -15,11 +15,10 @@ from scripts.configs import DEBUG
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
-    PIP_INPUTS_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
     benchmark_fixture_provenance,
-    boundaries,
+    group_pip_inputs_by_stratum,
     load_benchmark_points,
     load_pip_inputs,
     load_pip_strata,
@@ -37,11 +36,12 @@ from tests.auxiliaries import (
 # whose variance comes from the runner's best-case state, not the sample
 # size); per-round resolution is the lever, so this is it.
 #
-# Hard ceilings, enforced only as a ValueError below:
-#   - `_load_batch` needs BATCH_SIZE points per fixture -> 5,000
+# Hard ceilings, enforced only as a ValueError when the fixtures are loaded:
+#   - `_load_batch` below needs BATCH_SIZE points per fixture -> 5,000
 #     (N_UNIQUE_SHORTCUT_POINTS / N_AMBIGUOUS_SHORTCUT_POINTS)
-#   - `pip_inputs_by_stratum` needs BATCH_SIZE *per stratum*, and
-#     N_PIP_INPUTS=10,000 split three ways -> 3,333, the binding one
+#   - `group_pip_inputs_by_stratum` (tests/auxiliaries.py) needs BATCH_SIZE
+#     *per stratum*, and N_PIP_INPUTS=10,000 split three ways -> 3,333, the
+#     binding one
 # Raising past either means bumping the matching N_* in
 # scripts/generate_benchmark_fixtures.py and regenerating.
 BATCH_SIZE = 2_500
@@ -110,22 +110,7 @@ def ambiguous_shortcut_points() -> list[tuple[float, float]]:
 def pip_inputs_by_stratum() -> dict[str, list[tuple[int, int, np.ndarray]]]:
     """(x, y, polygon_coords) triples grouped by size stratum, `BATCH_SIZE`
     entries each, so per-stratum cost isn't hidden behind an average."""
-    inputs = load_pip_inputs()
-    strata = load_pip_strata()
-    grouped: dict[str, list[tuple[int, int, np.ndarray]]] = {}
-    for (x, y, poly_id), stratum in zip(inputs, strata):
-        bucket = grouped.setdefault(stratum, [])
-        if len(bucket) < BATCH_SIZE:
-            bucket.append((x, y, boundaries.coords_of(poly_id)))
-    for stratum, bucket in grouped.items():
-        if len(bucket) < BATCH_SIZE:
-            raise ValueError(
-                f"benchmark fixture {PIP_INPUTS_FIXTURE!r} has only {len(bucket)} "
-                f"'{stratum}' entries, but the benchmark suite needs at least "
-                f"{BATCH_SIZE} per stratum. Regenerate the fixtures with a larger "
-                "count via `make benchmark-fixtures`."
-            )
-    return grouped
+    return group_pip_inputs_by_stratum(load_pip_inputs(), load_pip_strata(), BATCH_SIZE)
 
 
 @pytest.fixture

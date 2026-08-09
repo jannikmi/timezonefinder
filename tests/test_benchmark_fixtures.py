@@ -24,6 +24,9 @@ from tests.auxiliaries import (
     BENCHMARK_FIXTURES_METADATA_PATH,
     FIXTURE_VERSION,
     ON_LAND_POINTS_FIXTURE,
+    PIP_INPUTS_FIXTURE,
+    PIP_STRATA,
+    PIP_STRATA_FIXTURE,
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
     BenchmarkFixtureError,
@@ -32,6 +35,7 @@ from tests.auxiliaries import (
     get_rnd_poly_int,
     get_rnd_query_pt,
     get_rnd_query_pt_area_weighted,
+    group_pip_inputs_by_stratum,
     load_benchmark_points,
     load_pip_inputs,
     load_pip_strata,
@@ -243,7 +247,65 @@ def test_load_pip_strata_matches_pip_inputs():
     pip_inputs = load_pip_inputs()
     strata = load_pip_strata()
     assert len(strata) == len(pip_inputs)
-    assert set(strata) == {"small", "medium", "large"}
+    assert set(strata) == set(PIP_STRATA)
+
+
+#######################
+# PIP STRATUM GROUPING
+#######################
+
+# small enough to keep these fast; the grouping is size-independent, and the
+# production BATCH_SIZE is exercised whenever the benchmark suite runs
+GROUPING_BATCH_SIZE = 5
+
+
+def _labelled_inputs(strata: list[str]) -> list[tuple[int, int, int]]:
+    """PIP inputs for the given labels, all pointing at polygon 0."""
+    return [(0, 0, 0) for _ in strata]
+
+
+def test_group_pip_inputs_by_stratum_fills_every_stratum():
+    grouped = group_pip_inputs_by_stratum(
+        load_pip_inputs(), load_pip_strata(), GROUPING_BATCH_SIZE
+    )
+    assert set(grouped) == set(PIP_STRATA)
+    for bucket in grouped.values():
+        assert len(bucket) == GROUPING_BATCH_SIZE
+
+
+def test_group_pip_inputs_by_stratum_rejects_length_mismatch():
+    strata = [PIP_STRATA[0]] * GROUPING_BATCH_SIZE
+    with pytest.raises(ValueError, match=PIP_STRATA_FIXTURE):
+        group_pip_inputs_by_stratum(
+            _labelled_inputs(strata)[:-1], strata, GROUPING_BATCH_SIZE
+        )
+
+
+def test_group_pip_inputs_by_stratum_rejects_unknown_stratum():
+    strata = ["enormous"] * GROUPING_BATCH_SIZE
+    with pytest.raises(ValueError, match="unknown strata"):
+        group_pip_inputs_by_stratum(
+            _labelled_inputs(strata), strata, GROUPING_BATCH_SIZE
+        )
+
+
+def test_group_pip_inputs_by_stratum_rejects_missing_stratum():
+    # a stratum absent from the fixture altogether: it never becomes a key, so
+    # only an expectation stated up front can notice it is gone
+    present, first_missing = PIP_STRATA[0], PIP_STRATA[1]
+    strata = [present] * GROUPING_BATCH_SIZE
+    with pytest.raises(ValueError, match=f"'{first_missing}' entries"):
+        group_pip_inputs_by_stratum(
+            _labelled_inputs(strata), strata, GROUPING_BATCH_SIZE
+        )
+
+
+def test_group_pip_inputs_by_stratum_rejects_short_stratum():
+    strata = [stratum for stratum in PIP_STRATA for _ in range(GROUPING_BATCH_SIZE)]
+    with pytest.raises(ValueError, match=PIP_INPUTS_FIXTURE):
+        group_pip_inputs_by_stratum(
+            _labelled_inputs(strata), strata, GROUPING_BATCH_SIZE + 1
+        )
 
 
 def test_benchmark_fixtures_dir_is_committed():

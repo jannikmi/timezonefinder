@@ -48,6 +48,14 @@ AMBIGUOUS_SHORTCUT_POINTS_FIXTURE = "ambiguous_shortcut_points"
 PIP_INPUTS_FIXTURE = "pip_inputs"
 PIP_STRATA_FIXTURE = "pip_strata"
 
+# The polygon-size strata every ``pip_inputs`` fixture is split into. Order
+# matters: the index is the integer code stored in ``pip_strata.npy``, and the
+# names are written into metadata.json for ``load_pip_strata`` to decode with.
+# Lives here rather than in the generator for the same reason FIXTURE_VERSION
+# does, and so that ``group_pip_inputs_by_stratum`` can state which strata a
+# fixture must contain rather than only inspecting the ones it found.
+PIP_STRATA = ("small", "medium", "large")
+
 # Bump whenever the *generation logic* changes in a way that makes previously
 # committed fixtures mean something different: the point sampler, the ``N_*``
 # counts, or the order in which the generators consume the shared seeded
@@ -556,6 +564,58 @@ def load_pip_strata() -> list[str]:
     metadata = _load_benchmark_fixture_metadata()
     stratum_names = metadata["pip_strata"]
     return [stratum_names[code] for code in arr]
+
+
+def group_pip_inputs_by_stratum(
+    inputs: list[tuple[int, int, int]],
+    strata: list[str],
+    batch_size: int,
+) -> dict[str, list[tuple[int, int, np.ndarray]]]:
+    """Pair PIP inputs with their labels and take ``batch_size`` of each stratum.
+
+    Returns ``(x, y, polygon_coords)`` triples keyed by :data:`PIP_STRATA`, with
+    the polygon ids of :func:`load_pip_inputs` already resolved against the
+    loaded boundary data.
+
+    Every way the two fixture files can disagree - different lengths, an
+    unexpected label, a stratum that is short or missing altogether - raises
+    here, naming the fixture and the fix. Left to the caller, each of them
+    instead produces a full-looking result that mislabels its points, or a bare
+    ``KeyError`` from the benchmark that consumes it.
+    """
+    if len(inputs) != len(strata):
+        raise ValueError(
+            f"benchmark fixtures {PIP_INPUTS_FIXTURE!r} ({len(inputs)} points) and "
+            f"{PIP_STRATA_FIXTURE!r} ({len(strata)} labels) disagree in length; "
+            "they must be generated together. Regenerate the fixtures via "
+            "`make benchmark-fixtures`."
+        )
+    unknown = sorted(set(strata) - set(PIP_STRATA))
+    if unknown:
+        raise ValueError(
+            f"benchmark fixture {PIP_STRATA_FIXTURE!r} labels points with unknown "
+            f"strata {unknown}; expected only {list(PIP_STRATA)}. Regenerate the "
+            "fixtures via `make benchmark-fixtures`."
+        )
+    # seeded with every expected stratum rather than with whatever the fixture
+    # turns out to contain, so a stratum missing from it entirely reaches the
+    # count check below instead of never becoming a key
+    grouped: dict[str, list[tuple[int, int, np.ndarray]]] = {
+        stratum: [] for stratum in PIP_STRATA
+    }
+    for (x, y, poly_id), stratum in zip(inputs, strata, strict=True):
+        bucket = grouped[stratum]
+        if len(bucket) < batch_size:
+            bucket.append((x, y, boundaries.coords_of(poly_id)))
+    for stratum, bucket in grouped.items():
+        if len(bucket) < batch_size:
+            raise ValueError(
+                f"benchmark fixture {PIP_INPUTS_FIXTURE!r} has only {len(bucket)} "
+                f"'{stratum}' entries, but the benchmark suite needs at least "
+                f"{batch_size} per stratum. Regenerate the fixtures with a larger "
+                "count via `make benchmark-fixtures`."
+            )
+    return grouped
 
 
 def convert_to_reduced_timezone(timezone: str) -> str:
