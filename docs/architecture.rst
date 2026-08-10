@@ -219,6 +219,14 @@ is the one failure this package must not ship quietly - it would degrade to the 
 without a single red check. It doubles as the proof that the abi3 claim holds, since one cp311 wheel
 is what all four interpreters install.
 
+**What the artifacts contain is asserted, not assumed.** ``tests/test_package_contents.py`` builds
+both distributions and checks them from both ends: every file the package needs at runtime is in
+them, and nothing that should have stayed in the repository - the CI configuration, ``docs/``,
+``scripts/``, the agent instruction files - came along. The asymmetry is why the second half is worth
+automating: a missing data file fails on first use and gets reported, an extra one ships quietly.
+That guard is easy to disarm by accident, so it is guarded in turn - see *Tests that protect
+guarantees, not behaviour* above.
+
 **A tag pushed from a non-master branch aborts the release.** Tags can be pushed from anywhere, so
 the release job verifies that the tagged commit is contained in ``origin/master`` before publishing
 rather than trusting the ref it was handed.
