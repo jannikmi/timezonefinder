@@ -115,6 +115,19 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 - Update `README.rst`, `docs/`, and changelog entries (`CHANGELOG.rst`) when behaviour, flags, or datasets change. This includes internal/dev-tooling changes with no public API impact (new scripts, test infrastructure, CI, refactors)—add those under the `Internal:` sub-list of the unreleased entry rather than skipping the changelog because nothing user-facing changed.
 - For data regeneration, document the timezone boundary release used, and note version bumps initiated with `uv version`. `update_data.sh` also regenerates the committed benchmark fixtures (`tests/fixtures/benchmarks/`) since they're pinned to `DATA_VERSION`, then automatically runs `make reports` to refresh `docs/data_report.rst` and `docs/benchmark_results_*.rst` against the new binary data (both would otherwise silently go stale) - if you bump `DATA_VERSION` any other way (not via `update_data.sh`), run `make benchmark-fixtures` and `make reports` yourself, in that order, or the benchmark fixture tests will fail with `BenchmarkFixtureError` and the reports will describe the old data. More generally: **regenerating the fixtures for any reason makes `docs/benchmark_results_*.rst` stale**, since those numbers are measured over the fixtures - always follow `make benchmark-fixtures` with `make reports`, whether or not `DATA_VERSION` moved. A standalone `make parse`/`make testparse` (bypassing `update_data.sh`) does not touch `DATA_VERSION`, the fixtures, or the reports at all.
 - Keep comments succinct but informative, especially around geometry calculations, numerical tolerances, and shortcut heuristics.
+- **Some hand-written pages describe things whose source of truth is a file elsewhere.** Nothing fails when the two diverge, so the update has to be part of the change that caused it. If you touch the left column, re-read the right:
+
+  | Changed | Re-read |
+  |---|---|
+  | the lookup flow (H3 resolution, hole/outer-ring order, the unique-cell short-circuit) | *How it works* in `README.rst` **and** `docs/index.rst`, plus `docs/architecture.rst` |
+  | `[project] dependencies` in `pyproject.toml` (added/removed, not a version bump) | *Dependencies* in `docs/0_getting_started.rst` |
+  | `.github/workflows/build.yml`, `[tool.cibuildwheel.*]`, `setup.py` | *How it ships* in `docs/architecture.rst` |
+  | `tox.ini` envlist, or the property-based tests | *Tests that protect guarantees* in `docs/architecture.rst` |
+  | a heading in any `docs/` page | `README.rst` links into it by anchor — grep for `<page>.html#` |
+  | a script under `prototypes/` | the table in `prototypes/README.md` |
+  | the packaged dataset | the `# 'Europe/Berlin'`-style result comments in `README.rst` and `docs/` — re-run the lookups rather than trusting them |
+
+  `CLAUDE.md` (*Documentation Files*) states what each of these breaks and why the duplication is deliberate.
 
 ## Tooling & Quality Gates
 
@@ -124,10 +137,10 @@ These guidelines describe how maintainers, contributors, and coding agents colla
 
 ## Pull Request Checklist
 
-- [ ] Branch is rebased on the latest `main` and commit history is clean.
+- [ ] Branch is rebased on the latest `master` and commit history is clean.
 - [ ] Code follows the standards above, with type hints, performance considerations, and Pythonic structure.
 - [ ] Tests are updated/added and pass (`pytest`, and `integration`/`tox` where relevant).
-- [ ] Documentation and changelog entries reflect the change.
+- [ ] Documentation and changelog entries reflect the change, including the pages that paraphrase a file you touched (see the table under *Documentation & Communication*).
 - [ ] Binary data or configuration changes are justified and the regeneration process is documented in the PR description.
 
 Thank you for helping to keep timezonefinder robust and high-performance!

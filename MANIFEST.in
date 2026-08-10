@@ -5,7 +5,7 @@ include DATA_VERSION
 include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.npy *.fbs *.txt *.json *.c *.h
-recursive-exclude prototypes *.py
+recursive-exclude prototypes *
 exclude AGENTS.md
 exclude CONTRIBUTING.md
 exclude CLAUDE.md
