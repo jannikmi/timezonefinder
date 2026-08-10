@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786330687619,
+  "lastUpdate": 1786331627839,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -945,6 +945,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0014979965048630857",
             "extra": "mean: 39.08168599999584 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efd04e929b6de9159c7959c46d5fd4bfe4ca7f6a",
+          "message": "Show the timezone the shipped data actually returns (#491)\n\nEvery usage snippet in README.rst and docs/1_usage.rst queries the Berlin\ncoordinates lng=13.358, lat=52.5061 and annotated the answer as\n'Europe/Paris'. That is what the reduced timezones-now dataset returns,\nwhere Europe/Berlin is merged into Europe/Paris. The package ships the\nfull dataset by default, which returns 'Europe/Berlin', so all eleven\ncomments described a dataset the reader does not have.\n\nEach annotation was re-derived by running the call it sits on rather than\nby find-and-replace: the global and instance forms of timezone_at,\ntimezone_at_land, certain_timezone_at and unique_timezone_at, plus the two\nTimezoneFinderL snippets. The neighbouring 'Etc/GMT' and None annotations\nwere confirmed correct and left alone. The get_geometry example in the\nopening block now asks for Europe/Berlin too - Europe/Paris was a valid\ncall, but read as though it followed from the lookup above it.\n\nNothing tied those comments to the packaged data, which is how they stayed\nwrong across releases. test_documented_contracts.py now re-runs each\ndocumented lookup against the example coordinate, one case per lookup,\nsince only unique_timezone_at can start returning None without any of the\nothers changing.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T05:12:20+02:00",
+          "tree_id": "e4f3e0d98a6039b34a02089b6ffbb67eeb31b361",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/efd04e929b6de9159c7959c46d5fd4bfe4ca7f6a"
+        },
+        "date": 1786331626733,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 73.60492717268728,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025716804881253556",
+            "extra": "mean: 13.586047000003987 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 232.38212358704087,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000052922376836108094",
+            "extra": "mean: 4.303256999996563 msec\nrounds: 188 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.4616431421867,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004692236516049199",
+            "extra": "mean: 39.274763000001656 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
           }
         ]
       }
