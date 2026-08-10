@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786251783007,
+  "lastUpdate": 1786330685532,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -900,6 +900,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0003545780800055254",
             "extra": "mean: 39.34654300002194 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b",
+          "message": "Make the docs landing page state what the package does (#487)\n\ndocs/index.rst is the second front door - the docs badge, the PyPI project\nlinks and search results all land there - but carried three sentences and a\nflat 17-entry table of contents in which Architecture sat between Memory\nBenchmarks and Data Format. Nothing on it said how a lookup works or what\nthe package trades away to be accurate.\n\nIt now carries the same \"How it works\" summary as the README, adapted to use\n:doc: roles where the README needs absolute URLs, plus the no-simplification\ntrade-off and the ocean-zone consequence for timezone_at() - the single most\ncommon source of user confusion, which until now appeared only in the README\nand the architecture page.\n\nThe toctree is split into four captioned groups (Using it, Design,\nPerformance, Project). All 17 entries are preserved, each in exactly one\ngroup, so Sphinx warns about neither an orphaned document nor a duplicate\nentry.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T04:56:49+02:00",
+          "tree_id": "6e1f3ff865ead2c5b1519d53121a626793a6ab00",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b"
+        },
+        "date": 1786330684889,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 74.07881511824121,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018109824831577794",
+            "extra": "mean: 13.499136000000078 msec\nrounds: 62 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 237.54436140947658,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020326803462425699",
+            "extra": "mean: 4.209740000000295 msec\nrounds: 198 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 25.58743243574769,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014979965048630857",
+            "extra": "mean: 39.08168599999584 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           }
         ]
       }
