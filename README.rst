@@ -124,6 +124,8 @@ Engineering notes
 * `Architecture <https://timezonefinder.readthedocs.io/en/latest/architecture.html>`__ - the lookup pipeline, the acceleration backends, and the ceilings this package deliberately does not exceed
 * `Data Format <https://timezonefinder.readthedocs.io/en/latest/data_format.html>`__ - binary layouts, coordinate scaling and the H3 index
 * `Benchmarking Methodology <https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html>`__ - the measurement design and where every threshold comes from
+* `Testing philosophy <https://timezonefinder.readthedocs.io/en/latest/architecture.html#tests-that-protect-guarantees-not-behaviour>`__ - the tests that exist because a rule needed a failure mode, plus the property-based suite and the version/backend matrix
+* `How it ships <https://timezonefinder.readthedocs.io/en/latest/architecture.html#how-it-ships>`__ - abi3 wheels, three libc targets, and the checks that stop a broken wheel reaching PyPI
 * `Alternatives <https://timezonefinder.readthedocs.io/en/latest/alternatives.html>`__ - the trade-offs against ``tzfpy``, and when to choose it instead
 * `Changelog <https://github.com/jannikmi/timezonefinder/blob/master/CHANGELOG.rst>`__
 
