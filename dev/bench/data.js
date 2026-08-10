@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786333677486,
+  "lastUpdate": 1786333679719,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1895,6 +1895,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4578be790822b7f7b7730a79c1391dfe5e8fd085",
+          "message": "Build test distributions for the interpreter running the tests (#494)\n\n`uv build` was invoked without `--python`, so it targeted the newest\ninterpreter on the machine, while tests/test_integration.py creates its\nthrowaway venv from `sys.executable`. On a checkout whose `.venv` is older\nthan the newest installed Python the two disagree: `make testint` built a\ncp314 wheel and `test_install_from_artifacts[wheel]` died on pip's \"not a\nsupported wheel on this platform\", nowhere near the build that caused it.\n\nEvery tox environment offers a single interpreter, so the two agreed by\naccident in CI and this only ever hit developer machines, where the\nworkaround was pinning UV_PYTHON.\n\nPin the shared build command to `sys.executable` instead of teaching\nsetup_venv to guess which interpreter uv would have chosen - the target venv\nis the thing under test, so it is the build that should follow it. The sdist\nbuild takes the same pin: it carries no interpreter tag, but it keeps the two\nartefacts in dist/ from coming out of different interpreters.\n\ntest_build_commands_pin_the_running_interpreter guards the pin. It needs no\nbuild and so carries the `unit` marker, which matters because no CI\nenvironment can reproduce the mismatch - without it the next regression would\ngo unnoticed the same way.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T05:46:41+02:00",
+          "tree_id": "0d92c9940338e24d2a609c1ff776ff07ed5d1480",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4578be790822b7f7b7730a79c1391dfe5e8fd085"
+        },
+        "date": 1786333679301,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466689109802246,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466852188110352,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529180526733398,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537940979003906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.84995365142822,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85877132415771,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0739 GHz"
           }
         ]
       }
