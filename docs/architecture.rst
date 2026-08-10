@@ -156,7 +156,72 @@ as a practice.
     the very attribute ``__slots__`` exists to forbid, punching a hole in the guarantee while
     looking like it enforces it.
 
+Two further layers sit beside those invariants.
+
+**Property-based tests.** ``tests/test_property_validation.py`` and ``tests/test_property_api.py``
+drive coordinate validation and the public lookup API with ``hypothesis``. The input space is two
+floats with hard bounds, which is exactly the shape fuzzing is good at: the interesting cases are the
+bounds themselves, the region just outside them, and ``NaN``/``Inf`` - all of which an example-based
+test only covers where somebody thought to write the example down. The properties asserted are
+invariants rather than values (a returned zone name is always one of the known names, a rejected
+coordinate always raises rather than returning something plausible), so they hold across a data
+update that changes every individual answer.
+
+The generator these tests draw from is uniform in *latitude*, which oversamples the poles by roughly
+2.5x. That bias is deliberate and it is why the same sampler must not be used for benchmarks - see
+:doc:`benchmarking_methodology`, where the opposite choice is made and justified. Correctness tests
+want more edge cases per draw; a benchmark wants the query mix a real caller has.
+
+**The matrix.** ``tox.ini`` runs four Python versions against three configurations - plain, ``numba``
+and ``pytz`` - plus separate ``slow`` and ``docs`` environments. It is a matrix rather than a single
+run because of the import-time binding above: the acceleration paths are separate code paths, so
+"the tests pass" is a statement about one configuration and says nothing about the other two. The
+``pytz`` axis checks a different kind of claim - that every zone name the packaged data can return is
+one ``pytz`` actually knows - which a data update can break without a line of this package's code
+changing.
+
 The shared shape: a rule that a reviewer would have to remember becomes a test that fails.
+
+
+How it ships
+------------
+
+Packaging is where the "correct but slower, never broken" contract above is actually kept, so it is
+part of the design rather than an afterthought. The operational side - how to cut a release - is in
+`CONTRIBUTING.md <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`__ and the
+``Makefile``; this section is the *why*.
+
+**One wheel per target, not one per Python version.** The C extension is built once against the
+stable ABI (``py_limited_api``, ``cp311``), so a single wheel serves every later interpreter instead
+of the build matrix growing a row per Python release. The saving is only real if the claim is true,
+which is why every wheel goes through ``abi3audit --strict`` in the repair step: a wheel that
+*declares* abi3 and links something version-specific installs happily and crashes at runtime on an
+interpreter no CI job ever ran.
+
+**Three libc targets.** manylinux2014, manylinux_2_28 and musllinux are built separately, so an
+Alpine container and an old glibc host both get the compiled path rather than the ~400x pure-Python
+fallback. Platforms without a published wheel install from the sdist and compile locally; if that
+fails, ``fallible_build_ext`` in ``setup.py`` swallows the error and the install still succeeds -
+slower, never broken.
+
+**The end-to-end job is the interesting one.** It installs the *built wheel* on four Python versions
+and asserts both a known lookup result and ``clang_extension_loaded``. A smoke test that only checked
+``import timezonefinder`` would pass on a wheel whose extension had silently failed to build, which
+is the one failure this package must not ship quietly - it would degrade to the pure-Python path
+without a single red check. It doubles as the proof that the abi3 claim holds, since one cp311 wheel
+is what all four interpreters install.
+
+**A tag pushed from a non-master branch aborts the release.** Tags can be pushed from anywhere, so
+the release job verifies that the tagged commit is contained in ``origin/master`` before publishing
+rather than trusting the ref it was handed.
+
+**The data pipeline releases itself.** A weekly workflow compares ``DATA_VERSION`` against the latest
+timezone-boundary-builder release, regenerates the data and opens a pull request; when that pull
+request's CI passes, a second workflow merges it and pushes the version tag, which starts the release
+above. The tag is pushed with a GitHub App token because a tag pushed with the default
+``GITHUB_TOKEN`` does not trigger downstream workflows - the release would be tagged and never built.
+On failure nothing is published: the pull request is labelled ``automation-failed`` and left for a
+human.
 
 
 Non-goals and deliberate ceilings
