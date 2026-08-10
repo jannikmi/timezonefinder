@@ -8,16 +8,40 @@ Use Cases:
 Creating aware datetime objects
 -------------------------------
 
-check out the example script in ``examples/aware_datetime.py``
+The lookup returns an IANA timezone name, which is exactly what ``zoneinfo`` takes:
+
+.. code-block:: python
+
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    tz_name = tf.timezone_at(lng=13.41, lat=52.52)  # 'Europe/Berlin'
+    aware = datetime.now(tz=ZoneInfo(tz_name))
+
+``examples/aware_datetime.py`` shows the same thing with ``pytz``, including the difference between
+attaching a timezone and localising a naive datetime.
 
 
 Getting a location's time zone offset
 --------------------------------------
 
-check out the example script in ``examples/get_offset.py``
+The offset is a property of the aware datetime, so it comes straight from ``utcoffset()`` - and it
+depends on the date, since it changes with daylight saving time:
 
+.. code-block:: python
 
-also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    tz_name = tf.timezone_at(lng=9.67, lat=45.69)  # 'Europe/Rome'
+    offset = datetime.now(tz=ZoneInfo(tz_name)).utcoffset()
+
+``examples/get_offset.py`` is the ``pytz`` equivalent, returning the offset in minutes.
+Also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
 
 
 Django
