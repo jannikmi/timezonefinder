@@ -1,11 +1,12 @@
-"""tests pinning the contracts the public docstrings promise
+"""tests pinning the contracts the documentation promises
 
-A docstring is the only place some of these promises live: nothing else in the package
+Documentation is the only place some of these promises live: nothing else in the package
 states which exception ``zone_id_of`` raises for a bad id, or that ``read_zone_names``
 raises rather than returning an empty list. That is precisely how three of them came to
 say the opposite of what the code does. Each test below corresponds to one ``:raises:``
-or ``:return:`` line, so a future change to the behaviour fails here instead of quietly
-turning the docstring into fiction again.
+or ``:return:`` line, or to one claim the hand-written pages make, so a future change to
+the behaviour or to the packaged data fails here instead of quietly turning the
+documentation into fiction again.
 
 Distinct from ``test_error_diagnostics.py``, which pins what the messages *say*; this
 pins which exception type comes out at all.
@@ -15,9 +16,14 @@ from pathlib import Path
 
 import pytest
 
-from timezonefinder import TimezoneFinder
+from timezonefinder import TimezoneFinder, TimezoneFinderL
 from timezonefinder.coord_accessors import FileCoordAccessor, MemoryCoordAccessor
 from timezonefinder.zone_names import get_zone_names_path, read_zone_names
+
+# the coordinate every snippet in ``README.rst`` and ``docs/1_usage.rst`` queries, and
+# the zone those snippets annotate as its result
+USAGE_DOCS_EXAMPLE_COORDS = {"lng": 13.358, "lat": 52.5061}
+USAGE_DOCS_EXAMPLE_ZONE = "Europe/Berlin"
 
 
 @pytest.mark.unit
@@ -84,3 +90,46 @@ def test_in_memory_selects_the_coordinate_access_mode(in_memory, expected_access
     with TimezoneFinder(in_memory=in_memory) as finder:
         assert isinstance(finder.boundaries.coordinates, expected_accessor)
         assert isinstance(finder.holes.coordinates, expected_accessor)
+
+
+@pytest.fixture(scope="module")
+def tfl() -> TimezoneFinderL:
+    """``TimezoneFinderL``, which the last two usage snippets are written against."""
+    return TimezoneFinderL(in_memory=True)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "finder_fixture, method_name",
+    [
+        # one case per lookup the usage pages annotate with a result, because the four
+        # reach the answer differently: only ``unique_timezone_at`` can start returning
+        # None without any of the others changing, if the example's H3 cell stops being
+        # covered by a single zone
+        ("tf", "timezone_at"),
+        ("tf", "timezone_at_land"),
+        ("tf", "certain_timezone_at"),
+        ("tf", "unique_timezone_at"),
+        ("tfl", "timezone_at"),
+        ("tfl", "unique_timezone_at"),
+    ],
+)
+def test_usage_docs_example_returns_the_annotated_zone(
+    request: pytest.FixtureRequest, finder_fixture: str, method_name: str
+):
+    """The running example of ``README.rst`` and ``docs/1_usage.rst`` resolves as annotated.
+
+    Every snippet on those pages queries this one coordinate and states the answer in a
+    trailing comment. Nothing tied those comments to the packaged data, and for several
+    releases all of them read ``'Europe/Paris'`` - what the reduced ``timezones-now``
+    dataset returns, where Berlin is merged into Paris, rather than what the full dataset
+    the package ships by default returns. A data update that moves this coordinate's zone
+    now fails here, where the fix is to re-annotate the snippets.
+
+    The pages show each lookup as a global function as well as a method; the global
+    functions delegate to an instance of these same classes, so the data claim is the same
+    one.
+    """
+    finder = request.getfixturevalue(finder_fixture)
+    lookup = getattr(finder, method_name)
+    assert lookup(**USAGE_DOCS_EXAMPLE_COORDS) == USAGE_DOCS_EXAMPLE_ZONE

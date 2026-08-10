@@ -67,7 +67,7 @@ It is recommended to install it together with the optional `Numba <https://numba
     # use the global function for convenience:
     from timezonefinder import timezone_at
 
-    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Paris'
+    tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
 
 
     # For improved performance and control, create and reuse an instance:
@@ -77,7 +77,7 @@ It is recommended to install it together with the optional `Numba <https://numba
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:
-        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Paris'
+        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
 
 
 **Note:** This library uses the full original timezone dataset with all >440 timezone names, providing full localization capabilities and historical timezone accuracy. For applications that prefer a smaller memory footprint, the reduced "timezones-now" dataset is available via the ``update_data.sh`` script (cf. `Documentation <https://timezonefinder.readthedocs.io/en/latest/data_format.html#alternative-dataset-options>`__).
