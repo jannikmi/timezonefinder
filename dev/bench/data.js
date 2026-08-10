@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786335179917,
+  "lastUpdate": 1786363923031,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1125,6 +1125,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0005172377323306261",
             "extra": "mean: 25.599710999998138 msec\nrounds: 50 on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a32de1afbbd2d3a1a5d222e9de85f6cb405fc965",
+          "message": "Bump pypa/cibuildwheel from 4.1.1 to 4.2.0 (#496)",
+          "timestamp": "2026-08-10T14:10:37+02:00",
+          "tree_id": "9b3748053d4689d2d00d5e68aaaedd6abdca15ca",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a32de1afbbd2d3a1a5d222e9de85f6cb405fc965"
+        },
+        "date": 1786363921721,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 113.29629450876027,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00024311858679197245",
+            "extra": "mean: 8.82641399999784 msec\nrounds: 87 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 400.6973737086171,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015491134604192158",
+            "extra": "mean: 2.4956490000036524 msec\nrounds: 278 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 40.113156004033954,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008176728820422246",
+            "extra": "mean: 24.92947700000059 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
           }
         ]
       }
