@@ -6,18 +6,24 @@ This module tests that:
 3. Every hand-written "unwanted" pattern still names a path that exists here - the two
    checks above pass for a pattern that matches nothing, so nothing else would notice
    one going stale
+4. Every path ``MANIFEST.in`` excludes is in turn named by one of those patterns.
+   ``MANIFEST.in`` and the pattern set are two hand-maintained statements of the same
+   intent, and check 2 only ever looks at what a *successful* build produced - so an
+   exclusion that lives in ``MANIFEST.in`` alone is enforced by the build and verified
+   by nothing, and deleting that line would leave the suite green
 
 The module uses parameterized tests and global constants to minimize code
 duplication and make the tests more maintainable. It builds both distribution types
 and verifies their contents independently.
 """
 
+import fnmatch
 from pathlib import Path
 import sys
 import tarfile
 import tempfile
 import zipfile
-from typing import Iterator
+from typing import Iterator, NamedTuple
 
 import pytest
 from tests.auxiliaries import (
@@ -38,6 +44,7 @@ from tests.auxiliaries import (
 # should surface.
 
 GITIGNORE_PATH = PROJECT_ROOT / ".gitignore"
+MANIFEST_PATH = PROJECT_ROOT / "MANIFEST.in"
 
 
 SDIST_TYPE = "sdist"
@@ -90,6 +97,26 @@ UNWANTED_DIST_PATTERNS = {
 # worktree it is a file instead of a directory - so this one pattern matches nothing
 # in the working tree by design, and is exempt from the check above.
 PATTERNS_WITHOUT_PROJECT_FILES = {".git/*"}
+
+# ``MANIFEST.in`` exclusions whose agreement with the patterns above cannot be shown
+# from the paths in a checkout, mapped to the pattern that states the same intent.
+# Each names repository metadata, a cache or byte-code - none of it under version
+# control - so what it matches is a property of the machine rather than of the
+# project: ``.git`` is a directory in a clone and a *file* in a linked worktree,
+# ``tests/.pytest_cache`` need not exist at all, and ``timezonefinder/__pycache__/``
+# holds numba's ``.nbi``/``.nbc`` cache only once a numba-enabled run has happened.
+# Scanning those paths would make the check below depend on what a given machine had
+# run, so the mapping is asserted instead, by
+# ``test_pattern_only_exclusions_stay_current``.
+# Neither ``global-exclude`` is load-bearing on its own: dropping either one changes
+# neither distribution, because setuptools already prunes ``__pycache__`` from an
+# sdist by default.
+EXCLUSIONS_GUARDED_BY_PATTERN_ONLY = {
+    "prune .git": ".git/*",
+    "prune tests/.pytest_cache": "*.pytest_cache",
+    "global-exclude __pycache__/*": "__pycache__/",
+    "global-exclude *.pyc": "*.py[cod]",
+}
 
 ALLOWED_IGNORED_PATTERNS = {
     "*.egg-info/",
@@ -152,9 +179,103 @@ def load_gitignore_patterns() -> set[str]:
         return {line for line in lines if line and not line.startswith(("#", "!"))}
 
 
+class ManifestExclusion(NamedTuple):
+    """One ``MANIFEST.in`` directive that keeps paths out of the distribution.
+
+    The four exclusion directives differ only in where their glob is rooted and
+    whether it is matched at that exact depth, so they collapse into one shape:
+
+    =========================  ==========  ===========  ============
+    directive                  ``prefix``  ``pattern``  ``anchored``
+    =========================  ==========  ===========  ============
+    ``exclude P``              ``()``      ``P``        yes
+    ``recursive-exclude D P``  ``D``       ``P``        no
+    ``global-exclude P``       ``()``      ``P``        no
+    ``prune D``                ``D``       ``None``     -
+    =========================  ==========  ===========  ============
+
+    A ``None`` pattern means the whole subtree, which is what ``prune`` takes.
+    Splitting the glob on ``/`` and matching it one path component at a time is
+    what keeps ``*`` from crossing a separator, as it does in ``MANIFEST.in`` but
+    not in ``matches_pattern``.
+    """
+
+    line: str  # the source line, whitespace collapsed, for messages and lookups
+    prefix: tuple[str, ...]
+    pattern: tuple[str, ...] | None
+    anchored: bool
+
+    def matches(self, path: Path) -> bool:
+        """Whether ``path``, relative to the project root, is excluded by this directive."""
+        parts = path.parts
+        if parts[: len(self.prefix)] != self.prefix:
+            return False
+        below_prefix = parts[len(self.prefix) :]
+        if self.pattern is None:
+            return True
+        if self.anchored:
+            if len(below_prefix) != len(self.pattern):
+                return False
+            tail = below_prefix
+        elif len(below_prefix) < len(self.pattern):
+            return False
+        else:
+            tail = below_prefix[len(below_prefix) - len(self.pattern) :]
+        return all(
+            fnmatch.fnmatch(part, pat)
+            for part, pat in zip(tail, self.pattern, strict=True)
+        )
+
+
+def _split(pattern: str) -> tuple[str, ...]:
+    """Split a ``MANIFEST.in`` glob into path components, dropping a trailing slash."""
+    return tuple(part for part in pattern.split("/") if part)
+
+
+def load_manifest_exclusions() -> tuple[ManifestExclusion, ...]:
+    """
+    Read the exclusion directives out of ``MANIFEST.in`` (``MANIFEST_PATH``).
+
+    The include side (``include``, ``recursive-include``, ``graft``) is not parsed:
+    what belongs in a distribution is asserted from the other end, by
+    ``test_essential_files_in_distribution``.
+
+    Returns:
+        One ``ManifestExclusion`` per directive, with a multi-pattern directive
+        (``exclude A B``) split into one entry per pattern.
+    """
+    exclusions = []
+    with open(MANIFEST_PATH, encoding="utf-8") as f:
+        for raw_line in f:
+            line = " ".join(raw_line.split())
+            if not line or line.startswith("#"):
+                continue
+            directive, *args = line.split(" ")
+            if directive == "exclude":
+                anchored = True
+            elif directive in ("recursive-exclude", "global-exclude"):
+                anchored = False
+            elif directive == "prune":
+                exclusions.append(ManifestExclusion(line, _split(args[0]), None, False))
+                continue
+            else:
+                continue
+            prefix, patterns = (
+                (_split(args[0]), args[1:])
+                if directive == "recursive-exclude"
+                else ((), args)
+            )
+            exclusions.extend(
+                ManifestExclusion(line, prefix, _split(pattern), anchored)
+                for pattern in patterns
+            )
+    return tuple(exclusions)
+
+
 # any file not under version control should not be included in the distribution
 NON_VERSION_CONTROL_PATTERNS = load_gitignore_patterns()
 IGNORED_PATTERNS = UNWANTED_DIST_PATTERNS | NON_VERSION_CONTROL_PATTERNS
+MANIFEST_EXCLUSIONS = load_manifest_exclusions()
 # NOTE: some patterns are not under version control, but should be included in the distribution
 UNWANTED_DIST_PATTERNS_FINAL = IGNORED_PATTERNS - ALLOWED_IGNORED_PATTERNS
 
@@ -368,6 +489,81 @@ def test_every_unwanted_pattern_matches_a_project_file():
         f"unwanted-file patterns matching nothing under {PROJECT_ROOT}: {unmatched}. "
         "A pattern that matches no path cannot fail, so the files it names are not "
         "guarded against being packaged - correct it, or drop it if the file is gone."
+    )
+
+
+@pytest.mark.unit
+def test_every_manifest_exclusion_is_guarded():
+    """A file kept out of the build by ``MANIFEST.in`` alone is kept out unverifiably.
+
+    ``MANIFEST.in`` and ``IGNORED_PATTERNS`` are two hand-written statements of the
+    same intent, and they have drifted before - which is why
+    ``test_every_unwanted_pattern_matches_a_project_file`` exists. That covers one
+    direction: a pattern naming nothing now fails. This is the other one. An
+    ``exclude``/``recursive-exclude``/``prune`` line added without a matching pattern
+    leaves ``test_no_unwanted_files_in_distribution`` with nothing to look for, so the
+    day that line is deleted or stops matching, the file ships and the suite stays
+    green.
+
+    Note this asserts against the union, not against ``UNWANTED_DIST_PATTERNS``:
+    several exclusions (``.claude/*``, ``__pycache__/``) are already covered by a
+    ``.gitignore`` pattern, and demanding a hand-written duplicate of those would only
+    give the two copies a new way to disagree.
+    """
+    scanned = [
+        exclusion
+        for exclusion in MANIFEST_EXCLUSIONS
+        if exclusion.line not in EXCLUSIONS_GUARDED_BY_PATTERN_ONLY
+    ]
+    assert scanned, (
+        f"no exclusion directives parsed out of {MANIFEST_PATH}. Every check below "
+        "is vacuous in that state - fix the parser, or the path if the file moved."
+    )
+    unguarded = {
+        exclusion.line: sorted(str(path) for path in unmatched)[:5]
+        for exclusion in scanned
+        if (
+            unmatched := [
+                path
+                for path in ALL_PROJECT_FILES
+                if exclusion.matches(path)
+                and not any(matches_pattern(path, p) for p in IGNORED_PATTERNS)
+            ]
+        )
+    }
+    assert not unguarded, (
+        f"{MANIFEST_PATH.name} excludes paths that no pattern in this module names "
+        f"(up to 5 shown per directive): {unguarded}. Only the build keeps them out, "
+        "so nothing would fail if that exclusion went away - add a pattern covering "
+        "them to UNWANTED_DIST_PATTERNS."
+    )
+
+
+@pytest.mark.unit
+def test_pattern_only_exclusions_stay_current():
+    """The exemptions above are claims about other lines, and those lines move.
+
+    ``EXCLUSIONS_GUARDED_BY_PATTERN_ONLY`` buys each entry out of the path scan
+    against a named pattern that carries the same intent. Neither side is pinned by
+    anything else: drop the ``MANIFEST.in`` directive and the exemption silently
+    excuses a line that no longer exists, drop the pattern and the exemption points
+    at nothing, which is the exact failure mode of an entry that guards nothing.
+    """
+    declared = {exclusion.line for exclusion in MANIFEST_EXCLUSIONS}
+    stale = sorted(set(EXCLUSIONS_GUARDED_BY_PATTERN_ONLY) - declared)
+    assert not stale, (
+        f"EXCLUSIONS_GUARDED_BY_PATTERN_ONLY exempts directives {MANIFEST_PATH.name} "
+        f"no longer contains: {stale}. Drop the entries."
+    )
+    unbacked = sorted(
+        f"{line!r} -> {pattern!r}"
+        for line, pattern in EXCLUSIONS_GUARDED_BY_PATTERN_ONLY.items()
+        if pattern not in IGNORED_PATTERNS
+    )
+    assert not unbacked, (
+        f"exemptions naming a pattern that is no longer in IGNORED_PATTERNS: "
+        f"{unbacked}. The exclusion is now stated in {MANIFEST_PATH.name} alone - "
+        "restore the pattern, or drop the exemption so the path scan covers it."
     )
 
 
