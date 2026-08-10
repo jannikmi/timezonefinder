@@ -156,6 +156,14 @@ as a practice.
     the very attribute ``__slots__`` exists to forbid, punching a hole in the guarantee while
     looking like it enforces it.
 
+``tests/test_package_contents.py``
+    Builds both distributions and asserts that no unwanted file is in either - which passes just as
+    readily when a pattern matches nothing at all, as ``.github`` (lacking the trailing slash a
+    directory pattern needs) and ``Agents.*`` (after the file became ``AGENTS.md``) each did. Two
+    tests now hold that pattern list and ``MANIFEST.in`` to each other: one fails on a pattern
+    naming no path in the checkout, the other on an exclusion that no pattern covers. They are two
+    hand-written statements of one intent, and had drifted in both directions.
+
 Two further layers sit beside those invariants.
 
 **Property-based tests.** ``tests/test_property_validation.py`` and ``tests/test_property_api.py``
