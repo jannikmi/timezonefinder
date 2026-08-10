@@ -13,6 +13,7 @@ and verifies their contents independently.
 """
 
 from pathlib import Path
+import sys
 import tarfile
 import tempfile
 import zipfile
@@ -20,6 +21,8 @@ from typing import Iterator
 
 import pytest
 from tests.auxiliaries import (
+    BUILD_SDIST_CMD,
+    BUILD_WHEEL_CMD,
     PROJECT_ROOT,
     any_filter_paths,
     build_sdist,
@@ -307,6 +310,36 @@ sdist_fixture = DistributionFilesFixture("sdist")
 wheel_fixture = DistributionFilesFixture("wheel")
 
 fixtures = {SDIST_TYPE: sdist_fixture, WHEEL_TYPE: wheel_fixture}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "build_cmd",
+    [BUILD_SDIST_CMD, BUILD_WHEEL_CMD],
+    ids=DIST_TYPES,
+)
+def test_build_commands_pin_the_running_interpreter(build_cmd):
+    """Unpinned, ``uv build`` targets the newest interpreter on the machine.
+
+    That it is the pytest interpreter is a coincidence. Once the two differ - a
+    project ``.venv`` older than the newest Python installed - the wheel comes out
+    tagged for the wrong one, and ``test_install_from_artifacts[wheel]`` fails with
+    a pip error about an unsupported platform, nowhere near the build that caused
+    it. Every tox env offers a single interpreter, so no CI run can reproduce the
+    mismatch; this check needs no build and catches it anywhere.
+
+    The sdist carries no interpreter tag and is checked only to keep the two
+    artefacts in ``dist/`` coming from one interpreter.
+    """
+    assert "--python" in build_cmd, (
+        f"{build_cmd} does not pin an interpreter, so uv will build for the newest "
+        "Python it finds rather than the one running the tests"
+    )
+    pinned = build_cmd[build_cmd.index("--python") + 1]
+    assert pinned == sys.executable, (
+        f"build pinned to {pinned}, but the tests run on {sys.executable}"
+    )
+
 
 # parameterised pytest test case for testing that all distribution files do not match any of the unwanted patterns
 

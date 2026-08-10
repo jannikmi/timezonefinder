@@ -8,6 +8,7 @@ from re import Pattern
 import re
 import shutil
 import subprocess
+import sys
 from math import asin, degrees, log10
 from typing import Any, Iterator
 
@@ -68,9 +69,19 @@ PIP_STRATA = ("small", "medium", "large")
 FIXTURE_VERSION = 2
 
 
-# Command constants
-BUILD_SDIST_CMD = ["uv", "build", "-v", "--sdist"]
-BUILD_WHEEL_CMD = ["uv", "build", "-v", "--wheel"]
+# Command constants.
+#
+# ``--python sys.executable`` pins the build to the interpreter running the tests.
+# Without it uv picks the newest interpreter it can find, which need not be the one
+# under test: a 3.12 ``.venv`` on a machine that also has 3.14 installed yields a
+# ``cp314`` wheel, and pip in the 3.12 venv that tests/test_integration.py installs
+# it into rejects it as "not a supported wheel on this platform". CI never saw this
+# because a tox env offers a single interpreter, so the two agreed by accident.
+# Keep the pin on the sdist build too: it costs nothing and stops the two artefacts
+# in ``dist/`` from being built by different interpreters.
+BUILD_CMD = ["uv", "build", "-v", "--python", sys.executable]
+BUILD_SDIST_CMD = [*BUILD_CMD, "--sdist"]
+BUILD_WHEEL_CMD = [*BUILD_CMD, "--wheel"]
 
 
 # for reading coordinates

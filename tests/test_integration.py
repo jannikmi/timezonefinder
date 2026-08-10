@@ -35,7 +35,13 @@ def run_timezonefinder_test(python_bin: str) -> None:
 
 
 def setup_venv(tempdir: str, upgrade_pip: bool = False) -> tuple[str, str]:
-    """Set up a virtual environment and return paths to python and pip binaries."""
+    """Set up a virtual environment and return paths to python and pip binaries.
+
+    The venv is created from ``sys.executable`` because that is what
+    ``BUILD_CMD`` pins the wheel build to; the wheel is only installable here
+    while both name the same interpreter. Change one and you must change the
+    other - ``test_build_commands_pin_the_running_interpreter`` guards the pin.
+    """
     venv_dir = Path(tempdir) / "venv"
     run_command([sys.executable, "-m", "venv", str(venv_dir)])
 
