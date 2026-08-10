@@ -174,12 +174,25 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   verify with `uv run --with readme-renderer python -m readme_renderer README.rst -o tmp/readme.html`
   and open it. `docs/index.rst` is the opposite case — it sits next to the images, so its paths
   stay relative
-- **The badge block is duplicated in `README.rst` and `docs/badges.rst` on purpose** — the docs
-  include it, but an `include` does not render on PyPI. This is a deliberate exception to the
-  declare-once rule above; edit both copies or they drift
-- `docs/` pages are Sphinx-built. A new page needs a `docs/index.rst` toctree entry or it is
-  orphaned and unreachable from the sidebar. `make docs` must build without new warnings —
-  `rstcheck` will not catch a broken cross-reference there
+- **Two passages are duplicated on purpose — edit every copy or they drift.** The badge block lives
+  in `README.rst` and `docs/badges.rst` because the docs `include` it and an `include` does not
+  render on PyPI. The *How it works* summary — the lookup pipeline, the no-simplification trade-off,
+  the ocean-zone consequence for `timezone_at()` — lives in `README.rst` *and* `docs/index.rst`,
+  because both are front doors reached without going through the other, with `docs/architecture.rst`
+  holding the long form. A change to the lookup flow (the H3 resolution, holes-before-outer-ring,
+  the unique-cell short-circuit) has to land in all three. Both are deliberate exceptions to the
+  declare-once rule above
+- **`README.rst` deep-links into `docs/` by anchor, and Sphinx derives an anchor from the heading
+  text.** Renaming a heading in `docs/` silently breaks every README link to it: the page still
+  loads, just at the top, so nothing 404s and nothing warns — `rstcheck` does not resolve targets
+  and `make docs` does not know `README.rst` exists. After renaming a heading in a `docs/` page,
+  grep `README.rst` for `<page>.html#`. When adding such a link, read the slug out of the built
+  page (`grep -o 'id="[a-z0-9-]*"' docs/_build/html/<page>.html`) instead of deriving it by hand
+- `docs/` pages are Sphinx-built. `docs/index.rst` carries four captioned toctrees — *Using it*,
+  *Design*, *Performance*, *Project* — and a new page belongs in exactly one of them; listed in
+  none it is orphaned and unreachable from the sidebar, listed in two it is a duplicate entry.
+  `make docs` warns on both, and must build without new warnings — but `rstcheck` will not catch a
+  broken cross-reference there
 - Generated docs: `docs/benchmark_results_*.rst` (`scripts/render_benchmark_reports.py`) and
   `docs/data_report.rst` (`scripts/reporting.py`). The don't-hand-edit corollary above applies
 - **Never copy an exact figure out of a generated page into hand-written prose** — vertex/polygon
@@ -190,6 +203,26 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   thousands of queries/s") and link the generated page for the current number. Figures fixed by a
   constant rather than by the data are fine to state exactly — `~1 cm` resolution follows from
   `COORD2INT_FACTOR`, `~41k` H3 cells from resolution 3
+- **A zone name in a snippet is example output, not a constant** — `tz = timezone_at(...)  #
+  'Europe/Berlin'`. It is an answer from the packaged dataset, so a data update can change it, and a
+  comment copied from a page written against a different dataset is wrong on arrival with nothing to
+  catch it. That is how `'Europe/Paris'` — the *reduced* `timezones-now` answer for Berlin
+  coordinates, not what ships — once annotated the default dataset's running example in eleven
+  places across `README.rst` and `docs/1_usage.rst`, until it was corrected wholesale. Run the
+  lookup and paste what it returns
+- **Prose that paraphrases a machine-readable file goes stale silently**, because the file changes
+  and nothing re-reads the prose. Three such pairs exist deliberately, each because the reasoning is
+  worth more than the indirection:
+  - `docs/0_getting_started.rst` names the runtime dependencies → `[project] dependencies` in
+    `pyproject.toml`. Names only, on purpose: version bounds stay in `pyproject.toml`, so a bump
+    cannot falsify the page, but adding or dropping a dependency does
+  - `docs/architecture.rst` *How it ships* → `.github/workflows/build.yml`,
+    `[tool.cibuildwheel.*]` and `setup.py`. Changing the wheel targets, the abi3 base interpreter,
+    the `abi3audit` repair step, what the end-to-end job asserts, or the on-master check changes
+    what that section claims
+  - `prototypes/README.md` → one row per script in `prototypes/`
+  When you touch one side, re-read the other. Describing *why* a choice was made survives longer
+  than restating *what* the file says — prefer it
 - **`make reports` re-measures everything** — it has both `benchmarks` and `memory` as
   prerequisites — so it rewrites every committed figure on all four report pages. To change only
   the *rendering*, invoke the renderer directly against the stored JSONs; measurement and

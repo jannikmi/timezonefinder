@@ -1,19 +1,20 @@
 # Potential improvements
 
-Working ledger of internal code-quality findings for `timezonefinder`. It is committed so that it
-reaches the next quality pass through `master`: every pass reads it before touching a source file,
-re-verifies the open entries against the current code, and writes back what it found.
+A triaged register of the internal quality debt `timezonefinder` is carrying, kept in the open.
+Every entry has been verified against the current code and ranked, and each one records the
+judgement that was made about it — including the ones judged not worth doing.
 
-**This is a to-do list, not a history.** A pass that ships an entry *deletes* it in the same pull
-request — the code is the evidence that it is done, the changelog says what changed, and
-`git log -- potential-improvements.md` still has the text. Entries that were *rejected*, ruled *out
-of scope* or *withdrawn* stay: they encode a dead end, and re-discovering one costs a whole pass.
-So does the *Deliberately checked and found sound* list at the foot.
+Entries are ordered within each section by expected value per line of review: **defects that will
+cause a real bug later > duplication that will drift > readability**. That ranking is the point of
+the file. Listing everything that could be improved is easy and worth little; what costs something
+is deciding which findings earn a reviewer's attention, and writing down why the rest do not.
 
 Almost everything here is internal quality — diagnostics that get discarded, duplication that will
 drift, docstrings describing code that no longer exists, dead definitions, annotations that
-contradict their call sites. The exception is the *Behaviour defects* section: entries a quality
-pass is not allowed to fix, recorded where they will not be lost.
+contradict their call sites. None of it is a user-visible bug, with one deliberate exception: the
+*Behaviour defects* section, which holds findings that would change observable behaviour to fix.
+Those need the maintainer's call rather than a cleanup pass, and they are recorded here because the
+alternative is losing them.
 
 **How to read an entry.** Locations are given by file plus a code anchor (a function or symbol
 name), never a line number, so they survive reformatting. `Size` is a rough count of changed lines.
@@ -21,8 +22,14 @@ name), never a line number, so they survive reformatting. `Size` is a rough coun
 everything still written down is unfinished or deliberately declined. Do not re-litigate a closed
 entry and do not re-add it under a new id.
 
-Order within each section is by expected value per line of review, following the ranking used to
-pick work: **defects that will cause a real bug later > duplication that will drift > readability**.
+**How it is maintained.** The file is committed so that it reaches the next quality pass through
+`master`: every pass reads it before touching a source file, re-verifies the open entries against
+the current code, and writes back what it found. It is a to-do list, not a history — a pass that
+ships an entry *deletes* it in the same pull request, since the code is the evidence that it is
+done, the changelog says what changed, and `git log -- potential-improvements.md` still has the
+text. Entries that were *rejected*, ruled *out of scope* or *withdrawn* stay: they encode a dead
+end, and re-discovering one costs a whole pass. So does the *Deliberately checked and found sound*
+list at the foot.
 
 ---
 
