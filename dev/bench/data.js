@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786330685532,
+  "lastUpdate": 1786330687619,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1673,6 +1673,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2415 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b",
+          "message": "Make the docs landing page state what the package does (#487)\n\ndocs/index.rst is the second front door - the docs badge, the PyPI project\nlinks and search results all land there - but carried three sentences and a\nflat 17-entry table of contents in which Architecture sat between Memory\nBenchmarks and Data Format. Nothing on it said how a lookup works or what\nthe package trades away to be accurate.\n\nIt now carries the same \"How it works\" summary as the README, adapted to use\n:doc: roles where the README needs absolute URLs, plus the no-simplification\ntrade-off and the ocean-zone consequence for timezone_at() - the single most\ncommon source of user confusion, which until now appeared only in the README\nand the architecture page.\n\nThe toctree is split into four captioned groups (Using it, Design,\nPerformance, Project). All 17 entries are preserved, each in exactly one\ngroup, so Sphinx warns about neither an orphaned document nor a duplicate\nentry.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T04:56:49+02:00",
+          "tree_id": "6e1f3ff865ead2c5b1519d53121a626793a6ab00",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d34404e7ce9e59377f42cc3ee69ed730cc8dcc3b"
+        },
+        "date": 1786330687255,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466736793518066,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466899871826172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529223442077637,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537968635559082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.8498592376709,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85863018035889,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
           }
         ]
       }
