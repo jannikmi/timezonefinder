@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786331627839,
+  "lastUpdate": 1786331630766,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1784,6 +1784,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efd04e929b6de9159c7959c46d5fd4bfe4ca7f6a",
+          "message": "Show the timezone the shipped data actually returns (#491)\n\nEvery usage snippet in README.rst and docs/1_usage.rst queries the Berlin\ncoordinates lng=13.358, lat=52.5061 and annotated the answer as\n'Europe/Paris'. That is what the reduced timezones-now dataset returns,\nwhere Europe/Berlin is merged into Europe/Paris. The package ships the\nfull dataset by default, which returns 'Europe/Berlin', so all eleven\ncomments described a dataset the reader does not have.\n\nEach annotation was re-derived by running the call it sits on rather than\nby find-and-replace: the global and instance forms of timezone_at,\ntimezone_at_land, certain_timezone_at and unique_timezone_at, plus the two\nTimezoneFinderL snippets. The neighbouring 'Etc/GMT' and None annotations\nwere confirmed correct and left alone. The get_geometry example in the\nopening block now asks for Europe/Berlin too - Europe/Paris was a valid\ncall, but read as though it followed from the lookup above it.\n\nNothing tied those comments to the packaged data, which is how they stayed\nwrong across releases. test_documented_contracts.py now re-runs each\ndocumented lookup against the example coordinate, one case per lookup,\nsince only unique_timezone_at can start returning None without any of the\nothers changing.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T05:12:20+02:00",
+          "tree_id": "e4f3e0d98a6039b34a02089b6ffbb67eeb31b361",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/efd04e929b6de9159c7959c46d5fd4bfe4ca7f6a"
+        },
+        "date": 1786331629952,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.4666948318481445,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.46685791015625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.528868675231934,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537759780883789,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.84999656677246,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85872459411621,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
