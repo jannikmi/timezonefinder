@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786363923031,
+  "lastUpdate": 1786363927060,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2228,6 +2228,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a32de1afbbd2d3a1a5d222e9de85f6cb405fc965",
+          "message": "Bump pypa/cibuildwheel from 4.1.1 to 4.2.0 (#496)",
+          "timestamp": "2026-08-10T14:10:37+02:00",
+          "tree_id": "9b3748053d4689d2d00d5e68aaaedd6abdca15ca",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a32de1afbbd2d3a1a5d222e9de85f6cb405fc965"
+        },
+        "date": 1786363925308,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466680526733398,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466843605041504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.528999328613281,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537803649902344,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.85012531280518,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85889530181885,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.2919 GHz"
           }
         ]
       }
