@@ -156,6 +156,14 @@ as a practice.
     the very attribute ``__slots__`` exists to forbid, punching a hole in the guarantee while
     looking like it enforces it.
 
+``tests/test_package_contents.py``
+    Builds both distributions and asserts that no unwanted file is in either - which passes just as
+    readily when a pattern matches nothing at all, as ``.github`` (lacking the trailing slash a
+    directory pattern needs) and ``Agents.*`` (after the file became ``AGENTS.md``) each did. Two
+    tests now hold that pattern list and ``MANIFEST.in`` to each other: one fails on a pattern
+    naming no path in the checkout, the other on an exclusion that no pattern covers. They are two
+    hand-written statements of one intent, and had drifted in both directions.
+
 Two further layers sit beside those invariants.
 
 **Property-based tests.** ``tests/test_property_validation.py`` and ``tests/test_property_api.py``
@@ -210,6 +218,14 @@ and asserts both a known lookup result and ``clang_extension_loaded``. A smoke t
 is the one failure this package must not ship quietly - it would degrade to the pure-Python path
 without a single red check. It doubles as the proof that the abi3 claim holds, since one cp311 wheel
 is what all four interpreters install.
+
+**What the artifacts contain is asserted, not assumed.** ``tests/test_package_contents.py`` builds
+both distributions and checks them from both ends: every file the package needs at runtime is in
+them, and nothing that should have stayed in the repository - the CI configuration, ``docs/``,
+``scripts/``, the agent instruction files - came along. The asymmetry is why the second half is worth
+automating: a missing data file fails on first use and gets reported, an extra one ships quietly.
+That guard is easy to disarm by accident, so it is guarded in turn - see *Tests that protect
+guarantees, not behaviour* above.
 
 **A tag pushed from a non-master branch aborts the release.** Tags can be pushed from anywhere, so
 the release job verifies that the tagged commit is contained in ``origin/master`` before publishing
