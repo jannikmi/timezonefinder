@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786335175378,
+  "lastUpdate": 1786335179917,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2117,6 +2117,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a69f03ca1d926c51ebf972349144b7aa37bee440",
+          "message": "Verify MANIFEST.in exclusions the other way round too (#493)\n\n* Verify MANIFEST.in exclusions the other way round too\n\nThe packaging guard asserts that nothing in the built sdist and wheel\nmatches a pattern in IGNORED_PATTERNS, and #486 made every hand-written\npattern name a path that actually exists. That closed one direction: a\npattern matching nothing now fails.\n\nThe converse stayed silent. MANIFEST.in and the pattern set are two\nhand-maintained statements of one intent, so an exclude/recursive-exclude/\nprune line added without a matching pattern left the file kept out by the\nbuild and verified by nothing - deleting that line later would ship it\nwith the suite still green.\n\ntest_every_manifest_exclusion_is_guarded parses the exclusion directives\nout of MANIFEST.in and fails when one of them covers a path in the\ncheckout that no pattern names. The four directive forms collapse into\none shape (prefix, glob, anchored), and the glob is matched a component\nat a time so `*` does not cross a separator, as it does not in\nMANIFEST.in but does in matches_pattern.\n\nFour directives name untracked artefacts whose presence is a property of\nthe machine rather than of the project - `.git` is a directory in a clone\nand a file in a linked worktree, numba's cache under\ntimezonefinder/__pycache__/ appears only after a numba-enabled run - so\nscanning them would pass here and fail elsewhere. Those are exempted\nagainst the pattern that carries the same intent, and\ntest_pattern_only_exclusions_stay_current fails if either side goes away.\nNeither global-exclude is load-bearing: dropping either changes neither\ndistribution, since setuptools already prunes __pycache__ from an sdist.\n\nBoth tests are unit tests - they need no build, so a drifted exclusion\nsurfaces in `make test`.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* List the packaging guard among the invariant-protecting tests\n\ndocs/architecture.rst's \"Tests that protect guarantees, not behaviour\"\ncollects the tests that exist to give an invariant a failure mode it\npreviously lacked. The packaging guard belongs there and was missing: a\ncheck that asserts nothing matched passes just as readily when its\npatterns match nothing at all, which is exactly how `.github` and\n`Agents.*` came to guard nothing while the suite stayed green.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Say what stops the wrong files reaching PyPI in How it ships\n\nThe section covers the checks that stop a broken wheel being published -\nthe abi3 audit, the end-to-end install job - but not the one that checks\nwhat is *in* the artifact. Both halves of that check are worth stating:\na missing runtime file fails on first use and gets reported, while an\nextra one ships quietly.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-10T06:11:31+02:00",
+          "tree_id": "0b67cf5e76359741e33278057c55f5e35fe55adf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a69f03ca1d926c51ebf972349144b7aa37bee440"
+        },
+        "date": 1786335177383,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466645240783691,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466808319091797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529265403747559,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537899971008301,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.84997940063477,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.8587007522583,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
