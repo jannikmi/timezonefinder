@@ -3,78 +3,8 @@
 Performance
 ===========
 
-Binary Data Format
-------------------
-
-TimezoneFinder uses an optimized binary format based on FlatBuffers for storing and accessing timezone data. This format provides several performance advantages:
-
-* **Zero-Copy Access**: FlatBuffers allows accessing serialized data without unpacking or parsing
-* **Spatial Indexing**: H3 hexagonal grid system efficiently narrows down polygon candidates
-* **Optimized Data Layout**: Compact storage with direct access to relevant data structures
-
-For detailed information about the data format in use, see :doc:`data_format`.
-
-
-C extension
------------
-
-During installation ``timezonefinder`` automatically tries to compile a C extension with an implementation of the time critical point in polygon check algorithm.
-In order for this to work, a Clang compiler has to be installed.
-
-.. note::
-
-    If compilation fails (due to e.g. missing C compiler or broken ``cffi`` installation) ``timezonefinder`` will silently fall back to a pure Python implementation (~400x slower, cf. :ref:`speed test results <speed-tests>` below).
-
-
-For testing if the compiled C implementation of the point in polygon algorithm is being used:
-
-.. code-block:: python
-
-    TimezoneFinder.using_clang_pip()  # returns True or False
-
-
-
-Numba
------
-
-Some of the utility function (cf. ``utils.py``) can be JIT compiled automatically by installing the optional dependency ``numba``:
-
-.. code-block:: console
-
-    pip install timezonefinder[numba]
-
-
-It is highly recommended to install ``Numba`` for increased performance when the C extensions cannot be used (e.g. C compiler is not present at build time).
-
-
-.. note::
-
-    If Numba can be imported, the JIT compiled Python version of the point in polygon check algorithm will be used instead of the C alternative as it is even faster (cf. :ref:`speed test results <speed-tests>` below).
-
-
-
-For testing if Numba is being used to JIT compile helper functions:
-
-
-.. code-block:: python
-
-    TimezoneFinder.using_numba()  # returns True or False
-
-
-
-In memory mode
---------------
-
-To speed up the computations at the cost of memory consumption and initialisation time, pass ``in_memory=True`` during initialisation.
-This causes all binary files to be read into memory.
-
-.. code-block:: python
-
-    tf = TimezoneFinder(in_memory=True)
-
-
-By default the coordinate data is memory mapped instead, so only the pages a lookup actually touches become resident - which is what keeps the default mode viable in a memory-constrained container. See :doc:`benchmark_results_memory` for the measured cost of each mode.
-
+This page collects the measured numbers and the two knobs that move them. For *why* the lookup is
+shaped the way it is, see :doc:`architecture`.
 
 
 .. _speed-tests:
@@ -114,3 +44,53 @@ Memory Footprint
 ~~~~~~~~~~~~~~~~
 
 See :doc:`benchmark_results_memory` for the measured footprint of each class and mode, auto-generated from the ``scripts/measure_memory.py`` harness (``make reports``). Memory is measured separately from the suites above rather than by ``pytest-benchmark``, which times code and would have its timings distorted by the allocation tracking.
+
+
+C extension
+-----------
+
+During installation ``timezonefinder`` automatically tries to compile a C extension implementing the
+time critical point in polygon check, which requires a Clang compiler. If that fails - no compiler,
+a broken ``cffi`` installation - the package falls back to the pure Python implementation, which is
+correct and roughly 400x slower.
+
+To check which implementation is active:
+
+.. code-block:: python
+
+    TimezoneFinder.using_clang_pip()  # returns True or False
+
+
+Numba
+-----
+
+Installing the optional ``numba`` dependency JIT-compiles the same routine, which is faster still and
+takes precedence over the C extension when both are available:
+
+.. code-block:: console
+
+    pip install timezonefinder[numba]
+
+
+.. code-block:: python
+
+    TimezoneFinder.using_numba()  # returns True or False
+
+
+Both backends compute identical results; they only differ in speed. :doc:`architecture` explains why
+the choice is made once at import time and what follows from that - most importantly that the three
+implementations are separate code paths whose timings must never be compared to each other.
+
+
+In memory mode
+--------------
+
+To speed up the computations at the cost of memory consumption and initialisation time, pass ``in_memory=True`` during initialisation.
+This causes all binary files to be read into memory.
+
+.. code-block:: python
+
+    tf = TimezoneFinder(in_memory=True)
+
+
+By default the coordinate data is memory mapped instead, so only the pages a lookup actually touches become resident - which is what keeps the default mode viable in a memory-constrained container. See :doc:`benchmark_results_memory` for the measured cost of each mode.
