@@ -482,6 +482,30 @@ Nothing in it is wrong; these three are readability and drift.
   FlatBuffers message, so this needs a corrupt file to happen at all — but it is the one site where
   the failure mode is a wrong answer.
 
+### TOOL-3 — `make parse` and `make testparse` cannot run at all
+
+- **Location:** `Makefile`, the `parse` and `testparse` targets; the absolute `from scripts...`
+  imports at the head of `scripts/file_converter.py`.
+- **Defect:** both targets invoke the converter *by path* (`uv run python
+  ./scripts/file_converter.py ...`), which puts `scripts/` on `sys.path[0]` rather than the
+  repository root, so the script's own `from scripts.timezone_data import TimezoneData` raises
+  `ModuleNotFoundError: No module named 'scripts'` before any work starts. `scripts` is not among
+  the installed packages in `[tool.setuptools] packages` either, so the environment does not supply
+  it. Reproduced on unmodified `origin/master` with `make testparse`; the failure is immediate and
+  total, not conditional on the machine.
+- **Value:** `testparse` is the only cheap end-to-end exercise of the data converter — it runs
+  against `tests/test_input.json` in a second, where `make data` needs a ~55 MB download and a full
+  parse. Nothing in `tests/` covers `parse_data()`, so while these targets are broken the converter
+  has no runnable smoke test at all, and a contributor following the `Makefile` header comment hits
+  a traceback that looks like a broken checkout.
+- **Fix:** invoke it as a module — `uv run python -m scripts.file_converter ...` — which is already
+  how `scripts/reporting.py` is run elsewhere (`uv run python -m scripts.reporting`). Confirm the
+  `argparse` entry point still behaves under `-m`, and check the other by-path invocations for the
+  same defect: `update_data.sh` also calls the converter. Size: ~4 lines.
+- **Status:** open
+- **Last touched:** 2026-08-13 — found while regenerating the packaged data for the hole
+  deduplication work (issue #350), which needed `PYTHONPATH=.` prefixed to every converter run.
+
 ### TOOL-2 — the `check-manifest` ignore list names two files that do not exist
 
 - **Location:** `.pre-commit-config.yaml`, the `check-manifest` hook's `--ignore` argument.

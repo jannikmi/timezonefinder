@@ -9,6 +9,7 @@ down - at the encoding, at the runtime resolution, and against the packaged data
 import numpy as np
 import pytest
 
+from scripts.configs import MIN_HOLE_DEDUP_RATIO
 from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder.configs import DEFAULT_DATA_DIR
@@ -86,27 +87,22 @@ def test_packaged_holes_are_deduplicated():
 
 
 @pytest.mark.unit
-def test_packaged_references_resolve_to_the_same_ring():
-    """Every referenced hole must trace exactly the path the boundary polygon does.
-
-    This is the property the whole optimisation rests on: the reference is a storage
-    detail, never a geometry change.
-    """
-    tf = TimezoneFinder(in_memory=True)
-    for hole_id in range(len(tf.holes)):
-        ref = int(tf.holes.poly_ref[hole_id])
-        if ref < 0:
-            continue
-        hole_ring = tf.holes.coords_of(hole_id)
-        boundary_ring = tf.boundaries.coords_of(ref)
-        assert np.array_equal(hole_ring, boundary_ring)
-
-
-@pytest.mark.unit
 def test_packaged_hole_bboxes_match_the_resolved_ring():
-    """The bbox vectors stay one entry per hole and are never rewritten, so they have
-    to agree with whatever the reference resolves to - ``outside_bbox`` would otherwise
-    reject points that are inside the hole."""
+    """Every reference in the shipped data must point at the *right* boundary polygon.
+
+    This is the one check on packaged data with independent evidence behind it, and so
+    the one that can catch a converter that mismatched holes to boundaries. The four
+    bbox vectors are computed at build time from the original hole rings, before any
+    deduplication, and are never rewritten - one entry per hole either way. A reference
+    pointing at the wrong polygon therefore resolves to a ring whose extent disagrees
+    with the bbox stored for that hole.
+
+    Note what cannot be asserted here instead: comparing ``holes.coords_of(id)`` against
+    ``boundaries.coords_of(ref)`` is vacuous, because resolving the reference *is*
+    returning the boundary ring. That the two rings were ever equal is a build-time
+    property, asserted where it is decided (``HoleCollection.deduplicate``) and measured
+    from the upstream data by ``prototypes/hole_boundary_redundancy.py``.
+    """
     tf = TimezoneFinder(in_memory=True)
     for hole_id in range(len(tf.holes)):
         ring = tf.holes.coords_of(hole_id)
@@ -114,6 +110,24 @@ def test_packaged_hole_bboxes_match_the_resolved_ring():
         assert int(tf.holes.xmax[hole_id]) == int(ring[0].max())
         assert int(tf.holes.ymin[hole_id]) == int(ring[1].min())
         assert int(tf.holes.ymax[hole_id]) == int(ring[1].max())
+
+
+@pytest.mark.unit
+def test_packaged_dedup_ratio_meets_the_floor():
+    """The shipped data must clear the same bar the converter enforces.
+
+    ``HoleCollection.deduplicate`` refuses to compile below this ratio, but that only
+    fires when someone runs the converter. Asserting it against the packaged binaries
+    catches data that reached the repository some other way - a partial regeneration, a
+    directory copied in - and states the expectation where a reader of the data will
+    look for it.
+    """
+    tf = TimezoneFinder(in_memory=True)
+    ratio = int((tf.holes.poly_ref >= 0).sum()) / len(tf.holes)
+    assert ratio >= MIN_HOLE_DEDUP_RATIO, (
+        f"only {ratio:.1%} of packaged holes are stored as a reference, below the "
+        f"{MIN_HOLE_DEDUP_RATIO:.0%} the converter enforces"
+    )
 
 
 @pytest.mark.unit
