@@ -528,7 +528,3 @@ class TestTimezonefinderCleanup:
                 pytest.fail(
                     f"__del__ raised {type(e).__name__} when cleanup raised {error_type}: {e}"
                 )
-
-
-# TEST equality for all results. in_memory_mode = True/False must not change the results
-# TEST equality for all results. in_memory_mode = True/False must not change the results

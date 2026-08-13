@@ -291,11 +291,12 @@ class TestOptimizedHybridShortcuts:
             read_hybrid_shortcuts_binary(path)
 
     @pytest.mark.parallel_threads_limit("auto")
-    def test_single_element_arrays_should_not_occur(
-        self, zone_id_dtype, temp_file_path
-    ):
-        path = temp_file_path()
-        """Test documenting that single-element arrays currently occur but should be optimized.
+    def test_single_element_arrays_round_trip(self, zone_id_dtype, temp_file_path):
+        """The format preserves a one-element polygon array rather than collapsing it.
+
+        Single-element arrays should not be produced in the first place - a lone polygon with a
+        unique timezone belongs in the shortcut as a zone id - but where they do occur the
+        serialisation round-trips them unchanged, which is what this pins.
 
         This test demonstrates that the current shortcut generation logic produces
         single-element arrays when it should optimize them to store zone IDs directly.
@@ -306,6 +307,7 @@ class TestOptimizedHybridShortcuts:
         with unique timezones and store their zone ID directly, this test should be
         updated to assert that single-element arrays do NOT occur.
         """
+        path = temp_file_path()
         try:
             # Create test data representing the current suboptimal behavior
             test_data = {

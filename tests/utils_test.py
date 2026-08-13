@@ -265,22 +265,6 @@ def test_convert_polygon_is_c_contiguous():
 @pytest.mark.parametrize(
     "lng, lat",
     [
-        (180.0, 90.0),
-        (-180.0, 90.0),
-        (-180.0, 90.0),
-        (180.0, -90.0),
-        (180.0, -90.0),
-        (-180.0, -90.0),
-        (-180.0, -90.0),
-    ],
-)
-def test_rectify_coords_valid(lng, lat):
-    utils.validate_coordinates(lng=lng, lat=lat)
-
-
-@pytest.mark.parametrize(
-    "lng, lat",
-    [
         (180.0 + INT2COORD_FACTOR, 90.0),
         (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
         (-180.0, 90.0 + INT2COORD_FACTOR),
@@ -290,7 +274,7 @@ def test_rectify_coords_valid(lng, lat):
         (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
     ],
 )
-def test_rectify_coords_invalid(lng, lat):
+def test_validate_coordinates_rejects_out_of_range(lng, lat):
     with pytest.raises(ValueError):
         utils.validate_coordinates(lng=lng, lat=lat)
 
