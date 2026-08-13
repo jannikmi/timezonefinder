@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786363927060,
+  "lastUpdate": 1786583888129,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1170,6 +1170,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008176728820422246",
             "extra": "mean: 24.92947700000059 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9e3ac2c272dcc1a24c306b18e77e522cfcd7e0d6",
+          "message": "make names and docstrings describe what the code does (#507)\n\nShips three ledger entries (TEST-6, TEST-8, TEST-10) plus one finding from a\nwide-angle review, all on one theme: code whose name or docstring contradicts\nwhat it does. No behaviour change.\n\n- TimezoneFinder.timezone_at documents that the last remaining zone is returned\n  without a point in polygon test, and that this is correct only where the data\n  covers every point - certain_timezone_at is the method that tests every\n  candidate. The optimisation was explained in comments but not where\n  help(TimezoneFinder) and the API page show it.\n- test_rectify_coords_valid/_invalid were named for a rectify_coords that does\n  not exist; both call validate_coordinates. The first is deleted as subsumed by\n  test_validate_coordinates_accepts_finite_values, which covers all four of its\n  distinct corners and asserts the return value; the second is renamed\n  test_validate_coordinates_rejects_out_of_range.\n- test_single_element_arrays_should_not_occur asserted that they do occur. Its\n  triple-quoted string sat after the first statement, so it was a discarded\n  expression rather than a docstring and reached neither --collect-only nor a\n  failure report - leaving the contradicting name as the only thing a reader saw.\n  Renamed test_single_element_arrays_round_trip, string moved above the body.\n- Dropped a stale comment duplicated across the last two lines of main_test.py,\n  reading as a to-do for what TestTimezonefinderClassTestMEM already does.\n\nLedger: TEST-6/8/10 deleted as shipped; TEST-9's anchor updated for the rename.\nAdds API-2 (every submodule reachable as a package attribute, so the public API\nis wider than __all__ says) and PERF-1 (is_ocean_timezone runs a regex on the\ntimezone_at_land path), both open and both blocked - one on a maintainer\ndecision, one on a measurement. A scope note now points structural work at the\nroadmap (#506) and states the test for what belongs in the ledger at all.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-13T03:16:45+02:00",
+          "tree_id": "bd97e60b0cfabb9979b72646b1b64235a1add4f9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9e3ac2c272dcc1a24c306b18e77e522cfcd7e0d6"
+        },
+        "date": 1786583886816,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 72.7763848781766,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005521433492322375",
+            "extra": "mean: 13.740721000004896 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 232.75121478675734,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018652182254459113",
+            "extra": "mean: 4.296433000000377 msec\nrounds: 192 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.831777125859308,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006037202365882388",
+            "extra": "mean: 40.27098000000251 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
           }
         ]
       }
