@@ -11,6 +11,7 @@ from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
 )
 from timezonefinder.np_binary_helpers import (
+    get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
     get_ymax_path,
@@ -55,12 +56,19 @@ class PolygonArray:
         self.coordinates = create_coord_accessor(coordinate_file_path, self.in_memory)
 
     def __del__(self) -> None:
-        """Clean up resources when the object is destroyed."""
-        del self.coordinates
-        del self.xmin
-        del self.xmax
-        del self.ymin
-        del self.ymax
+        """Clean up resources when the object is destroyed.
+
+        Tolerates a partially initialised instance, as ``FileCoordAccessor.cleanup``
+        does: ``__init__`` can raise between reading the bbox vectors and building the
+        coordinate accessor - a data directory whose coordinate file the layout guard
+        rejects does exactly that - and ``__del__`` still runs on the half-built object.
+        Deleting a never-assigned attribute would raise inside ``__del__``, which Python
+        can only report as an unraisable exception on stderr: noise that tells the user
+        nothing about the real error already propagating out of ``__init__``.
+        """
+        for attr in ("coordinates", "xmin", "xmax", "ymin", "ymax"):
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def __len__(self) -> int:
         """
@@ -138,3 +146,121 @@ class PolygonArray:
             if self.pip_with_bbox_check(poly_id, x, y):
                 return True
         return False
+
+
+class HoleArray(PolygonArray):
+    """Holes, whose geometry may be a reference to an identical boundary polygon.
+
+    Nearly every hole in the packaged data is an enclave: the upstream builder cuts a
+    hole into the surrounding zone with exactly the ring it uses as the enclave zone's
+    own boundary polygon, so the two rings are identical vertex for vertex. Storing
+    such a hole as a reference to that boundary is a pure storage change - the ring
+    handed to the point-in-polygon test is the same one either way.
+
+    ``poly_ref`` is a dense ``int32`` vector, one entry per hole id, with the sign
+    carrying the discriminant:
+
+    ==========  ==========================================================
+    ``v >= 0``  the ring *is* boundary polygon ``v``
+    ``v < 0``   the ring is stored inline, at index ``-(v + 1)`` of this
+                collection's own coordinate file
+    ==========  ==========================================================
+
+    Both index spaces are dense and start at 0, so the sign alone cannot separate
+    them: without the offset, inline ring 0 would encode as ``-0 == 0`` and collide
+    with boundary polygon 0. ``-(v + 1)`` is the usual packing (it is ``~v``); biasing
+    the non-negative side instead would only move the offset, not remove it.
+
+    Hole ids stay dense, so ``hole_registry`` and every caller above ``coords_of`` are
+    untouched, and the bbox vectors stay valid verbatim - a referenced ring is
+    identical, so its bbox already equals the boundary's. ``outside_bbox``, the hot
+    path, keeps reading a flat array with no indirection at all.
+    """
+
+    def __init__(
+        self,
+        data_location: str | Path,
+        boundaries: PolygonArray,
+        in_memory: bool = False,
+    ):
+        """
+        :param data_location: The path to the binary hole data files to use.
+        :param boundaries: The boundary polygons that references resolve against. Held
+            by reference, which keeps them alive for at least as long as this array.
+        :param in_memory: Whether to completely read and keep the coordinate data in memory.
+        """
+        super().__init__(data_location=data_location, in_memory=in_memory)
+        self.boundaries = boundaries
+        ref_path = get_poly_ref_path(self.data_location)
+        # absent -> a data directory compiled before hole deduplication existed, with
+        # every ring stored inline. Readable as it stands, just bigger.
+        self.poly_ref = read_per_polygon_vector(ref_path) if ref_path.exists() else None
+        self._validate_refs(ref_path)
+
+    def _validate_refs(self, ref_path: Path) -> None:
+        """Reject a hole directory whose files disagree about how many rings are stored.
+
+        The reference vector and the coordinate file are separate files, so a
+        half-updated data directory - one build's coordinates next to another's
+        references - is possible. Left unchecked it does not fail: every index still
+        resolves to *some* ring, just the wrong one, which surfaces as a wrong timezone
+        rather than as an error. Runs once per construction, never per lookup.
+        """
+        nr_holes = len(self.xmin)
+        nr_stored = len(self.coordinates)
+        if self.poly_ref is None:
+            if nr_stored != nr_holes:
+                raise ValueError(
+                    f"the hole data in {self.data_location} stores {nr_stored} rings for "
+                    f"{nr_holes} holes, and carries no {ref_path.name} to map the "
+                    f"difference. Regenerate this data directory with "
+                    f"scripts/file_converter.py from the current checkout."
+                )
+            return
+
+        if len(self.poly_ref) != nr_holes:
+            raise ValueError(
+                f"{ref_path} has {len(self.poly_ref)} entries but there are "
+                f"{nr_holes} holes."
+            )
+        nr_inline = int((self.poly_ref < 0).sum())
+        if nr_inline != nr_stored:
+            raise ValueError(
+                f"{ref_path} expects {nr_inline} inline hole rings but the coordinate "
+                f"file in {self.data_location} stores {nr_stored}."
+            )
+        if nr_holes:
+            max_ref = int(self.poly_ref.max())
+            if max_ref >= len(self.boundaries):
+                raise ValueError(
+                    f"a hole in {self.data_location} references boundary polygon "
+                    f"{max_ref}, but only {len(self.boundaries)} boundary polygons exist."
+                )
+
+    def coords_of(self, idx: IntegerLike) -> np.ndarray:
+        """
+        Get the hole coordinates for the given hole id, resolving a reference if needed.
+
+        :param idx: The hole id
+        :return: A numpy array containing the hole coordinates
+        """
+        if self.poly_ref is None:
+            return self.coordinates[idx]
+        ref = int(self.poly_ref[idx])
+        if ref >= 0:
+            return self.boundaries.coords_of(ref)
+        return self.coordinates[-(ref + 1)]
+
+    def __del__(self) -> None:
+        """Clean up resources when the object is destroyed.
+
+        Drops the boundaries reference *before* the base class tears this array down, so
+        no half-deleted state is one that still resolves references: afterwards
+        ``coords_of`` raises ``AttributeError`` instead of reading through a boundaries
+        array whose own accessor may already be gone.
+        """
+        if hasattr(self, "poly_ref"):
+            del self.poly_ref
+        if hasattr(self, "boundaries"):
+            del self.boundaries
+        super().__del__()

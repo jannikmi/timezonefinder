@@ -43,6 +43,16 @@ DEBUG = False
 SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 
 
+# Lower bound on the share of holes stored as a reference to an identical boundary
+# polygon rather than as their own copy of the ring (see HoleCollection.poly_refs).
+# The deduplication is worth ~7% of the packaged coordinate data, and it rests on how
+# the upstream builder emits enclaves - which is a convention, not a guarantee. A
+# release that changed it would still compile and still return correct timezones, just
+# with the shipped data quietly re-inflated, so the ratio is asserted rather than
+# reported. Measured 96.4% on release 2026c; the floor sits well below that so that
+# ordinary dataset churn does not trip it.
+MIN_HOLE_DEDUP_RATIO = 0.9
+
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
 HexIdSet: TypeAlias = set[int]
 PolyIdSet: TypeAlias = set[int]

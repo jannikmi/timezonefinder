@@ -52,6 +52,16 @@ class AbstractCoordAccessor(ABC):
         """
         pass
 
+    @abstractmethod
+    def __len__(self) -> int:
+        """
+        Get the number of polygons stored in the coordinate file.
+
+        Not the number of polygon *ids* in the collection using it: the holes file
+        stores only the rings that are not references to a boundary polygon.
+        """
+        pass
+
     def __del__(self) -> None:
         """
         Ensure resources are cleaned up when the object is destroyed.
@@ -102,6 +112,9 @@ class FileCoordAccessor(AbstractCoordAccessor):
             A numpy array containing the polygon coordinates
         """
         return read_polygon_array_from_binary(self.polygon_collection, idx)
+
+    def __len__(self) -> int:
+        return self.polygon_collection.PolygonsLength()
 
     def cleanup(self) -> None:
         """Clean up resources.
@@ -174,6 +187,9 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
             A numpy array containing the polygon coordinates
         """
         return self.polygons[idx]
+
+    def __len__(self) -> int:
+        return len(self.polygons)
 
     def cleanup(self) -> None:
         """Drop the preloaded polygons. Unlike the file-backed sibling, nothing to close.

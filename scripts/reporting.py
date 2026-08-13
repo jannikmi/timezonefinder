@@ -31,6 +31,7 @@ from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
     read_per_polygon_vector,
 )
+from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder.utils import (
     get_hole_registry_path,
     get_holes_dir,
@@ -106,34 +107,21 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
     all_tz_names = read_zone_names(data_path)
     nr_of_zones = len(all_tz_names)
 
-    # Load boundary polygon data
+    # Load boundary and hole polygons through the same classes the runtime uses, so
+    # that a hole stored as a reference to an identical boundary polygon is resolved
+    # here exactly as it is during a lookup - and reported at its true vertex count
+    # rather than skipped for not being in the (much smaller) hole coordinate file.
     boundaries_dir = get_boundaries_dir(data_path)
-    boundary_coord_path = get_coordinate_path(boundaries_dir)
-
-    # Read boundary polygons using FlatBuffer
-    from timezonefinder.flatbuf.io.polygons import (
-        get_polygon_collection,
-        read_polygon_array_from_binary,
-    )
-
-    with open(boundary_coord_path, "rb") as f:
-        coord_buf = f.read()
-
-    polygon_collection = get_polygon_collection(coord_buf, boundary_coord_path)
-    nr_of_polygons = polygon_collection.PolygonsLength()
-
-    # Calculate polygon lengths from FlatBuffer data
-    polygon_lengths = []
-    for idx in range(nr_of_polygons):
-        polygon_coords = read_polygon_array_from_binary(polygon_collection, idx)
-        polygon_lengths.append(polygon_coords.shape[1])  # Number of coordinate pairs
-
-    # Load hole data
     holes_dir = get_holes_dir(data_path)
-    hole_coord_path = get_coordinate_path(holes_dir)
 
-    # Load hole registry to get polynrs_of_holes
+    boundaries = PolygonArray(data_location=boundaries_dir)
+    nr_of_polygons = len(boundaries)
+    polygon_lengths = [
+        boundaries.coords_of(idx).shape[1] for idx in range(nr_of_polygons)
+    ]
+
     hole_registry_path = get_hole_registry_path(data_path)
+    hole_coord_path = get_coordinate_path(holes_dir)
     polynrs_of_holes = []
     all_hole_lengths = []
 
@@ -141,30 +129,17 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
         with open(hole_registry_path) as f:
             hole_registry = json.load(f)
 
-        # Read hole polygons using FlatBuffers
-        with open(hole_coord_path, "rb") as f:
-            hole_coord_buf = f.read()
-
-        hole_polygon_collection = get_polygon_collection(
-            hole_coord_buf, hole_coord_path
-        )
-
-        # Build polynrs_of_holes list from hole registry
-        hole_index = 0
-        for poly_id_str, hole_info in hole_registry.items():
-            poly_id = int(poly_id_str)
-            num_holes = hole_info[0]
-
-            for _ in range(num_holes):
-                polynrs_of_holes.append(poly_id)
-                if hole_index < hole_polygon_collection.PolygonsLength():
-                    hole_coords = read_polygon_array_from_binary(
-                        hole_polygon_collection, hole_index
-                    )
-                    all_hole_lengths.append(
-                        hole_coords.shape[1]
-                    )  # Number of coordinate pairs
-                    hole_index += 1
+        holes = HoleArray(data_location=holes_dir, boundaries=boundaries)
+        all_hole_lengths = [
+            holes.coords_of(hole_id).shape[1] for hole_id in range(len(holes))
+        ]
+        # which polygon each hole belongs to. Addressed through the registry's own
+        # first hole id: the JSON keys are sorted as strings, so iteration order is
+        # not ascending polygon id and a running counter would mislabel the holes.
+        polynrs_of_holes = [0] * len(holes)
+        for poly_id_str, (num_holes, first_hole_id) in hole_registry.items():
+            for offset in range(num_holes):
+                polynrs_of_holes[first_hole_id + offset] = int(poly_id_str)
 
     return {
         "shortcuts": shortcuts,

@@ -17,6 +17,7 @@ from pydantic import (
 from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
+    MIN_HOLE_DEDUP_RATIO,
     HoleLengthList,
     HoleRegistry,
     LengthList,
@@ -29,7 +30,7 @@ from scripts.configs import (
 from timezonefinder.configs import zone_id_dtype_to_string
 from scripts.helper_classes import Boundaries, GeoJSON, PolygonGeometry, compile_bboxes
 from scripts.hex_utils import Hex
-from scripts.utils import to_numpy_polygon_repr
+from scripts.utils import canonical_ring_key, to_numpy_polygon_repr
 
 
 def _validate_numpy_polygons(polygons: PolygonList, kind: str) -> None:
@@ -194,6 +195,8 @@ class HoleCollection(BaseModel):
     polynrs_of_holes: PolynrHolesList
     _boundaries: list[Boundaries] | None = PrivateAttr(default=None)
     _registry: HoleRegistry | None = PrivateAttr(default=None)
+    _poly_refs: list[int] | None = PrivateAttr(default=None)
+    _inline_holes: PolygonList | None = PrivateAttr(default=None)
 
     @field_validator("holes")
     @classmethod
@@ -256,6 +259,163 @@ class HoleCollection(BaseModel):
             raise ValueError(
                 f"Hole polygon references cannot be negative, found {min_poly_ref}"
             )
+        self.validate_boundary_refs(polygon_count)
+
+    def validate_boundary_refs(self, polygon_count: int) -> None:
+        """Check the encoding of the hole reference vector, if it has been computed.
+
+        Every entry has to address something real: a boundary polygon that exists, or an
+        inline ring that was actually written. A stale or off-by-one entry would not
+        fail at runtime - it would resolve to a different, valid ring and come back as a
+        wrong timezone.
+        """
+        if self._poly_refs is None:
+            return
+        if len(self._poly_refs) != len(self.holes):
+            raise ValueError(
+                f"Hole reference vector has {len(self._poly_refs)} entries but there "
+                f"are {len(self.holes)} holes"
+            )
+        nr_inline = len(self.inline_holes)
+        for hole_id, ref in enumerate(self._poly_refs):
+            if ref >= polygon_count:
+                raise ValueError(
+                    f"Hole {hole_id} references boundary polygon {ref} but only "
+                    f"{polygon_count} polygons exist"
+                )
+            if ref < 0 and -(ref + 1) >= nr_inline:
+                raise ValueError(
+                    f"Hole {hole_id} references inline ring {-(ref + 1)} but only "
+                    f"{nr_inline} inline rings are stored"
+                )
+
+    def deduplicate(
+        self, polygons: "PolygonCollection", poly_zone_ids: ZoneIdArray
+    ) -> None:
+        """Recognise every hole that is a verbatim copy of a boundary polygon.
+
+        The upstream builder cuts an enclave out of the surrounding zone using exactly
+        the ring it also emits as the enclave zone's own boundary polygon, so the two
+        are identical vertex for vertex. Such a hole does not have to be stored at all:
+        the reference vector records which boundary to read instead, and only the
+        remaining rings are written to the hole coordinate file.
+
+        Populates ``poly_refs`` and ``inline_holes``. Idempotent; the results are cached.
+
+        :param polygons: The boundary polygons that holes are matched against
+        :param poly_zone_ids: Zone id per boundary polygon, used to assert that a hole
+            never resolves to a polygon of the zone it was cut out of
+        """
+        if self._poly_refs is not None:
+            return
+
+        # A hole and its boundary twin agree on bounding box and vertex count, so
+        # bucketing on those first leaves only a handful of candidates to compare in
+        # full - the canonical key is what decides, the bucket only narrows the search.
+        buckets: dict[tuple[int, int, int, int, int], list[int]] = {}
+        for poly_id, bounds in enumerate(polygons.boundaries):
+            key = (
+                bounds.xmin,
+                bounds.xmax,
+                bounds.ymin,
+                bounds.ymax,
+                polygons.lengths[poly_id],
+            )
+            buckets.setdefault(key, []).append(poly_id)
+
+        canonical_cache: dict[int, bytes] = {}
+
+        def boundary_key(poly_id: int) -> bytes:
+            try:
+                return canonical_cache[poly_id]
+            except KeyError:
+                key = canonical_ring_key(polygons.polygons[poly_id])
+                canonical_cache[poly_id] = key
+                return key
+
+        poly_refs: list[int] = []
+        inline_holes: PolygonList = []
+        nr_matched = 0
+        nr_same_zone = 0
+        print("matching holes against identical boundary polygons...")
+        for hole_id, hole in enumerate(self.holes):
+            bounds = self.boundaries[hole_id]
+            candidates = buckets.get(
+                (
+                    bounds.xmin,
+                    bounds.xmax,
+                    bounds.ymin,
+                    bounds.ymax,
+                    self.lengths[hole_id],
+                ),
+                [],
+            )
+            match: int | None = None
+            if candidates:
+                hole_key = canonical_ring_key(hole)
+                for poly_id in candidates:
+                    if boundary_key(poly_id) == hole_key:
+                        match = poly_id
+                        break
+
+            if match is None:
+                # no twin: keep the ring, and address it by its position in the
+                # compacted coordinate file
+                poly_refs.append(-(len(inline_holes) + 1))
+                inline_holes.append(hole)
+                continue
+
+            parent_poly = self.polynrs_of_holes[hole_id]
+            if poly_zone_ids[match] == poly_zone_ids[parent_poly]:
+                # Not an enclave: a zone cut by a hole shaped like one of its own
+                # polygons cancels itself out there. Degenerate upstream geometry,
+                # reported rather than rejected - the reference is exact whatever the
+                # two zones are, so storing it changes nothing about the answer, and
+                # failing the build over it would block a data update for a defect
+                # that predates this encoding.
+                nr_same_zone += 1
+            poly_refs.append(match)
+            nr_matched += 1
+
+        nr_holes = len(self.holes)
+        if nr_holes:
+            ratio = nr_matched / nr_holes
+            print(
+                f"{nr_matched} of {nr_holes} holes ({ratio:.1%}) stored as a reference "
+                f"to an identical boundary polygon"
+            )
+            if nr_same_zone:
+                print(
+                    f"WARNING: {nr_same_zone} of them duplicate a polygon of their own "
+                    f"zone, which describes a zone that cancels itself out there. "
+                    f"Check the input data."
+                )
+            if ratio < MIN_HOLE_DEDUP_RATIO:
+                raise ValueError(
+                    f"only {ratio:.1%} of holes are identical to a boundary polygon, "
+                    f"below the expected minimum of {MIN_HOLE_DEDUP_RATIO:.0%}. The "
+                    f"upstream dataset appears to no longer emit enclaves as shared "
+                    f"rings; compiling anyway would silently inflate the packaged data. "
+                    f"Re-check the assumption and adjust MIN_HOLE_DEDUP_RATIO."
+                )
+
+        self._poly_refs = poly_refs
+        self._inline_holes = inline_holes
+
+    @property
+    def poly_refs(self) -> list[int]:
+        """One entry per hole id: ``>= 0`` a boundary polygon id, ``< 0`` the inline
+        ring at index ``-(v + 1)``. Requires :meth:`deduplicate` to have run."""
+        if self._poly_refs is None:
+            raise RuntimeError("holes have not been matched against boundaries yet")
+        return self._poly_refs
+
+    @property
+    def inline_holes(self) -> PolygonList:
+        """The hole rings that are not a copy of a boundary polygon, in storage order."""
+        if self._inline_holes is None:
+            raise RuntimeError("holes have not been matched against boundaries yet")
+        return self._inline_holes
 
     def holes_in_poly(self, poly_nr: int):
         registry = self.registry
@@ -583,6 +743,31 @@ class TimezoneData(BaseModel):
 
     def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
         return self.polygon_store.polygon_vertex_hexes(poly_nr, res)
+
+    @property
+    def hole_poly_refs(self) -> list[int]:
+        """Per hole id, the boundary polygon it duplicates or its inline position.
+
+        See :meth:`HoleCollection.deduplicate` for the encoding.
+        """
+        self.deduplicate_holes()
+        return self.hole_store.poly_refs
+
+    @property
+    def inline_holes(self) -> PolygonList:
+        """The hole rings that have to be stored, i.e. all but the duplicated ones."""
+        self.deduplicate_holes()
+        return self.hole_store.inline_holes
+
+    def deduplicate_holes(self) -> None:
+        """Match holes against identical boundary polygons, once.
+
+        Not done during construction: it walks every boundary polygon that shares a
+        bounding box with some hole, which is wasted work for the callers that build a
+        ``TimezoneData`` only to compile shortcuts from it.
+        """
+        self.hole_store.deduplicate(self.polygon_store, self.poly_zone_ids)
+        self.hole_store.validate_boundary_refs(self.nr_of_polygons)
 
     @property
     def hole_registry(self) -> HoleRegistry:
