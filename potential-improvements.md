@@ -72,6 +72,25 @@ here because the alternative is losing them; each needs the maintainer's call, n
 - **Last touched:** 2026-08-08 — found this pass. Documented accurately rather than changed; see
   DOC-2.
 
+### API-2 — every submodule is reachable as a package attribute, so the public API is wider than `__all__` says
+
+- **Location:** `timezonefinder/__init__.py`.
+- **Defect:** `__all__` constrains `import *` only. Because `__init__.py` imports from
+  `timezonefinder.timezonefinder` and `timezonefinder.global_functions`, and those import further
+  modules, `dir(timezonefinder)` also exposes `utils`, `configs`, `polygon_array`,
+  `coord_accessors`, `flatbuf`, `np_binary_helpers`, `zone_names`, `utils_clang`, `utils_numba` and
+  `inside_polygon_ext`. `docs/4_api.rst` documents seven names; roughly twenty are reachable, and
+  `timezonefinder.utils.validate_coordinates` is as importable as the documented API while being
+  covered by no stability promise.
+- **Fix:** a module-level `__getattr__` (PEP 562) for lazy submodule access, which narrows the
+  eagerly bound surface and keeps submodule imports out of `import timezonefinder`. Size: ~20 lines.
+- **Why it is not a straight refactor:** removing an attribute someone imports today is a breaking
+  change even though it was never documented, so this needs a decision on whether to deprecate
+  first. Same shape as API-1.
+- **Status:** open
+- **Last touched:** 2026-08-13 — found by a wide-angle review (see the roadmap, issue #506);
+  verified by running `dir(timezonefinder)`.
+
 ---
 
 ## Duplication
@@ -132,6 +151,28 @@ here because the alternative is losing them; each needs the maintainer's call, n
 - **Last touched:** 2026-08-09 — found this pass.
 
 ---
+
+## Performance
+
+### PERF-1 — `is_ocean_timezone` runs a regex on the `timezone_at_land` path
+
+- **Location:** `timezonefinder/utils.py`, `is_ocean_timezone`; called from
+  `AbstractTimezoneFinder.timezone_at_land`.
+- **Defect:** the check is `re.match(OCEAN_TIMEZONE_PREFIX, timezone_name)` against the result
+  *string*, on every call. Ocean-ness is a fixed property of a zone id for a given dataset, so this
+  recomputes a constant from a string per query and couples a behavioural decision to zone naming:
+  an upstream rename of the `Etc/GMT` family would silently change which results count as ocean.
+- **Fix:** precompute a boolean array indexed by zone id once at load and test that instead.
+  Correct by construction, faster, and decoupled from naming. Size: ~15 lines.
+- **Cost, and why this is still open:** it sits on a query path, so per DUP-1's precedent and
+  `CONTRIBUTING.md` it needs a before/after measurement in a no-numba environment, where the
+  surrounding code is plain Python. It also adds a small per-instance array, which `make memory`
+  would show. **No measurement has been taken yet** — do not retry blind, record the numbers here.
+- **Value:** low to moderate. `timezone_at_land` is public and the packaged data covers the oceans,
+  so the branch is taken constantly — but the regex runs on the *result*, after the lookup that
+  dominates the query.
+- **Status:** open
+- **Last touched:** 2026-08-13 — found by a wide-angle review (see the roadmap, issue #506).
 
 ## Dead and inert code
 
@@ -297,59 +338,16 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Last touched:** 2026-08-09 — found this pass, as the only failure in the final `make testall`
   gate; confirmed pre-existing by running the same test on unmodified `origin/master`.
 
-### TEST-6 — a stale two-line comment closes `tests/main_test.py`
-
-- **Location:** `tests/main_test.py`, the last two lines of the file.
-- **Defect:** the same comment (*"TEST equality for all results. in_memory_mode = True/False must
-  not change the results"*) appears twice, and it reads as a to-do for something
-  `TestTimezonefinderClassTestMEM` already does — it re-runs the whole `TestTimezonefinderClass`
-  suite with `in_memory_mode = True`.
-- **Fix:** delete both lines. Size: 2 lines.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass.
-
-### TEST-8 — a test whose docstring is not a docstring, under a name that says the opposite
-
-- **Location:** `tests/test_optimized_hybrid_shortcuts.py`,
-  `test_single_element_arrays_should_not_occur`.
-- **Defect:** the body opens with `path = temp_file_path()` and only *then* the triple-quoted
-  string, so that string is a discarded expression statement rather than a docstring — it does not
-  reach `--collect-only`, `-rA` output or any IDE. The name says single-element arrays should not
-  occur; the assertions require that they do (`assert single_element_count == 2`). The string
-  itself explains that it documents current, suboptimal behaviour, and carries a bare `TODO`.
-- **Fix:** move the string above the first statement and rename to what it verifies (that the
-  format round-trips a one-element array). Size: ~6 lines. The runtime side of the same behaviour
-  is already covered by `TestSingleElementShortcutArraysAtRuntime` below it.
-- **Value:** the one line a reader sees in a failure report is the name, and here it contradicts
-  the assertion that failed.
-- **Status:** open
-- **Last touched:** 2026-08-10 — found this pass.
-
 ### TEST-9 — the out-of-range coordinate table is written out twice
 
 - **Location:** `tests/main_test.py`, `OUT_OF_RANGE_COORDINATES`; `tests/utils_test.py`, the
-  `parametrize` list of `test_rectify_coords_invalid`.
+  `parametrize` list of `test_validate_coordinates_rejects_out_of_range`.
 - **Defect:** the same seven `(lng, lat)` tuples, verbatim, both built from `INT2COORD_FACTOR`.
   Only the `main_test.py` copy carries the comment explaining what makes them interesting (one
   representable step outside the valid range, per axis and at every corner). Adding a corner to one
   copy leaves the other testing a smaller set, with nothing to notice.
 - **Fix:** export the constant from one module — `tests/locations.py` already holds the shared
   coordinate tables — and import it in both. Size: ~15 lines.
-- **Status:** open
-- **Last touched:** 2026-08-10 — found this pass.
-
-### TEST-10 — two tests named after a function that does not exist
-
-- **Location:** `tests/utils_test.py`, `test_rectify_coords_valid` and
-  `test_rectify_coords_invalid`.
-- **Defect:** both call `utils.validate_coordinates`; there is no `rectify_coords` anywhere in the
-  package. `test_rectify_coords_valid` is additionally subsumed by
-  `test_validate_coordinates_accepts_finite_values` in the same file, which covers all four of its
-  distinct corners *and* asserts the return value — the older test's own list repeats three of its
-  seven cases and asserts nothing beyond "does not raise".
-- **Fix:** delete `test_rectify_coords_valid`, rename `test_rectify_coords_invalid` after
-  `validate_coordinates`. Size: ~20 lines removed. Pairs naturally with TEST-9, which touches the
-  same parametrize list.
 - **Status:** open
 - **Last touched:** 2026-08-10 — found this pass.
 
@@ -509,6 +507,12 @@ in exploratory code.
 
 `timezonefinder/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited
 directly; findings there belong against the generator or the schema instead.
+
+**Structural work belongs in the issue tracker, not here.** Issue #506 is the roadmap: it ranks the
+open issues and records decisions already taken (including ideas that were considered and dropped).
+An entry only belongs in this ledger if it names code that exists *and* a quality pass could close
+it by editing that code — everything else has no anchor to re-verify against and can never be
+deleted by the pass that reads it.
 
 ---
 

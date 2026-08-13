@@ -591,6 +591,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         Since ocean timezones span the whole globe, some timezone will always be matched!
         `None` can only be returned when using custom timezone data without such ocean timezones.
 
+        .. note:: for speed the last remaining zone is returned *without* a point in polygon test:
+            once no other zone can be matched, its polygons cannot change the outcome. With the
+            packaged data this is always correct, since the ocean zones cover the globe and every
+            point therefore lies within one of the candidate polygons. With custom data that leaves
+            areas uncovered it is not: a point inside none of the candidates is still attributed to
+            that last zone. Use :meth:`certain_timezone_at` there, which tests every candidate.
+
         :param lng: longitude of the point in degrees (-180.0 to 180.0)
         :param lat: latitude of the point in degrees (90.0 to -90.0)
         :return: the timezone name of the matched polygon, or None if no match is found.
