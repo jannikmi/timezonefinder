@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786616044130,
+  "lastUpdate": 1786616046773,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2450,6 +2450,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c4253bd19a412d884b0b1012983b9f91ecdb857",
+          "message": "Add roadmap-pass agent skill for advancing issue #506 (#508)\n\n* Add roadmap-pass agent skill for advancing issue #506\n\nAdvances the structural work tracked by roadmap issue #506 one pass at a\ntime: select an eligible item, check the sequencing preconditions #506\nrecords, put the item's open design decisions to the maintainer as\nconcrete choices, and only then implement one releasable slice.\n\nUnlike its code-quality-pass sibling it deliberately asks rather than\ndeciding alone, because a roadmap item's design choices outlive the pass.\nState is derived from the tracker rather than a progress file, so repeated\nand concurrent passes are idempotent.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Quote the skill description so YAML keeps all of it\n\nAn unquoted `#` preceded by a space starts a comment in a plain YAML\nscalar, so the roadmap-pass description was stored as \"Advances the\nstructural work tracked by roadmap issue\" - 53 of 831 characters, with\nevery trigger phrase discarded. The skill still loaded; it just stopped\nbeing discoverable by anything but its name.\n\ntests/test_agent_skills.py parses the frontmatter of every skill under\n.claude/skills/ and fails when the value a YAML parser stores ends before\nthe value the file writes.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-13T12:12:48+02:00",
+          "tree_id": "a565630af02e262ec724dd7f8b3ee41f8969414e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3c4253bd19a412d884b0b1012983b9f91ecdb857"
+        },
+        "date": 1786616046127,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.4665985107421875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466761589050293,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529223442077637,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537895202636719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.8500165939331,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85883331298828,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8713 GHz"
           }
         ]
       }
