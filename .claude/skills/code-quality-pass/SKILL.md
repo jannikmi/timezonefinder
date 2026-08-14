@@ -1,6 +1,6 @@
 ---
 name: code-quality-pass
-description: Runs one autonomous internal-code-quality pass over this repository — triage, a single-theme refactor with no behaviour change, full verification, and a pull request opened against master — coordinated through a persistent findings ledger (potential-improvements.md) so repeated passes build on each other instead of rediscovering the same candidates. Use this whenever the user asks for a code-quality pass, a cleanup or refactoring pass, wants technical debt found or paid down, says something like "improve the code quality", "tidy up the codebase", "find what's worth refactoring", or asks to run/continue/repeat the quality pass. Use it also when they ask what improvements are still outstanding, want the next item from the ledger picked up, or want a quality PR prepared for review — even if they never say the word "skill".
+description: Runs one autonomous internal-code-quality pass over this repository — triage, then the highest-priority findings fixed one at a time with no behaviour change until a diff budget of ~400 changed lines is spent, full verification, and a pull request opened against master — coordinated through a persistent findings ledger (potential-improvements.md) so repeated passes build on each other instead of rediscovering the same candidates. Use this whenever the user asks for a code-quality pass, a cleanup or refactoring pass, wants technical debt found or paid down, says something like "improve the code quality", "tidy up the codebase", "find what's worth refactoring", or asks to run/continue/repeat the quality pass. Use it also when they ask what improvements are still outstanding, want the next item from the ledger picked up, or want a quality PR prepared for review — even if they never say the word "skill".
 ---
 
 # Autonomous code-quality pass
@@ -8,6 +8,10 @@ description: Runs one autonomous internal-code-quality pass over this repository
 Deliver one **code-quality improvement pass** on `timezonefinder` (Python library for offline
 timezone lookup by coordinates), ending in a pull request opened against `master` for the
 repository owner to review, plus an updated findings ledger.
+
+The pass works the ledger down rather than sideways: rank every candidate, fix the highest-priority
+one, come back to the ranking for the next, and stop once the accumulated diff reaches the ~400
+changed-line budget of §6.
 
 Work to completion without stopping to ask questions. Where something is ambiguous, apply §8 and
 record the call you made in the PR description.
@@ -43,8 +47,8 @@ The checkout may contain unrelated uncommitted work. **Your PR must not contain 
    A worktree rather than `git checkout -b` even on a clean tree: the checkout may sit on someone
    else's branch, and switching it out from under a concurrent session breaks that session. **Both
    names must be unique to this pass** — a fixed path collides the moment a second pass runs. The
-   theme is not settled until §5, so a provisional slug is fine here; rename the branch with
-   `git branch -m quality/<theme-slug>` when you claim it, before the first push.
+   ground you will take is not settled until §5, so a provisional slug is fine here; rename the
+   branch with `git branch -m quality/<theme-slug>` when you claim it, before the first push.
 3. Install into that worktree.
 4. Record a baseline **before** editing: run `make test` and `make hook` on the untouched branch.
    Anything already failing there is pre-existing — note it, do not fix it in this pass, do not let
@@ -75,7 +79,7 @@ gh pr list --state open
 For each live branch, `git log origin/master..origin/<branch> --stat` shows the ground it has
 already taken, and `git show origin/<branch>:potential-improvements.md` its ledger (§4).
 
-**Claim, the moment you pick a theme in §5** — before you edit a single file:
+**Claim, the moment you pick your first item in §5** — before you edit a single file:
 
 ```
 git branch -m quality/<theme-slug>      # if you branched under a provisional name
@@ -83,14 +87,20 @@ git push -u origin quality/<theme-slug>
 ```
 
 Pushing a branch that still points at `master` costs nothing and is instantly visible to every
-sibling. The slug *is* the claim, so make it name the theme (`quality/docstring-contracts`, not
-`quality/pass-4`). A pass that works for an hour and pushes at the end has claimed nothing.
+sibling. The slug *is* the claim, so make it name the ground you are taking
+(`quality/docstring-contracts`, not `quality/pass-4`). A pass that works for an hour and pushes at
+the end has claimed nothing.
 
-**Resolving a collision.** If a sibling's branch already covers your theme or the files you were
-going to touch, it wins — it pushed first. Take the next candidate off your triage ranking rather
-than racing it, and say in your PR which theme you yielded and to whom. Two passes converging on
-one theme is the expensive failure here: both do the work, only one PR can land, and the ledger
-entry gets closed twice.
+Because this pass takes several items in sequence, the branch only ever claims what it already
+holds. Push after each item you finish (§6), and re-run the fetch and branch list above before you
+start the next one — it costs seconds, and it is the only thing standing between two passes and the
+same entry.
+
+**Resolving a collision.** If a sibling's branch already covers an item you were about to take, or
+the files it touches, it wins — it pushed first. Take the next candidate off your ranking rather
+than racing it, and say in your PR which item you yielded and to whom. Two passes converging on one
+entry is the expensive failure here: both do the work, only one PR can land, and the ledger entry
+gets closed twice.
 
 **What will conflict anyway, and how to resolve it.** These are expected, not mistakes:
 
@@ -222,32 +232,63 @@ than grepping for a defect you decided on in advance. Ad-hoc static-analysis run
 pre-commit hook configures can surface things CI never will. When a construct looks suspicious,
 `git log -S` on it tells you whether it is load-bearing or leftover.
 
-**Then pick one coherent theme and stop expanding.** A reviewable PR here is roughly ≤400 changed
-lines with a single story. If triage surfaces several good themes, implement the best one and leave
-the rest in the ledger as `open` — do not open several PRs, do not bundle unrelated themes.
+**Rank the whole list, then work down it.** The ranking, not a theme, is what this pass ships: take
+the top candidate, fix it (§6), come back for the next, and stop at the budget. So rank everything
+and not just the winner — a candidate lost to a sibling (§2.1) or found already fixed should then
+cost you the next line of the ranking rather than a fresh triage.
 
-Rank the whole list before you claim, not just the winner: if §2.1 shows a sibling already holds
-your first choice, you want the second one ready rather than a fresh triage. **Claim the theme by
-pushing your branch (§2.1) the moment you have picked it** — that is the step that makes running
-several passes at once safe, and it is worthless done later.
+Prefer: defects that will cause a real bug later > duplication that will drift > readability. Size
+breaks ties only: at equal value the smaller fix goes first, since it leaves more budget for what
+follows. Do not otherwise let size reorder the list — a pass that takes the cheap items first
+because they are cheap spends 400 lines on the least important things in the repository.
 
-Prefer: defects that will cause a real bug later > duplication that will drift > readability. A
-cosmetic-only PR is not worth the owner's review time; if triage genuinely finds nothing above that
-bar, do not invent a change to justify the pass — open a **ledger-only PR** instead, carrying just
-the updated `potential-improvements.md`, and say so in your final report. The findings are that
-pass's deliverable; losing them is the one outcome worse than shipping no code.
+**Claim by pushing your branch (§2.1) the moment you have picked the first item** — that is the
+step that makes running several passes at once safe, and it is worthless done later.
 
-**If the best candidate sits on the lookup fast path**, `CONTRIBUTING.md`'s benchmarking section
+A cosmetic-only PR is not worth the owner's review time; if triage genuinely finds nothing above
+that bar, do not invent a change to justify the pass — open a **ledger-only PR** instead, carrying
+just the updated `potential-improvements.md`, and say so in your final report. The findings are
+that pass's deliverable; losing them is the one outcome worse than shipping no code.
+
+**If a candidate you take sits on the lookup fast path**, `CONTRIBUTING.md`'s benchmarking section
 applies in full — measure before and after on the same machine and report the noise spread
 alongside, since one pair of numbers cannot separate a regression from scheduler noise. If the
 result is not clearly neutral or better, revert, and record the measurement in the ledger entry so
 the next pass does not retry it blind.
 
-## 6. Working loop
+## 6. Working loop and the diff budget
 
-Small, self-contained commits, each independently explicable. Test scope per change follows
-`CLAUDE.md`'s Testing section — in particular, do not run the `slow` suites reflexively. A refactor
-with no test exercising the new seam is not finished.
+Take the ranked candidates one at a time, highest first. Per item:
+
+1. **Re-verify** it against the current code (§4.1). Already fixed, or wrong? Resolve the entry as
+   §4.1 says and move to the next candidate without spending a commit on it.
+2. **Implement it, and only it.** Test scope per change follows `CLAUDE.md`'s Testing section — in
+   particular, do not run the `slow` suites reflexively. A refactor with no test exercising the new
+   seam is not finished.
+3. **Commit it on its own**, message naming the ledger id, so a reviewer can read one fix at a time
+   and reject one without unpicking the rest.
+4. **Delete its ledger entry** and **push** (§2.1). Ledger edits stay in their own commits, apart
+   from the code (§4) — one per item or one at the end, as long as they are not mixed in.
+5. **Measure the diff and decide whether to continue.**
+
+**The budget is ~400 changed lines**, measured against the merge base with the ledger excluded,
+since ledger churn is bookkeeping rather than review load:
+
+```
+git diff origin/master --shortstat -- . ':(exclude)potential-improvements.md'
+```
+
+Check it **between items, never mid-item**: finish and commit the one in hand first, then go to §7
+as soon as the total has reached 400 — or as soon as the next candidate's estimated size would
+carry it well past 400, since a fix half-applied to stay under the line is worse than one not
+started. Everything unreached stays `open` in the ledger for the next pass.
+
+400 is a stopping rule, not a quota. If the ranking runs dry first, or every remaining candidate is
+too large to start, conclude at whatever the diff is — do not pad the pass to fill the budget. One
+item and a report is a valid outcome; so is a single item that is worth 400 lines by itself.
+
+The items need no common theme — the ranking is the story — but each must stand alone and be
+explicable without the others, so that the owner can take part of the PR.
 
 ## 7. Gate before opening the PR
 
@@ -263,6 +304,8 @@ All of these, with output you have actually read:
 - [ ] Benchmark evidence, if the fast path was touched.
 - [ ] `git diff origin/master --stat` shows only files you intended to touch — no stray scratch
       files, and `potential-improvements.md` present.
+- [ ] The changed-line total sits at or just past the §6 budget, or the ranking ran dry first —
+      and you can say which of the two stopped the pass.
 - [ ] `CHANGELOG.rst` entry present.
 - [ ] `potential-improvements.md` updated and committed: this pass's findings recorded, the entries
       you shipped **deleted**, the ones you rejected or withdrew kept with a reason, coverage noted.
@@ -279,13 +322,15 @@ the failed change, and a branch left unpushed loses them.
 - **A bug spotted in passing?** Do not fix it here. Record it in the ledger and list it under
   "Deferred" in the PR.
 - **A pre-existing test failure?** Not yours. Note it, work around it, record it.
-- **The change keeps growing?** Cut back to what you can finish and verify; the remainder stays
-  `open` in the ledger.
+- **An item outgrows its estimate?** Cut it back to what you can finish and verify; the remainder
+  goes back into the ledger as a new `open` entry. If it has eaten the budget, it ends the pass.
+- **Budget nearly spent and the next item is large?** Stop there. 400 finished lines beat 600 with
+  the last fix rushed, and the item keeps its place in the ranking for the next pass.
 - **A comment contradicts the code?** The code is the truth for behaviour; fix the comment. Never
   change code to match a comment.
 - **An old ledger entry contradicts what you see?** The code wins. Correct the entry.
-- **A sibling pass holds the theme you wanted?** It pushed first, so it keeps it (§2.1). Take your
-  next-ranked candidate; do not open a competing PR on the same ground.
+- **A sibling pass holds an item you were about to take?** It pushed first, so it keeps it (§2.1).
+  Take the next candidate on your ranking; do not open a competing PR on the same ground.
 - **A sibling landed while you worked and your change is now partly redundant?** Rebase, keep only
   what is still a defect, and say in the PR what its change already covered. A shrunken PR is fine;
   a PR that re-applies what is already on `master` is not.
@@ -303,11 +348,14 @@ gh pr create --base master --title "<title>" --body "<body>"
 Do not merge, do not enable auto-merge, do not add reviewers or labels, do not push to `master`, do
 not tag a release. The PR is the deliverable; the owner reviews it.
 
-Title: imperative, names the theme rather than the mechanics. Body:
+Title: imperative, and about what was paid down rather than the mechanics. Name the common thread
+if the items happen to share one; otherwise name the ground they cover. Body:
 
 ```markdown
 ## What
-One paragraph: the defect, and the end state.
+One paragraph on what this pass paid down, then one line per item shipped — ledger id, the defect,
+the end state — in the order they were committed. Close with the changed-line total against the
+400-line budget, and whether the budget or an exhausted ranking stopped the pass.
 
 ## Why
 Why this was worth a reviewer's time. What breaks or drifts if it stays as is.
@@ -324,13 +372,15 @@ Anything ambiguous you decided yourself, and what you decided. Name any sibling 
 to, or whose landed change shrank this one.
 
 ## Deferred
-Candidates found during triage and deliberately left out, one line of reason each. Full detail is
-in `potential-improvements.md`, updated in this PR.
+Everything the ranking still holds: candidates deliberately left out, and the ones the budget
+stopped the pass before reaching — one line of reason each, in ranked order, so the next pass's
+starting point is visible. Full detail is in `potential-improvements.md`, updated in this PR.
 ```
 
 ## 10. Final report
 
-In chat: the PR URL; the theme in one sentence and why it beat the alternatives; the exact
+In chat: the PR URL; the items shipped in the order they were taken, one line each, with the
+changed-line total and what stopped the pass — budget reached, or ranking exhausted; the exact
 verification commands and their results — failures stated plainly, including anything skipped and
 why; what changed in the ledger this pass (new entries, entries deleted as shipped, closures, areas
 swept); which sibling passes were in flight and how you stayed clear of them; and whether you left
