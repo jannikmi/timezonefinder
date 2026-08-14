@@ -134,22 +134,6 @@ here because the alternative is losing them; each needs the maintainer's call, n
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### DUP-3 — the zone-id ordering rule is enforced twice, in two classes' worth of code
-
-- **Location:** `scripts/timezone_data.py`, `ZoneCollection.validate_structure` and
-  `ZoneCollection.zone_positions`.
-- **Defect:** both walk `poly_zone_ids` element by element checking it is non-decreasing, and both
-  raise the same message (`"Zone IDs must be in non-decreasing order, found {} after {}"`) built
-  from their own locals. `validate_structure` runs at construction, so by the time
-  `zone_positions` runs the invariant is already guaranteed — its copy can only fire if a caller
-  mutated the array in place.
-- **Fix:** keep the validator's scan and drop the one in `zone_positions`, or express both through
-  one helper. Size: ~10 lines.
-- **Value:** two Python-level passes over every polygon during data generation, and two places to
-  edit if the ordering rule ever changes.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass.
-
 ---
 
 ## Performance
@@ -206,31 +190,27 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### DEAD-3 — a negative-zone-id guard that the dtype check above it makes unreachable
+### DEAD-4 — `Hex.poly_candidates` guards against a `None` its initialiser cannot leave behind
 
-- **Location:** `scripts/timezone_data.py`, `ZoneCollection.validate_structure`, the
-  `if min_zone_id < 0` branch.
-- **Defect:** the same method rejects any `poly_zone_ids` whose `dtype.kind != "u"` a dozen lines
-  earlier, so the array is unsigned by the time `.min()` is taken and the branch cannot fire. It
-  reads as the guard against negative ids, which is what makes it worth removing rather than
-  leaving: the real negative-id exposure is BUG-1, elsewhere and still open.
-- **Fix:** delete the branch (and the now-unused `min_zone_id`). Size: ~4 lines.
+- **Location:** `scripts/hex_utils.py`, `Hex.poly_candidates`, the inner `if candidates is None:
+  return set()`.
+- **Defect:** the property calls `self._init_candidates()` and then re-tests the attribute for
+  `None`. Every path through `_init_candidates` leaves `_poly_candidates` a set — it early-returns
+  only when the attribute is already non-`None`, sets `set(range(nr_of_polygons))` at resolution 0,
+  and otherwise assigns the accumulated set — so the branch cannot fire. It reads as a guard
+  against an uninitialised cache, and returning an empty set would silently mean "no candidate
+  polygons" rather than raising. The `candidates = filtered_candidates` reassignment two lines
+  below is redundant with the `return` as well.
+- **Fix:** drop the branch and the reassignment; the property becomes an ordinary lazy accessor.
+  Size: ~8 lines.
+- **Value:** low-moderate. Nothing is wrong today, but the shape invites someone to "fix" the
+  empty-set fallback into real behaviour, which would turn a converter bug into missing shortcuts.
 - **Status:** open
-- **Last touched:** 2026-08-09 — found this pass.
+- **Last touched:** 2026-08-14 — found this pass, reading `scripts/hex_utils.py` in full.
 
 ---
 
 ## Type annotations that do not match reality
-
-### TYPE-1 — the shortcut compilation chain has both annotations backwards
-
-- **Location:** `scripts/shortcuts.py` — `check_shortcut_sorting(polygon_ids: np.ndarray, ...)` is
-  handed a `list[int]` by `process_single_hex`, and it in turn hands an `np.ndarray` to
-  `has_coherent_sequences(lst: list[int])`.
-- **Fix:** widen both rather than swapping them — `tests/shortcut_test.py` does call the latter with
-  real lists. Size: ~6 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ### TYPE-2 — implicit `Optional` (ruff `RUF013`)
 
@@ -281,30 +261,6 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 
 ## Test quality
 
-### TEST-4 — `test_overflow` leaves numpy's error state changed for the rest of the session
-
-- **Location:** `tests/main_test.py`, `TestTimezonefinderClass.test_overflow`.
-- **Defect:** calls `np.seterr(all="warn")` and never restores it, so every later test in the same
-  process runs with `under` promoted from `ignore` to `warn`. Its `warnings.filterwarnings("error")`
-  *is* undone, but only because pytest's warnings plugin wraps each test in `catch_warnings()` —
-  the test does not scope it itself. It also re-imports `warnings` inside the function body, which
-  the module already imports at the top.
-- **Fix:** the correct pattern already exists as `strict_numpy_warnings` in
-  `benchmarks/conftest.py`, whose docstring says in as many words that it is per-test *so it
-  cannot leak into other modules collected in the same session*. Move that fixture somewhere both
-  suites can use (`tests/auxiliaries.py` is where the other shared benchmark helpers live) and have
-  `test_overflow` request it. Size: ~15 lines.
-- **Value:** a leaked global makes an unrelated later test's failure depend on collection order,
-  which is the hardest kind of test failure to attribute.
-- **Second site, same defect:** `tests/utils_test.py`, `test_inside_polygon` does the same two
-  calls, and is parametrized over 2 kernels x 3 cases, so it leaks six times over. Whichever of the
-  two modules pytest collects first decides the state the other runs under. Fix both together.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass, while splitting the dead `pytest.raises` blocks
-  in the same file. Deliberately left out of that change: leaked state is a different defect from a
-  check that cannot fail, and the fix crosses `tests/` and `benchmarks/`.
-  2026-08-10 — second site in `tests/utils_test.py` added; entry otherwise unchanged.
-
 ### TEST-5 — eight cleanup tests differ only in which exception they raise
 
 - **Location:** `tests/main_test.py`, `TestTimezonefinderCleanup` — every test from
@@ -318,38 +274,6 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
   additionally assert the message. Size: ~90 lines removed.
 - **Status:** open
 - **Last touched:** 2026-08-09 — found this pass.
-
-### TEST-7 — the wheel install test builds and installs with two different interpreters
-
-- **Location:** `tests/test_integration.py`, `test_install_from_artifacts[wheel]`, via
-  `tests/auxiliaries.py`'s `BUILD_WHEEL_CMD` and `setup_venv`.
-- **Defect:** `uv build --wheel` picks its own interpreter, while `setup_venv` creates the target
-  venv from `sys.executable` — the one running pytest. When those differ, the ABI-tagged wheel
-  (`cp3XY-cp3XY-…`) is rejected by the venv's pip and the test fails with *"is not a supported
-  wheel on this platform"*, which reads like a packaging bug rather than a mismatched pair of
-  interpreters. The sdist half of the same test passes, because an sdist has no ABI tag.
-- **Reproduced:** on unmodified `origin/master` (c0a6887), on a machine whose default `python3` is
-  3.14 while the project venv is 3.12: `uv build` produces `cp314`, `setup_venv` builds a 3.12
-  venv. CI never sees it, since there the two are the same interpreter. **A local `make testall`
-  therefore cannot be fully green on such a machine** — treat this one failure as pre-existing.
-- **Fix:** build for the interpreter the test will install into — `uv build --wheel --python
-  {sys.executable}`. Size: ~5 lines.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass, as the only failure in the final `make testall`
-  gate; confirmed pre-existing by running the same test on unmodified `origin/master`.
-
-### TEST-9 — the out-of-range coordinate table is written out twice
-
-- **Location:** `tests/main_test.py`, `OUT_OF_RANGE_COORDINATES`; `tests/utils_test.py`, the
-  `parametrize` list of `test_validate_coordinates_rejects_out_of_range`.
-- **Defect:** the same seven `(lng, lat)` tuples, verbatim, both built from `INT2COORD_FACTOR`.
-  Only the `main_test.py` copy carries the comment explaining what makes them interesting (one
-  representable step outside the valid range, per axis and at every corner). Adding a corner to one
-  copy leaves the other testing a smaller set, with nothing to notice.
-- **Fix:** export the constant from one module — `tests/locations.py` already holds the shared
-  coordinate tables — and import it in both. Size: ~15 lines.
-- **Status:** open
-- **Last touched:** 2026-08-10 — found this pass.
 
 ### TEST-11 — nothing checks that the files a distribution must *add* are present
 
@@ -457,6 +381,20 @@ Nothing in it is wrong; these three are readability and drift.
 - **Status:** open
 - **Last touched:** 2026-08-08 — found this pass.
 
+### REND-4 — three cosmetic leftovers in `scripts/reporting.py`
+
+- **Location:** `scripts/reporting.py` — `calculate_shortcut_index_stats` (an `else:` whose body is
+  a single `if`, ruff `PLR5501`; a local named `ENTRY_KEY_SIZE_BYTES`, ruff `N806`) and the
+  "Median polygons per timezone" entry (`sorted(list(...))`, ruff `C414`).
+- **Defect:** none of the three is wrong; each is a leftover shape that reads as though it meant
+  something. The uppercase local in particular reads as a module constant while being rebound per
+  call.
+- **Fix:** `elif`, lowercase the local, drop the inner `list()`. Size: ~6 lines. Note the first two
+  sit inside the function BIG-2 proposes splitting — do that first and these come along with it.
+- **Value:** low. Recorded so a later `--select ALL` sweep does not re-triage them from scratch.
+- **Status:** open
+- **Last touched:** 2026-08-14 — found this pass, by ad-hoc ruff selects.
+
 ---
 
 ## Tooling
@@ -526,10 +464,12 @@ deleted by the pass that reads it.
 | 4 (docstring contracts) | 2026-08-08 | The three previously-unswept modules — `scripts/render_benchmark_reports.py`, `scripts/describe_benchmark_machine.py` and all three `benchmarks/test_*.py` — read in full; `timezonefinder/timezonefinder.py`, `utils.py`, `zone_names.py`, `polygon_array.py`, `global_functions.py` re-read for docstring/behaviour agreement, every `:raises:`/`:return:` claim in `timezonefinder/` checked against the running code | `docs/`, `.github/workflows/`, `scripts/timezone_data.py`, `scripts/measure_memory.py`, `scripts/generate_benchmark_fixtures.py`, the larger `tests/` modules |
 | 5 (checks that cannot fail) | 2026-08-09 | `tests/main_test.py`, `scripts/timezone_data.py`, `scripts/measure_memory.py` and `scripts/generate_benchmark_fixtures.py` read in full — the four previously unswept modules named by pass 4; every multi-statement `pytest.raises`/`pytest.warns` block in `tests/` and `benchmarks/` enumerated with an AST scan (all four were in `tests/main_test.py`, all four now split) | `docs/`, `.github/workflows/`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py` |
 | 6 (packaging guard patterns) | 2026-08-10 | The five test modules pass 5 left unread — `tests/test_package_contents.py`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py`, `tests/utils_test.py` — plus `tests/auxiliaries.py` and `tests/main_test.py` re-read; every `UNWANTED_DIST_PATTERNS` entry matched against the working tree, and `MANIFEST.in` / the `check-manifest` ignore list compared against it | `docs/`, `.github/workflows/` |
+| 7 (leaked state and duplicate checks) | 2026-08-14 | `.github/workflows/` read in full - the last area with no coverage in any pass (new guard: `tests/test_python_version_support.py`); `scripts/hex_utils.py` and `scripts/shortcuts.py` re-read in full; `scripts/timezone_data.py`'s `ZoneCollection` validators read and given their first tests; a repeated repo-wide ruff `--select ALL` triage over `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` (3811 findings, filtered per the note below - nothing new above the bar beyond DEAD-4 and REND-4) | `docs/` prose; `scripts/reporting.py` and `scripts/render_benchmark_reports.py` internals beyond the ruff sweep |
 
-Areas with **no coverage in any pass yet**, and therefore the cheapest place for the next pass to
-start: `docs/` prose and `.github/workflows/`. Every module under `tests/` has now been read at
-least once.
+Every module under `tests/` has been read at least once, and pass 7 covered
+`.github/workflows/`. The only area with **no coverage in any pass** is `docs/` prose — which is
+mostly outside a code-quality pass's scope, so the cheapest real starting point is now the ranked
+open entries above rather than fresh discovery.
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -566,6 +506,12 @@ Deliberately checked and found sound, so do not re-raise them:
   `tests/main_test.py`'s `test_edge_shortcut_validity`, which asserts nothing beyond "does not
   raise" on the base class — that *is* its subject, and `test_edge_shortcut_result` covers the
   expected values for the class that has polygon data.
+- Pass 7: `.github/workflows/benchmark.yml`, `benchmark-comment.yml`, `check_data_updates.yml` and
+  `release_data_update.yml` (read in full, nothing found beyond the version drift now guarded);
+  `timezonefinder/global_functions.py`'s module-level `TF_INSTANCE` and its `global` statement
+  (ruff `PLW0603`) — deliberate and documented as not thread-safe, with per-thread instances the
+  stated alternative; `scripts/hex_utils.py`'s `get_corrected_hex_boundaries` (the antimeridian and
+  pole clipping, covered by `tests/hex_utils_test.py` since pass 1's follow-up).
 - Pass 6: `tests/test_benchmark_ci_tooling.py` and `tests/test_render_benchmark_reports.py` (both
   read in full, nothing found — each assertion names why it exists); `tests/auxiliaries.py`'s
   `matches_pattern`, whose `fnmatch` semantics (`*` crosses `/`, POSIX case sensitivity) are what
