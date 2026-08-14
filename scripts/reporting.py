@@ -6,7 +6,7 @@ Contains functions for reporting various metrics about timezone polygons, holes,
 import argparse
 import json
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Callable
@@ -17,6 +17,10 @@ import numpy as np
 from scripts.configs import (
     DATA_REPORT_FILE,
     SHORTCUT_H3_RES,
+    BinaryData,
+    ShortcutIndexStats,
+    TableRow,
+    TableRows,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
     read_data_version,
@@ -53,7 +57,7 @@ DATA_VERSION_LABEL = "**Timezone Data Version**"
 
 
 # decorator to reroute the output of a function to a file
-def redirect_output_to_file(file_path: str) -> Callable:
+def redirect_output_to_file(file_path: str | Path) -> Callable:
     """Decorator to redirect the output of a function to a file."""
 
     def decorator(func: Callable) -> Callable:
@@ -87,7 +91,7 @@ def redirect_output_to_file_contextmanager(file_path: str | Path):
     return _redirect()
 
 
-def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
+def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
     """
     Load all necessary data from binary files to generate reports.
 
@@ -176,7 +180,7 @@ def rst_title(title: str, level: int = 0) -> str:
 
 
 def compute_column_widths(
-    headers: list[str], rows: list[list[str]], min_width: int = 6
+    headers: list[str], rows: TableRows, min_width: int = 6
 ) -> list[int]:
     """Compute RST ``list-table`` ``:widths:`` (summing to 100) proportional
     to each column's longest cell, floored at ``min_width`` so no column
@@ -211,7 +215,7 @@ def _format_table_row(cells: Iterable[str]) -> str:
     )
 
 
-def print_rst_table(headers: list[str], rows: list[list[str]]):
+def print_rst_table(headers: list[str], rows: TableRows) -> None:
     """
     Print a table in restructured text (.rst) format using list-table directive
 
@@ -291,7 +295,7 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 def calculate_shortcut_index_stats(
     mapping: dict[int, int | np.ndarray], poly_zone_ids: list[int]
-) -> dict[str, int | float]:
+) -> ShortcutIndexStats:
     """
     Calculate comprehensive statistics about the hybrid shortcut index.
 
@@ -482,18 +486,17 @@ def print_shortcut_statistics(
     print_frequencies(stats["zones_per_shortcut"], "Timezones in cell")
 
 
-def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
+def generate_metrics_rows(metrics_dict: Mapping[str, object]) -> list[TableRow]:
     """
     Generate additional metric rows for tables based on a dictionary of metrics.
 
     Args:
-        metric_type: Type of metrics (e.g., "boundary", "hole")
         metrics_dict: Dictionary of metric names and values
 
     Returns:
         List of rows for a table
     """
-    rows = []
+    rows: list[TableRow] = []
     for label, value in metrics_dict.items():
         # Format numbers with commas and add % to percentages
         if isinstance(value, (int, float)):
@@ -509,7 +512,10 @@ def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
 
 
 def generate_polygon_statistics_table(
-    polygon_type: str, count: int, length_list: list[int], additional_rows: list = None
+    polygon_type: str,
+    count: int,
+    length_list: list[int],
+    additional_rows: list[TableRow] | None = None,
 ) -> None:
     """
     Generate and print a table with statistics for a polygon collection.
@@ -528,7 +534,7 @@ def generate_polygon_statistics_table(
         print(f"No {polygon_type_lower} polygons found.")
         # Still print a table with zeros for consistency
         headers = [f"{polygon_type} Metric", "Value"]
-        rows = [
+        rows: list[TableRow] = [
             [f"Total {polygon_type_lower} polygons", "0"],
             [f"Total {polygon_type_lower} coordinates", "0"],
             [f"Total {polygon_type_lower} coordinate values (2 per point)", "0"],
@@ -738,14 +744,13 @@ def report_data_statistics(
 
     # General statistics section
     general_metrics = calculate_general_statistics(polygon_lengths, all_hole_lengths)
-    print_rst_table(
-        ["General Metric", "Value"], generate_metrics_rows("general", general_metrics)
-    )
+    print_rst_table(["General Metric", "Value"], generate_metrics_rows(general_metrics))
 
     # Boundary polygon statistics section
     print(rst_title("Boundary Polygon Statistics", level=2))
-    boundary_metrics = {}  # Could add more boundary-specific metrics here if needed
-    boundary_rows = generate_metrics_rows("boundary", boundary_metrics)
+    # Could add more boundary-specific metrics here if needed
+    boundary_metrics: dict[str, float] = {}
+    boundary_rows = generate_metrics_rows(boundary_metrics)
     generate_polygon_statistics_table(
         "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
     )
@@ -755,7 +760,7 @@ def report_data_statistics(
     hole_metrics = calculate_hole_metrics(
         nr_of_polygons, all_hole_lengths, polynrs_of_holes
     )
-    hole_rows = generate_metrics_rows("hole", hole_metrics)
+    hole_rows = generate_metrics_rows(hole_metrics)
     nr_of_holes = len(all_hole_lengths) if all_hole_lengths else 0
     generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
 
@@ -765,7 +770,7 @@ def report_data_statistics(
     timezone_metrics = calculate_timezone_metrics(
         nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
-    timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
+    timezone_rows = generate_metrics_rows(timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
 
     # Polygon distribution section
@@ -852,7 +857,7 @@ def write_data_report_from_binary(
     )
 
 
-def main() -> None:
+def main() -> int:
     """
     Main function for standalone execution.
     Generate data report from binary files.

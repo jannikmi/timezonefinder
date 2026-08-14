@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from scripts import reporting
-from scripts.configs import ZONE_ID_DTYPE
+from scripts.configs import ZONE_ID_DTYPE, BinaryData, ShortcutIndexStats
 from scripts.utils import convert2ints, convert_polygon, write_json
 from tests.auxiliaries import (
     convert_inside_polygon_input,
@@ -18,6 +18,7 @@ from tests.auxiliaries import (
 )
 from tests.locations import OUT_OF_RANGE_COORDINATES
 from timezonefinder import utils_clang, utils_numba, utils
+from timezonefinder.configs import DEFAULT_DATA_DIR
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -509,6 +510,26 @@ def test_polygon_distribution_table_pairs_each_count_with_an_example(capsys):
     assert "   * - 2 polygons\n     - 2\n     - 66.67%\n     - Etc/GMT\n" in table
     # zone 1 is the first zone with two polygons, so zone 2 never exemplifies it
     assert "Etc/GMT+1" not in table
+
+
+# The two TypedDicts below describe dicts assembled by hand in scripts/reporting.py.
+# The pre-commit mypy hook excludes scripts/, so nothing in CI compares the
+# declaration against the literal - a key added to one and not the other would
+# only surface as a KeyError part-way through writing a report.
+
+
+@pytest.mark.unit
+def test_shortcut_index_stats_matches_its_typed_dict():
+    stats = reporting.calculate_shortcut_index_stats({0: 1}, [7])
+
+    assert set(stats) == set(ShortcutIndexStats.__annotations__)
+
+
+@pytest.mark.integration
+def test_load_binary_data_matches_its_typed_dict():
+    data = reporting.load_binary_data(DEFAULT_DATA_DIR)
+
+    assert set(data) == set(BinaryData.__annotations__)
 
 
 if __name__ == "__main__":
