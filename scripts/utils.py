@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-import pickle
 from os.path import abspath
 from time import time
 from typing import Callable
@@ -11,31 +10,6 @@ from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_N
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
 from timezonefinder.utils_numba import coord2int
-
-
-def load_json(path: Path):
-    print(
-        f"loading json from {repr(path)}",
-    )
-    with open(path) as fp:
-        return json.load(fp)
-
-
-def load_pickle(path: Path):
-    print(
-        f"loading pickle from {repr(path)}",
-    )
-    with open(path, "rb") as fp:
-        obj = pickle.load(fp)
-    return obj
-
-
-def write_pickle(obj, path: Path):
-    print(
-        f"writing pickle to {repr(path)}",
-    )
-    with open(path, "wb") as fp:
-        pickle.dump(obj, fp)
 
 
 def write_json(obj, path: Path):

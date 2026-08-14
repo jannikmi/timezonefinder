@@ -36,10 +36,6 @@ class f8(SubscriptAndCallable):
     pass
 
 
-class i8(SubscriptAndCallable):
-    pass
-
-
 class i4(SubscriptAndCallable):
     pass
 
