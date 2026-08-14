@@ -238,8 +238,8 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 ## Data Pipeline & Versioning
 
 - `update_data.sh` downloads a timezone-boundary-builder release into `tmp/` and runs
-  `scripts/file_converter.py`, which scales coordinates by 10^7 into int32. Regenerating data
-  warrants a minor version bump
+  `scripts/file_converter.py`, which scales coordinates by 10^7 into int32. A data-only release is
+  a **patch** bump, which `update_data.sh` applies itself
 - Benchmark fixtures in `tests/fixtures/benchmarks/` are pinned to the `DATA_VERSION` they were
   generated against and the loader refuses mismatches. `make data` regenerates them; use
   `make benchmark-fixtures` only when just the fixtures need refreshing
@@ -252,7 +252,9 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 ## Release Process
 
 From `master` only — `make release` enforces it and its `Makefile` comments carry the tag/push
-ordering constraints.
+ordering constraints. `.claude/skills/cut-release/SKILL.md` drives the manual path end to end
+(bump proposal → release PR → tag); data-only releases go out through `release_data_update.yml`
+instead and need no manual step.
 
 ## Canonical Instructions File
 
