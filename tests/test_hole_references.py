@@ -6,10 +6,16 @@ if the resolved ring describes the same closed path, so that is what these tests
 down - at the encoding, at the runtime resolution, and against the packaged data.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from scripts.configs import MIN_HOLE_DEDUP_RATIO
+from scripts.data_integrity import (
+    DataIntegrityError,
+    validate_hole_dedup_ratio,
+    validate_hole_references,
+)
 from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder.configs import DEFAULT_DATA_DIR
@@ -87,47 +93,20 @@ def test_packaged_holes_are_deduplicated():
 
 
 @pytest.mark.unit
-def test_packaged_hole_bboxes_match_the_resolved_ring():
-    """Every reference in the shipped data must point at the *right* boundary polygon.
+def test_packaged_data_passes_the_integrity_check():
+    """The shipped data must satisfy the same check the converter runs over its output.
 
-    This is the one check on packaged data with independent evidence behind it, and so
-    the one that can catch a converter that mismatched holes to boundaries. The four
-    bbox vectors are computed at build time from the original hole rings, before any
-    deduplication, and are never rewritten - one entry per hole either way. A reference
-    pointing at the wrong polygon therefore resolves to a ring whose extent disagrees
-    with the bbox stored for that hole.
-
-    Note what cannot be asserted here instead: comparing ``holes.coords_of(id)`` against
-    ``boundaries.coords_of(ref)`` is vacuous, because resolving the reference *is*
-    returning the boundary ring. That the two rings were ever equal is a build-time
-    property, asserted where it is decided (``HoleCollection.deduplicate``) and measured
-    from the upstream data by ``prototypes/hole_boundary_redundancy.py``.
+    This is the whole of the packaged-data verification: the reference vector, the
+    coordinate file and the bounding boxes agreeing with one another, every reference
+    resolving to the geometry its bounding box describes, and - separately, since it
+    only means anything at dataset scale - the deduplication ratio clearing its floor.
+    The checks live in ``scripts/data_integrity`` so that the
+    converter and this test assert the same thing rather than two drifting
+    approximations of it - and so that neither obligation falls on ``HoleArray``, where
+    every user would re-derive it on every construction.
     """
-    tf = TimezoneFinder(in_memory=True)
-    for hole_id in range(len(tf.holes)):
-        ring = tf.holes.coords_of(hole_id)
-        assert int(tf.holes.xmin[hole_id]) == int(ring[0].min())
-        assert int(tf.holes.xmax[hole_id]) == int(ring[0].max())
-        assert int(tf.holes.ymin[hole_id]) == int(ring[1].min())
-        assert int(tf.holes.ymax[hole_id]) == int(ring[1].max())
-
-
-@pytest.mark.unit
-def test_packaged_dedup_ratio_meets_the_floor():
-    """The shipped data must clear the same bar the converter enforces.
-
-    ``HoleCollection.deduplicate`` refuses to compile below this ratio, but that only
-    fires when someone runs the converter. Asserting it against the packaged binaries
-    catches data that reached the repository some other way - a partial regeneration, a
-    directory copied in - and states the expectation where a reader of the data will
-    look for it.
-    """
-    tf = TimezoneFinder(in_memory=True)
-    ratio = int((tf.holes.poly_ref >= 0).sum()) / len(tf.holes)
-    assert ratio >= MIN_HOLE_DEDUP_RATIO, (
-        f"only {ratio:.1%} of packaged holes are stored as a reference, below the "
-        f"{MIN_HOLE_DEDUP_RATIO:.0%} the converter enforces"
-    )
+    validate_hole_references(DEFAULT_DATA_DIR)
+    validate_hole_dedup_ratio(DEFAULT_DATA_DIR)
 
 
 @pytest.mark.unit
@@ -195,6 +174,32 @@ def boundaries() -> PolygonArray:
     return PolygonArray(data_location=get_boundaries_dir(DEFAULT_DATA_DIR))
 
 
+def _synthetic_data_dir(tmp_path, *, rings, poly_ref, bboxes) -> Path:
+    """A whole data directory: the packaged boundaries, plus the given hole files.
+
+    ``validate_hole_references`` takes a data directory rather than a hole directory,
+    since resolving a reference needs the boundaries too.
+    """
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    get_boundaries_dir(data_dir).symlink_to(
+        get_boundaries_dir(DEFAULT_DATA_DIR), target_is_directory=True
+    )
+    _write_hole_dir(
+        get_holes_dir(data_dir), rings=rings, poly_ref=poly_ref, bboxes=bboxes
+    )
+    return data_dir
+
+
+def _bbox_of(ring) -> tuple[int, int, int, int]:
+    return (
+        int(ring[0].min()),
+        int(ring[0].max()),
+        int(ring[1].min()),
+        int(ring[1].max()),
+    )
+
+
 @pytest.mark.unit
 def test_reference_and_inline_rings_resolve(tmp_path, boundaries):
     """A negative entry addresses the inline ring at ``-(v + 1)``, a non-negative one a
@@ -227,57 +232,114 @@ def test_missing_reference_vector_falls_back_to_inline_rings(tmp_path, boundarie
 
 
 @pytest.mark.unit
-def test_reference_vector_length_mismatch_is_rejected(tmp_path, boundaries):
-    _write_hole_dir(
+def test_hole_array_does_not_validate_on_construction(tmp_path, boundaries):
+    """Constructing a ``HoleArray`` must not re-check the data directory.
+
+    Whether the binaries are coherent is settled by the build; paying for that again in
+    every user's process is what this guards against. A directory the integrity check
+    rejects therefore still constructs - catching it is the converter's job and the
+    test suite's, not the runtime's.
+    """
+    data_dir = _synthetic_data_dir(
+        tmp_path,
+        rings=[],  # the reference claims an inline ring the file does not contain
+        poly_ref=[-1],
+        bboxes=[(1, 3, 4, 6)],
+    )
+    HoleArray(data_location=get_holes_dir(data_dir), boundaries=boundaries)  # no raise
+
+    with pytest.raises(DataIntegrityError):
+        validate_hole_references(data_dir)
+
+
+# --------------------------------------------------------------------------------
+# the integrity check, which the converter and the test suite share
+# --------------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_integrity_check_accepts_a_consistent_directory(tmp_path, boundaries):
+    inline = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
+    data_dir = _synthetic_data_dir(
+        tmp_path,
+        rings=[inline],
+        poly_ref=[-1, 0],
+        bboxes=[_bbox_of(inline), _bbox_of(boundaries.coords_of(0))],
+    )
+    validate_hole_references(data_dir)
+
+
+@pytest.mark.unit
+def test_integrity_check_rejects_a_reference_vector_of_the_wrong_length(
+    tmp_path, boundaries
+):
+    data_dir = _synthetic_data_dir(
         tmp_path,
         rings=[np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)],
         poly_ref=[-1],
         bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],  # two holes, one reference entry
     )
-    with pytest.raises(ValueError, match="entries but there are 2 holes"):
-        HoleArray(data_location=tmp_path, boundaries=boundaries)
+    with pytest.raises(DataIntegrityError, match="entries but there are 2 holes"):
+        validate_hole_references(data_dir)
 
 
 @pytest.mark.unit
-def test_inline_ring_count_mismatch_is_rejected(tmp_path, boundaries):
-    """Coordinates from one build next to references from another must not be read.
+def test_integrity_check_rejects_an_inline_ring_count_mismatch(tmp_path, boundaries):
+    """Coordinates from one build beside references from another must be caught here.
 
-    Every index would still resolve to some ring, so this cannot be left to fail on
-    its own - it would surface as a wrong timezone, not as an error.
+    Every index would still resolve to some ring, so this cannot be left to fail on its
+    own - it would surface as a wrong timezone, not as an error.
     """
-    _write_hole_dir(
-        tmp_path,
-        rings=[],  # references claim one inline ring, the file has none
-        poly_ref=[-1],
-        bboxes=[(1, 3, 4, 6)],
+    data_dir = _synthetic_data_dir(
+        tmp_path, rings=[], poly_ref=[-1], bboxes=[(1, 3, 4, 6)]
     )
-    with pytest.raises(ValueError, match="expects 1 inline hole rings"):
-        HoleArray(data_location=tmp_path, boundaries=boundaries)
+    with pytest.raises(DataIntegrityError, match="exactly once"):
+        validate_hole_references(data_dir)
 
 
 @pytest.mark.unit
-def test_out_of_range_boundary_reference_is_rejected(tmp_path, boundaries):
-    _write_hole_dir(
+def test_integrity_check_rejects_an_out_of_range_boundary_reference(
+    tmp_path, boundaries
+):
+    data_dir = _synthetic_data_dir(
         tmp_path, rings=[], poly_ref=[len(boundaries)], bboxes=[(0, 0, 0, 0)]
     )
-    with pytest.raises(ValueError, match="references boundary polygon"):
-        HoleArray(data_location=tmp_path, boundaries=boundaries)
+    with pytest.raises(DataIntegrityError, match="references boundary polygon"):
+        validate_hole_references(data_dir)
 
 
 @pytest.mark.unit
-def test_missing_reference_vector_with_wrong_ring_count_is_rejected(
+def test_integrity_check_rejects_a_reference_to_the_wrong_polygon(tmp_path, boundaries):
+    """The check with evidence independent of the references themselves.
+
+    An off-by-one in the converter's matching produces exactly this: a reference that
+    resolves to a real, valid ring which is not the one the hole's bounding box was
+    computed from. Nothing else in the data would notice.
+    """
+    data_dir = _synthetic_data_dir(
+        tmp_path,
+        rings=[],
+        poly_ref=[1],  # the bbox below describes polygon 0
+        bboxes=[_bbox_of(boundaries.coords_of(0))],
+    )
+    with pytest.raises(DataIntegrityError, match="points at the wrong geometry"):
+        validate_hole_references(data_dir)
+
+
+@pytest.mark.unit
+def test_integrity_check_rejects_missing_references_with_a_short_ring_file(
     tmp_path, boundaries
 ):
     """Deduplicated coordinates without the reference vector: hole ids would silently
     address the wrong rings."""
-    _write_hole_dir(
+    data_dir = _synthetic_data_dir(
         tmp_path,
         rings=[np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)],
         poly_ref=None,
         bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],
     )
-    with pytest.raises(ValueError, match="stores 1 rings for 2 holes"):
-        HoleArray(data_location=tmp_path, boundaries=boundaries)
+    with pytest.raises(DataIntegrityError, match="stores 1 rings for 2 holes"):
+        validate_hole_references(data_dir)
 
 
 @pytest.mark.unit

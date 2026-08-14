@@ -56,6 +56,7 @@ from scripts.configs import (
     BoundaryArray,
     resolve_zone_id_dtype,
 )
+from scripts.data_integrity import validate_hole_references
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
@@ -225,6 +226,12 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     """
     write_numpy_binaries(data, output_path)
     write_flatbuffer_files(data, output_path)
+    # Check the artifact rather than the in-memory model it came from: the hole
+    # reference vector, the hole coordinate file and the hole bboxes are three separate
+    # files, and only reading them back proves they agree. This is where the coherence
+    # of a data directory is established - the runtime trusts it and does not re-derive it.
+    print("Verifying the integrity of the written data...")
+    validate_hole_references(output_path)
     print("Binary files written successfully")
 
 

@@ -175,6 +175,12 @@ class HoleArray(PolygonArray):
     untouched, and the bbox vectors stay valid verbatim - a referenced ring is
     identical, so its bbox already equals the boundary's. ``outside_bbox``, the hot
     path, keeps reading a flat array with no indirection at all.
+
+    Nothing here checks that the reference vector agrees with the coordinate file. That
+    the packaged data is coherent is established once, by the build - see
+    ``scripts/data_integrity.validate_hole_references``, which the converter runs over
+    what it wrote and the test suite runs over the packaged binaries. Re-deriving it in
+    every user's process would re-answer a settled question on a latency-sensitive path.
     """
 
     def __init__(
@@ -195,47 +201,6 @@ class HoleArray(PolygonArray):
         # absent -> a data directory compiled before hole deduplication existed, with
         # every ring stored inline. Readable as it stands, just bigger.
         self.poly_ref = read_per_polygon_vector(ref_path) if ref_path.exists() else None
-        self._validate_refs(ref_path)
-
-    def _validate_refs(self, ref_path: Path) -> None:
-        """Reject a hole directory whose files disagree about how many rings are stored.
-
-        The reference vector and the coordinate file are separate files, so a
-        half-updated data directory - one build's coordinates next to another's
-        references - is possible. Left unchecked it does not fail: every index still
-        resolves to *some* ring, just the wrong one, which surfaces as a wrong timezone
-        rather than as an error. Runs once per construction, never per lookup.
-        """
-        nr_holes = len(self.xmin)
-        nr_stored = len(self.coordinates)
-        if self.poly_ref is None:
-            if nr_stored != nr_holes:
-                raise ValueError(
-                    f"the hole data in {self.data_location} stores {nr_stored} rings for "
-                    f"{nr_holes} holes, and carries no {ref_path.name} to map the "
-                    f"difference. Regenerate this data directory with "
-                    f"scripts/file_converter.py from the current checkout."
-                )
-            return
-
-        if len(self.poly_ref) != nr_holes:
-            raise ValueError(
-                f"{ref_path} has {len(self.poly_ref)} entries but there are "
-                f"{nr_holes} holes."
-            )
-        nr_inline = int((self.poly_ref < 0).sum())
-        if nr_inline != nr_stored:
-            raise ValueError(
-                f"{ref_path} expects {nr_inline} inline hole rings but the coordinate "
-                f"file in {self.data_location} stores {nr_stored}."
-            )
-        if nr_holes:
-            max_ref = int(self.poly_ref.max())
-            if max_ref >= len(self.boundaries):
-                raise ValueError(
-                    f"a hole in {self.data_location} references boundary polygon "
-                    f"{max_ref}, but only {len(self.boundaries)} boundary polygons exist."
-                )
 
     def coords_of(self, idx: IntegerLike) -> np.ndarray:
         """

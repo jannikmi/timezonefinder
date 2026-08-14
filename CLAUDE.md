@@ -67,6 +67,15 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   from the top-level package, so emptying `timezonefinder/__init__.py` fails collection outright
 - Prefer dependency injection over module-level state; global helper functions are NOT thread-safe,
   concurrent workloads should use per-thread `TimezoneFinder(in_memory=True)` instances
+- **Check an artifact where it is produced, never where it is consumed.** Whatever the build
+  establishes — the packaged binaries above all — must not be re-validated when a finder is
+  constructed: that re-derives a settled fact in every user's process, on a path latency-sensitive
+  services pay for per thread. Put the assertion in the generator (over what it just wrote) *and*
+  in the test suite (over what is committed), sharing one implementation so the two cannot drift;
+  `scripts/data_integrity.py` is the pattern. Staying off the init path is also what lets such a
+  check be *thorough* — the hole-reference check resolves every ring in the dataset, which no
+  per-construction budget would allow. A defensive `if` at load time is the tempting version of
+  this and the wrong one: it is slower, and being forced to stay cheap makes it shallower
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed

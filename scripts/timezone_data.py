@@ -259,35 +259,6 @@ class HoleCollection(BaseModel):
             raise ValueError(
                 f"Hole polygon references cannot be negative, found {min_poly_ref}"
             )
-        self.validate_boundary_refs(polygon_count)
-
-    def validate_boundary_refs(self, polygon_count: int) -> None:
-        """Check the encoding of the hole reference vector, if it has been computed.
-
-        Every entry has to address something real: a boundary polygon that exists, or an
-        inline ring that was actually written. A stale or off-by-one entry would not
-        fail at runtime - it would resolve to a different, valid ring and come back as a
-        wrong timezone.
-        """
-        if self._poly_refs is None:
-            return
-        if len(self._poly_refs) != len(self.holes):
-            raise ValueError(
-                f"Hole reference vector has {len(self._poly_refs)} entries but there "
-                f"are {len(self.holes)} holes"
-            )
-        nr_inline = len(self.inline_holes)
-        for hole_id, ref in enumerate(self._poly_refs):
-            if ref >= polygon_count:
-                raise ValueError(
-                    f"Hole {hole_id} references boundary polygon {ref} but only "
-                    f"{polygon_count} polygons exist"
-                )
-            if ref < 0 and -(ref + 1) >= nr_inline:
-                raise ValueError(
-                    f"Hole {hole_id} references inline ring {-(ref + 1)} but only "
-                    f"{nr_inline} inline rings are stored"
-                )
 
     def deduplicate(
         self, polygons: "PolygonCollection", poly_zone_ids: ZoneIdArray
@@ -767,7 +738,6 @@ class TimezoneData(BaseModel):
         ``TimezoneData`` only to compile shortcuts from it.
         """
         self.hole_store.deduplicate(self.polygon_store, self.poly_zone_ids)
-        self.hole_store.validate_boundary_refs(self.nr_of_polygons)
 
     @property
     def hole_registry(self) -> HoleRegistry:
