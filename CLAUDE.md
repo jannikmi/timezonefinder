@@ -61,12 +61,27 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Preserve the fast lookup path; profile hot code (polygon math, shortcut lookups) when modifying it
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
-  code, data formats, and binary assets are versioned with the package and need no compatibility
+  code, data formats, and binary assets are versioned with the package and need no compatibility.
+  Before writing a fallback for older data or an older caller anyway, establish that what you would
+  stay compatible with was ever released: `git merge-base --is-ancestor <commit> <latest tag>`. On
+  `master` an unreleased format marker is indistinguishable from a shipped one, so such a branch
+  reads as load-bearing while being unreachable — and it is not only dead code that costs. Guarding
+  one cost a version bump that rewrote the 63 MB coordinate binary for a single changed byte, and
+  the fallback itself was a per-lookup branch reached by no dataset that exists
 - Keep `__all__` in `__init__.py` files — they define the public API surface. Nothing asserts
   their contents directly; the only incidental protection is that `tests/conftest.py` imports
   from the top-level package, so emptying `timezonefinder/__init__.py` fails collection outright
 - Prefer dependency injection over module-level state; global helper functions are NOT thread-safe,
   concurrent workloads should use per-thread `TimezoneFinder(in_memory=True)` instances
+- **Check an artifact where it is produced, never where it is consumed.** Whatever the build
+  establishes — the packaged binaries above all — must not be re-validated when a finder is
+  constructed: that re-derives a settled fact in every user's process, on a path latency-sensitive
+  services pay for per thread. Put the assertion in the generator (over what it just wrote) *and*
+  in the test suite (over what is committed), sharing one implementation so the two cannot drift;
+  `scripts/data_integrity.py` is the pattern. Staying off the init path is also what lets such a
+  check be *thorough* — the hole-reference check resolves every ring in the dataset, which no
+  per-construction budget would allow. A defensive `if` at load time is the tempting version of
+  this and the wrong one: it is slower, and being forced to stay cheap makes it shallower
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed

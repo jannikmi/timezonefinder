@@ -56,6 +56,7 @@ from scripts.configs import (
     BoundaryArray,
     resolve_zone_id_dtype,
 )
+from scripts.data_integrity import validate_hole_references
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
@@ -64,6 +65,7 @@ from timezonefinder.flatbuf.io.polygons import (
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.np_binary_helpers import (
+    get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
     get_ymax_path,
@@ -182,6 +184,14 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
         store_per_polygon_vector(get_ymax_path(dir), boundary_ymax)
         store_per_polygon_vector(get_ymin_path(dir), boundary_ymin)
 
+    # HOLE POLYGON REFERENCES: which boundary polygon each hole duplicates, or where
+    # its own ring sits in the (much smaller) hole coordinate file. Written per hole id,
+    # so the ids stay dense and the hole registry is unaffected.
+    store_per_polygon_vector(
+        get_poly_ref_path(holes_dir),
+        to_numpy_array(data.hole_poly_refs, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY),
+    )
+
     print("Numpy binary files written successfully")
 
 
@@ -199,8 +209,9 @@ def write_flatbuffer_files(data: TimezoneData, output_path: Path) -> None:
     write_polygon_collection_flatbuffer(boundary_polygon_file, data.polygons)
 
     hole_polygon_file: Path = get_coordinate_path(holes_dir)
-    # Write holes coordinates to flatbuffer
-    write_polygon_collection_flatbuffer(hole_polygon_file, data.holes)
+    # Write hole coordinates to flatbuffer. Only the rings that are not a verbatim copy
+    # of a boundary polygon: the rest are resolved through poly_ref.npy at runtime.
+    write_polygon_collection_flatbuffer(hole_polygon_file, data.inline_holes)
     print("Flatbuffer files written successfully")
 
 
@@ -215,6 +226,12 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     """
     write_numpy_binaries(data, output_path)
     write_flatbuffer_files(data, output_path)
+    # Check the artifact rather than the in-memory model it came from: the hole
+    # reference vector, the hole coordinate file and the hole bboxes are three separate
+    # files, and only reading them back proves they agree. This is where the coherence
+    # of a data directory is established - the runtime trusts it and does not re-derive it.
+    print("Verifying the integrity of the written data...")
+    validate_hole_references(output_path)
     print("Binary files written successfully")
 
 

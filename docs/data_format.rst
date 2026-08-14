@@ -59,7 +59,7 @@ Data Structure Overview
 
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
-1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes
+1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
 2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.fbs`` or ``hybrid_shortcuts_uint16.fbs``) that stores either direct zone IDs or polygon lists depending on timezone complexity
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
@@ -97,6 +97,12 @@ Boundaries Information
 
 * ``xmin.npy``, ``xmax.npy``, ``ymin.npy``, ``ymax.npy``: NumPy arrays storing the bounding boxes for each polygon
 
+Hole Data
+---------
+
+* ``poly_ref.npy``: NumPy ``int32`` array, one entry per hole, saying where that hole's
+  ring is stored (see `Holes as Boundary References`_)
+
 Spatial Indexing
 ----------------
 
@@ -112,15 +118,78 @@ Other Files
 
 * ``timezone_names.txt``: List of all timezone names
 
+Holes as Boundary References
+============================
+
+Almost every hole in the dataset is an **enclave**: the upstream boundary builder cuts a
+hole into the surrounding zone using exactly the ring it also emits as the enclosed
+zone's own boundary polygon. Both rings describe the same closed path, so storing the
+hole ring a second time is pure redundancy — it is the same geometry under two IDs.
+
+``poly_ref.npy`` records, per hole ID, which of the two cases applies. The sign carries
+the discriminant, so no separate table and no ambiguous sentinel value is needed:
+
+.. list-table::
+   :header-rows: 1
+
+   * - value
+     - meaning
+   * - ``v >= 0``
+     - the hole ring *is* boundary polygon ``v``; read it from ``boundaries/coordinates.fbs``
+   * - ``v < 0``
+     - the ring is stored inline, at index ``-(v + 1)`` of ``holes/coordinates.fbs``
+
+Both index spaces are dense and start at zero, which is why the inline case is offset by
+one: without it, inline ring ``0`` would encode as ``-0 == 0`` and collide with boundary
+polygon ``0``.
+
+Two properties keep this cheap at runtime:
+
+* **Hole IDs stay dense.** Every hole ID remains valid, so the hole registry and all of
+  its consumers are untouched by the change.
+* **The bounding box vectors stay valid verbatim.** A referenced ring is identical to
+  the boundary ring, so its bounding box already equals the boundary's. The bounding box
+  rejection test — the hot path — keeps reading a flat array with no indirection; only
+  the coordinate lookup gains a branch, and only where a point in polygon test was about
+  to happen anyway.
+
+Matching is done on a canonical form of the ring (rotated to its lexicographically
+smallest vertex, compared in both winding directions), with bounding box and vertex count
+equality as a prefilter only. It compares the integer coordinates themselves rather than
+any derived quantity, so there is no tolerance involved: two rings either trace the same
+closed path or they do not.
+
+A consequence worth knowing: a referenced hole ring is handed back exactly as the
+boundary polygon stores it, which for part of the dataset means a different starting
+vertex or winding direction than the hole ring originally had. The closed path — and
+therefore every point in polygon result and every timezone answer — is unchanged, but
+:meth:`~timezonefinder.TimezoneFinder.get_geometry` may report those hole rings starting
+at a different vertex than an older release did.
+
+Holes without a twin
+--------------------
+
+A small remainder (27 of 756 in release ``2026c``) matches no boundary polygon and stays
+stored inline. These are mostly ocean zones (``Etc/GMT±XX``) cut by a hole whose area is
+covered by a *union* of several land zones rather than by any single polygon, plus the
+``Asia/Jerusalem`` enclaves.
+
+They are kept rather than dropped. Probing their interiors shows every one of them is in
+fact covered by other zones, so dropping them would not leave a gap — but only as long as
+each covering polygon is tested before the parent polygon in every shortcut cell the hole
+touches. That ordering is an emergent property of how shortcut candidates are sorted, not
+an invariant the data guarantees, so relying on it is a separate change with a separate
+risk profile.
+
 FlatBuffers Schema
 ==================
 
 The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
 The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
-``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding. Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
+``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_). Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
 
-``layout_version`` tracks the *encoding*, not the package version, and is bumped only when the encoding actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
+``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
 Note that this check currently covers the coordinate files only. The shortcut index and the NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 

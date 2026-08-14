@@ -24,14 +24,23 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
 # polygon file at all?". Files written before this marker existed carry none.
 POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 
-# Encoding of the `coords` vectors. Absent in pre-guard files, which read back as
+# What a polygon collection file means. Absent in pre-guard files, which read back as
 # the FlatBuffers default 0, so those files self-identify without special casing.
-# 1 = per-axis blocks [x0...xN-1, y0...yN-1]; 0 = interleaved [x0, y0, x1, y1, ...]
 #
-# Deliberately NOT tied to the package version: bump it only when the coordinate
-# encoding itself changes, never for an ordinary release. Data compiled by any
-# version that writes a given layout stays readable by any version that reads it,
-# so a `bin_file_location` directory does not have to be regenerated on upgrade.
+#   0 = coordinates interleaved [x0, y0, x1, y1, ...], every hole ring stored inline
+#   1 = coordinates in per-axis blocks [x0...xN-1, y0...yN-1], and a *hole* collection
+#       holds only the rings that are not a verbatim copy of a boundary polygon, with
+#       holes/poly_ref.npy mapping hole ids onto them
+#
+# Deliberately NOT tied to the package version: bump it only when what the file means
+# changes, never for an ordinary release. Data compiled by any version that writes a
+# given layout stays readable by any version that reads it, so a `bin_file_location`
+# directory does not have to be regenerated on upgrade.
+#
+# Layout 1 covers both the per-axis encoding and the hole reference encoding because
+# they ship together: neither has appeared in a release, so no version in the wild
+# reads or writes layout 1, and giving the second change a version of its own would
+# rewrite every packaged coordinate file to distinguish states that never coexisted.
 POLYGON_LAYOUT_VERSION: Final[int] = 1
 
 
@@ -138,12 +147,12 @@ def _incompatible_layout_error(
     """Build the error raised for coordinate data this version cannot read."""
     location = f" {file_path}" if file_path is not None else ""
     return ValueError(
-        f"the polygon coordinate file{location} uses coordinate layout version "
+        f"the polygon coordinate file{location} uses polygon layout version "
         f"{found_version}, but this timezonefinder reads layout version "
-        f"{POLYGON_LAYOUT_VERSION}. The coordinate encoding changed between the two, "
-        f"and reading it anyway would yield wrong timezones rather than an error, so "
-        f"it is rejected. Regenerate this data directory with "
-        f"scripts/file_converter.py from the current checkout."
+        f"{POLYGON_LAYOUT_VERSION}. What the file holds differs between the two, and "
+        f"reading it anyway would yield wrong timezones rather than an error, so it is "
+        f"rejected. Regenerate this data directory with scripts/file_converter.py from "
+        f"the current checkout."
     )
 
 
@@ -152,7 +161,7 @@ def get_polygon_collection(
 ) -> PolygonCollection:
     """Load a PolygonCollection from a buffer, rejecting incompatible coordinate data.
 
-    The coordinate layout changed without any change to the container: same file name,
+    The layout changed without any change to the container: same file name,
     same schema, same vector lengths, values still plausible int32. Parsing such a file
     succeeds and returns wrong timezones silently, so the layout markers are checked
     here rather than trusted. This runs once per accessor construction, never per

@@ -37,6 +37,11 @@ def get_ymin_path(path: Path) -> Path:
     return path / "ymin.npy"
 
 
+def get_poly_ref_path(path: Path) -> Path:
+    """Return the path to the poly_ref.npy file in the given directory."""
+    return path / "poly_ref.npy"
+
+
 def store_per_polygon_vector(file_path: Path, vector: np.ndarray) -> None:
     """Store a vector as a .npy file in the specified file path."""
     print(f"Storing vector to {file_path}")

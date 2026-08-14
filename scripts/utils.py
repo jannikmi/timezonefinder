@@ -111,6 +111,43 @@ def convert_polygon(coords, validate: bool = True) -> np.ndarray:
     return poly
 
 
+def canonical_ring_key(ring: np.ndarray) -> bytes:
+    """Byte key identifying a closed ring regardless of where it starts and how it winds.
+
+    Two rings tracing the same closed path produce the same key even when stored with a
+    different first vertex or in the opposite direction, and different keys whenever any
+    vertex differs. Used to recognise a hole that is a verbatim copy of some zone's
+    boundary polygon, which is how the upstream builder emits enclaves.
+
+    The comparison is exact - it orders the integer coordinates themselves, never a
+    derived floating point quantity such as the signed area, so there is no tolerance to
+    tune and a near-degenerate ring cannot be misjudged. Winding is normalised by
+    generating the key for both directions and keeping the smaller, which is cheaper to
+    trust than a shoelace sum (whose intermediate products overflow int64 for a polygon
+    with many vertices at full coordinate scale).
+
+    :param ring: Ring coordinates with shape (2, N), without a repeated closing vertex
+    :return: A key that compares equal exactly for rings describing the same path
+    """
+    x, y = ring[0], ring[1]
+    best: bytes | None = None
+    for xs, ys in ((x, y), (x[::-1], y[::-1])):
+        # rotate the ring to begin at its lexicographically smallest vertex
+        on_xmin = np.flatnonzero(xs == xs.min())
+        starts = on_xmin[ys[on_xmin] == ys[on_xmin].min()]
+        # normally a single vertex; a ring that visits its extreme point more than once
+        # has several equally valid rotations, so all of them are tried
+        for start in starts:
+            candidate = np.concatenate(
+                (np.roll(xs, -start), np.roll(ys, -start))
+            ).tobytes()
+            if best is None or candidate < best:
+                best = candidate
+    if best is None:
+        raise ValueError("cannot compute a canonical key for an empty ring")
+    return best
+
+
 def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
     if flipped:
         # support the (lat, lng) format used by h3

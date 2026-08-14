@@ -26,7 +26,7 @@ from timezonefinder.np_binary_helpers import (
     get_zone_positions_path,
     read_per_polygon_vector,
 )
-from timezonefinder.polygon_array import PolygonArray
+from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
@@ -416,7 +416,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self.boundaries = PolygonArray(
             data_location=self.boundaries_dir, in_memory=in_memory
         )
-        self.holes = PolygonArray(data_location=self.holes_dir, in_memory=in_memory)
+        self.holes = HoleArray(
+            data_location=self.holes_dir,
+            boundaries=self.boundaries,
+            in_memory=in_memory,
+        )
 
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few entries it is feasible to keep them in the memory
