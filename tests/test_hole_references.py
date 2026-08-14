@@ -210,8 +210,14 @@ def test_reference_and_inline_rings_resolve(tmp_path, boundaries):
 
 
 @pytest.mark.unit
-def test_missing_reference_vector_falls_back_to_inline_rings(tmp_path, boundaries):
-    """A data directory compiled before this encoding existed stays readable."""
+def test_missing_reference_vector_is_not_readable(tmp_path, boundaries):
+    """``poly_ref.npy`` is required, not optional.
+
+    The layout it belongs to has never been released, so a hole directory without it
+    is not an older format to stay compatible with - it is one that cannot be
+    interpreted, since the coordinate file holds only the inline rings and hole ids do
+    not index it. Failing on the missing file beats guessing at an interpretation.
+    """
     rings = [
         np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32),
         np.array([[7, 8, 9], [1, 2, 3]], dtype=np.int32),
@@ -219,9 +225,8 @@ def test_missing_reference_vector_falls_back_to_inline_rings(tmp_path, boundarie
     _write_hole_dir(
         tmp_path, rings=rings, poly_ref=None, bboxes=[(1, 3, 4, 6), (7, 9, 1, 3)]
     )
-    holes = HoleArray(data_location=tmp_path, boundaries=boundaries)
-    assert holes.poly_ref is None
-    assert np.array_equal(holes.coords_of(1), rings[1])
+    with pytest.raises(FileNotFoundError, match="poly_ref"):
+        HoleArray(data_location=tmp_path, boundaries=boundaries)
 
 
 @pytest.mark.unit
@@ -320,18 +325,15 @@ def test_integrity_check_rejects_a_reference_to_the_wrong_polygon(tmp_path, boun
 
 
 @pytest.mark.unit
-def test_integrity_check_rejects_missing_references_with_a_short_ring_file(
-    tmp_path, boundaries
-):
-    """Deduplicated coordinates without the reference vector: hole ids would silently
-    address the wrong rings."""
+def test_integrity_check_rejects_a_directory_without_references(tmp_path, boundaries):
+    """A hole directory missing ``poly_ref.npy`` is rejected rather than guessed at."""
     data_dir = _synthetic_data_dir(
         tmp_path,
         rings=[np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)],
         poly_ref=None,
         bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],
     )
-    with pytest.raises(DataIntegrityError, match="stores 1 rings for 2 holes"):
+    with pytest.raises(FileNotFoundError, match="poly_ref"):
         validate_hole_references(data_dir)
 
 
@@ -383,7 +385,14 @@ def _inline_data_dir(destination) -> None:
     coord_path = get_coordinate_path(holes_dir)
     coord_path.unlink()  # drop the symlink, do not write through it
     write_polygon_collection_flatbuffer(coord_path, rings)
-    get_poly_ref_path(holes_dir).unlink()
+
+    # every hole addressed as its own inline ring: a valid directory in the same
+    # layout, just one where nothing was deduplicated
+    ref_path = get_poly_ref_path(holes_dir)
+    ref_path.unlink()
+    store_per_polygon_vector(
+        ref_path, np.array([-(i + 1) for i in range(len(rings))], dtype=np.int32)
+    )
 
 
 @pytest.mark.integration
@@ -399,7 +408,7 @@ def test_deduplicated_data_answers_exactly_like_inline_data(tmp_path):
 
     packaged = TimezoneFinder(in_memory=True)
     inline = TimezoneFinder(bin_file_location=inline_dir, in_memory=True)
-    assert inline.holes.poly_ref is None, "the reference data must be the inline one"
+    assert (inline.holes.poly_ref < 0).all(), "the reference data must be all-inline"
     assert len(inline.holes.coordinates) == len(inline.holes)
 
     rng = np.random.default_rng(11)

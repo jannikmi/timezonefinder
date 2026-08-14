@@ -176,6 +176,10 @@ class HoleArray(PolygonArray):
     identical, so its bbox already equals the boundary's. ``outside_bbox``, the hot
     path, keeps reading a flat array with no indirection at all.
 
+    ``poly_ref.npy`` is required rather than optional: the layout it belongs to has
+    never been released, so there is no older data directory to stay compatible with,
+    and a hole directory lacking it is not an older format but an unreadable one.
+
     Nothing here checks that the reference vector agrees with the coordinate file. That
     the packaged data is coherent is established once, by the build - see
     ``scripts/data_integrity.validate_hole_references``, which the converter runs over
@@ -197,10 +201,12 @@ class HoleArray(PolygonArray):
         """
         super().__init__(data_location=data_location, in_memory=in_memory)
         self.boundaries = boundaries
-        ref_path = get_poly_ref_path(self.data_location)
-        # absent -> a data directory compiled before hole deduplication existed, with
-        # every ring stored inline. Readable as it stands, just bigger.
-        self.poly_ref = read_per_polygon_vector(ref_path) if ref_path.exists() else None
+        # Required, not optional. Every directory the converter writes has one, and a
+        # hole directory without it cannot be interpreted: the coordinate file holds
+        # only the inline rings, so hole ids do not index it. Reading it unguarded
+        # means a missing file raises naming itself, rather than costing an
+        # `exists()` on every construction to say the same thing.
+        self.poly_ref = read_per_polygon_vector(get_poly_ref_path(self.data_location))
 
     def coords_of(self, idx: IntegerLike) -> np.ndarray:
         """
@@ -209,8 +215,6 @@ class HoleArray(PolygonArray):
         :param idx: The hole id
         :return: A numpy array containing the hole coordinates
         """
-        if self.poly_ref is None:
-            return self.coordinates[idx]
         ref = int(self.poly_ref[idx])
         if ref >= 0:
             return self.boundaries.coords_of(ref)

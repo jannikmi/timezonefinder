@@ -46,16 +46,6 @@ def validate_hole_references(data_dir: Path) -> None:
     poly_ref = holes.poly_ref
     ref_path = get_poly_ref_path(holes_dir)
 
-    if poly_ref is None:
-        # a directory compiled before hole deduplication existed: every ring inline
-        if nr_stored != nr_holes:
-            raise DataIntegrityError(
-                f"the hole data in {holes_dir} stores {nr_stored} rings for {nr_holes} "
-                f"holes, and carries no {ref_path.name} to map the difference. "
-                f"Regenerate it with scripts/file_converter.py from the current checkout."
-            )
-        return
-
     if len(poly_ref) != nr_holes:
         raise DataIntegrityError(
             f"{ref_path} has {len(poly_ref)} entries but there are {nr_holes} holes."
@@ -116,9 +106,9 @@ def validate_hole_dedup_ratio(data_dir: Path) -> None:
     custom region legitimately has few enclaves and would fail it while being perfectly
     well formed.
 
-    The converter enforces the same floor before writing anything
-    (``HoleCollection.deduplicate``), where it fails fast. This is the artifact-level
-    counterpart, for data that reached a repository some other way.
+    The converter only reports the ratio - compiling custom data whose holes are not
+    enclaves is a supported use case. This is where it is actually enforced, and it is
+    applied to the packaged dataset alone.
 
     :param data_dir: A compiled data directory
     :raises DataIntegrityError: if too few holes are stored as references
@@ -126,7 +116,7 @@ def validate_hole_dedup_ratio(data_dir: Path) -> None:
     boundaries = PolygonArray(data_location=get_boundaries_dir(data_dir))
     holes_dir = get_holes_dir(data_dir)
     holes = HoleArray(data_location=holes_dir, boundaries=boundaries)
-    if not len(holes) or holes.poly_ref is None:
+    if not len(holes):
         return
 
     ratio = int((holes.poly_ref >= 0).sum()) / len(holes)
