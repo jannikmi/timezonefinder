@@ -61,7 +61,13 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Preserve the fast lookup path; profile hot code (polygon math, shortcut lookups) when modifying it
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
-  code, data formats, and binary assets are versioned with the package and need no compatibility
+  code, data formats, and binary assets are versioned with the package and need no compatibility.
+  Before writing a fallback for older data or an older caller anyway, establish that what you would
+  stay compatible with was ever released: `git merge-base --is-ancestor <commit> <latest tag>`. On
+  `master` an unreleased format marker is indistinguishable from a shipped one, so such a branch
+  reads as load-bearing while being unreachable — and it is not only dead code that costs. Guarding
+  one cost a version bump that rewrote the 63 MB coordinate binary for a single changed byte, and
+  the fallback itself was a per-lookup branch reached by no dataset that exists
 - Keep `__all__` in `__init__.py` files — they define the public API surface. Nothing asserts
   their contents directly; the only incidental protection is that `tests/conftest.py` imports
   from the top-level package, so emptying `timezonefinder/__init__.py` fails collection outright
