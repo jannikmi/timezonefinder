@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 try:
-    profile  # type: ignore[name-defined]
+    profile  # type: ignore[used-before-def]
 except NameError:  # pragma: no cover - used only during profiling
 
     def profile(func):  # type: ignore[misc]

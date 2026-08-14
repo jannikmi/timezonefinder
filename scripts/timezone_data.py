@@ -287,7 +287,7 @@ class HoleCollection(BaseModel):
         # A hole and its boundary twin agree on bounding box and vertex count, so
         # bucketing on those first leaves only a handful of candidates to compare in
         # full - the canonical key is what decides, the bucket only narrows the search.
-        buckets: dict[tuple[int, int, int, int, int], list[int]] = {}
+        buckets: dict[tuple[float, float, float, float, int], list[int]] = {}
         for poly_id, bounds in enumerate(polygons.boundaries):
             key = (
                 bounds.xmin,

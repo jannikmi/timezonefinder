@@ -54,7 +54,7 @@ repos:
         rev: v2.2.0
         hooks:
             -   id: mypy
-                exclude: ^((tests|prototypes|scripts|docs|benchmarks)/)
+                exclude: ^((tests|prototypes|docs|benchmarks)/)
                 additional_dependencies: [types-pytz, types-cffi]
 
     -   repo: https://github.com/mgedmin/check-manifest

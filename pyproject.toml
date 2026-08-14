@@ -170,6 +170,7 @@ module = [
     "numba.*",
     "h3",
     "h3.*",
+    "cpuinfo",
 ]
 ignore_missing_imports = true
 

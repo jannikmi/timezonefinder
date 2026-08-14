@@ -227,7 +227,9 @@ class BenchmarkReporter:
     def __init__(self, title: str, output_path: Path):
         self.title = title
         self.output_path = Path(output_path)
-        self.content = []
+        # Heterogeneous, tagged by item[0]: ('section', title, level),
+        # ('text', text), ('table', headers, rows), ('note', text).
+        self.content: list[tuple[Any, ...]] = []
 
     def add_section(self, title: str, level: int = 1):
         """Add a new section with the given title and RST level."""
@@ -308,8 +310,8 @@ def get_system_status() -> dict[str, Any]:
 def add_system_status_section(
     reporter: BenchmarkReporter,
     system_info: dict[str, Any],
-    additional_info: dict[str, Any] = None,
-    provenance: dict[str, Any] = None,
+    additional_info: dict[str, Any] | None = None,
+    provenance: dict[str, Any] | None = None,
 ):
     """Add a comprehensive system status section to a benchmark report.
 

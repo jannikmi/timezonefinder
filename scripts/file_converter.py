@@ -103,7 +103,7 @@ def to_numpy_array(values: list[Any], dtype: str) -> NDArray[Any]:
     return np.array(values, dtype=dtype)
 
 
-def to_bbox_vector(values: list[int]) -> BoundaryArray:
+def to_bbox_vector(values: list[float]) -> BoundaryArray:
     return to_numpy_array(values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
 
 
@@ -116,10 +116,10 @@ def convert_bboxes_to_numpy(
     Returns:
         Tuple of numpy arrays (xmax, xmin, ymax, ymin)
     """
-    xmax_list: list[int] = []
-    xmin_list: list[int] = []
-    ymax_list: list[int] = []
-    ymin_list: list[int] = []
+    xmax_list: list[float] = []
+    xmin_list: list[float] = []
+    ymax_list: list[float] = []
+    ymin_list: list[float] = []
     for bounds in bboxes:
         xmax_list.append(bounds.xmax)
         xmin_list.append(bounds.xmin)

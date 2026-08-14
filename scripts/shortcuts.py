@@ -28,7 +28,7 @@ from timezonefinder.utils_numba import using_numba
 
 
 try:
-    profile  # type: ignore[name-defined]
+    profile  # type: ignore[used-before-def]
 except NameError:  # pragma: no cover - used only during profiling
 
     def profile(func):
@@ -53,7 +53,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     zone_ids = data.poly_zone_ids
 
     zone_buckets = defaultdict(list)
-    zone_sizes = defaultdict(int)
+    zone_sizes: defaultdict[int, int] = defaultdict(int)
 
     for poly_id in poly_ids:
         zone_id = int(zone_ids[poly_id])
@@ -245,7 +245,7 @@ def build_hybrid_index_from_separate_indices(
         - int: zone ID (for unique cases where all polygons share same zone)
         - list[int]: polygon IDs (for ambiguous cases requiring polygon tests)
     """
-    hybrid_mapping = {}
+    hybrid_mapping: dict[int, int | list[int]] = {}
 
     # First, add all entries from shortcuts (polygon lists)
     # This ensures we have entries for all hex cells with any polygons

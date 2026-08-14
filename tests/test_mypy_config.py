@@ -13,15 +13,18 @@ here - which should be a deliberate, reviewed decision rather than a one-line
 edit nobody notices.
 """
 
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from tests.auxiliaries import PROJECT_ROOT
 
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
+PRE_COMMIT_CONFIG_PATH = PROJECT_ROOT / ".pre-commit-config.yaml"
 
 # Only modules inside a `generated` package may be exempted. Expressed as a rule
 # rather than a literal allow-list so that regenerating or renaming bindings does
@@ -69,3 +72,29 @@ def test_generated_bindings_are_still_exempted() -> None:
     `make hook` fail on `flatc` output nobody can reasonably fix by hand.
     """
     assert "timezonefinder.flatbuf.generated.*" in _exempted_modules(PYPROJECT_PATH)
+
+
+@pytest.mark.unit
+def test_scripts_are_type_checked_by_the_hook() -> None:
+    """`scripts/` must stay outside the mypy hook's `exclude` pattern.
+
+    The exclude is a second, quieter way to stop type-checking a directory: it
+    takes no override entry and reports nothing, so the two tests above cannot
+    see it. `scripts/` holds the data converter and the benchmark tooling, and
+    while it was excluded its annotations drifted far enough to accumulate 15
+    errors - a return type contradicted by the value returned, implicit
+    `Optional` defaults, and `# type: ignore` codes mypy no longer emits.
+    """
+    hook_config = yaml.safe_load(PRE_COMMIT_CONFIG_PATH.read_text())
+    excludes = [
+        hook.get("exclude", "")
+        for repo in hook_config["repos"]
+        for hook in repo["hooks"]
+        if hook["id"] == "mypy"
+    ]
+    assert excludes, "no mypy hook found in .pre-commit-config.yaml"
+    offenders = [pattern for pattern in excludes if re.search(r"\bscripts\b", pattern)]
+    assert not offenders, (
+        "the mypy pre-commit hook excludes scripts/ again, which silently stops "
+        f"type-checking the data converter and benchmark tooling: {offenders}"
+    )
