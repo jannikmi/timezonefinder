@@ -39,6 +39,7 @@ jobs:
       matrix:
         # all officially supported Python versions should be tested
         # NOTE: need to match the versions in pyproject.toml > tox.ini
+        # enforced by tests/test_python_version_support.py
         include:
           - python-version: "3.11"
             tox-env: "py311,py311-numba,py311-pytz"
