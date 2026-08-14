@@ -445,3 +445,35 @@ def test_deduplicated_data_answers_exactly_like_inline_data(tmp_path):
         assert packaged.timezone_at_land(lng=lng, lat=lat) == inline.timezone_at_land(
             lng=lng, lat=lat
         )
+
+
+# --------------------------------------------------------------------------------
+# compiling custom data whose holes are not enclaves
+# --------------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_low_dedup_ratio_does_not_block_the_converter(capsys):
+    """Custom data whose holes are not enclaves must still compile.
+
+    ``scripts/file_converter.py`` is documented for "any other data in this format"
+    (``docs/2_use_cases.rst``), and a dataset whose holes are ordinary interior rings
+    rather than enclaves is perfectly valid - those rings are stored inline and answer
+    correctly, the output is merely larger. The deduplication floor is a statement
+    about the *packaged* dataset, so it is reported here and enforced only against that
+    (``validate_hole_dedup_ratio``).
+    """
+    from scripts.timezone_data import HoleCollection, PolygonCollection
+
+    boundary = np.array([[0, 100, 100, 0], [0, 0, 100, 100]], dtype=np.int32)
+    # an interior ring that is nothing like the boundary: 0% deduplication
+    hole = np.array([[10, 20, 20, 10], [10, 10, 20, 20]], dtype=np.int32)
+
+    polygons = PolygonCollection(polygons=[boundary], lengths=[4])
+    holes = HoleCollection(holes=[hole], lengths=[4], polynrs_of_holes=[0])
+
+    holes.deduplicate(polygons, np.array([0], dtype=np.uint16))
+
+    assert holes.poly_refs == [-1], "the unmatched ring must be stored inline"
+    assert len(holes.inline_holes) == 1
+    assert "WARNING" in capsys.readouterr().out

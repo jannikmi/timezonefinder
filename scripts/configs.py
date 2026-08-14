@@ -48,9 +48,14 @@ SHORTCUT_H3_RES = 0 if DEBUG else SHORTCUT_H3_RES
 # The deduplication is worth ~7% of the packaged coordinate data, and it rests on how
 # the upstream builder emits enclaves - which is a convention, not a guarantee. A
 # release that changed it would still compile and still return correct timezones, just
-# with the shipped data quietly re-inflated, so the ratio is asserted rather than
-# reported. Measured 96.4% on release 2026c; the floor sits well below that so that
-# ordinary dataset churn does not trip it.
+# with the shipped data quietly re-inflated, which is why it is asserted somewhere
+# rather than left to be noticed. Measured 96.4% on release 2026c; the floor sits well
+# below that so that ordinary dataset churn does not trip it.
+#
+# It is a statement about *this* dataset, so it is enforced only against the packaged
+# data (scripts.data_integrity.validate_hole_dedup_ratio, exercised by the test suite).
+# The converter merely reports it: compiling custom data whose holes are not enclaves
+# is a supported use case, and those rings are stored inline and answer correctly.
 MIN_HOLE_DEDUP_RATIO = 0.9
 
 DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode

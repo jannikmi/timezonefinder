@@ -362,12 +362,21 @@ class HoleCollection(BaseModel):
                     f"Check the input data."
                 )
             if ratio < MIN_HOLE_DEDUP_RATIO:
-                raise ValueError(
-                    f"only {ratio:.1%} of holes are identical to a boundary polygon, "
-                    f"below the expected minimum of {MIN_HOLE_DEDUP_RATIO:.0%}. The "
-                    f"upstream dataset appears to no longer emit enclaves as shared "
-                    f"rings; compiling anyway would silently inflate the packaged data. "
-                    f"Re-check the assumption and adjust MIN_HOLE_DEDUP_RATIO."
+                # Reported, not enforced. A low ratio is a perfectly valid outcome for
+                # a custom dataset whose holes are not enclaves - the unmatched rings
+                # are stored inline and the result is correct, just larger - and this
+                # converter is documented for "any other data in this format"
+                # (docs/2_use_cases.rst). What the floor actually protects is the
+                # *packaged* data, so it is enforced against that and only that, by
+                # scripts.data_integrity.validate_hole_dedup_ratio in the test suite.
+                print(
+                    f"WARNING: only {ratio:.1%} of holes are identical to a boundary "
+                    f"polygon, below the {MIN_HOLE_DEDUP_RATIO:.0%} the packaged "
+                    f"dataset is expected to reach. Expected for custom data whose "
+                    f"holes are not enclaves. If this IS the packaged dataset, the "
+                    f"upstream release has stopped emitting enclaves as shared rings "
+                    f"and the data is being silently inflated - re-check with "
+                    f"prototypes/hole_boundary_redundancy.py."
                 )
 
         self._poly_refs = poly_refs
