@@ -72,11 +72,19 @@ data:
 	rm -rf tmp
 	bash update_data.sh --dataset=full --with-oceans
 
+# Invoke the converter as a module, never by path: `python ./scripts/file_converter.py`
+# puts scripts/ on sys.path[0] instead of the repository root, and the script's own
+# `from scripts.timezone_data import ...` then raises ModuleNotFoundError before any
+# work starts. update_data.sh uses the same `-m` form for the same reason.
 parse:
-	uv run python ./scripts/file_converter.py -inp ./tmp/combined-with-oceans.json
+	uv run python -m scripts.file_converter -inp ./tmp/combined-with-oceans.json
 
+# NOTE: parse_data() always writes its report to the checkout's committed
+# docs/data_report.rst, whatever -out it was given, so this target leaves that
+# file describing the 3-zone fixture. Restore it afterwards:
+#   git checkout -- docs/data_report.rst
 testparse:
-	uv run python ./scripts/file_converter.py -inp ./tests/test_input.json -out ./tmp/parsed_data
+	uv run python -m scripts.file_converter -inp ./tests/test_input.json -out ./tmp/parsed_data
 
 # NOTE: `data` (update_data.sh) already regenerates these fixtures automatically
 # since they are pinned to DATA_VERSION; only run this target directly when just

@@ -87,10 +87,14 @@ Any other data in this format can also be parsed:
 
 ::
 
-    python /path/to/timezonefinder/scripts/file_converter.py \
+    python -m scripts.file_converter \
         [-inp /path/to/input.json] \
         [-out /path/to/output_folder] \
         [--zone-id-dtype {uint8,uint16}]
+
+Run it from the root of a ``timezonefinder`` repository checkout: the converter imports its
+helpers as ``scripts.<module>``, so invoking it by path fails to resolve them. ``make testparse``
+runs exactly this against the small ``tests/test_input.json`` fixture.
 
 
 
