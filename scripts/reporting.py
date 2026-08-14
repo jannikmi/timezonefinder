@@ -6,15 +6,21 @@ Contains functions for reporting various metrics about timezone polygons, holes,
 import argparse
 import json
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Callable
 
+import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.configs import (
     DATA_REPORT_FILE,
+    SHORTCUT_H3_RES,
+    BinaryData,
+    ShortcutIndexStats,
+    TableRow,
+    TableRows,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
     read_data_version,
@@ -49,9 +55,15 @@ from timezonefinder.zone_names import read_zone_names
 FIXTURE_VERSION_LABEL = "**Fixture Version**"
 DATA_VERSION_LABEL = "**Timezone Data Version**"
 
+# Widths of the hybrid shortcut index's stored fields, used to estimate its
+# on-disk size in the data report.
+SHORTCUT_KEY_SIZE_BYTES = 8  # int64 hex ID
+SHORTCUT_ZONE_ID_SIZE_BYTES = 1  # uint8 zone ID
+SHORTCUT_POLYGON_ID_SIZE_BYTES = 2  # uint16 polygon ID
+
 
 # decorator to reroute the output of a function to a file
-def redirect_output_to_file(file_path: str) -> Callable:
+def redirect_output_to_file(file_path: str | Path) -> Callable:
     """Decorator to redirect the output of a function to a file."""
 
     def decorator(func: Callable) -> Callable:
@@ -85,7 +97,7 @@ def redirect_output_to_file_contextmanager(file_path: str | Path):
     return _redirect()
 
 
-def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> dict:
+def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
     """
     Load all necessary data from binary files to generate reports.
 
@@ -174,7 +186,7 @@ def rst_title(title: str, level: int = 0) -> str:
 
 
 def compute_column_widths(
-    headers: list[str], rows: list[list[str]], min_width: int = 6
+    headers: list[str], rows: TableRows, min_width: int = 6
 ) -> list[int]:
     """Compute RST ``list-table`` ``:widths:`` (summing to 100) proportional
     to each column's longest cell, floored at ``min_width`` so no column
@@ -209,7 +221,7 @@ def _format_table_row(cells: Iterable[str]) -> str:
     )
 
 
-def print_rst_table(headers: list[str], rows: list[list[str]]):
+def print_rst_table(headers: list[str], rows: TableRows) -> None:
     """
     Print a table in restructured text (.rst) format using list-table directive
 
@@ -289,7 +301,7 @@ def get_file_size_in_mb(file_path: Path) -> float:
 
 def calculate_shortcut_index_stats(
     mapping: dict[int, int | np.ndarray], poly_zone_ids: list[int]
-) -> dict[str, int | float]:
+) -> ShortcutIndexStats:
     """
     Calculate comprehensive statistics about the hybrid shortcut index.
 
@@ -300,8 +312,6 @@ def calculate_shortcut_index_stats(
     Returns:
         Dictionary of statistical metrics
     """
-    from scripts.configs import SHORTCUT_H3_RES
-
     # Basic counts
     total_entries = len(mapping)
     zone_entries = 0
@@ -339,32 +349,13 @@ def calculate_shortcut_index_stats(
                 distinct_zones = set(zone_ids)
                 amount_of_different_zones.append(len(distinct_zones))
 
-    # Calculate H3 coverage statistics
-    try:
-        import h3.api.numpy_int as h3
-
-        # Calculate theoretical maximum cells at this resolution
-        if SHORTCUT_H3_RES == 0:
-            possible_cells = len(h3.get_res0_cells())
-        else:
-            # For higher resolutions, calculate based on H3 formula
-            # Each parent cell has 7 children (except res 0->1 which is different)
-            # Approximately 2 + 240 * 7^(res-1) cells for res >= 1
-            if SHORTCUT_H3_RES == 1:
-                possible_cells = 842  # Known value for resolution 1
-            elif SHORTCUT_H3_RES == 2:
-                possible_cells = 5882  # Known value for resolution 2
-            elif SHORTCUT_H3_RES == 3:
-                possible_cells = 41162  # Known value for resolution 3 (current default)
-            elif SHORTCUT_H3_RES == 4:
-                possible_cells = 288122  # Known value for resolution 4
-            else:
-                # For other resolutions, use the stored cells as a conservative estimate
-                possible_cells = total_entries
-
-    except ImportError:
-        # If h3 is not available, use stored cells as estimate
-        possible_cells = total_entries
+    # The theoretical cell count at this resolution is h3's to state, and it
+    # states it exactly. The ladder of per-resolution literals this replaces
+    # only covered resolutions 0-4; every other resolution - and a missing h3,
+    # which cannot happen since h3 is a runtime dependency - fell through to
+    # ``possible_cells = total_entries``, i.e. a silent ``coverage_ratio`` of
+    # 1.0 reporting complete H3 coverage instead of failing.
+    possible_cells = h3.get_num_cells(SHORTCUT_H3_RES)
 
     stored_cells = total_entries
     missing_cells = max(possible_cells - stored_cells, 0)
@@ -386,20 +377,20 @@ def calculate_shortcut_index_stats(
         else 0.0
     )
 
-    # Calculate storage efficiency metrics
-    # Estimate bytes per entry (key + value)
-    ENTRY_KEY_SIZE_BYTES = 8  # int64 hex ID
+    # Calculate storage efficiency metrics (bytes per entry: key + value)
     zone_storage_bytes = zone_entries * (
-        ENTRY_KEY_SIZE_BYTES + 1
-    )  # 1 byte for uint8 zone ID
+        SHORTCUT_KEY_SIZE_BYTES + SHORTCUT_ZONE_ID_SIZE_BYTES
+    )
     polygon_storage_bytes = (
-        polygon_entries * ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2
-    )  # 2 bytes per uint16 polygon ID
+        polygon_entries * SHORTCUT_KEY_SIZE_BYTES
+        + polygon_id_count * SHORTCUT_POLYGON_ID_SIZE_BYTES
+    )
     total_storage_bytes = zone_storage_bytes + polygon_storage_bytes
 
     # Calculate compression ratio vs naive storage
     naive_storage_bytes = total_entries * (
-        ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2 / total_entries
+        SHORTCUT_KEY_SIZE_BYTES
+        + polygon_id_count * SHORTCUT_POLYGON_ID_SIZE_BYTES / total_entries
         if total_entries
         else 0
     )
@@ -501,18 +492,17 @@ def print_shortcut_statistics(
     print_frequencies(stats["zones_per_shortcut"], "Timezones in cell")
 
 
-def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
+def generate_metrics_rows(metrics_dict: Mapping[str, object]) -> list[TableRow]:
     """
     Generate additional metric rows for tables based on a dictionary of metrics.
 
     Args:
-        metric_type: Type of metrics (e.g., "boundary", "hole")
         metrics_dict: Dictionary of metric names and values
 
     Returns:
         List of rows for a table
     """
-    rows = []
+    rows: list[TableRow] = []
     for label, value in metrics_dict.items():
         # Format numbers with commas and add % to percentages
         if isinstance(value, (int, float)):
@@ -528,7 +518,10 @@ def generate_metrics_rows(metric_type: str, metrics_dict: dict) -> list[list]:
 
 
 def generate_polygon_statistics_table(
-    polygon_type: str, count: int, length_list: list[int], additional_rows: list = None
+    polygon_type: str,
+    count: int,
+    length_list: list[int],
+    additional_rows: list[TableRow] | None = None,
 ) -> None:
     """
     Generate and print a table with statistics for a polygon collection.
@@ -547,7 +540,7 @@ def generate_polygon_statistics_table(
         print(f"No {polygon_type_lower} polygons found.")
         # Still print a table with zeros for consistency
         headers = [f"{polygon_type} Metric", "Value"]
-        rows = [
+        rows: list[TableRow] = [
             [f"Total {polygon_type_lower} polygons", "0"],
             [f"Total {polygon_type_lower} coordinates", "0"],
             [f"Total {polygon_type_lower} coordinate values (2 per point)", "0"],
@@ -664,7 +657,7 @@ def calculate_timezone_metrics(
         "Minimum polygons in one timezone": min(polygons_per_timezone.values())
         if polygons_per_timezone
         else 0,
-        "Median polygons per timezone": sorted(list(polygons_per_timezone.values()))[
+        "Median polygons per timezone": sorted(polygons_per_timezone.values())[
             len(polygons_per_timezone) // 2
         ]
         if polygons_per_timezone
@@ -675,22 +668,18 @@ def calculate_timezone_metrics(
 def print_polygon_distribution_table(
     polygons_per_timezone: Counter,
     all_tz_names: list[str],
-) -> list[list[str]]:
+) -> None:
     """
-    Create a table showing the distribution of polygon counts across timezones.
+    Print a table showing the distribution of polygon counts across timezones.
 
     Args:
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
         all_tz_names: List of timezone names
-
-    Returns:
-        List of rows for the distribution table
     """
     print(rst_title("Polygons per Timezone Distribution", level=3))
 
     # Create distribution of polygon counts
     distribution = Counter(polygons_per_timezone.values())
-    distribution_items = sorted(distribution.items())
 
     # Group timezone IDs by polygon count for examples
     polygon_count_to_timezone = {}
@@ -698,17 +687,15 @@ def print_polygon_distribution_table(
         if poly_count not in polygon_count_to_timezone:
             polygon_count_to_timezone[poly_count] = zone_id
 
-    # Convert to more readable format
-    distribution_items = [
-        (f"{k} polygon" + ("s" if k > 1 else ""), v) for k, v in distribution_items
-    ]
-
     # Create rows for distribution table
     distribution_rows = []
     total_zones = sum(distribution.values())
 
-    for category, count in distribution_items:
-        polygon_count = int(category.split()[0])  # Extract number from category
+    # The polygon count is both the row label and the key into the examples
+    # above. It used to be formatted into the label first and parsed back out
+    # of it with ``int(category.split()[0])`` to do the lookup.
+    for polygon_count, count in sorted(distribution.items()):
+        category = f"{polygon_count} polygon" + ("s" if polygon_count > 1 else "")
         example = ""
         if polygon_count in polygon_count_to_timezone:
             example_zone_id = polygon_count_to_timezone[polygon_count]
@@ -763,14 +750,13 @@ def report_data_statistics(
 
     # General statistics section
     general_metrics = calculate_general_statistics(polygon_lengths, all_hole_lengths)
-    print_rst_table(
-        ["General Metric", "Value"], generate_metrics_rows("general", general_metrics)
-    )
+    print_rst_table(["General Metric", "Value"], generate_metrics_rows(general_metrics))
 
     # Boundary polygon statistics section
     print(rst_title("Boundary Polygon Statistics", level=2))
-    boundary_metrics = {}  # Could add more boundary-specific metrics here if needed
-    boundary_rows = generate_metrics_rows("boundary", boundary_metrics)
+    # Could add more boundary-specific metrics here if needed
+    boundary_metrics: dict[str, float] = {}
+    boundary_rows = generate_metrics_rows(boundary_metrics)
     generate_polygon_statistics_table(
         "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
     )
@@ -780,7 +766,7 @@ def report_data_statistics(
     hole_metrics = calculate_hole_metrics(
         nr_of_polygons, all_hole_lengths, polynrs_of_holes
     )
-    hole_rows = generate_metrics_rows("hole", hole_metrics)
+    hole_rows = generate_metrics_rows(hole_metrics)
     nr_of_holes = len(all_hole_lengths) if all_hole_lengths else 0
     generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
 
@@ -790,7 +776,7 @@ def report_data_statistics(
     timezone_metrics = calculate_timezone_metrics(
         nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
-    timezone_rows = generate_metrics_rows("timezone", timezone_metrics)
+    timezone_rows = generate_metrics_rows(timezone_metrics)
     print_rst_table(["Timezone Metric", "Value"], timezone_rows)
 
     # Polygon distribution section
@@ -877,7 +863,7 @@ def write_data_report_from_binary(
     )
 
 
-def main() -> None:
+def main() -> int:
     """
     Main function for standalone execution.
     Generate data report from binary files.

@@ -386,7 +386,11 @@ def _function_label(bench: dict[str, Any]) -> str:
 
 
 def _memory_mode_label(bench: dict[str, Any]) -> str:
-    return "in-memory" if bench["name"].endswith("in_memory]") else "file-based"
+    # via PARAM_LABELS, the module's declared display vocabulary: spelling the
+    # two labels out here let the comparison bullets keep the old wording while
+    # the tables above them rendered the new one.
+    param = "in_memory" if bench["name"].endswith("in_memory]") else "file_based"
+    return PARAM_LABELS[param]
 
 
 def add_comparison_bullet(

@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, TypedDict
 from numpy.typing import NDArray
 import numpy as np
 
@@ -62,6 +63,72 @@ DEBUG_ZONE_CTR_STOP = 5  # parse only some polygons in debugging mode
 HexIdSet: TypeAlias = set[int]
 PolyIdSet: TypeAlias = set[int]
 ZoneIdSet: TypeAlias = set[int]
+
+# ``scripts.reporting.print_rst_table`` renders every cell through ``str()``,
+# so a row is not a list of strings - counts and percentages are passed through
+# as numbers and formatted by the renderer.
+TableCell: TypeAlias = str | int | float
+TableRow: TypeAlias = list[TableCell]
+# Read-only parameter type. ``list`` is invariant, so a plain ``list[list[str]]``
+# of already-formatted cells is not a ``list[TableRow]``; ``Sequence`` is
+# covariant and accepts both.
+TableRows: TypeAlias = Sequence[Sequence[TableCell]]
+
+
+class BinaryData(TypedDict):
+    """The packaged binaries the data report describes.
+
+    ``scripts.reporting.load_binary_data`` returns this and the rest of that
+    module indexes it by string literal, so an untyped ``dict`` turned a
+    mistyped key into a ``KeyError`` raised part-way through writing the report.
+    """
+
+    shortcuts: dict[int, int | np.ndarray]
+    nr_of_polygons: int
+    nr_of_zones: int
+    polygon_lengths: list[int]
+    all_hole_lengths: list[int]
+    polynrs_of_holes: list[int]
+    poly_zone_ids: list[int]
+    all_tz_names: list[str]
+    output_path: Path
+
+
+class ShortcutIndexStats(TypedDict):
+    """What ``scripts.reporting.calculate_shortcut_index_stats`` measures.
+
+    The last two members are distributions, one entry per shortcut cell. The
+    ``dict[str, int | float]`` this replaces could not describe them, so the
+    two ``print_frequencies`` calls consuming them were passing a ``list`` to a
+    parameter the annotation said was a scalar.
+    """
+
+    # basic counts
+    total_entries: int
+    zone_entries: int
+    polygon_entries: int
+    empty_entries: int
+    polygon_id_count: int
+    # H3 coverage
+    h3_resolution: int
+    stored_cells: int
+    possible_cells: int
+    missing_cells: int
+    coverage_ratio: float
+    # efficiency metrics
+    unique_entry_fraction: float
+    unique_surface_fraction: float
+    zone_distribution_efficiency: float
+    avg_polygons_per_entry: float
+    # storage efficiency
+    zone_storage_bytes: int
+    polygon_storage_bytes: int
+    total_storage_bytes: int
+    compression_ratio: float
+    # frequency distributions
+    polygons_per_shortcut: list[int]
+    zones_per_shortcut: list[int]
+
 
 # BINARY DATA TYPES
 # https://docs.python.org/3/library/struct.html#format-characters

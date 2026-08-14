@@ -127,7 +127,7 @@ class Hex:
     def is_special(self) -> bool:
         return self.x_overflow or self.surr_n_pole or self.surr_s_pole
 
-    def _init_candidates(self):
+    def _init_candidates(self) -> PolyIdSet:
         """
         here one might be tempted to only consider the actual detected zones of the parent cell
         to narrow down choice and speed up the computation up.
@@ -143,19 +143,21 @@ class Hex:
         """
         if self._poly_candidates is not None:
             # avoid overwriting initialised values
-            return
+            return self._poly_candidates
         if self.res == 0:
             # at the highest level all polygons should be tested
             self._poly_candidates = set(range(self.data.nr_of_polygons))
-            return
+            return self._poly_candidates
 
-        candidates: HexIdSet = set()
+        # polygon ids, inherited from the true parents - not hex ids
+        candidates: PolyIdSet = set()
         for parent_id in self.true_parents:
             parent_hex = self.data.get_hex(parent_id)
             parent_polys = parent_hex.poly_candidates
             candidates.update(parent_polys)
 
         self._poly_candidates = candidates
+        return candidates
 
     def is_poly_candidate(self, poly_id: int) -> bool:
         cell_bounds = self.bounds
@@ -164,19 +166,18 @@ class Hex:
         return overlapping
 
     @property
-    def poly_candidates(self) -> set[int]:
-        candidates = self._poly_candidates
-        if candidates is None:
-            self._init_candidates()
-            candidates = self._poly_candidates
-            if candidates is None:
-                return set()
-            filtered_candidates = {
-                poly_id for poly_id in candidates if self.is_poly_candidate(poly_id)
+    def poly_candidates(self) -> PolyIdSet:
+        # `_init_candidates` leaves a set behind on every path, so it returns
+        # one rather than the property re-reading the attribute and guarding
+        # against a `None` that cannot occur. That guard returned an empty set,
+        # which means "no candidate polygons" - a converter bug would have
+        # surfaced as silently missing shortcuts rather than as a failure.
+        if self._poly_candidates is None:
+            inherited = self._init_candidates()
+            self._poly_candidates = {
+                poly_id for poly_id in inherited if self.is_poly_candidate(poly_id)
             }
-            self._poly_candidates = filtered_candidates
-            candidates = filtered_candidates
-        return candidates
+        return self._poly_candidates
 
     @profile
     def lies_in_cell(self, poly_nr: int) -> bool:

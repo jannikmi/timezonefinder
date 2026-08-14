@@ -1,8 +1,12 @@
 """tests for the hex cell boundary correction used when compiling shortcuts"""
 
+from types import SimpleNamespace
+
+import numpy as np
 import pytest
 
-from scripts.hex_utils import get_corrected_hex_boundaries
+from scripts.helper_classes import Boundaries
+from scripts.hex_utils import Hex, get_corrected_hex_boundaries
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
 from timezonefinder.utils_numba import coord2int
 
@@ -100,3 +104,37 @@ def test_latitude_span_of_a_whole_hemisphere_is_rejected():
     """No h3 cell spans 90 degrees of latitude; such input is a coordinate mix-up."""
     with pytest.raises(AssertionError, match="latitude difference"):
         corrected([10.0, 20.0], [-45.0, 45.0])
+
+
+@pytest.mark.unit
+def test_root_cell_keeps_only_the_polygons_its_bounds_overlap():
+    """``poly_candidates`` filters the inherited set through the bounding box.
+
+    The property used to re-read the cached attribute after initialising it and
+    return an empty set if it were still ``None``. That was unreachable - every
+    path through ``_init_candidates`` leaves a set behind - but an empty set
+    there means "no candidate polygons", so a converter bug would have surfaced
+    as silently missing shortcuts rather than as a failure.
+    """
+    data = SimpleNamespace(
+        nr_of_polygons=3,
+        poly_boundaries=[
+            Boundaries(xmax=5.0, xmin=1.0, ymax=5.0, ymin=1.0),  # inside
+            Boundaries(xmax=20.0, xmin=9.0, ymax=20.0, ymin=9.0),  # overlapping
+            Boundaries(xmax=99.0, xmin=90.0, ymax=99.0, ymin=90.0),  # disjoint
+        ],
+    )
+    cell = Hex(
+        id=0,
+        res=0,  # every polygon is a candidate before the bbox filter
+        coords=np.empty((2, 0)),
+        bounds=Boundaries(xmax=10.0, xmin=0.0, ymax=10.0, ymin=0.0),
+        x_overflow=False,
+        surr_n_pole=False,
+        surr_s_pole=False,
+        data=data,
+    )
+
+    assert cell.poly_candidates == {0, 1}
+    # cached, and the cache holds the filtered set rather than the inherited one
+    assert cell.poly_candidates == {0, 1}

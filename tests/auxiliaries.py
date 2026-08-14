@@ -19,7 +19,6 @@ import pytest
 
 from scripts.configs import DEBUG, read_data_version
 from scripts.utils import validate_coord_array_shape
-from tests.locations import REDUCED_TIMEZONE_MAPPING
 from timezonefinder import utils
 from timezonefinder.configs import (
     MAX_LAT_VAL,
@@ -663,25 +662,9 @@ def group_pip_inputs_by_stratum(
     return grouped
 
 
-def convert_to_reduced_timezone(timezone: str) -> str:
-    """
-    Convert a timezone to its reduced version using ``REDUCED_TIMEZONE_MAPPING``.
-
-    NOTE: unused, but kept for future reference
-
-    Args:
-        timezone: The original timezone string.
-
-    Returns:
-        The reduced timezone if found in the mapping, otherwise the original timezone.
-    """
-    return REDUCED_TIMEZONE_MAPPING.get(timezone, timezone)
-
-
 def single_location_test(func, lat, lng, description, expected_orig):
     result = func(lng=lng, lat=lat)
     func_name = func.__name__
-    # expected = convert_to_reduced_timezone(expected_orig)
     assert result == expected_orig, (
         f"{func_name}({lng}, {lat}) [{description}] should return {expected_orig}, got {result}"
     )
