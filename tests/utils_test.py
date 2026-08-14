@@ -1,6 +1,7 @@
 import json
 from typing import Callable
 
+import h3.api.numpy_int as h3
 import numpy as np
 import pytest
 
@@ -441,6 +442,48 @@ def test_print_frequencies_keeps_the_bare_zero_without_a_label(capsys):
     reporting.print_frequencies([0, 2], "Polygons to test")
 
     assert "   * - 0\n" in capsys.readouterr().out
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("resolution", [0, 3, 5])
+def test_shortcut_index_stats_takes_the_cell_count_from_h3(monkeypatch, resolution):
+    """``possible_cells`` is the denominator of every coverage figure.
+
+    It used to come from a ladder of literals covering resolutions 0-4 only,
+    with everything else falling through to the number of cells actually
+    stored - which makes ``coverage_ratio`` exactly 1.0 and reports complete H3
+    coverage for a resolution nobody tabulated. Resolution 5 is in this
+    parametrization because it is the first one past the end of that ladder:
+    the two tabulated resolutions agree with h3 and so cannot show the
+    difference.
+    """
+    monkeypatch.setattr(reporting, "SHORTCUT_H3_RES", resolution)
+    mapping = {0: 1, 1: np.array([0, 1]), 2: np.array([], dtype=int)}
+
+    stats = reporting.calculate_shortcut_index_stats(mapping, [7, 7])
+
+    assert stats["h3_resolution"] == resolution
+    assert stats["possible_cells"] == h3.get_num_cells(resolution)
+    # the fallback this replaces reported stored == possible, hence full coverage
+    assert stats["stored_cells"] == len(mapping)
+    assert stats["coverage_ratio"] < 1.0
+
+
+@pytest.mark.unit
+def test_shortcut_index_stats_classifies_each_entry_kind():
+    """One direct zone id, one polygon list, one empty list."""
+    mapping = {0: 1, 1: np.array([0, 1]), 2: np.array([], dtype=int)}
+
+    stats = reporting.calculate_shortcut_index_stats(mapping, [7, 8])
+
+    assert stats["zone_entries"] == 1
+    assert stats["polygon_entries"] == 1
+    assert stats["empty_entries"] == 1
+    assert stats["polygon_id_count"] == 2
+    # the polygon entry spans two distinct zones; the direct one spans a single
+    # zone, and the empty one none
+    assert stats["zones_per_shortcut"] == [1, 2, 0]
+    assert stats["polygons_per_shortcut"] == [0, 2, 0]
 
 
 if __name__ == "__main__":

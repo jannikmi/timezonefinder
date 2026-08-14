@@ -11,10 +11,12 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Callable
 
+import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.configs import (
     DATA_REPORT_FILE,
+    SHORTCUT_H3_RES,
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
     read_data_version,
@@ -300,8 +302,6 @@ def calculate_shortcut_index_stats(
     Returns:
         Dictionary of statistical metrics
     """
-    from scripts.configs import SHORTCUT_H3_RES
-
     # Basic counts
     total_entries = len(mapping)
     zone_entries = 0
@@ -339,32 +339,13 @@ def calculate_shortcut_index_stats(
                 distinct_zones = set(zone_ids)
                 amount_of_different_zones.append(len(distinct_zones))
 
-    # Calculate H3 coverage statistics
-    try:
-        import h3.api.numpy_int as h3
-
-        # Calculate theoretical maximum cells at this resolution
-        if SHORTCUT_H3_RES == 0:
-            possible_cells = len(h3.get_res0_cells())
-        else:
-            # For higher resolutions, calculate based on H3 formula
-            # Each parent cell has 7 children (except res 0->1 which is different)
-            # Approximately 2 + 240 * 7^(res-1) cells for res >= 1
-            if SHORTCUT_H3_RES == 1:
-                possible_cells = 842  # Known value for resolution 1
-            elif SHORTCUT_H3_RES == 2:
-                possible_cells = 5882  # Known value for resolution 2
-            elif SHORTCUT_H3_RES == 3:
-                possible_cells = 41162  # Known value for resolution 3 (current default)
-            elif SHORTCUT_H3_RES == 4:
-                possible_cells = 288122  # Known value for resolution 4
-            else:
-                # For other resolutions, use the stored cells as a conservative estimate
-                possible_cells = total_entries
-
-    except ImportError:
-        # If h3 is not available, use stored cells as estimate
-        possible_cells = total_entries
+    # The theoretical cell count at this resolution is h3's to state, and it
+    # states it exactly. The ladder of per-resolution literals this replaces
+    # only covered resolutions 0-4; every other resolution - and a missing h3,
+    # which cannot happen since h3 is a runtime dependency - fell through to
+    # ``possible_cells = total_entries``, i.e. a silent ``coverage_ratio`` of
+    # 1.0 reporting complete H3 coverage instead of failing.
+    possible_cells = h3.get_num_cells(SHORTCUT_H3_RES)
 
     stored_cells = total_entries
     missing_cells = max(possible_cells - stored_cells, 0)
