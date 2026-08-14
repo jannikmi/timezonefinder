@@ -85,10 +85,6 @@ class ZoneCollection(BaseModel):
                 )
             )
 
-        min_zone_id = int(self.poly_zone_ids.min())
-        if min_zone_id < 0:
-            raise ValueError(f"Zone IDs cannot be negative, found {min_zone_id}")
-
         last_zone_id = -1
         for zone_id in self.poly_zone_ids:
             zone_int = int(zone_id)
