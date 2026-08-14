@@ -1,7 +1,6 @@
 from importlib.util import find_spec
 import warnings
 
-import numpy as np
 import pytest
 
 from scripts.configs import THRES_DTYPE_H
@@ -262,16 +261,12 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         ):
             metafunc.parametrize("lat, lng, loc, expected", cls.test_locations)
 
+    @pytest.mark.usefixtures("strict_numpy_warnings")
     def test_overflow(self):
         longitude = -123.2
         latitude = 48.4
-        # make numpy overflow runtime warning raise an error
-
-        np.seterr(all="warn")
-        import warnings
-
-        warnings.filterwarnings("error")
-        # must not raise a warning
+        # the fixture promotes numpy overflow warnings to errors: this lookup
+        # must complete without raising one
         self.test_instance.certain_timezone_at(
             lat=float(latitude), lng=float(longitude)
         )
