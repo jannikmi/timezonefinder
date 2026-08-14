@@ -11,10 +11,14 @@ from tests.auxiliaries import (
     validate_polygon_coordinates,
 )
 from tests.global_functions_test import single_location_test
-from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
+from tests.locations import (
+    BASIC_TEST_LOCATIONS,
+    EDGE_TEST_CASES,
+    OUT_OF_RANGE_COORDINATES,
+    TEST_LOCATIONS,
+)
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
-    INT2COORD_FACTOR,
 )
 from timezonefinder.zone_names import read_zone_names
 from timezonefinder.timezonefinder import (
@@ -33,18 +37,6 @@ PACKAGE_NAME = "timezonefinder"
 all_timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
-
-# (lng, lat) one representable step outside the valid WGS84 range: each axis on
-# its own, and both at once, at every corner of the coordinate system
-OUT_OF_RANGE_COORDINATES = [
-    (180.0 + INT2COORD_FACTOR, 90.0),
-    (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
-    (-180.0, 90.0 + INT2COORD_FACTOR),
-    (180.0 + INT2COORD_FACTOR, -90.0),
-    (180.0, -90.0 - INT2COORD_FACTOR),
-    (-180.0 - INT2COORD_FACTOR, -90.0),
-    (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
-]
 
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder

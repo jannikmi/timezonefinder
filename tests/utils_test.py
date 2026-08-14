@@ -14,8 +14,8 @@ from tests.auxiliaries import (
     get_rnd_query_pt,
     strict_numpy_errors,
 )
+from tests.locations import OUT_OF_RANGE_COORDINATES
 from timezonefinder import utils_clang, utils_numba, utils
-from timezonefinder.configs import INT2COORD_FACTOR
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -282,18 +282,7 @@ def test_convert_polygon_is_c_contiguous():
     assert coords_int[1].flags["C_CONTIGUOUS"]
 
 
-@pytest.mark.parametrize(
-    "lng, lat",
-    [
-        (180.0 + INT2COORD_FACTOR, 90.0),
-        (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
-        (-180.0, 90.0 + INT2COORD_FACTOR),
-        (180.0 + INT2COORD_FACTOR, -90.0),
-        (180.0, -90.0 - INT2COORD_FACTOR),
-        (-180.0 - INT2COORD_FACTOR, -90.0),
-        (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
-    ],
-)
+@pytest.mark.parametrize("lng, lat", OUT_OF_RANGE_COORDINATES)
 def test_validate_coordinates_rejects_out_of_range(lng, lat):
     with pytest.raises(ValueError):
         utils.validate_coordinates(lng=lng, lat=lat)
