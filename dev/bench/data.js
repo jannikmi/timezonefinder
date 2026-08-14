@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786685018640,
+  "lastUpdate": 1786685021089,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2672,6 +2672,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5428 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ceae1d6262131895b0055180fe95a0a14e6bdfe",
+          "message": "Add a cut-release skill, and give the quality pass a diff budget (#512)\n\n* Make the quality pass work its ranking down to a diff budget\n\nThe pass took one coherent theme and stopped; it now takes the ledger's\nhighest-priority findings one at a time until ~400 changed lines are spent,\nso the ranking rather than a common story is what holds the PR together.\nEach item lands as its own commit naming its ledger entry, the budget is\nmeasured against the merge base with the ledger excluded and checked between\nitems rather than mid-item, and a ranking that runs dry ends the pass as\nlegitimately as a spent budget. The branch claim in §2.1 follows: it claims\nonly what it already holds, so a pass re-pushes after every finished item.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Add a cut-release skill that proposes the bump and stops\n\nTurns the accumulated `X.X.X (unreleased)` changelog section into a released\nversion, in two halves split by the maintainer's merge. Prepare checks the\nsection is release-ready and complete against every commit since the last tag,\nproposes patch/minor/major as three concrete version numbers with the bullets\nbehind each, stops for the decision, then lands the bump as a release PR. Tag\nruns only after that PR is merged and asks again, since the tag is the publish\nand PyPI will not let a version take it back.\n\nRecords what the pipeline makes non-obvious: the tag-push run re-reads\npyproject.toml at the tagged commit; the release commit is the bump and the\nchangelog and nothing else, so `make reports` must not run in it; and the tag\nhas to be pushed promptly after the merge, because the master push run's own\nrelease job creates the GitHub Release and with it the tag, after which\npushing that tag is a no-op that fires no webhook.\n\nCLAUDE.md's claim that regenerating data warrants a minor bump is corrected:\nupdate_data.sh bumps patch and the last four data releases were patches.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-14T07:22:26+02:00",
+          "tree_id": "ec4e3362dff760a796f4bf4facd476336473ca75",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8ceae1d6262131895b0055180fe95a0a14e6bdfe"
+        },
+        "date": 1786685020577,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466736793518066,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466899871826172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.529167175292969,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.537881851196289,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 67.85004138946533,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 67.85880374908447,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2540 GHz"
           }
         ]
       }
