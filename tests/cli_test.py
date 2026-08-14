@@ -6,6 +6,7 @@ in :mod:`timezonefinder.command_line`.
 """
 
 import subprocess
+import sys
 
 import pytest
 
@@ -145,3 +146,104 @@ def test_details_name_the_function_they_were_given():
     details = _format_lookup_details(4.89, 52.37, 3, stub_lookup, "Europe/Amsterdam")
     assert "Function stub_lookup (function ID: 3)" in details
     assert "Result: Found timezone 'Europe/Amsterdam'" in details
+
+
+# --- stdin streaming mode tests ---
+
+
+@pytest.mark.unit
+def test_stdin_mode_prints_one_result_per_line():
+    """--stdin reads lng,lat pairs from stdin and writes one result per line."""
+    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n{PACIFIC[0]},{PACIFIC[1]}\n"
+    result = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin"],
+        input=stdin_input,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert len(lines) == 2, f"expected 2 lines, got {lines}"
+    assert lines[0] == "Europe/Amsterdam"
+    assert lines[1] == "Etc/GMT+10"
+
+
+@pytest.mark.unit
+def test_stdin_mode_respects_function_flag():
+    """-f applies to every lookup in the stream."""
+    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
+    result = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin", "-f", "5"],
+        input=stdin_input,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert len(lines) == 1
+    assert lines[0] == "Europe/Amsterdam"
+
+
+@pytest.mark.unit
+def test_stdin_mode_skips_malformed_lines():
+    """Malformed lines produce a stderr warning and an empty stdout line."""
+    stdin_input = (
+        f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
+        "not-a-coordinate\n"
+        f"{PACIFIC[0]},{PACIFIC[1]}\n"
+        "\n"  # blank line
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin"],
+        input=stdin_input,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert len(lines) == 4, f"expected 4 lines (one per input line), got {lines}"
+    assert lines[0] == "Europe/Amsterdam"
+    assert lines[1] == ""  # malformed -> empty
+    assert lines[2] == "Etc/GMT+10"
+    assert lines[3] == ""  # blank -> empty
+    assert "malformed input" in result.stderr
+
+
+@pytest.mark.unit
+def test_stdin_mode_empty_input_produces_no_output():
+    """An empty stream produces no output lines."""
+    result = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin"],
+        input="",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == ""
+
+
+@pytest.mark.unit
+def test_stdin_mode_land_only_returns_empty_for_ocean():
+    """Land-only lookups in stdin mode print an empty line for ocean points."""
+    stdin_input = f"{PACIFIC[0]},{PACIFIC[1]}\n"
+    result = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin", "-f", "5"],
+        input=stdin_input,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "\n"
+
+
+@pytest.mark.unit
+def test_stdin_and_verbose_are_mutually_exclusive():
+    """--stdin and -v cannot be used together."""
+    result = run_cli("--stdin", "-v", "0", "0")
+    assert result.returncode == 2
+    assert "mutually exclusive" in result.stderr
