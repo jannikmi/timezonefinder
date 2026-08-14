@@ -72,7 +72,6 @@ def compile_bboxes(coord_list: PolygonList) -> list[Boundaries]:
     boundaries: list[Boundaries] = []
     for coords in coord_list:
         x_coords, y_coords = coords
-        y_coords = coords[1]
         bounds = Boundaries(
             np.max(x_coords), np.min(x_coords), np.max(y_coords), np.min(y_coords)
         )

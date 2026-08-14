@@ -79,9 +79,9 @@ def has_coherent_sequences(lst: Sequence[int] | np.ndarray) -> bool:
     if len(lst) <= 1:
         return True
     encountered = set()
-    # at least 2 entries
-    lst_iter = iter(lst)
-    prev = next(lst_iter)
+    # at least 2 entries, so lst[0] exists; comparing it against itself on the
+    # first iteration is a deliberate no-op.
+    prev = lst[0]
     for e in lst:
         if e in encountered:
             # the entry appeared earlier already
@@ -107,7 +107,7 @@ def check_shortcut_sorting(
 
 
 @profile
-def process_single_hex(hex_id: int, data: TimezoneData) -> tuple[int, list[int]]:
+def process_single_hex(hex_id: int, data: TimezoneData) -> list[int]:
     """
     Process a single hex cell to find its polygon shortcuts.
 
@@ -116,14 +116,14 @@ def process_single_hex(hex_id: int, data: TimezoneData) -> tuple[int, list[int]]
         data: The timezone data (shared read-only resource)
 
     Returns:
-        Tuple of (hex_id, list of optimized polygon IDs)
+        The optimized polygon IDs for this hex cell
     """
     # IMPORTANT: cache hexagons to avoid recomputing them
     cell = data.get_hex(hex_id)
     polys = list(cell.polys_in_cell)
     polys_optimised = optimise_shortcut_ordering(data, polys)
     check_shortcut_sorting(polys_optimised, data.poly_zone_ids)
-    return hex_id, polys_optimised
+    return polys_optimised
 
 
 @profile
@@ -147,7 +147,7 @@ def compile_h3_map(data: TimezoneData, candidates: set[int]) -> ShortcutMapping:
     progress_interval = 50
 
     for processed, hex_id in enumerate(candidates, start=1):
-        hex_id, polys_optimised = process_single_hex(hex_id, data)
+        polys_optimised = process_single_hex(hex_id, data)
         mapping[hex_id] = polys_optimised
 
         if processed % progress_interval == 0 or processed == total_candidates:
