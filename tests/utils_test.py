@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from typing import Callable
 
 import h3.api.numpy_int as h3
@@ -484,6 +485,30 @@ def test_shortcut_index_stats_classifies_each_entry_kind():
     # zone, and the empty one none
     assert stats["zones_per_shortcut"] == [1, 2, 0]
     assert stats["polygons_per_shortcut"] == [0, 2, 0]
+
+
+@pytest.mark.unit
+def test_polygon_distribution_table_pairs_each_count_with_an_example(capsys):
+    """The polygon count labels a row and keys the example lookup.
+
+    It used to be formatted into the label and parsed back out of it, so the
+    two could only agree by the label's wording staying parseable.
+    """
+    # zone 0 has one polygon, zones 1 and 2 have two each
+    polygons_per_timezone = Counter({0: 1, 1: 2, 2: 2})
+
+    reporting.print_polygon_distribution_table(
+        polygons_per_timezone, ["Europe/Berlin", "Etc/GMT", "Etc/GMT+1"]
+    )
+
+    table = capsys.readouterr().out
+
+    # whole rows, so label, count, percentage and example are pinned together
+    # rather than merely all being present somewhere in the table
+    assert "   * - 1 polygon\n     - 1\n     - 33.33%\n     - Europe/Berlin\n" in table
+    assert "   * - 2 polygons\n     - 2\n     - 66.67%\n     - Etc/GMT\n" in table
+    # zone 1 is the first zone with two polygons, so zone 2 never exemplifies it
+    assert "Etc/GMT+1" not in table
 
 
 if __name__ == "__main__":

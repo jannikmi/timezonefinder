@@ -656,22 +656,18 @@ def calculate_timezone_metrics(
 def print_polygon_distribution_table(
     polygons_per_timezone: Counter,
     all_tz_names: list[str],
-) -> list[list[str]]:
+) -> None:
     """
-    Create a table showing the distribution of polygon counts across timezones.
+    Print a table showing the distribution of polygon counts across timezones.
 
     Args:
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
         all_tz_names: List of timezone names
-
-    Returns:
-        List of rows for the distribution table
     """
     print(rst_title("Polygons per Timezone Distribution", level=3))
 
     # Create distribution of polygon counts
     distribution = Counter(polygons_per_timezone.values())
-    distribution_items = sorted(distribution.items())
 
     # Group timezone IDs by polygon count for examples
     polygon_count_to_timezone = {}
@@ -679,17 +675,15 @@ def print_polygon_distribution_table(
         if poly_count not in polygon_count_to_timezone:
             polygon_count_to_timezone[poly_count] = zone_id
 
-    # Convert to more readable format
-    distribution_items = [
-        (f"{k} polygon" + ("s" if k > 1 else ""), v) for k, v in distribution_items
-    ]
-
     # Create rows for distribution table
     distribution_rows = []
     total_zones = sum(distribution.values())
 
-    for category, count in distribution_items:
-        polygon_count = int(category.split()[0])  # Extract number from category
+    # The polygon count is both the row label and the key into the examples
+    # above. It used to be formatted into the label first and parsed back out
+    # of it with ``int(category.split()[0])`` to do the lookup.
+    for polygon_count, count in sorted(distribution.items()):
+        category = f"{polygon_count} polygon" + ("s" if polygon_count > 1 else "")
         example = ""
         if polygon_count in polygon_count_to_timezone:
             example_zone_id = polygon_count_to_timezone[polygon_count]
