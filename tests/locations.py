@@ -1,3 +1,4 @@
+from timezonefinder.configs import INT2COORD_FACTOR
 from timezonefinder.utils import is_ocean_timezone
 
 # mapping from original timezone to reduced timezone of the timezones-now dataset
@@ -113,4 +114,19 @@ EDGE_TEST_CASES = [
     (180.0, -90.0, ""),
     (179.999, 0.0, "Etc/GMT-12"),
     (-179.999, 0.0, "Etc/GMT+12"),
+]
+
+
+# (lng, lat) one representable step outside the valid WGS84 range: each axis on
+# its own, and both at once, at every corner of the coordinate system.
+# Shared by the class-level rejection tests (tests/main_test.py) and the
+# validator's own (tests/utils_test.py) - adding a corner has to reach both.
+OUT_OF_RANGE_COORDINATES = [
+    (180.0 + INT2COORD_FACTOR, 90.0),
+    (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
+    (-180.0, 90.0 + INT2COORD_FACTOR),
+    (180.0 + INT2COORD_FACTOR, -90.0),
+    (180.0, -90.0 - INT2COORD_FACTOR),
+    (-180.0 - INT2COORD_FACTOR, -90.0),
+    (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
 ]

@@ -22,6 +22,7 @@ classifiers = [
 # following the official NumPy support/deprecation schedule:
 # https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule
 # NOTE: When updating requires-python, also update the py_limited_api wheel config in setup.py
+# (tests/test_python_version_support.py fails if the two, or the classifiers above, drift apart)
 requires-python = ">=3.11,<4"
 dependencies = [
     "numpy>=2",

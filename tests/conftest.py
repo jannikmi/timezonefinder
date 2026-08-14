@@ -4,6 +4,9 @@ Pytest configuration and shared fixtures.
 
 import pytest
 
+from tests.auxiliaries import (
+    strict_numpy_warnings,  # noqa: F401  # re-exported as a fixture for this suite
+)
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
