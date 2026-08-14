@@ -110,18 +110,20 @@ class Hex:
     _zones_in_cell: ZoneIdSet | None = None
 
     @classmethod
-    def from_id(cls, id: int, data: "TimezoneData"):
-        res = h3.get_resolution(id)
-        coord_pairs = h3.cell_to_boundary(id)
+    def from_id(cls, hex_id: int, data: "TimezoneData") -> "Hex":
+        res = h3.get_resolution(hex_id)
+        coord_pairs = h3.cell_to_boundary(hex_id)
         # ATTENTION: (lat, lng)! pairs
         coords = to_numpy_polygon_repr(coord_pairs, flipped=True)
         x_coords, y_coords = coords[0], coords[1]
-        surr_n_pole = surrounds_north_pole(id)
-        surr_s_pole = surrounds_south_pole(id)
+        surr_n_pole = surrounds_north_pole(hex_id)
+        surr_s_pole = surrounds_south_pole(hex_id)
         bounds, x_overflow = get_corrected_hex_boundaries(
             x_coords, y_coords, surr_n_pole, surr_s_pole
         )
-        return cls(id, res, coords, bounds, x_overflow, surr_n_pole, surr_s_pole, data)
+        return cls(
+            hex_id, res, coords, bounds, x_overflow, surr_n_pole, surr_s_pole, data
+        )
 
     @property
     def is_special(self) -> bool:

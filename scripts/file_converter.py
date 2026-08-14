@@ -173,16 +173,16 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
         (boundaries_dir, data.poly_boundaries),
     ]
 
-    for dir, bounds in boundary_sources:
+    for output_dir, bounds in boundary_sources:
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
             convert_bboxes_to_numpy(bounds)
         )
         # Save bounding box properties using store_per_polygon_vector
-        store_per_polygon_vector(get_xmax_path(dir), boundary_xmax)
-        store_per_polygon_vector(get_xmin_path(dir), boundary_xmin)
-        store_per_polygon_vector(get_ymax_path(dir), boundary_ymax)
-        store_per_polygon_vector(get_ymin_path(dir), boundary_ymin)
+        store_per_polygon_vector(get_xmax_path(output_dir), boundary_xmax)
+        store_per_polygon_vector(get_xmin_path(output_dir), boundary_xmin)
+        store_per_polygon_vector(get_ymax_path(output_dir), boundary_ymax)
+        store_per_polygon_vector(get_ymin_path(output_dir), boundary_ymin)
 
     # HOLE POLYGON REFERENCES: which boundary polygon each hole duplicates, or where
     # its own ring sits in the (much smaller) hole coordinate file. Written per hole id,

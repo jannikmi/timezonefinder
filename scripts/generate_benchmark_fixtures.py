@@ -182,7 +182,7 @@ def generate_pip_inputs(rng: random.Random, n: int) -> tuple[np.ndarray, np.ndar
 
 def write_points_fixture(
     output_dir: Path, name: str, points: list[tuple[float, float]]
-):
+) -> None:
     arr = np.array(points, dtype=np.float64)
     np.save(output_dir / f"{name}.npy", arr)
 

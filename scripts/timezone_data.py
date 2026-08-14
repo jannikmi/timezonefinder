@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any
 
 import h3.api.numpy_int as h3
@@ -18,6 +19,7 @@ from scripts.configs import (
     DEBUG,
     DEBUG_ZONE_CTR_STOP,
     MIN_HOLE_DEDUP_RATIO,
+    CoordinateArray,
     HoleLengthList,
     HoleRegistry,
     LengthList,
@@ -401,7 +403,7 @@ class HoleCollection(BaseModel):
             raise RuntimeError("holes have not been matched against boundaries yet")
         return self._inline_holes
 
-    def holes_in_poly(self, poly_nr: int):
+    def holes_in_poly(self, poly_nr: int) -> Iterator[CoordinateArray]:
         registry = self.registry
         if poly_nr not in registry:
             return
@@ -756,5 +758,5 @@ class TimezoneData(BaseModel):
     def hole_registry(self) -> HoleRegistry:
         return self.hole_store.registry
 
-    def holes_in_poly(self, poly_nr: int):
+    def holes_in_poly(self, poly_nr: int) -> Iterator[CoordinateArray]:
         yield from self.hole_store.holes_in_poly(poly_nr)
