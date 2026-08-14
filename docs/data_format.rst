@@ -187,9 +187,9 @@ FlatBuffers Schema
 The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
 The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
-``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding. Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
+``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_). Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
 
-``layout_version`` tracks the *encoding*, not the package version, and is bumped only when the encoding actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
+``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
 Note that this check currently covers the coordinate files only. The shortcut index and the NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 

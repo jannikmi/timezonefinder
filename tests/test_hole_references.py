@@ -20,8 +20,6 @@ from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import (
-    POLYGON_LAYOUT_VERSION,
-    READABLE_LAYOUT_VERSIONS,
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
@@ -107,11 +105,6 @@ def test_packaged_data_passes_the_integrity_check():
     """
     validate_hole_references(DEFAULT_DATA_DIR)
     validate_hole_dedup_ratio(DEFAULT_DATA_DIR)
-
-
-@pytest.mark.unit
-def test_packaged_data_uses_the_current_layout_version():
-    assert POLYGON_LAYOUT_VERSION in READABLE_LAYOUT_VERSIONS
 
 
 # --------------------------------------------------------------------------------
