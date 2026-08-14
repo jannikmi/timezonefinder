@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786696390755,
+  "lastUpdate": 1786696393289,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2894,6 +2894,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.3606 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "76f63966e5d6b2a8fb933b4b8d41a3c91bc644b3",
+          "message": "Make the data report generator derive its figures and describe its own types (#514)\n\n* REP-2: take the H3 cell count from h3 instead of a ladder of literals\n\n`calculate_shortcut_index_stats` derived `possible_cells` - the denominator\nof every coverage figure in docs/data_report.rst - from hard-coded constants\nfor resolutions 0 to 4, and fell through to `possible_cells = total_entries`\nfor anything else. That fallback makes `coverage_ratio` exactly 1.0, so an\nuntabulated resolution reports complete H3 coverage rather than failing.\n\nThe surrounding `except ImportError` could not fire at all: h3 is a runtime\ndependency of the package, not an optional one, and its fallback was the same\nsilent full-coverage value.\n\n`h3.get_num_cells` returns exactly the tabulated numbers (122, 842, 5882,\n41162, 288122), so the committed report regenerates byte-identically.\nThe h3 and SHORTCUT_H3_RES imports move to module level, matching every other\nmodule in scripts/ - neither guarded a cycle, and the resolution being a\nmodule attribute is what lets the new tests parametrize over it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-2/REND-4: stop round-tripping the polygon count through its own label\n\n`print_polygon_distribution_table` built `distribution_items` as\n(count, frequency) pairs, rebound the same name to (label, frequency) by\nformatting the count into \"N polygon(s)\", then recovered the count with\n`int(category.split()[0])` to look up the example timezone. The label's\nwording was load-bearing for a lookup that had the number all along.\n\nThe function is also annotated `-> list[list[str]]` and documents a return\nvalue, while having no return statement at all; its one caller discards the\nresult. Both now say `None`.\n\nNeither changes the report: docs/data_report.rst regenerates byte-identically.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TYPE-3/TYPE-2: make scripts/reporting.py's annotations describe its code\n\nmypy is not run over scripts/ by the pre-commit hook, and the module had\ndrifted 17 errors away from its own signatures. Running it by hand:\n\n- `calculate_shortcut_index_stats` claimed `dict[str, int | float]` while\n  returning two `list[int]` distributions, which the two `print_frequencies`\n  calls consume as lists. It and `load_binary_data`'s nine-key bag are now\n  `ShortcutIndexStats` / `BinaryData` TypedDicts in scripts/configs.py, where\n  this repo keeps its script-side types.\n- `redirect_output_to_file` declared `str` and is passed `DATA_REPORT_FILE`,\n  a Path, at all three call sites - its context-manager sibling already said\n  `str | Path`.\n- `main` was annotated `-> None` while returning 0 and 1 to `exit()`.\n- `print_rst_table` / `compute_column_widths` declared `list[list[str]]` rows\n  but render every cell through `str()`, and are handed ints and floats. They\n  take `TableRows` (a covariant Sequence, since list is invariant).\n- `generate_polygon_statistics_table`'s implicit-Optional `additional_rows`.\n- `generate_metrics_rows` took a `metric_type` its body never read; all four\n  call sites passed a label that went nowhere.\n\n`generate_metrics_rows`'s values are `Mapping[str, object]` rather than a\nnumeric type, so its non-numeric fallback stays reachable rather than being\ndeleted to satisfy an annotation.\n\nSince CI cannot check any of this, two tests assert each TypedDict's keys\nagainst the dict actually returned. docs/data_report.rst regenerates\nbyte-identically.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* REND-2/REND-4: look values up where they are declared\n\n`_memory_mode_label` spelled out \"in-memory\"/\"file-based\", which\n`PARAM_LABELS` - the module's declared display vocabulary, used by every other\nlabel - already maps from `in_memory`/`file_based`. Renaming a label there\nwould have left the comparison bullets on the old wording while the tables\nabove them moved to the new one.\n\nIn scripts/reporting.py the shortcut index's field widths were a local named\n`ENTRY_KEY_SIZE_BYTES` (so it read as a module constant while being rebound\nper call) plus two bare literals explained only by trailing comments. All\nthree are now named module constants. The median-polygons entry dropped a\n`list()` inside `sorted()`.\n\nRendering both report families against the same inputs before and after gives\nbyte-identical output.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-1: delete five definitions nothing references\n\n- `scripts/utils.py`: `load_json`, `load_pickle` and `write_pickle`. The\n  pickle pair was the only thing keeping `import pickle` in a data-generation\n  path.\n- `timezonefinder/_numba_replacements.py`: `i8`. The shim exists to mirror the\n  numba names the package imports when numba is absent, and that import line\n  asks for `njit, boolean, Array, i4, f8` - an extra class is an unexercised\n  claim about the fallback. Verified by blocking `import numba` and taking the\n  fallback branch end to end.\n- `tests/auxiliaries.py`: `convert_to_reduced_timezone`, self-documented as\n  \"unused, but kept for future reference\", along with the commented-out call\n  in `single_location_test` and the now-unused import.\n\n`REDUCED_TIMEZONE_MAPPING` in tests/locations.py is left in place, now with no\nconsumer; it is reference data rather than code, and it goes to the ledger.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-4: drop a guard against a None Hex._init_candidates cannot leave behind\n\n`poly_candidates` called `_init_candidates()`, re-read `_poly_candidates`,\nand returned an empty set if it were still `None`. No path through\n`_init_candidates` leaves it unset - it early-returns when already\ninitialised, assigns `set(range(nr_of_polygons))` at resolution 0, and\notherwise assigns the accumulated set - so the branch could not fire. It read\nas a guard against an uninitialised cache while meaning \"no candidate\npolygons\", which would have turned a converter bug into silently missing\nshortcuts instead of a failure.\n\n`_init_candidates` now returns the set it initialises, so the property does\nnot re-read the attribute and needs no guard. Its local accumulator was also\nannotated `HexIdSet` while holding polygon ids; both aliases are `set[int]`,\nso nothing could catch it.\n\nThe property had no direct test - it is reached only through `polys_in_cell`\nduring shortcut generation - so it gains one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record this quality pass in the changelog\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record pass 8 in the findings ledger\n\nDeletes the five entries this pass shipped (DEAD-1, DEAD-4, TYPE-3, REND-2,\nREND-4) and narrows TYPE-2 to the two sites still open.\n\nCorrects BIG-2: its title claimed 13 branches / 57 statements, over ruff's\nPLR0912/PLR0915 defaults. Replacing the hard-coded H3 ladder removed six\nbranches, so it now trips neither and the entry is readability only.\n\nAdds DEAD-5 (REDUCED_TIMEZONE_MAPPING, orphaned by DEAD-1 and annotated as a\nset while being a dict), BIG-4 and TOOL-4.\n\nBoth new entries are stated as they look after rebasing onto #509, which\nlanded mid-pass: it rewrote load_binary_data through PolygonArray/HoleArray,\nso BIG-4 keeps only the hole branch that silently yields empty lists rather\nthan the size complaint it was written about. #509 also took the id TOOL-3\nfor a separate finding, so the mypy-exclusion entry is TOOL-4.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-14T10:31:41+02:00",
+          "tree_id": "44113dd2737ccb993464be784e042939f6387cea",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/76f63966e5d6b2a8fb933b4b8d41a3c91bc644b3"
+        },
+        "date": 1786696392611,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466689109802246,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466852188110352,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.532392501831055,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.541015625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 65.69977569580078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 65.70849227905273,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
