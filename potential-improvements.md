@@ -160,22 +160,6 @@ here because the alternative is losing them; each needs the maintainer's call, n
 
 ## Dead and inert code
 
-### DEAD-1 — unreferenced definitions
-
-Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/`, `docs/` and
-`prototypes/`.
-
-- `scripts/utils.py` — `load_json`, `load_pickle`, `write_pickle`. The pickle pair also keeps
-  `import pickle` alive in a data-generation path.
-- `timezonefinder/_numba_replacements.py` — `i8`. The shim exists to mirror the numba names the
-  package actually imports; an extra one is an unexercised claim.
-- `tests/auxiliaries.py` — `convert_to_reduced_timezone`, self-documented as *"NOTE: unused, but
-  kept for future reference"*. Git history is the mechanism for that.
-- **Fix:** delete. Size: ~40 lines removed.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified all five still present and still unreferenced (PR #463
-  swept a different set).
-
 ### DEAD-2 — leftovers that are referenced but inert
 
 - `scripts/shortcuts.py` — `has_coherent_sequences` builds `lst_iter = iter(lst)` solely to take
@@ -190,23 +174,22 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### DEAD-4 — `Hex.poly_candidates` guards against a `None` its initialiser cannot leave behind
 
-- **Location:** `scripts/hex_utils.py`, `Hex.poly_candidates`, the inner `if candidates is None:
-  return set()`.
-- **Defect:** the property calls `self._init_candidates()` and then re-tests the attribute for
-  `None`. Every path through `_init_candidates` leaves `_poly_candidates` a set — it early-returns
-  only when the attribute is already non-`None`, sets `set(range(nr_of_polygons))` at resolution 0,
-  and otherwise assigns the accumulated set — so the branch cannot fire. It reads as a guard
-  against an uninitialised cache, and returning an empty set would silently mean "no candidate
-  polygons" rather than raising. The `candidates = filtered_candidates` reassignment two lines
-  below is redundant with the `return` as well.
-- **Fix:** drop the branch and the reassignment; the property becomes an ordinary lazy accessor.
-  Size: ~8 lines.
-- **Value:** low-moderate. Nothing is wrong today, but the shape invites someone to "fix" the
-  empty-set fallback into real behaviour, which would turn a converter bug into missing shortcuts.
+### DEAD-5 — `REDUCED_TIMEZONE_MAPPING` has no consumer, and is annotated as a set
+
+- **Location:** `tests/locations.py`, `REDUCED_TIMEZONE_MAPPING`.
+- **Defect:** two independent ones. It is now unreferenced: its only reader was
+  `tests/auxiliaries.py`'s `convert_to_reduced_timezone`, deleted with DEAD-1 this pass, and its own
+  comment already said *"unused, but kept for future reference"*. It is also annotated
+  `set[str, str]` while being a `dict` literal — `set[str, str]` is accepted at runtime (no arity
+  check on `types.GenericAlias`) and mypy does not see `tests/`, so nothing catches it.
+- **Fix:** delete it, or annotate `dict[str, str]` and say what still needs it. Size: ~35 lines
+  removed, or 1 changed.
+- **Value:** low. It is reference data rather than code — the zone merges of the reduced
+  `timezones-now` dataset — which is why DEAD-1 deleted its consumer and left it standing rather
+  than deciding for the maintainer. Recorded so the decision is made once.
 - **Status:** open
-- **Last touched:** 2026-08-14 — found this pass, reading `scripts/hex_utils.py` in full.
+- **Last touched:** 2026-08-14 — found this pass, as a consequence of DEAD-1.
 
 ---
 
@@ -215,23 +198,14 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 ### TYPE-2 — implicit `Optional` (ruff `RUF013`)
 
 - **Location:** `scripts/benchmark_utils.py` — `additional_info: dict[str, Any] = None`,
-  `provenance: dict[str, Any] = None`; `scripts/reporting.py` — `additional_rows: list = None`.
+  `provenance: dict[str, Any] = None`.
 - **Defect:** PEP 484 forbids implicit `Optional`. `no_implicit_optional = true` is already set in
   `[tool.mypy]`, but these live in `scripts/`, which the mypy hook does not currently cover.
-- **Fix:** annotate `| None`. Size: 3 lines.
+- **Fix:** annotate `| None`. Size: 2 lines.
 - **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
+- **Last touched:** 2026-08-14 — the third site, `scripts/reporting.py`'s `additional_rows`, shipped
+  this pass; these two are what is left. See TOOL-4 for the reason nothing catches them.
 
-### TYPE-3 — `load_binary_data` returns an untyped nine-key bag
-
-- **Location:** `scripts/reporting.py`, `load_binary_data(...) -> dict`.
-- **Defect:** returns `shortcuts`, `nr_of_polygons`, `nr_of_zones`, `polygon_lengths`,
-  `all_hole_lengths`, `polynrs_of_holes`, `poly_zone_ids`, `all_tz_names`, `output_path`, then the
-  rest of the module indexes it by string literal.
-- **Fix:** a `TypedDict` or dataclass, making a typo a type error instead of a `KeyError` at report
-  time. Size: ~30 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
 
 ### TYPE-4 — builtins shadowed
 
@@ -305,15 +279,20 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### BIG-2 — `calculate_shortcut_index_stats` is 13 branches / 57 statements
+### BIG-2 — `calculate_shortcut_index_stats` computes four unrelated things in one pass
 
-- **Location:** `scripts/reporting.py`, `calculate_shortcut_index_stats`. Over ruff's `PLR0912` /
-  `PLR0915` defaults.
+- **Location:** `scripts/reporting.py`, `calculate_shortcut_index_stats`.
 - **Defect:** computes coverage, uniqueness, storage and frequency metrics in one pass.
-- **Fix:** split along those four seams. Straightforward, but its output is committed in
-  `docs/data_report.rst`, so it needs a regenerate-and-diff to prove neutral. Size: ~80 lines moved.
+- **Fix:** split along those four seams. Its output is committed in `docs/data_report.rst`, so it
+  needs a regenerate-and-diff to prove neutral — cheap: `uv run python -m scripts.reporting`, then
+  confirm `git diff docs/data_report.rst` is empty. Size: ~80 lines moved.
+- **Value:** readability only, and lower than when this entry was written. The title used to read
+  "13 branches / 57 statements, over ruff's `PLR0912`/`PLR0915` defaults"; replacing the hard-coded
+  H3 ladder removed six branches, so it now trips neither (40 statements against a default of 50).
+  Nothing in CI asks for this split any more.
 - **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
+- **Last touched:** 2026-08-14 — re-verified and corrected. Deliberately not taken this pass: with
+  the linter justification gone it ranked below the annotation and dead-code work.
 
 ### BIG-3 — the GeoJSON parser threads nine accumulator lists through three call levels
 
@@ -337,12 +316,29 @@ Confirmed unreferenced across `timezonefinder/`, `scripts/`, `tests/`, `benchmar
 - **Status:** open
 - **Last touched:** 2026-08-09 — found this pass.
 
+### BIG-4 — `load_binary_data`'s hole branch silently yields empty lists when a file is missing
+
+- **Location:** `scripts/reporting.py`, `load_binary_data`.
+- **Defect:** the `if hole_registry_path.exists() and hole_coord_path.exists():` branch has no
+  `else`, so a data directory missing either file reports zero holes rather than saying so. Every
+  hole figure in `docs/data_report.rst` then reads as a legitimate zero.
+- **Fix:** raise, or state the absence in the report. Size: ~8 lines. **Check first whether this is
+  a behaviour change** — if any caller compiles data without holes, it is, and the entry belongs
+  under *Behaviour defects* instead.
+- **Value:** low-moderate, and narrower than when this entry was first written. It originally also
+  covered the function being 37 statements with a function-local import mid-body; PR #509 landed
+  during this pass and rewrote the loads through `PolygonArray`/`HoleArray`, taking it to 24
+  statements with no local import, so only the silent-empty branch is left.
+- **Status:** open
+- **Last touched:** 2026-08-14 — found this pass and re-verified against #509 after rebasing onto
+  it; the size complaint it was written about is gone.
+
 ---
 
 ## Report rendering
 
-First sweep of `scripts/render_benchmark_reports.py` — the largest module no earlier pass had read.
-Nothing in it is wrong; these three are readability and drift.
+First swept by pass 4 — `scripts/render_benchmark_reports.py` was the largest module no earlier
+pass had read. Nothing in it is wrong; the two below are readability.
 
 ### REND-1 — a conditional expression hides inside a paragraph of prose
 
@@ -358,17 +354,6 @@ Nothing in it is wrong; these three are readability and drift.
 - **Status:** open
 - **Last touched:** 2026-08-08 — found this pass.
 
-### REND-2 — the two memory-mode labels are written down twice
-
-- **Location:** `scripts/render_benchmark_reports.py`, `_memory_mode_label` returns the literals
-  `"in-memory"` / `"file-based"`, which `PARAM_LABELS` already maps from `in_memory` /
-  `file_based`.
-- **Defect:** `PARAM_LABELS` is the module's declared display vocabulary and every other label goes
-  through it. Renaming a label there leaves this function rendering the old wording into the
-  comparison bullets while the tables above use the new one.
-- **Fix:** look the labels up in `PARAM_LABELS`. Size: ~5 lines.
-- **Status:** open
-- **Last touched:** 2026-08-08 — found this pass.
 
 ### REND-3 — set membership expressed as a scan over lists of dicts
 
@@ -381,19 +366,6 @@ Nothing in it is wrong; these three are readability and drift.
 - **Status:** open
 - **Last touched:** 2026-08-08 — found this pass.
 
-### REND-4 — three cosmetic leftovers in `scripts/reporting.py`
-
-- **Location:** `scripts/reporting.py` — `calculate_shortcut_index_stats` (an `else:` whose body is
-  a single `if`, ruff `PLR5501`; a local named `ENTRY_KEY_SIZE_BYTES`, ruff `N806`) and the
-  "Median polygons per timezone" entry (`sorted(list(...))`, ruff `C414`).
-- **Defect:** none of the three is wrong; each is a leftover shape that reads as though it meant
-  something. The uppercase local in particular reads as a module constant while being rebound per
-  call.
-- **Fix:** `elif`, lowercase the local, drop the inner `list()`. Size: ~6 lines. Note the first two
-  sit inside the function BIG-2 proposes splitting — do that first and these come along with it.
-- **Value:** low. Recorded so a later `--select ALL` sweep does not re-triage them from scratch.
-- **Status:** open
-- **Last touched:** 2026-08-14 — found this pass, by ad-hoc ruff selects.
 
 ---
 
@@ -459,6 +431,30 @@ Nothing in it is wrong; these three are readability and drift.
 - **Last touched:** 2026-08-10 — found this pass, while correcting the same class of defect in the
   packaging test.
 
+### TOOL-4 — the mypy hook excludes `scripts/`, where the annotations have drifted furthest
+
+- **Location:** `.pre-commit-config.yaml`, the mypy hook's
+  `exclude: ^((tests|prototypes|scripts|docs|benchmarks)/)`.
+- **Defect:** `[tool.mypy]` is configured strictly enough to catch real defects, and nothing runs it
+  over the four directories that hold most of the repo's Python. `scripts/reporting.py` alone had
+  accumulated 17 errors, including a return annotation contradicted by the value returned and an
+  entry point annotated `-> None` while returning exit codes; all were fixed this pass.
+- **Fix:** narrow the exclude one directory at a time, `scripts/` first since it is now closest.
+  Measured on this branch, `uv run mypy scripts/` reports **20 errors**, of which **15 are in six
+  files under `scripts/`** — `shortcuts.py` (4), `file_converter.py` (4), `benchmark_utils.py` (3),
+  `timezone_data.py` (2), `measure_memory.py` (1), `hex_utils.py` (1) — while `reporting.py` and
+  `configs.py` are clean. The other five come from modules pulled in transitively and would not be
+  fixed by narrowing the exclude to `scripts/`: four in `tests/auxiliaries.py` (two `numpy.bool`
+  returns annotated `bool`, two `str` arguments to a `Path` parameter) and one missing `cffi` stub
+  in `timezonefinder/utils_clang.py` that the hook already supplies via `additional_dependencies`.
+  Two of the fifteen are TYPE-2's remaining sites. Size: ~30 lines plus one hook edit.
+- **Value:** moderate. This is the mechanism behind TYPE-2, TYPE-4, TYPE-5 and most of what this
+  pass fixed, so clearing it stops the class rather than the instances. Note the counts above are a
+  moving target — re-measure rather than trusting them.
+- **Status:** open
+- **Last touched:** 2026-08-14 — found this pass, and re-measured after rebasing onto PR #509,
+  which added `scripts/data_integrity.py` and moved several of the counts.
+
 ---
 
 ## Scope notes
@@ -489,11 +485,14 @@ deleted by the pass that reads it.
 | 5 (checks that cannot fail) | 2026-08-09 | `tests/main_test.py`, `scripts/timezone_data.py`, `scripts/measure_memory.py` and `scripts/generate_benchmark_fixtures.py` read in full — the four previously unswept modules named by pass 4; every multi-statement `pytest.raises`/`pytest.warns` block in `tests/` and `benchmarks/` enumerated with an AST scan (all four were in `tests/main_test.py`, all four now split) | `docs/`, `.github/workflows/`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py` |
 | 6 (packaging guard patterns) | 2026-08-10 | The five test modules pass 5 left unread — `tests/test_package_contents.py`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py`, `tests/utils_test.py` — plus `tests/auxiliaries.py` and `tests/main_test.py` re-read; every `UNWANTED_DIST_PATTERNS` entry matched against the working tree, and `MANIFEST.in` / the `check-manifest` ignore list compared against it | `docs/`, `.github/workflows/` |
 | 7 (leaked state and duplicate checks) | 2026-08-14 | `.github/workflows/` read in full - the last area with no coverage in any pass (new guard: `tests/test_python_version_support.py`); `scripts/hex_utils.py` and `scripts/shortcuts.py` re-read in full; `scripts/timezone_data.py`'s `ZoneCollection` validators read and given their first tests; a repeated repo-wide ruff `--select ALL` triage over `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` (3811 findings, filtered per the note below - nothing new above the bar beyond DEAD-4 and REND-4) | `docs/` prose; `scripts/reporting.py` and `scripts/render_benchmark_reports.py` internals beyond the ruff sweep |
+| 8 (the data report generator) | 2026-08-14 | `scripts/reporting.py` read in full — the last large module no pass had read end to end, and the source of five of this pass's six items; `scripts/hex_utils.py`'s `Hex` cache properties and `scripts/utils.py` re-read; `scripts/render_benchmark_reports.py` revisited only at the REND-2 site. `uv run mypy` run by hand over `scripts/`, which the pre-commit hook excludes — the first time any pass has done so, and the mechanism behind most findings here (recorded as TOOL-3) | `docs/` prose; `scripts/shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py` and `measure_memory.py`, whose mypy errors TOOL-4 counts but which were not read for it; `scripts/data_integrity.py`, added by #509 mid-pass |
 
-Every module under `tests/` has been read at least once, and pass 7 covered
-`.github/workflows/`. The only area with **no coverage in any pass** is `docs/` prose — which is
-mostly outside a code-quality pass's scope, so the cheapest real starting point is now the ranked
-open entries above rather than fresh discovery.
+Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`
+and pass 8 `scripts/reporting.py`. The only area with **no coverage in any pass** is `docs/` prose —
+mostly outside a code-quality pass's scope. The cheapest real starting point is therefore the ranked
+open entries above rather than fresh discovery, with one exception worth knowing: pass 8 found that
+running mypy by hand over an excluded directory surfaces defects no pass had seen, and only
+`scripts/reporting.py` has been cleared that way (TOOL-3).
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -536,6 +535,14 @@ Deliberately checked and found sound, so do not re-raise them:
   (ruff `PLW0603`) — deliberate and documented as not thread-safe, with per-thread instances the
   stated alternative; `scripts/hex_utils.py`'s `get_corrected_hex_boundaries` (the antimeridian and
   pole clipping, covered by `tests/hex_utils_test.py` since pass 1's follow-up).
+- Pass 8: `scripts/reporting.py`'s two output redirectors — `redirect_output_to_file` (a decorator,
+  opening `"a"`) and `redirect_output_to_file_contextmanager` (opening `"w"`) — which look like
+  duplicates but differ in append-vs-truncate, and both have callers that depend on which they got;
+  `calculate_shortcut_index_stats`'s `naive_storage_bytes`, whose conditional covers the whole
+  parenthesised expression rather than just the division, so a zero entry count yields `0 * 0` and
+  not a `ZeroDivisionError` — correct, and confusing enough to re-derive rather than re-raise;
+  `generate_metrics_rows`'s non-numeric `str(value)` fallback, kept reachable by annotating the
+  parameter `Mapping[str, object]` rather than deleted to satisfy a narrower annotation.
 - Pass 6: `tests/test_benchmark_ci_tooling.py` and `tests/test_render_benchmark_reports.py` (both
   read in full, nothing found — each assertion names why it exists); `tests/auxiliaries.py`'s
   `matches_pattern`, whose `fnmatch` semantics (`*` crosses `/`, POSIX case sensitivity) are what
