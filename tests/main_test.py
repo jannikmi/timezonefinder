@@ -348,170 +348,71 @@ class TestTimezonefinderClassTestMEM(TestTimezonefinderClass):
 
 @pytest.mark.unit
 class TestTimezonefinderCleanup:
-    """Test cleanup behavior and exception handling in __del__"""
+    """Test cleanup behavior and exception handling in ``__del__``."""
+
+    # Must match the `except` tuple in `TimezoneFinder.__del__`: these are the
+    # errors a not-fully-initialised or already-cleaned-up resource raises, and
+    # they are swallowed. Adding one there without adding it here leaves the new
+    # exception untested.
+    SUPPRESSED_ERRORS = (AttributeError, FileNotFoundError, OSError, ValueError)
+    # Everything else must reach the caller as a ResourceWarning instead.
+    WARNED_ERRORS = (RuntimeError, TypeError)
+
+    @staticmethod
+    def _finder_failing_cleanup(error: Exception) -> TimezoneFinder:
+        """Return a finder whose ``cleanup()`` raises ``error``."""
+
+        class FailingCleanupTimezoneFinder(TimezoneFinder):
+            # bound as a default argument, not captured from the enclosing
+            # scope: the instance is collected (re-entering __del__) after this
+            # call has returned, and a closure would raise whatever the name
+            # refers to by then
+            def cleanup(self, error=error):
+                raise error
+
+        return FailingCleanupTimezoneFinder()
+
+    @staticmethod
+    def _resource_warnings_of_del(tf: TimezoneFinder) -> list:
+        """Call ``__del__`` and return only the ResourceWarnings it emitted."""
+        with warnings.catch_warnings(record=True) as recorded:
+            warnings.simplefilter("always")
+            tf.__del__()
+            return [w for w in recorded if issubclass(w.category, ResourceWarning)]
 
     def test_cleanup_no_error(self):
-        """Test that cleanup in __del__ succeeds when no errors occur"""
-        tf = TimezoneFinder()
-        # Cleanup should not raise any warnings
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            # No warnings should be emitted for successful cleanup
-            # Filter out unrelated warnings
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 0
+        """A cleanup that succeeds emits no ResourceWarning."""
+        assert self._resource_warnings_of_del(TimezoneFinder()) == []
 
-    def test_cleanup_attribute_error_suppressed(self):
-        """Test that AttributeError during cleanup is silently suppressed"""
+    @pytest.mark.parametrize("error_type", SUPPRESSED_ERRORS)
+    def test_expected_cleanup_error_is_suppressed(self, error_type):
+        tf = self._finder_failing_cleanup(error_type("expected during cleanup"))
+        assert self._resource_warnings_of_del(tf) == []
 
-        # Create a subclass where we can override cleanup to raise AttributeError
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise AttributeError("missing attribute")
+    @pytest.mark.parametrize("error_type", WARNED_ERRORS)
+    def test_unexpected_cleanup_error_warns(self, error_type):
+        tf = self._finder_failing_cleanup(error_type("unexpected during cleanup"))
+        assert len(self._resource_warnings_of_del(tf)) == 1
 
-        tf = TestTimezoneFinder()
-        # Should not raise or warn
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            # This should not raise an exception
-            tf.__del__()
-            # No ResourceWarning should be emitted for expected error
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 0
-
-    def test_cleanup_file_not_found_error_suppressed(self):
-        """Test that FileNotFoundError during cleanup is silently suppressed"""
-
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise FileNotFoundError("file not found")
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 0
-
-    def test_cleanup_os_error_suppressed(self):
-        """Test that OSError during cleanup is silently suppressed"""
-
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise OSError("OS error")
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 0
-
-    def test_cleanup_value_error_suppressed(self):
-        """Test that ValueError during cleanup is silently suppressed"""
-
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise ValueError("invalid value")
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 0
-
-    def test_cleanup_unexpected_error_warned(self):
-        """Test that unexpected errors during cleanup emit a ResourceWarning"""
-
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise RuntimeError("unexpected error")
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            # Should emit exactly one ResourceWarning
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 1
-            assert "Error during TimezoneFinder cleanup" in str(
-                resource_warnings[0].message
-            )
-            assert "unexpected error" in str(resource_warnings[0].message)
-
-    def test_cleanup_warning_includes_error_message(self):
-        """Test that ResourceWarning includes the error message for debugging"""
+    def test_cleanup_warning_names_the_cause(self):
+        """The ResourceWarning has to be debuggable from its text alone."""
         error_msg = "specific error details"
+        recorded = self._resource_warnings_of_del(
+            self._finder_failing_cleanup(RuntimeError(error_msg))
+        )
+        assert len(recorded) == 1
+        warning_text = str(recorded[0].message)
+        assert "Error during TimezoneFinder cleanup" in warning_text
+        assert error_msg in warning_text
 
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise RuntimeError(error_msg)
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+    @pytest.mark.parametrize("error_type", SUPPRESSED_ERRORS + WARNED_ERRORS)
+    def test_cleanup_does_not_raise_to_user(self, error_type):
+        """``__del__`` never raises to user code, whichever error cleanup hits."""
+        tf = self._finder_failing_cleanup(error_type("error during cleanup"))
+        try:
             tf.__del__()
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 1
-            warning_text = str(resource_warnings[0].message)
-            assert error_msg in warning_text
-
-    def test_cleanup_type_error_warned(self):
-        """Test that TypeError during cleanup emits a ResourceWarning"""
-
-        class TestTimezoneFinder(TimezoneFinder):
-            def cleanup(self):
-                raise TypeError("type mismatch")
-
-        tf = TestTimezoneFinder()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            tf.__del__()
-            resource_warnings = [
-                x for x in w if issubclass(x.category, ResourceWarning)
-            ]
-            assert len(resource_warnings) == 1
-
-    def test_cleanup_does_not_raise_to_user(self):
-        """Test that __del__ never raises exceptions to user code"""
-        errors = [
-            AttributeError("attr error"),
-            FileNotFoundError("file error"),
-            RuntimeError("runtime error"),
-            ValueError("value error"),
-        ]
-
-        for error in errors:
-            error_type = type(error).__name__
-
-            class TestTimezoneFinder(TimezoneFinder):
-                # bound as a default argument, not captured from the loop: each
-                # instance is collected (re-entering __del__) after the loop has
-                # moved on, and a closure would raise whatever `error` is by then
-                def cleanup(self, error=error):
-                    raise error
-
-            tf = TestTimezoneFinder()
-            # This should never raise an exception
-            try:
-                tf.__del__()
-            except Exception as e:
-                pytest.fail(
-                    f"__del__ raised {type(e).__name__} when cleanup raised {error_type}: {e}"
-                )
+        except Exception as e:
+            pytest.fail(
+                f"__del__ raised {type(e).__name__} when cleanup raised "
+                f"{error_type.__name__}: {e}"
+            )
