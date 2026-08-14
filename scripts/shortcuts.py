@@ -3,6 +3,7 @@
 import itertools
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
 
 import h3.api.numpy_int as h3
@@ -71,7 +72,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     return poly_ids_sorted
 
 
-def has_coherent_sequences(lst: list[int]) -> bool:
+def has_coherent_sequences(lst: Sequence[int] | np.ndarray) -> bool:
     """
     :return: True if equal entries in the list are not separated by entries of other values
     """
@@ -92,7 +93,9 @@ def has_coherent_sequences(lst: list[int]) -> bool:
     return True
 
 
-def check_shortcut_sorting(polygon_ids: np.ndarray, all_zone_ids: np.ndarray):
+def check_shortcut_sorting(
+    polygon_ids: Sequence[int] | np.ndarray, all_zone_ids: np.ndarray
+) -> None:
     # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
     if len(polygon_ids) == 1:
         # single polygon in the shortcut, no need to check
