@@ -12,9 +12,10 @@ from tests.auxiliaries import (
     get_rnd_poly,
     get_rnd_poly_int,
     get_rnd_query_pt,
+    strict_numpy_errors,
 )
+from tests.locations import OUT_OF_RANGE_COORDINATES
 from timezonefinder import utils_clang, utils_numba, utils
-from timezonefinder.configs import INT2COORD_FACTOR
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -184,6 +185,29 @@ def test_clang_extension_loaded():
     assert utils.clang_extension_loaded, "the clang extension not loaded, "
 
 
+# `strict_numpy_errors` (tests/auxiliaries.py) is what keeps the overflow tests below
+# and in tests/main_test.py from deciding the numpy error state of every test collected
+# after them. Both properties it promises are asserted here, because a version that
+# silently stopped restoring the state would only surface as an unrelated failure in
+# whichever module pytest happened to collect next.
+def test_strict_numpy_errors_promotes_overflow_to_an_exception():
+    with strict_numpy_errors(), pytest.raises(RuntimeWarning):
+        np.int16(32767) + np.int16(1)
+
+
+def test_strict_numpy_errors_restores_the_global_state_after_raising():
+    # a state distinct from the one the context manager installs, so this cannot pass
+    # by coincidence when a previous test has already leaked `all="warn"`
+    original = np.seterr(over="ignore", under="ignore")
+    try:
+        with pytest.raises(RuntimeWarning), strict_numpy_errors():
+            np.int16(32767) + np.int16(1)
+        assert np.geterr()["over"] == "ignore"
+        assert np.geterr()["under"] == "ignore"
+    finally:
+        np.seterr(**original)
+
+
 # NOTE: these call the kernels directly, on hand-built arrays. That the two agree on
 # the *real* data, reached through the real coordinate accessors, is covered by
 # tests/test_acceleration_paths.py - which also explains why only one of them is ever
@@ -199,15 +223,11 @@ def test_clang_extension_loaded():
     "test_case",
     POINT_IN_POLYGON_TESTCASES,
 )
+@pytest.mark.usefixtures("strict_numpy_warnings")
 def test_inside_polygon(inside_poly_func: Callable, test_case: tuple):
     # print(f"\ntesting function {inside_poly_func.__name__}")
 
-    # test for overflow:
-    # make numpy overflow runtime warning raise an error
-    np.seterr(all="warn")
-    import warnings
-
-    warnings.filterwarnings("error")
+    # the fixture promotes numpy overflow warnings to errors for this test
     nr_mistakes = 0
     template = "{:12s} | {:10s} | {:10s} | {:2s}"
     print()
@@ -262,18 +282,7 @@ def test_convert_polygon_is_c_contiguous():
     assert coords_int[1].flags["C_CONTIGUOUS"]
 
 
-@pytest.mark.parametrize(
-    "lng, lat",
-    [
-        (180.0 + INT2COORD_FACTOR, 90.0),
-        (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
-        (-180.0, 90.0 + INT2COORD_FACTOR),
-        (180.0 + INT2COORD_FACTOR, -90.0),
-        (180.0, -90.0 - INT2COORD_FACTOR),
-        (-180.0 - INT2COORD_FACTOR, -90.0),
-        (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
-    ],
-)
+@pytest.mark.parametrize("lng, lat", OUT_OF_RANGE_COORDINATES)
 def test_validate_coordinates_rejects_out_of_range(lng, lat):
     with pytest.raises(ValueError):
         utils.validate_coordinates(lng=lng, lat=lat)

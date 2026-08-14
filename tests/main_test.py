@@ -1,7 +1,6 @@
 from importlib.util import find_spec
 import warnings
 
-import numpy as np
 import pytest
 
 from scripts.configs import THRES_DTYPE_H
@@ -12,10 +11,14 @@ from tests.auxiliaries import (
     validate_polygon_coordinates,
 )
 from tests.global_functions_test import single_location_test
-from tests.locations import BASIC_TEST_LOCATIONS, EDGE_TEST_CASES, TEST_LOCATIONS
+from tests.locations import (
+    BASIC_TEST_LOCATIONS,
+    EDGE_TEST_CASES,
+    OUT_OF_RANGE_COORDINATES,
+    TEST_LOCATIONS,
+)
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
-    INT2COORD_FACTOR,
 )
 from timezonefinder.zone_names import read_zone_names
 from timezonefinder.timezonefinder import (
@@ -34,18 +37,6 @@ PACKAGE_NAME = "timezonefinder"
 all_timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
-
-# (lng, lat) one representable step outside the valid WGS84 range: each axis on
-# its own, and both at once, at every corner of the coordinate system
-OUT_OF_RANGE_COORDINATES = [
-    (180.0 + INT2COORD_FACTOR, 90.0),
-    (-180.0 - INT2COORD_FACTOR, 90.0 + INT2COORD_FACTOR),
-    (-180.0, 90.0 + INT2COORD_FACTOR),
-    (180.0 + INT2COORD_FACTOR, -90.0),
-    (180.0, -90.0 - INT2COORD_FACTOR),
-    (-180.0 - INT2COORD_FACTOR, -90.0),
-    (-180.0 - INT2COORD_FACTOR, -90.01 - INT2COORD_FACTOR),
-]
 
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
@@ -262,16 +253,12 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         ):
             metafunc.parametrize("lat, lng, loc, expected", cls.test_locations)
 
+    @pytest.mark.usefixtures("strict_numpy_warnings")
     def test_overflow(self):
         longitude = -123.2
         latitude = 48.4
-        # make numpy overflow runtime warning raise an error
-
-        np.seterr(all="warn")
-        import warnings
-
-        warnings.filterwarnings("error")
-        # must not raise a warning
+        # the fixture promotes numpy overflow warnings to errors: this lookup
+        # must complete without raising one
         self.test_instance.certain_timezone_at(
             lat=float(latitude), lng=float(longitude)
         )

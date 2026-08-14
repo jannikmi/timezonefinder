@@ -4,9 +4,6 @@ Not collected by `make test` / `make testall` (see `testpaths` in
 `pyproject.toml`); run explicitly via `make benchmarks`.
 """
 
-import warnings
-from typing import Iterator
-
 import numpy as np
 import pytest
 
@@ -22,6 +19,7 @@ from tests.auxiliaries import (
     load_benchmark_points,
     load_pip_inputs,
     load_pip_strata,
+    strict_numpy_warnings,  # noqa: F401  # re-exported as a fixture for this suite
 )
 
 # Fixed unit of work for every benchmark: one pass over a batch of this many
@@ -111,20 +109,3 @@ def pip_inputs_by_stratum() -> dict[str, list[tuple[int, int, np.ndarray]]]:
     """(x, y, polygon_coords) triples grouped by size stratum, `BATCH_SIZE`
     entries each, so per-stratum cost isn't hidden behind an average."""
     return group_pip_inputs_by_stratum(load_pip_inputs(), load_pip_strata(), BATCH_SIZE)
-
-
-@pytest.fixture
-def strict_numpy_warnings() -> Iterator[None]:
-    """Turn numpy overflow/invalid-value warnings into errors for one test.
-
-    Scoped per-test (not module scope, unlike the old
-    `scripts/check_speed_inside_polygon.py`) so it cannot leak into other
-    modules collected in the same pytest session.
-    """
-    original_state = np.seterr(all="warn")
-    with warnings.catch_warnings():
-        warnings.filterwarnings("error")
-        try:
-            yield
-        finally:
-            np.seterr(**original_state)

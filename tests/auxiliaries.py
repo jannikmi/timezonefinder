@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from contextlib import contextmanager
 import fnmatch
 import json
 import os
@@ -9,10 +10,12 @@ import re
 import shutil
 import subprocess
 import sys
+import warnings
 from math import asin, degrees, log10
 from typing import Any, Iterator
 
 import numpy as np
+import pytest
 
 from scripts.configs import DEBUG, read_data_version
 from scripts.utils import validate_coord_array_shape
@@ -91,6 +94,37 @@ boundaries = PolygonArray(data_location=boundaries_dir, in_memory=True)
 #######################
 # UTILITY FUNCTIONS
 #######################
+
+
+@contextmanager
+def strict_numpy_errors() -> Iterator[None]:
+    """Turn numpy overflow/invalid-value warnings into errors, then restore.
+
+    Both `np.seterr` and the warning filters are process-global, so code that
+    sets them without restoring them decides the error state of everything that
+    runs afterwards - which turns an unrelated later failure into one that
+    depends on collection order.
+    """
+    original_state = np.seterr(all="warn")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error")
+        try:
+            yield
+        finally:
+            np.seterr(**original_state)
+
+
+@pytest.fixture
+def strict_numpy_warnings() -> Iterator[None]:
+    """`strict_numpy_errors` scoped to a single test.
+
+    Per-test (not module scope, unlike the old
+    `scripts/check_speed_inside_polygon.py`) so it cannot leak into other
+    modules collected in the same session. Shared by `tests/` and
+    `benchmarks/` through the conftest of each.
+    """
+    with strict_numpy_errors():
+        yield
 
 
 def run_command(

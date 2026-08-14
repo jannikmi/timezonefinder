@@ -44,6 +44,19 @@ def _validate_numpy_polygons(polygons: PolygonList, kind: str) -> None:
             raise ValueError(f"{kind} polygon array must have shape (2, N)")
 
 
+def _validate_non_decreasing(zone_ids: ZoneIdArray) -> None:
+    """Zone ids must not decrease: the converter groups polygons by zone, and
+    `zone_positions` reads that grouping off as one start index per zone."""
+    last_zone_id = -1
+    for zone_id in zone_ids:
+        zone_int = int(zone_id)
+        if zone_int < last_zone_id:
+            raise ValueError(
+                f"Zone IDs must be in non-decreasing order, found {zone_int} after {last_zone_id}"
+            )
+        last_zone_id = zone_int
+
+
 def _validate_lengths(lengths: list[int], kind: str, minimum: int) -> None:
     if any(length == 0 for length in lengths):
         raise ValueError(f"Found a {kind} with no coordinates")
@@ -85,18 +98,7 @@ class ZoneCollection(BaseModel):
                 )
             )
 
-        min_zone_id = int(self.poly_zone_ids.min())
-        if min_zone_id < 0:
-            raise ValueError(f"Zone IDs cannot be negative, found {min_zone_id}")
-
-        last_zone_id = -1
-        for zone_id in self.poly_zone_ids:
-            zone_int = int(zone_id)
-            if zone_int < last_zone_id:
-                raise ValueError(
-                    f"Zone IDs must be in non-decreasing order, found {zone_int} after {last_zone_id}"
-                )
-            last_zone_id = zone_int
+        _validate_non_decreasing(self.poly_zone_ids)
         return self
 
     @property
@@ -108,15 +110,17 @@ class ZoneCollection(BaseModel):
         return int(self.poly_zone_ids.size)
 
     def zone_positions(self) -> list[int]:
+        """Index of the first polygon of each zone, plus a trailing polygon count.
+
+        Does not re-check the ordering: `validate_structure` runs at construction
+        and `poly_zone_ids` is never written to afterwards, so a collection that
+        exists is already ordered.
+        """
         positions: list[int] = []
         last_id = -1
         for poly_idx, zone_id in enumerate(self.poly_zone_ids):
             zone_int = int(zone_id)
             if zone_int != last_id:
-                if zone_int < last_id:
-                    raise ValueError(
-                        f"Zone IDs must be in non-decreasing order, found {zone_int} after {last_id}"
-                    )
                 positions.append(poly_idx)
                 last_id = zone_int
         positions.append(self.nr_of_polygons)
