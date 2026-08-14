@@ -55,6 +55,12 @@ from timezonefinder.zone_names import read_zone_names
 FIXTURE_VERSION_LABEL = "**Fixture Version**"
 DATA_VERSION_LABEL = "**Timezone Data Version**"
 
+# Widths of the hybrid shortcut index's stored fields, used to estimate its
+# on-disk size in the data report.
+SHORTCUT_KEY_SIZE_BYTES = 8  # int64 hex ID
+SHORTCUT_ZONE_ID_SIZE_BYTES = 1  # uint8 zone ID
+SHORTCUT_POLYGON_ID_SIZE_BYTES = 2  # uint16 polygon ID
+
 
 # decorator to reroute the output of a function to a file
 def redirect_output_to_file(file_path: str | Path) -> Callable:
@@ -371,20 +377,20 @@ def calculate_shortcut_index_stats(
         else 0.0
     )
 
-    # Calculate storage efficiency metrics
-    # Estimate bytes per entry (key + value)
-    ENTRY_KEY_SIZE_BYTES = 8  # int64 hex ID
+    # Calculate storage efficiency metrics (bytes per entry: key + value)
     zone_storage_bytes = zone_entries * (
-        ENTRY_KEY_SIZE_BYTES + 1
-    )  # 1 byte for uint8 zone ID
+        SHORTCUT_KEY_SIZE_BYTES + SHORTCUT_ZONE_ID_SIZE_BYTES
+    )
     polygon_storage_bytes = (
-        polygon_entries * ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2
-    )  # 2 bytes per uint16 polygon ID
+        polygon_entries * SHORTCUT_KEY_SIZE_BYTES
+        + polygon_id_count * SHORTCUT_POLYGON_ID_SIZE_BYTES
+    )
     total_storage_bytes = zone_storage_bytes + polygon_storage_bytes
 
     # Calculate compression ratio vs naive storage
     naive_storage_bytes = total_entries * (
-        ENTRY_KEY_SIZE_BYTES + polygon_id_count * 2 / total_entries
+        SHORTCUT_KEY_SIZE_BYTES
+        + polygon_id_count * SHORTCUT_POLYGON_ID_SIZE_BYTES / total_entries
         if total_entries
         else 0
     )
@@ -651,7 +657,7 @@ def calculate_timezone_metrics(
         "Minimum polygons in one timezone": min(polygons_per_timezone.values())
         if polygons_per_timezone
         else 0,
-        "Median polygons per timezone": sorted(list(polygons_per_timezone.values()))[
+        "Median polygons per timezone": sorted(polygons_per_timezone.values())[
             len(polygons_per_timezone) // 2
         ]
         if polygons_per_timezone
