@@ -295,6 +295,29 @@ def test_stdin_mode_takes_explicit_column_names():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "header", ["LONGITUDE_DEG,LATITUDE_DEG", "longitude_deg , latitude_deg"]
+)
+def test_stdin_mode_matches_an_explicit_column_name_loosely(header: str):
+    """--lng-col/--lat-col compare names the way auto-detection does.
+
+    These flags are the fallback for a header auto-detection could not match,
+    so matching case- or whitespace-sensitively here would refuse the very
+    headers they exist to rescue.
+    """
+    result = run_cli(
+        "--stdin",
+        "--lng-col",
+        "longitude_deg",
+        "--lat-col",
+        "latitude_deg",
+        input=csv_input(f"{AMSTERDAM[0]},{AMSTERDAM[1]}", header=header),
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines()[1].endswith(",Europe/Amsterdam")
+
+
+@pytest.mark.unit
 def test_stdin_mode_names_the_header_it_could_not_match():
     """An unmatchable header reports what it found, not just that it failed."""
     result = run_cli("--stdin", input=csv_input("4.89,52.37", header="a,b"))

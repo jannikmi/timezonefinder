@@ -296,32 +296,37 @@ def _resolve_column(
     :raises ValueError: If the column cannot be determined or is out of range
     """
     flag = f"--{'lng' if axis == 'longitude' else 'lat'}-col"
+    names = None if header is None else [_normalise_header_name(n) for n in header]
+
     if spec is not None:
         if _is_column_number(spec):
             index = int(spec) - 1
             if index < 0:
                 raise ValueError(f"{flag} is 1-based, got {spec}")
             return index
-        if header is None:
+        if names is None:
             raise ValueError(
                 f"{flag}={spec!r} names a column, but the input has no header row"
             )
-        try:
-            return header.index(spec)
-        except ValueError:
+        # Compared through the same normalisation as the automatic lookup
+        # below. This flag is the fallback for a header that lookup could not
+        # match, so matching more strictly here would refuse the very cases it
+        # exists to rescue - a name in another case, or padded with spaces.
+        wanted = _normalise_header_name(spec)
+        if wanted not in names:
             raise ValueError(
                 f"{flag}={spec!r} is not among the header columns: {header}"
-            ) from None
+            )
+        return names.index(wanted)
 
-    if header is None:
+    if names is None:
         raise ValueError(
             f"cannot tell which column holds the {axis}: the input has no header "
             f"row, so pass {flag} with a 1-based column number"
         )
-    lowered = [_normalise_header_name(name) for name in header]
     for candidate in known_names:
-        if candidate in lowered:
-            return lowered.index(candidate)
+        if candidate in names:
+            return names.index(candidate)
     raise ValueError(
         f"no {axis} column found in the header {header}: expected one of "
         f"{list(known_names)}, or pass {flag}"
