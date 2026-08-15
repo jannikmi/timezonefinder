@@ -24,6 +24,16 @@ LNG_COLUMN_NAMES = ("lng", "lon", "long", "longitude", "x")
 LAT_COLUMN_NAMES = ("lat", "latitude", "y")
 TIMEZONE_COLUMN = "timezone"
 
+# Per function id, the global function and the name of the equivalent
+# ``TimezoneFinder`` method. The globals share a singleton whose access mode
+# cannot be configured from here, so the in-memory case has to bind its method
+# on an instance of its own - which is the only thing the two columns differ in.
+TIMEZONE_FINDER_FUNCTIONS: dict[int, tuple[Callable[..., str | None], str]] = {
+    0: (timezone_at, "timezone_at"),
+    1: (certain_timezone_at, "certain_timezone_at"),
+    5: (timezone_at_land, "timezone_at_land"),
+}
+
 # The ids dispatching to TimezoneFinderL rather than TimezoneFinder.
 TIMEZONE_FINDER_L_FUNCTIONS = (3, 4)
 
@@ -58,38 +68,27 @@ def get_timezone_function(
     :return: A callable that accepts lng and lat as keyword arguments and returns a timezone name or None
     :raises ValueError: If function_id is not in the valid range [0, 1, 3, 4, 5]
     """
-    # Use global functions for TimezoneFinder methods
-    match function_id:
-        case 0:
-            return (
-                TimezoneFinder(in_memory=True).timezone_at if in_memory else timezone_at
-            )
-        case 1:
-            return (
-                TimezoneFinder(in_memory=True).certain_timezone_at
-                if in_memory
-                else certain_timezone_at
-            )
-        case 5:
-            return (
-                TimezoneFinder(in_memory=True).timezone_at_land
-                if in_memory
-                else timezone_at_land
-            )
-        case 3 | 4:  # keep in step with TIMEZONE_FINDER_L_FUNCTIONS
-            # For TimezoneFinderL methods, create an instance
-            tf_instance = TimezoneFinderL(in_memory=in_memory)
-            if function_id == 3:
-                return tf_instance.timezone_at
-            else:
-                return tf_instance.timezone_at_land
-        case _:
-            raise ValueError(
-                f"Invalid function ID: {function_id}. "
-                f"Valid choices are: 0 (timezone_at), 1 (certain_timezone_at), "
-                f"3 (TimezoneFinderL.timezone_at), 4 (TimezoneFinderL.timezone_at_land), "
-                f"5 (timezone_at_land)"
-            )
+    if function_id in TIMEZONE_FINDER_FUNCTIONS:
+        global_function, method_name = TIMEZONE_FINDER_FUNCTIONS[function_id]
+        if not in_memory:
+            return global_function
+        return getattr(TimezoneFinder(in_memory=True), method_name)
+
+    if function_id in TIMEZONE_FINDER_L_FUNCTIONS:
+        # For TimezoneFinderL methods, create an instance
+        tf_instance = TimezoneFinderL(in_memory=in_memory)
+        return (
+            tf_instance.timezone_at
+            if function_id == 3
+            else tf_instance.timezone_at_land
+        )
+
+    raise ValueError(
+        f"Invalid function ID: {function_id}. "
+        f"Valid choices are: 0 (timezone_at), 1 (certain_timezone_at), "
+        f"3 (TimezoneFinderL.timezone_at), 4 (TimezoneFinderL.timezone_at_land), "
+        f"5 (timezone_at_land)"
+    )
 
 
 def _parse_arguments() -> argparse.Namespace:
