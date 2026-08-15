@@ -161,7 +161,7 @@ def _parse_coordinate_line(line: str) -> tuple[float, float]:
     return validate_coordinates(lng, lat)
 
 
-def _run_stdin(timezone_function: Callable[..., str | None]) -> None:
+def _run_stdin(timezone_function: Callable[..., str | None]) -> int:
     """Read ``lng,lat`` pairs from stdin and print one result per line.
 
     Unusable lines - blank, unparseable, or naming a coordinate outside the
@@ -169,8 +169,15 @@ def _run_stdin(timezone_function: Callable[..., str | None]) -> None:
     that a caller reading one line per query stays in step with its inputs and
     one bad line among a thousand does not discard the other 999.
 
+    The empty line that marks a rejected input is indistinguishable on stdout
+    from the empty line that marks a genuine "no timezone here" - which ``-f 4``
+    and ``-f 5`` produce for every ocean point. The count returned here is what
+    lets the caller tell the two apart without parsing stderr.
+
     :param timezone_function: The lookup function to call for each pair
+    :return: How many input lines were rejected
     """
+    rejected = 0
     for line_no, raw_line in enumerate(sys.stdin, start=1):
         try:
             lng, lat = _parse_coordinate_line(raw_line)
@@ -181,6 +188,7 @@ def _run_stdin(timezone_function: Callable[..., str | None]) -> None:
             )
             # keep stdout aligned with stdin
             print(flush=True)
+            rejected += 1
             continue
 
         tz = timezone_function(lng=lng, lat=lat)
@@ -192,6 +200,8 @@ def _run_stdin(timezone_function: Callable[..., str | None]) -> None:
         # they refer to.
         print(tz if tz else "", flush=True)
 
+    return rejected
+
 
 def main() -> None:
     """Main entry point for the CLI."""
@@ -201,7 +211,7 @@ def main() -> None:
 
     if args.stdin:
         try:
-            _run_stdin(timezone_function)
+            rejected = _run_stdin(timezone_function)
         except BrokenPipeError:
             # The consumer stopped reading (`| head -5`, a closed reader).
             # Python flushes stdout again on shutdown, which would raise a
@@ -211,6 +221,8 @@ def main() -> None:
             devnull = os.open(os.devnull, os.O_WRONLY)
             os.dup2(devnull, sys.stdout.fileno())
             raise SystemExit(1) from None
+        if rejected:
+            raise SystemExit(1)
         return
 
     tz = timezone_function(lng=args.lng, lat=args.lat)

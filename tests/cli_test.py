@@ -188,7 +188,13 @@ def test_stdin_mode_respects_function_flag():
 
 @pytest.mark.unit
 def test_stdin_mode_skips_malformed_lines():
-    """Malformed lines produce a stderr warning and an empty stdout line."""
+    """Malformed lines produce a stderr warning, an empty stdout line and exit 1.
+
+    The empty line is what keeps a caller reading one line per query in step
+    with its inputs, but it is also what a genuine "no timezone here" looks
+    like, so the exit code is the only thing distinguishing a stream that was
+    fully answered from one that silently dropped inputs.
+    """
     stdin_input = (
         f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
         "not-a-coordinate\n"
@@ -202,7 +208,7 @@ def test_stdin_mode_skips_malformed_lines():
         text=True,
         check=False,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 1, "a stream with rejected lines must not exit 0"
     lines = result.stdout.splitlines()
     assert len(lines) == 4, f"expected 4 lines (one per input line), got {lines}"
     assert lines[0] == "Europe/Amsterdam"
