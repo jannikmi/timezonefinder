@@ -234,6 +234,15 @@ def _resolve_delimiter(delimiter: str) -> str:
     return delimiter
 
 
+def _is_column_number(spec: str | None) -> bool:
+    """Whether a ``--lng-col``/``--lat-col`` value addresses a column by number.
+
+    :param spec: The flag value, or None if it was not given
+    :return: True if the value is a 1-based column number
+    """
+    return spec is not None and spec.isdigit()
+
+
 def _looks_like_data(row: list[str]) -> bool:
     """Decide whether a row is data rather than a header.
 
@@ -274,7 +283,7 @@ def _resolve_column(
     """
     flag = f"--{'lng' if axis == 'longitude' else 'lat'}-col"
     if spec is not None:
-        if spec.isdigit():
+        if _is_column_number(spec):
             index = int(spec) - 1
             if index < 0:
                 raise ValueError(f"{flag} is 1-based, got {spec}")
@@ -412,7 +421,17 @@ def _run_stdin(
             continue
 
         if lng_index is None or lat_index is None:
-            header = None if _looks_like_data(row) else row
+            # Whether the first row is a header is only worth probing when the
+            # header is needed to resolve a column. With both columns given as
+            # numbers it decides nothing but the fate of this row, and the two
+            # ways of being wrong are not symmetric: reading a data row as a
+            # header drops it in silence, while reading a header as data costs
+            # one warning naming the row. So the unverifiable case reads as
+            # data, and `--header` states the other case rather than guessing.
+            addressed_by_number = _is_column_number(lng_spec) and _is_column_number(
+                lat_spec
+            )
+            header = None if addressed_by_number or _looks_like_data(row) else row
             lng_index = _resolve_column(lng_spec, header, LNG_COLUMN_NAMES, "longitude")
             lat_index = _resolve_column(lat_spec, header, LAT_COLUMN_NAMES, "latitude")
             if header is not None:

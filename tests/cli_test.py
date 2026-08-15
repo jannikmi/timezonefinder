@@ -245,6 +245,23 @@ def test_stdin_mode_takes_explicit_1_based_columns():
 
 
 @pytest.mark.unit
+def test_stdin_mode_does_not_mistake_a_data_row_for_a_header():
+    """A row addressed by column number is data, even if nothing in it parses.
+
+    Probing the row is only meaningful when the header is needed to resolve a
+    column. With both columns given as numbers it decides nothing else, and
+    reading this row as a header would drop it in silence and still exit 0 -
+    the failure mode column numbers were meant to rule out.
+    """
+    result = run_cli(
+        "--stdin", "--lng-col", "2", "--lat-col", "3", input="S-1,N/A,N/A\n"
+    )
+    assert result.returncode == 1, "the unusable row must reach the exit code"
+    assert result.stdout.splitlines() == ["S-1,N/A,N/A,"]
+    assert "row 1" in result.stderr
+
+
+@pytest.mark.unit
 def test_stdin_mode_takes_explicit_column_names():
     """A header with unrecognised names is addressable by naming the columns."""
     result = run_cli(
