@@ -45,7 +45,7 @@ def get_timezone_function(function_id: int) -> Callable[..., str | None]:
             raise ValueError(
                 f"Invalid function ID: {function_id}. "
                 f"Valid choices are: 0 (timezone_at), 1 (certain_timezone_at), "
-                f"3 (TimezoneFinderL.timezone_at), 4 (TimezoneFinderL.timezone_at_land(), "
+                f"3 (TimezoneFinderL.timezone_at), 4 (TimezoneFinderL.timezone_at_land), "
                 f"5 (timezone_at_land)"
             )
 
