@@ -420,10 +420,13 @@ as it does for a single query. ``-d``/``--delimiter`` sets the field delimiter f
 input and output alike, defaulting to ``,`` - spell tab as ``'\t'``. ``-v`` is
 rejected in this mode, since verbose output is per query and would break the
 one-row-per-result contract, and so are ``lng``/``lat`` on the command line, since
-the coordinates come from stdin. ``--in-memory`` reads the coordinate data into
-RAM rather than memory-mapping it: tens of MB for roughly 1.3x faster lookups once
-the page cache is warm, so it is worth passing for a long stream and not for a
-single query.
+the coordinates come from stdin. ``--in-memory`` reads the polygon coordinate data
+into RAM rather than memory-mapping it, trading an order of magnitude more memory
+for measurably faster lookups once the page cache is warm
+(:doc:`benchmark_results_memory` and :doc:`benchmark_results_timezonefinding` carry
+the current figures for both sides of that trade). It is worth passing for a long
+stream and not for a single query, and does not apply to ``-f 3``/``-f 4``, which
+load no polygon data.
 
 **Rows that cannot be used.** There is always exactly one output row per input
 row, which is what lets a caller consume the two in step. A row that is too short,
