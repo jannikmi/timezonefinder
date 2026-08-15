@@ -439,15 +439,3 @@ field containing the delimiter survives intact. One consequence of that: a quote
 field may span several physical lines, so the guarantee is one output *row* per
 input *row*, which is only the same thing as one line per line when no field is
 quoted across a newline.
-
-There is always exactly one output line per input line, which is what lets a caller
-consume the two in step. A line that cannot be used - blank, not two numbers, or a
-coordinate outside the valid range - produces an empty output line and a warning on
-stderr naming the line number and the reason. Note that an empty output line is also
-what a genuine "no timezone here" looks like, which ``-f 4`` and ``-f 5`` return for
-every ocean point; the two are told apart by the **exit code**, which is ``1`` if any
-input line was rejected and ``0`` if every line was answered.
-
-``--in-memory`` reads the coordinate data into RAM rather than memory-mapping it.
-That costs tens of MB and makes lookups roughly 1.3x faster once the page cache is
-warm, so it is worth passing for a long stream and not for a single query.
