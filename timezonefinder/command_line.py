@@ -350,10 +350,10 @@ def _run_stdin(
     to rejoin the two. An input header gains a ``timezone`` column; a headerless
     input stays headerless.
 
-    A row that cannot be used - blank, too short, not numeric, or outside the
-    valid coordinate range - produces a warning on stderr and is written out
-    with that column empty, so one bad row among a thousand costs its own answer
-    and no other. That empty cell is also what a genuine "no timezone here"
+    A row that cannot be used - blank, malformed as csv, too short, not
+    numeric, or outside the valid coordinate range - produces a warning on
+    stderr and is written out with that column empty, so one bad row among a
+    thousand costs its own answer and no other. That empty cell is also what a genuine "no timezone here"
     looks like, which ``-f 4`` and ``-f 5`` return for every ocean point, so the
     count returned here is what lets a caller tell the two apart.
 
@@ -380,7 +380,29 @@ def _run_stdin(
     lng_index: int | None = None
     lat_index: int | None = None
 
-    for row_no, row in enumerate(reader, start=1):
+    # Driven by hand rather than with `enumerate`, so that a row csv itself
+    # rejects can be caught without ending the loop. `csv.Error` derives from
+    # `Exception`, not `ValueError`, so it would otherwise escape every handler
+    # here and abort the stream with a traceback - the one outcome this mode
+    # promises not to produce.
+    rows = iter(reader)
+    row_no = 0
+    while True:
+        row_no += 1
+        try:
+            row = next(rows)
+        except StopIteration:
+            break
+        except csv.Error as e:
+            # An unterminated quote, or a field past csv's size limit. The
+            # reader resumes on the following line, so this costs one row like
+            # any other unusable one - but the fields went with it, leaving
+            # nothing to echo back.
+            sys.stderr.write(f"warning: skipping row {row_no}: {e}\n")
+            emit([])
+            rejected += 1
+            continue
+
         if not row:
             # A blank row carries no columns to resolve against, so it cannot
             # decide the header question either. Reject it and read on.

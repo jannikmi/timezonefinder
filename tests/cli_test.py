@@ -5,6 +5,7 @@ cover the ``[project.scripts]`` wiring in ``pyproject.toml`` as well as the code
 in :mod:`timezonefinder.command_line`.
 """
 
+import csv
 import subprocess
 import sys
 
@@ -330,6 +331,25 @@ def test_stdin_mode_survives_an_unusable_row(bad_row: str):
     assert lines[-1] == f"{AMSTERDAM_ROW},Europe/Amsterdam", (
         f"the row after {bad_row!r} must still be answered, got {lines}"
     )
+
+
+@pytest.mark.unit
+def test_stdin_mode_survives_a_row_csv_itself_rejects():
+    """A line csv cannot parse costs one row, not the rest of the stream.
+
+    ``csv.Error`` derives from ``Exception`` rather than ``ValueError``, so it
+    escapes every handler written for a bad coordinate; before it was caught
+    where the rows are read, an over-long field ended the run with a traceback.
+    """
+    oversized = "x" * (csv.field_size_limit() + 1)
+    result = run_cli(
+        "--stdin",
+        input=csv_input(f"{oversized},{AMSTERDAM[1]},{AMSTERDAM[0]}", AMSTERDAM_ROW),
+    )
+    assert result.returncode == 1, "a rejected row must be visible in the exit code"
+    assert "Traceback" not in result.stderr, result.stderr
+    assert "field larger than field limit" in result.stderr
+    assert result.stdout.splitlines()[-1] == f"{AMSTERDAM_ROW},Europe/Amsterdam"
 
 
 @pytest.mark.unit
