@@ -338,9 +338,10 @@ A command line script is being installed as part of this package.
 
 ::
 
-    timezonefinder [-h] [-v] [--stdin] [--in-memory] [-d DELIMITER]
-                   [--lng-col LNG_COL] [--lat-col LAT_COL]
-                   [-f {0,1,3,4,5}] lng lat
+    timezonefinder [-h] [-v] [--stdin] [-d DELIMITER] [--lng-col LNG_COL]
+                   [--lat-col LAT_COL] [--header | --no-header]
+                   [--in-memory] [-f {0,1,3,4,5}]
+                   [lng] [lat]
 
 
 **Example**:
