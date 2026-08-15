@@ -175,13 +175,20 @@ def test_stdin_mode_prints_one_result_per_line():
 
 @pytest.mark.unit
 def test_stdin_mode_respects_function_flag():
-    """-f applies to every lookup in the stream."""
-    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
+    """-f applies to every lookup in the stream.
+
+    The ocean point is what makes this discriminating: it is the only one of
+    the two whose answer differs between the default `-f 0` (`Etc/GMT+10`, the
+    zone of the longitude band) and `-f 5` (empty, since it is not on land).
+    Asserting only the land point would pass with the flag ignored entirely.
+    """
+    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n{PACIFIC[0]},{PACIFIC[1]}\n"
     result = run_cli("--stdin", "-f", "5", input=stdin_input)
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
-    assert len(lines) == 1
+    assert len(lines) == 2, f"expected 2 lines, got {lines}"
     assert lines[0] == "Europe/Amsterdam"
+    assert lines[1] == "", "-f 5 is land-only, so the ocean point has no answer"
 
 
 @pytest.mark.unit
@@ -233,3 +240,96 @@ def test_stdin_and_verbose_are_mutually_exclusive():
     result = run_cli("--stdin", "-v")
     assert result.returncode == 2
     assert "mutually exclusive" in result.stderr
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "bad_line",
+    ["200,100", "0,91", "nan,nan", "inf,0", "1,2,3", "not-a-coordinate", "   "],
+)
+def test_stdin_mode_survives_an_unusable_line(bad_line: str):
+    """One unusable line must not cost the caller the rest of the stream.
+
+    Out-of-range coordinates are the case worth pinning: they parse as two
+    floats and only fail inside the lookup, so before the bounds check moved
+    into the line parser they raised past the loop and discarded every input
+    after them - the outcome issue #504 called hostile.
+    """
+    stdin_input = f"{bad_line}\n{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
+    result = run_cli("--stdin", input=stdin_input)
+    assert result.returncode == 1, "a rejected line must be visible in the exit code"
+    assert "Traceback" not in result.stderr, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines == ["", "Europe/Amsterdam"], (
+        f"the line after {bad_line!r} must still be answered, got {lines}"
+    )
+
+
+@pytest.mark.unit
+def test_stdin_mode_warning_names_the_line_and_the_reason():
+    """A rejected line is diagnosable: its number, its content and why it failed."""
+    result = run_cli("--stdin", input=f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n200,100\n")
+    assert "line 2" in result.stderr
+    assert "'200,100'" in result.stderr
+    assert "must be in range" in result.stderr
+
+
+@pytest.mark.unit
+def test_stdin_mode_exits_zero_when_every_line_was_answered():
+    """An empty answer is not a rejected line: ocean points under -f 5 exit 0."""
+    result = run_cli("--stdin", "-f", "5", input=f"{PACIFIC[0]},{PACIFIC[1]}\n")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "\n"
+    assert result.stderr == ""
+
+
+@pytest.mark.unit
+def test_stdin_mode_exits_quietly_when_the_consumer_stops_reading():
+    """`--stdin | head -1` must not end in a BrokenPipeError traceback.
+
+    Stopping early is how a shell pipeline is normally driven, so this is the
+    advertised use case rather than an edge case. The input has to outrun the
+    stdout buffer for the writer to still be writing once the reader is gone.
+    """
+    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n" * 20000
+    writer = subprocess.Popen(
+        ["timezonefinder", "--stdin"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    reader = subprocess.Popen(
+        ["head", "-1"], stdin=writer.stdout, stdout=subprocess.PIPE, text=True
+    )
+    # the parent must drop its own handle, or the pipe never reports as closed
+    assert writer.stdout is not None
+    writer.stdout.close()
+    try:
+        writer.stdin.write(stdin_input)
+        writer.stdin.close()
+    except BrokenPipeError:  # pragma: no cover - the writer may exit first
+        pass
+    assert reader.communicate()[0] == "Europe/Amsterdam\n"
+    stderr = writer.communicate()[1]
+    assert "BrokenPipeError" not in stderr, stderr
+    assert "Exception ignored" not in stderr, stderr
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("extra_args", [("4.89", "52.37"), ("4.89",)])
+def test_stdin_mode_rejects_coordinates_on_the_command_line(extra_args):
+    """Coordinates passed alongside --stdin are an error, not silently dropped."""
+    result = run_cli("--stdin", *extra_args, input="")
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "do not pass lng and lat" in result.stderr
+
+
+@pytest.mark.unit
+def test_missing_argument_error_names_only_what_is_missing():
+    """A partial invocation must not report the argument that was supplied."""
+    result = run_cli("--", *AMSTERDAM[:1])
+    assert result.returncode == 2
+    assert "required: lat" in result.stderr
+    assert "lng" not in result.stderr.rsplit("required:", 1)[-1]
