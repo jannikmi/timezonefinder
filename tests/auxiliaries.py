@@ -157,7 +157,7 @@ def build_wheel(clean_dist: bool = True) -> Path:
     if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
 
-    run_command(BUILD_WHEEL_CMD, cwd=str(PROJECT_ROOT))
+    run_command(BUILD_WHEEL_CMD, cwd=PROJECT_ROOT)
 
     wheels = list(DIST_DIR.glob("*.whl"))
     assert wheels, "No wheel file found in dist/"
@@ -169,7 +169,7 @@ def build_sdist(clean_dist: bool = True) -> Path:
     if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
 
-    run_command(BUILD_SDIST_CMD, cwd=str(PROJECT_ROOT))
+    run_command(BUILD_SDIST_CMD, cwd=PROJECT_ROOT)
 
     dist_files = file_path_iterator(DIST_DIR, relative=False)
     sdist_files = list(filter_paths(dist_files, "*.tar.gz"))
@@ -342,12 +342,12 @@ def is_valid_lat_int(y: int) -> bool:
     return -MAX_LAT_VAL_INT <= y <= MAX_LAT_VAL_INT
 
 
-def is_valid_lng_int_vec(arr) -> bool:
-    return np.all((-MAX_LNG_VAL_INT <= arr) & (arr <= MAX_LNG_VAL_INT))
+def is_valid_lng_int_vec(arr: np.ndarray) -> bool:
+    return bool(np.all((-MAX_LNG_VAL_INT <= arr) & (arr <= MAX_LNG_VAL_INT)))
 
 
-def is_valid_lat_int_vec(arr) -> bool:
-    return np.all((-MAX_LAT_VAL_INT <= arr) & (arr <= MAX_LAT_VAL_INT))
+def is_valid_lat_int_vec(arr: np.ndarray) -> bool:
+    return bool(np.all((-MAX_LAT_VAL_INT <= arr) & (arr <= MAX_LAT_VAL_INT)))
 
 
 def validate_polygon_coordinates(coords: np.ndarray):

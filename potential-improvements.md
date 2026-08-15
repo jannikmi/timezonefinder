@@ -160,21 +160,6 @@ here because the alternative is losing them; each needs the maintainer's call, n
 
 ## Dead and inert code
 
-### DEAD-2 — leftovers that are referenced but inert
-
-- `scripts/shortcuts.py` — `has_coherent_sequences` builds `lst_iter = iter(lst)` solely to take
-  `next()` as the initial `prev`, then loops over `lst` from the start. Correct (the first
-  comparison is a no-op) but it reads as an off-by-one bug.
-- `scripts/helper_classes.py` — `compile_bboxes` unpacks `x_coords, y_coords = coords` and then
-  immediately reassigns `y_coords = coords[1]`.
-- `scripts/shortcuts.py` — `process_single_hex` returns the `hex_id` it was handed, so its only
-  caller writes `hex_id, polys_optimised = process_single_hex(hex_id, data)`, reassigning the loop
-  variable to itself (ruff `PLW2901`). Vestigial from the parallel-map version.
-- **Fix:** simplify each in place. Size: ~15 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
-
-
 ### DEAD-5 — `REDUCED_TIMEZONE_MAPPING` has no consumer, and is annotated as a set
 
 - **Location:** `tests/locations.py`, `REDUCED_TIMEZONE_MAPPING`.
@@ -193,61 +178,7 @@ here because the alternative is losing them; each needs the maintainer's call, n
 
 ---
 
-## Type annotations that do not match reality
-
-### TYPE-2 — implicit `Optional` (ruff `RUF013`)
-
-- **Location:** `scripts/benchmark_utils.py` — `additional_info: dict[str, Any] = None`,
-  `provenance: dict[str, Any] = None`.
-- **Defect:** PEP 484 forbids implicit `Optional`. `no_implicit_optional = true` is already set in
-  `[tool.mypy]`, but these live in `scripts/`, which the mypy hook does not currently cover.
-- **Fix:** annotate `| None`. Size: 2 lines.
-- **Status:** open
-- **Last touched:** 2026-08-14 — the third site, `scripts/reporting.py`'s `additional_rows`, shipped
-  this pass; these two are what is left. See TOOL-4 for the reason nothing catches them.
-
-
-### TYPE-4 — builtins shadowed
-
-- **Location:** `scripts/file_converter.py`, `for dir, bounds in boundary_sources:` (ruff `A001`);
-  `scripts/hex_utils.py`, `HexIdSet.from_id(cls, id: int, ...)` (ruff `A002`).
-- **Fix:** rename the loop variable and the parameter. `from_id` has one call site
-  (`scripts/timezone_data.py`, `Hex.from_id(hex_id, data)`) and passes it positionally, so renaming
-  it moves nothing. Size: ~6 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified; the `A002` site added this pass, same defect and same
-  fix, so it belongs here rather than in an entry of its own.
-
-### TYPE-5 — generator functions with no return annotation
-
-- **Location:** `scripts/timezone_data.py` — `HoleCollection.holes_in_poly` and
-  `TimezoneData.holes_in_poly`; `scripts/generate_benchmark_fixtures.py` —
-  `write_points_fixture`.
-- **Defect:** the two `holes_in_poly` are generators returning polygon arrays and are annotated
-  with nothing at all, so a caller cannot tell from the signature that iterating is required. Every
-  neighbouring method in both classes is annotated, which is what makes these read as oversights
-  rather than as a choice.
-- **Fix:** `Iterator[np.ndarray]` and `None`. Size: ~4 lines.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass.
-
----
-
 ## Test quality
-
-### TEST-5 — eight cleanup tests differ only in which exception they raise
-
-- **Location:** `tests/main_test.py`, `TestTimezonefinderCleanup` — every test from
-  `test_cleanup_attribute_error_suppressed` through `test_cleanup_type_error_warned`.
-- **Defect:** each defines the same `TimezoneFinder` subclass overriding `cleanup` to raise one
-  exception, then repeats the same `catch_warnings` block and the same `ResourceWarning` filter.
-  The only things that vary are the exception and whether zero or one warning is expected. Adding a
-  ninth exception to `__del__`'s suppression list means copying the block a ninth time, and a copy
-  that asserts the wrong count is invisible.
-- **Fix:** one parametrized test over `(exception, expected_warning_count)`, plus the two that
-  additionally assert the message. Size: ~90 lines removed.
-- **Status:** open
-- **Last touched:** 2026-08-09 — found this pass.
 
 ### TEST-11 — nothing checks that the files a distribution must *add* are present
 
@@ -355,18 +286,6 @@ pass had read. Nothing in it is wrong; the two below are readability.
 - **Last touched:** 2026-08-08 — found this pass.
 
 
-### REND-3 — set membership expressed as a scan over lists of dicts
-
-- **Location:** `scripts/render_benchmark_reports.py`, `render_timezone_finding`:
-  `other = [b for b in benches if b not in in_memory and b not in file_based]`.
-- **Defect:** `in` over a list of dicts compares by value, so this is a deep-equality scan to
-  answer a question the two lines above already answered by name suffix. Harmless at ~14
-  benchmarks, but it reads as though identity mattered and it does not.
-- **Fix:** classify on the suffix directly, as the two lines above do. Size: ~3 lines.
-- **Status:** open
-- **Last touched:** 2026-08-08 — found this pass.
-
-
 ---
 
 ## Tooling
@@ -374,13 +293,16 @@ pass had read. Nothing in it is wrong; the two below are readability.
 ### TOOL-1 — ruff runs close to its default rule set
 
 - **Location:** `pyproject.toml`, `[tool.ruff]` — no `lint.select`.
-- **Defect:** several findings in this ledger (`B904`, `RUF013`, `A001`, `PLW2901`, `PLR09xx`) were
-  surfaced by ad-hoc `uv run ruff check --select ...` runs and are not caught by CI as configured.
+- **Defect:** several findings in this ledger (`B904`, `RUF013`, `A001`, `A002`, `PLW2901`,
+  `PLR09xx`) were surfaced by ad-hoc `uv run ruff check --select ...` runs and are not caught by CI
+  as configured.
 - **Fix:** enable a chosen subset. Best done *after* the existing findings are cleared, so the first
   run is not a wall of noise. Note that `TRY003` / `EM101` / `EM102` fire in the hundreds across
   `scripts/` and are not worth adopting — pick deliberately rather than taking a whole family.
 - **Status:** open
-- **Last touched:** 2026-08-09 — `B904` and `B023` are now both clean repo-wide (excluding
+- **Last touched:** 2026-08-14 — `RUF013`, `A001`, `A002` and `PLW2901` are all clean repo-wide as
+  of this pass, so of the families named above only `PLR09xx` still has sites. `B904` and `B023` are
+  clean too (excluding
   `prototypes/`) and could be enabled on their own. `B905` is down to 9 sites: two in
   `scripts/timezone_data.py`'s validators and one in `tests/utils_test.py` where the lengths are
   checked on the line above, the rest genuinely paired by construction. The one worth looking at
@@ -392,68 +314,50 @@ pass had read. Nothing in it is wrong; the two below are readability.
   FlatBuffers message, so this needs a corrupt file to happen at all — but it is the one site where
   the failure mode is a wrong answer.
 
-### TOOL-3 — `make parse` and `make testparse` cannot run at all
-
-- **Location:** `Makefile`, the `parse` and `testparse` targets; the absolute `from scripts...`
-  imports at the head of `scripts/file_converter.py`.
-- **Defect:** both targets invoke the converter *by path* (`uv run python
-  ./scripts/file_converter.py ...`), which puts `scripts/` on `sys.path[0]` rather than the
-  repository root, so the script's own `from scripts.timezone_data import TimezoneData` raises
-  `ModuleNotFoundError: No module named 'scripts'` before any work starts. `scripts` is not among
-  the installed packages in `[tool.setuptools] packages` either, so the environment does not supply
-  it. Reproduced on unmodified `origin/master` with `make testparse`; the failure is immediate and
-  total, not conditional on the machine.
-- **Value:** `testparse` is the only cheap end-to-end exercise of the data converter — it runs
-  against `tests/test_input.json` in a second, where `make data` needs a ~55 MB download and a full
-  parse. Nothing in `tests/` covers `parse_data()`, so while these targets are broken the converter
-  has no runnable smoke test at all, and a contributor following the `Makefile` header comment hits
-  a traceback that looks like a broken checkout.
-- **Fix:** invoke it as a module — `uv run python -m scripts.file_converter ...` — which is already
-  how `scripts/reporting.py` is run elsewhere (`uv run python -m scripts.reporting`). Confirm the
-  `argparse` entry point still behaves under `-m`, and check the other by-path invocations for the
-  same defect: `update_data.sh` also calls the converter. Size: ~4 lines.
-- **Status:** open
-- **Last touched:** 2026-08-13 — found while regenerating the packaged data for the hole
-  deduplication work (issue #350), which needed `PYTHONPATH=.` prefixed to every converter run.
-
-### TOOL-2 — the `check-manifest` ignore list names two files that do not exist
-
-- **Location:** `.pre-commit-config.yaml`, the `check-manifest` hook's `--ignore` argument.
-- **Defect:** it lists `CONTRIBUTING.rst` (the file is `CONTRIBUTING.md`) and `publish.py` (gone
-  from the repository). Both are inert — an ignore entry that matches nothing only fails to
-  suppress a report — so this is tidiness, not a hole. The same argument also carries `.*` and
-  `.*/*`, which exempt every dotfile and dot-directory from `check-manifest` entirely; that is what
-  leaves `tests/test_package_contents.py` as the only guard over `.github/`, `.vscode/` and
-  `.cursor/`.
-- **Fix:** drop the two stale entries. Size: 1 line. Re-run `make hook` afterwards — the point of
-  the list is that `check-manifest` stays green.
-- **Status:** open
-- **Last touched:** 2026-08-10 — found this pass, while correcting the same class of defect in the
-  packaging test.
-
-### TOOL-4 — the mypy hook excludes `scripts/`, where the annotations have drifted furthest
+### TOOL-5 — the mypy hook still excludes `tests/`
 
 - **Location:** `.pre-commit-config.yaml`, the mypy hook's
-  `exclude: ^((tests|prototypes|scripts|docs|benchmarks)/)`.
-- **Defect:** `[tool.mypy]` is configured strictly enough to catch real defects, and nothing runs it
-  over the four directories that hold most of the repo's Python. `scripts/reporting.py` alone had
-  accumulated 17 errors, including a return annotation contradicted by the value returned and an
-  entry point annotated `-> None` while returning exit codes; all were fixed this pass.
-- **Fix:** narrow the exclude one directory at a time, `scripts/` first since it is now closest.
-  Measured on this branch, `uv run mypy scripts/` reports **20 errors**, of which **15 are in six
-  files under `scripts/`** — `shortcuts.py` (4), `file_converter.py` (4), `benchmark_utils.py` (3),
-  `timezone_data.py` (2), `measure_memory.py` (1), `hex_utils.py` (1) — while `reporting.py` and
-  `configs.py` are clean. The other five come from modules pulled in transitively and would not be
-  fixed by narrowing the exclude to `scripts/`: four in `tests/auxiliaries.py` (two `numpy.bool`
-  returns annotated `bool`, two `str` arguments to a `Path` parameter) and one missing `cffi` stub
-  in `timezonefinder/utils_clang.py` that the hook already supplies via `additional_dependencies`.
-  Two of the fifteen are TYPE-2's remaining sites. Size: ~30 lines plus one hook edit.
-- **Value:** moderate. This is the mechanism behind TYPE-2, TYPE-4, TYPE-5 and most of what this
-  pass fixed, so clearing it stops the class rather than the instances. Note the counts above are a
-  moving target — re-measure rather than trusting them.
+  `exclude: ^((tests|prototypes|docs|benchmarks)/)`.
+- **Defect:** the same mechanism TOOL-4 closed for `scripts/`, one directory over. Measured on this
+  branch, `uv run mypy tests/` reports **14 errors** (plus one `cffi` stub the hook supplies itself
+  via `additional_dependencies`): six are missing third-party stubs (`pytz` ×2, `yaml` ×4), which
+  want `types-PyYAML` in `additional_dependencies` and `pytz` adding to the
+  `ignore_missing_imports` override rather than code changes. The remaining eight are real
+  disagreements — five in `tests/main_test.py` (three uses of a `test_instance` attribute the base
+  class does not define, and two subclass attributes narrowing a base annotation), two in
+  `tests/locations.py` (DEAD-5's `set[str, str]` on a `dict` literal, counted twice), one in
+  `tests/test_memory_footprint.py` (`int | None` into a `float`-valued dict comprehension).
+- **Fix:** clear the fourteen, then drop `tests` from the exclude and extend
+  `test_scripts_are_type_checked_by_the_hook` to cover it. Size: ~35 lines plus two hook edits.
+- **Value:** moderate, and lower than TOOL-4's was — `tests/` is exercised by running it, so a type
+  error there is less likely to hide a live defect than one in the converter. The
+  `test_instance` errors are the exception: they say the base class and its subclasses disagree
+  about what exists.
 - **Status:** open
-- **Last touched:** 2026-08-14 — found this pass, and re-measured after rebasing onto PR #509,
-  which added `scripts/data_integrity.py` and moved several of the counts.
+- **Last touched:** 2026-08-14 — measured this pass, directly after narrowing the exclude to cover
+  `scripts/`.
+
+### TOOL-6 — `parse_data` rewrites the committed data report whatever `-out` it was given
+
+- **Location:** `scripts/file_converter.py`, `parse_data`'s call to
+  `write_data_report_from_binary`; `scripts/reporting.py`, `write_data_report_from_binary`, which
+  writes to `DATA_REPORT_FILE` (`scripts/configs.py`, anchored at the checkout's `docs/`).
+- **Defect:** the function's `data_path` selects which binaries to *read*; the destination is fixed.
+  So `make testparse`, which parses `tests/test_input.json` into `tmp/parsed_data`, leaves the
+  committed `docs/data_report.rst` describing the three-zone fixture — as does any user following
+  `docs/2_use_cases.rst` with their own `-out`. Nothing warns, and the report is a generated file
+  nobody re-reads, so the corruption is only caught by `git status`.
+- **Fix:** write the report beside the parsed data when the output directory is not the packaged
+  one, or have `parse_data` skip the report for a non-default `-out` and leave it to
+  `make reports`. Size: ~10 lines.
+- **Why it is not a straight refactor:** either fix changes where a file is written for anyone
+  calling `parse_data(output_path=...)`, which is a behaviour change by §3's definition and wants
+  the maintainer's call. **Out of scope for a quality pass**; recorded here so the decision is made
+  once. In the meantime `make testparse` carries a comment saying to restore the file.
+- **Status:** open — out of scope for the quality pass that found it.
+- **Last touched:** 2026-08-14 — found this pass, immediately after making `make testparse`
+  runnable again (TOOL-3); before that the target could not reach the report-writing code at all,
+  which is why no earlier pass saw it.
 
 ---
 
@@ -485,14 +389,17 @@ deleted by the pass that reads it.
 | 5 (checks that cannot fail) | 2026-08-09 | `tests/main_test.py`, `scripts/timezone_data.py`, `scripts/measure_memory.py` and `scripts/generate_benchmark_fixtures.py` read in full — the four previously unswept modules named by pass 4; every multi-statement `pytest.raises`/`pytest.warns` block in `tests/` and `benchmarks/` enumerated with an AST scan (all four were in `tests/main_test.py`, all four now split) | `docs/`, `.github/workflows/`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py` |
 | 6 (packaging guard patterns) | 2026-08-10 | The five test modules pass 5 left unread — `tests/test_package_contents.py`, `tests/test_benchmark_ci_tooling.py`, `tests/test_optimized_hybrid_shortcuts.py`, `tests/test_render_benchmark_reports.py`, `tests/utils_test.py` — plus `tests/auxiliaries.py` and `tests/main_test.py` re-read; every `UNWANTED_DIST_PATTERNS` entry matched against the working tree, and `MANIFEST.in` / the `check-manifest` ignore list compared against it | `docs/`, `.github/workflows/` |
 | 7 (leaked state and duplicate checks) | 2026-08-14 | `.github/workflows/` read in full - the last area with no coverage in any pass (new guard: `tests/test_python_version_support.py`); `scripts/hex_utils.py` and `scripts/shortcuts.py` re-read in full; `scripts/timezone_data.py`'s `ZoneCollection` validators read and given their first tests; a repeated repo-wide ruff `--select ALL` triage over `timezonefinder/`, `scripts/`, `tests/`, `benchmarks/` (3811 findings, filtered per the note below - nothing new above the bar beyond DEAD-4 and REND-4) | `docs/` prose; `scripts/reporting.py` and `scripts/render_benchmark_reports.py` internals beyond the ruff sweep |
-| 8 (the data report generator) | 2026-08-14 | `scripts/reporting.py` read in full — the last large module no pass had read end to end, and the source of five of this pass's six items; `scripts/hex_utils.py`'s `Hex` cache properties and `scripts/utils.py` re-read; `scripts/render_benchmark_reports.py` revisited only at the REND-2 site. `uv run mypy` run by hand over `scripts/`, which the pre-commit hook excludes — the first time any pass has done so, and the mechanism behind most findings here (recorded as TOOL-3) | `docs/` prose; `scripts/shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py` and `measure_memory.py`, whose mypy errors TOOL-4 counts but which were not read for it; `scripts/data_integrity.py`, added by #509 mid-pass |
+| 8 (the data report generator) | 2026-08-14 | `scripts/reporting.py` read in full — the last large module no pass had read end to end, and the source of five of this pass's six items; `scripts/hex_utils.py`'s `Hex` cache properties and `scripts/utils.py` re-read; `scripts/render_benchmark_reports.py` revisited only at the REND-2 site. `uv run mypy` run by hand over `scripts/`, which the pre-commit hook excludes — the first time any pass has done so, and the mechanism behind most findings here | `docs/` prose; `scripts/shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py` and `measure_memory.py`, whose mypy errors TOOL-4 counts but which were not read for it; `scripts/data_integrity.py`, added by #509 mid-pass |
+
+| 9 (scripts/ entry point and typing) | 2026-08-14 | The five `scripts/` modules pass 8 named as unreached — `shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py`, `measure_memory.py` — read at their mypy error sites and around them; `Makefile`, `update_data.sh` and `docs/2_use_cases.rst` compared for how the converter is invoked; `tests/main_test.py`'s cleanup class and `tests/auxiliaries.py` re-read. `uv run mypy` run by hand over `scripts/` (15 errors, all cleared, directory now in the hook) and over `tests/` (14 errors, recorded as TOOL-5) | `docs/` prose; `scripts/data_integrity.py`, still unread by any pass; `scripts/reporting.py` internals (pass 8's ground); no repeat of the repo-wide `--select ALL` triage — passes 7 and 8 both ran it and found nothing new above the bar |
 
 Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`
-and pass 8 `scripts/reporting.py`. The only area with **no coverage in any pass** is `docs/` prose —
-mostly outside a code-quality pass's scope. The cheapest real starting point is therefore the ranked
-open entries above rather than fresh discovery, with one exception worth knowing: pass 8 found that
-running mypy by hand over an excluded directory surfaces defects no pass had seen, and only
-`scripts/reporting.py` has been cleared that way (TOOL-3).
+and pass 8 `scripts/reporting.py`. The only areas with **no coverage in any pass** are `docs/` prose
+— mostly outside a code-quality pass's scope — and `scripts/data_integrity.py`. The cheapest real
+starting point is therefore the ranked open entries above rather than fresh discovery, with one
+exception worth knowing: running mypy by hand over a directory the pre-commit hook excludes
+surfaces defects no pass had seen. All of `scripts/` has now been cleared that way and the hook
+covers it; `tests/` is the directory that is still excluded, measured in TOOL-5.
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run

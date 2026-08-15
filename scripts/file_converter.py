@@ -103,7 +103,7 @@ def to_numpy_array(values: list[Any], dtype: str) -> NDArray[Any]:
     return np.array(values, dtype=dtype)
 
 
-def to_bbox_vector(values: list[int]) -> BoundaryArray:
+def to_bbox_vector(values: list[float]) -> BoundaryArray:
     return to_numpy_array(values, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY)
 
 
@@ -116,10 +116,10 @@ def convert_bboxes_to_numpy(
     Returns:
         Tuple of numpy arrays (xmax, xmin, ymax, ymin)
     """
-    xmax_list: list[int] = []
-    xmin_list: list[int] = []
-    ymax_list: list[int] = []
-    ymin_list: list[int] = []
+    xmax_list: list[float] = []
+    xmin_list: list[float] = []
+    ymax_list: list[float] = []
+    ymin_list: list[float] = []
     for bounds in bboxes:
         xmax_list.append(bounds.xmax)
         xmin_list.append(bounds.xmin)
@@ -173,16 +173,16 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
         (boundaries_dir, data.poly_boundaries),
     ]
 
-    for dir, bounds in boundary_sources:
+    for output_dir, bounds in boundary_sources:
         # Convert Boundaries to numpy arrays
         boundary_xmax, boundary_xmin, boundary_ymax, boundary_ymin = (
             convert_bboxes_to_numpy(bounds)
         )
         # Save bounding box properties using store_per_polygon_vector
-        store_per_polygon_vector(get_xmax_path(dir), boundary_xmax)
-        store_per_polygon_vector(get_xmin_path(dir), boundary_xmin)
-        store_per_polygon_vector(get_ymax_path(dir), boundary_ymax)
-        store_per_polygon_vector(get_ymin_path(dir), boundary_ymin)
+        store_per_polygon_vector(get_xmax_path(output_dir), boundary_xmax)
+        store_per_polygon_vector(get_xmin_path(output_dir), boundary_xmin)
+        store_per_polygon_vector(get_ymax_path(output_dir), boundary_ymax)
+        store_per_polygon_vector(get_ymin_path(output_dir), boundary_ymin)
 
     # HOLE POLYGON REFERENCES: which boundary polygon each hole duplicates, or where
     # its own ring sits in the (much smaller) hole coordinate file. Written per hole id,

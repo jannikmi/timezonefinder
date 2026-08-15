@@ -493,7 +493,9 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
 
     in_memory = [b for b in benches if b["name"].endswith("in_memory]")]
     file_based = [b for b in benches if b["name"].endswith("file_based]")]
-    other = [b for b in benches if b not in in_memory and b not in file_based]
+    other = [
+        b for b in benches if not b["name"].endswith(("in_memory]", "file_based]"))
+    ]
 
     for section_title, group in (
         ("In-Memory Mode", in_memory),
