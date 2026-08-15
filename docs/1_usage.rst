@@ -406,6 +406,12 @@ or for input with no header at all, name them explicitly - a header name, or a
     timezonefinder --stdin --lng-col 3 --lat-col 2 < headerless.csv
     timezonefinder --stdin --lng-col longitude_deg --lat-col latitude_deg < f.csv
 
+**Header or not.** Whether the first row names the columns or already holds data
+is worked out from the row itself when nothing says otherwise. Say it outright with
+``--header`` or ``--no-header`` when that could go wrong - a header whose names are
+all numbers reads as data, and a first data row whose coordinates are placeholders
+reads as a header.
+
 .. note::
 
     The column order is **never** guessed. Input with no header and no

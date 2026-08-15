@@ -251,6 +251,52 @@ def test_stdin_mode_refuses_to_guess_the_column_order():
 
 
 @pytest.mark.unit
+def test_stdin_mode_header_flag_overrides_the_probe():
+    """--header states what probing the first row can only infer.
+
+    A header of purely numeric names looks like data to any probe, and the
+    coordinate columns are then never found - so without a way to state it, a
+    perfectly well-formed input is unusable.
+    """
+    probed = run_cli("--stdin", input="2024,lat,lng\n5,52.37,4.89\n")
+    assert probed.returncode == 2
+    assert "no header row" in probed.stderr
+
+    stated = run_cli("--stdin", "--header", input="2024,lat,lng\n5,52.37,4.89\n")
+    assert stated.returncode == 0, stated.stderr
+    assert stated.stdout.splitlines() == [
+        "2024,lat,lng,timezone",
+        "5,52.37,4.89,Europe/Amsterdam",
+    ]
+
+
+@pytest.mark.unit
+def test_stdin_mode_no_header_flag_keeps_the_first_row_as_data():
+    """--no-header states that every row is data, first one included."""
+    result = run_cli(
+        "--stdin",
+        "--no-header",
+        "--lng-col",
+        "1",
+        "--lat-col",
+        "2",
+        input=f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n",
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        f"{AMSTERDAM[0]},{AMSTERDAM[1]},Europe/Amsterdam"
+    ]
+
+
+@pytest.mark.unit
+def test_stdin_mode_header_flags_are_mutually_exclusive():
+    """The first row is one thing or the other, so both flags cannot be given."""
+    result = run_cli("--stdin", "--header", "--no-header", input="")
+    assert result.returncode == 2
+    assert "not allowed with argument" in result.stderr
+
+
+@pytest.mark.unit
 def test_stdin_mode_takes_explicit_1_based_columns():
     """--lng-col/--lat-col address a headerless input by column number."""
     rows = f"S-1,{AMSTERDAM[0]},{AMSTERDAM[1]}\nS-2,{PACIFIC[0]},{PACIFIC[1]}\n"
@@ -560,7 +606,14 @@ def test_stdin_mode_rejects_coordinates_on_the_command_line(extra_args):
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
-    "flag_args", [("-d", ";"), ("--lng-col", "2"), ("--lat-col", "3")]
+    "flag_args",
+    [
+        ("-d", ";"),
+        ("--lng-col", "2"),
+        ("--lat-col", "3"),
+        ("--header",),
+        ("--no-header",),
+    ],
 )
 def test_stdin_only_flags_are_rejected_for_a_single_query(flag_args):
     """The row-format flags mean nothing without --stdin, so they are refused."""

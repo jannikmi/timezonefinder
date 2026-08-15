@@ -131,6 +131,25 @@ def _parse_arguments() -> argparse.Namespace:
         help="which --stdin column holds the latitude: a header name, or a "
         "1-based column number for input without a header.",
     )
+    header_group = parser.add_mutually_exclusive_group()
+    header_group.add_argument(
+        "--header",
+        dest="header",
+        action="store_const",
+        const=True,
+        default=None,
+        help="treat the first --stdin row as a header naming the columns, "
+        "rather than probing it. Worth stating whenever the first row could "
+        "hold no recognisable number - a header of purely numeric names, or a "
+        "data row whose coordinates are placeholders.",
+    )
+    header_group.add_argument(
+        "--no-header",
+        dest="header",
+        action="store_const",
+        const=False,
+        help="treat every --stdin row as data, including the first.",
+    )
     parser.add_argument(
         "--in-memory",
         action="store_true",
@@ -190,6 +209,7 @@ def _parse_arguments() -> argparse.Namespace:
             ("-d/--delimiter", args.delimiter != ","),
             ("--lng-col", args.lng_col is not None),
             ("--lat-col", args.lat_col is not None),
+            ("--header/--no-header", args.header is not None),
         )
         if value
     ]
@@ -420,13 +440,15 @@ def _run_stdin(
     delimiter: str,
     lng_spec: str | None,
     lat_spec: str | None,
+    has_header: bool | None,
 ) -> int:
     """Annotate delimited rows read from stdin with the timezone of each.
 
     Every input row is written back out with one column appended, so the answer
     arrives attached to the row it belongs to and a caller needs no second pass
     to rejoin the two. An input header gains a ``timezone`` column; a headerless
-    input stays headerless.
+    input stays headerless. Which one it is is stated by ``--header`` /
+    ``--no-header``, or probed for when neither is given.
 
     A row that cannot be used - blank, malformed as csv, too short, not
     numeric, or outside the valid coordinate range - produces a warning on
@@ -439,6 +461,8 @@ def _run_stdin(
     :param delimiter: The single-character field delimiter
     :param lng_spec: ``--lng-col`` value, or None to take it from the header
     :param lat_spec: ``--lat-col`` value, or None to take it from the header
+    :param has_header: ``--header``/``--no-header`` as stated, or None to probe
+        the first row for one
     :return: How many input rows were rejected
     :raises ValueError: If the coordinate columns cannot be determined
     """
@@ -493,17 +517,21 @@ def _run_stdin(
             continue
 
         if lng_index is None or lat_index is None:
-            # Whether the first row is a header is only worth probing when the
-            # header is needed to resolve a column. With both columns given as
-            # numbers it decides nothing but the fate of this row, and the two
-            # ways of being wrong are not symmetric: reading a data row as a
-            # header drops it in silence, while reading a header as data costs
-            # one warning naming the row. So the unverifiable case reads as
-            # data, and `--header` states the other case rather than guessing.
-            addressed_by_number = _is_column_number(lng_spec) and _is_column_number(
-                lat_spec
-            )
-            header = None if addressed_by_number or _looks_like_data(row) else row
+            # Probing the first row is only worth it when nothing states what
+            # it is, and when the header is needed to resolve a column at all:
+            # with both columns given as numbers it decides nothing but the
+            # fate of this row. The two ways of being wrong are not symmetric -
+            # reading a data row as a header drops it in silence, reading a
+            # header as data costs one warning naming the row - so where the
+            # probe cannot help, the row reads as data.
+            if has_header is None:
+                addressed_by_number = _is_column_number(lng_spec) and _is_column_number(
+                    lat_spec
+                )
+                is_header = not (addressed_by_number or _looks_like_data(row))
+            else:
+                is_header = has_header
+            header = row if is_header else None
             lng_index = _resolve_column(lng_spec, header, LNG_COLUMN_NAMES, "longitude")
             lat_index = _resolve_column(lat_spec, header, LAT_COLUMN_NAMES, "latitude")
             _check_columns_fit(row, (lng_index, lat_index))
@@ -538,6 +566,7 @@ def main() -> None:
                 _resolve_delimiter(args.delimiter),
                 args.lng_col,
                 args.lat_col,
+                args.header,
             )
         except ValueError as e:
             # The columns could not be determined - a usage problem, not a bad
