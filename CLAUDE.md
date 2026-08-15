@@ -112,6 +112,13 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   is what the bare CI envs use. When a change depends on one of these axes, test that axis instead
   of re-running the whole gate; one file elsewhere costs seconds and needs no tox env:
   `uv run --python 3.11 --all-groups --isolated pytest tests/<file>.py`
+- **A push only reaches CI through an open PR.** `build.yml` and `benchmark.yml` trigger on
+  `pull_request`, on pushes to `master` and tags, and on `workflow_dispatch` — never on a push to a
+  topic branch. So pushing a branch that has no PR yet schedules *nothing*, and the empty Actions
+  list means it will never start, not that it has not started. Once a PR exists, `pull_request`
+  fires on every further push to its head. Open the PR (or `workflow_dispatch`) if you want the
+  matrix run; and read an empty check list as "never ran", which is also why a thin green list is
+  not evidence that anything passed
 - `slow` tests are exhaustive sweeps of the whole dataset or hypothesis fuzzing, not general
   regression tests. Run them only when the change plausibly affects what they cover:
   - `main_test.py`, `shortcut_test.py`, `global_functions_test.py` slow cases — after touching
