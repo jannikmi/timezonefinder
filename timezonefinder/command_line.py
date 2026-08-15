@@ -161,10 +161,7 @@ def _parse_coordinate_line(line: str) -> tuple[float, float]:
     return validate_coordinates(lng, lat)
 
 
-def _run_stdin(
-    timezone_function: Callable[..., str | None],
-    function_id: int,
-) -> None:
+def _run_stdin(timezone_function: Callable[..., str | None]) -> None:
     """Read ``lng,lat`` pairs from stdin and print one result per line.
 
     Unusable lines - blank, unparseable, or naming a coordinate outside the
@@ -173,7 +170,6 @@ def _run_stdin(
     one bad line among a thousand does not discard the other 999.
 
     :param timezone_function: The lookup function to call for each pair
-    :param function_id: The function ID (used only for stderr diagnostics)
     """
     for line_no, raw_line in enumerate(sys.stdin, start=1):
         try:
@@ -205,7 +201,7 @@ def main() -> None:
 
     if args.stdin:
         try:
-            _run_stdin(timezone_function, args.function)
+            _run_stdin(timezone_function)
         except BrokenPipeError:
             # The consumer stopped reading (`| head -5`, a closed reader).
             # Python flushes stdout again on shutdown, which would raise a
