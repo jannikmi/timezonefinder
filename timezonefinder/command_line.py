@@ -183,12 +183,17 @@ def _run_stdin(
                 f"{raw_line.strip()!r} ({e})\n"
             )
             # keep stdout aligned with stdin
-            print()
+            print(flush=True)
             continue
 
         tz = timezone_function(lng=lng, lat=lat)
-        # an empty line when no timezone was found, same contract as single mode
-        print(tz if tz else "")
+        # an empty line when no timezone was found, same contract as single mode.
+        # Flushed per line because Python block-buffers stdout whenever it is not
+        # a terminal - which is every case this mode exists for. Without this a
+        # consumer receives nothing until ~8 KB of results has accumulated, and
+        # the unbuffered warnings on stderr arrive detached from the output lines
+        # they refer to.
+        print(tz if tz else "", flush=True)
 
 
 def main() -> None:
