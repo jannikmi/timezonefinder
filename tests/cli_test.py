@@ -440,6 +440,26 @@ def test_stdin_mode_writes_a_rejected_row_back_with_an_empty_answer():
 
 
 @pytest.mark.unit
+def test_stdin_mode_echoes_a_blank_row_back_blank():
+    """A blank row must not turn into a one-column row in a rectangular file.
+
+    ``csv`` writes a lone empty field as ``""`` to keep it distinguishable from
+    an empty row, which is exactly the ragged row a consumer of the output
+    trips over. There is no row to append a cell to, so none is appended.
+    """
+    result = run_cli("--stdin", input=csv_input(AMSTERDAM_ROW, "", PACIFIC_ROW))
+    assert result.returncode == 1, "a rejected row must be visible in the exit code"
+    assert result.stdout.splitlines() == [
+        f"{HEADER},timezone",
+        f"{AMSTERDAM_ROW},Europe/Amsterdam",
+        "",
+        f"{PACIFIC_ROW},Etc/GMT+10",
+    ]
+    widths = {len(row) for row in csv.reader(result.stdout.splitlines()) if row}
+    assert widths == {len(HEADER.split(",")) + 1}, "the output must stay rectangular"
+
+
+@pytest.mark.unit
 def test_stdin_mode_warning_names_the_row_and_the_reason():
     """A rejected row is diagnosable: its number and why it failed."""
     result = run_cli("--stdin", input=csv_input(AMSTERDAM_ROW, "Bad,100,200"))

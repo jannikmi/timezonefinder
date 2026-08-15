@@ -462,9 +462,12 @@ def _run_stdin(
 
         if not row:
             # A blank row carries no columns to resolve against, so it cannot
-            # decide the header question either. Reject it and read on.
+            # decide the header question either. Reject it and read on, echoing
+            # a blank row back: writing one empty field instead would emit `""`
+            # - a one-column row in an otherwise rectangular file, which is
+            # what a csv consumer of the output chokes on.
             sys.stderr.write(f"warning: skipping row {row_no}: blank row\n")
-            emit([""])
+            emit([])
             rejected += 1
             continue
 

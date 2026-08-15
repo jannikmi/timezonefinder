@@ -426,10 +426,12 @@ the page cache is warm, so it is worth passing for a long stream and not for a
 single query.
 
 **Rows that cannot be used.** There is always exactly one output row per input
-row, which is what lets a caller consume the two in step. A row that is blank,
-too short, holds a non-numeric coordinate, or names a coordinate outside the valid
-range is written back out with an empty ``timezone`` cell, and a warning naming the
-row number and the reason goes to stderr. An empty cell is also what a genuine
+row, which is what lets a caller consume the two in step. A row that is too short,
+holds a non-numeric coordinate, or names a coordinate outside the valid range is
+written back out with an empty ``timezone`` cell, and a warning naming the row
+number and the reason goes to stderr. A row with no fields at all - a blank line,
+or one csv itself could not parse - is echoed back blank, since there is no row to
+append a cell to. An empty cell is also what a genuine
 "no timezone here" looks like - which ``-f 4`` and ``-f 5`` return for every ocean
 point - so the two are told apart by the **exit code**: ``1`` if any input row was
 rejected, ``0`` if every row was answered.
