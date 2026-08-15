@@ -534,6 +534,10 @@ def test_stdin_mode_exits_quietly_when_the_consumer_stops_reading():
     stderr = writer.communicate()[1]
     assert "BrokenPipeError" not in stderr, stderr
     assert "Exception ignored" not in stderr, stderr
+    assert writer.returncode == 141, (
+        "a truncated pipeline must not report the exit code that means "
+        "rows were rejected"
+    )
 
 
 @pytest.mark.unit

@@ -434,7 +434,9 @@ or one csv itself could not parse - is echoed back blank, since there is no row 
 append a cell to. An empty cell is also what a genuine
 "no timezone here" looks like - which ``-f 4`` and ``-f 5`` return for every ocean
 point - so the two are told apart by the **exit code**: ``1`` if any input row was
-rejected, ``0`` if every row was answered.
+rejected, ``0`` if every row was answered. A consumer that stops reading early -
+``| head``, a closed pipe - ends the run with ``141`` instead, so that a truncated
+pipeline is not mistaken for a file full of bad coordinates.
 
 Standard CSV quoting is honoured on the way in and reproduced on the way out, so a
 field containing the delimiter survives intact. One consequence of that: a quoted

@@ -27,6 +27,12 @@ TIMEZONE_COLUMN = "timezone"
 # The ids dispatching to TimezoneFinderL rather than TimezoneFinder.
 TIMEZONE_FINDER_L_FUNCTIONS = (3, 4)
 
+# What a shell reports for a process killed by a closed pipe: 128 + SIGPIPE.
+# Exiting 1 there would be indistinguishable from a run that rejected rows,
+# which is the one thing the exit code of this mode has to say. Spelled out
+# rather than read off `signal`, which carries no SIGPIPE on Windows.
+BROKEN_PIPE_EXIT_CODE = 141
+
 # The lookup functions this CLI dispatches to return their result, they never
 # print. Nothing else writes to stdout between argument parsing and the final
 # print either, so the only output is the one `main` emits deliberately -
@@ -546,7 +552,7 @@ def main() -> None:
             # the idiom the Python docs prescribe for a filter like this one.
             devnull = os.open(os.devnull, os.O_WRONLY)
             os.dup2(devnull, sys.stdout.fileno())
-            raise SystemExit(1) from None
+            raise SystemExit(BROKEN_PIPE_EXIT_CODE) from None
         if rejected:
             raise SystemExit(1)
         return
