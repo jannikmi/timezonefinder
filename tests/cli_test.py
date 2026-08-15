@@ -219,6 +219,22 @@ def test_stdin_mode_recognises_header_name_variants(lng_name: str, lat_name: str
 
 
 @pytest.mark.unit
+def test_stdin_mode_matches_a_header_carrying_a_byte_order_mark():
+    """A spreadsheet exported as "CSV UTF-8" starts with a BOM; it must not hide
+    the first column's name from the matcher.
+
+    The BOM is echoed back with the row rather than swallowed, so the annotated
+    output stays the same flavour of CSV that was fed in.
+    """
+    result = run_cli("--stdin", input=f"\ufefflng,lat\n{AMSTERDAM[0]},{AMSTERDAM[1]}\n")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [
+        "\ufefflng,lat,timezone",
+        f"{AMSTERDAM[0]},{AMSTERDAM[1]},Europe/Amsterdam",
+    ]
+
+
+@pytest.mark.unit
 def test_stdin_mode_refuses_to_guess_the_column_order():
     """Headerless input without column flags is an error, never a positional guess.
 

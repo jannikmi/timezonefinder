@@ -234,6 +234,20 @@ def _resolve_delimiter(delimiter: str) -> str:
     return delimiter
 
 
+def _normalise_header_name(name: str) -> str:
+    """Reduce a header field to the form column matching compares.
+
+    Strips a UTF-8 BOM along with the surrounding whitespace. A spreadsheet
+    exported as "CSV UTF-8" - the format Excel offers by that name - starts the
+    file with one, and it decodes onto the front of the first column's name,
+    where it matches nothing and is invisible in the error saying so.
+
+    :param name: The raw header field
+    :return: The name to compare against
+    """
+    return name.lstrip("\ufeff").strip().lower()
+
+
 def _is_column_number(spec: str | None) -> bool:
     """Whether a ``--lng-col``/``--lat-col`` value addresses a column by number.
 
@@ -304,7 +318,7 @@ def _resolve_column(
             f"cannot tell which column holds the {axis}: the input has no header "
             f"row, so pass {flag} with a 1-based column number"
         )
-    lowered = [name.strip().lower() for name in header]
+    lowered = [_normalise_header_name(name) for name in header]
     for candidate in known_names:
         if candidate in lowered:
             return lowered.index(candidate)
