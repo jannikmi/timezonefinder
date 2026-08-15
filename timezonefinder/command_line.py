@@ -248,6 +248,15 @@ def _normalise_header_name(name: str) -> str:
     return name.lstrip("\ufeff").strip().lower()
 
 
+def _column_flag(axis: str) -> str:
+    """Name the flag that addresses one axis, for diagnostics.
+
+    :param axis: "longitude" or "latitude"
+    :return: The flag name
+    """
+    return f"--{'lng' if axis == 'longitude' else 'lat'}-col"
+
+
 def _is_column_number(spec: str | None) -> bool:
     """Whether a ``--lng-col``/``--lat-col`` value addresses a column by number.
 
@@ -293,9 +302,10 @@ def _resolve_column(
     :param known_names: Header names recognised for this axis
     :param axis: "longitude" or "latitude", for diagnostics
     :return: The 0-based index of the column
-    :raises ValueError: If the column cannot be determined or is out of range
+    :raises ValueError: If the column cannot be determined. Whether it fits the
+        input is checked once against the first row, by ``_check_columns_fit``
     """
-    flag = f"--{'lng' if axis == 'longitude' else 'lat'}-col"
+    flag = _column_flag(axis)
     names = None if header is None else [_normalise_header_name(n) for n in header]
 
     if spec is not None:
@@ -331,6 +341,25 @@ def _resolve_column(
         f"no {axis} column found in the header {header}: expected one of "
         f"{list(known_names)}, or pass {flag}"
     )
+
+
+def _check_columns_fit(row: list[str], indices: tuple[int, int]) -> None:
+    """Check the resolved columns against the width of the first row.
+
+    A column number wider than the input is a typo in the flag, not a property
+    of one row, so it is diagnosed once here rather than becoming a warning per
+    row plus a useless copy of the whole input.
+
+    :param row: The first row, whose width the input is taken to have
+    :param indices: The resolved ``(longitude, latitude)`` column indices
+    :raises ValueError: If either column lies beyond the row
+    """
+    for index, axis in zip(indices, ("longitude", "latitude")):
+        if index >= len(row):
+            raise ValueError(
+                f"{_column_flag(axis)} addresses column {index + 1}, but the "
+                f"input has {len(row)} column(s)"
+            )
 
 
 def _coordinates_from_row(
@@ -453,6 +482,7 @@ def _run_stdin(
             header = None if addressed_by_number or _looks_like_data(row) else row
             lng_index = _resolve_column(lng_spec, header, LNG_COLUMN_NAMES, "longitude")
             lat_index = _resolve_column(lat_spec, header, LAT_COLUMN_NAMES, "latitude")
+            _check_columns_fit(row, (lng_index, lat_index))
             if header is not None:
                 emit([*row, TIMEZONE_COLUMN])
                 continue

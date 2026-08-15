@@ -327,6 +327,30 @@ def test_stdin_mode_names_the_header_it_could_not_match():
 
 
 @pytest.mark.unit
+def test_stdin_mode_rejects_a_column_number_wider_than_the_input():
+    """A typo in --lng-col is one usage error, not a warning per row.
+
+    It is a property of the flag, not of any row, so diagnosing it per row
+    would bury it under a warning and a useless echo for every line of the
+    input - millions of them for the file sizes this mode is for.
+    """
+    result = run_cli(
+        "--stdin",
+        "--lng-col",
+        "9",
+        "--lat-col",
+        "2",
+        input=csv_input(AMSTERDAM_ROW, PACIFIC_ROW),
+    )
+    assert result.returncode == 2
+    assert result.stdout == "", (
+        "nothing may be answered against a column that is absent"
+    )
+    assert result.stderr.count("\n") == 1, result.stderr
+    assert "--lng-col addresses column 9" in result.stderr
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("delimiter, flag", [(";", ";"), ("\t", "\\t"), ("|", "|")])
 def test_stdin_mode_honours_the_delimiter_flag(delimiter: str, flag: str):
     """-d sets the delimiter for input and output alike."""
