@@ -8,6 +8,7 @@ from timezonefinder import (
     certain_timezone_at,
     timezone_at_land,
 )
+from timezonefinder.utils import validate_coordinates
 
 # The lookup functions this CLI dispatches to return their result, they never
 # print. Nothing else writes to stdout between argument parsing and the final
@@ -131,26 +132,32 @@ def _format_lookup_details(
     return "\n".join(lines)
 
 
-def _parse_coordinate_line(line: str) -> tuple[float, float] | None:
-    """Parse a single ``lng,lat`` line from stdin.
+def _parse_coordinate_line(line: str) -> tuple[float, float]:
+    """Parse and validate a single ``lng,lat`` line from stdin.
 
-    Returns ``(lng, lat)`` on success or ``None`` when the line is blank,
-    contains only whitespace, or cannot be parsed as two floats separated by
-    a comma.
+    The bounds check is the same one every lookup performs, so a coordinate
+    that reaches the lookup from here cannot raise there. That is what keeps
+    one unusable line from ending the stream: the caller learns *this line*
+    is unusable, not that the process is over.
 
-    :param line: One line of input (without the trailing newline)
-    :return: A ``(lng, lat)`` tuple, or ``None`` for blank/malformed lines
+    :param line: One line of input (with or without the trailing newline)
+    :return: The validated ``(lng, lat)`` pair
+    :raises ValueError: If the line is blank, is not two comma-separated
+        numbers, or names a coordinate outside the valid range
     """
     stripped = line.strip()
     if not stripped:
-        return None
+        raise ValueError("blank line")
     parts = stripped.split(",")
     if len(parts) != 2:
-        return None
+        raise ValueError(
+            f"expected 'lng,lat', got {len(parts)} comma-separated field(s)"
+        )
     try:
-        return float(parts[0].strip()), float(parts[1].strip())
+        lng, lat = float(parts[0]), float(parts[1])
     except ValueError:
-        return None
+        raise ValueError("both fields must be numbers") from None
+    return validate_coordinates(lng, lat)
 
 
 def _run_stdin(
@@ -159,25 +166,26 @@ def _run_stdin(
 ) -> None:
     """Read ``lng,lat`` pairs from stdin and print one result per line.
 
-    Malformed or out-of-range lines produce a warning on stderr and an empty
-    line on stdout, so that a caller reading one line per query stays in step
-    with its inputs.
+    Unusable lines - blank, unparseable, or naming a coordinate outside the
+    valid range - produce a warning on stderr and an empty line on stdout, so
+    that a caller reading one line per query stays in step with its inputs and
+    one bad line among a thousand does not discard the other 999.
 
     :param timezone_function: The lookup function to call for each pair
     :param function_id: The function ID (used only for stderr diagnostics)
     """
     for line_no, raw_line in enumerate(sys.stdin, start=1):
-        parsed = _parse_coordinate_line(raw_line)
-        if parsed is None:
+        try:
+            lng, lat = _parse_coordinate_line(raw_line)
+        except ValueError as e:
             sys.stderr.write(
                 f"warning: skipping malformed input on line {line_no}: "
-                f"{raw_line.strip()!r}\n"
+                f"{raw_line.strip()!r} ({e})\n"
             )
             # keep stdout aligned with stdin
             print()
             continue
 
-        lng, lat = parsed
         tz = timezone_function(lng=lng, lat=lat)
         # an empty line when no timezone was found, same contract as single mode
         print(tz if tz else "")
