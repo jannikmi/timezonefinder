@@ -24,6 +24,9 @@ LNG_COLUMN_NAMES = ("lng", "lon", "long", "longitude", "x")
 LAT_COLUMN_NAMES = ("lat", "latitude", "y")
 TIMEZONE_COLUMN = "timezone"
 
+# The ids dispatching to TimezoneFinderL rather than TimezoneFinder.
+TIMEZONE_FINDER_L_FUNCTIONS = (3, 4)
+
 # The lookup functions this CLI dispatches to return their result, they never
 # print. Nothing else writes to stdout between argument parsing and the final
 # print either, so the only output is the one `main` emits deliberately -
@@ -42,8 +45,10 @@ def get_timezone_function(
     share a singleton this cannot configure.
 
     :param function_id: The ID of the function to retrieve (0, 1, 3, 4, or 5)
-    :param in_memory: Whether to read the coordinate data into RAM instead of
-        memory-mapping it. Only worth its footprint across many lookups
+    :param in_memory: Whether to read the polygon coordinate data into RAM
+        instead of memory-mapping it. Only worth its footprint across many
+        lookups, and without effect for the ``TimezoneFinderL`` ids, which load
+        no polygon data - ``_parse_arguments`` refuses the combination
     :return: A callable that accepts lng and lat as keyword arguments and returns a timezone name or None
     :raises ValueError: If function_id is not in the valid range [0, 1, 3, 4, 5]
     """
@@ -65,7 +70,7 @@ def get_timezone_function(
                 if in_memory
                 else timezone_at_land
             )
-        case 3 | 4:
+        case 3 | 4:  # keep in step with TIMEZONE_FINDER_L_FUNCTIONS
             # For TimezoneFinderL methods, create an instance
             tf_instance = TimezoneFinderL(in_memory=in_memory)
             if function_id == 3:
@@ -123,9 +128,10 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--in-memory",
         action="store_true",
-        help="read the coordinate data into RAM instead of memory-mapping it. "
-        "Costs tens of MB for roughly 1.3x faster lookups once the page cache "
-        "is warm, so it only pays for itself over a long --stdin stream.",
+        help="read the polygon coordinate data into RAM instead of "
+        "memory-mapping it. Costs tens of MB for faster lookups once the page "
+        "cache is warm, so it only pays for itself over a long --stdin stream. "
+        "Not available for -f 3 and -f 4, which load no polygon data.",
     )
     parser.add_argument(
         "-f",
@@ -158,6 +164,15 @@ def _parse_arguments() -> argparse.Namespace:
     if args.stdin and len(missing) != 2:
         parser.error(
             "--stdin reads the coordinates from stdin: do not pass lng and lat"
+        )
+
+    # TimezoneFinderL holds no polygon data, so there is nothing for the flag to
+    # read into memory. Accepting it there would promise a speedup it cannot
+    # deliver, which is worse than refusing it.
+    if args.in_memory and args.function in TIMEZONE_FINDER_L_FUNCTIONS:
+        parser.error(
+            f"--in-memory does not apply to -f {args.function}: TimezoneFinderL "
+            f"loads no polygon data"
         )
 
     if args.stdin and args.v:

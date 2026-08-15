@@ -18,6 +18,8 @@ from timezonefinder.zone_names import read_zone_names
 timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 
 FUNCTION_IDS = [0, 1, 3, 4, 5]
+# The ids that reach TimezoneFinder, the only class with polygon data to hold.
+IN_MEMORY_FUNCTION_IDS = [0, 1, 5]
 
 # A land point deep enough inland that every lookup agrees on it, and whose
 # timezone name happens to end in a character a naive `rstrip("\n\x1b[0m")`
@@ -573,7 +575,7 @@ def test_missing_argument_error_names_only_what_is_missing():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("function_id", FUNCTION_IDS)
+@pytest.mark.parametrize("function_id", IN_MEMORY_FUNCTION_IDS)
 def test_in_memory_flag_returns_the_same_answers(function_id: int):
     """--in-memory only changes how the coordinate data is held, never the result."""
     rows = csv_input(AMSTERDAM_ROW, PACIFIC_ROW)
@@ -581,6 +583,20 @@ def test_in_memory_flag_returns_the_same_answers(function_id: int):
     in_memory = run_cli("--stdin", "--in-memory", "-f", str(function_id), input=rows)
     assert in_memory.returncode == 0, in_memory.stderr
     assert in_memory.stdout == mapped.stdout
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("function_id", [3, 4])
+def test_in_memory_flag_is_refused_where_it_cannot_apply(function_id: int):
+    """TimezoneFinderL holds no polygon data, so the flag is rejected, not ignored.
+
+    Accepting it would promise the speedup its help text advertises and deliver
+    nothing, which no output of a passing run would reveal.
+    """
+    result = run_cli("--in-memory", "-f", str(function_id), "--", *AMSTERDAM)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "does not apply" in result.stderr
 
 
 @pytest.mark.unit
