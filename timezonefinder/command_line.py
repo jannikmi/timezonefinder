@@ -4,6 +4,7 @@ import sys
 from collections.abc import Callable
 
 from timezonefinder import (
+    TimezoneFinder,
     TimezoneFinderL,
     timezone_at,
     certain_timezone_at,
@@ -18,27 +19,43 @@ from timezonefinder.utils import validate_coordinates
 # another command. `tests/cli_test.py` pins that contract.
 
 
-def get_timezone_function(function_id: int) -> Callable[..., str | None]:
+def get_timezone_function(
+    function_id: int, in_memory: bool = False
+) -> Callable[..., str | None]:
     """
     Get the appropriate timezone function based on the function ID.
 
     Uses global functions when available, otherwise creates instances as needed.
+    ``in_memory`` forces an own instance for every id, since the global functions
+    share a singleton this cannot configure.
 
     :param function_id: The ID of the function to retrieve (0, 1, 3, 4, or 5)
+    :param in_memory: Whether to read the coordinate data into RAM instead of
+        memory-mapping it. Only worth its footprint across many lookups
     :return: A callable that accepts lng and lat as keyword arguments and returns a timezone name or None
     :raises ValueError: If function_id is not in the valid range [0, 1, 3, 4, 5]
     """
     # Use global functions for TimezoneFinder methods
     match function_id:
         case 0:
-            return timezone_at
+            return (
+                TimezoneFinder(in_memory=True).timezone_at if in_memory else timezone_at
+            )
         case 1:
-            return certain_timezone_at
+            return (
+                TimezoneFinder(in_memory=True).certain_timezone_at
+                if in_memory
+                else certain_timezone_at
+            )
         case 5:
-            return timezone_at_land
+            return (
+                TimezoneFinder(in_memory=True).timezone_at_land
+                if in_memory
+                else timezone_at_land
+            )
         case 3 | 4:
             # For TimezoneFinderL methods, create an instance
-            tf_instance = TimezoneFinderL()
+            tf_instance = TimezoneFinderL(in_memory=in_memory)
             if function_id == 3:
                 return tf_instance.timezone_at
             else:
@@ -71,6 +88,13 @@ def _parse_arguments() -> argparse.Namespace:
         help="read lng,lat pairs from stdin, one per line, and print one result "
         "per line. The TimezoneFinder instance is constructed once, amortising "
         "initialisation across the whole input.",
+    )
+    parser.add_argument(
+        "--in-memory",
+        action="store_true",
+        help="read the coordinate data into RAM instead of memory-mapping it. "
+        "Costs tens of MB for roughly 1.3x faster lookups once the page cache "
+        "is warm, so it only pays for itself over a long --stdin stream.",
     )
     parser.add_argument(
         "-f",
@@ -221,7 +245,7 @@ def main() -> None:
     """Main entry point for the CLI."""
     args = _parse_arguments()
 
-    timezone_function = get_timezone_function(args.function)
+    timezone_function = get_timezone_function(args.function, args.in_memory)
 
     if args.stdin:
         try:
