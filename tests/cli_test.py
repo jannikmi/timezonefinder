@@ -6,7 +6,6 @@ in :mod:`timezonefinder.command_line`.
 """
 
 import subprocess
-import sys
 
 import pytest
 
@@ -30,16 +29,27 @@ AMSTERDAM = ("4.89", "52.37")
 PACIFIC = ("-150.0", "0.0")
 
 
-def run_cli(*args: str) -> subprocess.CompletedProcess:
+def run_cli(*args: str, input: str | None = None) -> subprocess.CompletedProcess:
     """Run the installed console script.
 
     Invoked as an argument list rather than through a shell, so that an
     argument is passed through verbatim and a missing entry point raises
     ``FileNotFoundError`` here instead of turning into a shell error message
     that has to be recognised in the captured output.
+
+    Every case goes through the console script rather than ``python -m``, so
+    that the ``[project.scripts]`` wiring in ``pyproject.toml`` is covered too -
+    a ``-m`` invocation reaches ``main`` without it and would stay green if that
+    entry point were broken or removed.
+
+    :param input: Text to feed to the process on stdin, for the ``--stdin`` cases
     """
     return subprocess.run(
-        ["timezonefinder", *args], capture_output=True, text=True, check=False
+        ["timezonefinder", *args],
+        input=input,
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
@@ -155,13 +165,7 @@ def test_details_name_the_function_they_were_given():
 def test_stdin_mode_prints_one_result_per_line():
     """--stdin reads lng,lat pairs from stdin and writes one result per line."""
     stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n{PACIFIC[0]},{PACIFIC[1]}\n"
-    result = subprocess.run(
-        [sys.executable, "-m", "timezonefinder", "--stdin"],
-        input=stdin_input,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_cli("--stdin", input=stdin_input)
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
     assert len(lines) == 2, f"expected 2 lines, got {lines}"
@@ -173,13 +177,7 @@ def test_stdin_mode_prints_one_result_per_line():
 def test_stdin_mode_respects_function_flag():
     """-f applies to every lookup in the stream."""
     stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
-    result = subprocess.run(
-        [sys.executable, "-m", "timezonefinder", "--stdin", "-f", "5"],
-        input=stdin_input,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_cli("--stdin", "-f", "5", input=stdin_input)
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
     assert len(lines) == 1
@@ -201,13 +199,7 @@ def test_stdin_mode_skips_malformed_lines():
         f"{PACIFIC[0]},{PACIFIC[1]}\n"
         "\n"  # blank line
     )
-    result = subprocess.run(
-        [sys.executable, "-m", "timezonefinder", "--stdin"],
-        input=stdin_input,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_cli("--stdin", input=stdin_input)
     assert result.returncode == 1, "a stream with rejected lines must not exit 0"
     lines = result.stdout.splitlines()
     assert len(lines) == 4, f"expected 4 lines (one per input line), got {lines}"
@@ -221,13 +213,7 @@ def test_stdin_mode_skips_malformed_lines():
 @pytest.mark.unit
 def test_stdin_mode_empty_input_produces_no_output():
     """An empty stream produces no output lines."""
-    result = subprocess.run(
-        [sys.executable, "-m", "timezonefinder", "--stdin"],
-        input="",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_cli("--stdin", input="")
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
 
@@ -236,13 +222,7 @@ def test_stdin_mode_empty_input_produces_no_output():
 def test_stdin_mode_land_only_returns_empty_for_ocean():
     """Land-only lookups in stdin mode print an empty line for ocean points."""
     stdin_input = f"{PACIFIC[0]},{PACIFIC[1]}\n"
-    result = subprocess.run(
-        [sys.executable, "-m", "timezonefinder", "--stdin", "-f", "5"],
-        input=stdin_input,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = run_cli("--stdin", "-f", "5", input=stdin_input)
     assert result.returncode == 0, result.stderr
     assert result.stdout == "\n"
 
