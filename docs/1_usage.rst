@@ -338,7 +338,7 @@ A command line script is being installed as part of this package.
 
 ::
 
-    timezonefinder [-h] [-v] [-f {0,1,2,3,4,5}] lng lat
+    timezonefinder [-h] [-v] [--stdin] [--in-memory] [-f {0,1,3,4,5}] lng lat
 
 
 **Example**:
@@ -363,4 +363,38 @@ With the argument of the flag ``-f`` one can choose between the different functi
 
 .. note::
 
-    This will be orders of magnitude slower than using the package directly from within Python as a separate Timezonefinder() instance is being created for every call.
+    A single invocation is orders of magnitude slower than using the package from
+    within Python, because it pays the full initialisation cost to answer one query.
+    Use ``--stdin`` (below) for more than a handful of coordinates.
+
+
+Looking up many coordinates at once
+-----------------------------------
+
+With ``--stdin`` the script reads ``lng,lat`` pairs from standard input, one per
+line, and writes one result per line to standard output. The finder is built once,
+so initialisation amortises across the whole input instead of being paid per
+coordinate:
+
+::
+
+    $ printf '4.89,52.37\n-150.0,0.0\n' | timezonefinder --stdin
+    Europe/Amsterdam
+    Etc/GMT+10
+
+``-f`` selects the lookup function for the whole stream, exactly as it does for a
+single query. ``-v`` is rejected in this mode, since verbose output is per query
+and would break the one-line-per-result contract. The coordinates come from stdin,
+so passing ``lng`` and ``lat`` on the command line as well is an error.
+
+There is always exactly one output line per input line, which is what lets a caller
+consume the two in step. A line that cannot be used - blank, not two numbers, or a
+coordinate outside the valid range - produces an empty output line and a warning on
+stderr naming the line number and the reason. Note that an empty output line is also
+what a genuine "no timezone here" looks like, which ``-f 4`` and ``-f 5`` return for
+every ocean point; the two are told apart by the **exit code**, which is ``1`` if any
+input line was rejected and ``0`` if every line was answered.
+
+``--in-memory`` reads the coordinate data into RAM rather than memory-mapping it.
+That costs tens of MB and makes lookups roughly 1.3x faster once the page cache is
+warm, so it is worth passing for a long stream and not for a single query.
