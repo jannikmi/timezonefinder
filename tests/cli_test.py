@@ -250,6 +250,6 @@ def test_stdin_mode_land_only_returns_empty_for_ocean():
 @pytest.mark.unit
 def test_stdin_and_verbose_are_mutually_exclusive():
     """--stdin and -v cannot be used together."""
-    result = run_cli("--stdin", "-v", "0", "0")
+    result = run_cli("--stdin", "-v")
     assert result.returncode == 2
     assert "mutually exclusive" in result.stderr

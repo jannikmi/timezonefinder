@@ -88,8 +88,22 @@ def _parse_arguments() -> argparse.Namespace:
     )
     args = parser.parse_args()  # takes input from sys.argv
 
-    if not args.stdin and (args.lng is None or args.lat is None):
-        parser.error("the following arguments are required: lng, lat")
+    # `nargs="?"` moved the required-argument check off argparse, which named
+    # only what was actually missing. Rebuild that: telling someone who forgot
+    # the latitude that the longitude is missing too sends them to check the
+    # half they got right.
+    missing = [
+        name for name, value in (("lng", args.lng), ("lat", args.lat)) if value is None
+    ]
+    if not args.stdin and missing:
+        parser.error(f"the following arguments are required: {', '.join(missing)}")
+
+    # len(missing) != 2 rather than `not missing`: a lone `--stdin 5` supplies
+    # one positional, which would otherwise still be discarded in silence.
+    if args.stdin and len(missing) != 2:
+        parser.error(
+            "--stdin reads the coordinates from stdin: do not pass lng and lat"
+        )
 
     if args.stdin and args.v:
         parser.error("--stdin and -v are mutually exclusive")
