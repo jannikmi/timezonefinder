@@ -338,7 +338,9 @@ A command line script is being installed as part of this package.
 
 ::
 
-    timezonefinder [-h] [-v] [--stdin] [--in-memory] [-f {0,1,3,4,5}] lng lat
+    timezonefinder [-h] [-v] [--stdin] [--in-memory] [-d DELIMITER]
+                   [--lng-col LNG_COL] [--lat-col LAT_COL]
+                   [-f {0,1,3,4,5}] lng lat
 
 
 **Example**:
@@ -371,42 +373,72 @@ With the argument of the flag ``-f`` one can choose between the different functi
 Looking up many coordinates at once
 -----------------------------------
 
-With ``--stdin`` the script reads ``lng,lat`` pairs from standard input, one per
-line, and writes one result per line to standard output. The finder is built once,
+With ``--stdin`` the script reads delimited rows from standard input and writes
+each row back out with a ``timezone`` column appended. The finder is built once,
 so initialisation amortises across the whole input instead of being paid per
 coordinate:
 
 ::
 
-    $ printf '4.89,52.37\n-150.0,0.0\n' | timezonefinder --stdin
-    Europe/Amsterdam
-    Etc/GMT+10
+    $ cat stores.csv
+    store_id,name,lat,lng
+    S-1,Amsterdam Centraal,52.37,4.89
+    S-2,Pacific Buoy,0.0,-150.0
 
-``-f`` selects the lookup function for the whole stream, exactly as it does for a
-single query. ``-v`` is rejected in this mode, since verbose output is per query
-and would break the one-line-per-result contract. The coordinates come from stdin,
-so passing ``lng`` and ``lat`` on the command line as well is an error.
+    $ timezonefinder --stdin < stores.csv
+    store_id,name,lat,lng,timezone
+    S-1,Amsterdam Centraal,52.37,4.89,Europe/Amsterdam
+    S-2,Pacific Buoy,0.0,-150.0,Etc/GMT+10
 
-**Input format.** Each line must be exactly two comma-separated numbers, longitude
-first. Surrounding whitespace is ignored, ``\r\n`` line endings are accepted, and the
-final line need not end in a newline.
+Because the answer arrives attached to the row it belongs to, annotating a file
+is one command - no projecting the coordinate columns out, and no rejoining the
+results afterwards.
 
-.. warning::
-
-    The order is ``lng,lat``, matching the argument order of every function in this
-    package - and the reverse of the ``lat,lng`` convention many geographic data
-    files use. A swapped pair is usually still a valid coordinate, so it produces a
-    confidently wrong answer rather than an error: ``4.89,52.37`` is Amsterdam,
-    while ``52.37,4.89`` is a point in the Indian Ocean.
-
-This is a line format, not a CSV dialect: there is no parser for headers, quoting,
-or extra columns. A header row, a ``"4.89","52.37"`` quoted pair, an ``id,lng,lat``
-row and a tab-separated pair are all rejected as unusable lines. Strip a header and
-project the two columns you need before piping, for example:
+**Choosing the coordinate columns.** With a header row the columns are found by
+name: ``lng``, ``lon``, ``long``, ``longitude`` or ``x`` for the longitude, and
+``lat``, ``latitude`` or ``y`` for the latitude, matched case-insensitively.
+Their position in the file does not matter. For a header that uses other names,
+or for input with no header at all, name them explicitly - a header name, or a
+1-based column number:
 
 ::
 
-    tail -n +2 points.csv | cut -d, -f2,3 | timezonefinder --stdin
+    timezonefinder --stdin --lng-col 3 --lat-col 2 < headerless.csv
+    timezonefinder --stdin --lng-col longitude_deg --lat-col latitude_deg < f.csv
+
+.. note::
+
+    The column order is **never** guessed. Input with no header and no
+    ``--lng-col``/``--lat-col`` is rejected outright, because guessing would fail
+    silently rather than loudly: for any point with a longitude between -90 and
+    90 - most of the populated world - a swapped pair is still a valid
+    coordinate, so it resolves to a real but wrong timezone. Swapping Moscow's
+    pair yields ``Asia/Tehran``, which looks like an answer.
+
+**Other flags.** ``-f`` selects the lookup function for the whole stream, exactly
+as it does for a single query. ``-d``/``--delimiter`` sets the field delimiter for
+input and output alike, defaulting to ``,`` - spell tab as ``'\t'``. ``-v`` is
+rejected in this mode, since verbose output is per query and would break the
+one-row-per-result contract, and so are ``lng``/``lat`` on the command line, since
+the coordinates come from stdin. ``--in-memory`` reads the coordinate data into
+RAM rather than memory-mapping it: tens of MB for roughly 1.3x faster lookups once
+the page cache is warm, so it is worth passing for a long stream and not for a
+single query.
+
+**Rows that cannot be used.** There is always exactly one output row per input
+row, which is what lets a caller consume the two in step. A row that is blank,
+too short, holds a non-numeric coordinate, or names a coordinate outside the valid
+range is written back out with an empty ``timezone`` cell, and a warning naming the
+row number and the reason goes to stderr. An empty cell is also what a genuine
+"no timezone here" looks like - which ``-f 4`` and ``-f 5`` return for every ocean
+point - so the two are told apart by the **exit code**: ``1`` if any input row was
+rejected, ``0`` if every row was answered.
+
+Standard CSV quoting is honoured on the way in and reproduced on the way out, so a
+field containing the delimiter survives intact. One consequence of that: a quoted
+field may span several physical lines, so the guarantee is one output *row* per
+input *row*, which is only the same thing as one line per line when no field is
+quoted across a newline.
 
 There is always exactly one output line per input line, which is what lets a caller
 consume the two in step. A line that cannot be used - blank, not two numbers, or a

@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 import sys
 from collections.abc import Callable
@@ -11,6 +12,17 @@ from timezonefinder import (
     timezone_at_land,
 )
 from timezonefinder.utils import validate_coordinates
+
+# Header names recognised for each axis, lowercased. Auto-detection exists so the
+# common case - a CSV exported from a database or a dataframe - needs no flags at
+# all; anything unrecognised is an error naming the columns that were found,
+# never a guess. Guessing the order is the one thing this must not do: a swapped
+# pair is still a valid coordinate for any point with |lng| <= 90, which is most
+# of the populated world, so it yields a confident wrong answer rather than a
+# failure.
+LNG_COLUMN_NAMES = ("lng", "lon", "long", "longitude", "x")
+LAT_COLUMN_NAMES = ("lat", "latitude", "y")
+TIMEZONE_COLUMN = "timezone"
 
 # The lookup functions this CLI dispatches to return their result, they never
 # print. Nothing else writes to stdout between argument parsing and the final
@@ -74,7 +86,7 @@ def _parse_arguments() -> argparse.Namespace:
     Parse and validate command-line arguments.
 
     In stdin mode ``lng`` and ``lat`` become optional — coordinates are read
-    from stdin instead, one ``lng,lat`` pair per line.
+    from stdin instead, as delimited rows.
 
     :return: Parsed command-line arguments
     """
@@ -85,9 +97,28 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--stdin",
         action="store_true",
-        help="read lng,lat pairs from stdin, one per line, and print one result "
-        "per line. The TimezoneFinder instance is constructed once, amortising "
-        "initialisation across the whole input.",
+        help="read delimited rows from stdin and write each back out with a "
+        "timezone column appended. Coordinate columns are taken from the header "
+        "row, or named with --lng-col/--lat-col. The TimezoneFinder instance is "
+        "constructed once, amortising initialisation across the whole input.",
+    )
+    parser.add_argument(
+        "-d",
+        "--delimiter",
+        default=",",
+        help="field delimiter for --stdin input and output (default: ','). "
+        "Spell tab as '\\t'.",
+    )
+    parser.add_argument(
+        "--lng-col",
+        help="which --stdin column holds the longitude: a header name, or a "
+        "1-based column number for input without a header. Required when the "
+        "input has no header, since the column order is never guessed.",
+    )
+    parser.add_argument(
+        "--lat-col",
+        help="which --stdin column holds the latitude: a header name, or a "
+        "1-based column number for input without a header.",
     )
     parser.add_argument(
         "--in-memory",
@@ -132,6 +163,18 @@ def _parse_arguments() -> argparse.Namespace:
     if args.stdin and args.v:
         parser.error("--stdin and -v are mutually exclusive")
 
+    stdin_only = [
+        flag
+        for flag, value in (
+            ("-d/--delimiter", args.delimiter != ","),
+            ("--lng-col", args.lng_col is not None),
+            ("--lat-col", args.lat_col is not None),
+        )
+        if value
+    ]
+    if stdin_only and not args.stdin:
+        parser.error(f"{', '.join(stdin_only)} only apply to --stdin")
+
     return args
 
 
@@ -171,72 +214,199 @@ def _format_lookup_details(
     return "\n".join(lines)
 
 
-def _parse_coordinate_line(line: str) -> tuple[float, float]:
-    """Parse and validate a single ``lng,lat`` line from stdin.
+def _resolve_delimiter(delimiter: str) -> str:
+    """Turn the ``--delimiter`` value into the single character csv needs.
+
+    ``\\t`` is accepted spelled out, since typing a literal tab into an argument
+    means shell-specific quoting (``$'\\t'``) that not every shell offers.
+
+    :param delimiter: The raw flag value
+    :return: A single-character delimiter
+    :raises ValueError: If the value is not one character
+    """
+    if delimiter == "\\t":
+        return "\t"
+    if len(delimiter) != 1:
+        raise ValueError(
+            f"--delimiter must be a single character, got {delimiter!r} "
+            f"(use '\\t' for tab)"
+        )
+    return delimiter
+
+
+def _looks_like_data(row: list[str]) -> bool:
+    """Decide whether a row is data rather than a header.
+
+    A header row names its columns, so none of its fields is a number; a data
+    row holds at least one coordinate, so at least one is. Probing the row
+    itself keeps this streaming - ``csv.Sniffer`` wants a sample of the file,
+    which a pipe cannot hand back once read.
+
+    :param row: The first non-empty row of the input
+    :return: True if the row holds data, False if it names columns
+    """
+    for field in row:
+        try:
+            float(field)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def _resolve_column(
+    spec: str | None,
+    header: list[str] | None,
+    known_names: tuple[str, ...],
+    axis: str,
+) -> int:
+    """Work out which column holds one axis, without ever guessing a position.
+
+    An all-digit ``spec`` is a 1-based column number, anything else a header
+    name; with no ``spec`` the header is searched for a known name.
+
+    :param spec: The ``--lng-col``/``--lat-col`` value, or None
+    :param header: The header row, or None if the input has none
+    :param known_names: Header names recognised for this axis
+    :param axis: "longitude" or "latitude", for diagnostics
+    :return: The 0-based index of the column
+    :raises ValueError: If the column cannot be determined or is out of range
+    """
+    flag = f"--{'lng' if axis == 'longitude' else 'lat'}-col"
+    if spec is not None:
+        if spec.isdigit():
+            index = int(spec) - 1
+            if index < 0:
+                raise ValueError(f"{flag} is 1-based, got {spec}")
+            return index
+        if header is None:
+            raise ValueError(
+                f"{flag}={spec!r} names a column, but the input has no header row"
+            )
+        try:
+            return header.index(spec)
+        except ValueError:
+            raise ValueError(
+                f"{flag}={spec!r} is not among the header columns: {header}"
+            ) from None
+
+    if header is None:
+        raise ValueError(
+            f"cannot tell which column holds the {axis}: the input has no header "
+            f"row, so pass {flag} with a 1-based column number"
+        )
+    lowered = [name.strip().lower() for name in header]
+    for candidate in known_names:
+        if candidate in lowered:
+            return lowered.index(candidate)
+    raise ValueError(
+        f"no {axis} column found in the header {header}: expected one of "
+        f"{list(known_names)}, or pass {flag}"
+    )
+
+
+def _coordinates_from_row(
+    row: list[str], lng_index: int, lat_index: int
+) -> tuple[float, float]:
+    """Read and validate the coordinate pair out of one input row.
 
     The bounds check is the same one every lookup performs, so a coordinate
     that reaches the lookup from here cannot raise there. That is what keeps
-    one unusable line from ending the stream: the caller learns *this line*
-    is unusable, not that the process is over.
+    one unusable row from ending the stream.
 
-    :param line: One line of input (with or without the trailing newline)
+    :param row: The row's fields
+    :param lng_index: 0-based index of the longitude column
+    :param lat_index: 0-based index of the latitude column
     :return: The validated ``(lng, lat)`` pair
-    :raises ValueError: If the line is blank, is not two comma-separated
-        numbers, or names a coordinate outside the valid range
+    :raises ValueError: If the row is too short, either field is not a number,
+        or the pair is outside the valid range
     """
-    stripped = line.strip()
-    if not stripped:
-        raise ValueError("blank line")
-    parts = stripped.split(",")
-    if len(parts) != 2:
-        raise ValueError(
-            f"expected 'lng,lat', got {len(parts)} comma-separated field(s)"
-        )
+    for index, axis in ((lng_index, "longitude"), (lat_index, "latitude")):
+        if index >= len(row):
+            raise ValueError(
+                f"row has {len(row)} field(s), needs at least {index + 1} "
+                f"for the {axis}"
+            )
     try:
-        lng, lat = float(parts[0]), float(parts[1])
+        lng, lat = float(row[lng_index]), float(row[lat_index])
     except ValueError:
-        raise ValueError("both fields must be numbers") from None
+        raise ValueError(
+            f"longitude {row[lng_index]!r} and latitude {row[lat_index]!r} "
+            f"must both be numbers"
+        ) from None
     return validate_coordinates(lng, lat)
 
 
-def _run_stdin(timezone_function: Callable[..., str | None]) -> int:
-    """Read ``lng,lat`` pairs from stdin and print one result per line.
+def _run_stdin(
+    timezone_function: Callable[..., str | None],
+    delimiter: str,
+    lng_spec: str | None,
+    lat_spec: str | None,
+) -> int:
+    """Annotate delimited rows read from stdin with the timezone of each.
 
-    Unusable lines - blank, unparseable, or naming a coordinate outside the
-    valid range - produce a warning on stderr and an empty line on stdout, so
-    that a caller reading one line per query stays in step with its inputs and
-    one bad line among a thousand does not discard the other 999.
+    Every input row is written back out with one column appended, so the answer
+    arrives attached to the row it belongs to and a caller needs no second pass
+    to rejoin the two. An input header gains a ``timezone`` column; a headerless
+    input stays headerless.
 
-    The empty line that marks a rejected input is indistinguishable on stdout
-    from the empty line that marks a genuine "no timezone here" - which ``-f 4``
-    and ``-f 5`` produce for every ocean point. The count returned here is what
-    lets the caller tell the two apart without parsing stderr.
+    A row that cannot be used - blank, too short, not numeric, or outside the
+    valid coordinate range - produces a warning on stderr and is written out
+    with that column empty, so one bad row among a thousand costs its own answer
+    and no other. That empty cell is also what a genuine "no timezone here"
+    looks like, which ``-f 4`` and ``-f 5`` return for every ocean point, so the
+    count returned here is what lets a caller tell the two apart.
 
-    :param timezone_function: The lookup function to call for each pair
-    :return: How many input lines were rejected
+    :param timezone_function: The lookup function to call for each row
+    :param delimiter: The single-character field delimiter
+    :param lng_spec: ``--lng-col`` value, or None to take it from the header
+    :param lat_spec: ``--lat-col`` value, or None to take it from the header
+    :return: How many input rows were rejected
+    :raises ValueError: If the coordinate columns cannot be determined
     """
+    reader = csv.reader(sys.stdin, delimiter=delimiter)
+    # csv defaults to \r\n; the rest of this CLI emits \n and so should this.
+    writer = csv.writer(sys.stdout, delimiter=delimiter, lineterminator="\n")
+
+    def emit(fields: list[str]) -> None:
+        # Flushed per row because Python block-buffers stdout whenever it is not
+        # a terminal - which is every case this mode exists for. Without it a
+        # consumer receives nothing until ~8 KB has accumulated, and the
+        # unbuffered warnings on stderr arrive detached from the rows they name.
+        writer.writerow(fields)
+        sys.stdout.flush()
+
     rejected = 0
-    for line_no, raw_line in enumerate(sys.stdin, start=1):
+    lng_index: int | None = None
+    lat_index: int | None = None
+
+    for row_no, row in enumerate(reader, start=1):
+        if not row:
+            # A blank row carries no columns to resolve against, so it cannot
+            # decide the header question either. Reject it and read on.
+            sys.stderr.write(f"warning: skipping row {row_no}: blank row\n")
+            emit([""])
+            rejected += 1
+            continue
+
+        if lng_index is None or lat_index is None:
+            header = None if _looks_like_data(row) else row
+            lng_index = _resolve_column(lng_spec, header, LNG_COLUMN_NAMES, "longitude")
+            lat_index = _resolve_column(lat_spec, header, LAT_COLUMN_NAMES, "latitude")
+            if header is not None:
+                emit([*row, TIMEZONE_COLUMN])
+                continue
+
         try:
-            lng, lat = _parse_coordinate_line(raw_line)
+            lng, lat = _coordinates_from_row(row, lng_index, lat_index)
         except ValueError as e:
-            sys.stderr.write(
-                f"warning: skipping malformed input on line {line_no}: "
-                f"{raw_line.strip()!r} ({e})\n"
-            )
-            # keep stdout aligned with stdin
-            print(flush=True)
+            sys.stderr.write(f"warning: skipping row {row_no}: {e}\n")
+            emit([*row, ""])
             rejected += 1
             continue
 
         tz = timezone_function(lng=lng, lat=lat)
-        # an empty line when no timezone was found, same contract as single mode.
-        # Flushed per line because Python block-buffers stdout whenever it is not
-        # a terminal - which is every case this mode exists for. Without this a
-        # consumer receives nothing until ~8 KB of results has accumulated, and
-        # the unbuffered warnings on stderr arrive detached from the output lines
-        # they refer to.
-        print(tz if tz else "", flush=True)
+        emit([*row, tz or ""])
 
     return rejected
 
@@ -249,7 +419,17 @@ def main() -> None:
 
     if args.stdin:
         try:
-            rejected = _run_stdin(timezone_function)
+            rejected = _run_stdin(
+                timezone_function,
+                _resolve_delimiter(args.delimiter),
+                args.lng_col,
+                args.lat_col,
+            )
+        except ValueError as e:
+            # The columns could not be determined - a usage problem, not a bad
+            # row, so it ends the run rather than being skipped like one.
+            sys.stderr.write(f"error: {e}\n")
+            raise SystemExit(2) from None
         except BrokenPipeError:
             # The consumer stopped reading (`| head -5`, a closed reader).
             # Python flushes stdout again on shutdown, which would raise a
