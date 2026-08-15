@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from collections.abc import Callable
 
@@ -203,7 +204,17 @@ def main() -> None:
     timezone_function = get_timezone_function(args.function)
 
     if args.stdin:
-        _run_stdin(timezone_function, args.function)
+        try:
+            _run_stdin(timezone_function, args.function)
+        except BrokenPipeError:
+            # The consumer stopped reading (`| head -5`, a closed reader).
+            # Python flushes stdout again on shutdown, which would raise a
+            # second time and print "Exception ignored in ..." after the
+            # traceback, so point the fd at the null device first. This is
+            # the idiom the Python docs prescribe for a filter like this one.
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, sys.stdout.fileno())
+            raise SystemExit(1) from None
         return
 
     tz = timezone_function(lng=args.lng, lat=args.lat)
