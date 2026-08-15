@@ -387,6 +387,27 @@ single query. ``-v`` is rejected in this mode, since verbose output is per query
 and would break the one-line-per-result contract. The coordinates come from stdin,
 so passing ``lng`` and ``lat`` on the command line as well is an error.
 
+**Input format.** Each line must be exactly two comma-separated numbers, longitude
+first. Surrounding whitespace is ignored, ``\r\n`` line endings are accepted, and the
+final line need not end in a newline.
+
+.. warning::
+
+    The order is ``lng,lat``, matching the argument order of every function in this
+    package - and the reverse of the ``lat,lng`` convention many geographic data
+    files use. A swapped pair is usually still a valid coordinate, so it produces a
+    confidently wrong answer rather than an error: ``4.89,52.37`` is Amsterdam,
+    while ``52.37,4.89`` is a point in the Indian Ocean.
+
+This is a line format, not a CSV dialect: there is no parser for headers, quoting,
+or extra columns. A header row, a ``"4.89","52.37"`` quoted pair, an ``id,lng,lat``
+row and a tab-separated pair are all rejected as unusable lines. Strip a header and
+project the two columns you need before piping, for example:
+
+::
+
+    tail -n +2 points.csv | cut -d, -f2,3 | timezonefinder --stdin
+
 There is always exactly one output line per input line, which is what lets a caller
 consume the two in step. A line that cannot be used - blank, not two numbers, or a
 coordinate outside the valid range - produces an empty output line and a warning on

@@ -6,6 +6,7 @@ in :mod:`timezonefinder.command_line`.
 """
 
 import subprocess
+import sys
 
 import pytest
 
@@ -333,3 +334,101 @@ def test_missing_argument_error_names_only_what_is_missing():
     assert result.returncode == 2
     assert "required: lat" in result.stderr
     assert "lng" not in result.stderr.rsplit("required:", 1)[-1]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "stdin_input, description",
+    [
+        ("4.89,52.37\n", "plain"),
+        ("  4.89 , 52.37  \n", "whitespace around the fields and the separator"),
+        ("4.89,52.37\r\n", "CRLF line ending"),
+        ("4.89,52.37", "no trailing newline on the final line"),
+    ],
+)
+def test_stdin_mode_input_tolerances(stdin_input: str, description: str):
+    """The tolerances the usage guide promises for an input line."""
+    result = run_cli("--stdin", input=stdin_input)
+    assert result.returncode == 0, f"{description}: {result.stderr}"
+    assert result.stdout == "Europe/Amsterdam\n", description
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "line",
+    [
+        "lng,lat",  # a header row
+        '"4.89","52.37"',  # quoted fields
+        "1,4.89,52.37",  # an extra id column
+        "4.89\t52.37",  # tab separated
+        "4.89 52.37",  # space separated
+    ],
+)
+def test_stdin_mode_is_not_a_csv_parser(line: str):
+    """Input is two comma-separated numbers per line, not a CSV dialect.
+
+    Pinned because the obvious way to reach for this mode is `cat points.csv |
+    timezonefinder --stdin`, and a real CSV rarely holds exactly two bare
+    numeric columns. Each of these must be rejected as an unusable line rather
+    than silently misread as a coordinate.
+    """
+    result = run_cli("--stdin", input=f"{line}\n")
+    assert result.returncode == 1
+    assert result.stdout == "\n"
+    assert "skipping malformed input" in result.stderr
+
+
+@pytest.mark.unit
+def test_stdin_mode_reads_longitude_first():
+    """The pair is lng,lat - the reverse order is a different, valid point.
+
+    A swapped pair does not raise, so nothing but this ordering stands between
+    a caller and a confidently wrong answer.
+    """
+    result = run_cli("--stdin", input="4.89,52.37\n52.37,4.89\n")
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    assert lines[0] == "Europe/Amsterdam"
+    assert lines[1] != "Europe/Amsterdam", (
+        "a swapped pair must not resolve to the same zone, or this pins nothing"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("function_id", FUNCTION_IDS)
+def test_in_memory_flag_returns_the_same_answers(function_id: int):
+    """--in-memory only changes how the coordinate data is held, never the result."""
+    coordinates = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n{PACIFIC[0]},{PACIFIC[1]}\n"
+    mapped = run_cli("--stdin", "-f", str(function_id), input=coordinates)
+    in_memory = run_cli(
+        "--stdin", "--in-memory", "-f", str(function_id), input=coordinates
+    )
+    assert in_memory.returncode == 0, in_memory.stderr
+    assert in_memory.stdout == mapped.stdout
+
+
+@pytest.mark.unit
+def test_in_memory_flag_applies_to_a_single_query():
+    """The flag is not stdin-only: a one-shot lookup accepts it too."""
+    result = run_cli("--in-memory", "--", *AMSTERDAM)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "Europe/Amsterdam\n"
+
+
+@pytest.mark.unit
+def test_module_entry_point_matches_the_console_script():
+    """`python -m timezonefinder` reaches the same CLI as the console script.
+
+    Every other case here runs the console script, so without this the
+    ``__main__`` module added for the streaming mode has no coverage at all.
+    """
+    stdin_input = f"{AMSTERDAM[0]},{AMSTERDAM[1]}\n"
+    module = subprocess.run(
+        [sys.executable, "-m", "timezonefinder", "--stdin"],
+        input=stdin_input,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert module.returncode == 0, module.stderr
+    assert module.stdout == run_cli("--stdin", input=stdin_input).stdout
