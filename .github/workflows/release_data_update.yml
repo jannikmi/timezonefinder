@@ -152,6 +152,11 @@ jobs:
           set -euo pipefail
 
           version=$(uv version --short)
+          # an annotated tag records a tagger, and a GitHub runner has no git
+          # identity configured - git would refuse with "unable to auto-detect
+          # email address", merging the data without ever publishing it
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # mirror the manual release process ("make release": annotated tag on master)
           git tag -a "$version" -m "Release $version"
           git push origin "$version"

@@ -67,6 +67,24 @@ def test_blocked_auto_release_labels_and_notifies_the_update_pr() -> None:
 
 
 @pytest.mark.unit
+def test_annotated_release_tag_has_a_tagger_identity() -> None:
+    """`git tag -a` records a tagger and fails without a configured identity.
+
+    A GitHub runner has none, and git refuses to guess one from
+    `runner@<host>.(none)`. Without this the PR merges and the tag that starts
+    the release pipeline never gets pushed.
+    """
+    tag_step = next(
+        step for step in _release_steps() if step.get("name") == "Tag the release"
+    )
+    script = tag_step["run"]
+
+    assert "git config user.name" in script
+    assert "git config user.email" in script
+    assert script.index("git config user.email") < script.index("git tag -a")
+
+
+@pytest.mark.unit
 def test_update_pr_is_selected_from_the_workflow_run_payload() -> None:
     workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     steps = [step for job in workflow["jobs"].values() for step in job["steps"]]
