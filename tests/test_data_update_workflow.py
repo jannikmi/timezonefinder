@@ -148,6 +148,23 @@ def test_the_shared_action_rejects_a_pr_that_is_not_the_update_pr() -> None:
 
 
 @pytest.mark.unit
+def test_the_shared_action_falls_back_to_a_branch_lookup() -> None:
+    """``workflow_run.pull_requests`` is not always populated.
+
+    Trusting it alone made an empty array resolve to ``gh pr view ""``, failing
+    the whole job - including ``alert_failure``, whose entire purpose is to
+    still reach the maintainer when something has gone wrong.
+    """
+    action = yaml.safe_load(RESOLVE_ACTION.read_text(encoding="utf-8"))
+    assert action["inputs"]["pr-number"]["required"] is False
+
+    script = action["runs"]["steps"][0]["run"]
+    assert 'gh pr list --state open --base master --head "$BRANCH"' in script
+    # the fallback is narrowed the same way, and still identity-checked after
+    assert script.index("gh pr list") < script.index("gh pr view")
+
+
+@pytest.mark.unit
 def test_a_job_running_the_local_action_checks_out_master_first() -> None:
     """A local ``uses:`` needs the repo in the workspace, and it must be master.
 
