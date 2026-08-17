@@ -61,6 +61,16 @@ def insert_data_release(
     insertion_point = _unreleased_section_end(changelog)
 
     title = f"{version} ({release_date.isoformat()})"
+    # Everything below recognises a release by _RELEASE_TITLE, so a version
+    # this pattern does not match would be inserted as text no check can see:
+    # validate_changelog_order() would pass over it, the next data update would
+    # insert above it rather than below, and the ordering guarantee would hold
+    # only over the entries that happen to be well-formed.
+    if not _RELEASE_TITLE.fullmatch(f"{title}\n{'-' * len(title)}"):
+        raise ValueError(
+            f"{version!r} is not a release version: a changelog heading must "
+            "read <major>.<minor>.<patch>, or nothing downstream can find it"
+        )
     entry = (
         f"{title}\n{'-' * len(title)}\n\n"
         f"* updated the data to `{data_tag} "

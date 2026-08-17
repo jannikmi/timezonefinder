@@ -119,6 +119,36 @@ X.X.X (unreleased)
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("version", ["8.2.6rc1", "8.2", "v8.2.6", "8.2.6.post1"])
+def test_insertion_rejects_a_version_no_check_could_find(version: str) -> None:
+    """A heading that _RELEASE_TITLE cannot match is invisible to every check.
+
+    ``validate_changelog_order`` would pass over such an entry rather than
+    reject it, and the next data update would insert above it instead of
+    below - so the ordering guarantee would silently cover only the
+    well-formed entries.
+    """
+    changelog = """Changelog
+=========
+
+X.X.X (unreleased)
+------------------
+
+8.2.5 (2026-07-22)
+------------------
+"""
+
+    with pytest.raises(ValueError, match="not a release version"):
+        insert_data_release(
+            changelog,
+            version=version,
+            release_date=date(2026, 8, 17),
+            data_tag="2026a",
+            data_repo_url="https://example.test/data",
+        )
+
+
+@pytest.mark.unit
 def test_committed_changelog_sections_are_in_release_order() -> None:
     validate_changelog_order(
         (PROJECT_ROOT / "CHANGELOG.rst").read_text(encoding="utf-8")
