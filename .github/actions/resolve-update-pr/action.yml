@@ -16,7 +16,9 @@ inputs:
     description: github.event.workflow_run.head_branch
     required: true
   head-sha:
-    description: github.event.workflow_run.head_sha
+    description: >
+      github.event.workflow_run.head_sha. A PR that has moved past it makes
+      this run superseded, which is a no-op rather than an error.
     required: true
   repo-owner:
     description: github.repository_owner - the only owner a head repository may have
@@ -83,10 +85,20 @@ runs:
         head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
         # identity first: a PR that is not ours is an error whatever its state
         if [[ "$base_branch" != "master" || "$head_branch" != "$BRANCH" || \
-              "$head_sha" != "$HEAD_SHA" || "$head_owner" != "$REPO_OWNER" ]]; then
+              "$head_owner" != "$REPO_OWNER" ]]; then
           echo "::error::PR #$pr_number does not match the update PR this run was for" \
-            "(base=$base_branch head=$head_branch@$head_sha owner=$head_owner)"
+            "(base=$base_branch head=$head_branch owner=$head_owner)"
           exit 1
+        fi
+
+        # ours, but this run is no longer the current one. build.yml declares
+        # no concurrency group, so a run for an older head finishes after a
+        # push instead of being cancelled. Acting on it would merge or report a
+        # commit the PR has moved past - wrong, but not an error: the run for
+        # the new head does the work. Failing here would instead cost the alert
+        # job its comment, the only place a failed CI run is reported.
+        if [[ "$head_sha" != "$HEAD_SHA" ]]; then
+          nothing_to_do "PR #$pr_number is at $head_sha, this run was for $HEAD_SHA, nothing to do"
         fi
 
         # ours, but already dealt with - a re-run of build.yml on a merged or

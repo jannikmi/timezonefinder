@@ -32,6 +32,12 @@ def _all_steps() -> list[dict]:
     return [step for job in _jobs().values() for step in job["steps"]]
 
 
+def _resolve_script() -> str:
+    return yaml.safe_load(RESOLVE_ACTION.read_text(encoding="utf-8"))["runs"]["steps"][
+        0
+    ]["run"]
+
+
 @pytest.mark.unit
 def test_every_step_acting_on_the_pr_goes_through_the_shared_action() -> None:
     """The identity check is what stops a fork PR from being auto-merged.
@@ -143,13 +149,30 @@ def test_an_unmatched_pr_errors_while_an_absent_one_does_not() -> None:
     at all" has to succeed: that is an ordinary re-run. Checking identity
     before state is what keeps a mismatched PR from taking the no-op path.
     """
-    script = yaml.safe_load(RESOLVE_ACTION.read_text(encoding="utf-8"))["runs"][
-        "steps"
-    ][0]["run"]
+    script = _resolve_script()
 
     assert script.index('"$head_owner" != "$REPO_OWNER"') < script.index(
         '"$pr_state" != "OPEN"'
     )
+
+
+@pytest.mark.unit
+def test_a_run_the_pr_has_moved_past_is_a_no_op_rather_than_an_error() -> None:
+    """Superseded and "not ours" are different, and only one of them is fatal.
+
+    build.yml declares no concurrency group, so a run for an older head does
+    finish after a push rather than being cancelled. Comparing the head SHA
+    inside the fork check made that ordinary case fail the job - and in the
+    alert job, failing before the notice means a genuinely failed CI run is
+    reported nowhere at all.
+    """
+    script = _resolve_script()
+
+    fork_check = script[: script.index("exit 1")]
+    assert "$HEAD_SHA" not in fork_check, "a stale head must not fail the fork check"
+
+    superseded = script[script.index('"$head_sha" != "$HEAD_SHA"') :]
+    assert "nothing_to_do" in superseded[: superseded.index("fi")]
 
 
 @pytest.mark.unit
