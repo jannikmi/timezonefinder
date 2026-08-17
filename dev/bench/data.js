@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787007995886,
+  "lastUpdate": 1787007998181,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3338,6 +3338,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.1456 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e3a43ae189dd7f21a2fe4c038f71e354d0fc4af3",
+          "message": "Retire the release stop for a state that can no longer arise (#520)\n\nThe cut-release skill stopped when a dated section sat above\n`X.X.X (unreleased)`, and explained it by `update_data.sh` splicing its\nentry under the file header. Since #519 it inserts below the unreleased\nsection and `release_data_update.yml` withholds the merge while anything\nis pending, so the automation cannot leave the file out of order - and\n`validate_changelog_order` fails the test suite over the committed file\nif anything else does, which the skill's green-master precondition\nalready stops on.\n\nThe skill's own maintenance section named this as its removal condition.\nThat entry is spent and goes with it; what replaces it is the record of\nwhy the row is absent, so it is not re-added on the next read.\n\nCloses #510\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-18T01:05:12+02:00",
+          "tree_id": "ed8566bcda4190f94f5d93002510a7fd5f6bd83d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e3a43ae189dd7f21a2fe4c038f71e354d0fc4af3"
+        },
+        "date": 1787007997446,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466736793518066,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466899871826172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.5323896408081055,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.541097640991211,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 65.69981384277344,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 65.70852661132812,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8703 GHz"
           }
         ]
       }
