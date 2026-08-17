@@ -37,6 +37,12 @@ from timezonefinder.utils_numba import convert2coords
 
 PROJECT_ROOT = PACKAGE_DIR.parent
 DIST_DIR = PROJECT_ROOT / "dist"
+# where GitHub looks for workflows and for local `uses: ./...` actions - the
+# layout is GitHub's, not ours, so the tests that read those files share one
+# declaration of it rather than each spelling out the same directories
+GITHUB_DIR = PROJECT_ROOT / ".github"
+WORKFLOW_DIR = GITHUB_DIR / "workflows"
+ACTION_DIR = GITHUB_DIR / "actions"
 BENCHMARK_FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "benchmarks"
 BENCHMARK_FIXTURES_METADATA_PATH = BENCHMARK_FIXTURES_DIR / "metadata.json"
 

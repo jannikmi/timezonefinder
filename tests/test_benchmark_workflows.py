@@ -29,9 +29,8 @@ from typing import Any
 import pytest
 import yaml
 
-from tests.auxiliaries import PROJECT_ROOT
+from tests.auxiliaries import WORKFLOW_DIR
 
-WORKFLOW_DIR = PROJECT_ROOT / ".github" / "workflows"
 BENCHMARK_WORKFLOW = WORKFLOW_DIR / "benchmark.yml"
 BENCHMARK_COMMENT_WORKFLOW = WORKFLOW_DIR / "benchmark-comment.yml"
 

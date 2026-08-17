@@ -3,15 +3,13 @@
 import pytest
 import yaml
 
-from tests.auxiliaries import PROJECT_ROOT
+from tests.auxiliaries import ACTION_DIR, PROJECT_ROOT, WORKFLOW_DIR
 
 UPDATE_SCRIPT = PROJECT_ROOT / "update_data.sh"
-RELEASE_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "release_data_update.yml"
-RESOLVE_ACTION = (
-    PROJECT_ROOT / ".github" / "actions" / "resolve-update-pr" / "action.yml"
-)
+RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
+RESOLVE_ACTION = ACTION_DIR / "resolve-update-pr" / "action.yml"
 RESOLVE_ACTION_REF = "./.github/actions/resolve-update-pr"
-NOTIFY_ACTION = PROJECT_ROOT / ".github" / "actions" / "notify-update-pr" / "action.yml"
+NOTIFY_ACTION = ACTION_DIR / "notify-update-pr" / "action.yml"
 NOTIFY_ACTION_REF = "./.github/actions/notify-update-pr"
 
 
