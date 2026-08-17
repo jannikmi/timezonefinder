@@ -133,19 +133,16 @@ fi
 uv version --bump patch
 NEW_VERSION=$(uv version --short)
 
-# prepend a changelog entry for the data update
+# insert the data release below the unreleased section. The release workflow
+# separately refuses to merge while that section contains pending work.
 DATA_TAG=$(cat DATA_VERSION)
-ENTRY_TITLE="$NEW_VERSION ($(date +%Y-%m-%d))"
-ENTRY_UNDERLINE=$(printf '%*s' "${#ENTRY_TITLE}" '' | tr ' ' '-')
-{
-    # keep the changelog header (first 3 lines), insert the new entry below it
-    head -n 3 "$CHANGELOG_PATH"
-    printf '\n\n%s\n%s\n\n' "$ENTRY_TITLE" "$ENTRY_UNDERLINE"
-    printf '* updated the data to `%s <%s/releases/tag/%s>`__\n' "$DATA_TAG" "$DATA_REPO_URL" "$DATA_TAG"
-    tail -n +4 "$CHANGELOG_PATH"
-} >"$CHANGELOG_PATH.new"
-mv "$CHANGELOG_PATH.new" "$CHANGELOG_PATH"
-echo "added $CHANGELOG_PATH entry: $ENTRY_TITLE"
+RELEASE_DATE=$(date +%Y-%m-%d)
+uv run python -m scripts.changelog insert-data-release "$CHANGELOG_PATH" \
+    --version "$NEW_VERSION" \
+    --date "$RELEASE_DATE" \
+    --data-tag "$DATA_TAG" \
+    --data-repo-url "$DATA_REPO_URL"
+echo "added $CHANGELOG_PATH entry: $NEW_VERSION ($RELEASE_DATE)"
 
 if [ "$RM_TMP" -eq 1 ]; then
     echo "deleting temporary data files..."

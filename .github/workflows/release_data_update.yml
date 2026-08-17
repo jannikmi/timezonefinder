@@ -37,27 +37,104 @@ jobs:
           private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
+      - name: Check out current master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Check unreleased section
+        id: changelog-guard
+        continue-on-error: true
+        run: python -m scripts.changelog check-empty CHANGELOG.rst
+
       - name: Merge the update PR
+        if: steps.changelog-guard.outcome == 'success'
         id: merge
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
-          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
-          if [[ -z "$pr_number" ]]; then
-            echo "no open update PR for branch $BRANCH, nothing to do"
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
+          pr_state=$(jq -r .state <<<"$pr_data")
+          base_branch=$(jq -r .baseRefName <<<"$pr_data")
+          head_branch=$(jq -r .headRefName <<<"$pr_data")
+          head_sha=$(jq -r .headRefOid <<<"$pr_data")
+          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
+          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
+                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
+                "$head_owner" != "$REPO_OWNER" ]]; then
+            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
+            exit 1
           fi
 
-          gh pr merge "$pr_number" --squash
-          merge_sha=$(gh pr view "$pr_number" --json mergeCommit --jq .mergeCommit.oid)
-          echo "merged PR #$pr_number as $merge_sha"
+          guarded_master=$(git rev-parse HEAD)
+          current_master=$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq .object.sha)
+          if [[ "$guarded_master" != "$current_master" ]]; then
+            echo "master changed after the changelog check; refusing to merge"
+            exit 1
+          fi
+
+          gh pr merge "$PR_NUMBER" --squash --match-head-commit "$HEAD_SHA"
+          merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq .mergeCommit.oid)
+          echo "merged PR #$PR_NUMBER as $merge_sha"
           echo "merged=true" >> "$GITHUB_OUTPUT"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Report pending work
+        if: >
+          always() &&
+          (steps.changelog-guard.outcome == 'failure' ||
+           steps.merge.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          MAINTAINER: ${{ github.repository_owner }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          BOT_LOGIN: github-actions[bot]
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
+          pr_state=$(jq -r .state <<<"$pr_data")
+          base_branch=$(jq -r .baseRefName <<<"$pr_data")
+          head_branch=$(jq -r .headRefName <<<"$pr_data")
+          head_sha=$(jq -r .headRefOid <<<"$pr_data")
+          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
+          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
+                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
+                "$head_owner" != "$REPO_OWNER" ]]; then
+            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
+            exit 1
+          fi
+
+          gh label create automation-failed \
+            --description "the automated data update needs manual attention" \
+            --color D93F0B --force
+          gh pr edit "$PR_NUMBER" --add-label automation-failed
+
+          notice_id=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq "[.[] | select(.user.login == \"$BOT_LOGIN\" and (.body | contains(\"<!-- data-update-automation-notice -->\")))][0].id // empty")
+          if [[ -z "$notice_id" ]]; then
+            gh pr comment "$PR_NUMBER" --body "<!-- data-update-automation-notice --> @$MAINTAINER this automated data update was not merged because the release guard found pending unreleased work, malformed changelog structure, or a concurrent change to master. If work is pending, please cut a release first."
+          fi
+
+      - name: Stop blocked release
+        if: >
+          always() &&
+          (steps.changelog-guard.outcome == 'failure' ||
+           steps.merge.outcome == 'failure')
+        run: exit 1
 
       - uses: actions/checkout@v7
         if: steps.merge.outputs.merged == 'true'
@@ -95,27 +172,38 @@ jobs:
           BRANCH: ${{ github.event.workflow_run.head_branch }}
           MAINTAINER: ${{ github.repository_owner }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          BOT_LOGIN: github-actions[bot]
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
-          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
-          if [[ -z "$pr_number" ]]; then
-            echo "no open update PR for branch $BRANCH, nothing to do"
-            exit 0
+          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
+          pr_state=$(jq -r .state <<<"$pr_data")
+          base_branch=$(jq -r .baseRefName <<<"$pr_data")
+          head_branch=$(jq -r .headRefName <<<"$pr_data")
+          head_sha=$(jq -r .headRefOid <<<"$pr_data")
+          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
+          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
+                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
+                "$head_owner" != "$REPO_OWNER" ]]; then
+            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
+            exit 1
           fi
 
           gh label create automation-failed \
             --description "the automated data update needs manual attention" \
             --color D93F0B --force
 
-          gh pr edit "$pr_number" --add-label automation-failed
+          gh pr edit "$PR_NUMBER" --add-label automation-failed
 
-          # avoid repeated notifications on CI re-runs
-          already_notified=$(gh pr view "$pr_number" --json comments \
-            --jq '[.comments[] | select(.body | contains("automated data update"))] | length')
-          if [[ "$already_notified" -gt 0 ]]; then
-            echo "failure comment already exists on PR #$pr_number, nothing to do"
+          # avoid repeated notifications on CI re-runs, without trusting user comments
+          notice_id=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq "[.[] | select(.user.login == \"$BOT_LOGIN\" and (.body | contains(\"<!-- data-update-automation-notice -->\")))][0].id // empty")
+          if [[ -n "$notice_id" ]]; then
+            echo "automation comment already exists on PR #$PR_NUMBER, nothing to do"
             exit 0
           fi
 
-          gh pr comment "$pr_number" --body "@$MAINTAINER the CI/CD pipeline of this automated data update failed ([run]($RUN_URL)). Manual attention is needed; the PR will not be merged automatically."
+          gh pr comment "$PR_NUMBER" --body "<!-- data-update-automation-notice --> @$MAINTAINER the CI/CD pipeline of this automated data update failed ([run]($RUN_URL)). Manual attention is needed; the PR will not be merged automatically."
