@@ -107,6 +107,21 @@ jobs:
             exit 1
           fi
 
+          # The check above compares master before the merge; a push landing in
+          # the window between them would slip its unreleased work into this
+          # data-only release. The squash commit's first parent is the master
+          # tip the merge actually applied to, so it settles that after the
+          # fact. The merge itself is harmless and stands - what is withheld is
+          # the tag, since that is what publishes.
+          merge_parent=$(gh api "repos/$GH_REPO/commits/$merge_sha" \
+            --jq '.parents[0].sha')
+          if [[ "$merge_parent" != "$guarded_master" ]]; then
+            echo "::error::master moved from $guarded_master to $merge_parent" \
+              "between the changelog check and the merge - refusing to tag," \
+              "since the release notes would omit whatever landed in between"
+            exit 1
+          fi
+
           echo "merged PR #$PR_NUMBER as $merge_sha"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
 

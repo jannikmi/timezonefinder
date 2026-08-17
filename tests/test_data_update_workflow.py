@@ -66,6 +66,27 @@ def test_current_master_is_checked_before_an_update_pr_can_merge() -> None:
 
 
 @pytest.mark.unit
+def test_the_squash_parent_proves_master_did_not_move() -> None:
+    """Comparing master before the merge leaves a window open.
+
+    A push landing between the comparison and ``gh pr merge`` would ship its
+    unreleased work under data-only release notes - the exact thing this
+    workflow exists to prevent. ``--match-head-commit`` pins the PR head, not
+    the base, so the squash commit's first parent is what settles it.
+    """
+    merge = next(
+        step for step in _release_steps() if step.get("name") == "Merge the update PR"
+    )
+    script = merge["run"]
+
+    assert "parents[0].sha" in script
+    assert '"$merge_parent" != "$guarded_master"' in script
+    # checked before the commit is published as an output, so a mismatch
+    # withholds the tag rather than merely logging
+    assert script.index("merge_parent") < script.index('echo "merge_sha=')
+
+
+@pytest.mark.unit
 def test_the_merge_commit_is_waited_for_and_gates_the_release() -> None:
     """GitHub applies a squash merge asynchronously.
 
