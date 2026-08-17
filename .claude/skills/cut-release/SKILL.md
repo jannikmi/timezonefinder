@@ -53,13 +53,6 @@ git fetch origin --tags && uv version --short && sed -n '1,10p' CHANGELOG.rst &&
 | `X.X.X (unreleased)` | equals the newest tag | **prepare** — §2 |
 | `V (YYYY-MM-DD)`, no tag `V` exists | not yet tagged | **tag** — §8 |
 | `V (YYYY-MM-DD)`, tag `V` exists | released | nothing to do — report the run status (§9) and stop |
-| a dated section sits *above* `X.X.X (unreleased)` | — | stop, see below |
-
-That last row is not a corrupt file: `update_data.sh` inserts its release section directly under
-the three-line header, i.e. above the unreleased one, so an automated data release that landed
-while work accumulated leaves the sections out of order and its tag shipped that work under a
-version number that documents none of it. Report it and let the maintainer decide; do not
-silently reorder the file as part of a release.
 
 ## 2. Prepare: preconditions
 
@@ -262,9 +255,15 @@ Absent on purpose, and to stay absent:
 the public-API contract; `Makefile`'s comments own the tag/push ordering; `build.yml` owns what a
 tag triggers. A second copy here drifts, and the copy that drifts is the one an agent obeys.
 
+**The changelog-ordering stop.** §1 carried a fourth row for "a dated section sits *above*
+`X.X.X (unreleased)`", because `update_data.sh` spliced its entry under the file header. Since #519
+it inserts below the unreleased section, and `release_data_update.yml` withholds the merge while
+anything is pending, so the automation cannot produce that state. If it arises any other way,
+`validate_changelog_order` fails the test suite over the committed file — which §2's green-master
+precondition already stops on. Do not re-add the row.
+
 **Autonomy.** §0 explains why the two stops exist. Removing them makes the skill able to publish an
 unreviewable, unrepeatable artifact without a human in the loop.
 
 What *should* change here: the §8 race note, if `build.yml`'s `release` job stops creating the tag;
-the §4 table, if the versioning contract in `CLAUDE.md` changes; §1's data-update row, if
-`update_data.sh` stops inserting above the unreleased section.
+the §4 table, if the versioning contract in `CLAUDE.md` changes.
