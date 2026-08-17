@@ -56,6 +56,16 @@ jobs:
           repo: ${{ github.repository }}
           token: ${{ steps.app-token.outputs.token }}
 
+      # scripts/changelog.py is stdlib-only, so no uv sync is needed - but it
+      # is written against this project's requires-python and the runner
+      # image's default interpreter is pinned by nothing. Resolving to
+      # anything older than 3.10 would fail the guard on its `X | None`
+      # annotations and report it as pending changelog work.
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+
       # a failure here fails the job outright. The reporting steps below run on
       # `failure()` and each names the step it is reporting on, so nothing has
       # to be kept alive with continue-on-error to reach them.

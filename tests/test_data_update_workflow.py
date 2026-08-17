@@ -56,6 +56,16 @@ def test_current_master_is_checked_before_an_update_pr_can_merge() -> None:
     assert "continue-on-error" not in guard
     assert "continue-on-error" not in merge
     assert "python -m scripts.changelog check-empty CHANGELOG.rst" in guard["run"]
+
+    # the guard runs a project script, so it must not depend on whatever
+    # interpreter the runner image happens to default to
+    setup = next(
+        step
+        for step in steps
+        if str(step.get("uses", "")).startswith("actions/setup-python")
+    )
+    assert names.index("Set up Python") < guard_index
+    assert setup["with"]["python-version-file"] == ".python-version"
     assert merge["env"]["HEAD_SHA"] == "${{ github.event.workflow_run.head_sha }}"
     remote_check = 'gh api "repos/$GH_REPO/git/ref/heads/master"'
     assert remote_check in merge["run"]
