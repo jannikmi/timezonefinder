@@ -1,12 +1,7 @@
 name: Flag an update PR for manual attention
 description: >
-  Label the automated data update PR and leave one comment for the maintainer.
-
-  Notices are deduplicated so a re-run of build.yml does not repeat them, and
-  the marker that does the deduplicating is per cause. A single shared marker
-  meant whichever notice was posted first silenced the other: a CI failure
-  reported on Monday would swallow "the release is blocked by pending work" on
-  Tuesday, leaving a red workflow as the only signal.
+  Label the update PR and leave one comment for the maintainer, deduplicated so
+  a re-run of build.yml does not repeat it.
 
 inputs:
   pr-number:
@@ -14,8 +9,8 @@ inputs:
     required: true
   marker:
     description: >
-      short slug naming the cause (e.g. ci-failed, blocked). Two notices with
-      different causes must use different slugs, or one hides the other.
+      slug naming the cause. Deduplication is per marker, so two causes sharing
+      one means whichever posts first silences the other.
     required: true
   body:
     description: comment body, without the marker
@@ -24,8 +19,8 @@ inputs:
     description: >
       login that authors the comment, so the dedup query cannot be fooled by a
       human comment quoting the marker. Must match whoever `token`
-      authenticates as - `secrets.GITHUB_TOKEN` posts as github-actions[bot],
-      a GitHub App token does not.
+      authenticates as - secrets.GITHUB_TOKEN posts as github-actions[bot], a
+      GitHub App token does not.
     required: false
     default: github-actions[bot]
   repo:

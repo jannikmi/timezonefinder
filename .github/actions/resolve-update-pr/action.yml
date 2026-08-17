@@ -1,24 +1,15 @@
 name: Resolve the automated data update PR
 description: >
-  Resolve the pull request a completed workflow_run belongs to and prove it is
-  the update PR this repository's own automation opened, before any step merges
-  it, labels it or comments on it. The identity check is what stops a fork
-  branch named data-update-* from reaching the merge step, so every consumer
-  runs the same one rather than its own copy.
-
-  Two outcomes are deliberately kept apart. A PR that exists but does not match
-  - wrong base, wrong head, a head repository outside this owner - is an error.
-  A PR that is absent or no longer open is "nothing to do" (found=false,
-  success): re-running build.yml on an already-merged update PR re-fires
-  workflow_run, and that has to stay the no-op it was rather than failing the
-  workflow and burying the real notifications under a false alarm.
+  Resolve the PR a completed workflow_run belongs to and prove it is the update
+  PR this repository's own automation opened. The identity check is what stops
+  a fork branch named data-update-* from reaching the merge step, so every
+  consumer runs this one rather than its own copy.
 
 inputs:
   pr-number:
     description: >
       github.event.workflow_run.pull_requests[0].number. May be empty - GitHub
-      does not populate that array for every run - so the branch lookup in the
-      step below is the fallback rather than the only path.
+      does not populate that array for every run - hence the branch fallback.
     required: false
     default: ""
   branch:
@@ -40,9 +31,8 @@ inputs:
 outputs:
   found:
     description: >
-      'true' when an open, matching update PR exists. Anything else means there
-      is nothing to act on - consumers must gate on it rather than assuming a
-      PR number is present.
+      'true' when an open, matching update PR exists. Consumers must gate on
+      it rather than assume a PR number is present.
     value: ${{ steps.resolve.outputs.found }}
   pr-number:
     description: number of the resolved update PR, empty unless found is 'true'
