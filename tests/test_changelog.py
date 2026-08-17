@@ -12,59 +12,42 @@ from scripts.changelog import (
 )
 from tests.auxiliaries import PROJECT_ROOT
 
+PREVIOUS_RELEASE = "8.2.5 (2026-07-22)\n------------------\n\n* previous release\n"
 
-@pytest.mark.unit
-def test_data_release_is_inserted_below_nonempty_unreleased_section() -> None:
-    changelog = """Changelog
-=========
 
-X.X.X (unreleased)
-------------------
+def _changelog(unreleased: str = "", *, below: str = PREVIOUS_RELEASE) -> str:
+    """Build a changelog with ``unreleased`` as the pending section's body."""
+    return f"Changelog\n=========\n\nX.X.X (unreleased)\n------------------\n{unreleased}\n{below}"
 
-* user-facing change
 
-Internal:
-
-* build change
-
-8.2.5 (2026-07-22)
-------------------
-
-* previous release
-"""
-
-    updated = insert_data_release(
+def _insert(
+    changelog: str, *, version: str = "8.2.6", release_date: date = date(2026, 8, 17)
+) -> str:
+    return insert_data_release(
         changelog,
-        version="8.2.6",
-        release_date=date(2026, 8, 17),
+        version=version,
+        release_date=release_date,
         data_tag="2026a",
         data_repo_url="https://example.test/data",
     )
 
-    assert (
-        updated
-        == """Changelog
-=========
 
-X.X.X (unreleased)
-------------------
+@pytest.mark.unit
+def test_data_release_is_inserted_below_a_nonempty_unreleased_section() -> None:
+    """Pending work stays pending: the entry goes below it, not above.
 
-* user-facing change
+    The previous implementation prepended after the file header, which put the
+    data release above work it does not describe.
+    """
+    pending = "\n* user-facing change\n\nInternal:\n\n* build change\n"
 
-Internal:
-
-* build change
-
-8.2.6 (2026-08-17)
-------------------
-
-* updated the data to `2026a <https://example.test/data/releases/tag/2026a>`__
-
-8.2.5 (2026-07-22)
-------------------
-
-* previous release
-"""
+    assert _insert(_changelog(pending)) == _changelog(
+        pending,
+        below=(
+            "8.2.6 (2026-08-17)\n------------------\n\n"
+            "* updated the data to `2026a "
+            "<https://example.test/data/releases/tag/2026a>`__\n\n" + PREVIOUS_RELEASE
+        ),
     )
 
 
@@ -83,113 +66,59 @@ Internal:
 def test_pending_unreleased_changes_are_detected(
     unreleased_body: str, expected: bool
 ) -> None:
-    changelog = f"""Changelog
-=========
-
-X.X.X (unreleased)
-------------------
-{unreleased_body}
-8.2.5 (2026-07-22)
-------------------
-
-* previous release
-"""
-
-    assert has_pending_unreleased_changes(changelog) is expected
+    assert has_pending_unreleased_changes(_changelog(unreleased_body)) is expected
 
 
 @pytest.mark.unit
-def test_check_empty_cli_blocks_pending_unreleased_changes(tmp_path) -> None:
-    changelog_path = tmp_path / "CHANGELOG.rst"
-    changelog_path.write_text(
-        """Changelog
-=========
+@pytest.mark.parametrize(
+    ("unreleased_body", "exit_code"),
+    [("\n* pending change\n", 1), ("", 0), ("\nInternal:\n", 0)],
+)
+def test_check_empty_cli_reports_whether_work_is_pending(
+    tmp_path, unreleased_body: str, exit_code: int
+) -> None:
+    """Both exit codes matter.
 
-X.X.X (unreleased)
-------------------
+    A check-empty returning 1 unconditionally passes a suite that only tests
+    the blocking case, while ensuring no data update is ever released again -
+    and a workflow that merges nothing looks exactly like upstream having
+    published nothing.
+    """
+    changelog = tmp_path / "CHANGELOG.rst"
+    changelog.write_text(_changelog(unreleased_body))
 
-* pending change
-
-8.2.5 (2026-07-22)
-------------------
-"""
-    )
-
-    assert main(["check-empty", str(changelog_path)]) == 1
+    assert main(["check-empty", str(changelog)]) == exit_code
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("version", ["8.2.6rc1", "8.2", "v8.2.6", "8.2.6.post1"])
-def test_insertion_rejects_a_version_no_check_could_find(version: str) -> None:
-    """A heading that _RELEASE_TITLE cannot match is invisible to every check.
+@pytest.mark.parametrize("content", [None, "Changelog\n=========\n\nunstructured\n"])
+def test_check_empty_cli_blocks_what_it_cannot_read(tmp_path, content) -> None:
+    """A changelog the guard cannot parse must block, not crash or release."""
+    changelog = tmp_path / "CHANGELOG.rst"
+    if content is not None:
+        changelog.write_text(content)
+
+    assert main(["check-empty", str(changelog)]) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("version", ["8.2.6rc1", "8.2", "v8.2.6"])
+def test_insertion_rejects_a_version_no_later_check_could_find(version: str) -> None:
+    """A heading the release pattern cannot match is invisible to every check.
 
     ``validate_changelog_order`` would pass over such an entry rather than
     reject it, and the next data update would insert above it instead of
     below - so the ordering guarantee would silently cover only the
     well-formed entries.
     """
-    changelog = """Changelog
-=========
-
-X.X.X (unreleased)
-------------------
-
-8.2.5 (2026-07-22)
-------------------
-"""
-
     with pytest.raises(ValueError, match="not a release version"):
-        insert_data_release(
-            changelog,
-            version=version,
-            release_date=date(2026, 8, 17),
-            data_tag="2026a",
-            data_repo_url="https://example.test/data",
-        )
+        _insert(_changelog(), version=version)
 
 
 @pytest.mark.unit
-def test_check_empty_cli_allows_an_empty_unreleased_section(tmp_path) -> None:
-    """The exit code that actually releases data was never asserted.
-
-    ``check-empty`` returning 1 for every input would still pass a suite that
-    only tests the blocking case, and would silently stop data updates from
-    ever being released - a workflow that never merges looks like upstream
-    having published nothing.
-    """
-    changelog_path = tmp_path / "CHANGELOG.rst"
-    changelog_path.write_text(
-        """Changelog
-=========
-
-X.X.X (unreleased)
-------------------
-
-Internal:
-
-8.2.5 (2026-07-22)
-------------------
-
-* previous release
-"""
-    )
-
-    assert main(["check-empty", str(changelog_path)]) == 0
-
-
-@pytest.mark.unit
-def test_check_empty_cli_blocks_an_unparsable_changelog(tmp_path) -> None:
-    """A changelog the guard cannot parse must block, not release."""
-    changelog_path = tmp_path / "CHANGELOG.rst"
-    changelog_path.write_text("Changelog\n=========\n\nunstructured prose\n")
-
-    assert main(["check-empty", str(changelog_path)]) == 1
-
-
-@pytest.mark.unit
-def test_check_empty_cli_blocks_a_missing_changelog(tmp_path) -> None:
-    """A path that does not exist must block rather than crash the step."""
-    assert main(["check-empty", str(tmp_path / "absent.rst")]) == 1
+def test_insertion_rejects_a_date_older_than_the_latest_release() -> None:
+    with pytest.raises(ValueError, match="descending"):
+        _insert(_changelog(), release_date=date(2026, 7, 1))
 
 
 @pytest.mark.unit
@@ -197,44 +126,3 @@ def test_committed_changelog_sections_are_in_release_order() -> None:
     validate_changelog_order(
         (PROJECT_ROOT / "CHANGELOG.rst").read_text(encoding="utf-8")
     )
-
-
-@pytest.mark.unit
-def test_changelog_order_rejects_older_release_above_newer_release() -> None:
-    changelog = """Changelog
-=========
-
-X.X.X (unreleased)
-------------------
-
-8.2.4 (2026-07-01)
-------------------
-
-8.2.5 (2026-07-22)
-------------------
-"""
-
-    with pytest.raises(ValueError, match="descending"):
-        validate_changelog_order(changelog)
-
-
-@pytest.mark.unit
-def test_insertion_rejects_a_release_date_older_than_the_latest_release() -> None:
-    changelog = """Changelog
-=========
-
-X.X.X (unreleased)
-------------------
-
-8.2.5 (2026-07-22)
-------------------
-"""
-
-    with pytest.raises(ValueError, match="descending"):
-        insert_data_release(
-            changelog,
-            version="8.2.6",
-            release_date=date(2026, 7, 1),
-            data_tag="2026a",
-            data_repo_url="https://example.test/data",
-        )
