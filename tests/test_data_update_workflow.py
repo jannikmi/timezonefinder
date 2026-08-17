@@ -11,6 +11,8 @@ RESOLVE_ACTION = (
     PROJECT_ROOT / ".github" / "actions" / "resolve-update-pr" / "action.yml"
 )
 RESOLVE_ACTION_REF = "./.github/actions/resolve-update-pr"
+NOTIFY_ACTION = PROJECT_ROOT / ".github" / "actions" / "notify-update-pr" / "action.yml"
+NOTIFY_ACTION_REF = "./.github/actions/notify-update-pr"
 
 
 def _workflow() -> dict:
@@ -124,9 +126,8 @@ def test_blocked_auto_release_labels_and_notifies_the_update_pr() -> None:
 
     assert "steps.changelog-guard.outcome == 'failure'" in alert["if"]
     assert "steps.merge.outcome == 'failure'" in alert["if"]
-    assert "automation-failed" in alert["run"]
-    assert "gh pr comment" in alert["run"]
-    assert "cut a release" in alert["run"]
+    assert alert["uses"] == NOTIFY_ACTION_REF
+    assert "cut a release" in alert["with"]["body"]
 
     stop = next(step for step in steps if step.get("name") == "Stop blocked release")
     assert "steps.changelog-guard.outcome == 'failure'" in stop["if"]
@@ -224,10 +225,8 @@ def test_no_step_acts_on_the_pr_unless_one_was_found() -> None:
     acting = [
         step
         for step in _all_steps()
-        if any(
-            marker in str(step.get("run", ""))
-            for marker in ("gh pr merge", "gh pr edit", "gh pr comment")
-        )
+        if "gh pr merge" in str(step.get("run", ""))
+        or step.get("uses") == NOTIFY_ACTION_REF
     ]
     assert acting
 
@@ -282,14 +281,24 @@ def test_a_job_running_the_local_action_checks_out_master_first() -> None:
 
 
 @pytest.mark.unit
-def test_notifications_are_deduplicated_by_marker_and_automation_author() -> None:
-    notification_steps = [
-        step for step in _all_steps() if "gh pr comment" in str(step.get("run", ""))
-    ]
+def test_each_notice_cause_deduplicates_on_its_own_marker() -> None:
+    """One marker for both notices meant the first one silenced the second.
 
-    assert notification_steps
-    for step in notification_steps:
-        script = step["run"]
-        assert "<!-- data-update-automation-notice -->" in script
-        assert step["env"]["BOT_LOGIN"] == "github-actions[bot]"
-        assert ".user.login" in script
+    A CI failure and a blocked release are different things to tell the
+    maintainer, and either can follow the other: fix the CI, re-run, and the
+    guard then reports pending work - which the earlier notice would have
+    swallowed, leaving a red workflow as the only signal.
+    """
+    notifiers = [step for step in _all_steps() if step.get("uses") == NOTIFY_ACTION_REF]
+    assert len(notifiers) == 2
+
+    markers = [step["with"]["marker"] for step in notifiers]
+    assert len(set(markers)) == len(markers), f"causes share a marker: {markers}"
+
+    script = yaml.safe_load(NOTIFY_ACTION.read_text(encoding="utf-8"))["runs"]["steps"][
+        0
+    ]["run"]
+    # the marker is part of the string both written and searched for
+    assert "data-update-automation-notice:$MARKER" in script
+    assert '.user.login == \\"$BOT_LOGIN\\"' in script
+    assert "contains(" in script

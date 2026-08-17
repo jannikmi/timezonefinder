@@ -1,0 +1,68 @@
+name: Flag an update PR for manual attention
+description: >
+  Label the automated data update PR and leave one comment for the maintainer.
+
+  Notices are deduplicated so a re-run of build.yml does not repeat them, and
+  the marker that does the deduplicating is per cause. A single shared marker
+  meant whichever notice was posted first silenced the other: a CI failure
+  reported on Monday would swallow "the release is blocked by pending work" on
+  Tuesday, leaving a red workflow as the only signal.
+
+inputs:
+  pr-number:
+    description: number of the update PR, from the resolve-update-pr action
+    required: true
+  marker:
+    description: >
+      short slug naming the cause (e.g. ci-failed, blocked). Two notices with
+      different causes must use different slugs, or one hides the other.
+    required: true
+  body:
+    description: comment body, without the marker
+    required: true
+  bot-login:
+    description: >
+      login that authors the comment, so the dedup query cannot be fooled by a
+      human comment quoting the marker. Must match whoever `token`
+      authenticates as - `secrets.GITHUB_TOKEN` posts as github-actions[bot],
+      a GitHub App token does not.
+    required: false
+    default: github-actions[bot]
+  repo:
+    description: github.repository
+    required: true
+  token:
+    description: token used to label and comment
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ inputs.repo }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        MARKER: ${{ inputs.marker }}
+        BODY: ${{ inputs.body }}
+        BOT_LOGIN: ${{ inputs.bot-login }}
+      run: |
+        set -euo pipefail
+
+        gh label create automation-failed \
+          --description "the automated data update needs manual attention" \
+          --color D93F0B --force
+        gh pr edit "$PR_NUMBER" --add-label automation-failed
+
+        marker="<!-- data-update-automation-notice:$MARKER -->"
+        # avoid repeated notifications on CI re-runs, without trusting the
+        # marker to appear only in comments this automation wrote
+        notice_id=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
+          --jq "[.[] | select(.user.login == \"$BOT_LOGIN\" and (.body | contains(\"$marker\")))][0].id // empty")
+        if [[ -n "$notice_id" ]]; then
+          echo "a '$MARKER' notice already exists on PR #$PR_NUMBER, nothing to do"
+          exit 0
+        fi
+
+        gh pr comment "$PR_NUMBER" --body "$marker $BODY"
+        echo "commented '$MARKER' on PR #$PR_NUMBER"

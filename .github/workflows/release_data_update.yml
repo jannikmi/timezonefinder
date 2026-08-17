@@ -131,25 +131,17 @@ jobs:
           steps.resolve-merge.outputs.found == 'true' &&
           (steps.changelog-guard.outcome == 'failure' ||
            steps.merge.outcome == 'failure')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          MAINTAINER: ${{ github.repository_owner }}
-          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
-          BOT_LOGIN: github-actions[bot]
-        run: |
-          set -euo pipefail
-
-          gh label create automation-failed \
-            --description "the automated data update needs manual attention" \
-            --color D93F0B --force
-          gh pr edit "$PR_NUMBER" --add-label automation-failed
-
-          notice_id=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
-            --jq "[.[] | select(.user.login == \"$BOT_LOGIN\" and (.body | contains(\"<!-- data-update-automation-notice -->\")))][0].id // empty")
-          if [[ -z "$notice_id" ]]; then
-            gh pr comment "$PR_NUMBER" --body "<!-- data-update-automation-notice --> @$MAINTAINER this automated data update was not merged because the release guard found pending unreleased work, malformed changelog structure, or a concurrent change to master. If work is pending, please cut a release first."
-          fi
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: blocked
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} this automated data update was not
+            merged because the release guard found pending unreleased work,
+            malformed changelog structure, or a concurrent change to master.
+            If work is pending, please cut a release first.
 
       - name: Stop blocked release
         if: >
@@ -215,28 +207,13 @@ jobs:
 
       - name: Label the PR and mention the maintainer
         if: steps.resolve-alert.outputs.found == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          MAINTAINER: ${{ github.repository_owner }}
-          RUN_URL: ${{ github.event.workflow_run.html_url }}
-          PR_NUMBER: ${{ steps.resolve-alert.outputs.pr-number }}
-          BOT_LOGIN: github-actions[bot]
-        run: |
-          set -euo pipefail
-
-          gh label create automation-failed \
-            --description "the automated data update needs manual attention" \
-            --color D93F0B --force
-
-          gh pr edit "$PR_NUMBER" --add-label automation-failed
-
-          # avoid repeated notifications on CI re-runs, without trusting user comments
-          notice_id=$(gh api "repos/$GH_REPO/issues/$PR_NUMBER/comments?per_page=100" \
-            --jq "[.[] | select(.user.login == \"$BOT_LOGIN\" and (.body | contains(\"<!-- data-update-automation-notice -->\")))][0].id // empty")
-          if [[ -n "$notice_id" ]]; then
-            echo "automation comment already exists on PR #$PR_NUMBER, nothing to do"
-            exit 0
-          fi
-
-          gh pr comment "$PR_NUMBER" --body "<!-- data-update-automation-notice --> @$MAINTAINER the CI/CD pipeline of this automated data update failed ([run]($RUN_URL)). Manual attention is needed; the PR will not be merged automatically."
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-alert.outputs.pr-number }}
+          marker: ci-failed
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} the CI/CD pipeline of this automated
+            data update failed ([run](${{ github.event.workflow_run.html_url }})).
+            Manual attention is needed; the PR will not be merged automatically.
