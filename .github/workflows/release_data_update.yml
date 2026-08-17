@@ -43,6 +43,19 @@ jobs:
           ref: master
           persist-credentials: false
 
+      # before the guard, because every later step needs the PR number -
+      # including the ones that only run once the guard has failed
+      - name: Resolve the update PR
+        id: resolve-merge
+        uses: ./.github/actions/resolve-update-pr
+        with:
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          branch: ${{ github.event.workflow_run.head_branch }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo-owner: ${{ github.repository_owner }}
+          repo: ${{ github.repository }}
+          token: ${{ steps.app-token.outputs.token }}
+
       - name: Check unreleased section
         id: changelog-guard
         continue-on-error: true
@@ -55,25 +68,10 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-          REPO_OWNER: ${{ github.repository_owner }}
+          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
         run: |
           set -euo pipefail
-
-          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
-          pr_state=$(jq -r .state <<<"$pr_data")
-          base_branch=$(jq -r .baseRefName <<<"$pr_data")
-          head_branch=$(jq -r .headRefName <<<"$pr_data")
-          head_sha=$(jq -r .headRefOid <<<"$pr_data")
-          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
-          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
-                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
-                "$head_owner" != "$REPO_OWNER" ]]; then
-            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
-            exit 1
-          fi
 
           guarded_master=$(git rev-parse HEAD)
           current_master=$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq .object.sha)
@@ -96,27 +94,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
           MAINTAINER: ${{ github.repository_owner }}
-          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
           BOT_LOGIN: github-actions[bot]
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-
-          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
-          pr_state=$(jq -r .state <<<"$pr_data")
-          base_branch=$(jq -r .baseRefName <<<"$pr_data")
-          head_branch=$(jq -r .headRefName <<<"$pr_data")
-          head_sha=$(jq -r .headRefOid <<<"$pr_data")
-          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
-          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
-                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
-                "$head_owner" != "$REPO_OWNER" ]]; then
-            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
-            exit 1
-          fi
 
           gh label create automation-failed \
             --description "the automated data update needs manual attention" \
@@ -170,32 +152,36 @@ jobs:
       startsWith(github.event.workflow_run.head_branch, 'data-update-')
     runs-on: ubuntu-latest
     steps:
+      # the composite action below is a local `uses:`, so the repository has to
+      # be in the workspace first. master, never the PR head - this job runs
+      # code from it while a pull request is in flight.
+      - name: Check out current master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Resolve the update PR
+        id: resolve-alert
+        uses: ./.github/actions/resolve-update-pr
+        with:
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          branch: ${{ github.event.workflow_run.head_branch }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo-owner: ${{ github.repository_owner }}
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Label the PR and mention the maintainer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
           MAINTAINER: ${{ github.repository_owner }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
-          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          PR_NUMBER: ${{ steps.resolve-alert.outputs.pr-number }}
           BOT_LOGIN: github-actions[bot]
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO_OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-
-          pr_data=$(gh pr view "$PR_NUMBER" --json state,baseRefName,headRefName,headRefOid,headRepositoryOwner)
-          pr_state=$(jq -r .state <<<"$pr_data")
-          base_branch=$(jq -r .baseRefName <<<"$pr_data")
-          head_branch=$(jq -r .headRefName <<<"$pr_data")
-          head_sha=$(jq -r .headRefOid <<<"$pr_data")
-          head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
-          if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
-                "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
-                "$head_owner" != "$REPO_OWNER" ]]; then
-            echo "workflow run PR #$PR_NUMBER does not match the expected update PR"
-            exit 1
-          fi
 
           gh label create automation-failed \
             --description "the automated data update needs manual attention" \

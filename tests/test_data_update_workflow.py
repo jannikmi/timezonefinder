@@ -7,11 +7,27 @@ from tests.auxiliaries import PROJECT_ROOT
 
 UPDATE_SCRIPT = PROJECT_ROOT / "update_data.sh"
 RELEASE_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "release_data_update.yml"
+RESOLVE_ACTION = (
+    PROJECT_ROOT / ".github" / "actions" / "resolve-update-pr" / "action.yml"
+)
+RESOLVE_ACTION_REF = "./.github/actions/resolve-update-pr"
+
+
+def _workflow() -> dict:
+    return yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
 
 
 def _release_steps() -> list[dict]:
-    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
-    return workflow["jobs"]["merge_and_release"]["steps"]
+    return _workflow()["jobs"]["merge_and_release"]["steps"]
+
+
+def _all_steps() -> list[dict]:
+    return [step for job in _workflow()["jobs"].values() for step in job["steps"]]
+
+
+def _resolve_action_script() -> str:
+    action = yaml.safe_load(RESOLVE_ACTION.read_text(encoding="utf-8"))
+    return action["runs"]["steps"][0]["run"]
 
 
 @pytest.mark.unit
@@ -85,32 +101,79 @@ def test_annotated_release_tag_has_a_tagger_identity() -> None:
 
 
 @pytest.mark.unit
-def test_update_pr_is_selected_from_the_workflow_run_payload() -> None:
-    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
-    steps = [step for job in workflow["jobs"].values() for step in job["steps"]]
-    scripts = [str(step.get("run", "")) for step in steps]
+def test_every_pr_touching_step_resolves_through_the_shared_action() -> None:
+    """One identity check, not one copy per step.
 
-    assert not any("gh pr list" in script for script in scripts)
+    The check is what stops a fork branch named ``data-update-*`` from being
+    auto-merged, so a second inline copy is a second thing to keep correct.
+    Every step that acts on the PR takes its number from the shared action.
+    """
+    steps = _all_steps()
+    resolvers = [step for step in steps if step.get("uses") == RESOLVE_ACTION_REF]
+    assert len(resolvers) == 2, "both jobs resolve the PR through the action"
+
+    for resolver in resolvers:
+        assert resolver["with"]["pr-number"] == (
+            "${{ github.event.workflow_run.pull_requests[0].number }}"
+        )
+        assert resolver["with"]["head-sha"] == (
+            "${{ github.event.workflow_run.head_sha }}"
+        )
+        assert resolver["with"]["repo-owner"] == "${{ github.repository_owner }}"
+
+    # no step re-implements the lookup or the identity check inline
     for step in steps:
-        if "gh pr view" in str(step.get("run", "")):
-            assert step["env"]["PR_NUMBER"] == (
-                "${{ github.event.workflow_run.pull_requests[0].number }}"
-            )
+        script = str(step.get("run", ""))
+        assert "gh pr view" not in script or "mergeCommit" in script
+        assert "headRepositoryOwner" not in script
 
-    merge = next(step for step in steps if step.get("name") == "Merge the update PR")
-    assert "headRepositoryOwner" in merge["run"]
-    assert "headRefOid" in merge["run"]
-    assert "baseRefName" in merge["run"]
+    # and every consumer takes the number from a resolver output
+    for step in steps:
+        pr_number = step.get("env", {}).get("PR_NUMBER")
+        if pr_number is not None:
+            assert pr_number.startswith("${{ steps.resolve-")
+            assert pr_number.endswith(".outputs.pr-number }}")
+
+
+@pytest.mark.unit
+def test_the_shared_action_rejects_a_pr_that_is_not_the_update_pr() -> None:
+    script = _resolve_action_script()
+
+    assert "headRepositoryOwner" in script
+    assert "headRefOid" in script
+    assert "baseRefName" in script
+    # a head repository outside this owner is what the check exists for
+    assert '"$head_owner" != "$REPO_OWNER"' in script
+    assert "exit 1" in script
+
+
+@pytest.mark.unit
+def test_a_job_running_the_local_action_checks_out_master_first() -> None:
+    """A local ``uses:`` needs the repo in the workspace, and it must be master.
+
+    Both jobs run while a pull request is in flight; checking out its head
+    would run the PR's own code with the automation's permissions.
+    """
+    for job in _workflow()["jobs"].values():
+        steps = job["steps"]
+        uses = [step.get("uses") for step in steps]
+        if RESOLVE_ACTION_REF not in uses:
+            continue
+        checkout_index = next(
+            i
+            for i, step in enumerate(steps)
+            if str(step.get("uses", "")).startswith("actions/checkout")
+        )
+        assert checkout_index < uses.index(RESOLVE_ACTION_REF)
+        checkout = steps[checkout_index]
+        assert checkout["with"]["ref"] == "master"
+        assert checkout["with"]["persist-credentials"] is False
 
 
 @pytest.mark.unit
 def test_notifications_are_deduplicated_by_marker_and_automation_author() -> None:
-    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     notification_steps = [
-        step
-        for job in workflow["jobs"].values()
-        for step in job["steps"]
-        if "gh pr comment" in str(step.get("run", ""))
+        step for step in _all_steps() if "gh pr comment" in str(step.get("run", ""))
     ]
 
     assert notification_steps
@@ -118,7 +181,4 @@ def test_notifications_are_deduplicated_by_marker_and_automation_author() -> Non
         script = step["run"]
         assert "<!-- data-update-automation-notice -->" in script
         assert step["env"]["BOT_LOGIN"] == "github-actions[bot]"
-        assert step["env"]["HEAD_SHA"] == "${{ github.event.workflow_run.head_sha }}"
-        assert "headRepositoryOwner" in script
-        assert "baseRefName" in script
         assert ".user.login" in script
