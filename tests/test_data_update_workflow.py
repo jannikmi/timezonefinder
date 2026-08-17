@@ -299,6 +299,33 @@ def test_a_job_running_the_local_action_checks_out_master_first() -> None:
 
 
 @pytest.mark.unit
+def test_notice_dedup_matches_the_login_the_token_posts_as() -> None:
+    """The author filter and the posting token are set independently.
+
+    Dedup only works while ``bot-login`` names whoever ``token``
+    authenticates as. ``secrets.GITHUB_TOKEN`` posts as github-actions[bot];
+    the GitHub App token this workflow also holds does not. Switching a
+    notifier to the app token without changing the login would match no
+    comment ever, so every re-run of build.yml would add another mention -
+    a silent failure, since commenting still succeeds.
+    """
+    default_login = yaml.safe_load(NOTIFY_ACTION.read_text(encoding="utf-8"))["inputs"][
+        "bot-login"
+    ]["default"]
+    assert default_login == "github-actions[bot]"
+
+    for step in [
+        step for step in _all_steps() if step.get("uses") == NOTIFY_ACTION_REF
+    ]:
+        given = step["with"]
+        assert given["token"] == "${{ secrets.GITHUB_TOKEN }}", (
+            f"{step['name']!r} posts with a token that is not github-actions[bot]; "
+            "set bot-login to match or dedup silently stops working"
+        )
+        assert given.get("bot-login", default_login) == default_login
+
+
+@pytest.mark.unit
 def test_each_notice_cause_deduplicates_on_its_own_marker() -> None:
     """One marker for both notices meant the first one silenced the second.
 
