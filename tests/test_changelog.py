@@ -149,6 +149,50 @@ X.X.X (unreleased)
 
 
 @pytest.mark.unit
+def test_check_empty_cli_allows_an_empty_unreleased_section(tmp_path) -> None:
+    """The exit code that actually releases data was never asserted.
+
+    ``check-empty`` returning 1 for every input would still pass a suite that
+    only tests the blocking case, and would silently stop data updates from
+    ever being released - a workflow that never merges looks like upstream
+    having published nothing.
+    """
+    changelog_path = tmp_path / "CHANGELOG.rst"
+    changelog_path.write_text(
+        """Changelog
+=========
+
+X.X.X (unreleased)
+------------------
+
+Internal:
+
+8.2.5 (2026-07-22)
+------------------
+
+* previous release
+"""
+    )
+
+    assert main(["check-empty", str(changelog_path)]) == 0
+
+
+@pytest.mark.unit
+def test_check_empty_cli_blocks_an_unparsable_changelog(tmp_path) -> None:
+    """A changelog the guard cannot parse must block, not release."""
+    changelog_path = tmp_path / "CHANGELOG.rst"
+    changelog_path.write_text("Changelog\n=========\n\nunstructured prose\n")
+
+    assert main(["check-empty", str(changelog_path)]) == 1
+
+
+@pytest.mark.unit
+def test_check_empty_cli_blocks_a_missing_changelog(tmp_path) -> None:
+    """A path that does not exist must block rather than crash the step."""
+    assert main(["check-empty", str(tmp_path / "absent.rst")]) == 1
+
+
+@pytest.mark.unit
 def test_committed_changelog_sections_are_in_release_order() -> None:
     validate_changelog_order(
         (PROJECT_ROOT / "CHANGELOG.rst").read_text(encoding="utf-8")
