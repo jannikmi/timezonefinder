@@ -6,6 +6,13 @@ description: >
   branch named data-update-* from reaching the merge step, so every consumer
   runs the same one rather than its own copy.
 
+  Two outcomes are deliberately kept apart. A PR that exists but does not match
+  - wrong base, wrong head, a head repository outside this owner - is an error.
+  A PR that is absent or no longer open is "nothing to do" (found=false,
+  success): re-running build.yml on an already-merged update PR re-fires
+  workflow_run, and that has to stay the no-op it was rather than failing the
+  workflow and burying the real notifications under a false alarm.
+
 inputs:
   pr-number:
     description: >
@@ -31,8 +38,14 @@ inputs:
     required: true
 
 outputs:
+  found:
+    description: >
+      'true' when an open, matching update PR exists. Anything else means there
+      is nothing to act on - consumers must gate on it rather than assuming a
+      PR number is present.
+    value: ${{ steps.resolve.outputs.found }}
   pr-number:
-    description: number of the resolved update PR
+    description: number of the resolved update PR, empty unless found is 'true'
     value: ${{ steps.resolve.outputs.pr-number }}
 
 runs:
@@ -50,6 +63,13 @@ runs:
       run: |
         set -euo pipefail
 
+        nothing_to_do() {
+          echo "$1"
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          echo "pr-number=" >> "$GITHUB_OUTPUT"
+          exit 0
+        }
+
         pr_number="$PR_NUMBER"
         if [[ -z "$pr_number" ]]; then
           # workflow_run.pull_requests is empty in more cases than it is
@@ -61,8 +81,7 @@ runs:
             --json number --jq '.[0].number // empty')
         fi
         if [[ -z "$pr_number" ]]; then
-          echo "::error::no open update PR found for branch $BRANCH"
-          exit 1
+          nothing_to_do "no open update PR for branch $BRANCH, nothing to do"
         fi
 
         pr_data=$(gh pr view "$pr_number" \
@@ -72,13 +91,20 @@ runs:
         head_branch=$(jq -r .headRefName <<<"$pr_data")
         head_sha=$(jq -r .headRefOid <<<"$pr_data")
         head_owner=$(jq -r .headRepositoryOwner.login <<<"$pr_data")
-        if [[ "$pr_state" != "OPEN" || "$base_branch" != "master" || \
-              "$head_branch" != "$BRANCH" || "$head_sha" != "$HEAD_SHA" || \
-              "$head_owner" != "$REPO_OWNER" ]]; then
+        # identity first: a PR that is not ours is an error whatever its state
+        if [[ "$base_branch" != "master" || "$head_branch" != "$BRANCH" || \
+              "$head_sha" != "$HEAD_SHA" || "$head_owner" != "$REPO_OWNER" ]]; then
           echo "::error::PR #$pr_number does not match the update PR this run was for" \
-            "(state=$pr_state base=$base_branch head=$head_branch@$head_sha owner=$head_owner)"
+            "(base=$base_branch head=$head_branch@$head_sha owner=$head_owner)"
           exit 1
         fi
 
+        # ours, but already dealt with - a re-run of build.yml on a merged or
+        # closed update PR lands here and must not fail the workflow
+        if [[ "$pr_state" != "OPEN" ]]; then
+          nothing_to_do "update PR #$pr_number is $pr_state, nothing to do"
+        fi
+
         echo "resolved update PR #$pr_number"
+        echo "found=true" >> "$GITHUB_OUTPUT"
         echo "pr-number=$pr_number" >> "$GITHUB_OUTPUT"

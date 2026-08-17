@@ -148,6 +148,48 @@ def test_the_shared_action_rejects_a_pr_that_is_not_the_update_pr() -> None:
 
 
 @pytest.mark.unit
+def test_an_already_handled_pr_is_a_no_op_rather_than_a_failure() -> None:
+    """Re-running build.yml on a merged update PR re-fires ``workflow_run``.
+
+    That used to exit 0 with "nothing to do". Failing instead turns every such
+    re-run red and, worse, makes ``Report pending work`` abort before it can
+    say anything - a false alarm that buries the real ones.
+    """
+    script = _resolve_action_script()
+
+    # not open -> found=false, success. Not ours -> error. Different things.
+    assert 'if [[ "$pr_state" != "OPEN" ]]; then' in script
+    assert "nothing_to_do" in script
+    assert "exit 0" in script
+    # identity is checked first, so "not ours" cannot be softened into a no-op
+    assert script.index('"$head_owner" != "$REPO_OWNER"') < script.index(
+        '"$pr_state" != "OPEN"'
+    )
+
+
+@pytest.mark.unit
+def test_no_step_acts_on_the_pr_unless_one_was_found() -> None:
+    acting = [
+        step
+        for step in _all_steps()
+        if any(
+            marker in str(step.get("run", ""))
+            for marker in ("gh pr merge", "gh pr edit", "gh pr comment")
+        )
+    ]
+    assert acting
+
+    for step in acting:
+        assert "outputs.found == 'true'" in step["if"], step.get("name")
+
+    # and the step that fails the job must not fire when there was nothing to do
+    stop = next(
+        step for step in _release_steps() if step.get("name") == "Stop blocked release"
+    )
+    assert "outputs.found == 'true'" in stop["if"]
+
+
+@pytest.mark.unit
 def test_the_shared_action_falls_back_to_a_branch_lookup() -> None:
     """``workflow_run.pull_requests`` is not always populated.
 
