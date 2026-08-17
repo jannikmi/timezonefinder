@@ -7,7 +7,6 @@ import re
 import sys
 
 _UNRELEASED_HEADING = "X.X.X (unreleased)\n------------------"
-_RELEASE_HEADING = re.compile(r"(?m)^(?=\d+\.\d+\.\d+ \(\d{4}-\d{2}-\d{2}\)\n-+$)")
 _RELEASE_TITLE = re.compile(r"(?m)^\d+\.\d+\.\d+ \((\d{4}-\d{2}-\d{2})\)\n-+$")
 
 
@@ -29,9 +28,7 @@ def validate_changelog_order(changelog: str) -> None:
 def _unreleased_section_end(changelog: str) -> int:
     validate_changelog_order(changelog)
     section_start = changelog.index(_UNRELEASED_HEADING)
-    release = _RELEASE_HEADING.search(
-        changelog, section_start + len(_UNRELEASED_HEADING)
-    )
+    release = _RELEASE_TITLE.search(changelog, section_start + len(_UNRELEASED_HEADING))
     if release is None:
         raise ValueError("changelog has no dated release below the unreleased section")
     return release.start()
