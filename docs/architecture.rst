@@ -238,8 +238,11 @@ empty unreleased section lets it merge and push the version tag, which starts th
 pending work withholds both operations, because an automatic patch release cannot choose that work's
 version or release notes. The tag is pushed with a GitHub App token because a tag pushed with the default
 ``GITHUB_TOKEN`` does not trigger downstream workflows - the release would be tagged and never built.
-On failed CI, malformed changelog structure or pending unreleased work nothing is published: the pull
-request is labelled ``automation-failed`` and left for a human.
+The guard reads ``master`` before the merge, so the squash commit's first parent is checked against it
+afterwards: work that landed in between withholds the tag rather than the merge, since the tag is what
+publishes. On failed CI, malformed changelog structure, pending unreleased work or a ``master`` that
+moved mid-merge, no release is published: the pull request is labelled ``automation-failed`` and left
+for a human, with one comment naming which of those happened.
 
 
 Non-goals and deliberate ceilings
