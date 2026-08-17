@@ -242,7 +242,9 @@ The guard reads ``master`` before the merge, so the squash commit's first parent
 afterwards: work that landed in between withholds the tag rather than the merge, since the tag is what
 publishes. On failed CI, malformed changelog structure, pending unreleased work or a ``master`` that
 moved mid-merge, no release is published: the pull request is labelled ``automation-failed`` and left
-for a human, with one comment naming which of those happened.
+for a human, with one comment naming which of those happened. The merge is the one step that cannot be
+undone, so a failure after it - a rejected tag push, say - is reported as its own cause: master carries
+the new data, nothing was published, and only a tag pushed by hand still releases it.
 
 
 Non-goals and deliberate ceilings

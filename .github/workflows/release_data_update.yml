@@ -200,6 +200,34 @@ jobs:
           git push origin "$version"
           echo "pushed release tag $version, the release pipeline in build.yml takes over"
 
+      # the merge cannot be undone, so a failure past it gets its own notice:
+      # master already carries the data update and only the tag is missing.
+      # `merge.outcome == 'success'` is what "past it" means - a failure inside
+      # the merge step is the previous notice's, whichever side of `gh pr merge`
+      # it fell on. This has to stay the last step in the job: a step appended
+      # below it would fail without being reported, which is the hole this
+      # closes. workflow_run failures show up on no pull request, so an
+      # unreported one leaves nothing to notice anywhere the maintainer looks.
+      - name: Report a merge that was not released
+        if: >
+          failure() &&
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.merge.outcome == 'success'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: merged-untagged
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} this automated data update was
+            merged into master, but its release tag was never pushed
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            Nothing was published: master carries the new data and no release
+            was built for it. Check that run for the reason, then release it by
+            hand with `make release` from an up-to-date master, which pushes
+            the same tag this step would have.
+
   alert_failure:
     name: Notify the maintainer about a failed update PR
     if: >

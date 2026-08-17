@@ -116,6 +116,28 @@ def test_the_guard_runs_before_the_merge_and_can_stop_it() -> None:
 
 
 @pytest.mark.unit
+def test_nothing_can_fail_after_the_last_notice() -> None:
+    """The merge is irreversible, so a failure past it must still be reported.
+
+    ``Report failed merge`` covers the merge step alone. A tag push that is
+    rejected happens after it and leaves master carrying the data update with
+    no release built - and since a ``workflow_run`` failure appears on no pull
+    request, nothing marks it anywhere the maintainer looks. The notice for
+    that is the job's last step by construction: a step appended below it
+    would fail unreported again, which is the hole this closes.
+    """
+    steps = _jobs()["merge_and_release"]["steps"]
+    post_merge = [
+        i
+        for i, step in enumerate(steps)
+        if step.get("uses") == NOTIFY_ACTION_REF
+        and "steps.merge.outcome == 'success'" in step["if"]
+    ]
+
+    assert post_merge == [len(steps) - 1]
+
+
+@pytest.mark.unit
 def test_each_notice_cause_deduplicates_on_its_own_marker() -> None:
     """One shared marker meant the first notice silenced every later one.
 
