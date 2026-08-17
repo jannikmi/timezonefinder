@@ -233,11 +233,18 @@ rather than trusting the ref it was handed.
 
 **The data pipeline releases itself.** A weekly workflow compares ``DATA_VERSION`` against the latest
 timezone-boundary-builder release, regenerates the data and opens a pull request; when that pull
-request's CI passes, a second workflow merges it and pushes the version tag, which starts the release
-above. The tag is pushed with a GitHub App token because a tag pushed with the default
+request's CI passes, a second workflow checks the current ``master`` changelog before merging. An
+empty unreleased section lets it merge and push the version tag, which starts the release above;
+pending work withholds both operations, because an automatic patch release cannot choose that work's
+version or release notes. The tag is pushed with a GitHub App token because a tag pushed with the default
 ``GITHUB_TOKEN`` does not trigger downstream workflows - the release would be tagged and never built.
-On failure nothing is published: the pull request is labelled ``automation-failed`` and left for a
-human.
+The guard reads ``master`` before the merge, so the squash commit's first parent is checked against it
+afterwards: work that landed in between withholds the tag rather than the merge, since the tag is what
+publishes. On failed CI, malformed changelog structure, pending unreleased work or a ``master`` that
+moved mid-merge, no release is published: the pull request is labelled ``automation-failed`` and left
+for a human, with one comment naming which of those happened. The merge is the one step that cannot be
+undone, so a failure after it - a rejected tag push, say - is reported as its own cause: master carries
+the new data, nothing was published, and only a tag pushed by hand still releases it.
 
 
 Non-goals and deliberate ceilings

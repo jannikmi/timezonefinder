@@ -37,48 +37,196 @@ jobs:
           private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
+      - name: Check out current master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+
+      # before the guard, because every later step needs the PR number -
+      # including the ones that only run once the guard has failed
+      - name: Resolve the update PR
+        id: resolve-merge
+        uses: ./.github/actions/resolve-update-pr
+        with:
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          branch: ${{ github.event.workflow_run.head_branch }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo-owner: ${{ github.repository_owner }}
+          repo: ${{ github.repository }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      # scripts/changelog.py is stdlib-only, so no uv sync is needed - but it
+      # is written against this project's requires-python and the runner
+      # image's default interpreter is pinned by nothing. Resolving to
+      # anything older than 3.10 would fail the guard on its `X | None`
+      # annotations and report it as pending changelog work.
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+
+      # a failure here fails the job outright. The reporting steps below run on
+      # `failure()` and each names the step it is reporting on, so nothing has
+      # to be kept alive with continue-on-error to reach them.
+      - name: Check unreleased section
+        id: changelog-guard
+        if: steps.resolve-merge.outputs.found == 'true'
+        run: python -m scripts.changelog check-empty CHANGELOG.rst
+
+      # no `if:` for the guard - a step without a status check function is
+      # already skipped once an earlier one has failed
       - name: Merge the update PR
+        if: steps.resolve-merge.outputs.found == 'true'
         id: merge
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
         run: |
           set -euo pipefail
 
-          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
-          if [[ -z "$pr_number" ]]; then
-            echo "no open update PR for branch $BRANCH, nothing to do"
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          guarded_master=$(git rev-parse HEAD)
+          current_master=$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq .object.sha)
+          if [[ "$guarded_master" != "$current_master" ]]; then
+            echo "master changed after the changelog check; refusing to merge"
+            exit 1
           fi
 
-          gh pr merge "$pr_number" --squash
-          merge_sha=$(gh pr view "$pr_number" --json mergeCommit --jq .mergeCommit.oid)
-          echo "merged PR #$pr_number as $merge_sha"
-          echo "merged=true" >> "$GITHUB_OUTPUT"
+          gh pr merge "$PR_NUMBER" --squash --match-head-commit "$HEAD_SHA"
+
+          # GitHub applies the squash asynchronously, so mergeCommit is null for
+          # a moment afterwards and `--jq .mergeCommit.oid` would abort the step
+          # under `set -e` with the PR already merged
+          merge_sha=""
+          for attempt in $(seq 1 10); do
+            merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit \
+              --jq '.mergeCommit.oid // empty')
+            if [[ -n "$merge_sha" ]]; then
+              break
+            fi
+            echo "merge commit not reported yet (attempt $attempt), retrying"
+            sleep 3
+          done
+          if [[ -z "$merge_sha" ]]; then
+            echo "::error::PR #$PR_NUMBER merged but GitHub never reported its" \
+              "merge commit - master carries the data update and no tag was pushed"
+            exit 1
+          fi
+
+          # The check above compares master before the merge; a push landing in
+          # the window between them would slip its unreleased work into this
+          # data-only release. The squash commit's first parent is the master
+          # tip the merge actually applied to, so it settles that after the
+          # fact. The merge itself is harmless and stands - what is withheld is
+          # the tag, since that is what publishes.
+          merge_parent=$(gh api "repos/$GH_REPO/commits/$merge_sha" \
+            --jq '.parents[0].sha')
+          if [[ "$merge_parent" != "$guarded_master" ]]; then
+            echo "::error::master moved from $guarded_master to $merge_parent" \
+              "between the changelog check and the merge - refusing to tag," \
+              "since the release notes would omit whatever landed in between"
+            exit 1
+          fi
+
+          echo "merged PR #$PR_NUMBER as $merge_sha"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
 
+      # one step per cause: the maintainer is told what actually happened,
+      # rather than a disjunction of everything that could have
+      - name: Report pending work
+        if: >
+          failure() &&
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.changelog-guard.outcome == 'failure'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: blocked
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} this automated data update was not
+            merged: the `X.X.X (unreleased)` section of `CHANGELOG.rst` on
+            master is not empty, or could not be parsed
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            An automatic patch release cannot choose a version or release notes
+            for that work, so please cut its release first - this PR then
+            merges and releases on its next successful CI run.
+
+      - name: Report failed merge
+        if: >
+          failure() &&
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.merge.outcome == 'failure'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: merge-failed
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} the changelog guard passed but this
+            automated data update could not be merged and released
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            Check that run for the reason - a merge conflict, a change to
+            master landing mid-merge, or a merge that went through without the
+            release tag being pushed, which the log states explicitly.
+
       - uses: actions/checkout@v7
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         with:
           token: ${{ steps.app-token.outputs.token }}
           ref: ${{ steps.merge.outputs.merge_sha }}
 
       - name: Install uv
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         uses: astral-sh/setup-uv@v7
 
       - name: Tag the release
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         run: |
           set -euo pipefail
 
           version=$(uv version --short)
+          # an annotated tag records a tagger, and a GitHub runner has no git
+          # identity configured - git would refuse with "unable to auto-detect
+          # email address", merging the data without ever publishing it
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # mirror the manual release process ("make release": annotated tag on master)
           git tag -a "$version" -m "Release $version"
           git push origin "$version"
           echo "pushed release tag $version, the release pipeline in build.yml takes over"
+
+      # the merge cannot be undone, so a failure past it gets its own notice:
+      # master already carries the data update and only the tag is missing.
+      # `merge.outcome == 'success'` is what "past it" means - a failure inside
+      # the merge step is the previous notice's, whichever side of `gh pr merge`
+      # it fell on. This has to stay the last step in the job: a step appended
+      # below it would fail without being reported, which is the hole this
+      # closes. workflow_run failures show up on no pull request, so an
+      # unreported one leaves nothing to notice anywhere the maintainer looks.
+      - name: Report a merge that was not released
+        if: >
+          failure() &&
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.merge.outcome == 'success'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: merged-untagged
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} this automated data update was
+            merged into master, but its release tag was never pushed
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            Nothing was published: master carries the new data and no release
+            was built for it. Check that run for the reason, then release it by
+            hand with `make release` from an up-to-date master, which pushes
+            the same tag this step would have.
 
   alert_failure:
     name: Notify the maintainer about a failed update PR
@@ -88,34 +236,35 @@ jobs:
       startsWith(github.event.workflow_run.head_branch, 'data-update-')
     runs-on: ubuntu-latest
     steps:
+      # the composite action below is a local `uses:`, so the repository has to
+      # be in the workspace first. master, never the PR head - this job runs
+      # code from it while a pull request is in flight.
+      - name: Check out current master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Resolve the update PR
+        id: resolve-alert
+        uses: ./.github/actions/resolve-update-pr
+        with:
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          branch: ${{ github.event.workflow_run.head_branch }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo-owner: ${{ github.repository_owner }}
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Label the PR and mention the maintainer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
-          MAINTAINER: ${{ github.repository_owner }}
-          RUN_URL: ${{ github.event.workflow_run.html_url }}
-        run: |
-          set -euo pipefail
-
-          pr_number=$(gh pr list --state open --head "$BRANCH" --json number --jq '.[0].number // empty')
-          if [[ -z "$pr_number" ]]; then
-            echo "no open update PR for branch $BRANCH, nothing to do"
-            exit 0
-          fi
-
-          gh label create automation-failed \
-            --description "the automated data update needs manual attention" \
-            --color D93F0B --force
-
-          gh pr edit "$pr_number" --add-label automation-failed
-
-          # avoid repeated notifications on CI re-runs
-          already_notified=$(gh pr view "$pr_number" --json comments \
-            --jq '[.comments[] | select(.body | contains("automated data update"))] | length')
-          if [[ "$already_notified" -gt 0 ]]; then
-            echo "failure comment already exists on PR #$pr_number, nothing to do"
-            exit 0
-          fi
-
-          gh pr comment "$pr_number" --body "@$MAINTAINER the CI/CD pipeline of this automated data update failed ([run]($RUN_URL)). Manual attention is needed; the PR will not be merged automatically."
+        if: steps.resolve-alert.outputs.found == 'true'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-alert.outputs.pr-number }}
+          marker: ci-failed
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} the CI/CD pipeline of this automated
+            data update failed ([run](${{ github.event.workflow_run.html_url }})).
+            Manual attention is needed; the PR will not be merged automatically.

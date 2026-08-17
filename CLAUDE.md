@@ -119,6 +119,15 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   fires on every further push to its head. Open the PR (or `workflow_dispatch`) if you want the
   matrix run; and read an empty check list as "never ran", which is also why a thin green list is
   not evidence that anything passed
+- **A test over a file that cannot be run asserts an invariant, not the file's text.** The
+  workflows and the composite actions under `.github/actions/` are only ever executed by GitHub,
+  which makes "assert this step still contains that shell string" the tempting way to cover them,
+  and the wrong one: it fails on every rewording and passes on every bug that keeps the wording,
+  so the file becomes expensive to edit without becoming safer. Assert what the structure does not
+  already enforce and what breaks silently — an ordering between steps, a gate every acting step
+  must carry, two callers that must not pass the same value. And when the invariant is that two
+  copies agree, prefer deleting the copy: `tests/test_data_update_workflow.py` needed half as many
+  assertions once the steps it covered shared one action instead of three inline blocks
 - `slow` tests are exhaustive sweeps of the whole dataset or hypothesis fuzzing, not general
   regression tests. Run them only when the change plausibly affects what they cover:
   - `main_test.py`, `shortcut_test.py`, `global_functions_test.py` slow cases — after touching
@@ -153,6 +162,8 @@ state**, never the path taken to it:
   `CONTRIBUTING.md` or a docstring, and the bullet points there.
 - Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
   the same feature, merge them.
+- **Remember to acknowledge outside contributions**, in the form the existing `Thanks to …` bullets
+  use. Credit the contributor's own PR, which is not the maintainer PR that superseded it.
 
 ## Generated Files
 
