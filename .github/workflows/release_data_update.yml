@@ -95,10 +95,6 @@ jobs:
           fi
 
           gh pr merge "$PR_NUMBER" --squash --match-head-commit "$HEAD_SHA"
-          # the merge has happened - record that before anything else can fail,
-          # so a later error is reported as "merged but not released" rather
-          # than looking like the merge never took place
-          echo "merged=true" >> "$GITHUB_OUTPUT"
 
           # GitHub applies the squash asynchronously, so mergeCommit is null for
           # a moment afterwards and `--jq .mergeCommit.oid` would abort the step
