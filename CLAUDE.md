@@ -153,6 +153,8 @@ state**, never the path taken to it:
   `CONTRIBUTING.md` or a docstring, and the bullet points there.
 - Before finishing a task, re-read the whole `X.X.X (unreleased)` section: if two bullets describe
   the same feature, merge them.
+- **Remember to acknowledge outside contributions**, in the form the existing `Thanks to …` bullets
+  use. Credit the contributor's own PR, which is not the maintainer PR that superseded it.
 
 ## Generated Files
 
