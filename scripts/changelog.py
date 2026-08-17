@@ -68,10 +68,12 @@ def insert_data_release(
             f"{version!r} is not a release version: a changelog heading must "
             "read <major>.<minor>.<patch>, or nothing downstream can find it"
         )
+    # two blank lines below the entry, as the changelog puts above every
+    # release title - rstcheck accepts either, so nothing else would catch it
     entry = (
         f"{title}\n{'-' * len(title)}\n\n"
         f"* updated the data to `{data_tag} "
-        f"<{data_repo_url}/releases/tag/{data_tag}>`__\n\n"
+        f"<{data_repo_url}/releases/tag/{data_tag}>`__\n\n\n"
     )
     updated = changelog[:insertion_point] + entry + changelog[insertion_point:]
     validate_changelog_order(updated)
