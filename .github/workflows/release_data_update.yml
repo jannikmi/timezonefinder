@@ -125,12 +125,13 @@ jobs:
           echo "merged PR #$PR_NUMBER as $merge_sha"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
 
+      # one step per cause: the maintainer is told what actually happened,
+      # rather than a disjunction of everything that could have
       - name: Report pending work
         if: >
           always() &&
           steps.resolve-merge.outputs.found == 'true' &&
-          (steps.changelog-guard.outcome == 'failure' ||
-           steps.merge.outcome == 'failure')
+          steps.changelog-guard.outcome == 'failure'
         uses: ./.github/actions/notify-update-pr
         with:
           pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
@@ -139,9 +140,31 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: >
             @${{ github.repository_owner }} this automated data update was not
-            merged because the release guard found pending unreleased work,
-            malformed changelog structure, or a concurrent change to master.
-            If work is pending, please cut a release first.
+            merged: the `X.X.X (unreleased)` section of `CHANGELOG.rst` on
+            master is not empty, or could not be parsed
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            An automatic patch release cannot choose a version or release notes
+            for that work, so please cut its release first - this PR then
+            merges and releases on its next successful CI run.
+
+      - name: Report failed merge
+        if: >
+          always() &&
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.merge.outcome == 'failure'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: merge-failed
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} the changelog guard passed but this
+            automated data update could not be merged and released
+            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+            Check that run for the reason - a merge conflict, a change to
+            master landing mid-merge, or a merge that went through without the
+            release tag being pushed, which the log states explicitly.
 
       - name: Stop blocked release
         if: >

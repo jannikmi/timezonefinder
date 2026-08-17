@@ -121,14 +121,32 @@ def test_the_merge_commit_is_waited_for_and_gates_the_release() -> None:
 
 @pytest.mark.unit
 def test_blocked_auto_release_labels_and_notifies_the_update_pr() -> None:
+    """Each notice states the cause it was actually triggered by.
+
+    One step covering both causes had to describe them as a disjunction, and
+    told the maintainer to cut a release - useless advice for a merge conflict
+    or a tag that never got pushed.
+    """
     steps = _release_steps()
-    alert = next(step for step in steps if step.get("name") == "Report pending work")
 
-    assert "steps.changelog-guard.outcome == 'failure'" in alert["if"]
-    assert "steps.merge.outcome == 'failure'" in alert["if"]
-    assert alert["uses"] == NOTIFY_ACTION_REF
-    assert "cut a release" in alert["with"]["body"]
+    pending = next(step for step in steps if step.get("name") == "Report pending work")
+    assert pending["if"].count("outcome == 'failure'") == 1
+    assert "steps.changelog-guard.outcome == 'failure'" in pending["if"]
+    assert pending["uses"] == NOTIFY_ACTION_REF
+    assert "cut its release first" in pending["with"]["body"]
 
+    merge_failed = next(
+        step for step in steps if step.get("name") == "Report failed merge"
+    )
+    assert merge_failed["if"].count("outcome == 'failure'") == 1
+    assert "steps.merge.outcome == 'failure'" in merge_failed["if"]
+    assert merge_failed["uses"] == NOTIFY_ACTION_REF
+
+    # both link the run whose log holds the reason
+    for step in (pending, merge_failed):
+        assert "actions/runs/${{ github.run_id }}" in step["with"]["body"]
+
+    # the job still fails for either cause
     stop = next(step for step in steps if step.get("name") == "Stop blocked release")
     assert "steps.changelog-guard.outcome == 'failure'" in stop["if"]
     assert "steps.merge.outcome == 'failure'" in stop["if"]
@@ -290,7 +308,7 @@ def test_each_notice_cause_deduplicates_on_its_own_marker() -> None:
     swallowed, leaving a red workflow as the only signal.
     """
     notifiers = [step for step in _all_steps() if step.get("uses") == NOTIFY_ACTION_REF]
-    assert len(notifiers) == 2
+    assert len(notifiers) == 3
 
     markers = [step["with"]["marker"] for step in notifiers]
     assert len(set(markers)) == len(markers), f"causes share a marker: {markers}"
