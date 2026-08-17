@@ -51,10 +51,11 @@ def test_current_master_is_checked_before_an_update_pr_can_merge() -> None:
 
     assert checkout_index < guard_index < merge_index
     assert checkout["with"]["persist-credentials"] is False
-    assert guard["continue-on-error"] is True
+    # a guard failure fails the job; nothing is kept alive with
+    # continue-on-error, so nothing can forget to re-fail it afterwards
+    assert "continue-on-error" not in guard
+    assert "continue-on-error" not in merge
     assert "python -m scripts.changelog check-empty CHANGELOG.rst" in guard["run"]
-    assert "steps.changelog-guard.outcome == 'success'" in merge["if"]
-    assert merge["continue-on-error"] is True
     assert merge["env"]["HEAD_SHA"] == "${{ github.event.workflow_run.head_sha }}"
     remote_check = 'gh api "repos/$GH_REPO/git/ref/heads/master"'
     assert remote_check in merge["run"]
@@ -144,11 +145,14 @@ def test_blocked_auto_release_labels_and_notifies_the_update_pr() -> None:
     for step in (pending, merge_failed):
         assert "actions/runs/${{ github.run_id }}" in step["with"]["body"]
 
-    # the job still fails for either cause
-    stop = next(step for step in steps if step.get("name") == "Stop blocked release")
-    assert "steps.changelog-guard.outcome == 'failure'" in stop["if"]
-    assert "steps.merge.outcome == 'failure'" in stop["if"]
-    assert stop["run"] == "exit 1"
+    # both report only after something has actually failed, so neither can
+    # comment on a run that went through
+    for step in (pending, merge_failed):
+        assert "failure()" in step["if"]
+
+    # the job fails by itself: no step exists whose only purpose is to re-fail
+    # it, which is a step that can be forgotten when a cause is added
+    assert not [step for step in steps if str(step.get("run", "")).strip() == "exit 1"]
 
 
 @pytest.mark.unit
@@ -249,11 +253,15 @@ def test_no_step_acts_on_the_pr_unless_one_was_found() -> None:
     for step in acting:
         assert "outputs.found == 'true'" in step["if"], step.get("name")
 
-    # and the step that fails the job must not fire when there was nothing to do
-    stop = next(
-        step for step in _release_steps() if step.get("name") == "Stop blocked release"
+    # the changelog guard fails the job by itself, so it too must stay out of
+    # the way when there is no update PR: master having pending work is not a
+    # failure of a run that had nothing to release
+    guard = next(
+        step
+        for step in _release_steps()
+        if step.get("name") == "Check unreleased section"
     )
-    assert "outputs.found == 'true'" in stop["if"]
+    assert "outputs.found == 'true'" in guard["if"]
 
 
 @pytest.mark.unit

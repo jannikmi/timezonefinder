@@ -56,17 +56,19 @@ jobs:
           repo: ${{ github.repository }}
           token: ${{ steps.app-token.outputs.token }}
 
+      # a failure here fails the job outright. The reporting steps below run on
+      # `failure()` and each names the step it is reporting on, so nothing has
+      # to be kept alive with continue-on-error to reach them.
       - name: Check unreleased section
         id: changelog-guard
-        continue-on-error: true
+        if: steps.resolve-merge.outputs.found == 'true'
         run: python -m scripts.changelog check-empty CHANGELOG.rst
 
+      # no `if:` for the guard - a step without a status check function is
+      # already skipped once an earlier one has failed
       - name: Merge the update PR
-        if: >
-          steps.changelog-guard.outcome == 'success' &&
-          steps.resolve-merge.outputs.found == 'true'
+        if: steps.resolve-merge.outputs.found == 'true'
         id: merge
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
@@ -129,7 +131,7 @@ jobs:
       # rather than a disjunction of everything that could have
       - name: Report pending work
         if: >
-          always() &&
+          failure() &&
           steps.resolve-merge.outputs.found == 'true' &&
           steps.changelog-guard.outcome == 'failure'
         uses: ./.github/actions/notify-update-pr
@@ -149,7 +151,7 @@ jobs:
 
       - name: Report failed merge
         if: >
-          always() &&
+          failure() &&
           steps.resolve-merge.outputs.found == 'true' &&
           steps.merge.outcome == 'failure'
         uses: ./.github/actions/notify-update-pr
@@ -165,14 +167,6 @@ jobs:
             Check that run for the reason - a merge conflict, a change to
             master landing mid-merge, or a merge that went through without the
             release tag being pushed, which the log states explicitly.
-
-      - name: Stop blocked release
-        if: >
-          always() &&
-          steps.resolve-merge.outputs.found == 'true' &&
-          (steps.changelog-guard.outcome == 'failure' ||
-           steps.merge.outcome == 'failure')
-        run: exit 1
 
       - uses: actions/checkout@v7
         if: steps.merge.outputs.merge_sha != ''
