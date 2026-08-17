@@ -66,6 +66,37 @@ def test_current_master_is_checked_before_an_update_pr_can_merge() -> None:
 
 
 @pytest.mark.unit
+def test_the_merge_commit_is_waited_for_and_gates_the_release() -> None:
+    """GitHub applies a squash merge asynchronously.
+
+    Reading ``.mergeCommit.oid`` straight afterwards returns null often enough
+    to matter, which aborted the step under ``set -e`` with the PR already
+    merged: data on master, no tag, and no output saying the merge had
+    happened. The publish steps key off the resolved commit rather than the
+    merge alone, so they cannot run against an empty ref.
+    """
+    steps = _release_steps()
+    merge = next(step for step in steps if step.get("name") == "Merge the update PR")
+    script = merge["run"]
+
+    # the merge is recorded before anything that can still fail
+    assert script.index('echo "merged=true"') < script.index("mergeCommit")
+    assert "// empty" in script, "a null merge commit must not abort the step"
+    assert "retrying" in script
+
+    published = [
+        step
+        for step in steps
+        if "uv version --short" in str(step.get("run", ""))
+        or str(step.get("uses", "")).startswith("actions/checkout")
+        and step.get("name") is None
+    ]
+    assert published
+    for step in published:
+        assert step["if"] == "steps.merge.outputs.merge_sha != ''"
+
+
+@pytest.mark.unit
 def test_blocked_auto_release_labels_and_notifies_the_update_pr() -> None:
     steps = _release_steps()
     alert = next(step for step in steps if step.get("name") == "Report pending work")

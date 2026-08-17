@@ -83,9 +83,31 @@ jobs:
           fi
 
           gh pr merge "$PR_NUMBER" --squash --match-head-commit "$HEAD_SHA"
-          merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq .mergeCommit.oid)
-          echo "merged PR #$PR_NUMBER as $merge_sha"
+          # the merge has happened - record that before anything else can fail,
+          # so a later error is reported as "merged but not released" rather
+          # than looking like the merge never took place
           echo "merged=true" >> "$GITHUB_OUTPUT"
+
+          # GitHub applies the squash asynchronously, so mergeCommit is null for
+          # a moment afterwards and `--jq .mergeCommit.oid` would abort the step
+          # under `set -e` with the PR already merged
+          merge_sha=""
+          for attempt in $(seq 1 10); do
+            merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit \
+              --jq '.mergeCommit.oid // empty')
+            if [[ -n "$merge_sha" ]]; then
+              break
+            fi
+            echo "merge commit not reported yet (attempt $attempt), retrying"
+            sleep 3
+          done
+          if [[ -z "$merge_sha" ]]; then
+            echo "::error::PR #$PR_NUMBER merged but GitHub never reported its" \
+              "merge commit - master carries the data update and no tag was pushed"
+            exit 1
+          fi
+
+          echo "merged PR #$PR_NUMBER as $merge_sha"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
 
       - name: Report pending work
@@ -123,17 +145,17 @@ jobs:
         run: exit 1
 
       - uses: actions/checkout@v7
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         with:
           token: ${{ steps.app-token.outputs.token }}
           ref: ${{ steps.merge.outputs.merge_sha }}
 
       - name: Install uv
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         uses: astral-sh/setup-uv@v7
 
       - name: Tag the release
-        if: steps.merge.outputs.merged == 'true'
+        if: steps.merge.outputs.merge_sha != ''
         run: |
           set -euo pipefail
 
