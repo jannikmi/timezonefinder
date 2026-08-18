@@ -26,7 +26,7 @@ project_root = os.path.dirname(cwd)
 # This ensures that the source package is importable
 sys.path.insert(0, os.path.join(project_root))
 # ... and the data distribution alongside it, since `timezonefinder.configs` imports
-# `timezonefinder_data` to locate the boundary data (issue #446). Read the Docs
+# `timezonefinder_data` to locate the boundary data. Read the Docs
 # installs docs/requirements_docs.txt and never the project itself, so both packages
 # are reached from the checkout - which is also what keeps the docs building before
 # the data distribution has been published to PyPI at all.

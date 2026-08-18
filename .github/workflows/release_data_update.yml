@@ -1,6 +1,6 @@
 name: Auto-release data update PRs
 
-# Full automation of data updates (issue #167, step 3): when the CI/CD pipeline
+# Full automation of data updates: when the CI/CD pipeline
 # of an automated update PR (branch data-update-*, opened by
 # check_data_updates.yml) completes:
 # - on success: merge the PR and push the `data-v*` tag, which triggers the

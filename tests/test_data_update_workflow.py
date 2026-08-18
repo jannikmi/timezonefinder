@@ -113,7 +113,7 @@ def test_publishing_keys_off_the_resolved_merge_commit() -> None:
 def test_the_data_tag_is_derived_from_the_data_package_alone() -> None:
     """A bare version tag would publish `timezonefinder`, not the data.
 
-    The two streams share a branch and differ only in the tag namespace (issue #446),
+    The two streams share a branch and differ only in the tag namespace,
     so reading the *root* version here - which is what this step used to do, when a
     data update was a patch release of the code - would push a code release tag for a
     commit that changed no code. build.yml would then build and publish

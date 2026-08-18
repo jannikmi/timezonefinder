@@ -1,6 +1,6 @@
 name: publish data
 
-# Publishes the `timezonefinder-data` distribution (issue #446).
+# Publishes the `timezonefinder-data` distribution.
 #
 # This repository has two tag namespaces on one branch: a bare version tag
 # (`8.3.0`) releases `timezonefinder` through build.yml, and `data-v<version>`

@@ -92,6 +92,13 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed
+- **Never cite an issue or PR number in code** — comments, docstrings, workflow headers, config
+  comments. `# Since #446` and `(issue #446)` are the shape to avoid. A number is an indirection to
+  a tracker the reader may not be able to open, whose contents get retitled, re-scoped and closed
+  independently of the code, so the *reason* silently stops being where the code is. Write the
+  reasoning itself; if it is too long for a comment, it belongs in `docs/`. `CHANGELOG.rst` is the
+  exception — there the number is the release's provenance, and `Thanks to … PR #123` is required
+  (see *Changelog*)
 
 ## Testing
 

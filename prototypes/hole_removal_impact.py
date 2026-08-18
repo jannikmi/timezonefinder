@@ -50,10 +50,10 @@ among the shortcut candidates, ordering decides whether it is reached first.
 enclaves right by accident and evidently not these.
 
 So dropping holes needs a candidate-ordering guarantee *established* in shortcut
-compilation, not merely verified - see issue #513, which also covers the interaction
-with the ``last_zone_change_idx`` early break in ``timezone_at`` (it returns the final
-candidate untested, so "present in the list" is not "reached"), and the holes covered
-only by a *union* of zones, where correctness depends on all of them.
+compilation, not merely verified. Two further complications belong to that guarantee:
+the ``last_zone_change_idx`` early break in ``timezone_at`` returns the final candidate
+untested, so "present in the list" is not "reached", and holes covered only by a
+*union* of zones need all of those zones ordered correctly, not just one.
 
 This is the evidence behind keeping the unmatched holes stored inline rather than
 dropping them - see the "Holes without a twin" section of docs/data_format.rst.

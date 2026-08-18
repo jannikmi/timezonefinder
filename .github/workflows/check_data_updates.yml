@@ -129,7 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           # the data distribution's version - a data update bumps that one and
-          # leaves `timezonefinder` alone (issue #446)
+          # leaves `timezonefinder` alone
           new_version=$(uv version --short --package timezonefinder-data)
           body=$(cat <<EOF
           Automated update to the timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) (previously packaged: \`$CURRENT\`).

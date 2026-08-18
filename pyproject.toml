@@ -30,7 +30,7 @@ dependencies = [
     "cffi<3,>=1.15.1",
     "flatbuffers>=25.2.10",
     # the packaged boundary data, split out so that a data update needs no code
-    # release (issue #446). The floor names the oldest dataset this code reads; the
+    # release. The floor names the oldest dataset this code reads; the
     # ceiling is the *format* generation (timezonefinder.configs.DATA_FORMAT_VERSION,
     # the data version's major), so every future release of the current format keeps
     # satisfying it while a format change becomes a resolver error instead of a

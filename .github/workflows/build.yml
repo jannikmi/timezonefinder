@@ -5,7 +5,7 @@ name: build
 # GitHub limits: tag push webhooks are not emitted when more than three tags are pushed in one operation.
 # Tag push runs use the workflow file as it exists in the commit the tag points to (the workflow must exist there).
 #
-# This repository has two tag namespaces (issue #446): a bare version tag releases
+# This repository has two tag namespaces: a bare version tag releases
 # `timezonefinder`, and `data-v*` releases `timezonefinder-data` through
 # publish_data.yml. Nothing here may publish on a `data-v*` ref, and that is enforced
 # twice because there are two ways in. The tag filter below covers the push path - one
@@ -150,7 +150,7 @@ jobs:
 
     # wheel only, no sdist: there is no build-from-source case for a pure-data
     # py3-none-any wheel, and an sdist would double what each data release costs
-    # against the new project's quota - halving that burn is the point of issue #446
+    # against the data project's fresh quota - halving that burn is the point of the split
     - run: uv build -v --package timezonefinder-data --wheel -o dist/
 
     - uses: actions/upload-artifact@v7
@@ -195,7 +195,8 @@ jobs:
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
             uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
 
-      # Checks issue #418
+      # A wheel tagged manylinux_2_28 must actually be installable on it: the tag is a
+      # claim pip believes, so a mis-tagged wheel is chosen and then fails at import.
       - name: Verify manylinux_2_28 wheel
         run: |
             pip download \

@@ -55,7 +55,7 @@ OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 PACKAGE_DIR = Path(__file__).parent
 
 # Where the packaged boundary data lives. It ships in its own distribution
-# (``timezonefinder-data``, issue #446) so that a dataset update needs no release of
+# (``timezonefinder-data``) so that a dataset update needs no release of
 # this package, which is why this is an import rather than ``PACKAGE_DIR / "data"``.
 # The name stays: seven path helpers across four modules take it as their default
 # argument, and ``AbstractTimezoneFinder`` is the only consumer for which it is more

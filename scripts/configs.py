@@ -38,7 +38,7 @@ DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 # pyproject is no longer unambiguous, hence DATA_PYPROJECT_FILE below.
 PYPROJECT_FILE = PROJECT_ROOT / "pyproject.toml"
 
-# The second distribution in this workspace: the boundary data (issue #446).
+# The second distribution in this workspace: the boundary data.
 # The name is what pip resolves and what `uv build --package` selects, so the tests
 # that build it and the test holding the root's dependency bound share this one copy.
 DATA_DISTRIBUTION_NAME = "timezonefinder-data"
@@ -53,8 +53,8 @@ DATA_RELEASES_FILE = DATA_PACKAGE_ROOT / "README.md"
 # Deliberately NOT ``timezonefinder.configs.DEFAULT_DATA_DIR``: that one answers
 # "where does the *installed* data package live", which under a non-editable install
 # is inside site-packages - so a converter defaulting to it would rewrite the
-# installed wheel instead of the checkout. Since #523 `make parse` passes no paths at
-# all, which makes the difference load-bearing rather than theoretical.
+# installed wheel instead of the checkout. `make parse` passes no paths at all, which
+# makes the difference load-bearing rather than theoretical.
 SOURCE_DATA_DIR = DATA_PACKAGE_ROOT / "timezonefinder_data" / "data"
 
 

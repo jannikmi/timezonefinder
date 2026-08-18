@@ -1,6 +1,6 @@
 """Tests for verifying the contents of the package distributions.
 
-This repository publishes two distributions (issue #446): ``timezonefinder``, the
+This repository publishes two distributions: ``timezonefinder``, the
 code, and ``timezonefinder-data``, the boundary data. Each is described by a
 :class:`Distribution` naming its source directory, the artefact types it publishes
 and its own pattern sets - a single global set cannot express both, since

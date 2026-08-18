@@ -147,7 +147,7 @@ if ! make reports; then
 fi
 
 # A data update releases the *data* distribution and nothing else: no version of
-# `timezonefinder` changes, and the root CHANGELOG.rst is not touched (issue #446).
+# `timezonefinder` changes, and the root CHANGELOG.rst is not touched.
 # The version follows from the release just parsed rather than from a bump - it states
 # which upstream release this is, prefixed by the data format generation.
 DATA_TAG=$(cat DATA_VERSION)

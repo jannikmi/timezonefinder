@@ -449,8 +449,8 @@ def test_stdin_mode_survives_an_unusable_row(bad_row: str):
 
     Out-of-range coordinates are the case worth pinning: they parse as numbers
     and only fail inside the lookup, so before the bounds check moved into the
-    row parser they raised past the loop and discarded every row after them -
-    the outcome issue #504 called hostile.
+    row parser they raised past the loop and discarded every row after them,
+    which is a hostile outcome for a stream the caller cannot re-read.
     """
     result = run_cli("--stdin", input=csv_input(bad_row, AMSTERDAM_ROW))
     assert result.returncode == 1, "a rejected row must be visible in the exit code"

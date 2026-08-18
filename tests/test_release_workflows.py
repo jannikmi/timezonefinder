@@ -1,6 +1,6 @@
 """Invariants of the two release streams this repository publishes.
 
-One branch carries two tag namespaces (issue #446): a bare version tag releases
+One branch carries two tag namespaces: a bare version tag releases
 ``timezonefinder``, and ``data-v*`` releases ``timezonefinder-data``. Neither can be
 exercised here - a tag push happens only on GitHub, and no pull request produces one -
 so these read the workflow YAML.
