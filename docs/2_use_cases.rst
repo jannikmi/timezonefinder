@@ -90,7 +90,8 @@ Any other data in this format can also be parsed:
     python -m scripts.file_converter \
         [-inp /path/to/input.json] \
         [-out /path/to/output_folder] \
-        [--zone-id-dtype {uint8,uint16}]
+        [--zone-id-dtype {uint8,uint16}] \
+        [--data-version RELEASE]
 
 Run it from the root of a ``timezonefinder`` repository checkout: the converter imports its
 helpers as ``scripts.<module>``, so invoking it by path fails to resolve them. ``make testparse``
@@ -98,7 +99,17 @@ runs exactly this against the small ``tests/test_input.json`` fixture.
 
 
 
-Per default the script parses the ``combined.json`` from its own parent directory (``timezonefinder``) into data files inside its parent directory.
+Per default the script parses the timezone-boundary-builder release named by the
+repository's ``DATA_VERSION`` out of ``tmp/`` - where ``update_data.sh`` leaves it - into the
+packaged data directory.
+
+The release a parse came from is recorded in the compiled data and reported by
+``TimezoneFinder.data_version``, and it is read off the input's filename
+(``combined-with-oceans-2026c.json``), because nothing inside the GeoJSON states it. Your own
+data needs no such name: it is recorded as ``unknown``, which is the true answer for boundaries
+that are not a release. An *unpacked release archive* that lost its tag is refused rather than
+recorded as ``unknown`` - rename it, or state the release with ``--data-version``.
+
 Use ``--zone-id-dtype`` (or set ``TIMEZONEFINDER_ZONE_ID_DTYPE``) when your dataset
 contains more than 256 distinct timezones so the generated binaries use
 ``uint16`` storage instead of the default ``uint8``.

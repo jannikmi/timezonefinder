@@ -36,7 +36,8 @@ The processing pipeline for this data involves:
 
 1. Downloading the latest ``timezones-with-<...>.geojson.zip`` file from the releases section of the timezone-boundary-builder repository
 2. Unzipping into the ``combined.json`` file
-3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
+3. Renaming it after the release it came from (``combined-2026c.json``), which nothing inside the file records
+4. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
 The script ``update_data.sh`` automates this process. It resolves the release tag first and names the download after it (``combined-with-oceans-2026c.json``), since a release archive says nothing about which release it is - the converter reads the tag back off that name, and refuses an unpacked archive that lacks it rather than compiling data that could never say where it came from. The tag is also recorded in the repository's ``DATA_VERSION`` file. The script further regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
