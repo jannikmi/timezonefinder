@@ -87,22 +87,33 @@ else
     unzip $ZIP_ARCHIVE_PATH -d $WORKING_FOLDER_NAME
 fi
 
+# hand the parse the release tag recorded at download time: DATA_VERSION still
+# names the *previous* one until the parse has succeeded, so it is the only thing
+# here that knows which release the data being written comes from. Empty when the
+# download was skipped, which leaves the converter to fall back to DATA_VERSION.
+DOWNLOADED_TAG=""
+if [ -s "$DOWNLOADED_TAG_PATH" ]; then
+    DOWNLOADED_TAG=$(cat "$DOWNLOADED_TAG_PATH")
+fi
+
+PARSE_ARGS=(-inp "$JSON_PATH")
+if [ -n "$DOWNLOADED_TAG" ]; then
+    PARSE_ARGS+=(--data-version "$DOWNLOADED_TAG")
+fi
+
 echo "START PARSING..."
 echo "calling scripts.file_converter:"
-if ! uv run python -m scripts.file_converter -inp "$JSON_PATH"; then
+if ! uv run python -m scripts.file_converter "${PARSE_ARGS[@]}"; then
     echo "file_converter failed!"
     exit 1
 fi
 
 # update DATA_VERSION to the release tag recorded at download time
-# (checked weekly against upstream by .github/workflows/check_data_updates.yml)
-if [ -s "$DOWNLOADED_TAG_PATH" ]; then
+# (checked weekly against upstream by .github/workflows/check_data_updates.yml).
+# The packaged stamp the runtime reads (AbstractTimezoneFinder.data_version) needs
+# no second copy here: the parse above already wrote it from the same tag.
+if [ -n "$DOWNLOADED_TAG" ]; then
     cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
-    # also re-stamp the packaged data_version.txt that file_converter.py wrote
-    # from the *previous* DATA_VERSION during parse above - the runtime side
-    # (AbstractTimezoneFinder.data_version) reads this copy, not the repo-root
-    # file, so the two must move together on every data update.
-    cp "$DOWNLOADED_TAG_PATH" timezonefinder/data/data_version.txt
     echo "DATA_VERSION set to $(cat DATA_VERSION)"
 else
     echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"
