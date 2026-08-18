@@ -115,6 +115,39 @@ def test_nothing_publishing_the_code_is_reachable_from_a_data_tag() -> None:
 
 
 @pytest.mark.unit
+def test_the_code_release_checks_its_data_dependency_before_uploading() -> None:
+    """Ordering is the whole invariant: a check after the upload checks nothing.
+
+    On a data format change the data distribution must be published first, and
+    publishing the code first puts a wheel on PyPI that nobody can install - which
+    cannot be undone, because the version number is spent. So the guard has to sit in
+    the job that uploads, ahead of the upload, and it must be able to fail the job.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    for name, job in _jobs_using(workflow, PYPI_PUBLISH_ACTION).items():
+        steps = job["steps"]
+        guard = [
+            i
+            for i, step in enumerate(steps)
+            if "scripts.check_data_dependency" in str(step.get("run", ""))
+        ]
+        upload = [
+            i
+            for i, step in enumerate(steps)
+            if _uses(step).startswith(PYPI_PUBLISH_ACTION)
+        ]
+        assert guard, f"{name} uploads without checking that the required data exists"
+        assert max(guard) < min(upload), (
+            f"{name} runs the data-dependency check after the upload, where it can no "
+            "longer prevent anything"
+        )
+        assert "continue-on-error" not in steps[guard[0]], (
+            f"{name}'s data-dependency check cannot fail the job, so it cannot block "
+            "the upload"
+        )
+
+
+@pytest.mark.unit
 def test_the_data_stream_publishes_only_from_its_own_tag() -> None:
     triggers = _triggers(_workflow(PUBLISH_DATA_WORKFLOW))
     assert set(triggers) == {"push"}, (

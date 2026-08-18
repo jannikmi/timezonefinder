@@ -327,6 +327,14 @@ jobs:
           find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
           ls -lR dist/
 
+      # The two distributions release independently, and on a data format change the
+      # order is fixed: data first, then the code requiring it. Backwards, the wheel
+      # is uninstallable for everyone until the data lands - and PyPI never accepts a
+      # version number twice, so the fix is a whole new release. This is the last
+      # moment the mistake is still free.
+      - name: Verify the required data version is published
+        run: uv run --with packaging python -m scripts.check_data_dependency
+
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
