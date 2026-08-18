@@ -26,6 +26,7 @@ import zipfile
 from typing import Iterator, NamedTuple
 
 import pytest
+from timezonefinder.configs import DATA_VERSION_FILENAME, DEFAULT_DATA_DIR
 from tests.auxiliaries import (
     BUILD_SDIST_CMD,
     BUILD_WHEEL_CMD,
@@ -626,34 +627,19 @@ def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
     )
 
 
-# The packaged dataset version stamp. ``scripts/file_converter.py`` writes it
-# into the data directory at build time and ``AbstractTimezoneFinder.data_version``
-# reads it at runtime, so it must ship in both the wheel and the sdist - this is
-# the mirror of the ``UNWANTED_DIST_PATTERNS`` checks above: a single named file
-# that *must* be present, asserted by name rather than via the ``*.txt`` glob so
-# the check keeps guarding it if the glob set ever narrows.
-PACKAGED_DATA_VERSION_PATH = Path("timezonefinder") / "data" / "data_version.txt"
+@pytest.mark.unit
+def test_the_packaged_data_version_stamp_is_an_essential_file():
+    """The stamp must stay in the set the distribution checks above cover.
 
-
-@pytest.mark.integration
-@pytest.mark.parametrize("dist_type", DIST_TYPES)
-def test_packaged_data_version_file_in_distribution(dist_type: str):
-    """The dataset version stamp must ship in both sdist and wheel."""
-    fixture = fixtures[dist_type]
-    fixture.initialize()
-    dist_files = fixture.archive_files
-
-    pattern = str(PACKAGED_DATA_VERSION_PATH)
-    # in the wheel the package sits under ``timezonefinder/`` at the archive
-    # root, so the relative path matches directly; the ``**/`` form covers any
-    # future relocation without weakening the sdist's anchored match.
-    matched_files = any_filter_paths(
-        dist_files, [pattern, f"**/{pattern}"], include_matches=True
-    )
-    matched_file_repr = [str(f) for f in matched_files]
-    assert len(matched_file_repr) == 1, (
-        f"packaged data version file {PACKAGED_DATA_VERSION_PATH!s} not found in "
-        f"{dist_type}: matched {matched_file_repr}. The build must include "
-        "timezonefinder/data/data_version.txt so AbstractTimezoneFinder.data_version "
-        "can read it at runtime."
+    ``AbstractTimezoneFinder.data_version`` reads it out of the installed package,
+    so a build that drops it breaks a public property. It is covered today by the
+    ``*.txt`` entry in ``ESSENTIAL_SOURCE_PATTERNS`` rather than by name, which is
+    what this pins: narrow that pattern set and the sdist/wheel checks would stop
+    looking for the stamp without failing.
+    """
+    stamp = DEFAULT_DATA_DIR.relative_to(PROJECT_ROOT) / DATA_VERSION_FILENAME
+    assert stamp in set(iter_expected_distribution_files()), (
+        f"{stamp} is no longer among the files "
+        f"test_essential_files_in_distribution checks for. Add a pattern matching "
+        f"it to ESSENTIAL_SOURCE_PATTERNS."
     )
