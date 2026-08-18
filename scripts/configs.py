@@ -32,6 +32,11 @@ DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 # and a second copy of the path would silently stop tracking this one.
 DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
+# The package metadata. Read by tests that hold a second statement of something it
+# declares to it - the supported Python versions, and the version the installed
+# distribution reports as ``timezonefinder.__version__``.
+PYPROJECT_FILE = PROJECT_ROOT / "pyproject.toml"
+
 
 def read_data_version() -> str:
     """The release tag of the boundary data currently packaged, e.g. ``"2026c"``."""

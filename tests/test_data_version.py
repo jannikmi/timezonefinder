@@ -6,6 +6,7 @@ timezone-boundary-builder releases and written by update_data.sh on data updates
 
 import re
 import shutil
+import tomllib
 
 import pytest
 
@@ -15,6 +16,7 @@ from scripts.configs import (
     DATA_VERSION_FILE,
     DEFAULT_INPUT_PATH,
     PROJECT_ROOT,
+    PYPROJECT_FILE,
     read_data_version,
     resolve_data_version,
 )
@@ -89,16 +91,27 @@ def test_finder_exposes_packaged_data_version():
         )
 
 
-def test_package_exposes_version():
+def test_package_exposes_the_declared_version():
     # the package itself must state its own version - previously it did not
     # (hasattr(timezonefinder, "__version__") was False), which is why
     # scripts/benchmark_utils.py fell back to "Unknown" for every report.
+    #
+    # Compared against what pyproject.toml declares rather than merely against the
+    # "unknown" fallback: __version__ comes from the *installed* distribution's
+    # metadata, so an environment left behind by a version bump answers with the
+    # previous release - which is not the fallback, reads like a real answer, and
+    # is what every benchmark report would then record.
     assert hasattr(timezonefinder, "__version__"), (
         "timezonefinder.__version__ is not exposed"
     )
-    assert timezonefinder.__version__ != "unknown", (
-        f"timezonefinder.__version__ is {timezonefinder.__version__!r}; the "
-        "package must be installed for importlib.metadata to resolve its version."
+    declared = tomllib.loads(PYPROJECT_FILE.read_text(encoding="utf-8"))["project"][
+        "version"
+    ]
+    assert timezonefinder.__version__ == declared, (
+        f"timezonefinder.__version__ is {timezonefinder.__version__!r}, but "
+        f"pyproject.toml declares {declared!r}. The installed distribution's "
+        "metadata is stale (or missing, reading as 'unknown') - re-sync the "
+        "environment with `uv sync --all-groups`."
     )
 
 
