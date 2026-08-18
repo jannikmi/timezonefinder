@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787084101829,
+  "lastUpdate": 1787088943108,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1665,6 +1665,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0015784869718891731",
             "extra": "mean: 39.322448999996595 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d6af064e46ce18d60f41a07b7d6a5e3a0ad788de",
+          "message": "Give the shortcut binaries a file identifier and a layout version (#526)\n\nThe hybrid shortcut files finished their buffer bare and the reader picked a\nschema by substring-matching \"uint8\"/\"uint16\" in the file name, so a renamed or\nmispaired file was caught by nothing: the two schemas differ only in the width\nof UniqueZone.zone_id, and either width parses cleanly under the other and hands\nback wrong zone ids.\n\nBoth schemas now declare a file_identifier - TZS1 for uint8, TZS2 for uint16,\ndistinct on purpose - and a layout_version field mirroring PolygonCollection's.\nThe reader dispatches on the identifier stamped inside the buffer and then\nchecks the version, so the file name carries no meaning any more and\n_schema_for_file_name is gone. polygons.py's rejection message moves to\ntimezonefinder/flatbuf/io/layout.py so both binary kinds fail the same way.\n\nThe packaged hybrid_shortcuts_uint16.fbs is regenerated to carry the markers;\nits decoded mapping is unchanged entry for entry, and coordinates.fbs is\nuntouched.\n\nCloses #458\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-18T23:34:30+02:00",
+          "tree_id": "3be670d0d81111510337ee9e4822c6294832d070",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d6af064e46ce18d60f41a07b7d6a5e3a0ad788de"
+        },
+        "date": 1787088942149,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 80.28838302575214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021667857227594453",
+            "extra": "mean: 12.455101999989893 msec\nrounds: 60 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 259.25219223635236,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000037276416150018817",
+            "extra": "mean: 3.8572480000027554 msec\nrounds: 210 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 26.773712968879597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005057930706958977",
+            "extra": "mean: 37.35006799999496 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           }
         ]
       }
