@@ -8,7 +8,7 @@ repos:
             -   id: end-of-file-fixer
             -   id: check-yaml
             -   id: check-added-large-files
-                exclude: ^timezonefinder/data/.*\.fbs$
+                exclude: ^packages/timezonefinder-data/timezonefinder_data/data/.*\.fbs$
             -   id: check-case-conflict
             -   id: check-json
             -   id: pretty-format-json
