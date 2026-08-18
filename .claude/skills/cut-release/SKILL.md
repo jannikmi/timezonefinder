@@ -111,12 +111,18 @@ Classify by the **strongest single bullet** in the section, not by how many ther
 |---|---|
 | **major** | anything that breaks the public API — the `__all__` exports, an exported signature, or documented return semantics. `CLAUDE.md` promises no break between minor versions, so a break has nowhere else to go |
 | **minor** | new public API; a user-visible behaviour change that is not a break; a new or raised runtime dependency; dropping a supported Python version; a packaged-data format change that makes users who compile their own data regenerate it |
-| **patch** | bug fixes; data-only updates; documentation; a section whose bullets are all under `Internal:` |
+| **patch** | bug fixes; documentation; a section whose bullets are all under `Internal:` |
 
 Two things that look like majors and are not: internal code, binary data formats and packaged
 assets are versioned with the package and carry no compatibility promise (`CLAUDE.md`), and a
 changed `.fbs` layout is therefore a minor at most — it costs users a regeneration, not a rewrite.
 An `Internal:`-only section is a patch however long it is.
+
+A boundary-data update is **not on this table at all** since #446: it releases
+`timezonefinder-data`, leaves this version untouched, and never reaches `CHANGELOG.rst`. What does
+belong here is a *format* change, which bumps `DATA_FORMAT_VERSION` and the data distribution's
+major — and then the ordering is load-bearing: publish the data release first, then this one, or
+the new bound resolves to nothing.
 
 Put it to the maintainer with `AskUserQuestion`: one question, the three options as the actual
 version numbers (`8.3.0 — minor`, …), recommended first, each with the bullet that drives it quoted
@@ -206,8 +212,8 @@ Only after the release PR is merged. Preconditions, each verified:
       carries. Do not wait for master's push run to finish, and this is not laziness: that run's
       `release` job creates the GitHub Release itself, which creates the tag, and a `git push` of a
       tag the remote already has reports "Everything up-to-date" and fires no webhook. The
-      automated data path (`release_data_update.yml`) tags immediately after merging for this
-      reason.
+      automated data path (`release_data_update.yml`, which pushes a `data-v*` tag) does the
+      same for this reason.
 
 Then ask — plainly, in chat, naming what it does: tag `<version>` on `master` and push it, which
 builds the wheels and uploads them to PyPI, and PyPI will not accept that version again. On a clear
@@ -256,11 +262,10 @@ the public-API contract; `Makefile`'s comments own the tag/push ordering; `build
 tag triggers. A second copy here drifts, and the copy that drifts is the one an agent obeys.
 
 **The changelog-ordering stop.** §1 carried a fourth row for "a dated section sits *above*
-`X.X.X (unreleased)`", because `update_data.sh` spliced its entry under the file header. Since #519
-it inserts below the unreleased section, and `release_data_update.yml` withholds the merge while
-anything is pending, so the automation cannot produce that state. If it arises any other way,
-`validate_changelog_order` fails the test suite over the committed file — which §2's green-master
-precondition already stops on. Do not re-add the row.
+`X.X.X (unreleased)`", because `update_data.sh` spliced its entry under the file header. It no
+longer writes to `CHANGELOG.rst` at all: since #446 a data update releases `timezonefinder-data`
+and records itself in that package's README, so the automation cannot produce that state, and
+nothing else writes release sections unattended. Do not re-add the row.
 
 **Autonomy.** §0 explains why the two stops exist. Removing them makes the skill able to publish an
 unreviewable, unrepeatable artifact without a human in the loop.

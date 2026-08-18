@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from timezonefinder import TimezoneFinder
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonAddCoords,
     PolygonEnd,
@@ -45,6 +46,7 @@ from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     write_hybrid_shortcuts_flatbuffers,
 )
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
+from scripts.data_integrity import validate_shipped_schemas
 
 POLYGONS = [
     np.array([[0, 1, 2], [3, 4, 5]]),
@@ -142,6 +144,20 @@ def test_newer_layout_version_is_rejected():
     message = str(excinfo.value)
     assert "file_converter.py" in message
     assert f"layout version {POLYGON_LAYOUT_VERSION + 1}" in message
+
+
+@pytest.mark.unit
+def test_the_packaged_data_ships_the_schemas_describing_it():
+    """The committed data directory must carry the format definition it was written by.
+
+    The copy under ``<data>/schemas/`` is what lets a data directory be read back
+    without the package that wrote it - a hand-built ``bin_file_location``, a directory
+    copied out of site-packages - and it is generated, so it goes stale silently: edit
+    a schema, regenerate the bindings, and the shipped copy still describes the
+    previous format with nothing to say so. The converter runs this same check over
+    what it just wrote; this one covers what the repository ships.
+    """
+    validate_shipped_schemas(DEFAULT_DATA_DIR)
 
 
 @pytest.mark.unit

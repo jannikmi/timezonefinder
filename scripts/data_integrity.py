@@ -15,6 +15,11 @@ initialisation path.
 from pathlib import Path
 
 from scripts.configs import MIN_HOLE_DEDUP_RATIO
+from timezonefinder.flatbuf.schemas import (
+    SCHEMA_SUFFIX,
+    get_schemas_dir,
+    iter_schema_files,
+)
 from timezonefinder.np_binary_helpers import get_poly_ref_path
 from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
@@ -128,4 +133,51 @@ def validate_hole_dedup_ratio(data_dir: Path) -> None:
             f"enclaves as shared rings - in which case the packaged data is quietly "
             f"re-inflated - or the matching pass is broken. Re-check with "
             f"prototypes/hole_boundary_redundancy.py."
+        )
+
+
+def validate_shipped_schemas(data_dir: Path) -> None:
+    """Check that the schemas in ``data_dir`` are the ones its binaries were written by.
+
+    A compiled data directory carries a copy of the FlatBuffers schemas describing it,
+    so that it says what its own format is - which matters for a hand-built
+    ``bin_file_location`` and for anyone debugging one, and puts the format's definition
+    in the distribution whose major version *is* the format version.
+
+    Being a copy, it can go stale: the schemas change under ``make flatbuf`` while the
+    binaries are not regenerated, and nothing about the resulting directory announces
+    that the description no longer matches the thing described. Hence one check, run
+    both by the converter over what it just wrote and by the test suite over what is
+    committed.
+
+    :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
+    :raises DataIntegrityError: if the shipped schemas are missing or differ
+    """
+    shipped_dir = get_schemas_dir(data_dir)
+    expected = {path.name: path.read_bytes() for path in iter_schema_files()}
+    if not expected:
+        raise DataIntegrityError(
+            "no schema definitions found to compare against - the canonical schemas "
+            "have moved, and the shipped copies are now checked against nothing."
+        )
+
+    shipped = {
+        path.name: path.read_bytes()
+        for path in sorted(shipped_dir.glob(f"*{SCHEMA_SUFFIX}"))
+    }
+    if shipped.keys() != expected.keys():
+        missing = sorted(expected.keys() - shipped.keys())
+        extra = sorted(shipped.keys() - expected.keys())
+        raise DataIntegrityError(
+            f"{shipped_dir} does not hold the schemas describing this data: "
+            f"missing {missing}, unexpected {extra}. Regenerate the data directory."
+        )
+
+    differing = sorted(name for name, body in expected.items() if shipped[name] != body)
+    if differing:
+        raise DataIntegrityError(
+            f"the schema copies in {shipped_dir} differ from the canonical ones: "
+            f"{differing}. They are generated, so fix this by regenerating the data "
+            "rather than by editing the copy - and check whether the binaries next to "
+            "it still match the schema that changed."
         )

@@ -1,0 +1,83 @@
+name: publish data
+
+# Publishes the `timezonefinder-data` distribution.
+#
+# This repository has two tag namespaces on one branch: a bare version tag
+# (`8.3.0`) releases `timezonefinder` through build.yml, and `data-v<version>`
+# releases the boundary data here. build.yml excludes `data-v*` at its trigger and
+# again on its `release` job, so no code artefact can be published from this
+# namespace - and this workflow deliberately creates **no GitHub Release**, which is
+# what keeps build.yml's `release: types: [published]` trigger unable to fire for a
+# data tag at all.
+#
+# The data itself is not re-validated here: it was compiled and checked by build.yml
+# on the pull request, and the tag points at a commit already on master, which the
+# verification step below requires.
+#
+# Publishing uses PyPI Trusted Publishing (OIDC), not an API token: PyPI is configured
+# to trust this workflow file in this repository, gated on the `pypi-data` deployment
+# environment. Nothing here can therefore upload `timezonefinder`, and no long-lived
+# credential exists to leak or rotate. It also removes the bootstrap problem a token
+# would have had - a project-scoped token cannot be minted for a project that does not
+# exist yet, whereas a *pending publisher* covers the very first upload.
+
+on:
+  push:
+    tags:
+      - 'data-v*'
+
+jobs:
+  publish-data-pypi:
+    name: Publish timezonefinder-data to PyPI
+    runs-on: ubuntu-latest
+    # the environment the trusted publisher on PyPI is bound to; a run outside it gets
+    # no OIDC identity PyPI will accept
+    environment: pypi-data
+    permissions:
+      # required for Trusted Publishing: the job exchanges this for a short-lived
+      # PyPI token, which is why no secret appears anywhere below
+      id-token: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        # Fetch full history to check remote branches for verification.
+        with:
+          fetch-depth: 0
+
+      # Tags can be pushed from any branch, but a release must come from master.
+      # Mirrors the same check in build.yml's release job.
+      - name: Verify commit is on master branch
+        run: |
+          if ! git branch -r --contains HEAD | grep -q origin/master; then
+            echo "Tag is not on master branch. Aborting release."
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      # The tag names what is published, and the wheel's version comes from
+      # pyproject.toml - two statements that must agree, or the tag points at a
+      # release nobody can find by it. update_data.sh derives both from the upstream
+      # release it parsed; this catches a hand-pushed tag that does not match.
+      - name: Verify the tag matches the declared data version
+        run: |
+          set -euo pipefail
+          version=$(uv version --short --package timezonefinder-data)
+          tagged="${GITHUB_REF_NAME#data-v}"
+          if [[ "$tagged" != "$version" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME names version '$tagged', but the data" \
+              "package declares '$version'"
+            exit 1
+          fi
+          echo "publishing timezonefinder-data $version"
+
+      # wheel only: a pure-data py3-none-any distribution has no build-from-source
+      # case, and an sdist would double the ~63 MB each data release costs
+      - name: Build the data wheel
+        run: uv build -v --package timezonefinder-data --wheel -o dist/
+
+      - name: PyPI Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

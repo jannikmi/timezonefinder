@@ -37,6 +37,9 @@ from timezonefinder.utils_numba import convert2coords
 
 PROJECT_ROOT = PACKAGE_DIR.parent
 DIST_DIR = PROJECT_ROOT / "dist"
+# this repository's root distribution; the data one is named by
+# scripts.configs.DATA_DISTRIBUTION_NAME, which also owns the path to it
+ROOT_DISTRIBUTION_NAME = "timezonefinder"
 # where GitHub looks for workflows and for local `uses: ./...` actions - the
 # layout is GitHub's, not ours, so the tests that read those files share one
 # declaration of it rather than each spelling out the same directories
@@ -87,7 +90,11 @@ FIXTURE_VERSION = 2
 # because a tox env offers a single interpreter, so the two agreed by accident.
 # Keep the pin on the sdist build too: it costs nothing and stops the two artefacts
 # in ``dist/`` from being built by different interpreters.
-BUILD_CMD = ["uv", "build", "-v", "--python", sys.executable]
+#
+# ``-o dist/`` is explicit rather than left to the default: inside a uv workspace,
+# where a build target is selected with ``--package``, the output directory is not
+# obviously the one a caller then globs.
+BUILD_CMD = ["uv", "build", "-v", "--python", sys.executable, "-o", "dist/"]
 BUILD_SDIST_CMD = [*BUILD_CMD, "--sdist"]
 BUILD_WHEEL_CMD = [*BUILD_CMD, "--wheel"]
 
@@ -157,16 +164,29 @@ def run_command(
         raise
 
 
-def build_wheel(clean_dist: bool = True) -> Path:
-    """Build wheel distribution and return its path."""
+def build_wheel(clean_dist: bool = True, package: str | None = None) -> Path:
+    """Build a wheel distribution and return its path.
+
+    ``package`` names a workspace member to build instead of the root distribution
+    (``timezonefinder-data``). Both wheels land in the same ``dist/``, so the glob
+    names the distribution rather than taking whatever wheel is there - and a caller
+    building both must pass ``clean_dist=False`` for the second, or it deletes the
+    first.
+    """
     # TODO reuse with DistributionFilesFixture (found in test_package_contents.py)
     if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
 
-    run_command(BUILD_WHEEL_CMD, cwd=PROJECT_ROOT)
+    cmd = (
+        BUILD_WHEEL_CMD if package is None else [*BUILD_WHEEL_CMD, "--package", package]
+    )
+    run_command(cmd, cwd=PROJECT_ROOT)
 
-    wheels = list(DIST_DIR.glob("*.whl"))
-    assert wheels, "No wheel file found in dist/"
+    # a distribution name is normalised to underscores in the wheel filename
+    dist_name = (package or ROOT_DISTRIBUTION_NAME).replace("-", "_")
+    wheels = list(DIST_DIR.glob(f"{dist_name}-*.whl"))
+    assert wheels, f"No {dist_name} wheel found in dist/"
+    assert len(wheels) == 1, f"Expected exactly one {dist_name} wheel, got {wheels}"
     return wheels[0]
 
 

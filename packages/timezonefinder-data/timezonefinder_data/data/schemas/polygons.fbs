@@ -1,0 +1,17 @@
+namespace timezonefinder.flatbuf.generated.polygons;
+
+table Polygon {
+  // all x coordinates followed by all y coordinates, in a single vector
+  coords:[int];
+}
+
+table PolygonCollection {
+  polygons:[Polygon];
+  // encoding of the `coords` vectors; see POLYGON_LAYOUT_VERSION in
+  // timezonefinder/flatbuf/io/polygons.py. absent (= 0) in files written
+  // before the per-axis layout was introduced.
+  layout_version:ushort;
+}
+
+root_type PolygonCollection;
+file_identifier "TZFP";

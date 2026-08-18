@@ -4,6 +4,16 @@ name: build
 # - push to master, version tags, or publishing a GitHub Release (fallback if a tag push did not start a run).
 # GitHub limits: tag push webhooks are not emitted when more than three tags are pushed in one operation.
 # Tag push runs use the workflow file as it exists in the commit the tag points to (the workflow must exist there).
+#
+# This repository has two tag namespaces: a bare version tag releases
+# `timezonefinder`, and `data-v*` releases `timezonefinder-data` through
+# publish_data.yml. Nothing here may publish on a `data-v*` ref, and that is enforced
+# twice because there are two ways in. The tag filter below covers the push path - one
+# line, in one place, impossible to half-apply. The `release: types: [published]` path
+# is not a tag filter at all: `github.ref` is the tag, and publish_data.yml
+# deliberately creates no GitHub Release, so this can only fire for a data tag if
+# someone publishes one by hand. That is why the `release` job carries the ref guard as
+# well; `publish-pypi` needs it, so skipping it skips the upload too.
 on:
   pull_request:
   push:
@@ -11,6 +21,7 @@ on:
       - master
     tags:
       - '**'
+      - '!data-v*'
   release:
     types: [published]
   workflow_dispatch:
@@ -128,9 +139,28 @@ jobs:
         name: artifact-source-dist
         path: "./**/dist/*.tar.gz"
 
+  make-data-wheel:
+    name: Make the data distribution wheel
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+
+    # wheel only, no sdist: there is no build-from-source case for a pure-data
+    # py3-none-any wheel, and an sdist would double what each data release costs
+    # against the data project's fresh quota - halving that burn is the point of the split
+    - run: uv build -v --package timezonefinder-data --wheel -o dist/
+
+    - uses: actions/upload-artifact@v7
+      with:
+        name: artifact-data-wheel
+        path: "./**/dist/timezonefinder_data-*.whl"
+
   end-to-end-test:
     runs-on: ubuntu-latest
-    needs: [make-wheels]
+    needs: [make-wheels, make-data-wheel]
     strategy:
         fail-fast: false
         matrix:
@@ -157,12 +187,16 @@ jobs:
         run: |
             find .
             uv init --name e2e --python ${{ matrix.uv-python-version }} --bare
-            uv add ./dist/timezonefinder*manylinux_2_28*whl
+            # both distributions from local artefacts, never the index: before the
+            # first data release there is nothing to resolve there, and afterwards
+            # resolving it would test a published dataset instead of this branch's
+            uv add ./dist/timezonefinder_data-*.whl ./dist/timezonefinder-*manylinux_2_28*whl
             uv tree
             uv run python3 -c 'from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); result = tf.timezone_at(lat=40.5, lng=11.7); assert(result == "Etc/GMT-1")'
             uv run python3 -c 'from timezonefinder.utils import clang_extension_loaded; assert(clang_extension_loaded)'
 
-      # Checks issue #418
+      # A wheel tagged manylinux_2_28 must actually be installable on it: the tag is a
+      # claim pip believes, so a mis-tagged wheel is chosen and then fails at import.
       - name: Verify manylinux_2_28 wheel
         run: |
             pip download \
@@ -177,7 +211,13 @@ jobs:
     needs: [test, make-wheels, make-sdist, end-to-end-test, pre-commit-hooks]
     # Run on pushes to master or tag pushes to create releases.
     # The verification step below ensures tags are only released if on master.
-    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+    # The `data-v*` exclusion repeats the trigger's tag filter because the
+    # `release: types: [published]` trigger bypasses it (see the header). This job is
+    # the one that must carry it: it creates the GitHub Release, and `publish-pypi`
+    # needs it, so guarding here guards both.
+    if: >
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
+      !startsWith(github.ref, 'refs/tags/data-v')
     permissions:
         id-token: write
         contents: write
@@ -245,7 +285,9 @@ jobs:
           draft: false
           prerelease: false
           skipIfReleaseExists: true
-          artifacts: "dist/timezonefinder*.whl,dist/timezonefinder*.tar.gz"
+          # `timezonefinder-*`, not `timezonefinder*`: the latter also matches the
+          # timezonefinder_data wheel, which is released under its own tag
+          artifacts: "dist/timezonefinder-*.whl,dist/timezonefinder-*.tar.gz"
 
   publish-pypi:
     name: Publish to PyPI
@@ -274,12 +316,15 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
 
+      # the data wheel is deliberately left out of dist/: this job uploads whatever
+      # is in it with the `timezonefinder` token, and publishing timezonefinder-data
+      # is publish_data.yml's, on its own tag and its own credentials
       - name: Copy artifacts to dist/ folder
         run: |
           find . -name 'artifact-*' -exec unzip '{}' \;
           mkdir -p dist/
           find . -name '*.tar.gz' -exec mv '{}' dist/ \;
-          find . -name '*.whl' -exec mv '{}' dist/ \;
+          find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
           ls -lR dist/
 
       - name: PyPI Publishing

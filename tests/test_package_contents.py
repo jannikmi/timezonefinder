@@ -1,8 +1,15 @@
-"""Tests for verifying the contents of the package distribution.
+"""Tests for verifying the contents of the package distributions.
+
+This repository publishes two distributions: ``timezonefinder``, the
+code, and ``timezonefinder-data``, the boundary data. Each is described by a
+:class:`Distribution` naming its source directory, the artefact types it publishes
+and its own pattern sets - a single global set cannot express both, since
+``packages/`` is unwanted in the code distribution and is the entire content of the
+data one.
 
 This module tests that:
-1. All required files are included in both source (sdist) and binary (wheel) distributions
-2. No unwanted files are included (cache, .env, temporary files, etc.) in either distribution type
+1. All required files are included in every artefact each distribution publishes
+2. No unwanted files are included (cache, .env, temporary files, etc.) in any of them
 3. Every hand-written "unwanted" pattern still names a path that exists here - the two
    checks above pass for a pattern that matches nothing, so nothing else would notice
    one going stale
@@ -11,10 +18,14 @@ This module tests that:
    intent, and check 2 only ever looks at what a *successful* build produced - so an
    exclusion that lives in ``MANIFEST.in`` alone is enforced by the build and verified
    by nothing, and deleting that line would leave the suite green
+5. Neither distribution carries the other's payload. That is the separation the split
+   exists for, and unlike a directory convention it is something that can actually
+   fail: a wrongly-packaged file is caught, and re-adding ``**/*.npy`` to the root's
+   ``package-data`` fails check 5 rather than merely re-inflating the wheel
 
-The module uses parameterized tests and global constants to minimize code
-duplication and make the tests more maintainable. It builds both distribution types
-and verifies their contents independently.
+The module uses parameterized tests and per-distribution constants to minimize code
+duplication and make the tests more maintainable. It builds each distribution's
+artefacts and verifies their contents independently.
 """
 
 import fnmatch
@@ -26,11 +37,13 @@ import zipfile
 from typing import Iterator, NamedTuple
 
 import pytest
-from timezonefinder.configs import DATA_VERSION_FILENAME, DEFAULT_DATA_DIR
+from scripts.configs import DATA_DISTRIBUTION_NAME, DATA_PACKAGE_ROOT, SOURCE_DATA_DIR
+from timezonefinder.configs import DATA_VERSION_FILENAME
 from tests.auxiliaries import (
     BUILD_SDIST_CMD,
     BUILD_WHEEL_CMD,
     PROJECT_ROOT,
+    ROOT_DISTRIBUTION_NAME,
     any_filter_paths,
     build_sdist,
     build_wheel,
@@ -50,7 +63,6 @@ MANIFEST_PATH = PROJECT_ROOT / "MANIFEST.in"
 
 SDIST_TYPE = "sdist"
 WHEEL_TYPE = "wheel"
-DIST_TYPES = [SDIST_TYPE, WHEEL_TYPE]
 
 
 #######################
@@ -65,7 +77,7 @@ DIST_TYPES = [SDIST_TYPE, WHEEL_TYPE]
 # which is what ``test_every_unwanted_pattern_matches_a_project_file`` now catches.
 # ``build/`` and the other build artefacts are not listed here: .gitignore already
 # contributes them below.
-UNWANTED_DIST_PATTERNS = {
+UNWANTED_CODE_DIST_PATTERNS = {
     ".github/",
     ".git/*",
     ".vscode/",
@@ -75,6 +87,8 @@ UNWANTED_DIST_PATTERNS = {
     "scripts/",
     "benchmarks/",
     "prototypes/",
+    # the other distribution in this workspace, built and published on its own
+    "packages/",
     # "tests/", # NOTE: tests should be included in the package for users to validate the package
     ".coveragerc",
     ".editorconfig",
@@ -93,6 +107,13 @@ UNWANTED_DIST_PATTERNS = {
     "tox.ini",
     "uv.lock",
 }
+
+# The data distribution's source directory holds nothing but what it publishes, so it
+# has no hand-written exclusions of its own - what must stay out of it is the *code*
+# distribution's payload, which does not exist under that directory and so cannot be
+# named by a pattern this module requires to match something. That separation is
+# asserted directly instead, by ``test_no_distribution_carries_the_others_payload``.
+UNWANTED_DATA_DIST_PATTERNS: set[str] = set()
 
 # ``.git`` holds repository metadata rather than project files, and in a linked
 # worktree it is a file instead of a directory - so this one pattern matches nothing
@@ -119,18 +140,27 @@ EXCLUSIONS_GUARDED_BY_PATTERN_ONLY = {
     "global-exclude *.pyc": "*.py[cod]",
 }
 
-ALLOWED_IGNORED_PATTERNS = {
+ALLOWED_IGNORED_CODE_PATTERNS = {
     "*.egg-info/",
     "*.so",  # Compiled shared objects, are ok in wheels
 }  # not under version control, but should be included in the distribution
+
+# The data distribution ships no compiled anything, so ``*.so`` is *not* bought out of
+# .gitignore's exclusions here: an extension module appearing in the data wheel fails
+# ``test_no_unwanted_files_in_distribution`` on its own.
+ALLOWED_IGNORED_DATA_PATTERNS = {
+    "*.egg-info/",
+}
 
 
 #######################
 # ESSENTIAL PATTERNS
 #######################
 
-# all files matching these patterns should be included in source distribution
-ESSENTIAL_SOURCE_PATTERNS = {
+# all files matching these patterns should be included in the code distribution.
+# The data payload extensions (*.npy, *.json, the timezone-name *.txt) are the data
+# distribution's, below - after the split this one carries no dataset at all.
+ESSENTIAL_CODE_PATTERNS = {
     "setup.py",
     "pyproject.toml",
     # "MANIFEST.in",
@@ -145,20 +175,86 @@ ESSENTIAL_SOURCE_PATTERNS = {
     "*.h",  # C header files
     "*.so",  # Compiled shared objects
     # data files:
-    "*.npy",  # Numpy binary data files
     "*.fbs",  # Flatbuffer schema files
-    "*.json",  # used for hole registry
-    "*.txt",  # Text files (used for timezone names)
 }
 
 # these files are not included in wheels
-WHEEL_EXCEPTION_PATTERNS = {
+WHEEL_EXCEPTION_CODE_PATTERNS = {
     "pyproject.toml",
     "setup.py",
     "README*",
     # wheels define what is installed. tests should not be included
     "tests/*",
 }
+
+# What the data distribution exists to ship: the binaries, the licence that has to
+# travel with them (the ODbL is share-alike on the database), and the one module that
+# gives them an importable path. Its ``pyproject.toml`` and ``README.md`` are not
+# listed - they are build inputs, and the README travels as the wheel's long
+# description rather than as a file.
+ESSENTIAL_DATA_PATTERNS = {
+    "*LICENSE*",
+    "*__init__.py",
+    # data files:
+    "*.npy",  # Numpy binary data files
+    "*.fbs",  # Flatbuffer binaries and the schemas describing them
+    "*.json",  # used for hole registry
+    "*.txt",  # Text files (timezone names, the dataset version stamp)
+}
+
+
+class Distribution(NamedTuple):
+    """One published distribution, and everything the checks below need about it.
+
+    Both the pattern sets and the file walk are per-distribution: ``packages/`` is
+    unwanted in the code distribution and is the whole of the data one, so no single
+    global set can describe both.
+    """
+
+    name: str
+    # where this distribution's files live in the checkout
+    source_root: Path
+    # the artefact types it publishes. The data distribution ships a wheel and no
+    # sdist: there is no build-from-source case for a pure-data py3-none-any wheel,
+    # and an sdist would double the ~63 MB each data release costs.
+    dist_types: tuple[str, ...]
+    # the ``uv build --package`` argument, or None for the root distribution
+    build_package: str | None
+    essential_patterns: frozenset[str]
+    unwanted_patterns: frozenset[str]
+    allowed_ignored_patterns: frozenset[str]
+    wheel_exception_patterns: frozenset[str]
+
+    @property
+    def cases(self) -> list[tuple["Distribution", str]]:
+        return [(self, dist_type) for dist_type in self.dist_types]
+
+
+CODE_DIST = Distribution(
+    name=ROOT_DISTRIBUTION_NAME,
+    source_root=PROJECT_ROOT,
+    dist_types=(SDIST_TYPE, WHEEL_TYPE),
+    build_package=None,
+    essential_patterns=frozenset(ESSENTIAL_CODE_PATTERNS),
+    unwanted_patterns=frozenset(UNWANTED_CODE_DIST_PATTERNS),
+    allowed_ignored_patterns=frozenset(ALLOWED_IGNORED_CODE_PATTERNS),
+    wheel_exception_patterns=frozenset(WHEEL_EXCEPTION_CODE_PATTERNS),
+)
+
+DATA_DIST = Distribution(
+    name=DATA_DISTRIBUTION_NAME,
+    source_root=DATA_PACKAGE_ROOT,
+    dist_types=(WHEEL_TYPE,),
+    build_package=DATA_DISTRIBUTION_NAME,
+    essential_patterns=frozenset(ESSENTIAL_DATA_PATTERNS),
+    unwanted_patterns=frozenset(UNWANTED_DATA_DIST_PATTERNS),
+    allowed_ignored_patterns=frozenset(ALLOWED_IGNORED_DATA_PATTERNS),
+    wheel_exception_patterns=frozenset(),
+)
+
+DISTRIBUTIONS = (CODE_DIST, DATA_DIST)
+DIST_CASES = [case for dist in DISTRIBUTIONS for case in dist.cases]
+DIST_CASE_IDS = [f"{dist.name}-{dist_type}" for dist, dist_type in DIST_CASES]
 
 
 def load_gitignore_patterns() -> set[str]:
@@ -275,62 +371,59 @@ def load_manifest_exclusions() -> tuple[ManifestExclusion, ...]:
 
 # any file not under version control should not be included in the distribution
 NON_VERSION_CONTROL_PATTERNS = load_gitignore_patterns()
-IGNORED_PATTERNS = UNWANTED_DIST_PATTERNS | NON_VERSION_CONTROL_PATTERNS
 MANIFEST_EXCLUSIONS = load_manifest_exclusions()
-# NOTE: some patterns are not under version control, but should be included in the distribution
-UNWANTED_DIST_PATTERNS_FINAL = IGNORED_PATTERNS - ALLOWED_IGNORED_PATTERNS
 
 
-def filter_ignore_patterns(paths: Iterator[Path]) -> Iterator[Path]:
+def ignored_patterns(dist: Distribution) -> set[str]:
+    """Every pattern naming a file that must not be in ``dist``."""
+    return set(dist.unwanted_patterns) | NON_VERSION_CONTROL_PATTERNS
+
+
+def unwanted_patterns_to_scan(dist: Distribution) -> set[str]:
+    """The patterns the built artefacts are actually scanned for.
+
+    NOTE: some patterns are not under version control, but should be included in the
+    distribution - those are bought out per distribution, which is how ``*.so`` is
+    legitimate in the code wheel and a failure in the data one.
     """
-    Filter out paths that match any pattern in IGNORE_PATTERNS.
-
-    Args:
-        paths: An iterator of Path objects to filter
-
-    Yields:
-        Path objects that don't match any ignore pattern
-
-    Examples:
-        # Get all files except those matching ignore patterns
-        all_files = iterate_files_by_pattern()
-        valid_files = list(filter_ignore_patterns(all_files))
-    """
-    return any_filter_paths(paths, IGNORED_PATTERNS, include_matches=False)
+    return ignored_patterns(dist) - set(dist.allowed_ignored_patterns)
 
 
-# One walk of the working tree, shared by the essential-file parametrisation and the
-# pattern check below. Walking a developer checkout means descending into .venv/,
-# .tox/ and the build artefacts, which is not cheap enough to repeat.
-ALL_PROJECT_FILES = tuple(file_path_iterator(PROJECT_ROOT, relative=True))
+# One walk per distribution source root, shared by the essential-file parametrisation
+# and the pattern checks below. Walking a developer checkout means descending into
+# .venv/, .tox/ and the build artefacts, which is not cheap enough to repeat.
+PROJECT_FILES: dict[str, tuple[Path, ...]] = {
+    dist.name: tuple(file_path_iterator(dist.source_root, relative=True))
+    for dist in DISTRIBUTIONS
+}
 
 
-def get_distributable_files() -> Iterator[Path]:
+def get_distributable_files(dist: Distribution) -> Iterator[Path]:
     """
     Get all files that should be included in the distribution.
 
-    This function filters out files matching IGNORE_PATTERNS.
+    This function filters out files matching the distribution's ignore patterns.
 
     Returns:
         Iterator of Path objects for files that should be included in the distribution
     """
-    # Filter out ignored files
-    return filter_ignore_patterns(iter(ALL_PROJECT_FILES))
+    return any_filter_paths(
+        iter(PROJECT_FILES[dist.name]), ignored_patterns(dist), include_matches=False
+    )
 
 
-def iter_expected_distribution_files() -> Iterator[Path]:
+def iter_expected_distribution_files(dist: Distribution) -> Iterator[Path]:
     """
     Get all essential source files that should be included in the distribution.
 
-    This function filters out files matching IGNORE_PATTERNS.
+    This function filters out files matching the distribution's ignore patterns.
 
     Returns:
         Iterator of Path objects for essential source files
     """
-    all_files = get_distributable_files()
-
-    # Filter out ignored files
-    return any_filter_paths(all_files, ESSENTIAL_SOURCE_PATTERNS, include_matches=True)
+    return any_filter_paths(
+        get_distributable_files(dist), dist.essential_patterns, include_matches=True
+    )
 
 
 def extract_archive(archive_path: Path) -> list[Path]:
@@ -391,19 +484,17 @@ def extract_wheel(wheel_path: Path) -> list[Path]:
 class DistributionFilesFixture:
     """A fixture class to manage the distribution files testing context.
 
-    This singleton class builds the distribution once and provides access
-    to the files for all tests, improving performance significantly.
+    One instance per (distribution, artefact type). Each builds its artefact once
+    and provides access to the files for all tests, improving performance
+    significantly.
     """
 
-    def __init__(self, dist_type="sdist"):
+    def __init__(self, dist: Distribution, dist_type: str = SDIST_TYPE):
         """Initialize the fixture with empty attributes."""
+        self.dist = dist
         self.dist_type = dist_type  # "sdist" or "wheel"
-        self.temp_dir = None
         self.archive_path = None
-        self.extract_dir = None
-        self.project_files = None
         self.archive_files = None
-        self.package_name = None
         self._initialized = False
 
     def initialize(self):
@@ -412,33 +503,41 @@ class DistributionFilesFixture:
             return
 
         # Build the distribution based on type
-        if self.dist_type == "sdist":
+        if self.dist_type == SDIST_TYPE:
             self.archive_path = build_sdist()
             self.archive_files = extract_archive(self.archive_path)
-        elif self.dist_type == "wheel":
-            self.archive_path = build_wheel()
+        elif self.dist_type == WHEEL_TYPE:
+            self.archive_path = build_wheel(package=self.dist.build_package)
             self.archive_files = extract_wheel(self.archive_path)
         else:
             raise ValueError(f"Unknown distribution type: {self.dist_type}")
 
         self._initialized = True
         print(
-            f"Built and extracted {self.dist_type} distribution with {len(self.archive_files)} files"
+            f"Built and extracted the {self.dist.name} {self.dist_type} "
+            f"with {len(self.archive_files)} files"
         )
 
 
 # Create singleton instances for the fixtures
-sdist_fixture = DistributionFilesFixture("sdist")
-wheel_fixture = DistributionFilesFixture("wheel")
+fixtures = {
+    (dist.name, dist_type): DistributionFilesFixture(dist, dist_type)
+    for dist, dist_type in DIST_CASES
+}
 
-fixtures = {SDIST_TYPE: sdist_fixture, WHEEL_TYPE: wheel_fixture}
+
+def built_files(dist: Distribution, dist_type: str) -> list[Path]:
+    """The files in ``dist``'s built ``dist_type`` artefact, building it if needed."""
+    fixture = fixtures[(dist.name, dist_type)]
+    fixture.initialize()
+    return fixture.archive_files
 
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
     "build_cmd",
     [BUILD_SDIST_CMD, BUILD_WHEEL_CMD],
-    ids=DIST_TYPES,
+    ids=[SDIST_TYPE, WHEEL_TYPE],
 )
 def test_build_commands_pin_the_running_interpreter(build_cmd):
     """Unpinned, ``uv build`` targets the newest interpreter on the machine.
@@ -467,7 +566,8 @@ def test_build_commands_pin_the_running_interpreter(build_cmd):
 
 
 @pytest.mark.unit
-def test_every_unwanted_pattern_matches_a_project_file():
+@pytest.mark.parametrize("dist", DISTRIBUTIONS, ids=[d.name for d in DISTRIBUTIONS])
+def test_every_unwanted_pattern_matches_a_project_file(dist: Distribution):
     """A pattern matching nothing here can never catch that thing being packaged.
 
     ``test_no_unwanted_files_in_distribution`` only ever asserts that *nothing*
@@ -477,19 +577,21 @@ def test_every_unwanted_pattern_matches_a_project_file():
     after the file became ``AGENTS.md``, and ``readthedocs.yaml`` against a file
     that has always been ``readthedocs.yml``.
 
-    Only the hand-written set is checked. The patterns read out of ``.gitignore``
-    legitimately name build artefacts and caches that need not exist in any given
-    checkout, so requiring them to match something would be flaky.
+    Only the hand-written set is checked, and only against its own distribution's
+    source tree. The patterns read out of ``.gitignore`` legitimately name build
+    artefacts and caches that need not exist in any given checkout, so requiring
+    them to match something would be flaky.
     """
     unmatched = sorted(
         pattern
-        for pattern in UNWANTED_DIST_PATTERNS - PATTERNS_WITHOUT_PROJECT_FILES
-        if not any(matches_pattern(path, pattern) for path in ALL_PROJECT_FILES)
+        for pattern in dist.unwanted_patterns - PATTERNS_WITHOUT_PROJECT_FILES
+        if not any(matches_pattern(path, pattern) for path in PROJECT_FILES[dist.name])
     )
     assert not unmatched, (
-        f"unwanted-file patterns matching nothing under {PROJECT_ROOT}: {unmatched}. "
-        "A pattern that matches no path cannot fail, so the files it names are not "
-        "guarded against being packaged - correct it, or drop it if the file is gone."
+        f"unwanted-file patterns matching nothing under {dist.source_root}: "
+        f"{unmatched}. A pattern that matches no path cannot fail, so the files it "
+        "names are not guarded against being packaged - correct it, or drop it if "
+        "the file is gone."
     )
 
 
@@ -497,7 +599,7 @@ def test_every_unwanted_pattern_matches_a_project_file():
 def test_every_manifest_exclusion_is_guarded():
     """A file kept out of the build by ``MANIFEST.in`` alone is kept out unverifiably.
 
-    ``MANIFEST.in`` and ``IGNORED_PATTERNS`` are two hand-written statements of the
+    ``MANIFEST.in`` and the ignored-pattern set are two hand-written statements of the
     same intent, and they have drifted before - which is why
     ``test_every_unwanted_pattern_matches_a_project_file`` exists. That covers one
     direction: a pattern naming nothing now fails. This is the other one. An
@@ -506,11 +608,15 @@ def test_every_manifest_exclusion_is_guarded():
     day that line is deleted or stops matching, the file ships and the suite stays
     green.
 
-    Note this asserts against the union, not against ``UNWANTED_DIST_PATTERNS``:
+    ``MANIFEST.in`` governs sdists, and the code distribution publishes the only one -
+    so this is asserted against that distribution alone rather than per distribution.
+
+    Note this asserts against the union, not against the hand-written set:
     several exclusions (``.claude/*``, ``__pycache__/``) are already covered by a
     ``.gitignore`` pattern, and demanding a hand-written duplicate of those would only
     give the two copies a new way to disagree.
     """
+    patterns = ignored_patterns(CODE_DIST)
     scanned = [
         exclusion
         for exclusion in MANIFEST_EXCLUSIONS
@@ -526,9 +632,9 @@ def test_every_manifest_exclusion_is_guarded():
         if (
             unmatched := [
                 path
-                for path in ALL_PROJECT_FILES
+                for path in PROJECT_FILES[CODE_DIST.name]
                 if exclusion.matches(path)
-                and not any(matches_pattern(path, p) for p in IGNORED_PATTERNS)
+                and not any(matches_pattern(path, p) for p in patterns)
             ]
         )
     }
@@ -536,7 +642,7 @@ def test_every_manifest_exclusion_is_guarded():
         f"{MANIFEST_PATH.name} excludes paths that no pattern in this module names "
         f"(up to 5 shown per directive): {unguarded}. Only the build keeps them out, "
         "so nothing would fail if that exclusion went away - add a pattern covering "
-        "them to UNWANTED_DIST_PATTERNS."
+        "them to UNWANTED_CODE_DIST_PATTERNS."
     )
 
 
@@ -556,57 +662,79 @@ def test_pattern_only_exclusions_stay_current():
         f"EXCLUSIONS_GUARDED_BY_PATTERN_ONLY exempts directives {MANIFEST_PATH.name} "
         f"no longer contains: {stale}. Drop the entries."
     )
+    patterns = ignored_patterns(CODE_DIST)
     unbacked = sorted(
         f"{line!r} -> {pattern!r}"
         for line, pattern in EXCLUSIONS_GUARDED_BY_PATTERN_ONLY.items()
-        if pattern not in IGNORED_PATTERNS
+        if pattern not in patterns
     )
     assert not unbacked, (
-        f"exemptions naming a pattern that is no longer in IGNORED_PATTERNS: "
+        f"exemptions naming a pattern that is no longer ignored: "
         f"{unbacked}. The exclusion is now stated in {MANIFEST_PATH.name} alone - "
         "restore the pattern, or drop the exemption so the path scan covers it."
     )
 
 
+# One case per (distribution, artefact, pattern/file), as before the split: an
+# aggregate assertion would name the distribution but not the entry that broke it.
+UNWANTED_CASES = [
+    (dist, dist_type, pattern)
+    for dist, dist_type in DIST_CASES
+    for pattern in sorted(unwanted_patterns_to_scan(dist))
+]
+UNWANTED_CASE_IDS = [
+    f"{dist.name}-{dist_type}-{pattern}" for dist, dist_type, pattern in UNWANTED_CASES
+]
+
+ESSENTIAL_CASES = [
+    (dist, dist_type, expected_file)
+    for dist, dist_type in DIST_CASES
+    for expected_file in iter_expected_distribution_files(dist)
+]
+ESSENTIAL_CASE_IDS = [
+    f"{dist.name}-{dist_type}-{expected_file}"
+    for dist, dist_type, expected_file in ESSENTIAL_CASES
+]
+
+
 @pytest.mark.integration
-@pytest.mark.parametrize("pattern", UNWANTED_DIST_PATTERNS_FINAL)
-@pytest.mark.parametrize("dist_type", DIST_TYPES)
+@pytest.mark.parametrize(
+    ("dist", "dist_type", "pattern"), UNWANTED_CASES, ids=UNWANTED_CASE_IDS
+)
 def test_no_unwanted_files_in_distribution(
-    pattern: str,
-    dist_type: str,
+    dist: Distribution, dist_type: str, pattern: str
 ):
     """Test that no unwanted files are included in the distribution."""
-
-    # Get all files in the distribution
-    fixture = fixtures[dist_type]
-    fixture.initialize()
-    dist_files = fixture.archive_files
+    dist_files = built_files(dist, dist_type)
 
     # Filter out files that match the ignore patterns
-    ignored_files = filter_paths(dist_files, pattern, include_matches=True)
+    ignored_files = filter_paths(iter(dist_files), pattern, include_matches=True)
 
     ignored_file_repr = [str(f) for f in ignored_files]
     nr_ignored_files = len(ignored_file_repr)
     assert nr_ignored_files == 0, (
-        f"Found {nr_ignored_files} unwanted files matching pattern '{pattern}' in {dist_type}: {', '.join(ignored_file_repr)}"
+        f"Found {nr_ignored_files} unwanted files matching pattern '{pattern}' in "
+        f"the {dist.name} {dist_type}: {', '.join(ignored_file_repr)}"
     )
 
 
 # parameterised pytest test case for testing that all essential source files are included in the distribution
 @pytest.mark.integration
-@pytest.mark.parametrize("expected_file", iter_expected_distribution_files())
-@pytest.mark.parametrize("dist_type", DIST_TYPES)
-def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
+@pytest.mark.parametrize(
+    ("dist", "dist_type", "expected_file"), ESSENTIAL_CASES, ids=ESSENTIAL_CASE_IDS
+)
+def test_essential_files_in_distribution(
+    dist: Distribution, dist_type: str, expected_file: Path
+):
     """Test that all essential source files are included in the distribution."""
     pattern = str(expected_file)
-    # Get all files in the distribution
-    fixture = fixtures[dist_type]
-    fixture.initialize()
-    dist_files = fixture.archive_files
+    dist_files = built_files(dist, dist_type)
 
     # NOTE: in wheels the files may be in a subdirectory, relax the pattern matching
     if dist_type == WHEEL_TYPE:
-        if any(matches_pattern(expected_file, p) for p in WHEEL_EXCEPTION_PATTERNS):
+        if any(
+            matches_pattern(expected_file, p) for p in dist.wheel_exception_patterns
+        ):
             # some files are ok to not exist in wheels
             print(f"Skipping {expected_file} in {dist_type} due to wheel exceptions")
             return
@@ -616,14 +744,72 @@ def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
         ]
     else:
         patterns = [pattern]
-    matched_files = any_filter_paths(dist_files, patterns, include_matches=True)
+    matched_files = any_filter_paths(iter(dist_files), patterns, include_matches=True)
     matched_file_repr = [str(f) for f in matched_files]
     nr_matched_files = len(matched_file_repr)
     assert nr_matched_files < 2, (
-        f"multiple files matched pattern '{pattern}' in {dist_type}: {', '.join(matched_file_repr)}"
+        f"multiple files matched pattern '{pattern}' in the {dist.name} "
+        f"{dist_type}: {', '.join(matched_file_repr)}"
     )
     assert nr_matched_files == 1, (
-        f"Essential file '{pattern}' not found in {dist_type}."
+        f"Essential file '{pattern}' not found in the {dist.name} {dist_type}."
+    )
+
+
+@pytest.mark.integration
+def test_no_distribution_carries_the_others_payload():
+    """The separation the split exists for, stated as something that can fail.
+
+    A layout convention is enforced by nothing; a wrongly-packaged file is. Every
+    assertion here corresponds to a way the split silently un-does itself: re-adding
+    ``**/*.npy`` to the root's ``package-data`` puts 63 MB back into every code
+    release, and any importable module in the data package turns a dataset update
+    into a code deployment.
+    """
+    code_files = {
+        dist_type: built_files(CODE_DIST, dist_type)
+        for dist_type in CODE_DIST.dist_types
+    }
+    data_files = built_files(DATA_DIST, WHEEL_TYPE)
+
+    for dist_type, files in code_files.items():
+        payload = sorted(
+            str(path)
+            for path in files
+            # scoped to the package directory: the sdist legitimately grafts
+            # tests/, whose benchmark fixtures are .npy and whose input is .json
+            if any(part == ROOT_DISTRIBUTION_NAME for part in path.parts)
+            and path.suffix in {".npy", ".json"}
+        )
+        assert not payload, (
+            f"the {CODE_DIST.name} {dist_type} carries boundary data payload: "
+            f"{payload}. It belongs in {DATA_DIST.name} - check the root's "
+            "[tool.setuptools.package-data] and MANIFEST.in."
+        )
+        packaged_workspace = sorted(
+            str(path) for path in files if path.parts[:1] == ("packages",)
+        )
+        assert not packaged_workspace, (
+            f"the {CODE_DIST.name} {dist_type} carries the other distribution's "
+            f"source tree: {packaged_workspace}"
+        )
+
+    compiled = sorted(
+        str(path) for path in data_files if path.suffix in {".so", ".c", ".h", ".pyd"}
+    )
+    assert not compiled, (
+        f"the {DATA_DIST.name} wheel carries compiled code: {compiled}. It ships data "
+        "only - the extension module belongs to the lookup layer."
+    )
+    importable = sorted(
+        str(path)
+        for path in data_files
+        if path.suffix == ".py" and path.name != "__init__.py"
+    )
+    assert not importable, (
+        f"the {DATA_DIST.name} wheel carries importable code beyond its __init__.py: "
+        f"{importable}. A reader shipped with the data would make a reader bug cost a "
+        "63 MB upload, and needs a version the data's own numbering has no room for."
     )
 
 
@@ -631,15 +817,16 @@ def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
 def test_the_packaged_data_version_stamp_is_an_essential_file():
     """The stamp must stay in the set the distribution checks above cover.
 
-    ``AbstractTimezoneFinder.data_version`` reads it out of the installed package,
-    so a build that drops it breaks a public property. It is covered today by the
-    ``*.txt`` entry in ``ESSENTIAL_SOURCE_PATTERNS`` rather than by name, which is
-    what this pins: narrow that pattern set and the sdist/wheel checks would stop
-    looking for the stamp without failing.
+    ``AbstractTimezoneFinder.data_version`` reads it out of the installed data
+    package, so a build that drops it breaks a public property of ``timezonefinder``
+    across the distribution boundary. It is covered by the ``*.txt`` entry in
+    ``ESSENTIAL_DATA_PATTERNS`` rather than by name, which is what this pins: narrow
+    that pattern set and the wheel check would stop looking for the stamp without
+    failing.
     """
-    stamp = DEFAULT_DATA_DIR.relative_to(PROJECT_ROOT) / DATA_VERSION_FILENAME
-    assert stamp in set(iter_expected_distribution_files()), (
+    stamp = SOURCE_DATA_DIR.relative_to(DATA_DIST.source_root) / DATA_VERSION_FILENAME
+    assert stamp in set(iter_expected_distribution_files(DATA_DIST)), (
         f"{stamp} is no longer among the files "
         f"test_essential_files_in_distribution checks for. Add a pattern matching "
-        f"it to ESSENTIAL_SOURCE_PATTERNS."
+        f"it to ESSENTIAL_DATA_PATTERNS."
     )

@@ -128,11 +128,13 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          new_version=$(uv version --short)
+          # the data distribution's version - a data update bumps that one and
+          # leaves `timezonefinder` alone
+          new_version=$(uv version --short --package timezonefinder-data)
           body=$(cat <<EOF
           Automated update to the timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) (previously packaged: \`$CURRENT\`).
 
-          The data was regenerated with \`update_data.sh\` (full dataset with oceans) and the version was bumped to \`$new_version\` including the changelog entry. The CI/CD pipeline of this PR validates the new data against all supported Python versions.
+          The data was regenerated with \`update_data.sh\` (full dataset with oceans). Merging this publishes \`timezonefinder-data $new_version\`; no \`timezonefinder\` release is involved. The CI/CD pipeline of this PR validates the new data against all supported Python versions.
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF

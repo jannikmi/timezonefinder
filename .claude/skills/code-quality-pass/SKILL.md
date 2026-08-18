@@ -140,7 +140,7 @@ know your boundary, so treat them as prohibitions here:
 
 - Behaviour changes, bug fixes, features, API additions or removals.
 - Regenerating timezone data, benchmark fixtures or FlatBuffers bindings; editing
-  `timezonefinder/data/` or `timezonefinder/flatbuf/generated/`.
+  `packages/timezonefinder-data/timezonefinder_data/data/` or `timezonefinder/flatbuf/generated/`.
 - Dependency, lockfile, Python-version or release-version changes.
 - Whole-file reformatting or "modernisation" for style alone — churn a reviewer cannot tie to a
   concrete defect.

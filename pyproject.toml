@@ -29,6 +29,14 @@ dependencies = [
     "h3>=4",
     "cffi<3,>=1.15.1",
     "flatbuffers>=25.2.10",
+    # the packaged boundary data, split out so that a data update needs no code
+    # release. The floor names the oldest dataset this code reads; the
+    # ceiling is the *format* generation (timezonefinder.configs.DATA_FORMAT_VERSION,
+    # the data version's major), so every future release of the current format keeps
+    # satisfying it while a format change becomes a resolver error instead of a
+    # failure at the first lookup. tests/test_data_version.py holds the two numbers
+    # to the constant.
+    "timezonefinder-data>=1.2026.3,<2",
 ]
 
 [project.urls]
@@ -102,6 +110,16 @@ pytz = [
     "pytz>=2022.7.1"
 ]
 
+# One repository, two distributions: `timezonefinder` (this project) and
+# `timezonefinder-data` (the boundary data). The source declaration keeps a local
+# checkout resolving to the workspace member rather than to PyPI, so the two are
+# developed together while being released independently.
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+timezonefinder-data = { workspace = true }
+
 [build-system]
 requires = ["setuptools>=61", "cffi"]
 # Use setuptools build backend to build CFFI extensions via setup.py
@@ -120,11 +138,13 @@ packages = [
     "timezonefinder.flatbuf.schemas",
 ]
 
+# No data payload here any more - it ships in `timezonefinder-data`. What is left
+# under `timezonefinder/` is the flatbuffers schemas and the C extension sources;
+# tests/test_package_contents.py fails if a `.npy`/`.json` file reappears in this
+# distribution. DATA_LICENSE moved with the database it covers, so there is no
+# `[tool.setuptools.data-files]` entry left to declare.
 [tool.setuptools.package-data]
-timezonefinder = ["**/*.npy", "**/*.fbs", "**/*.txt", "**/*.json", "**/*.c", "**/*.h", ]
-
-[tool.setuptools.data-files]
-"." = ["DATA_LICENSE"]
+timezonefinder = ["**/*.fbs", "**/*.c", "**/*.h", ]
 
 [tool.ruff]
 target-version = "py311"

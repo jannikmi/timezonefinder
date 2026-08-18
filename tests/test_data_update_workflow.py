@@ -65,15 +65,14 @@ def test_nothing_acts_on_a_pr_that_was_not_resolved() -> None:
     """A run with no update PR must stay green and touch nothing.
 
     ``workflow_run`` re-fires whenever build.yml is re-run, including on an
-    update PR that was merged long ago. Every step that acts, and the guard
-    that can fail the job, are conditioned on a PR having been found.
+    update PR that was merged long ago. Every step that acts is conditioned on a
+    PR having been found.
     """
     acting = [
         step
         for step in _all_steps()
         if "gh pr merge" in str(step.get("run", ""))
         or step.get("uses") == NOTIFY_ACTION_REF
-        or step.get("name") == "Check unreleased section"
     ]
     assert acting
 
@@ -82,25 +81,20 @@ def test_nothing_acts_on_a_pr_that_was_not_resolved() -> None:
 
 
 @pytest.mark.unit
-def test_the_guard_runs_before_the_merge_and_can_stop_it() -> None:
-    """The point of the workflow: pending work blocks the release.
+def test_publishing_keys_off_the_resolved_merge_commit() -> None:
+    """The tag names the merge that happened, or nothing is tagged at all.
 
-    Ordering is the whole invariant - a guard after the merge guards nothing -
-    and it must fail the job rather than be swallowed, or a blocked release
-    reports success.
+    Every publishing step is conditioned on the merge having reported a commit, so
+    none of them can run against an empty ref when the merge failed or never
+    happened - which would tag whatever master happened to be, publishing data the
+    run never validated. The merge step in turn compares its checkout against the
+    remote, so the checkout has to precede it.
     """
     steps = _jobs()["merge_and_release"]["steps"]
     names = [step.get("name", "") for step in steps]
-    guard = steps[names.index("Check unreleased section")]
 
-    assert names.index("Check out current master") < names.index(
-        "Check unreleased section"
-    )
-    assert names.index("Check unreleased section") < names.index("Merge the update PR")
-    assert "continue-on-error" not in guard
+    assert names.index("Check out current master") < names.index("Merge the update PR")
 
-    # publishing keys off the resolved merge commit, so it cannot run against
-    # an empty ref when the merge failed or never happened
     publishing = [
         step
         for step in steps
@@ -113,6 +107,27 @@ def test_the_guard_runs_before_the_merge_and_can_stop_it() -> None:
     assert publishing
     for step in publishing:
         assert step["if"] == "steps.merge.outputs.merge_sha != ''"
+
+
+@pytest.mark.unit
+def test_the_data_tag_is_derived_from_the_data_package_alone() -> None:
+    """A bare version tag would publish `timezonefinder`, not the data.
+
+    The two streams share a branch and differ only in the tag namespace,
+    so reading the *root* version here - which is what this step used to do, when a
+    data update was a patch release of the code - would push a code release tag for a
+    commit that changed no code. build.yml would then build and publish
+    `timezonefinder` from it.
+    """
+    steps = _jobs()["merge_and_release"]["steps"]
+    tagging = next(step for step in steps if step.get("name") == "Tag the release")
+    script = str(tagging["run"])
+
+    assert "uv version --short --package timezonefinder-data" in script, (
+        "the tag must name the data distribution's version; a bare `uv version "
+        "--short` reads the root's and tags a code release"
+    )
+    assert "data-v" in script, "the pushed tag must live in the data namespace"
 
 
 @pytest.mark.unit
@@ -141,9 +156,9 @@ def test_nothing_can_fail_after_the_last_notice() -> None:
 def test_each_notice_cause_deduplicates_on_its_own_marker() -> None:
     """One shared marker meant the first notice silenced every later one.
 
-    Fix a failing CI run, re-run it, and the guard then reports pending work -
-    a notice the earlier CI-failure comment suppressed, leaving a red workflow
-    as the only signal. Dedup also depends on ``bot-login`` naming whoever
+    Fix a failing CI run, re-run it, and the merge then fails on a conflict - a
+    notice the earlier CI-failure comment would suppress, leaving a red workflow as
+    the only signal. Dedup also depends on ``bot-login`` naming whoever
     ``token`` authenticates as; ``secrets.GITHUB_TOKEN`` posts as
     github-actions[bot] and the app token this workflow also holds does not.
     """

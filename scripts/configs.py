@@ -6,6 +6,7 @@ from numpy.typing import NDArray
 import numpy as np
 
 from timezonefinder.configs import (
+    DATA_FORMAT_VERSION,
     DEFAULT_ZONE_ID_DTYPE,
     UNKNOWN_DATA_VERSION,
     DEFAULT_ZONE_ID_DTYPE_NAME,
@@ -33,8 +34,28 @@ DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
 # The package metadata. Read by tests that hold a second statement of something it
 # declares to it - the supported Python versions, and the version the installed
-# distribution reports as ``timezonefinder.__version__``.
+# distribution reports as ``timezonefinder.__version__``. Under a workspace "the"
+# pyproject is no longer unambiguous, hence DATA_PYPROJECT_FILE below.
 PYPROJECT_FILE = PROJECT_ROOT / "pyproject.toml"
+
+# The second distribution in this workspace: the boundary data.
+# The name is what pip resolves and what `uv build --package` selects, so the tests
+# that build it and the test holding the root's dependency bound share this one copy.
+DATA_DISTRIBUTION_NAME = "timezonefinder-data"
+DATA_PACKAGE_ROOT = PROJECT_ROOT / "packages" / DATA_DISTRIBUTION_NAME
+DATA_PYPROJECT_FILE = DATA_PACKAGE_ROOT / "pyproject.toml"
+# Where a data release is recorded - this distribution's PyPI long description, and
+# the only place a data update writes release notes. The root CHANGELOG.rst describes
+# `timezonefinder`, so that the two release streams cannot block each other.
+DATA_RELEASES_FILE = DATA_PACKAGE_ROOT / "README.md"
+
+# Where the generators write, and the only correct target for a regeneration.
+# Deliberately NOT ``timezonefinder.configs.DEFAULT_DATA_DIR``: that one answers
+# "where does the *installed* data package live", which under a non-editable install
+# is inside site-packages - so a converter defaulting to it would rewrite the
+# installed wheel instead of the checkout. `make parse` passes no paths at all, which
+# makes the difference load-bearing rather than theoretical.
+SOURCE_DATA_DIR = DATA_PACKAGE_ROOT / "timezonefinder_data" / "data"
 
 
 def read_data_version() -> str:
@@ -104,6 +125,42 @@ def resolve_data_version(input_path: Path | str, explicit: str | None = None) ->
         )
 
     return UNKNOWN_DATA_VERSION
+
+
+def data_distribution_version(
+    data_tag: str, format_version: int = DATA_FORMAT_VERSION
+) -> str:
+    """The ``timezonefinder-data`` version built from upstream release ``data_tag``.
+
+    ``2026c`` at format version 1 becomes ``1.2026.3``: the format generation, the
+    upstream year, and the release letter as a number. Written by ``update_data.sh``
+    into the data package's ``pyproject.toml``.
+
+    The letter suffix is **bijective base-26** (``a``=1 ... ``z``=26, ``aa``=27), not a
+    single-character lookup: :data:`DATA_VERSION_TAG_PATTERN` admits ``[a-z]+`` and
+    check_data_updates.yml accepts the same shape from upstream, so a two-letter
+    release would otherwise crash here or - worse - collide with a one-letter one.
+    Bijective base-26 is what keeps PEP 440 ordering identical to release ordering
+    within a generation, which is what makes the ``>=`` floor mean what it says.
+
+    Across generations the format dominates (``1.2026.26 < 2.2026.5``), so the version
+    does not sort by data recency once a format bump has happened. That is the
+    ordering the ``<N+1>`` ceiling needs; the data package's README lists both numbers
+    for human readers.
+
+    :raises ValueError: if ``data_tag`` is not a timezone-boundary-builder release tag.
+    """
+    if not DATA_VERSION_TAG_PATTERN.fullmatch(data_tag):
+        raise ValueError(
+            f"{data_tag!r} is not a timezone-boundary-builder release tag "
+            "(four digits and one or more lowercase letters, e.g. '2026c'), so no "
+            "data distribution version follows from it"
+        )
+    year, letters = data_tag[:4], data_tag[4:]
+    letter_value = 0
+    for char in letters:
+        letter_value = letter_value * 26 + (ord(char) - ord("a") + 1)
+    return f"{format_version}.{year}.{letter_value}"
 
 
 DEBUG = False

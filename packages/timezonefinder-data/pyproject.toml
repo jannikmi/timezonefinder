@@ -1,0 +1,47 @@
+[project]
+name = "timezonefinder-data"
+# <format>.<year>.<letter>: the timezone-boundary-builder release this was built
+# from, prefixed by timezonefinder.configs.DATA_FORMAT_VERSION. The major is the
+# binary format generation, which is what lets `timezonefinder` bound the data it
+# can read (`timezonefinder-data>=...,<N+1`) without also capping the data axis.
+# Written by update_data.sh; tests/test_data_version.py holds it to the derivation.
+version = "1.2026.3"
+description = "the packaged timezone boundary data for the timezonefinder package"
+authors = [{name = "jannikmi", email = "github@michelfe.it"}]
+# Replace with license="ODbL-1.0" with setuptools>=71
+license = {file="DATA_LICENSE"}
+readme = "README.md"
+keywords = ["timezone", "coordinates", "latitude", "longitude", "location", "offline", "polygon"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Localization",
+]
+# mirrors the root distribution's floor: this package is only ever imported by it
+requires-python = ">=3.11,<4"
+# none on purpose - this distribution is data plus the one line that locates it
+dependencies = []
+
+[project.urls]
+homepage = "https://timezonefinder.michelfe.it/gui"
+repository = "https://github.com/jannikmi/timezonefinder"
+documentation = "https://timezonefinder.readthedocs.io/en/latest/"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["timezonefinder_data"]
+# setuptools' default license-files globs only match LICEN[CS]E*, so without this the
+# ODbL text would land in the METADATA header and the file itself would ship nowhere -
+# and a share-alike licence has to travel with the database it covers. Named here
+# rather than under [project] because that spelling needs setuptools>=77, above this
+# package's build requirement.
+license-files = ["DATA_LICENSE"]
+
+[tool.setuptools.package-data]
+timezonefinder_data = ["data/**/*.npy", "data/**/*.fbs", "data/**/*.txt", "data/**/*.json"]

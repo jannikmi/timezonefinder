@@ -241,7 +241,7 @@ here because the alternative is losing them; each needs the maintainer's call, n
   turning the three signatures into `(accumulator, <the thing being parsed>)`. Size: ~120 lines
   touched, no logic moved.
 - **Why it is not a straight refactor:** this is the data converter, and the only thing that proves
-  it neutral is regenerating the binaries and confirming `git status --short timezonefinder/data`
+  it neutral is regenerating the binaries and confirming `git status --short packages/timezonefinder-data/timezonefinder_data/data`
   is empty — which needs a timezone-boundary-builder download (`update_data.sh`), not just a test
   run. Worth doing, but the verification is the expensive part, so it should be its own pass.
 - **Status:** open
@@ -367,7 +367,7 @@ pass had read. Nothing in it is wrong; the two below are readability.
 class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave
 in exploratory code.
 
-`timezonefinder/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited
+`packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited
 directly; findings there belong against the generator or the schema instead.
 
 **Structural work belongs in the issue tracker, not here.** Issue #506 is the roadmap: it ranks the

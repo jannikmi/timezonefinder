@@ -2,7 +2,7 @@ name: benchmark-comment
 
 # Posts the benchmark comparison for a pull request.
 #
-# Why this is a separate workflow (issue #150's comments flag exactly this):
+# Why this is a separate workflow:
 # a PR from a fork gets a read-only GITHUB_TOKEN and no secrets, so the
 # measuring job in benchmark.yml cannot comment - and it must not fail because
 # of that. So benchmark.yml only measures and uploads artifacts (identical

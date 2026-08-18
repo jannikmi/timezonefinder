@@ -1,6 +1,6 @@
 name: benchmark
 
-# Continuous benchmarking (issue #150). Deliberately kept separate from
+# Continuous benchmarking. Deliberately kept separate from
 # build.yml: benchmarking must never be entangled with the release/publish
 # pipeline, in either direction.
 #
