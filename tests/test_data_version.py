@@ -7,10 +7,20 @@ timezone-boundary-builder releases and written by update_data.sh on data updates
 import re
 
 import timezonefinder
-from scripts.configs import DATA_REPORT_FILE, DATA_VERSION_FILE, read_data_version
+from scripts.configs import (
+    DATA_REPORT_FILE,
+    DATA_VERSION_FILE,
+    DEFAULT_INPUT_PATH,
+    read_data_version,
+    resolve_data_version,
+)
 from scripts.reporting import DATA_VERSION_LABEL
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import DATA_VERSION_FILENAME, DEFAULT_DATA_DIR
+from timezonefinder.configs import (
+    DATA_VERSION_FILENAME,
+    DEFAULT_DATA_DIR,
+    UNKNOWN_DATA_VERSION,
+)
 
 # release tags of timezone-boundary-builder, e.g. "2026c"
 DATA_VERSION_PATTERN = re.compile(r"\d{4}[a-z]+")
@@ -84,3 +94,29 @@ def test_package_exposes_version():
         f"timezonefinder.__version__ is {timezonefinder.__version__!r}; the "
         "package must be installed for importlib.metadata to resolve its version."
     )
+
+
+def test_the_packaged_input_is_stamped_with_the_repo_data_version():
+    # the one input the repo-root DATA_VERSION does describe
+    assert resolve_data_version(DEFAULT_INPUT_PATH) == read_data_version()
+
+
+def test_the_packaged_input_is_recognised_through_an_unresolved_path():
+    # update_data.sh and `make parse` both pass it as ./tmp/combined-with-oceans.json,
+    # so the comparison has to normalise rather than match the path literally
+    unresolved = DEFAULT_INPUT_PATH.parent / ".." / "tmp" / DEFAULT_INPUT_PATH.name
+    assert resolve_data_version(unresolved) == read_data_version()
+
+
+def test_custom_input_is_not_stamped_with_the_repo_data_version():
+    # the failure this guards against is silent: stamping the repository's release
+    # onto someone else's GeoJSON makes TimezoneFinder.data_version answer with a
+    # release the data never came from, and nothing anywhere would notice
+    stamped = resolve_data_version(DATA_VERSION_FILE.parent / "tests" / "input.json")
+    assert stamped == UNKNOWN_DATA_VERSION
+
+
+def test_an_explicitly_named_release_wins():
+    # what update_data.sh passes: the tag recorded at download time, which is the
+    # only thing that knows the release before DATA_VERSION is updated
+    assert resolve_data_version(DEFAULT_INPUT_PATH, "2099z") == "2099z"

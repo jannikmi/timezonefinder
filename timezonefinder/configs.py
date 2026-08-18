@@ -30,6 +30,7 @@ __all__ = [
     "MAX_LNG_VAL_INT",
     "MAX_LAT_VAL_INT",
     "DATA_VERSION_FILENAME",
+    "UNKNOWN_DATA_VERSION",
     # Type aliases
     "IntegerLike",
     "ShortcutMapping",
@@ -56,6 +57,12 @@ DEFAULT_DATA_DIR = PACKAGE_DIR / "data"
 # .data_version) and the build side (``scripts/file_converter.py``) share one
 # filename - a second copy would silently stop tracking this one.
 DATA_VERSION_FILENAME = "data_version.txt"
+
+# What that stamp reads when the data was compiled from an input whose upstream
+# release nobody stated (``scripts/file_converter.py`` without ``--data-version``, on
+# anything but the packaged input). Naming a release the data may not come from would
+# be worse than admitting the gap: the value exists to be trusted.
+UNKNOWN_DATA_VERSION = "unknown"
 
 
 # COORDINATE SCALING AND PRECISION

@@ -148,8 +148,12 @@ class AbstractTimezoneFinder(ABC):
         reverse-engineering it from the package version - which also changes
         for unrelated code fixes and, under the automated data-update
         pipeline, changes together with the data in a way callers cannot
-        distinguish. The value mirrors the repo-root ``DATA_VERSION`` the data
-        was built from.
+        distinguish.
+
+        For the packaged data this is the release ``update_data.sh`` downloaded.
+        A data directory compiled from your own GeoJSON reads ``"unknown"``
+        unless ``scripts/file_converter.py --data-version`` named the release it
+        came from, since nothing about the input states it.
         """
         version_path = self.data_location / DATA_VERSION_FILENAME
         return version_path.read_text(encoding="utf-8").strip()

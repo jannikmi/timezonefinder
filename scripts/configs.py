@@ -6,6 +6,7 @@ import numpy as np
 
 from timezonefinder.configs import (
     DEFAULT_ZONE_ID_DTYPE,
+    UNKNOWN_DATA_VERSION,
     DEFAULT_ZONE_ID_DTYPE_NAME,
     SHORTCUT_H3_RES,
     available_zone_id_dtype_names,
@@ -35,6 +36,30 @@ DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 def read_data_version() -> str:
     """The release tag of the boundary data currently packaged, e.g. ``"2026c"``."""
     return DATA_VERSION_FILE.read_text(encoding="utf-8").strip()
+
+
+def resolve_data_version(input_path: Path | str, explicit: str | None = None) -> str:
+    """The boundary data release a parse of ``input_path`` may claim to come from.
+
+    Only the caller knows which upstream release a GeoJSON was downloaded from, so an
+    ``explicit`` tag wins - ``update_data.sh`` passes the one it recorded at download
+    time, which is also why the stamp is correct before ``DATA_VERSION`` is updated.
+
+    Without it, :data:`DATA_VERSION_FILE` describes exactly one input - the packaged
+    :data:`DEFAULT_INPUT_PATH`, which *is* the release it names - and nothing else.
+    Stamping it onto an arbitrary GeoJSON would make ``TimezoneFinder.data_version``
+    answer with a release the data did not come from, silently and with nothing to
+    catch it, so an unattributed parse is stamped
+    :data:`~timezonefinder.configs.UNKNOWN_DATA_VERSION` instead.
+
+    The comparison resolves both sides: ``update_data.sh`` and ``make parse`` pass the
+    default input as the relative ``./tmp/combined-with-oceans.json``.
+    """
+    if explicit:
+        return explicit
+    if Path(input_path).resolve() == DEFAULT_INPUT_PATH.resolve():
+        return read_data_version()
+    return UNKNOWN_DATA_VERSION
 
 
 DEBUG = False
