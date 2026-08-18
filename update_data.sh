@@ -98,6 +98,11 @@ fi
 # (checked weekly against upstream by .github/workflows/check_data_updates.yml)
 if [ -s "$DOWNLOADED_TAG_PATH" ]; then
     cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
+    # also re-stamp the packaged data_version.txt that file_converter.py wrote
+    # from the *previous* DATA_VERSION during parse above - the runtime side
+    # (AbstractTimezoneFinder.data_version) reads this copy, not the repo-root
+    # file, so the two must move together on every data update.
+    cp "$DOWNLOADED_TAG_PATH" timezonefinder/data/data_version.txt
     echo "DATA_VERSION set to $(cat DATA_VERSION)"
 else
     echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"

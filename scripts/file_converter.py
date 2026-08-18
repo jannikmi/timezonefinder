@@ -54,6 +54,7 @@ from scripts.configs import (
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
     BoundaryArray,
+    read_data_version,
     resolve_zone_id_dtype,
 )
 from scripts.data_integrity import validate_hole_references
@@ -63,7 +64,7 @@ from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import DEFAULT_DATA_DIR, DATA_VERSION_FILENAME
 from timezonefinder.np_binary_helpers import (
     get_poly_ref_path,
     get_xmax_path,
@@ -244,6 +245,16 @@ def compile_data_files(data: TimezoneData, output_path: Path) -> None:
 
     # Write binary files
     write_binary_files(data, output_path)
+
+    # Stamp the dataset version into the data directory so an installed
+    # timezonefinder can state which boundary data release it answers from
+    # (AbstractTimezoneFinder.data_version). Mirrors the repo-root DATA_VERSION
+    # this parse was built from; update_data.sh re-stamps both together after a
+    # successful upstream release, and a standalone `make parse` against the
+    # committed DATA_VERSION leaves the two in agreement.
+    (output_path / DATA_VERSION_FILENAME).write_text(
+        f"{read_data_version()}\n", encoding="utf-8"
+    )
 
 
 @time_execution
