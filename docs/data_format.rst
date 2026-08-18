@@ -39,7 +39,7 @@ The processing pipeline for this data involves:
 3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
-The script ``update_data.sh`` automates this process. It also records the release tag in the ``DATA_VERSION`` file and regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
+The script ``update_data.sh`` automates this process. It also records the release tag - in the repository's ``DATA_VERSION`` file, and in the packaged ``data_version.txt`` below, which it hands to the converter so the compiled data states the release it came from - and regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
 
 Alternative Dataset Options
 ============================
@@ -117,6 +117,10 @@ Other Files
 -----------
 
 * ``timezone_names.txt``: List of all timezone names
+* ``data_version.txt``: the timezone-boundary-builder release this data was compiled from,
+  as ``TimezoneFinder.data_version`` reports it. Compiling your own data writes
+  ``unknown`` here unless ``file_converter.py --data-version`` names the release the
+  input came from
 
 Holes as Boundary References
 ============================
