@@ -102,7 +102,7 @@ def build_collection(
 @pytest.mark.unit
 def test_written_file_carries_layout_markers(tmp_path):
     """A file this version writes is one this version accepts."""
-    output_file = tmp_path / "coordinates.fbs"
+    output_file = tmp_path / "coordinates.bin"
     write_polygon_collection_flatbuffer(output_file, POLYGONS)
     with open(output_file, "rb") as f:
         buffer = f.read()
@@ -120,7 +120,7 @@ def test_pre_guard_buffer_is_rejected(tmp_path):
     # would parse cleanly and return wrong coordinates without the guard
     assert PolygonCollection.GetRootAs(buffer, 0).LayoutVersion() == 0
 
-    path = tmp_path / "coordinates.fbs"
+    path = tmp_path / "coordinates.bin"
     with pytest.raises(ValueError) as excinfo:
         get_polygon_collection(buffer, path)
 

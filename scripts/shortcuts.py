@@ -331,5 +331,5 @@ def compile_shortcuts(
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
     # This will generate the hybrid shortcuts binary file:
-    # hybrid_shortcuts_uint8.fbs - optimized format (hex_id -> zone_id OR [polygon_ids])
+    # hybrid_shortcuts_uint8.bin - optimized format (hex_id -> zone_id OR [polygon_ids])
     compile_shortcuts(output_path=SOURCE_DATA_DIR, data=data)

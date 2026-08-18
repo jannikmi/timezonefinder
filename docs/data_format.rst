@@ -75,8 +75,8 @@ requires bumping ``DATA_FORMAT_VERSION`` too.
 
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
-1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
-2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.fbs`` or ``hybrid_shortcuts_uint16.fbs``) that stores either direct zone IDs or polygon lists depending on timezone complexity
+1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
+2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.bin`` or ``hybrid_shortcuts_uint16.bin``) that stores either direct zone IDs or polygon lists depending on timezone complexity
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
@@ -102,7 +102,7 @@ The library creates and uses the following files:
 Polygon Data
 ------------
 
-* ``coordinates.fbs``: FlatBuffer binary file containing all polygon coordinates
+* ``coordinates.bin``: FlatBuffer binary file containing all polygon coordinates
 * ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
   unsigned integers (``uint16`` by default, ``uint8`` for datasets with less than 256 timezones); pass
   ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
@@ -123,7 +123,7 @@ Hole Data
 Spatial Indexing
 ----------------
 
-* ``hybrid_shortcuts_uint8.fbs`` (or ``hybrid_shortcuts_uint16.fbs``): FlatBuffer binary file containing the hybrid spatial index that maps H3 hexagon IDs to either:
+* ``hybrid_shortcuts_uint8.bin`` (or ``hybrid_shortcuts_uint16.bin``): FlatBuffer binary file containing the hybrid spatial index that maps H3 hexagon IDs to either:
 
    - Direct zone IDs (when all polygons in a hexagon belong to the same timezone)
    - Arrays of polygon IDs that intersect with each hexagon (when multiple timezones are present)
@@ -136,10 +136,16 @@ Other Files
 * ``schemas/*.fbs``: the FlatBuffers schema definitions describing the binaries in this
   directory, copied from ``timezonefinder/flatbuf/schemas/`` when the data is compiled.
   A data directory that carries the definition of its own format can be read back
-  without the package that wrote it. They live in a subdirectory because ``.fbs`` in the
-  data root already means a serialised buffer, not a schema. Generated, never
-  hand-edited: ``scripts/data_integrity.validate_shipped_schemas`` holds the copy to the
-  original both in the converter and over the committed data
+  without the package that wrote it. Generated, never hand-edited:
+  ``scripts/data_integrity.validate_shipped_schemas`` holds the copy to the original
+  both in the converter and over the committed data
+
+.. note::
+
+    The two extensions are not interchangeable. ``.fbs`` is the FlatBuffers *schema*
+    extension and is used here only for schema definitions; the serialised buffers are
+    ``.bin``, and each says what it is through the file identifier in its first bytes
+    rather than through its name.
 * ``timezone_names.txt``: List of all timezone names
 * ``data_version.txt``: the timezone-boundary-builder release this data was compiled
   from, as ``TimezoneFinder.data_version`` reports it. Taken from the input's filename
@@ -164,9 +170,9 @@ the discriminant, so no separate table and no ambiguous sentinel value is needed
    * - value
      - meaning
    * - ``v >= 0``
-     - the hole ring *is* boundary polygon ``v``; read it from ``boundaries/coordinates.fbs``
+     - the hole ring *is* boundary polygon ``v``; read it from ``boundaries/coordinates.bin``
    * - ``v < 0``
-     - the ring is stored inline, at index ``-(v + 1)`` of ``holes/coordinates.fbs``
+     - the ring is stored inline, at index ``-(v + 1)`` of ``holes/coordinates.bin``
 
 Both index spaces are dense and start at zero, which is why the inline case is offset by
 one: without it, inline ring ``0`` would encode as ``-0 == 0`` and collide with boundary
@@ -218,9 +224,9 @@ The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
 Every FlatBuffers file carries a file identifier and a ``layout_version`` field, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
 
-``coordinates.fbs`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_).
+``coordinates.bin`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_).
 
-The hybrid shortcut files use a *different identifier per zone id width* - ``TZS1`` for ``hybrid_shortcuts_uint8.fbs``, ``TZS2`` for ``hybrid_shortcuts_uint16.fbs``. That distinction is the point: the two schemas differ only in the width of ``UniqueZone.zone_id`` (``ubyte`` vs ``ushort``), so either width parses cleanly under the other schema and hands back wrong zone ids. The width is therefore read from the identifier inside the buffer rather than from the file name, which a rename or a mispaired copy can make lie.
+The hybrid shortcut files use a *different identifier per zone id width* - ``TZS1`` for ``hybrid_shortcuts_uint8.bin``, ``TZS2`` for ``hybrid_shortcuts_uint16.bin``. That distinction is the point: the two schemas differ only in the width of ``UniqueZone.zone_id`` (``ubyte`` vs ``ushort``), so either width parses cleanly under the other schema and hands back wrong zone ids. The width is therefore read from the identifier inside the buffer rather than from the file name, which a rename or a mispaired copy can make lie.
 
 ``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
