@@ -5,6 +5,9 @@ timezone-boundary-builder releases and written by update_data.sh on data updates
 """
 
 import re
+import shutil
+
+import pytest
 
 import timezonefinder
 from scripts.configs import (
@@ -120,3 +123,15 @@ def test_an_explicitly_named_release_wins():
     # what update_data.sh passes: the tag recorded at download time, which is the
     # only thing that knows the release before DATA_VERSION is updated
     assert resolve_data_version(DEFAULT_INPUT_PATH, "2099z") == "2099z"
+
+
+def test_a_data_directory_without_a_stamp_says_how_to_fix_it(tmp_path):
+    # a data directory compiled before the stamp existed loads and answers lookups
+    # as it always did, so the one thing that fails has to say why on its own
+    data_dir = tmp_path / "data"
+    shutil.copytree(DEFAULT_DATA_DIR, data_dir)
+    (data_dir / DATA_VERSION_FILENAME).unlink()
+
+    with TimezoneFinder(bin_file_location=data_dir) as tf:
+        with pytest.raises(FileNotFoundError, match="no dataset version stamp"):
+            tf.data_version

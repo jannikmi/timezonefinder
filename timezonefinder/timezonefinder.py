@@ -154,9 +154,22 @@ class AbstractTimezoneFinder(ABC):
         A data directory compiled from your own GeoJSON reads ``"unknown"``
         unless ``scripts/file_converter.py --data-version`` named the release it
         came from, since nothing about the input states it.
+
+        :raises FileNotFoundError: if the data directory carries no stamp, which
+            a directory compiled before this file existed does not.
         """
         version_path = self.data_location / DATA_VERSION_FILENAME
-        return version_path.read_text(encoding="utf-8").strip()
+        try:
+            return version_path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError as exc:
+            # every other file of a pre-stamp data directory still loads, so the
+            # bare OS error arrives with no hint that regenerating is the fix
+            raise FileNotFoundError(
+                f"no dataset version stamp at {version_path}. This data directory "
+                "was compiled before the stamp existed - recompile it with "
+                "`scripts/file_converter.py --data-version <timezone-boundary-builder "
+                "release>` to state which boundary data it holds."
+            ) from exc
 
     @property
     def nr_of_zones(self) -> int:
