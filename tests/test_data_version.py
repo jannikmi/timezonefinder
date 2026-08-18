@@ -14,6 +14,7 @@ from scripts.configs import (
     DATA_REPORT_FILE,
     DATA_VERSION_FILE,
     DEFAULT_INPUT_PATH,
+    PROJECT_ROOT,
     read_data_version,
     resolve_data_version,
 )
@@ -69,9 +70,11 @@ def test_packaged_data_version_file_matches_repo_root():
     )
     assert packaged == read_data_version(), (
         f"packaged data version stamp ({packaged!r}) disagrees with the "
-        f"repo-root DATA_VERSION ({read_data_version()!r}). Regenerate the "
-        "packaged data with `uv run python -m scripts.file_converter` so the "
-        "two stay in sync."
+        f"repo-root DATA_VERSION ({read_data_version()!r}). If the packaged "
+        "binaries are the ones DATA_VERSION names, copy the tag across:\n"
+        f"    cp {DATA_VERSION_FILE.name} {DEFAULT_DATA_DIR.relative_to(PROJECT_ROOT)}/{DATA_VERSION_FILENAME}\n"
+        "Only regenerate the data (`update_data.sh`) if they are not - that "
+        "downloads the boundary release and takes hours."
     )
 
 
