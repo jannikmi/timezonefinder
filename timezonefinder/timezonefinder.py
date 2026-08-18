@@ -31,6 +31,7 @@ from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     SHORTCUT_H3_RES,
+    DATA_VERSION_FILENAME,
     CoordLists,
     CoordPairs,
     IntegerLike,
@@ -136,6 +137,22 @@ class AbstractTimezoneFinder(ABC):
         # NOTE: this has also been added for the last zone
         first_boundary_id_next = zone_positions[zone_id + 1]
         yield from range(first_boundary_id_zone, first_boundary_id_next)
+
+    @property
+    def data_version(self) -> str:
+        """The timezone-boundary-builder release this finder answers from.
+
+        Reads the stamp ``scripts/file_converter.py`` wrote into the data
+        directory at build time (``data_version.txt``), so an installed
+        ``timezonefinder`` can state which dataset it is answering from without
+        reverse-engineering it from the package version - which also changes
+        for unrelated code fixes and, under the automated data-update
+        pipeline, changes together with the data in a way callers cannot
+        distinguish. The value mirrors the repo-root ``DATA_VERSION`` the data
+        was built from.
+        """
+        version_path = self.data_location / DATA_VERSION_FILENAME
+        return version_path.read_text(encoding="utf-8").strip()
 
     @property
     def nr_of_zones(self) -> int:
