@@ -17,6 +17,7 @@ from scripts.configs import (
     DEFAULT_INPUT_PATH,
     PROJECT_ROOT,
     PYPROJECT_FILE,
+    UPSTREAM_INPUT_STEMS,
     read_data_version,
     resolve_data_version,
 )
@@ -115,30 +116,46 @@ def test_package_exposes_the_declared_version():
     )
 
 
-def test_the_packaged_input_is_stamped_with_the_repo_data_version():
-    # the one input the repo-root DATA_VERSION does describe
+def test_a_tagged_input_states_its_own_release():
+    # the normal path: update_data.sh names its download after the release it
+    # resolved, and the parse reads it back off the name
     assert resolve_data_version(DEFAULT_INPUT_PATH) == read_data_version()
+    assert resolve_data_version("/anywhere/combined-with-oceans-2099z.json") == "2099z"
+    assert resolve_data_version("/anywhere/combined-now-2099z.json") == "2099z"
 
 
-def test_the_packaged_input_is_recognised_through_an_unresolved_path():
-    # update_data.sh and `make parse` both pass it as ./tmp/combined-with-oceans.json,
-    # so the comparison has to normalise rather than match the path literally
-    unresolved = DEFAULT_INPUT_PATH.parent / ".." / "tmp" / DEFAULT_INPUT_PATH.name
-    assert resolve_data_version(unresolved) == read_data_version()
+@pytest.mark.parametrize("stem", sorted(UPSTREAM_INPUT_STEMS))
+def test_an_untagged_upstream_file_is_refused(stem):
+    # the failure this exists to stop is silent and permanent: an unpacked release
+    # that lost its tag would compile into data whose data_version says "unknown"
+    # forever, when the answer was knowable at that moment
+    with pytest.raises(ValueError, match="does not say which release it is"):
+        resolve_data_version(f"tmp/{stem}.json")
 
 
-def test_custom_input_is_not_stamped_with_the_repo_data_version():
-    # the failure this guards against is silent: stamping the repository's release
-    # onto someone else's GeoJSON makes TimezoneFinder.data_version answer with a
-    # release the data never came from, and nothing anywhere would notice
-    stamped = resolve_data_version(DATA_VERSION_FILE.parent / "tests" / "input.json")
-    assert stamped == UNKNOWN_DATA_VERSION
+def test_the_refusal_names_both_ways_out():
+    with pytest.raises(ValueError) as excinfo:
+        resolve_data_version("tmp/combined-with-oceans.json")
+    message = str(excinfo.value)
+    assert "tmp/combined-with-oceans-<release>.json" in message, (
+        "the error must show the rename, since that is the fix that sticks to the file"
+    )
+    assert "--data-version" in message, (
+        "the error must name the flag too, for an input that cannot be renamed"
+    )
+
+
+def test_data_that_is_not_a_release_is_stamped_unattributed():
+    # compiling your own GeoJSON is supported (docs/2_use_cases.rst) and has no
+    # release to name - "unknown" is the true answer, not a gap
+    assert resolve_data_version("my_boundaries.json") == UNKNOWN_DATA_VERSION
+    assert resolve_data_version("tests/test_input.json") == UNKNOWN_DATA_VERSION
 
 
 def test_an_explicitly_named_release_wins():
-    # what update_data.sh passes: the tag recorded at download time, which is the
-    # only thing that knows the release before DATA_VERSION is updated
-    assert resolve_data_version(DEFAULT_INPUT_PATH, "2099z") == "2099z"
+    # for an input that cannot carry the release in its name
+    assert resolve_data_version("my_boundaries.json", "2099z") == "2099z"
+    assert resolve_data_version("tmp/combined-with-oceans.json", "2099z") == "2099z"
 
 
 def test_a_data_directory_without_a_stamp_says_how_to_fix_it(tmp_path):

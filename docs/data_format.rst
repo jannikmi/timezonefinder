@@ -39,7 +39,7 @@ The processing pipeline for this data involves:
 3. Running the ``file_converter.py`` script to compile the data into the binary format used by ``timezonefinder``
 
 
-The script ``update_data.sh`` automates this process. It also records the release tag - in the repository's ``DATA_VERSION`` file, and in the packaged ``data_version.txt`` below, which it hands to the converter so the compiled data states the release it came from - and regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
+The script ``update_data.sh`` automates this process. It resolves the release tag first and names the download after it (``combined-with-oceans-2026c.json``), since a release archive says nothing about which release it is - the converter reads the tag back off that name, and refuses an unpacked archive that lacks it rather than compiling data that could never say where it came from. The tag is also recorded in the repository's ``DATA_VERSION`` file. The script further regenerates the committed benchmark input fixtures under ``tests/fixtures/benchmarks/`` (see ``scripts/generate_benchmark_fixtures.py``), since some of those fixtures (on-land/shortcut classification, point-in-polygon polygon IDs) are derived from this boundary data and are pinned to the ``DATA_VERSION`` they were generated against.
 
 Alternative Dataset Options
 ============================
@@ -117,10 +117,11 @@ Other Files
 -----------
 
 * ``timezone_names.txt``: List of all timezone names
-* ``data_version.txt``: the timezone-boundary-builder release this data was compiled from,
-  as ``TimezoneFinder.data_version`` reports it. Compiling your own data writes
-  ``unknown`` here unless ``file_converter.py --data-version`` names the release the
-  input came from
+* ``data_version.txt``: the timezone-boundary-builder release this data was compiled
+  from, as ``TimezoneFinder.data_version`` reports it. Taken from the input's filename
+  (``combined-with-oceans-2026c.json``), or from ``file_converter.py --data-version``
+  for an input that cannot carry it. Data that is not a release at all - your own
+  GeoJSON - is stamped ``unknown``
 
 Holes as Boundary References
 ============================

@@ -272,13 +272,15 @@ def parse_data(
 ) -> None:
     input_path_obj: Path = Path(input_path)
     output_path_obj: Path = Path(output_path)
-    output_path_obj.mkdir(parents=True, exist_ok=True)
 
+    # before creating anything: both of these refuse outright, and a run that refuses
+    # should leave no half-made output directory behind to be mistaken for data
     resolved_zone_id_dtype = _coerce_zone_id_dtype(zone_id_dtype)
-    print(f"Using zone id dtype: {resolved_zone_id_dtype}")
-
     resolved_data_version = resolve_data_version(input_path_obj, data_version)
+    print(f"Using zone id dtype: {resolved_zone_id_dtype}")
     print(f"Stamping the data as boundary release: {resolved_data_version}")
+
+    output_path_obj.mkdir(parents=True, exist_ok=True)
 
     data: TimezoneData = TimezoneData.from_path(
         input_path_obj, zone_id_dtype=resolved_zone_id_dtype
@@ -325,9 +327,9 @@ if __name__ == "__main__":
         default=None,
         help=(
             "timezone-boundary-builder release tag the input was downloaded from, "
-            "stamped into the output directory (default: the repository's "
-            "DATA_VERSION when parsing the packaged input, else "
-            f"'{UNKNOWN_DATA_VERSION}')"
+            "stamped into the output directory. Only needed for an input that cannot "
+            "state it in its own name (combined-with-oceans-2026c.json); data that is "
+            f"not a release at all is stamped '{UNKNOWN_DATA_VERSION}'"
         ),
     )
     parser.add_argument(

@@ -5,13 +5,12 @@
 set -euo pipefail
 
 WORKING_FOLDER_NAME=tmp
-ARCHIVE_NAME=data_downloaded.zip
-ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/$ARCHIVE_NAME
 DOWNLOADED_TAG_PATH=./$WORKING_FOLDER_NAME/downloaded_tag.txt
 RELEASE_API_URL=https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest
 JSON_PREFIX=combined
 JSON_SUFFIX=.json
-URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/latest/download/timezones
+# the tagged release asset, not `releases/latest/download/...`: see the tag resolution below
+URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/download
 URL_SUFFIX=.geojson.zip
 CHANGELOG_PATH=CHANGELOG.rst
 DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
@@ -62,62 +61,64 @@ parent_path=$(
 cd "$parent_path" || exit 1
 mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 
-JSON_FILE_NAME=$JSON_PREFIX$INTERFIX$DATASET_SUFFIX$JSON_SUFFIX
-JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_FILE_NAME
+# Resolve the release tag first: everything downstream is named after it. Asking the
+# API which release is "latest" and fetching `releases/latest/download/...` were two
+# independent questions, so a release landing between them attributed one release's
+# data to the other - permanently, and with nothing able to notice afterwards. One
+# answer now governs the download URL, the file names and DATA_VERSION alike.
+echo "RESOLVING THE LATEST RELEASE..."
+DOWNLOADED_TAG=$(curl -sL --retry 3 $RELEASE_API_URL | grep '"tag_name"' | cut -d'"' -f4)
+if [ -z "$DOWNLOADED_TAG" ]; then
+    echo "ERROR: could not determine the latest timezone-boundary-builder release." >&2
+    echo "Without it the data cannot be attributed to a release, so nothing is parsed." >&2
+    exit 1
+fi
+echo "latest release: $DOWNLOADED_TAG"
+echo "$DOWNLOADED_TAG" >"$DOWNLOADED_TAG_PATH"
 
-if [ -f $JSON_PATH ]; then
+# Both artefacts carry the release *and* the dataset variant: a leftover file from
+# another release (or another variant) must not satisfy the "already downloaded"
+# checks below and be parsed in place of what was asked for.
+VARIANT=$INTERFIX$DATASET_SUFFIX
+ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/data_downloaded$VARIANT-$DOWNLOADED_TAG.zip
+UNPACKED_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT$JSON_SUFFIX
+JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT-$DOWNLOADED_TAG$JSON_SUFFIX
+
+if [ -f "$JSON_PATH" ]; then
     echo "skip unpacking: $JSON_PATH already exists."
 else
-    if [ -f $ZIP_ARCHIVE_PATH ]; then
+    if [ -f "$ZIP_ARCHIVE_PATH" ]; then
         echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
     else
-        URL=$URL_PREFIX$INTERFIX$DATASET_SUFFIX$URL_SUFFIX
+        URL=$URL_PREFIX/$DOWNLOADED_TAG/timezones$VARIANT$URL_SUFFIX
         echo "DOWNLOADING $URL"
 
         # install command mac:
         # brew install wget
-        wget -O $ZIP_ARCHIVE_PATH $URL --tries=3
-
-        # record which release tag the "latest" download URL resolved to,
-        # so DATA_VERSION can be updated after a successful parse
-        curl -sL $RELEASE_API_URL | grep '"tag_name"' | cut -d'"' -f4 >"$DOWNLOADED_TAG_PATH"
-        echo "downloaded data release: $(cat "$DOWNLOADED_TAG_PATH")"
+        wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
     fi
     echo "UNPACKING..."
-    unzip $ZIP_ARCHIVE_PATH -d $WORKING_FOLDER_NAME
-fi
-
-# hand the parse the release tag recorded at download time: DATA_VERSION still
-# names the *previous* one until the parse has succeeded, so it is the only thing
-# here that knows which release the data being written comes from. Empty when the
-# download was skipped, which leaves the converter to fall back to DATA_VERSION.
-DOWNLOADED_TAG=""
-if [ -s "$DOWNLOADED_TAG_PATH" ]; then
-    DOWNLOADED_TAG=$(cat "$DOWNLOADED_TAG_PATH")
-fi
-
-PARSE_ARGS=(-inp "$JSON_PATH")
-if [ -n "$DOWNLOADED_TAG" ]; then
-    PARSE_ARGS+=(--data-version "$DOWNLOADED_TAG")
+    unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
+    # The archive unpacks under a name that says nothing about where it came from, and
+    # this is the last point at which anything knows. The converter reads the release
+    # back off this name and refuses an upstream file that lacks it.
+    mv "$UNPACKED_PATH" "$JSON_PATH"
 fi
 
 echo "START PARSING..."
 echo "calling scripts.file_converter:"
-if ! uv run python -m scripts.file_converter "${PARSE_ARGS[@]}"; then
+# no --data-version: $JSON_PATH carries the release, and the parse reads it there
+if ! uv run python -m scripts.file_converter -inp "$JSON_PATH"; then
     echo "file_converter failed!"
     exit 1
 fi
 
-# update DATA_VERSION to the release tag recorded at download time
+# update DATA_VERSION to the release just parsed
 # (checked weekly against upstream by .github/workflows/check_data_updates.yml).
 # The packaged stamp the runtime reads (AbstractTimezoneFinder.data_version) needs
 # no second copy here: the parse above already wrote it from the same tag.
-if [ -n "$DOWNLOADED_TAG" ]; then
-    cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
-    echo "DATA_VERSION set to $(cat DATA_VERSION)"
-else
-    echo "WARNING: downloaded release tag unknown, DATA_VERSION not updated"
-fi
+cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
+echo "DATA_VERSION set to $(cat DATA_VERSION)"
 
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
