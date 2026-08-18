@@ -7,27 +7,61 @@ timezone-boundary-builder releases and written by update_data.sh on data updates
 import re
 import shutil
 import tomllib
+from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+from packaging.version import Version
 
 import timezonefinder
 from scripts.configs import (
+    DATA_DISTRIBUTION_NAME,
+    DATA_PYPROJECT_FILE,
     DATA_REPORT_FILE,
     DATA_VERSION_FILE,
     DEFAULT_INPUT_PATH,
     PROJECT_ROOT,
     PYPROJECT_FILE,
+    SOURCE_DATA_DIR,
     UPSTREAM_INPUT_STEMS,
+    data_distribution_version,
     read_data_version,
     resolve_data_version,
 )
 from scripts.reporting import DATA_VERSION_LABEL
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import (
+    DATA_FORMAT_LAYOUT_VERSIONS,
+    DATA_FORMAT_VERSION,
     DATA_VERSION_FILENAME,
     DEFAULT_DATA_DIR,
     UNKNOWN_DATA_VERSION,
 )
+from timezonefinder.flatbuf.io.hybrid_shortcuts import SHORTCUT_LAYOUT_VERSION
+from timezonefinder.flatbuf.io.polygons import POLYGON_LAYOUT_VERSION
+
+
+def _declared_version(pyproject: Path) -> str:
+    return tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+
+
+def _declared_data_requirement() -> Requirement:
+    """The root distribution's dependency on the data distribution."""
+    dependencies = tomllib.loads(PYPROJECT_FILE.read_text(encoding="utf-8"))["project"][
+        "dependencies"
+    ]
+    requirements = [
+        requirement
+        for requirement in map(Requirement, dependencies)
+        if canonicalize_name(requirement.name) == DATA_DISTRIBUTION_NAME
+    ]
+    assert len(requirements) == 1, (
+        f"expected exactly one {DATA_DISTRIBUTION_NAME} dependency in "
+        f"{PYPROJECT_FILE.name}, found {len(requirements)}"
+    )
+    return requirements[0]
+
 
 # release tags of timezone-boundary-builder, e.g. "2026c"
 DATA_VERSION_PATTERN = re.compile(r"\d{4}[a-z]+")
@@ -63,7 +97,7 @@ def test_committed_data_report_states_the_packaged_data_version():
 
 
 def test_packaged_data_version_file_matches_repo_root():
-    # the runtime stamp (timezonefinder/data/data_version.txt) and the
+    # the runtime stamp (the data package's data/data_version.txt) and the
     # build-source stamp (repo-root DATA_VERSION) are two copies of the same
     # fact: which boundary data release is packaged. A data update writes both
     # via update_data.sh; if the two drift, AbstractTimezoneFinder.data_version
@@ -75,7 +109,7 @@ def test_packaged_data_version_file_matches_repo_root():
         f"packaged data version stamp ({packaged!r}) disagrees with the "
         f"repo-root DATA_VERSION ({read_data_version()!r}). If the packaged "
         "binaries are the ones DATA_VERSION names, copy the tag across:\n"
-        f"    cp {DATA_VERSION_FILE.name} {DEFAULT_DATA_DIR.relative_to(PROJECT_ROOT)}/{DATA_VERSION_FILENAME}\n"
+        f"    cp {DATA_VERSION_FILE.name} {SOURCE_DATA_DIR.relative_to(PROJECT_ROOT)}/{DATA_VERSION_FILENAME}\n"
         "Only regenerate the data (`update_data.sh`) if they are not - that "
         "downloads the boundary release and takes hours."
     )
@@ -168,3 +202,103 @@ def test_a_data_directory_without_a_stamp_says_how_to_fix_it(tmp_path):
     with TimezoneFinder(bin_file_location=data_dir) as tf:
         with pytest.raises(FileNotFoundError, match="no dataset version stamp"):
             tf.data_version
+
+
+@pytest.mark.parametrize(
+    ("data_tag", "format_version", "expected"),
+    [
+        ("2026a", 1, "1.2026.1"),
+        ("2026c", 1, "1.2026.3"),
+        # the letter suffix is bijective base-26, not one character: upstream tags are
+        # `[a-z]+` and a 27th release of a year is `aa`, which a lookup table would
+        # either crash on or collide with `a`
+        ("2026z", 1, "1.2026.26"),
+        ("2026aa", 1, "1.2026.27"),
+        ("2026ab", 1, "1.2026.28"),
+        # a format bump moves the major, and only the major
+        ("2026c", 2, "2.2026.3"),
+    ],
+)
+def test_the_data_distribution_version_is_derived_from_the_release_tag(
+    data_tag: str, format_version: int, expected: str
+) -> None:
+    assert data_distribution_version(data_tag, format_version) == expected
+
+
+@pytest.mark.parametrize("data_tag", ["2026", "v2026c", "2026C", "202c", "20261"])
+def test_a_version_cannot_be_derived_from_a_non_release_tag(data_tag: str) -> None:
+    # update_data.sh feeds this whatever upstream tagged, and a malformed tag has to
+    # stop the release rather than produce a version number that sorts arbitrarily
+    with pytest.raises(ValueError, match="not a timezone-boundary-builder release"):
+        data_distribution_version(data_tag)
+
+
+def test_the_data_distribution_version_matches_the_packaged_release() -> None:
+    # the second of the two hand-touchable copies of DATA_FORMAT_VERSION: the data
+    # package's own version. update_data.sh writes it from the tag it just parsed, so
+    # this catches a hand-edit and a half-applied update alike - a version naming a
+    # release other than the one whose binaries sit next to it would publish data
+    # under a number no consumer could use to pin it.
+    assert _declared_version(DATA_PYPROJECT_FILE) == data_distribution_version(
+        read_data_version()
+    ), (
+        f"{DATA_PYPROJECT_FILE} declares "
+        f"{_declared_version(DATA_PYPROJECT_FILE)!r}, but the packaged release "
+        f"{read_data_version()!r} at format version {DATA_FORMAT_VERSION} derives "
+        f"{data_distribution_version(read_data_version())!r}."
+    )
+
+
+def test_the_declared_data_bound_brackets_the_current_format_generation() -> None:
+    """The bound is the one copy of the format version a person types.
+
+    The floor deliberately is *not* pinned to the packaged version: data updates move
+    the data package forward while this bound stays put, which is the whole point of
+    the split. What must hold is that both ends name the current format generation -
+    a ceiling left at the old one makes the next data release uninstallable, and one
+    raised early admits data this code cannot read.
+    """
+    specifier = _declared_data_requirement().specifier
+    bounds = {spec.operator: Version(spec.version) for spec in specifier}
+    assert set(bounds) == {">=", "<"}, (
+        f"expected a floor and a format ceiling on {DATA_DISTRIBUTION_NAME}, got "
+        f"{str(specifier)!r}"
+    )
+
+    assert bounds["<"] == Version(str(DATA_FORMAT_VERSION + 1)), (
+        f"{PYPROJECT_FILE.name} caps {DATA_DISTRIBUTION_NAME} at <{bounds['<']}, but the "
+        f"format generation this code reads is {DATA_FORMAT_VERSION}, so the cap "
+        f"belongs at <{DATA_FORMAT_VERSION + 1}."
+    )
+    assert bounds[">="].major == DATA_FORMAT_VERSION, (
+        f"the floor {bounds['>=']} names format generation {bounds['>='].major}, not "
+        f"{DATA_FORMAT_VERSION} - it can no longer be satisfied by data this code reads"
+    )
+    packaged = Version(_declared_version(DATA_PYPROJECT_FILE))
+    assert packaged in specifier, (
+        f"the packaged data version {packaged} does not satisfy the declared bound "
+        f"{str(specifier)!r}, so `pip install timezonefinder` cannot resolve to the "
+        "data this repository ships"
+    )
+
+
+def test_the_format_version_moves_with_the_layouts_it_is_made_of() -> None:
+    """A per-file layout bump that leaves DATA_FORMAT_VERSION behind ships silently.
+
+    The per-file versions are not derived from DATA_FORMAT_VERSION and must not be -
+    a shortcut-format change would otherwise rewrite the 63 MB coordinate file. The
+    implication runs the other way: whichever of them moves, the packaging-level
+    number has to move too, or the data goes out under a version whose bound says it
+    is readable by code that cannot read it. Nothing else notices - the in-file guard
+    only fires once the wrong pair is already installed.
+    """
+    in_effect = {
+        "POLYGON_LAYOUT_VERSION": POLYGON_LAYOUT_VERSION,
+        "SHORTCUT_LAYOUT_VERSION": SHORTCUT_LAYOUT_VERSION,
+    }
+    assert DATA_FORMAT_LAYOUT_VERSIONS == in_effect, (
+        f"the layout versions this data format generation records "
+        f"{DATA_FORMAT_LAYOUT_VERSIONS} are no longer the ones in force {in_effect}. "
+        "Bump DATA_FORMAT_VERSION and update the record - and remember that the data "
+        "distribution must then be published before the code release requiring it."
+    )

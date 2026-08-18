@@ -36,6 +36,12 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["timezonefinder_data"]
+# setuptools' default license-files globs only match LICEN[CS]E*, so without this the
+# ODbL text would land in the METADATA header and the file itself would ship nowhere -
+# and a share-alike licence has to travel with the database it covers. Named here
+# rather than under [project] because that spelling needs setuptools>=77, above this
+# package's build requirement.
+license-files = ["DATA_LICENSE"]
 
 [tool.setuptools.package-data]
 timezonefinder_data = ["data/**/*.npy", "data/**/*.fbs", "data/**/*.txt", "data/**/*.json"]

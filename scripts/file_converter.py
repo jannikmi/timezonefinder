@@ -36,6 +36,7 @@ in res=3 it takes only slightly more space to store just the highest resolution 
     -> only use one resolution, because of the higher simplicity of the lookup algorithms
 """
 
+import shutil
 from pathlib import Path
 from typing import Any
 from numpy.typing import NDArray
@@ -48,6 +49,7 @@ from scripts.helper_classes import Boundaries
 
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
+    SOURCE_DATA_DIR,
     DTYPE_FORMAT_H_NUMPY,
     DTYPE_FORMAT_SIGNED_I_NUMPY,
     ZONE_ID_DTYPE,
@@ -57,15 +59,15 @@ from scripts.configs import (
     resolve_data_version,
     resolve_zone_id_dtype,
 )
-from scripts.data_integrity import validate_hole_references
+from scripts.data_integrity import validate_hole_references, validate_shipped_schemas
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
+from timezonefinder.flatbuf.schemas import get_schemas_dir, iter_schema_files
 from timezonefinder.configs import (
-    DEFAULT_DATA_DIR,
     DATA_VERSION_FILENAME,
     UNKNOWN_DATA_VERSION,
 )
@@ -85,6 +87,22 @@ from timezonefinder.utils import (
     get_holes_dir,
 )
 from timezonefinder.zone_names import write_zone_names
+
+
+def write_schemas(output_path: Path) -> None:
+    """Copy the FlatBuffers schemas into the data directory being produced.
+
+    A data directory that carries the definition of its own binary format can be read
+    back without the package that wrote it - which is what a user debugging a
+    hand-built ``bin_file_location`` has, and what makes the format's definition ship
+    in the distribution whose major version *is* the format version. The copy is
+    generated, never hand-edited: ``validate_shipped_schemas`` holds it to the
+    canonical schemas here and again over the committed data in the test suite.
+    """
+    schemas_dir = get_schemas_dir(output_path)
+    schemas_dir.mkdir(parents=True, exist_ok=True)
+    for schema in iter_schema_files():
+        shutil.copyfile(schema, schemas_dir / schema.name)
 
 
 def create_and_write_hole_registry(data: TimezoneData, output_path: Path) -> None:
@@ -252,6 +270,12 @@ def compile_data_files(
     # Write binary files
     write_binary_files(data, output_path)
 
+    # ship the format's own definition next to the binaries it describes, and hold the
+    # copy to the original right here - checked where it is produced, never on a
+    # lookup path (see scripts/data_integrity.py)
+    write_schemas(output_path)
+    validate_shipped_schemas(output_path)
+
     # Stamp the boundary data release into the data directory so an installed
     # timezonefinder can state which one it answers from
     # (AbstractTimezoneFinder.data_version). Passed in rather than read from the
@@ -266,7 +290,7 @@ def compile_data_files(
 @time_execution
 def parse_data(
     input_path: Path | str = DEFAULT_INPUT_PATH,
-    output_path: Path | str = DEFAULT_DATA_DIR,
+    output_path: Path | str = SOURCE_DATA_DIR,
     zone_id_dtype: str | np.dtype | None = ZONE_ID_DTYPE_NAME,
     data_version: str | None = None,
 ) -> None:
@@ -320,7 +344,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-out",
         help="path to output folder for storing the parsed data files",
-        default=DEFAULT_DATA_DIR,
+        default=SOURCE_DATA_DIR,
     )
     parser.add_argument(
         "--data-version",

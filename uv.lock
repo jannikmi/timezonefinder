@@ -16,6 +16,12 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
+[manifest]
+members = [
+    "timezonefinder",
+    "timezonefinder-data",
+]
+
 [[package]]
 name = "alabaster"
 version = "1.0.0"
@@ -2123,6 +2129,7 @@ dependencies = [
     { name = "flatbuffers" },
     { name = "h3" },
     { name = "numpy" },
+    { name = "timezonefinder-data" },
 ]
 
 [package.optional-dependencies]
@@ -2186,6 +2193,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2" },
     { name = "numpy", marker = "extra == 'numba'", specifier = "<2.4" },
     { name = "pytz", marker = "extra == 'pytz'", specifier = ">=2022.7.1" },
+    { name = "timezonefinder-data", editable = "packages/timezonefinder-data" },
 ]
 provides-extras = ["numba", "pytz"]
 
@@ -2226,6 +2234,11 @@ test = [
     { name = "setuptools", specifier = ">=61" },
     { name = "tox" },
 ]
+
+[[package]]
+name = "timezonefinder-data"
+version = "1.2026.3"
+source = { editable = "packages/timezonefinder-data" }
 
 [[package]]
 name = "tomli-w"

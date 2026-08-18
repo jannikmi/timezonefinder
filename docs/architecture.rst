@@ -219,11 +219,32 @@ is the one failure this package must not ship quietly - it would degrade to the 
 without a single red check. It doubles as the proof that the abi3 claim holds, since one cp311 wheel
 is what all four interpreters install.
 
+**Two distributions, one repository.** The boundary data ships as ``timezonefinder-data``, a
+separate distribution built from the same checkout. Every release used to carry the whole ~65 MB
+dataset in three platform wheels plus an sdist to distinguish a 3 KB ``.so``, which had already
+exhausted the PyPI project quota once - and it coupled the two things that change on entirely
+different cadences, so a dataset could only be pinned by pinning an old ``timezonefinder`` and
+forfeiting every code fix since. The dependency is hard, so ``pip install timezonefinder`` behaves
+as it always did.
+
+What the split needs to stay honest is a version that carries *two* facts. An upstream release is
+the frequent driver; a change to the binary format is the other, and that one breaks in both
+directions at once, since the writer lives in ``scripts/`` and the reader in
+``timezonefinder/flatbuf/io/``. So the data version reads ``<format>.<year>.<letter>`` -
+``1.2026.3`` is format generation 1 built from release ``2026c`` - and ``timezonefinder`` requires
+``timezonefinder-data>=…,<N+1``. No ceiling on the data axis, so an ordinary update still needs no
+code release; a hard one on the format axis, so old code paired with a new format is refused by the
+resolver rather than at the first lookup. The in-file identifier and ``layout_version`` markers stay
+regardless: a ``bin_file_location`` directory has no distribution metadata to read, and only a
+per-file marker catches a *mixed* directory.
+
 **What the artifacts contain is asserted, not assumed.** ``tests/test_package_contents.py`` builds
-both distributions and checks them from both ends: every file the package needs at runtime is in
-them, and nothing that should have stayed in the repository - the CI configuration, ``docs/``,
-``scripts/``, the agent instruction files - came along. The asymmetry is why the second half is worth
-automating: a missing data file fails on first use and gets reported, an extra one ships quietly.
+every artefact each distribution publishes and checks them from both ends: every file the package
+needs at runtime is in them, and nothing that should have stayed in the repository - the CI
+configuration, ``docs/``, ``scripts/``, the agent instruction files - came along. The asymmetry is
+why the second half is worth automating: a missing data file fails on first use and gets reported,
+an extra one ships quietly. Since the split it also asserts that neither distribution carries the
+other's payload, which is the difference between a layout convention and something that can fail.
 That guard is easy to disarm by accident, so it is guarded in turn - see *Tests that protect
 guarantees, not behaviour* above.
 
@@ -233,18 +254,24 @@ rather than trusting the ref it was handed.
 
 **The data pipeline releases itself.** A weekly workflow compares ``DATA_VERSION`` against the latest
 timezone-boundary-builder release, regenerates the data and opens a pull request; when that pull
-request's CI passes, a second workflow checks the current ``master`` changelog before merging. An
-empty unreleased section lets it merge and push the version tag, which starts the release above;
-pending work withholds both operations, because an automatic patch release cannot choose that work's
-version or release notes. The tag is pushed with a GitHub App token because a tag pushed with the default
-``GITHUB_TOKEN`` does not trigger downstream workflows - the release would be tagged and never built.
-The guard reads ``master`` before the merge, so the squash commit's first parent is checked against it
-afterwards: work that landed in between withholds the tag rather than the merge, since the tag is what
-publishes. On failed CI, malformed changelog structure, pending unreleased work or a ``master`` that
-moved mid-merge, no release is published: the pull request is labelled ``automation-failed`` and left
-for a human, with one comment naming which of those happened. The merge is the one step that cannot be
-undone, so a failure after it - a rejected tag push, say - is reported as its own cause: master carries
-the new data, nothing was published, and only a tag pushed by hand still releases it.
+request's CI passes, a second workflow merges it and pushes a ``data-v*`` tag, which publishes
+``timezonefinder-data`` and nothing else. That the two streams cannot block each other is the point:
+a data update once had to wait for whatever code work sat unreleased, because it *was* a patch
+release of ``timezonefinder`` and would have shipped that work under release notes describing only
+the data. Now it releases a distribution containing no code, so the question does not arise.
+
+The two namespaces share a branch, so what keeps them apart is enforced rather than conventional:
+``build.yml`` excludes ``data-v*`` at its trigger, and again on the job that creates the GitHub
+Release, because the ``release: types: [published]`` trigger consults no tag filter. Each stream
+publishes with a token scoped to its own project. The tag is pushed with a GitHub App token because
+a tag pushed with the default ``GITHUB_TOKEN`` does not trigger downstream workflows - the release
+would be tagged and never built. The run reads ``master`` before the merge and checks the squash
+commit's first parent against it afterwards, so a push that landed in between withholds the tag
+rather than the merge, since the tag is what publishes. On failed CI or a ``master`` that moved
+mid-merge, nothing is published: the pull request is labelled ``automation-failed`` and left for a
+human, with one comment naming which of those happened. The merge is the one step that cannot be
+undone, so a failure after it - a rejected tag push, say - is reported as its own cause: master
+carries the new data, nothing was published, and only a tag pushed by hand still releases it.
 
 
 Non-goals and deliberate ceilings

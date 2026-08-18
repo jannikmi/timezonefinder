@@ -1,6 +1,6 @@
 #!/bin/bash
 # Download the latest timezone-boundary-builder release, regenerate the packaged
-# binary data and prepare a release (version bump + changelog entry).
+# binary data and prepare a release of the data distribution (version + release note).
 # Non-interactive: all behavior is controlled via command line flags (CI-ready).
 set -euo pipefail
 
@@ -12,7 +12,7 @@ JSON_SUFFIX=.json
 # the tagged release asset, not `releases/latest/download/...`: see the tag resolution below
 URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/download
 URL_SUFFIX=.geojson.zip
-CHANGELOG_PATH=CHANGELOG.rst
+DATA_PACKAGE=timezonefinder-data
 DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
 
 usage() {
@@ -146,24 +146,26 @@ if ! make reports; then
     exit 1
 fi
 
-# patch version bump (data-only releases are patch releases)
-uv version --bump patch
-NEW_VERSION=$(uv version --short)
-
-# insert the data release below the unreleased section. The release workflow
-# separately refuses to merge while that section contains pending work.
+# A data update releases the *data* distribution and nothing else: no version of
+# `timezonefinder` changes, and the root CHANGELOG.rst is not touched (issue #446).
+# The version follows from the release just parsed rather than from a bump - it states
+# which upstream release this is, prefixed by the data format generation.
 DATA_TAG=$(cat DATA_VERSION)
+NEW_VERSION=$(uv run python -m scripts.data_releases derive-version --data-tag "$DATA_TAG")
+uv version --package "$DATA_PACKAGE" "$NEW_VERSION"
+
+# record it in the data package's own README, which is its PyPI long description
 RELEASE_DATE=$(date +%Y-%m-%d)
-uv run python -m scripts.changelog insert-data-release "$CHANGELOG_PATH" \
+uv run python -m scripts.data_releases insert-data-release \
     --version "$NEW_VERSION" \
     --date "$RELEASE_DATE" \
     --data-tag "$DATA_TAG" \
     --data-repo-url "$DATA_REPO_URL"
-echo "added $CHANGELOG_PATH entry: $NEW_VERSION ($RELEASE_DATE)"
+echo "recorded the data release $NEW_VERSION ($RELEASE_DATE)"
 
 if [ "$RM_TMP" -eq 1 ]; then
     echo "deleting temporary data files..."
     rm -r "$WORKING_FOLDER_NAME"
 fi
 
-echo "SUCCESS! the new package version $NEW_VERSION can now be released!"
+echo "SUCCESS! $DATA_PACKAGE $NEW_VERSION can now be released (tag data-v$NEW_VERSION)!"

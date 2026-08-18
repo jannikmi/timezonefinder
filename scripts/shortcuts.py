@@ -12,6 +12,7 @@ import numpy as np
 from scripts.timezone_data import TimezoneData
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
+    SOURCE_DATA_DIR,
     HexIdSet,
     SHORTCUT_H3_RES,
     ShortcutMapping,
@@ -19,7 +20,6 @@ from scripts.configs import (
 from scripts.utils import (
     time_execution,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
     write_hybrid_shortcuts_flatbuffers,
@@ -332,4 +332,4 @@ if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
     # This will generate the hybrid shortcuts binary file:
     # hybrid_shortcuts_uint8.fbs - optimized format (hex_id -> zone_id OR [polygon_ids])
-    compile_shortcuts(output_path=DEFAULT_DATA_DIR, data=data)
+    compile_shortcuts(output_path=SOURCE_DATA_DIR, data=data)

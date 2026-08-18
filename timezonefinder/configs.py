@@ -14,9 +14,11 @@ Coordinate System:
 
 import os
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, Final, TypeAlias
 
 import numpy as np
+
+import timezonefinder_data
 
 __all__ = [
     "DEFAULT_DATA_DIR",
@@ -31,6 +33,8 @@ __all__ = [
     "MAX_LAT_VAL_INT",
     "DATA_VERSION_FILENAME",
     "UNKNOWN_DATA_VERSION",
+    "DATA_FORMAT_VERSION",
+    "DATA_FORMAT_LAYOUT_VERSIONS",
     # Type aliases
     "IntegerLike",
     "ShortcutMapping",
@@ -49,7 +53,15 @@ OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 
 # PATHS
 PACKAGE_DIR = Path(__file__).parent
-DEFAULT_DATA_DIR = PACKAGE_DIR / "data"
+
+# Where the packaged boundary data lives. It ships in its own distribution
+# (``timezonefinder-data``, issue #446) so that a dataset update needs no release of
+# this package, which is why this is an import rather than ``PACKAGE_DIR / "data"``.
+# The name stays: seven path helpers across four modules take it as their default
+# argument, and ``AbstractTimezoneFinder`` is the only consumer for which it is more
+# than a default. A real filesystem path is required - ``FileCoordAccessor`` mmaps
+# through ``fileno()`` - which a normal wheel install provides.
+DEFAULT_DATA_DIR = timezonefinder_data.DATA_DIR
 
 # The dataset version stamp written into each generated data directory by
 # ``scripts/file_converter.py`` (mirroring the repo-root ``DATA_VERSION`` the
@@ -63,6 +75,35 @@ DATA_VERSION_FILENAME = "data_version.txt"
 # anything but the packaged input). Naming a release the data may not come from would
 # be worse than admitting the gap: the value exists to be trusted.
 UNKNOWN_DATA_VERSION = "unknown"
+
+
+# DATASET FORMAT GENERATION
+# The generation of the binary data format as a whole, and the major version of the
+# ``timezonefinder-data`` distribution (``1.2026.3`` is format 1 built from upstream
+# release 2026c). That is what it is for: `timezonefinder` requires
+# ``timezonefinder-data>=<floor>,<DATA_FORMAT_VERSION + 1>``, so every future release
+# of this format still satisfies the bound - a data update needs no code release -
+# while data written in the *next* format is refused by the resolver rather than at
+# the first lookup. Bump it whenever either per-file layout version below moves.
+#
+# Packaging-level and dataset-wide, and deliberately a separate number from the
+# per-file ``POLYGON_LAYOUT_VERSION`` / ``SHORTCUT_LAYOUT_VERSION``. Merging the three
+# into one field written into every binary would rewrite the 63 MB coordinate file to
+# record a shortcut-format change that did not touch its layout, and those binaries
+# are committed.
+DATA_FORMAT_VERSION: Final[int] = 1
+
+# What this generation is made of: the per-file layout versions in force when
+# DATA_FORMAT_VERSION was last bumped. Restated rather than imported, because
+# ``flatbuf.io`` imports *this* module - and because the point is to pin the pairing,
+# not to derive one side from the other. The implication runs one way only: a moved
+# per-file version requires a moved DATA_FORMAT_VERSION, or data in a format no
+# released bound can express ships under a version that claims the old one.
+# tests/test_data_version.py asserts it; nothing else would notice.
+DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
+    "POLYGON_LAYOUT_VERSION": 1,
+    "SHORTCUT_LAYOUT_VERSION": 1,
+}
 
 
 # COORDINATE SCALING AND PRECISION

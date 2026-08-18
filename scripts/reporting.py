@@ -878,9 +878,6 @@ Examples:
 
   # Generate report using custom data directory
   python -m scripts.reporting --data-path /path/to/data
-
-  # Generate report using current package data
-  python -m scripts.reporting --data-path timezonefinder/data
         """.strip(),
     )
 

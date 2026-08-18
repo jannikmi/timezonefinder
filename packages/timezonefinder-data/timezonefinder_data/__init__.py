@@ -6,6 +6,7 @@ an upstream boundary release ships as a new ``timezonefinder-data`` without a
 dataset can pin it without giving up code fixes.
 """
 
+from importlib.metadata import PackageNotFoundError, version as _metadata_version
 from pathlib import Path
 
 # The packaged data directory. A real filesystem path rather than an
@@ -20,8 +21,6 @@ DATA_DIR: Path = Path(__file__).parent / "data"
 # only the pair says which dataset answered. ``PackageNotFoundError`` bites when the
 # package is imported without being installed (a source checkout with no metadata),
 # where "unknown" is honest.
-from importlib.metadata import PackageNotFoundError, version as _metadata_version
-
 try:
     __version__ = _metadata_version("timezonefinder-data")
 except PackageNotFoundError:  # pragma: no cover - source checkout without install

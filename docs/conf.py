@@ -25,6 +25,12 @@ project_root = os.path.dirname(cwd)
 # Insert the project root dir as the first element in the PYTHONPATH.
 # This ensures that the source package is importable
 sys.path.insert(0, os.path.join(project_root))
+# ... and the data distribution alongside it, since `timezonefinder.configs` imports
+# `timezonefinder_data` to locate the boundary data (issue #446). Read the Docs
+# installs docs/requirements_docs.txt and never the project itself, so both packages
+# are reached from the checkout - which is also what keeps the docs building before
+# the data distribution has been published to PyPI at all.
+sys.path.insert(0, os.path.join(project_root, "packages", "timezonefinder-data"))
 
 # needed for auto document, ATTENTION: must then be installed during online build!
 import timezonefinder  # noqa: E402 Module level import not at top of file

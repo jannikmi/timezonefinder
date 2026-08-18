@@ -27,10 +27,17 @@ bug), and general-purpose geometry — spatial code exists only in service of ti
 
 ## Project Structure
 
+**Two distributions, one uv workspace** (issue #446): `timezonefinder` at the root, and
+`packages/timezonefinder-data/` holding the boundary binaries plus `DATA_LICENSE`. The data package
+is deliberately dumb — one `DATA_DIR` constant and a version — and ships no reader; that was
+considered and rejected, with reasons in `plans/446-data-as-separate-distribution.md` §2.
+
 Most modules are self-describing; the non-obvious ones:
 
 - `timezonefinder/configs.py`: central type definitions and runtime constants (coordinate scaling,
-  FlatBuffers layout)
+  FlatBuffers layout, `DATA_FORMAT_VERSION`). `DEFAULT_DATA_DIR` sources from
+  `timezonefinder_data.DATA_DIR`, so the data's *location* differs between a `uv sync` checkout
+  (editable, source tree) and an installed wheel — anything asserting it will disagree across the two
 - `timezonefinder/utils.py` / `utils_numba.py` / `utils_clang.py`: polygon math, pure-Python plus
   the two acceleration backends. `utils.py` picks the implementation **at import time**, so the
   backends are entirely separate code paths whose timings are not comparable
@@ -191,7 +198,7 @@ Two things that cost more than they look:
 **Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and
 diffing compares like with like. Keep it that way — when it breaks, a re-parse shows spurious diffs
 that look like converter drift, or real changes drown in formatting churn, and the lossless check
-after a data regeneration (`git status --short timezonefinder/data` listing only genuinely changed
+after a data regeneration (`git status --short packages/timezonefinder-data/timezonefinder_data/data` listing only genuinely changed
 binaries) stops meaning anything.
 
 What it takes to hold, for anything you add:
@@ -292,8 +299,21 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 ## Data Pipeline & Versioning
 
 - `update_data.sh` downloads a timezone-boundary-builder release into `tmp/` and runs
-  `scripts/file_converter.py`, which scales coordinates by 10^7 into int32. A data-only release is
-  a **patch** bump, which `update_data.sh` applies itself
+  `scripts/file_converter.py`, which scales coordinates by 10^7 into int32. A data update releases
+  the **separate `timezonefinder-data` distribution** and nothing else: `update_data.sh` sets that
+  package's version from the tag it parsed and records the release in
+  `packages/timezonefinder-data/README.md`. `timezonefinder`'s version and `CHANGELOG.rst` are not
+  touched, and the tag namespace is `data-v*` — a bare version tag publishes the *code*
+- **The data distribution's major version is `DATA_FORMAT_VERSION`** (`timezonefinder/configs.py`),
+  and the root declares `timezonefinder-data>=…,<N+1`. Bumping either per-file layout version
+  (`POLYGON_LAYOUT_VERSION`, `SHORTCUT_LAYOUT_VERSION`) obliges a `DATA_FORMAT_VERSION` bump —
+  `tests/test_data_version.py` asserts the pairing, because nothing else would notice. A format
+  change is therefore a **two-distribution, ordered release: publish the data first**, then the code
+  requiring it, or `timezonefinder` is briefly uninstallable
+- **Generators write to `scripts.configs.SOURCE_DATA_DIR`, never `DEFAULT_DATA_DIR`.** The latter
+  now resolves to wherever `timezonefinder_data` is *installed*, which under a non-editable install
+  is inside `site-packages` — and since `make parse` passes no paths, a converter defaulting to it
+  would rewrite the installed wheel instead of the checkout
 - Benchmark fixtures in `tests/fixtures/benchmarks/` are pinned to the `DATA_VERSION` they were
   generated against and the loader refuses mismatches. `make data` regenerates them; use
   `make benchmark-fixtures` only when just the fixtures need refreshing

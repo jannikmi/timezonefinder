@@ -1,0 +1,46 @@
+namespace timezonefinder.flatbuf.generated.shortcuts_uint16;
+
+// Table representing a unique zone ID (when all polygons in hex share same zone)
+// Optimized for uint16 zone IDs (0-65535)
+table UniqueZone {
+  // Direct zone ID storage - 2 bytes per zone ID
+  zone_id: ushort;
+}
+
+// Table representing a list of polygon IDs (when hex contains multiple zones)
+table PolygonList {
+  // List of polygon IDs (fixed uint16 as per requirement)
+  poly_ids: [ushort];
+}
+
+// Union type for the shortcut value - either unique zone or polygon list
+union ShortcutValue {
+  UniqueZone,
+  PolygonList
+}
+
+// Individual shortcut entry mapping H3 hex ID to its value
+table HybridShortcutEntry {
+  // H3 hexagon ID (uint64)
+  hex_id: ulong;
+  // The value for this hex - either unique zone or polygon list
+  value: ShortcutValue;
+}
+
+// Root collection containing all shortcut entries
+// Optimized for uint16 zone IDs - no metadata overhead
+table HybridShortcutCollection {
+  // All shortcut entries
+  entries: [HybridShortcutEntry];
+  // encoding of the shortcut entries; see SHORTCUT_LAYOUT_VERSION in
+  // timezonefinder/flatbuf/io/hybrid_shortcuts.py. absent (= 0) in files written
+  // before the identifier and this marker were introduced.
+  layout_version: ushort;
+}
+
+root_type HybridShortcutCollection;
+
+// Distinct per zone id width on purpose: a uint16 buffer parsed under the other
+// schema decodes UniqueZone.zone_id at the wrong width and yields wrong zone ids
+// without failing, so the two must never be mistaken for one another.
+file_identifier "TZS2";

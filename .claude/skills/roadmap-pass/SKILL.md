@@ -318,7 +318,7 @@ The sibling's §7 checklist applies unchanged — `git fetch && git rebase origi
       have moved.
 - [ ] The slice passes §6.1's changelog sentence test.
 - [ ] Benchmark evidence names its backend, if any performance claim is made.
-- [ ] `git status --short timezonefinder/data` is **empty** unless data regeneration was the
+- [ ] `git status --short packages/timezonefinder-data/timezonefinder_data/data` is **empty** unless data regeneration was the
       explicit, agreed subject of this pass.
 
 If a gate fails and you cannot fix it, do not open the PR. Push the branch, record the state in the

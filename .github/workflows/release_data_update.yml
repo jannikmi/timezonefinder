@@ -3,8 +3,8 @@ name: Auto-release data update PRs
 # Full automation of data updates (issue #167, step 3): when the CI/CD pipeline
 # of an automated update PR (branch data-update-*, opened by
 # check_data_updates.yml) completes:
-# - on success: merge the PR and push the version tag, which triggers the
-#   release pipeline in build.yml
+# - on success: merge the PR and push the `data-v*` tag, which triggers the
+#   publishing pipeline in publish_data.yml
 # - on failure: label the PR and notify the maintainer
 #
 # NOTE: merging and tagging use the GitHub App token, since tags pushed with
@@ -56,26 +56,6 @@ jobs:
           repo: ${{ github.repository }}
           token: ${{ steps.app-token.outputs.token }}
 
-      # scripts/changelog.py is stdlib-only, so no uv sync is needed - but it
-      # is written against this project's requires-python and the runner
-      # image's default interpreter is pinned by nothing. Resolving to
-      # anything older than 3.10 would fail the guard on its `X | None`
-      # annotations and report it as pending changelog work.
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version-file: .python-version
-
-      # a failure here fails the job outright. The reporting steps below run on
-      # `failure()` and each names the step it is reporting on, so nothing has
-      # to be kept alive with continue-on-error to reach them.
-      - name: Check unreleased section
-        id: changelog-guard
-        if: steps.resolve-merge.outputs.found == 'true'
-        run: python -m scripts.changelog check-empty CHANGELOG.rst
-
-      # no `if:` for the guard - a step without a status check function is
-      # already skipped once an earlier one has failed
       - name: Merge the update PR
         if: steps.resolve-merge.outputs.found == 'true'
         id: merge
@@ -87,10 +67,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          guarded_master=$(git rev-parse HEAD)
+          checked_master=$(git rev-parse HEAD)
           current_master=$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq .object.sha)
-          if [[ "$guarded_master" != "$current_master" ]]; then
-            echo "master changed after the changelog check; refusing to merge"
+          if [[ "$checked_master" != "$current_master" ]]; then
+            echo "master moved after this run checked it out; refusing to merge"
             exit 1
           fi
 
@@ -115,18 +95,17 @@ jobs:
             exit 1
           fi
 
-          # The check above compares master before the merge; a push landing in
-          # the window between them would slip its unreleased work into this
-          # data-only release. The squash commit's first parent is the master
-          # tip the merge actually applied to, so it settles that after the
-          # fact. The merge itself is harmless and stands - what is withheld is
-          # the tag, since that is what publishes.
+          # The check above compares master before the merge; the squash commit's
+          # first parent is the master tip the merge actually applied to, which
+          # settles after the fact that nothing landed in the window between them.
+          # The merge itself is harmless and stands - what is withheld is the tag,
+          # since that is what publishes.
           merge_parent=$(gh api "repos/$GH_REPO/commits/$merge_sha" \
             --jq '.parents[0].sha')
-          if [[ "$merge_parent" != "$guarded_master" ]]; then
-            echo "::error::master moved from $guarded_master to $merge_parent" \
-              "between the changelog check and the merge - refusing to tag," \
-              "since the release notes would omit whatever landed in between"
+          if [[ "$merge_parent" != "$checked_master" ]]; then
+            echo "::error::master moved from $checked_master to $merge_parent" \
+              "while this run was merging - refusing to tag, since the release" \
+              "was not built against the tree being tagged"
             exit 1
           fi
 
@@ -135,26 +114,6 @@ jobs:
 
       # one step per cause: the maintainer is told what actually happened,
       # rather than a disjunction of everything that could have
-      - name: Report pending work
-        if: >
-          failure() &&
-          steps.resolve-merge.outputs.found == 'true' &&
-          steps.changelog-guard.outcome == 'failure'
-        uses: ./.github/actions/notify-update-pr
-        with:
-          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
-          marker: blocked
-          repo: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: >
-            @${{ github.repository_owner }} this automated data update was not
-            merged: the `X.X.X (unreleased)` section of `CHANGELOG.rst` on
-            master is not empty, or could not be parsed
-            ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
-            An automatic patch release cannot choose a version or release notes
-            for that work, so please cut its release first - this PR then
-            merges and releases on its next successful CI run.
-
       - name: Report failed merge
         if: >
           failure() &&
@@ -189,16 +148,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          version=$(uv version --short)
+          # the *data* distribution's version, never the root's: a data update
+          # changes no code, and a bare version tag is what releases
+          # `timezonefinder` through build.yml. The two namespaces are what keep
+          # this from publishing a code release (see .github/workflows/publish_data.yml)
+          version=$(uv version --short --package timezonefinder-data)
+          tag="data-v$version"
           # an annotated tag records a tagger, and a GitHub runner has no git
           # identity configured - git would refuse with "unable to auto-detect
           # email address", merging the data without ever publishing it
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # mirror the manual release process ("make release": annotated tag on master)
-          git tag -a "$version" -m "Release $version"
-          git push origin "$version"
-          echo "pushed release tag $version, the release pipeline in build.yml takes over"
+          git tag -a "$tag" -m "Data release $version"
+          git push origin "$tag"
+          echo "pushed release tag $tag, publish_data.yml takes over"
 
       # the merge cannot be undone, so a failure past it gets its own notice:
       # master already carries the data update and only the tag is missing.
@@ -224,9 +188,9 @@ jobs:
             merged into master, but its release tag was never pushed
             ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
             Nothing was published: master carries the new data and no release
-            was built for it. Check that run for the reason, then release it by
-            hand with `make release` from an up-to-date master, which pushes
-            the same tag this step would have.
+            was built for it. Check that run for the reason, then push the
+            `data-v<version>` tag by hand from an up-to-date master, which is
+            the same tag this step would have pushed.
 
   alert_failure:
     name: Notify the maintainer about a failed update PR

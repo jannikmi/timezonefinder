@@ -58,6 +58,21 @@ If your use case requires the reduced dataset, you can use the ``update_data.sh`
 Data Structure Overview
 =======================
 
+Where the data lives
+--------------------
+
+The compiled binaries ship in their own distribution, ``timezonefinder-data`` (installed
+automatically with ``timezonefinder``), and are reached through ``timezonefinder_data.DATA_DIR`` -
+which is what ``timezonefinder.configs.DEFAULT_DATA_DIR`` resolves to. Any other directory of the
+same shape works just as well: pass it as ``bin_file_location`` (see :ref:`use cases <use_cases>`).
+
+That distribution's **major version is the data format generation**
+(``timezonefinder.configs.DATA_FORMAT_VERSION``), and its remaining two components name the
+upstream release: ``1.2026.3`` is format 1 built from ``2026c``. ``timezonefinder`` requires
+``timezonefinder-data>=…,<N+1``, so a dataset update needs no code release while a format change is
+refused when resolving rather than when reading. Bumping either per-file ``layout_version`` below
+requires bumping ``DATA_FORMAT_VERSION`` too.
+
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.fbs``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
@@ -65,6 +80,7 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
+6. **Schemas**: a copy of the FlatBuffers schema definitions the binaries above were written by, under ``schemas/``
 
 
 Coordinate Representation
@@ -117,6 +133,13 @@ Spatial Indexing
 Other Files
 -----------
 
+* ``schemas/*.fbs``: the FlatBuffers schema definitions describing the binaries in this
+  directory, copied from ``timezonefinder/flatbuf/schemas/`` when the data is compiled.
+  A data directory that carries the definition of its own format can be read back
+  without the package that wrote it. They live in a subdirectory because ``.fbs`` in the
+  data root already means a serialised buffer, not a schema. Generated, never
+  hand-edited: ``scripts/data_integrity.validate_shipped_schemas`` holds the copy to the
+  original both in the converter and over the committed data
 * ``timezone_names.txt``: List of all timezone names
 * ``data_version.txt``: the timezone-boundary-builder release this data was compiled
   from, as ``TimezoneFinder.data_version`` reports it. Taken from the input's filename
