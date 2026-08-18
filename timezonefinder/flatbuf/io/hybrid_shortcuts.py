@@ -3,11 +3,13 @@
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
+from typing import Final
 
 import flatbuffers
 import numpy as np
 
 from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.flatbuf.io.layout import incompatible_layout_error
 
 # The two generated packages describe the same tables and differ only in the width of
 # `UniqueZone.zone_id` (ubyte vs ushort), so they export identically named symbols.
@@ -34,6 +36,19 @@ from timezonefinder.flatbuf.generated.shortcuts_uint16.ShortcutValue import (
 )
 
 
+# What a hybrid shortcut file means. Absent in pre-guard files, which read back as the
+# FlatBuffers default 0, so those files self-identify without special casing.
+#
+#   0 = no file identifier; the zone id width was inferred from the file name
+#   1 = file identifier per zone id width, layout version present
+#
+# Deliberately NOT tied to the package version, for the same reason as
+# POLYGON_LAYOUT_VERSION (see timezonefinder/flatbuf/io/polygons.py): bump it only when
+# what the file means changes, so a `bin_file_location` directory compiled once stays
+# readable across ordinary releases.
+SHORTCUT_LAYOUT_VERSION: Final[int] = 1
+
+
 @dataclass(frozen=True)
 class ShortcutSchema:
     """Everything that differs between the hybrid shortcut schemas.
@@ -45,6 +60,10 @@ class ShortcutSchema:
 
     #: width of the zone ids this schema stores; the single source of the width
     zone_id_dtype: np.dtype
+    #: FlatBuffers file identifier (bytes 4-8) stamped on files written with this
+    #: schema. Distinct per width: a uint8 buffer read as uint16 decodes
+    #: ``UniqueZone.zone_id`` at the wrong width and yields wrong zone ids silently
+    file_identifier: bytes
     collection: ModuleType
     entry: ModuleType
     unique_zone: ModuleType
@@ -55,7 +74,11 @@ class ShortcutSchema:
 
     @property
     def dtype_name(self) -> str:
-        """``"uint8"`` / ``"uint16"`` - the marker embedded in the binary's file name."""
+        """``"uint8"`` / ``"uint16"`` - names this width in file names and messages.
+
+        Naming only: which schema a binary uses is decided by ``file_identifier``,
+        which travels inside the buffer and so survives a rename.
+        """
         return self.zone_id_dtype.name
 
     @property
@@ -69,12 +92,12 @@ class ShortcutSchema:
         return int(np.iinfo(self.zone_id_dtype).max)
 
 
-#: Supported zone id widths, narrowest first. `_schema_for_file_name` scans this in
-#: order, so a name matching several markers resolves to the narrowest - as the
-#: previous `if "uint8" ... elif "uint16" ...` chain did.
+#: Supported zone id widths, narrowest first. Scanned in order both when picking a
+#: schema for a width to write and when identifying a buffer to read.
 SHORTCUT_SCHEMAS: tuple[ShortcutSchema, ...] = (
     ShortcutSchema(
         zone_id_dtype=np.dtype("<u1"),
+        file_identifier=b"TZS1",
         collection=_uint8_collection,
         entry=_uint8_entry,
         unique_zone=_uint8_unique_zone,
@@ -84,6 +107,7 @@ SHORTCUT_SCHEMAS: tuple[ShortcutSchema, ...] = (
     ),
     ShortcutSchema(
         zone_id_dtype=np.dtype("<u2"),
+        file_identifier=b"TZS2",
         collection=_uint16_collection,
         entry=_uint16_entry,
         unique_zone=_uint16_unique_zone,
@@ -104,22 +128,6 @@ def _schema_for_zone_id_width(zone_id_dtype: np.dtype) -> ShortcutSchema:
     raise ValueError(
         f"Unsupported zone_id_dtype: {zone_id_dtype}. "
         f"Supported: {_SUPPORTED_DTYPE_NAMES}."
-    )
-
-
-def _schema_for_file_name(file_name: str) -> ShortcutSchema:
-    """Detect which schema a shortcut binary uses from the zone id width in its name.
-
-    Matches the ``uintN`` marker anywhere in the name rather than requiring
-    ``ShortcutSchema.file_name`` exactly, so binaries written to a scratch path
-    (as the tests do) are still readable.
-    """
-    for schema in SHORTCUT_SCHEMAS:
-        if schema.dtype_name in file_name:
-            return schema
-    raise ValueError(
-        f"Cannot determine schema from filename: {file_name}. "
-        f"Filename must include one of: {_SUPPORTED_DTYPE_NAMES}."
     )
 
 
@@ -230,13 +238,39 @@ def _write_hybrid_shortcuts_with_schema(
     # Create HybridShortcutCollection
     schema.collection.HybridShortcutCollectionStart(builder)
     schema.collection.HybridShortcutCollectionAddEntries(builder, entries_vector)
+    schema.collection.HybridShortcutCollectionAddLayoutVersion(
+        builder, SHORTCUT_LAYOUT_VERSION
+    )
     collection = schema.collection.HybridShortcutCollectionEnd(builder)
 
-    builder.Finish(collection)
+    # Stamp the identifier so a reader can tell which zone id width this buffer holds
+    # without trusting the file name it happens to be stored under
+    builder.Finish(collection, file_identifier=schema.file_identifier)
 
     # Write to file
     with open(output_file, "wb") as f:
         f.write(builder.Output())
+
+
+def _schema_for_buffer(buf: bytes, file_path: Path) -> ShortcutSchema:
+    """Detect which schema a shortcut buffer uses from its file identifier.
+
+    The identifier travels inside the buffer, so a renamed or mispaired file is
+    caught here. Nothing about a uint8 buffer read under the uint16 schema fails on
+    its own - ``UniqueZone.zone_id`` simply decodes at the wrong width and yields
+    wrong zone ids - so the width has to be read rather than inferred.
+    """
+    for schema in SHORTCUT_SCHEMAS:
+        if schema.collection.HybridShortcutCollection.HybridShortcutCollectionBufferHasIdentifier(
+            buf, 0
+        ):
+            return schema
+    # Written before the identifier existed, when the file name was the only marker.
+    # Reported as layout version 0 rather than as a corrupt file, since that is what
+    # it actually is for everyone who will ever hit this.
+    raise incompatible_layout_error(
+        "hybrid shortcut file", 0, SHORTCUT_LAYOUT_VERSION, file_path
+    )
 
 
 def read_hybrid_shortcuts_binary(
@@ -245,7 +279,8 @@ def read_hybrid_shortcuts_binary(
     """
     Read hybrid shortcut mapping from an optimized FlatBuffer binary file.
 
-    Auto-detects whether the file uses uint8 or uint16 schema based on filename.
+    Detects whether the file uses the uint8 or the uint16 schema from the file
+    identifier stamped into the buffer, and rejects data this version cannot read.
 
     Args:
         file_path: Path to the hybrid shortcut FlatBuffer file
@@ -254,19 +289,27 @@ def read_hybrid_shortcuts_binary(
         Dictionary mapping H3 hexagon IDs to either:
         - int: unique zone ID (when all polygons share same zone)
         - np.ndarray: array of polygon IDs (when multiple zones)
+
+    Raises:
+        ValueError: if the buffer carries no known identifier or an unreadable
+            layout version.
     """
-    schema = _schema_for_file_name(file_path.name)
-    return _read_hybrid_shortcuts_with_schema(file_path, schema)
+    with open(file_path, "rb") as f:
+        buf = f.read()
+    schema = _schema_for_buffer(buf, file_path)
+    return _read_hybrid_shortcuts_with_schema(buf, file_path, schema)
 
 
 def _read_hybrid_shortcuts_with_schema(
-    file_path: Path, schema: ShortcutSchema
+    buf: bytes, file_path: Path, schema: ShortcutSchema
 ) -> dict[int, int | np.ndarray]:
     """Read hybrid shortcuts using the provided schema."""
-    with open(file_path, "rb") as f:
-        buf = f.read()
-
     collection = schema.collection.HybridShortcutCollection.GetRootAs(buf, 0)
+    layout_version = collection.LayoutVersion()
+    if layout_version != SHORTCUT_LAYOUT_VERSION:
+        raise incompatible_layout_error(
+            "hybrid shortcut file", layout_version, SHORTCUT_LAYOUT_VERSION, file_path
+        )
 
     hybrid_mapping: dict[int, int | np.ndarray] = {}
     # `PolyIdsAsNumpy()` is `np.frombuffer` under the hood, i.e. a view onto `buf`.

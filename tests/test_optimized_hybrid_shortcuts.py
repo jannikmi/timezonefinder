@@ -271,24 +271,19 @@ class TestOptimizedHybridShortcuts:
             with pytest.raises(ValueError):
                 get_hybrid_shortcut_file_path(invalid_dtype)
 
-    def test_file_name_without_marker_is_rejected(self, tmp_path):
-        """A name carrying no zone id marker leaves the reader no schema to pick.
+    def test_file_name_carries_no_schema_information(self, tmp_path):
+        """A name with no zone id marker is read all the same.
 
-        Guessing a width would silently mis-decode ``UniqueZone.zone_id`` (ubyte in one
-        schema, ushort in the other) and hand back wrong zone ids, so the read has to
-        fail loudly instead. The positive direction - marker selects schema - is covered
-        by ``test_generated_file_name_round_trips``.
-
-        Replaces a test that asserted ``uint8_data == uint16_data`` on two identical
-        payloads, which held for any detection outcome and so pinned nothing.
+        The schema comes from the identifier stamped into the buffer, so the reader
+        does not need the name to say anything. Rejection of a buffer whose identifier
+        is missing or foreign lives in ``tests/test_flatbuf_format_guard.py``.
         """
         path = tmp_path / "hybrid_shortcuts.fbs"
         write_hybrid_shortcuts_flatbuffers(
             {0x85283473FFFFFFF: 42}, np.dtype("<u1"), path
         )
 
-        with pytest.raises(ValueError, match="Cannot determine schema"):
-            read_hybrid_shortcuts_binary(path)
+        assert read_hybrid_shortcuts_binary(path) == {0x85283473FFFFFFF: 42}
 
     @pytest.mark.parallel_threads_limit("auto")
     def test_single_element_arrays_round_trip(self, zone_id_dtype, temp_file_path):

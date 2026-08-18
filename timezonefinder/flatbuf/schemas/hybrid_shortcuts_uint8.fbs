@@ -32,6 +32,15 @@ table HybridShortcutEntry {
 table HybridShortcutCollection {
   // All shortcut entries
   entries: [HybridShortcutEntry];
+  // encoding of the shortcut entries; see SHORTCUT_LAYOUT_VERSION in
+  // timezonefinder/flatbuf/io/hybrid_shortcuts.py. absent (= 0) in files written
+  // before the identifier and this marker were introduced.
+  layout_version: ushort;
 }
 
 root_type HybridShortcutCollection;
+
+// Distinct per zone id width on purpose: a uint8 buffer parsed under the other
+// schema decodes UniqueZone.zone_id at the wrong width and yields wrong zone ids
+// without failing, so the two must never be mistaken for one another.
+file_identifier "TZS1";

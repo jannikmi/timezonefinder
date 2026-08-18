@@ -1,10 +1,12 @@
-"""Guard against silently reading coordinate data written by an incompatible version.
+"""Guard against silently reading packaged data written by an incompatible version.
 
-The per-axis coordinate layout changed inside an unchanged container: same file name,
-same schema, same vector lengths, values still plausible ``int32``. A file written by an
-older version parses cleanly and yields wrong timezones with no error, which no existing
-failure mode catches. The file identifier and ``layout_version`` exist to turn that into
-a startup error, so the rejection paths are what these tests cover.
+Both packaged binary kinds can change what they *mean* inside an unchanged container:
+the per-axis coordinate layout changed with the same file name, the same schema, the
+same vector lengths and values still plausible ``int32``; a hybrid shortcut file holds
+zone ids one byte wide in one schema and two in the other, and either width parses under
+either schema. Such a file parses cleanly and yields wrong timezones with no error, which
+no existing failure mode catches. The file identifier and ``layout_version`` exist to
+turn that into a startup error, so the rejection paths are what these tests cover.
 """
 
 import flatbuffers
@@ -34,12 +36,22 @@ from timezonefinder.flatbuf.io.polygons import (
     get_polygon_collection,
     write_polygon_collection_flatbuffer,
 )
+from timezonefinder.flatbuf.io.hybrid_shortcuts import (
+    SHORTCUT_LAYOUT_VERSION,
+    SHORTCUT_SCHEMAS,
+    ShortcutSchema,
+    get_hybrid_shortcut_file_path,
+    read_hybrid_shortcuts_binary,
+    write_hybrid_shortcuts_flatbuffers,
+)
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
 
 POLYGONS = [
     np.array([[0, 1, 2], [3, 4, 5]]),
     np.array([[100, 200], [300, 400]]),
 ]
+
+SCHEMA_IDS = [schema.dtype_name for schema in SHORTCUT_SCHEMAS]
 
 
 def build_collection(
@@ -154,6 +166,168 @@ def test_guard_keeps_coordinates_zero_copy(in_memory):
     finally:
         del coords
         del tf
+
+
+# --- hybrid shortcuts -------------------------------------------------------------
+
+SHORTCUT_MAPPING: dict[int, int | list[int]] = {
+    0x85283473FFFFFFF: 42,
+    0x85283447FFFFFFF: [1, 2, 3],
+}
+
+
+def build_shortcut_collection(
+    schema: ShortcutSchema,
+    *,
+    with_identifier: bool = True,
+    layout_version: int | None = SHORTCUT_LAYOUT_VERSION,
+) -> bytes:
+    """Build a shortcut buffer, optionally omitting or faking the layout markers.
+
+    ``with_identifier=False, layout_version=None`` reproduces a pre-guard file, back
+    when the zone id width was inferred from the file name.
+    """
+    builder = flatbuffers.Builder(0)
+    schema.unique_zone.UniqueZoneStart(builder)
+    schema.unique_zone.UniqueZoneAddZoneId(builder, 42)
+    unique_zone_offset = schema.unique_zone.UniqueZoneEnd(builder)
+
+    schema.entry.HybridShortcutEntryStart(builder)
+    schema.entry.HybridShortcutEntryAddHexId(builder, 0x85283473FFFFFFF)
+    schema.entry.HybridShortcutEntryAddValueType(builder, schema.unique_zone_tag)
+    schema.entry.HybridShortcutEntryAddValue(builder, unique_zone_offset)
+    entry_offset = schema.entry.HybridShortcutEntryEnd(builder)
+
+    schema.collection.HybridShortcutCollectionStartEntriesVector(builder, 1)
+    builder.PrependUOffsetTRelative(entry_offset)
+    entries_vector = builder.EndVector()
+
+    schema.collection.HybridShortcutCollectionStart(builder)
+    schema.collection.HybridShortcutCollectionAddEntries(builder, entries_vector)
+    if layout_version is not None:
+        schema.collection.HybridShortcutCollectionAddLayoutVersion(
+            builder, layout_version
+        )
+    collection_offset = schema.collection.HybridShortcutCollectionEnd(builder)
+
+    if with_identifier:
+        builder.Finish(collection_offset, file_identifier=schema.file_identifier)
+    else:
+        builder.Finish(collection_offset)
+    return bytes(builder.Output())
+
+
+@pytest.mark.unit
+def test_shortcut_identifiers_are_distinct():
+    """The whole point of the identifier: it must tell the zone id widths apart.
+
+    Sharing one would leave a uint8 buffer readable as uint16, which is silently wrong
+    rather than an error - ``UniqueZone.zone_id`` simply decodes at the wrong width.
+    """
+    identifiers = [schema.file_identifier for schema in SHORTCUT_SCHEMAS]
+    assert len(set(identifiers)) == len(identifiers)
+    assert all(len(identifier) == 4 for identifier in identifiers), (
+        "a FlatBuffers file identifier occupies exactly bytes 4-8"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_written_shortcut_file_carries_layout_markers(schema, tmp_path):
+    """A file this version writes is one this version accepts."""
+    output_file = tmp_path / schema.file_name
+    write_hybrid_shortcuts_flatbuffers(
+        SHORTCUT_MAPPING, schema.zone_id_dtype, output_file
+    )
+    buffer = output_file.read_bytes()
+
+    assert buffer[4:8] == schema.file_identifier
+    collection = schema.collection.HybridShortcutCollection.GetRootAs(buffer, 0)
+    assert collection.LayoutVersion() == SHORTCUT_LAYOUT_VERSION
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_wrong_shortcut_identifier_is_rejected(schema, tmp_path):
+    """A buffer carrying another kind's identifier is not a shortcut file.
+
+    Stamped with the polygon identifier, everything else about it is a valid shortcut
+    collection - so nothing but the identifier separates it from one that would parse.
+    """
+    buffer = bytearray(build_shortcut_collection(schema))
+    buffer[4:8] = POLYGON_FILE_IDENTIFIER
+    path = tmp_path / schema.file_name
+    path.write_bytes(bytes(buffer))
+
+    with pytest.raises(ValueError) as excinfo:
+        read_hybrid_shortcuts_binary(path)
+
+    message = str(excinfo.value)
+    assert str(path) in message, "error must name the offending file"
+    assert "file_converter.py" in message, "error must name the way to regenerate"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_pre_guard_shortcut_buffer_is_rejected(schema, tmp_path):
+    """A file written before the markers existed carries no identifier at all."""
+    path = tmp_path / schema.file_name
+    path.write_bytes(
+        build_shortcut_collection(schema, with_identifier=False, layout_version=None)
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        read_hybrid_shortcuts_binary(path)
+
+    assert "layout version 0" in str(excinfo.value), (
+        "a pre-guard file is layout version 0, not corrupt"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_newer_shortcut_layout_version_is_rejected(schema, tmp_path):
+    """Old code, newer data - the direction the identifier alone cannot catch."""
+    path = tmp_path / schema.file_name
+    path.write_bytes(
+        build_shortcut_collection(schema, layout_version=SHORTCUT_LAYOUT_VERSION + 1)
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        read_hybrid_shortcuts_binary(path)
+
+    assert f"layout version {SHORTCUT_LAYOUT_VERSION + 1}" in str(excinfo.value)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_shortcut_schema_follows_the_identifier_not_the_file_name(schema, tmp_path):
+    """The reason the marker moved into the buffer: names lie, identifiers travel.
+
+    Written under the *other* width's file name, the file still decodes at its own
+    width. Before the identifier the name picked the schema, so this file silently
+    returned zone ids read at the wrong width.
+    """
+    other = next(s for s in SHORTCUT_SCHEMAS if s is not schema)
+    path = tmp_path / other.file_name
+    write_hybrid_shortcuts_flatbuffers(SHORTCUT_MAPPING, schema.zone_id_dtype, path)
+
+    read_back = read_hybrid_shortcuts_binary(path)
+    assert read_back[0x85283473FFFFFFF] == 42
+    assert list(read_back[0x85283447FFFFFFF]) == [1, 2, 3]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("schema", SHORTCUT_SCHEMAS, ids=SCHEMA_IDS)
+def test_packaged_shortcut_data_passes_guard(schema):
+    """The shipped shortcut binary must satisfy the guard its own writer stamps."""
+    path = get_hybrid_shortcut_file_path(schema.zone_id_dtype)
+    if not path.exists():
+        pytest.skip(f"no packaged shortcut binary for {schema.dtype_name}")
+    buffer = path.read_bytes()
+    assert buffer[4:8] == schema.file_identifier
+    collection = schema.collection.HybridShortcutCollection.GetRootAs(buffer, 0)
+    assert collection.LayoutVersion() == SHORTCUT_LAYOUT_VERSION
 
 
 if __name__ == "__main__":

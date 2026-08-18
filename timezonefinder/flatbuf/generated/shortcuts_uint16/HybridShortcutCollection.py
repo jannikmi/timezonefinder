@@ -23,6 +23,14 @@ class HybridShortcutCollection:
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
 
+    @classmethod
+    def HybridShortcutCollectionBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x5a\x53\x32", size_prefixed=size_prefixed
+        )
+
     # HybridShortcutCollection
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
@@ -55,9 +63,18 @@ class HybridShortcutCollection:
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+    # HybridShortcutCollection
+    def LayoutVersion(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.Get(
+                flatbuffers.number_types.Uint16Flags, o + self._tab.Pos
+            )
+        return 0
+
 
 def HybridShortcutCollectionStart(builder):
-    builder.StartObject(1)
+    builder.StartObject(2)
 
 
 def Start(builder):
@@ -80,6 +97,14 @@ def HybridShortcutCollectionStartEntriesVector(builder, numElems):
 
 def StartEntriesVector(builder, numElems):
     return HybridShortcutCollectionStartEntriesVector(builder, numElems)
+
+
+def HybridShortcutCollectionAddLayoutVersion(builder, layoutVersion):
+    builder.PrependUint16Slot(1, layoutVersion, 0)
+
+
+def AddLayoutVersion(builder, layoutVersion):
+    HybridShortcutCollectionAddLayoutVersion(builder, layoutVersion)
 
 
 def HybridShortcutCollectionEnd(builder):
