@@ -76,8 +76,10 @@ data:
 # puts scripts/ on sys.path[0] instead of the repository root, and the script's own
 # `from scripts.timezone_data import ...` then raises ModuleNotFoundError before any
 # work starts. update_data.sh uses the same `-m` form for the same reason.
+# no -inp: the converter defaults to the release DATA_VERSION names, which is what
+# update_data.sh leaves in tmp/. Pass -inp explicitly to parse anything else.
 parse:
-	uv run python -m scripts.file_converter -inp ./tmp/combined-with-oceans.json
+	uv run python -m scripts.file_converter
 
 # NOTE: parse_data() always writes its report to the checkout's committed
 # docs/data_report.rst, whatever -out it was given, so this target leaves that

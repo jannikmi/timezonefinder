@@ -26,6 +26,7 @@ import zipfile
 from typing import Iterator, NamedTuple
 
 import pytest
+from timezonefinder.configs import DATA_VERSION_FILENAME, DEFAULT_DATA_DIR
 from tests.auxiliaries import (
     BUILD_SDIST_CMD,
     BUILD_WHEEL_CMD,
@@ -623,4 +624,22 @@ def test_essential_files_in_distribution(expected_file: Path, dist_type: str):
     )
     assert nr_matched_files == 1, (
         f"Essential file '{pattern}' not found in {dist_type}."
+    )
+
+
+@pytest.mark.unit
+def test_the_packaged_data_version_stamp_is_an_essential_file():
+    """The stamp must stay in the set the distribution checks above cover.
+
+    ``AbstractTimezoneFinder.data_version`` reads it out of the installed package,
+    so a build that drops it breaks a public property. It is covered today by the
+    ``*.txt`` entry in ``ESSENTIAL_SOURCE_PATTERNS`` rather than by name, which is
+    what this pins: narrow that pattern set and the sdist/wheel checks would stop
+    looking for the stamp without failing.
+    """
+    stamp = DEFAULT_DATA_DIR.relative_to(PROJECT_ROOT) / DATA_VERSION_FILENAME
+    assert stamp in set(iter_expected_distribution_files()), (
+        f"{stamp} is no longer among the files "
+        f"test_essential_files_in_distribution checks for. Add a pattern matching "
+        f"it to ESSENTIAL_SOURCE_PATTERNS."
     )

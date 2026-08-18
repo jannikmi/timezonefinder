@@ -29,6 +29,8 @@ __all__ = [
     "MAX_LAT_VAL",
     "MAX_LNG_VAL_INT",
     "MAX_LAT_VAL_INT",
+    "DATA_VERSION_FILENAME",
+    "UNKNOWN_DATA_VERSION",
     # Type aliases
     "IntegerLike",
     "ShortcutMapping",
@@ -48,6 +50,19 @@ OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 # PATHS
 PACKAGE_DIR = Path(__file__).parent
 DEFAULT_DATA_DIR = PACKAGE_DIR / "data"
+
+# The dataset version stamp written into each generated data directory by
+# ``scripts/file_converter.py`` (mirroring the repo-root ``DATA_VERSION`` the
+# data was built from). Declared here so the runtime side (``AbstractTimezoneFinder``
+# .data_version) and the build side (``scripts/file_converter.py``) share one
+# filename - a second copy would silently stop tracking this one.
+DATA_VERSION_FILENAME = "data_version.txt"
+
+# What that stamp reads when the data was compiled from an input whose upstream
+# release nobody stated (``scripts/file_converter.py`` without ``--data-version``, on
+# anything but the packaged input). Naming a release the data may not come from would
+# be worse than admitting the gap: the value exists to be trusted.
+UNKNOWN_DATA_VERSION = "unknown"
 
 
 # COORDINATE SCALING AND PRECISION

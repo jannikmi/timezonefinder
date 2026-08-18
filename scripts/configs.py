@@ -1,3 +1,4 @@
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TypeAlias, TypedDict
@@ -6,6 +7,7 @@ import numpy as np
 
 from timezonefinder.configs import (
     DEFAULT_ZONE_ID_DTYPE,
+    UNKNOWN_DATA_VERSION,
     DEFAULT_ZONE_ID_DTYPE_NAME,
     SHORTCUT_H3_RES,
     available_zone_id_dtype_names,
@@ -21,8 +23,6 @@ PERFORMANCE_REPORT_FILE = DOC_ROOT / "benchmark_results_timezonefinding.rst"
 POLYGON_REPORT_FILE = DOC_ROOT / "benchmark_results_polygon.rst"
 INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 MEMORY_REPORT_FILE = DOC_ROOT / "benchmark_results_memory.rst"
-DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
-
 # The timezone-boundary-builder release the packaged binary data was built
 # from, written by update_data.sh once a parse has succeeded. Declared here
 # because three unrelated consumers stamp or validate against it - the
@@ -31,10 +31,79 @@ DEFAULT_INPUT_PATH = PROJECT_ROOT / "tmp" / "combined-with-oceans.json"
 # and a second copy of the path would silently stop tracking this one.
 DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
+# The package metadata. Read by tests that hold a second statement of something it
+# declares to it - the supported Python versions, and the version the installed
+# distribution reports as ``timezonefinder.__version__``.
+PYPROJECT_FILE = PROJECT_ROOT / "pyproject.toml"
+
 
 def read_data_version() -> str:
     """The release tag of the boundary data currently packaged, e.g. ``"2026c"``."""
     return DATA_VERSION_FILE.read_text(encoding="utf-8").strip()
+
+
+# Where update_data.sh leaves the release this repository is pinned to, and so what a
+# parse means without arguments. Named after DATA_VERSION rather than fixed, because
+# the release a GeoJSON came from is part of its identity here (see
+# resolve_data_version) - a bare "combined-with-oceans.json" states nothing and is
+# refused.
+DEFAULT_INPUT_PATH = (
+    PROJECT_ROOT / "tmp" / f"combined-with-oceans-{read_data_version()}.json"
+)
+
+# The stems timezone-boundary-builder's release archives unpack to - "combined" plus
+# the dataset variant. update_data.sh composes the same four names from its own
+# pieces (JSON_PREFIX/INTERFIX/DATASET_SUFFIX) and appends the release tag; this is
+# the reading half of that one convention, so the two move together.
+UPSTREAM_INPUT_STEMS = frozenset(
+    f"combined{interfix}{variant}"
+    for interfix in ("", "-with-oceans")
+    for variant in ("", "-now")
+)
+
+# A timezone-boundary-builder release tag, e.g. "2026c".
+DATA_VERSION_TAG_PATTERN = re.compile(r"\d{4}[a-z]+")
+
+
+def resolve_data_version(input_path: Path | str, explicit: str | None = None) -> str:
+    """The boundary data release a parse of ``input_path`` may claim to come from.
+
+    Nothing inside a timezone-boundary-builder GeoJSON says which release it is - the
+    file is a bare ``FeatureCollection`` of ``tzid`` features - so the release has to
+    ride on the filename, which ``update_data.sh`` gives it while it still knows:
+    ``combined-with-oceans-2026c.json``. That survives the file being copied,
+    archived or handed to the converter by someone else, which a shell variable does
+    not, and it is why this is the normal path rather than ``explicit``.
+
+    A file named the way the release archives unpack (:data:`UPSTREAM_INPUT_STEMS`)
+    but carrying no tag is an untagged copy of a real release, so it is refused rather
+    than guessed at: stamping such data ``unknown`` throws away an answer that exists,
+    and stamping it with the repository's own ``DATA_VERSION`` would invent one.
+    Anything else is data nobody claimed was a release, and is stamped
+    :data:`~timezonefinder.configs.UNKNOWN_DATA_VERSION`.
+
+    :raises ValueError: if the input is an upstream file whose release is unstated.
+    """
+    if explicit:
+        return explicit
+
+    stem = Path(input_path).stem
+    tag = stem.rpartition("-")[2]
+    if DATA_VERSION_TAG_PATTERN.fullmatch(tag):
+        return tag
+
+    if stem in UPSTREAM_INPUT_STEMS:
+        raise ValueError(
+            f"'{Path(input_path).name}' is named the way a timezone-boundary-builder "
+            "release archive unpacks, but does not say which release it is - and the "
+            "compiled data would inherit that gap as its permanent answer to "
+            "TimezoneFinder.data_version. State the release either way:\n"
+            f"    mv {input_path} {Path(input_path).with_name(f'{stem}-<release>.json')}\n"
+            "    ... or pass --data-version <release>\n"
+            "(update_data.sh names its download this way already.)"
+        )
+
+    return UNKNOWN_DATA_VERSION
 
 
 DEBUG = False

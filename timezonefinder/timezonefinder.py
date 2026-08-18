@@ -31,6 +31,7 @@ from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     SHORTCUT_H3_RES,
+    DATA_VERSION_FILENAME,
     CoordLists,
     CoordPairs,
     IntegerLike,
@@ -136,6 +137,39 @@ class AbstractTimezoneFinder(ABC):
         # NOTE: this has also been added for the last zone
         first_boundary_id_next = zone_positions[zone_id + 1]
         yield from range(first_boundary_id_zone, first_boundary_id_next)
+
+    @property
+    def data_version(self) -> str:
+        """The timezone-boundary-builder release this finder answers from.
+
+        Reads the stamp ``scripts/file_converter.py`` wrote into the data
+        directory at build time (``data_version.txt``), so an installed
+        ``timezonefinder`` can state which dataset it is answering from without
+        reverse-engineering it from the package version - which also changes
+        for unrelated code fixes and, under the automated data-update
+        pipeline, changes together with the data in a way callers cannot
+        distinguish.
+
+        For the packaged data this is the release ``update_data.sh`` downloaded.
+        A data directory compiled from your own GeoJSON reads ``"unknown"``
+        unless ``scripts/file_converter.py --data-version`` named the release it
+        came from, since nothing about the input states it.
+
+        :raises FileNotFoundError: if the data directory carries no stamp, which
+            a directory compiled before this file existed does not.
+        """
+        version_path = self.data_location / DATA_VERSION_FILENAME
+        try:
+            return version_path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError as exc:
+            # every other file of a pre-stamp data directory still loads, so the
+            # bare OS error arrives with no hint that regenerating is the fix
+            raise FileNotFoundError(
+                f"no dataset version stamp at {version_path}. This data directory "
+                "was compiled before the stamp existed - recompile it with "
+                "`scripts/file_converter.py --data-version <timezone-boundary-builder "
+                "release>` to state which boundary data it holds."
+            ) from exc
 
     @property
     def nr_of_zones(self) -> int:

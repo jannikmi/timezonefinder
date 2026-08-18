@@ -21,7 +21,7 @@ from scripts.reporting import (
     print_rst_table,
     rst_title,
 )
-from timezonefinder import TimezoneFinder
+from timezonefinder import TimezoneFinder, __version__ as timezonefinder_version
 
 # Which pytest-benchmark ``stats`` field is treated as *the* number for a
 # benchmark. Defined here rather than in each consumer because the CI
@@ -303,7 +303,11 @@ def get_system_status() -> dict[str, Any]:
         "numpy_version": np.__version__,
         "using_clang_pip": tf_instance.using_clang_pip(),
         "using_numba": tf_instance.using_numba(),
-        "timezonefinder_version": getattr(tf_instance, "__version__", "Unknown"),
+        # ``timezonefinder.__version__`` is the installed package version, read
+        # from distribution metadata. The previous ``getattr(tf_instance,
+        # "__version__", "Unknown")`` read a non-existent attribute on a class
+        # with ``__slots__``, so every report carried ``"Unknown"`` instead.
+        "timezonefinder_version": timezonefinder_version,
     }
 
 

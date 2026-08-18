@@ -165,6 +165,27 @@ state**, never the path taken to it:
 - **Remember to acknowledge outside contributions**, in the form the existing `Thanks to …` bullets
   use. Credit the contributor's own PR, which is not the maintainer PR that superseded it.
 
+## Roadmap Issue
+
+Issue #506 is the index for all open work: the ranking, how the issues relate, and the decisions
+that would otherwise be rediscovered. It is the only place any of that is written down, so it goes
+stale silently — nothing in the repository references it and no check reads it.
+
+**Sync it as part of the work that changes it**, not afterwards, whenever you ship an item, open
+or close an issue, re-scope or retitle one, or settle a design question the roadmap ranked. That
+means editing the body — strike shipped items, correct entries whose premise moved, update §4
+sequencing — *and* posting a comment saying what changed and, explicitly, what did **not**
+(sequencing above all: "no sequencing changed" is information). Match the existing comments' shape.
+
+Two things that cost more than they look:
+
+- **A recorded decision in §5 is kept, never deleted** — including rejected options, which is most
+  of their value. The next pass re-proposes whatever is not written down as already refused
+- **Correct the reasoning, not just the status.** An entry whose conclusion survived on a premise
+  that has since been disproved is the failure mode worth catching: it reads as settled and sends
+  the next pass down a path already ruled out. Say what moved, the way the #350/#513 and #446
+  entries do
+
 ## Generated Files
 
 **Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and

@@ -25,9 +25,9 @@ import tomllib
 import pytest
 import yaml
 
+from scripts.configs import PYPROJECT_FILE
 from tests.auxiliaries import PROJECT_ROOT
 
-PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 TOX_INI = PROJECT_ROOT / "tox.ini"
 BUILD_WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "build.yml"
 SETUP_PY = PROJECT_ROOT / "setup.py"
@@ -36,7 +36,7 @@ SETUP_PY = PROJECT_ROOT / "setup.py"
 @pytest.fixture(scope="module")
 def classifier_minors() -> list[int]:
     """The minor versions `pyproject.toml` advertises to PyPI."""
-    classifiers = tomllib.loads(PYPROJECT.read_text())["project"]["classifiers"]
+    classifiers = tomllib.loads(PYPROJECT_FILE.read_text())["project"]["classifiers"]
     matches = (
         re.fullmatch(r"Programming Language :: Python :: 3\.(\d+)", c)
         for c in classifiers
@@ -105,7 +105,7 @@ def test_every_tox_env_named_in_the_matrix_is_generated_by_the_envlist(
 
 @pytest.mark.unit
 def test_requires_python_floor_is_the_lowest_advertised_version(classifier_minors):
-    requires = tomllib.loads(PYPROJECT.read_text())["project"]["requires-python"]
+    requires = tomllib.loads(PYPROJECT_FILE.read_text())["project"]["requires-python"]
     floor = re.search(r">=\s*3\.(\d+)", requires)
     assert floor, f"cannot read a 3.x floor out of requires-python = {requires!r}"
     assert int(floor.group(1)) == classifier_minors[0]

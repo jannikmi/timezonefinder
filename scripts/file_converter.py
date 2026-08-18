@@ -54,6 +54,7 @@ from scripts.configs import (
     ZONE_ID_DTYPE_CHOICES,
     ZONE_ID_DTYPE_NAME,
     BoundaryArray,
+    resolve_data_version,
     resolve_zone_id_dtype,
 )
 from scripts.data_integrity import validate_hole_references
@@ -63,7 +64,11 @@ from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
     write_polygon_collection_flatbuffer,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    DATA_VERSION_FILENAME,
+    UNKNOWN_DATA_VERSION,
+)
 from timezonefinder.np_binary_helpers import (
     get_poly_ref_path,
     get_xmax_path,
@@ -236,7 +241,9 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
 
 
 @time_execution
-def compile_data_files(data: TimezoneData, output_path: Path) -> None:
+def compile_data_files(
+    data: TimezoneData, output_path: Path, data_version: str
+) -> None:
     write_zone_names(data.all_tz_names, output_path)
 
     # Write registry for holes (which polygon each hole belongs to)
@@ -245,24 +252,40 @@ def compile_data_files(data: TimezoneData, output_path: Path) -> None:
     # Write binary files
     write_binary_files(data, output_path)
 
+    # Stamp the boundary data release into the data directory so an installed
+    # timezonefinder can state which one it answers from
+    # (AbstractTimezoneFinder.data_version). Passed in rather than read from the
+    # repo-root DATA_VERSION here: that file describes the packaged input and
+    # nothing else, so which release *this* parse came from is the caller's to
+    # state (scripts.configs.resolve_data_version).
+    (output_path / DATA_VERSION_FILENAME).write_text(
+        f"{data_version}\n", encoding="utf-8"
+    )
+
 
 @time_execution
 def parse_data(
     input_path: Path | str = DEFAULT_INPUT_PATH,
     output_path: Path | str = DEFAULT_DATA_DIR,
     zone_id_dtype: str | np.dtype | None = ZONE_ID_DTYPE_NAME,
+    data_version: str | None = None,
 ) -> None:
     input_path_obj: Path = Path(input_path)
     output_path_obj: Path = Path(output_path)
-    output_path_obj.mkdir(parents=True, exist_ok=True)
 
+    # before creating anything: both of these refuse outright, and a run that refuses
+    # should leave no half-made output directory behind to be mistaken for data
     resolved_zone_id_dtype = _coerce_zone_id_dtype(zone_id_dtype)
+    resolved_data_version = resolve_data_version(input_path_obj, data_version)
     print(f"Using zone id dtype: {resolved_zone_id_dtype}")
+    print(f"Stamping the data as boundary release: {resolved_data_version}")
+
+    output_path_obj.mkdir(parents=True, exist_ok=True)
 
     data: TimezoneData = TimezoneData.from_path(
         input_path_obj, zone_id_dtype=resolved_zone_id_dtype
     )
-    compile_data_files(data, output_path_obj)
+    compile_data_files(data, output_path_obj, resolved_data_version)
 
     _ = compile_shortcuts(output_path_obj, data)
 
@@ -300,6 +323,16 @@ if __name__ == "__main__":
         default=DEFAULT_DATA_DIR,
     )
     parser.add_argument(
+        "--data-version",
+        default=None,
+        help=(
+            "timezone-boundary-builder release tag the input was downloaded from, "
+            "stamped into the output directory. Only needed for an input that cannot "
+            "state it in its own name (combined-with-oceans-2026c.json); data that is "
+            f"not a release at all is stamped '{UNKNOWN_DATA_VERSION}'"
+        ),
+    )
+    parser.add_argument(
         "--zone-id-dtype",
         choices=ZONE_ID_DTYPE_CHOICES,
         default=ZONE_ID_DTYPE_NAME,
@@ -311,4 +344,5 @@ if __name__ == "__main__":
         input_path=parsed_args.inp,
         output_path=parsed_args.out,
         zone_id_dtype=parsed_args.zone_id_dtype,
+        data_version=parsed_args.data_version,
     )
