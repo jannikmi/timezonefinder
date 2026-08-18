@@ -193,11 +193,15 @@ FlatBuffers Schema
 The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
 The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
-``coordinates.fbs`` carries a FlatBuffers file identifier (``TZFP``) and a ``layout_version`` field recording the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_). Both are checked when the file is opened, and a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
+Every FlatBuffers file carries a file identifier and a ``layout_version`` field, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
+
+``coordinates.fbs`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_).
+
+The hybrid shortcut files use a *different identifier per zone id width* - ``TZS1`` for ``hybrid_shortcuts_uint8.fbs``, ``TZS2`` for ``hybrid_shortcuts_uint16.fbs``. That distinction is the point: the two schemas differ only in the width of ``UniqueZone.zone_id`` (``ubyte`` vs ``ushort``), so either width parses cleanly under the other schema and hands back wrong zone ids. The width is therefore read from the identifier inside the buffer rather than from the file name, which a rename or a mispaired copy can make lie.
 
 ``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
-Note that this check currently covers the coordinate files only. The shortcut index and the NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
+Note that this check covers the FlatBuffers files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 
 
 Spatial Indexing with H3 Hexagons

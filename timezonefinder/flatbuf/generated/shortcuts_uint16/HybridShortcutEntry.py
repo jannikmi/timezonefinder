@@ -23,6 +23,12 @@ class HybridShortcutEntry:
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
 
+    @classmethod
+    def HybridShortcutEntryBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x5a\x53\x32", size_prefixed=size_prefixed
+        )
+
     # HybridShortcutEntry
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)

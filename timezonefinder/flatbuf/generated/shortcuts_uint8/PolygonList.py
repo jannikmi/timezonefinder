@@ -23,6 +23,12 @@ class PolygonList:
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
 
+    @classmethod
+    def PolygonListBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x5a\x53\x31", size_prefixed=size_prefixed
+        )
+
     # PolygonList
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)

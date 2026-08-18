@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Final
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
+from timezonefinder.flatbuf.io.layout import incompatible_layout_error
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,
@@ -145,14 +146,8 @@ def _incompatible_layout_error(
     found_version: int, file_path: Path | None
 ) -> ValueError:
     """Build the error raised for coordinate data this version cannot read."""
-    location = f" {file_path}" if file_path is not None else ""
-    return ValueError(
-        f"the polygon coordinate file{location} uses polygon layout version "
-        f"{found_version}, but this timezonefinder reads layout version "
-        f"{POLYGON_LAYOUT_VERSION}. What the file holds differs between the two, and "
-        f"reading it anyway would yield wrong timezones rather than an error, so it is "
-        f"rejected. Regenerate this data directory with scripts/file_converter.py from "
-        f"the current checkout."
+    return incompatible_layout_error(
+        "polygon coordinate file", found_version, POLYGON_LAYOUT_VERSION, file_path
     )
 
 
