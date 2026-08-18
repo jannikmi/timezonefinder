@@ -146,27 +146,45 @@ def test_the_data_stream_creates_no_github_release() -> None:
 
 
 @pytest.mark.unit
-def test_the_two_streams_cannot_use_each_others_credentials() -> None:
-    """Separate tokens are the only thing scoping each stream to its own project.
+def test_the_data_stream_publishes_without_a_shared_credential() -> None:
+    """What scopes the data stream to its own project, now that it holds no token.
 
-    A shared token would let a data release upload `timezonefinder`, and the plan for
-    the first upload - an account-scoped token, replaced by a project-scoped one once
-    the project exists - is only meaningful if the two are distinct to begin with.
+    It publishes by Trusted Publishing: PyPI trusts this workflow file, gated on a
+    deployment environment, and the job exchanges an OIDC identity for a short-lived
+    upload token. Two things therefore have to hold, and neither is self-announcing if
+    it stops holding. The job must request ``id-token: write`` - without it the
+    exchange has nothing to present, and the upload fails only at release time, on a
+    tag that cannot be pushed twice. And it must not reach for the code stream's
+    token, which would let a data release upload ``timezonefinder``.
     """
+    workflow = _workflow(PUBLISH_DATA_WORKFLOW)
+    publishing = _jobs_using(workflow, PYPI_PUBLISH_ACTION)
+    assert publishing, f"{PUBLISH_DATA_WORKFLOW.name} publishes nothing"
 
-    def publish_secrets(path) -> set[str]:
-        workflow = _workflow(path)
-        return {
-            step["with"]["password"]
-            for job in _jobs_using(workflow, PYPI_PUBLISH_ACTION).values()
-            for step in job["steps"]
-            if _uses(step).startswith(PYPI_PUBLISH_ACTION)
-        }
+    for name, job in publishing.items():
+        assert job.get("permissions", {}).get("id-token") == "write", (
+            f"{name} publishes by OIDC but does not request id-token: write"
+        )
+        assert job.get("environment"), (
+            f"{name} is not gated on a deployment environment, which is what the "
+            "trusted publisher on PyPI is bound to"
+        )
 
-    code_secrets = publish_secrets(BUILD_WORKFLOW)
-    data_secrets = publish_secrets(PUBLISH_DATA_WORKFLOW)
-    assert code_secrets and data_secrets
-    assert not (code_secrets & data_secrets), (
-        f"both release streams publish with {code_secrets & data_secrets}; a token "
-        "scoped to one project is what keeps the other stream from uploading to it"
+    code_secrets = {
+        step["with"]["password"]
+        for job in _jobs_using(_workflow(BUILD_WORKFLOW), PYPI_PUBLISH_ACTION).values()
+        for step in job["steps"]
+        if _uses(step).startswith(PYPI_PUBLISH_ACTION)
+    }
+    assert code_secrets, (
+        f"no publishing credential found in {BUILD_WORKFLOW.name} - this check is "
+        "vacuous, so the code stream's mechanism has changed too"
+    )
+    data_workflow_text = PUBLISH_DATA_WORKFLOW.read_text(encoding="utf-8")
+    borrowed = sorted(
+        secret for secret in code_secrets if secret.strip() in data_workflow_text
+    )
+    assert not borrowed, (
+        f"{PUBLISH_DATA_WORKFLOW.name} references the code stream's credential "
+        f"{borrowed}; that token can upload `timezonefinder`"
     )

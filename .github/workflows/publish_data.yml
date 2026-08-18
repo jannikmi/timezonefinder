@@ -14,9 +14,12 @@ name: publish data
 # on the pull request, and the tag points at a commit already on master, which the
 # verification step below requires.
 #
-# Credentials are separate on purpose: PYPI_DATA_DEPLOYMENT_API_KEY must be scoped to
-# `timezonefinder-data` alone. The very first upload cannot be - PyPI scopes tokens to
-# existing projects - so that one uses an account-scoped token which is then replaced.
+# Publishing uses PyPI Trusted Publishing (OIDC), not an API token: PyPI is configured
+# to trust this workflow file in this repository, gated on the `pypi-data` deployment
+# environment. Nothing here can therefore upload `timezonefinder`, and no long-lived
+# credential exists to leak or rotate. It also removes the bootstrap problem a token
+# would have had - a project-scoped token cannot be minted for a project that does not
+# exist yet, whereas a *pending publisher* covers the very first upload.
 
 on:
   push:
@@ -27,7 +30,12 @@ jobs:
   publish-data-pypi:
     name: Publish timezonefinder-data to PyPI
     runs-on: ubuntu-latest
+    # the environment the trusted publisher on PyPI is bound to; a run outside it gets
+    # no OIDC identity PyPI will accept
+    environment: pypi-data
     permissions:
+      # required for Trusted Publishing: the job exchanges this for a short-lived
+      # PyPI token, which is why no secret appears anywhere below
       id-token: write
     steps:
       - name: Checkout repo
@@ -72,5 +80,4 @@ jobs:
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_DATA_DEPLOYMENT_API_KEY }}
           skip-existing: true
