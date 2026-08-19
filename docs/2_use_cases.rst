@@ -40,8 +40,8 @@ depends on the date, since it changes with daylight saving time:
     tz_name = tf.timezone_at(lng=9.67, lat=45.69)  # 'Europe/Rome'
     offset = datetime.now(tz=ZoneInfo(tz_name)).utcoffset()
 
-``examples/get_offset.py`` shows the same lookup with the optional ``pytz`` extra,
-returning the offset in minutes. For new code, the stdlib
+``examples/get_offset.py`` answers the same question with the optional ``pytz`` extra,
+returning the offset in minutes from ``certain_timezone_at()``. For new code, the stdlib
 `zoneinfo <https://docs.python.org/3/library/zoneinfo.html>`_ module is the
 recommended way to attach an IANA timezone to a datetime.
 
