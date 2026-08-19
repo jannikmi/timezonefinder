@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787117778318,
+  "lastUpdate": 1787117780478,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3893,6 +3893,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "42696172134b385922d487b33773321cb7f2d99d",
+          "message": "Refuse to publish the code before the data it requires exists (#529)\n\n* Refuse to publish the code before the data it requires exists\n\nThe two distributions release independently, and on a data format change the\norder is fixed: the data first, then the code requiring it. Backwards, the\nwheel is uninstallable for everyone until the data lands - and PyPI never\naccepts a version number twice, so the fix is a whole new release rather than\na re-upload. Until now that ordering was a checklist item with nothing\nenforcing it.\n\nThe guard runs in the publishing job, ahead of the upload, and reads the\nrequirement out of the wheel about to be published rather than out of\npyproject.toml: the wheel is what a user's resolver will read. It then asks\nthe index the same question that resolver will ask, instead of reimplementing\nthe answer - so a release whose files are all yanked does not count as one\nthat satisfies the bound.\n\n\"Nothing satisfies it\" and \"the check could not run\" exit differently. A\nrelease blocked because PyPI was unreachable is a retry; one blocked because\nthe data is genuinely missing needs the data published first, and collapsing\nthe two loses the only thing the operator needs to know. A wheel declaring no\ndata dependency at all is the second kind, not a pass - that would be the\nguard succeeding for the wrong reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Guard release on data dependency: require data published before code\n\nEnsure code releases cannot be published until the separate timezonefinder-data distribution is published. Update CI workflows, release scripts, documentation and tests to check and enforce the data dependency.\\n\\nFiles changed include workflow YAMLs, release helper scripts, docs, and tests to make the data dependency explicit and to prevent accidental code-only releases.\\n\\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>\n\n* Finish the release guard and assert what each distribution ships\n\nCompletes three items left open on this branch.\n\nThe data-dependency check ran twice: the move ahead of the GitHub Release\nlanded, but the copy next to the PyPI upload survived the merge. Drop it -\n`publish-pypi` needs `release`, so one placement covers both - and widen its\ntest from \"before the upload\" to \"before any publishing step\", satisfied\nin-job or through a dependency. The old test passed with the guard sitting\nafter the GitHub Release, which is the earlier irreversible step.\n\nAssert each distribution's build contents. setuptools copies package data\ninto build/lib and never prunes it, so the .fbs -> .bin rename left a 63 MB\ncoordinates.fbs shipping next to its replacement in every wheel built from a\ndeveloper checkout - 99 MiB instead of 50. Nothing caught it: the\nunwanted-file scan only knows .gitignore patterns, which cannot match a path\ninside an archive, and the essential-file checks only ask whether expected\nfiles are present. Compare the wheel's payload to the committed dataset as a\nset, and clear build/ before building so a local build matches CI's fresh\ncheckout.\n\nRestore the code sdist's assertions for the test fixtures it grafts. Dropping\n*.npy/*.json when the dataset moved out also dropped the only checks that\ntests/fixtures/benchmarks/ and tests/test_input.json still ship.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Let cut-release decide the bump level, reviewed on the release PR\n\nThe skill stopped twice: once to put patch/minor/major to the maintainer,\nonce before pushing the tag. The first stop asked them to answer, from §4's\ntable and with no diff attached, a question the release PR then asked again\nwith both attached. Drop it: §4 derives the level from the table, and §7's\n\"Why this level\" is the review surface instead.\n\nThat only works if the justification is checkable, so it now has a required\nshape - the one bullet that drove the level, quoted, the table row it matches,\nand the level ruled out with the reason. \"minor, not major: no exported\nsignature changed\" can be checked in seconds; \"minor\" cannot.\n\nThe tag stop stays and is different in kind: nothing reviews it afterwards,\nbuild.yml publishes on the push, and PyPI will not take a version twice. The\nmaintenance section records both directions so the next pass neither re-adds\nthe bump gate nor removes the tag one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-19T07:35:03+02:00",
+          "tree_id": "728a8d1bd275eef1eb7a0f6165c853acec39fb4d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/42696172134b385922d487b33773321cb7f2d99d"
+        },
+        "date": 1787117779853,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466585159301758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466748237609863,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.5325469970703125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.541166305541992,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 65.69967937469482,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 65.70830726623535,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           }
         ]
       }
