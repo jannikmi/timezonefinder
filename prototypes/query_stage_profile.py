@@ -13,11 +13,17 @@ Two instruments, because one query stratum is ~1 us and another is ~30 us:
   ``T_k - T_(k-1)``. Nothing is instrumented, so nothing is distorted; the price is
   that the ladder is a *copy* of the lookup, which the ``timezone_at`` row at the
   bottom of every table cross-checks against the real thing.
-* **line_profiler** (``--line-profile``, corroboration only). Its per-line probe costs
-  more than most of the stages it is measuring - it puts the ``validate_coordinates``
-  line at 3.4 us against the 0.28 us the ladder measures, a 12x inflation, and it
-  inflates the cheapest lines hardest. Read the *ordering* of its lines; never a
-  share-of-total.
+* **line_profiler** (``--line-profile``, corroboration only). Its cost is not a per-line
+  probe that could be subtracted off: enabling it deoptimises the whole interpreter, so
+  code that never calls the profiled function slows down too. Measured here, with only
+  ``timezone_at`` registered, ``validate_coordinates`` goes 284 -> 2,251 ns and
+  ``h3.latlng_to_cell`` 390 -> 1,090 ns in loops that call neither, and both revert when
+  it is switched off. The inflation is therefore non-uniform by stage type - ~8x for a
+  pure-Python stage, ~2.8x for a C-extension one, ~1x for time spent inside numba or the
+  C extension, which the interpreter never sees - so it shifts attribution away from
+  geometry and towards the Python prologue. That is the exact ratio this script exists to
+  settle, which is why it is not the primary instrument. Read the *ordering* of its
+  lines; never a share-of-total.
 
 Both backends must be measured. ``timezonefinder/utils.py`` binds the point-in-polygon
 implementation at *import* time and numba wins whenever it is importable, so::
