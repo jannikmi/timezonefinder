@@ -3,7 +3,7 @@ from timezonefinder.utils import is_ocean_timezone
 
 # mapping from original timezone to reduced timezone of the timezones-now dataset
 # unused, but kept for future reference
-REDUCED_TIMEZONE_MAPPING: set[str, str] = {
+REDUCED_TIMEZONE_MAPPING: dict[str, str] = {
     "Europe/Berlin": "Europe/Paris",
     "Europe/Kyiv": "Europe/Athens",
     "Asia/Yakutsk": "Asia/Tokyo",

@@ -122,18 +122,6 @@ here because the alternative is losing them; each needs the maintainer's call, n
 - **Status:** open
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
 
-### DUP-2 — `file_converter.py` recomputes and re-creates its output directories
-
-- **Location:** `scripts/file_converter.py`, `write_numpy_binaries` and `write_flatbuffer_files`.
-- **Defect:** each recomputes `holes_dir` / `boundaries_dir` and `mkdir`s them.
-  `write_numpy_binaries` also calls `np.save` directly for the zone ids while using
-  `store_per_polygon_vector` for everything else, so that one file is written without the progress
-  line the others print.
-- **Fix:** hoist the directory setup to the caller; route the zone ids through the same helper.
-  Size: ~25 lines.
-- **Status:** open
-- **Last touched:** 2026-08-07 — re-verified, unchanged.
-
 ---
 
 ## Performance
@@ -160,39 +148,23 @@ here because the alternative is losing them; each needs the maintainer's call, n
 
 ## Dead and inert code
 
-### DEAD-5 — `REDUCED_TIMEZONE_MAPPING` has no consumer, and is annotated as a set
+### DEAD-5 — `REDUCED_TIMEZONE_MAPPING` has no consumer
 
 - **Location:** `tests/locations.py`, `REDUCED_TIMEZONE_MAPPING`.
-- **Defect:** two independent ones. It is now unreferenced: its only reader was
-  `tests/auxiliaries.py`'s `convert_to_reduced_timezone`, deleted with DEAD-1 this pass, and its own
-  comment already said *"unused, but kept for future reference"*. It is also annotated
-  `set[str, str]` while being a `dict` literal — `set[str, str]` is accepted at runtime (no arity
-  check on `types.GenericAlias`) and mypy does not see `tests/`, so nothing catches it.
-- **Fix:** delete it, or annotate `dict[str, str]` and say what still needs it. Size: ~35 lines
-  removed, or 1 changed.
+- **Defect:** unreferenced. Its only reader was `tests/auxiliaries.py`'s
+  `convert_to_reduced_timezone`, deleted with DEAD-1, and its own comment already said
+  *"unused, but kept for future reference"*.
+- **Fix:** delete it. Size: ~35 lines removed. **Only the deletion is left** — the second half of
+  this entry, the `set[str, str]` annotation on a `dict` literal, was corrected when `tests/` came
+  under the mypy hook, which is also what now stops the same mistake recurring anywhere in the
+  directory.
 - **Value:** low. It is reference data rather than code — the zone merges of the reduced
   `timezones-now` dataset — which is why DEAD-1 deleted its consumer and left it standing rather
-  than deciding for the maintainer. Recorded so the decision is made once.
+  than deciding for the maintainer, and why the pass that fixed its annotation did not delete it
+  either. Deleting data someone wrote down on purpose is the maintainer's call; recorded so it is
+  made once.
 - **Status:** open
-- **Last touched:** 2026-08-14 — found this pass, as a consequence of DEAD-1.
-
----
-
-## Test quality
-
-### TEST-11 — nothing checks that the files a distribution must *add* are present
-
-- **Location:** `tests/test_package_contents.py`.
-- **Defect:** `test_essential_files_in_distribution` covers files that exist in the checkout, so it
-  cannot cover what only the build produces — `PKG-INFO`, the `.dist-info` metadata. A dead
-  `EXPECTED_DIST_PATTERNS` set naming `PKG-INFO` sat in the module unreferenced, with a `TODO test`
-  above it; it was deleted this pass rather than left to read as coverage that exists.
-- **Fix:** assert those names against the built archives, next to the two checks already there.
-  Size: ~15 lines.
-- **Value:** low — an sdist without `PKG-INFO` fails at upload, so the failure is loud elsewhere.
-  Recorded so the deleted constant is not rediscovered as a gap nobody knew about.
-- **Status:** open
-- **Last touched:** 2026-08-10 — found this pass.
+- **Last touched:** 2026-08-19 — annotation half shipped, deletion still open.
 
 ---
 
@@ -266,28 +238,6 @@ here because the alternative is losing them; each needs the maintainer's call, n
 
 ---
 
-## Report rendering
-
-First swept by pass 4 — `scripts/render_benchmark_reports.py` was the largest module no earlier
-pass had read. Nothing in it is wrong; the two below are readability.
-
-### REND-1 — a conditional expression hides inside a paragraph of prose
-
-- **Location:** `scripts/render_benchmark_reports.py`, `render_memory`, the second
-  `reporter.add_text(...)` call.
-- **Defect:** the argument is `"<12 lines of implicitly concatenated prose>" if workload_size else
-  "<3 more lines>"`, with the `if`/`else` buried in the middle of what reads as one string literal.
-  Correct — the conditional guards the `{workload_size:,}` interpolation that would otherwise fail
-  on `None` — but a reader editing the long branch has no reason to look for a ternary at its foot,
-  and moving a sentence across it changes which report gets it.
-- **Fix:** two named locals, or an `if`/`else` statement around two `add_text` calls. Size: ~15
-  lines. Covered by `tests/test_render_benchmark_reports.py`, so a regression is visible.
-- **Status:** open
-- **Last touched:** 2026-08-08 — found this pass.
-
-
----
-
 ## Tooling
 
 ### TOOL-1 — ruff runs close to its default rule set
@@ -307,35 +257,16 @@ pass had read. Nothing in it is wrong; the two below are readability.
   `scripts/timezone_data.py`'s validators and one in `tests/utils_test.py` where the lengths are
   checked on the line above, the rest genuinely paired by construction. The one worth looking at
   on its own merits is `timezonefinder/flatbuf/io/hybrid_shortcuts.py`'s
-  `zip(poly_id_hex_ids, poly_id_lengths)` — the only one on the library's own load path. A
-  truncation there drops shortcut entries silently, and `_iter_boundaries_in_shortcut` treats a
+  `zip(poly_id_hex_ids, poly_id_lengths)` — the only one on the library's own load path.
+  **That reasoning was wrong. It is corrected here rather than deleted, because the site still
+  looks alarming and the next pass would otherwise re-raise it at full price.** The worry was that
+  a truncated `zip` drops shortcut entries silently while `_iter_boundaries_in_shortcut` reads a
   missing hex id as "no candidate polygons" (`shortcut_mapping.get(hex_id)` is `None` → `return`),
-  so those coordinates would answer `None` rather than raise. Both arrays come out of one
-  FlatBuffers message, so this needs a corrupt file to happen at all — but it is the one site where
-  the failure mode is a wrong answer.
-
-### TOOL-5 — the mypy hook still excludes `tests/`
-
-- **Location:** `.pre-commit-config.yaml`, the mypy hook's
-  `exclude: ^((tests|prototypes|docs|benchmarks)/)`.
-- **Defect:** the same mechanism TOOL-4 closed for `scripts/`, one directory over. Measured on this
-  branch, `uv run mypy tests/` reports **14 errors** (plus one `cffi` stub the hook supplies itself
-  via `additional_dependencies`): six are missing third-party stubs (`pytz` ×2, `yaml` ×4), which
-  want `types-PyYAML` in `additional_dependencies` and `pytz` adding to the
-  `ignore_missing_imports` override rather than code changes. The remaining eight are real
-  disagreements — five in `tests/main_test.py` (three uses of a `test_instance` attribute the base
-  class does not define, and two subclass attributes narrowing a base annotation), two in
-  `tests/locations.py` (DEAD-5's `set[str, str]` on a `dict` literal, counted twice), one in
-  `tests/test_memory_footprint.py` (`int | None` into a `float`-valued dict comprehension).
-- **Fix:** clear the fourteen, then drop `tests` from the exclude and extend
-  `test_scripts_are_type_checked_by_the_hook` to cover it. Size: ~35 lines plus two hook edits.
-- **Value:** moderate, and lower than TOOL-4's was — `tests/` is exercised by running it, so a type
-  error there is less likely to hide a live defect than one in the converter. The
-  `test_instance` errors are the exception: they say the base class and its subclasses disagree
-  about what exists.
-- **Status:** open
-- **Last touched:** 2026-08-14 — measured this pass, directly after narrowing the exclude to cover
-  `scripts/`.
+  so those coordinates would answer `None` rather than raise. The two lists cannot differ in
+  length: they are local accumulators appended in the same iteration of the same loop, a few lines
+  above the `zip`, and no file — corrupt or otherwise — is read between the two. `strict=True`
+  there would assert what the control flow already guarantees, so B905 has no site on the load
+  path and the family stands or falls on the other eight.
 
 ### TOOL-6 — `parse_data` rewrites the committed data report whatever `-out` it was given
 
@@ -359,6 +290,25 @@ pass had read. Nothing in it is wrong; the two below are readability.
   runnable again (TOOL-3); before that the target could not reach the report-writing code at all,
   which is why no earlier pass saw it.
 
+### TOOL-7 — the data-dependency guard checks one wheel of however many it finds
+
+- **Location:** `scripts/check_data_dependency.py`, `find_wheel`.
+- **Defect:** `sorted(dist_dir.glob(f"{prefix}-*.whl"))[0]` and no word about the rest. The release
+  job runs this over a `dist/` that cibuildwheel has filled with one wheel per platform target, so
+  the discarded majority is the normal case, not the edge one. It is correct today because every
+  wheel of a build carries the same `Requires-Dist`; it stops being correct the moment `dist/`
+  holds two versions, and the guard would then pass on the wrong one — silently, in the one script
+  whose entire job is to not pass vacuously (its own `read_requirement` raises rather than let a
+  missing requirement do that).
+- **Fix:** read the requirement from every matching wheel and raise `UndeterminedError` if they
+  disagree. Size: ~10 lines.
+- **Why it is not a straight refactor:** it changes when the script exits `2`, for an input that
+  exits `0` today, in the gate ahead of an irreversible publish. That is a behaviour change by the
+  quality pass's own definition and wants the maintainer's call. **Out of scope**; recorded so the
+  decision is made once.
+- **Status:** open — out of scope for the quality pass that found it.
+- **Last touched:** 2026-08-19 — found this pass, on the first read of the module.
+
 ---
 
 ## Scope notes
@@ -369,6 +319,11 @@ in exploratory code.
 
 `packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited
 directly; findings there belong against the generator or the schema instead.
+
+The `timezonefinder-data` distribution is deliberately thin — one `DATA_DIR` constant and a version
+in `packages/timezonefinder-data/timezonefinder_data/__init__.py`, plus the payload. Pass 10 read
+it and found nothing; there is no code there to carry debt, and `CLAUDE.md` records that moving the
+binary-format reader into it was considered and rejected, so do not propose that as a finding.
 
 **Structural work belongs in the issue tracker, not here.** Issue #506 is the roadmap: it ranks the
 open issues and records decisions already taken (including ideas that were considered and dropped).
@@ -392,14 +347,24 @@ deleted by the pass that reads it.
 | 8 (the data report generator) | 2026-08-14 | `scripts/reporting.py` read in full — the last large module no pass had read end to end, and the source of five of this pass's six items; `scripts/hex_utils.py`'s `Hex` cache properties and `scripts/utils.py` re-read; `scripts/render_benchmark_reports.py` revisited only at the REND-2 site. `uv run mypy` run by hand over `scripts/`, which the pre-commit hook excludes — the first time any pass has done so, and the mechanism behind most findings here | `docs/` prose; `scripts/shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py` and `measure_memory.py`, whose mypy errors TOOL-4 counts but which were not read for it; `scripts/data_integrity.py`, added by #509 mid-pass |
 
 | 9 (scripts/ entry point and typing) | 2026-08-14 | The five `scripts/` modules pass 8 named as unreached — `shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py`, `measure_memory.py` — read at their mypy error sites and around them; `Makefile`, `update_data.sh` and `docs/2_use_cases.rst` compared for how the converter is invoked; `tests/main_test.py`'s cleanup class and `tests/auxiliaries.py` re-read. `uv run mypy` run by hand over `scripts/` (15 errors, all cleared, directory now in the hook) and over `tests/` (14 errors, recorded as TOOL-5) | `docs/` prose; `scripts/data_integrity.py`, still unread by any pass; `scripts/reporting.py` internals (pass 8's ground); no repeat of the repo-wide `--select ALL` triage — passes 7 and 8 both ran it and found nothing new above the bar |
+| 10 (the data-package split, and `tests/` typing) | 2026-08-19 | The six modules the distribution split added or rewrote, none of which any pass had read: `packages/timezonefinder-data/timezonefinder_data/__init__.py`, `scripts/data_integrity.py` (named as unreached by passes 8 and 9), `scripts/check_data_dependency.py`, `scripts/data_releases.py`, `timezonefinder/flatbuf/schemas/__init__.py` and `timezonefinder/zone_names.py` — plus the new test modules `test_integration.py` and `test_script_invocations.py`. Every open entry re-verified against the current code, which no pass had done since #509; `uv run mypy` re-run over `tests/` (19 errors, up from pass 9's 14 — the 8 real ones cleared and the directory now in the hook), and the repository's duplicated root-path derivations enumerated | `docs/` prose; the larger new test modules (`test_hole_references.py`, `test_release_workflows.py`, `test_flatbuf_format_guard.py`, `test_data_version.py`, `test_resource_management.py`) read only at their headers; no repeat of the repo-wide `--select ALL` triage |
 
-Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`
-and pass 8 `scripts/reporting.py`. The only areas with **no coverage in any pass** are `docs/` prose
-— mostly outside a code-quality pass's scope — and `scripts/data_integrity.py`. The cheapest real
-starting point is therefore the ranked open entries above rather than fresh discovery, with one
-exception worth knowing: running mypy by hand over a directory the pre-commit hook excludes
-surfaces defects no pass had seen. All of `scripts/` has now been cleared that way and the hook
-covers it; `tests/` is the directory that is still excluded, measured in TOOL-5.
+Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`,
+pass 8 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only
+area with **no coverage in any pass** is `docs/` prose, which is mostly outside a code-quality
+pass's scope. The cheapest real starting point is therefore the ranked open entries above rather
+than fresh discovery — with two things worth knowing.
+
+Running mypy by hand over a directory the pre-commit hook excludes surfaced defects no pass had
+seen, twice: 15 in `scripts/` and 8 real ones in `tests/`. **Both directories are now in the hook**,
+so that particular seam is closed and the technique has nothing left to find here — `prototypes/`,
+`docs/` and `benchmarks/` are what the exclude still names, and the first of those is out of scope
+by choice.
+
+And an open entry's *premise* goes stale faster than its location. Pass 10 re-verified all of them
+after six merged PRs and found one conclusion resting on something untrue (TOOL-1's B905 site) and
+one half-shipped by unrelated work (DEAD-5's annotation). Re-verify before ranking, not after
+picking.
 
 The `--select ALL` triage above is worth repeating, but its output needs filtering: 180 findings,
 of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run
@@ -450,6 +415,15 @@ Deliberately checked and found sound, so do not re-raise them:
   not a `ZeroDivisionError` — correct, and confusing enough to re-derive rather than re-raise;
   `generate_metrics_rows`'s non-numeric `str(value)` fallback, kept reachable by annotating the
   parameter `Mapping[str, object]` rather than deleted to satisfy a narrower annotation.
+- Pass 10: `scripts/data_integrity.py` (read in full — its two validators each build their own
+  `PolygonArray`/`HoleArray`, which looks like duplication and is not worth collapsing: they are
+  separate entry points with different subjects, one about whether a directory's files agree and
+  one an expectation about the upstream data, and `__del__` releases the accessors either way);
+  `packages/timezonefinder-data/timezonefinder_data/__init__.py` and
+  `scripts/data_releases.py` (read in full, nothing found); `timezonefinder/zone_names.py`, whose
+  asymmetric defaults — `read_zone_names` takes a path, `write_zone_names` requires one — are
+  deliberate and documented, since defaulting the write side to `DEFAULT_DATA_DIR` would rewrite
+  the installed dataset in `site-packages`.
 - Pass 6: `tests/test_benchmark_ci_tooling.py` and `tests/test_render_benchmark_reports.py` (both
   read in full, nothing found — each assertion names why it exists); `tests/auxiliaries.py`'s
   `matches_pattern`, whose `fnmatch` semantics (`*` crosses `/`, POSIX case sensitivity) are what

@@ -1,4 +1,5 @@
 from importlib.util import find_spec
+from pathlib import Path
 import warnings
 
 import pytest
@@ -22,6 +23,7 @@ from timezonefinder.configs import (
 )
 from timezonefinder.zone_names import read_zone_names
 from timezonefinder.timezonefinder import (
+    AbstractTimezoneFinder,
     TimezoneFinder,
     TimezoneFinderL,
 )
@@ -41,14 +43,22 @@ RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
 # tests for both classes: TimezoneFinderL and TimezoneFinder
 class TestBaseTimezoneFinderClass:
-    class_under_test = TimezoneFinderL
+    # Annotated rather than left to inference: every one of these is a knob the
+    # subclasses below turn, so inferring each type from *this* class's value declares
+    # the base's choice to be the only allowed one - a subclass naming TimezoneFinder or
+    # listing a third keyword-only method then contradicts a type nobody wrote down.
+    class_under_test: type[AbstractTimezoneFinder] = TimezoneFinderL
     # NOTE: setting memory mode does not make a difference for TimezoneFinderL (relevant only for polygon data)
-    in_memory_mode = False
-    bin_file_dir = None
-    on_land_pt_fct_name = "timezone_at"
-    test_locations = BASIC_TEST_LOCATIONS
+    in_memory_mode: bool = False
+    bin_file_dir: Path | None = None
+    on_land_pt_fct_name: str = "timezone_at"
+    test_locations: list = BASIC_TEST_LOCATIONS
     # the lookup methods this class exposes that take lng/lat keyword-only
-    keyword_only_methods = ("timezone_at", "timezone_at_land")
+    keyword_only_methods: tuple[str, ...] = ("timezone_at", "timezone_at_land")
+    # set on the class by the ``_init_test_instance`` fixture below, which is where the
+    # per-subclass construction lives; without the declaration the tests read an
+    # attribute the class does not admit to having
+    test_instance: AbstractTimezoneFinder
 
     @pytest.fixture(scope="class", autouse=True)
     def _init_test_instance(

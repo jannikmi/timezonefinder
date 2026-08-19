@@ -26,12 +26,12 @@ def get_schemas_dir(data_dir: Path) -> Path:
     return data_dir / "schemas"
 
 
+# The schema *files* are data, not submodules, so they are not named here - listing
+# them made ``from ... import *`` raise ``AttributeError``. ``iter_schema_files()``
+# is how they are enumerated.
 __all__ = [
     "SCHEMA_DIR",
     "SCHEMA_SUFFIX",
     "get_schemas_dir",
     "iter_schema_files",
-    "polygons",
-    "hybrid_shortcuts_uint8",
-    "hybrid_shortcuts_uint16",
 ]

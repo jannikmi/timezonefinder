@@ -786,18 +786,26 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
         "is the cost of NumPy and H3, paid once per process whichever finder "
         "you build."
     )
-    reporter.add_text(
-        "``Heap`` is what ``tracemalloc`` accounts for - Python and NumPy "
-        "allocations. ``RSS`` is the process resident set, which additionally "
-        "counts memory-mapped pages. The two differ by design and the gap is "
-        "the point: with ``in_memory=False`` the coordinate data is mapped "
-        f"rather than read, so it becomes resident only as the {workload_size:,} "
-        "lookups of the workload fault its pages in - which is why the "
-        "``after init`` and ``after workload`` columns are both shown."
-        if workload_size
-        else "``Heap`` is what ``tracemalloc`` accounts for; ``RSS`` is the "
-        "process resident set, which additionally counts memory-mapped pages."
-    )
+    # Two whole paragraphs rather than one with a conditional clause: the long one
+    # interpolates the workload size, which is absent from an older measurement JSON,
+    # and a ternary between two multi-line strings puts the branch where a reader
+    # editing either one will not look for it.
+    if workload_size:
+        metric_explanation = (
+            "``Heap`` is what ``tracemalloc`` accounts for - Python and NumPy "
+            "allocations. ``RSS`` is the process resident set, which additionally "
+            "counts memory-mapped pages. The two differ by design and the gap is "
+            "the point: with ``in_memory=False`` the coordinate data is mapped "
+            f"rather than read, so it becomes resident only as the {workload_size:,} "
+            "lookups of the workload fault its pages in - which is why the "
+            "``after init`` and ``after workload`` columns are both shown."
+        )
+    else:
+        metric_explanation = (
+            "``Heap`` is what ``tracemalloc`` accounts for; ``RSS`` is the "
+            "process resident set, which additionally counts memory-mapped pages."
+        )
+    reporter.add_text(metric_explanation)
 
     metrics = list(MEMORY_METRIC_LABELS)
     headers = ["Configuration", *(MEMORY_METRIC_LABELS[m] for m in metrics)]

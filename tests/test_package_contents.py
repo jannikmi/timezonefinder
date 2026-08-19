@@ -501,8 +501,11 @@ class DistributionFilesFixture:
         """Initialize the fixture with empty attributes."""
         self.dist = dist
         self.dist_type = dist_type  # "sdist" or "wheel"
-        self.archive_path = None
-        self.archive_files = None
+        # Annotated because ``built_files`` promises a ``list[Path]`` and reads them
+        # straight off the fixture: inferred from this line alone both are plain
+        # ``None``, so nothing connects the promise to what ``initialize`` assigns.
+        self.archive_path: Path | None = None
+        self.archive_files: list[Path] | None = None
         self._initialized = False
 
     def initialize(self):
@@ -540,6 +543,7 @@ def built_files(dist: Distribution, dist_type: str) -> list[Path]:
     """The files in ``dist``'s built ``dist_type`` artefact, building it if needed."""
     fixture = fixtures[(dist.name, dist_type)]
     fixture.initialize()
+    assert fixture.archive_files is not None
     return fixture.archive_files
 
 
@@ -763,6 +767,46 @@ def test_essential_files_in_distribution(
     )
     assert nr_matched_files == 1, (
         f"Essential file '{pattern}' not found in the {dist.name} {dist_type}."
+    )
+
+
+# The metadata each artefact type carries that no file in the checkout corresponds to:
+# the build produces it, so ``test_essential_files_in_distribution`` - which is driven by
+# paths that exist in the source tree - structurally cannot reach any of it.
+BUILD_PRODUCED_METADATA = {
+    SDIST_TYPE: ("PKG-INFO",),
+    WHEEL_TYPE: ("*.dist-info/METADATA", "*.dist-info/WHEEL", "*.dist-info/RECORD"),
+}
+
+METADATA_CASES = [
+    (dist, dist_type, pattern)
+    for dist, dist_type in DIST_CASES
+    for pattern in BUILD_PRODUCED_METADATA[dist_type]
+]
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("dist", "dist_type", "pattern"),
+    METADATA_CASES,
+    ids=[f"{d.name}-{t}-{p}" for d, t, p in METADATA_CASES],
+)
+def test_build_produced_metadata_in_distribution(
+    dist: Distribution, dist_type: str, pattern: str
+):
+    """The metadata an artefact only has because it was built is actually there.
+
+    A distribution is more than the files it copies out of the checkout, and the rest
+    is exactly what the essential-files check cannot see: every case it runs names a
+    path in the source tree, so nothing it does can notice ``PKG-INFO`` or the
+    ``.dist-info`` directory going missing. The failure would surface at upload, in a
+    release that cannot be taken back and re-published under the same version.
+    """
+    dist_files = built_files(dist, dist_type)
+    matched = [path for path in dist_files if matches_pattern(path, pattern)]
+    assert matched, (
+        f"the {dist.name} {dist_type} carries no {pattern}, which the build - not the "
+        f"checkout - is responsible for producing"
     )
 
 
