@@ -172,6 +172,18 @@ def _coerce_zone_id_dtype(zone_id_dtype: str | np.dtype | None) -> np.dtype:
     return np.dtype(zone_id_dtype)
 
 
+def create_polygon_dirs(output_path: Path) -> None:
+    """Create the per-polygon subdirectories both writers below write into.
+
+    Called once by ``write_binary_files`` rather than by each writer: they used to
+    create them independently, which reads as though either could run on its own and
+    is not true - a data directory needs both, and the reference vector one writes
+    addresses the coordinate file the other does.
+    """
+    for directory in (get_holes_dir(output_path), get_boundaries_dir(output_path)):
+        directory.mkdir(parents=True, exist_ok=True)
+
+
 def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     print("Writing binary data to separate Numpy binary .npy files...")
     # some properties are very small but essential for the performance of the package
@@ -187,15 +199,12 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
     # BOUNDARY_ZONE_IDS: the zone id for every polygon
     # NOTE: zone ids are stored idependently from boundaries or holes
     zone_id_file: Path = get_zone_ids_path(output_path)
-    np.save(zone_id_file, data.poly_zone_ids)
+    store_per_polygon_vector(zone_id_file, data.poly_zone_ids)
 
     # properties which are "per polygon" (boundary/hole) vectors
     # separate output directories for holes and boundaries
     holes_dir: Path = get_holes_dir(output_path)
     boundaries_dir: Path = get_boundaries_dir(output_path)
-
-    holes_dir.mkdir(parents=True, exist_ok=True)
-    boundaries_dir.mkdir(parents=True, exist_ok=True)
 
     # save 4 bbox vectors for holes and polygons to the respective directories
     boundary_sources = [
@@ -230,9 +239,6 @@ def write_flatbuffer_files(data: TimezoneData, output_path: Path) -> None:
     holes_dir: Path = get_holes_dir(output_path)
     boundaries_dir: Path = get_boundaries_dir(output_path)
 
-    holes_dir.mkdir(parents=True, exist_ok=True)
-    boundaries_dir.mkdir(parents=True, exist_ok=True)
-
     print("Writing binary data to flatbuffer files...")
     # Write polygon boundary coordinates to flatbuffer
     boundary_polygon_file: Path = get_coordinate_path(boundaries_dir)
@@ -254,6 +260,7 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     Args:
         output_path: Directory where binary files will be written
     """
+    create_polygon_dirs(output_path)
     write_numpy_binaries(data, output_path)
     write_flatbuffer_files(data, output_path)
     # Check the artifact rather than the in-memory model it came from: the hole
