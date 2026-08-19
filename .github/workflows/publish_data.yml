@@ -20,6 +20,12 @@ name: publish data
 # credential exists to leak or rotate. It also removes the bootstrap problem a token
 # would have had - a project-scoped token cannot be minted for a project that does not
 # exist yet, whereas a *pending publisher* covers the very first upload.
+#
+# The name of this file is therefore load-bearing: the publisher names it, alongside
+# this repository and the `pypi-data` deployment environment. Renaming it breaks
+# publishing silently - PyPI simply refuses the OIDC identity, at tag-push time, when
+# the release is already half out. A rename means updating the publisher on pypi.org in
+# the same breath.
 
 on:
   push:
