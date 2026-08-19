@@ -192,8 +192,9 @@ state**, never the path taken to it:
 ## Improvement Register
 
 `potential-improvements.md` at the repository root is the single register of what is worth doing
-next: every finding, one ranking across structural work and internal quality alike, the sequencing
-rules, and the decisions already taken. `.claude/skills/improvement-pass/SKILL.md` drives one pass
+next: every finding a pass turns up — whatever its area, from a correctness defect to a docs
+caveat to a data encoding — in one ranking, with the sequencing rules and the decisions already
+taken. `.claude/skills/improvement-pass/SKILL.md` drives one pass
 over it, and `tests/test_improvement_ledger.py` asserts that the ranking table and the entries name
 the same items.
 

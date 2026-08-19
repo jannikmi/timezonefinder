@@ -1,6 +1,6 @@
 ---
 name: improvement-pass
-description: "Advances timezonefinder by one improvement pass — read the ranked register in potential-improvements.md, re-verify and re-rank it, take the highest-ranked item that is eligible, put any maintainer-owned design choice to them as concrete options, implement one reviewable slice, and end in a single pull request against master plus an updated register. One pass, one item, one pull request. The register holds every finding, the ranking, the sequencing rules and the decisions already taken, so repeated and concurrent passes build on each other instead of rediscovering the same candidates. Use this whenever the user asks for an improvement, quality, cleanup, refactoring or roadmap pass, wants technical debt found or paid down, says improve the code quality or tidy up the codebase or find what is worth refactoring, asks to work on or continue the roadmap, wants the next item picked up, asks what improvements are still outstanding or what the next pass would do or what is blocking an item, or wants a pull request prepared for review — even if they never say the word skill."
+description: "Advances timezonefinder by one improvement pass — read the ranked register in potential-improvements.md, re-verify and re-rank it, take the highest-ranked item that is eligible, put any maintainer-owned design choice to them as concrete options, implement one reviewable slice, and end in a single pull request against master plus an updated register. One pass, one item, one pull request. Any improvement is in scope, whatever its area: correctness, performance, public API, data format, docs, packaging, release and CI, tests, developer tooling, internal structure. The register holds every finding, the ranking, the sequencing rules and the decisions already taken, so repeated and concurrent passes build on each other instead of rediscovering the same candidates. Use this whenever the user asks for an improvement, quality, cleanup, refactoring or roadmap pass, wants technical debt found or paid down, says improve the code quality or tidy up the codebase or find what is worth refactoring, asks to work on or continue the roadmap, wants the next item picked up, asks what improvements are still outstanding or what the next pass would do or what is blocking an item, or wants a pull request prepared for review — even if they never say the word skill."
 ---
 
 # Improvement pass
@@ -19,24 +19,30 @@ them, the sequencing rules and the decisions already taken. Reading it and writi
 of the deliverable, not bookkeeping. §3 is what keeps concurrent passes off each other's ground;
 read it before you pick anything to work on.
 
-## 0. Two kinds of item, one pass
+## 0. What counts as an improvement
 
-The register mixes work of two shapes, and the difference decides how a pass behaves — not which
-skill it runs:
+Anything that leaves the package better than you found it and that a reviewer can act on. A
+correctness defect, a slow path, an API that is awkward to call, a docs page that lies, a release
+step that can fail silently, a test that cannot fail, a name that misleads, a build slower than it
+needs to be, a data encoding that wastes half its bytes. **Whatever a pass discovers is welcome in
+the register**, whatever its area and whoever would do the work — §4 ranks it and §5 names the few
+things that are out of bounds.
 
-- **Internal quality.** A defect in code that already works: duplication that will drift, a
-  docstring describing an older signature, an error path that swallows its cause. Observable
-  behaviour does not change. These have an obvious correct answer, so **decide and proceed**;
-  stopping to ask would be the agent declining to make a routine call.
-- **Structural.** A batch API, a data encoding, a validation mode, a release guardrail. These carry
-  choices that belong to the maintainer — what a batch call returns, whether a dependency is hard,
-  which thresholds block a release. Those decisions outlive the pass and are expensive to reverse.
-  **A month-sized item built on a guessed design choice is worse than one not started**, so §6
-  applies before any code is written.
+Resist the pull to sort candidates into categories that then decide how the pass behaves. Two
+properties do that, and both belong to the individual change rather than to any class you could put
+it in:
 
-An earlier version of this skill split those into two files, one that never asked and one that
-always did. That was the wrong seam: the *item* decides, not the skill. Do not re-split it — but do
-not flatten it either, by dropping §6 to make every item behave like a quality fix.
+- **Does it change observable behaviour?** Same results, same public API, same binary formats, same
+  exception types for the same inputs — or not. If you cannot prove it does not, it does (§5).
+- **Does it carry a choice that belongs to the maintainer?** One that outlives the pass and is
+  expensive to reverse: what a batch call returns, whether a dependency is hard, which thresholds
+  block a release. If so, §6 applies **before any code is written** — an item built on a guessed
+  design choice is worse than one not started. If not, decide and proceed; stopping to ask would
+  be the agent declining to make a routine call.
+
+Read both per item, not per category. A rename that looks like pure tidying changes an exception
+type and is a behaviour change; a month-sized item whose design was settled two passes ago needs no
+question at all.
 
 ## 1. Ground rules
 
@@ -75,8 +81,7 @@ it in a diff. In the register, an entry is reviewed in the pull request that cha
 
 Issues still exist and are still useful — an issue is where one item is worked out in detail and
 where outside contributors comment. But **the ranking, the sequencing and the decisions live
-here**, and a structural entry names its issue as a pointer rather than delegating its reasoning to
-it.
+here**, and an entry names its issue as a pointer rather than delegating its reasoning to it.
 
 | Question | Answered by |
 |---|---|
@@ -126,7 +131,7 @@ concurrent passes. The deletion rule is **only** for shipped work. Rejected, out
 withdrawn entries stay with their one line of reason, as does the *deliberately checked and found
 sound* list: each encodes a dead end, and re-discovering one costs a whole pass.
 
-Two structural rules the file depends on:
+Two rules the file depends on:
 
 - **The ranking table and the entries are one list, kept in step.** Every entry has exactly one row
   and every row has exactly one entry; `tests/test_improvement_ledger.py` fails otherwise. The
@@ -254,17 +259,19 @@ stale faster than its location.
 
 ## 5. Scope: what a pass may change
 
-In scope, for a quality item — observable behaviour must not change (same results, same public API,
-same binary formats, same exception types for the same inputs): duplication that has drifted or
-will; functions doing several unrelated things, deep nesting, parameter lists that outgrew the
-function; missing, wrong or `Any`-shaped type hints; error handling that swallows failures or fails
-without naming the offending input; dead code, unreachable branches, comments that contradict the
-code; test quality — assertions that assert nothing, over-mocking, an uncovered error path the code
-clearly cares about; names that mislead.
+**In scope: any change to this repository a reviewer can act on** — library code, scripts, tests,
+docs, packaging, workflows, developer tooling. The list of what a pass may improve is not enumerated
+anywhere on purpose; an enumeration is read as exhaustive, and then a real defect goes unrecorded
+because it did not fit a heading.
 
-In scope, for a structural item: exactly what its recorded decisions say, and no more.
+Two conditions attach to the change rather than to its area, and both are §0's questions applied:
 
-Out of scope for every pass — the repository docs describe some of these procedures neutrally
+- A change that alters observable behaviour needs a **recorded decision** behind it (§6). If you
+  cannot prove a change is behaviour-preserving, treat it as one.
+- An item whose design is already decided is implemented as decided — **exactly what its recorded
+  decisions say, and no more.**
+
+Out of bounds for every pass — the repository docs describe some of these procedures neutrally
 because they cannot know your boundary, so treat them as prohibitions here:
 
 - Regenerating timezone data, benchmark fixtures or FlatBuffers bindings; editing the packaged data
@@ -334,8 +341,8 @@ to justify the pass.
 
 ### 7.1 The releasable-slice rule
 
-Structural items are month-sized, so the question that decides whether this skill helps or harms
-is: *how does a pass deliver a reviewable slice without leaving the tree half-migrated?*
+Some items are month-sized, so the question that decides whether this skill helps or harms is:
+*how does a pass deliver a reviewable slice without leaving the tree half-migrated?*
 
 **The rule: a slice must leave `master` releasable on its own.** The test is concrete —
 
@@ -435,7 +442,7 @@ item was not the top of the ranking, say what stood above it and why that was no
 The recorded decisions it is built on, and who decided them. Omit for an item that needed none.
 
 ## Behaviour impact
-None — internal quality only. Or: the exact observable difference, and the decision behind it.
+None, and why you are sure. Or: the exact observable difference, and the decision behind it.
 
 ## Verification
 Commands run and their outcome. Benchmark before/after with the backend named and the noise
@@ -504,9 +511,11 @@ and implemented it has done damage that is expensive to undo.
 
 ## Maintaining this skill
 
-**The two-shapes distinction in §0 is the design, not an inconsistency.** One skill, one register,
-one ranking; the item decides whether the pass asks. Do not re-split this into a quality skill and
-a roadmap skill, and do not remove §6 to make every item behave like a quality fix.
+**One skill, one register, one ranking, and no item categories that gate behaviour.** §0's two
+questions are asked of each change; that is the whole of what varies between passes. Splitting this
+file by kind of work — or splitting the register's ranking — puts the decision back on a category,
+which is what makes an agent ask a routine question or skip a consequential one. Equally, do not
+collapse §6 away so that every item is decided by the agent.
 
 Three things are deliberately absent, and should stay absent.
 
