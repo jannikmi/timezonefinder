@@ -6,13 +6,33 @@ loop (#364) by per-polygon FFI marshalling, shortcut ordering (#301) by the poly
 loop. This script measures the breakdown so those assumptions stop being assumptions.
 See issue #497.
 
-Two instruments, because one query stratum is ~1 us and another is ~30 us:
+No instrument is unbiased here, so there are three, chosen to fail differently, and
+the report leads with the one that measures the *real* function untouched.
 
-* **Stage ladder** (primary). A series of prefixes of ``TimezoneFinder.timezone_at``,
+* **Exact counts x sampled share** (primary). Hit counts come from ``line_profiler``,
+  whose timings are unusable (below) but whose *counts* are exact and invariant under
+  that perturbation - deoptimising the interpreter does not change how many times a line
+  runs. The time share comes from an ``ITIMER_REAL`` signal sampler, which installs no
+  tracing hooks. Neither half carries the other's bias::
+
+      ns per query = sampled share x untouched wall clock / queries
+      ns per hit   = ns per query / exact hits per query
+
+  Wall clock rather than ``ITIMER_PROF`` on purpose: CPU-time sampling hides memory
+  stalls, and the mapped coordinate accessor (finding 5) is one. Attribution is to
+  *blocks* of lines, because a signal is delivered at the next bytecode boundary, so a
+  long call's time can land on the following line - a skid that cancels inside a block
+  and does not across one. Measured overhead: 0.3-3.7%, printed per stratum rather than
+  claimed, against an unsampled *mean* over the same loop. (Against the unsampled *min*
+  it reads 8-16%, which charges the sampler for the machine's own 3-9% jitter; the
+  reconciliation line prints both so the comparison cannot be made wrongly.)
+* **Stage ladder** (for splits inside a block, and for the ~1 us strata where no
+  profiler resolves anything). A series of prefixes of ``TimezoneFinder.timezone_at``,
   each executing the real code up to stage k and stopping. The cost of stage k is
-  ``T_k - T_(k-1)``. Nothing is instrumented, so nothing is distorted; the price is
-  that the ladder is a *copy* of the lookup, which the ``timezone_at`` row at the
-  bottom of every table cross-checks against the real thing.
+  ``T_k - T_(k-1)``. Nothing is instrumented, so nothing is distorted; the prices are
+  that the ladder is a *copy* of the lookup - which the ``timezone_at`` row at the
+  bottom of every table cross-checks against the real thing - and that a stage measured
+  as the difference of two large numbers is noise (see the ``ffi.from_buffer`` note).
 * **line_profiler** (``--line-profile``, corroboration only). Its cost is not a per-line
   probe that could be subtracted off: enabling it deoptimises the whole interpreter, so
   code that never calls the profiled function slows down too. Measured here, with only
@@ -45,9 +65,34 @@ same commit execute the same workload.
 
 FINDINGS (2026-08-19, Apple arm64, Python 3.13, data 2026c, fixture set v2)
 
-All figures are nanoseconds per query, the min over 15 passes of 2,000 fixture points.
-The ``real`` row is ``tf.timezone_at(lng=, lat=)`` itself; the gap above it is the
-bound-method call the ladder does not pay.
+All figures are nanoseconds per query. Ladder figures are the min over 15 passes of
+2,000 fixture points; the ``real`` row is ``tf.timezone_at(lng=, lat=)`` itself, and the
+gap above it is the bound-method call the ladder does not pay.
+
+Counts x sampled share, over the real function with nothing attached to it - blocks, so
+that the sampler's one-line skid stays inside a block:
+
+    block             ambiguous            unique
+                    numba    clang    numba    clang
+    prologue        1,147    1,031      794      718
+    bookkeeping     1,413    1,708        -        -
+    candidate loop 10,468   10,971        -        -
+    zone name         147      198      378      355
+    -----------------------------------------------
+    total          13,214   13,958    1,209    1,102
+
+  `zone name` on the unique stratum is not just ``zone_name_from_id`` (the ladder puts
+  that at 39 ns): a frame's teardown is attributed to the line it returns from, so that
+  block absorbs the ~390 ns of call overhead the ladder measures separately. The two
+  agree once that is accounted for - 789 ladder + 385 call = 1,174, against the sampler's
+  1,209.
+
+  The number this construction gives that neither other instrument does is **cost per
+  candidate polygon tested**, since the candidate loop is one line and its hit count is
+  exact: **9,264 ns (numba) / 9,709 ns (clang)** per candidate on the ambiguous stratum,
+  12,464 ns on `on_land`, at 1.13 candidates per ambiguous query. The ladder's
+  bbox+holes+PIP over the same count gives 10,270 ns, a 10% spread between two
+  instruments with unrelated failure modes.
 
 Unique-shortcut stratum - the common case, and the one with no geometry in it at all:
 
@@ -142,11 +187,15 @@ CONCLUSIONS, in the order #497 asks them:
 """
 
 import argparse
+import collections
+import inspect
+import signal
 import time
 from collections.abc import Callable, Sequence
 
 import numpy as np
 from h3.api import numpy_int as h3
+from line_profiler import LineProfiler
 
 from scripts.assert_acceleration_path import active_acceleration_path
 from tests.auxiliaries import (
@@ -513,13 +562,202 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# the unbiased construction: exact counts x sampled time share
+#
+# Neither half carries the other's bias. Hit counts come from ``line_profiler``,
+# whose *timings* are unusable here (enabling it deoptimises the interpreter,
+# non-uniformly by stage type - see the module docstring) but whose *counts* are
+# exact and invariant under that perturbation: slowing the interpreter down does
+# not change how many times a line runs. The time share comes from a signal
+# sampler, which installs no tracing hooks at all. The untouched wall clock of
+# the same workload is the third input, and the reconciliation line below is what
+# proves the profile describes the program that actually ran:
+#
+#     ns per query = sampled_share x untouched_total / queries
+#     ns per hit   = ns per query / exact hits per query
+#
+# ITIMER_REAL, not ITIMER_PROF: CPU-time sampling hides memory stalls, and the
+# mapped coordinate accessor (finding 5) is exactly such a stall. Attribution is
+# to *blocks* of lines rather than to single lines, because a signal is delivered
+# at the next bytecode boundary and a long call's time can land on the following
+# line - within a block that skid cancels, across one it does not, and there are
+# three block boundaries here instead of ten line boundaries. Splits *inside* a
+# block are the ladder's job.
+# ---------------------------------------------------------------------------
+
+SAMPLE_SECONDS = 6.0
+# 1 kHz, tuned against the overhead line the report prints rather than guessed:
+# 5 kHz cost 11-17% of the workload, which is a large enough perturbation to be
+# worth avoiding even though it is roughly uniform in time. At 1 kHz it is ~3%
+# and a 6 s window still yields ~6,000 samples, so a 10% block is resolved to
+# about +/-4% relative.
+SAMPLE_INTERVAL_S = 0.001
+# window for the unsampled mean the overhead line is measured against
+OVERHEAD_REFERENCE_SECONDS = 2.0
+
+# Which block each line of ``timezone_at`` belongs to, matched on what the line
+# *says* rather than on its number, so the mapping survives edits to
+# timezonefinder.py. A line matching nothing is reported as "other", which is the
+# signal that this table needs a new marker.
+BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
+    ("validate_coordinates", "prologue"),
+    ("latlng_to_cell", "prologue"),
+    ("shortcut_mapping.get", "prologue"),
+    ("shortcut_value is None", "prologue"),
+    ("match shortcut_value", "prologue"),
+    ("case int(zone_id)", "prologue"),
+    ("zone_name_from_id", "zone name"),
+    ("possible_boundaries = shortcut_value", "bookkeeping"),
+    ("nr_possible_polygons", "bookkeeping"),
+    ("zone_ids_of", "bookkeeping"),
+    ("get_last_change_idx", "bookkeeping"),
+    ("coord2int", "bookkeeping"),
+    ("for i, boundary_id", "bookkeeping"),
+    ("i >= last_zone_change_idx", "bookkeeping"),
+    ("break", "bookkeeping"),
+    ("zone_id = zone_ids", "bookkeeping"),
+    ("inside_of_polygon", "candidate loop"),
+)
+BLOCK_ORDER = ("prologue", "bookkeeping", "candidate loop", "zone name", "other")
+
+
+def line_blocks(func: Callable) -> dict[int, str]:
+    """Map every line number of ``func`` to its block, by source text."""
+    lines, first = inspect.getsourcelines(func)
+    blocks = {}
+    for offset, text in enumerate(lines):
+        block = next(
+            (name for marker, name in BLOCK_MARKERS if marker in text), "other"
+        )
+        blocks[first + offset] = block
+    return blocks
+
+
+def mean_ns_per_query(tf: TimezoneFinder, points: Points, seconds: float) -> float:
+    """Mean ns per query over a fixed window, the estimator the overhead line needs.
+
+    Deliberately not :func:`measure`, which reports a min: comparing a sampled
+    *mean* against an unsampled *min* charges the sampler for the machine's own
+    jitter as well, which is how a 4% perturbation reads as 16%.
+    """
+    queries = 0
+    start = time.perf_counter()
+    while time.perf_counter() - start < seconds:
+        for lng, lat in points:
+            tf.timezone_at(lng=lng, lat=lat)
+        queries += len(points)
+    return (time.perf_counter() - start) / queries * 1e9
+
+
+def sample_blocks(
+    tf: TimezoneFinder, points: Points, blocks: dict[int, str]
+) -> tuple[collections.Counter, int, float]:
+    """Sample ``timezone_at`` by wall clock for ``SAMPLE_SECONDS``.
+
+    Returns the per-block sample counts, the number of queries executed, and the
+    elapsed time - the latter two so the caller can state the sampler's own
+    overhead against an unsampled run of the same loop.
+    """
+    target = TimezoneFinder.timezone_at.__code__
+    samples: collections.Counter = collections.Counter()
+
+    def handler(signum, frame):
+        f = frame
+        while f is not None:
+            if f.f_code is target:
+                samples[blocks.get(f.f_lineno, "other")] += 1
+                return
+            f = f.f_back
+
+    previous = signal.signal(signal.SIGALRM, handler)
+    signal.setitimer(signal.ITIMER_REAL, SAMPLE_INTERVAL_S, SAMPLE_INTERVAL_S)
+    queries = 0
+    start = time.perf_counter()
+    try:
+        while time.perf_counter() - start < SAMPLE_SECONDS:
+            for lng, lat in points:
+                tf.timezone_at(lng=lng, lat=lat)
+            queries += len(points)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+    return samples, queries, time.perf_counter() - start
+
+
+def exact_hits_per_query(
+    tf: TimezoneFinder, points: Points, blocks: dict[int, str]
+) -> dict[str, float]:
+    """Exact per-block execution counts per query, from ``line_profiler``.
+
+    Its timings are discarded. Counts are what survives the perturbation, and
+    they are the half a sampler cannot supply.
+    """
+    profiler = LineProfiler()
+    profiler.add_function(TimezoneFinder.timezone_at)
+    profiler.enable_by_count()
+    try:
+        for lng, lat in points:
+            tf.timezone_at(lng=lng, lat=lat)
+    finally:
+        profiler.disable_by_count()
+
+    hits: dict[str, float] = collections.defaultdict(float)
+    for (_, _, _), entries in profiler.get_stats().timings.items():
+        for lineno, nr_hits, _time in entries:
+            hits[blocks.get(lineno, "other")] += nr_hits
+    return {block: count / len(points) for block, count in hits.items()}
+
+
+def profile_combined(tf: TimezoneFinder) -> None:
+    blocks = line_blocks(TimezoneFinder.timezone_at)
+
+    def timezone_at_batch(points: Points) -> int:
+        n = 0
+        for lng, lat in points:
+            tf.timezone_at(lng=lng, lat=lat)
+            n += 1
+        return n
+
+    for stratum, fixture in QUERY_STRATA:
+        points = load_benchmark_points(fixture)[:BATCH_SIZE]
+        untouched = measure(lambda points=points: timezone_at_batch(points))
+        per_query_ns = untouched / len(points) * 1e9
+        unsampled_mean_ns = mean_ns_per_query(tf, points, OVERHEAD_REFERENCE_SECONDS)
+        samples, queries, elapsed = sample_blocks(tf, points, blocks)
+        hits = exact_hits_per_query(tf, points, blocks)
+        total_samples = sum(samples.values())
+        sampled_per_query_ns = elapsed / queries * 1e9
+
+        print(f"\n### {stratum} — counts x sampled share\n")
+        print("| block | share | line hits/query | ns/query | ns/hit |")
+        print("|---|---:|---:|---:|---:|")
+        for block in BLOCK_ORDER:
+            if not samples.get(block):
+                continue
+            share = samples[block] / total_samples
+            ns_query = share * per_query_ns
+            per_hit = f"{ns_query / hits[block]:,.0f}" if hits.get(block) else "—"
+            print(
+                f"| {block} | {100 * share:.1f}% | {hits.get(block, 0):.2f} | "
+                f"{ns_query:,.0f} | {per_hit} |"
+            )
+        print(f"| **total** | 100.0% | | **{per_query_ns:,.0f}** | |")
+        print(
+            f"\nreconciliation: {total_samples:,} samples over {queries:,} queries; "
+            f"shares scaled by the untouched min, {per_query_ns:,.0f} ns/query. "
+            f"Sampler overhead {100 * (sampled_per_query_ns / unsampled_mean_ns - 1):+.1f}% "
+            f"(mean vs mean: {sampled_per_query_ns:,.0f} vs {unsampled_mean_ns:,.0f} ns), "
+            f"machine jitter {100 * (unsampled_mean_ns / per_query_ns - 1):+.1f}% "
+            f"(unsampled mean vs min)"
+        )
+
+
+# ---------------------------------------------------------------------------
 # line_profiler corroboration - ambiguous stratum only, see the module docstring
 # ---------------------------------------------------------------------------
 
 
 def line_profile(tf: TimezoneFinder) -> None:
-    from line_profiler import LineProfiler
-
     points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:500]
     profiler = LineProfiler()
     profiler.add_function(TimezoneFinder.timezone_at)
@@ -557,6 +795,7 @@ def main() -> None:
         f"data {tf.data_version} | batch {BATCH_SIZE}"
     )
 
+    profile_combined(tf)
     profile_query_stages(tf)
     profile_pip_stages(tf, backend)
     if args.line_profile:
