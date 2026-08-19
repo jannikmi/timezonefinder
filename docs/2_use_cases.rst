@@ -40,8 +40,18 @@ depends on the date, since it changes with daylight saving time:
     tz_name = tf.timezone_at(lng=9.67, lat=45.69)  # 'Europe/Rome'
     offset = datetime.now(tz=ZoneInfo(tz_name)).utcoffset()
 
-``examples/get_offset.py`` is the ``pytz`` equivalent, returning the offset in minutes.
-Also see the `pytz Doc <http://pytz.sourceforge.net/>`__.
+``examples/get_offset.py`` shows the same lookup with the optional ``pytz`` extra,
+returning the offset in minutes. For new code, the stdlib
+`zoneinfo <https://docs.python.org/3/library/zoneinfo.html>`_ module is the
+recommended way to attach an IANA timezone to a datetime.
+
+.. warning::
+
+    ``Etc/GMT±X`` zone names use an **inverted** sign convention: ``Etc/GMT+5`` is
+    UTC-5 and ``Etc/GMT-5`` is UTC+5. The packaged data covers the oceans, so any
+    coordinate at sea resolves to one of these zones. Computing an offset by
+    parsing the returned name will silently produce the wrong sign — always call
+    ``utcoffset()`` on an aware datetime instead.
 
 
 Django
