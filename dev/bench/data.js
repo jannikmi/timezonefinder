@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787127704427,
+  "lastUpdate": 1787178126995,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1980,6 +1980,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00041682151724125466",
             "extra": "mean: 40.56135300000108 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64da9e1a30df7565d2742ab22b9ee755f03b9476",
+          "message": "Type-check tests/, and close two surfaces nothing was checking (#539)\n\n* SURF-1: drop the three schema filenames from the schemas package __all__\n\nThey are .fbs data files next to the module, not submodules of it, so\n`from timezonefinder.flatbuf.schemas import *` raised AttributeError on a\nsurface declaration nothing checked. tests/test_documented_contracts.py now\nresolves every __all__ entry in the package against its module.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TOOL-5: type-check tests/ with the mypy hook instead of excluding it\n\nClears the eight real disagreements the exclusion had been hiding - an\nundeclared attribute the base test class's fixture assigns, two subclasses\ncontradicting types inferred from the base's own values, a promised list[Path]\nbacked by an attribute only ever inferred as None, a dict literal annotated\nset[str, str], and an unmeasured metric reaching a float comparison as None -\nthen drops tests/ from the hook's exclude and extends the guard that keeps\nscripts/ out of it to cover tests/ too.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PATH-1: import PROJECT_ROOT in the test helpers instead of re-deriving it\n\ntests/auxiliaries.py anchored the checkout root on the installed timezonefinder\npackage (PACKAGE_DIR.parent), which is site-packages for anything but an\neditable install. scripts.configs already declares it against the repository.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DUP-2: create the converter's output directories once, in the caller\n\nwrite_numpy_binaries and write_flatbuffer_files each recomputed holes_dir and\nboundaries_dir and mkdir'd them, which reads as though either could run alone;\nthey cannot, since the reference vector one writes addresses the coordinate\nfile the other writes. The zone ids now go through store_per_polygon_vector\nlike every other vector. Verified byte-identical over tests/test_input.json.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* REND-1: choose the memory report's metric paragraph with an if, not a ternary\n\nThe conditional sat at the foot of twelve lines of implicitly concatenated\nprose, so a reader editing the long branch had no reason to look for it. Only\nthat branch interpolates the workload size. The rendered text is unchanged -\nthe diff moves no character of either paragraph.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TEST-11: assert the metadata the build produces, not just the files it copies\n\ntest_essential_files_in_distribution is driven by paths that exist in the\nsource tree, so it structurally cannot notice PKG-INFO or the .dist-info\ndirectory going missing - a failure that would otherwise surface at upload.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* ledger: re-verify every entry against the data-package split, record pass 10\n\nDeletes the four entries this pass shipped (DUP-2, TEST-11, REND-1, TOOL-5),\ncorrects TOOL-1's B905 claim - the load-path zip it named cannot truncate, both\nlists being local accumulators appended in one loop - and narrows DEAD-5 to the\ndeletion decision now that its annotation half is fixed. Adds TOOL-7 for the\nrelease guard's silent single-wheel pick, a scope note for the thin data\ndistribution, and the pass 10 coverage row.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-20T00:20:37+02:00",
+          "tree_id": "e50a9152f1d951ecc7396043dabd687391b1bf78",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/64da9e1a30df7565d2742ab22b9ee755f03b9476"
+        },
+        "date": 1787178125695,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 71.01147538339397,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00028397787656812834",
+            "extra": "mean: 14.082231000003276 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 231.92627527561274,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008478332651968453",
+            "extra": "mean: 4.311715000000049 msec\nrounds: 195 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.865381930401142,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00235419507327891",
+            "extra": "mean: 40.21655500000065 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
