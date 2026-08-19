@@ -21,7 +21,7 @@ import re
 import pytest
 import yaml
 
-from tests.auxiliaries import WORKFLOW_DIR
+from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 
 BUILD_WORKFLOW = WORKFLOW_DIR / "build.yml"
 PUBLISH_DATA_WORKFLOW = WORKFLOW_DIR / "publish_data.yml"
@@ -33,6 +33,11 @@ PYPI_PUBLISH_ACTION = "pypa/gh-action-pypi-publish"
 GITHUB_RELEASE_ACTION = "ncipollo/release-action"
 # the release job's stand-in for the tox matrix it skips on a tag ref
 GREEN_RUN_STEP_ID = "verify_tested_on_master"
+# the one implementation of "flatten every uploaded artefact into dist/"
+STAGE_ACTION = ACTION_DIR / "stage-artifacts" / "action.yml"
+STAGE_ACTION_REF = "./.github/actions/stage-artifacts"
+DATA_WHEEL_INPUT = "include-data-wheel"
+DATA_WHEEL_PREFIX = "timezonefinder_data-"
 
 
 def _workflow(path):
@@ -424,3 +429,104 @@ def test_the_skipped_matrix_is_replaced_by_a_check_and_not_an_assumption() -> No
         "`actions: read`; declaring any permission zeroes the rest, and the omission "
         "fails only at release time, on a tag that cannot be pushed twice"
     )
+
+
+# --- staging dist/ ---------------------------------------------------------------
+#
+# Three jobs need the same dist/ and one of them needs it to differ. Written out
+# three times, that difference was a diff between shell one-liners; through the
+# shared action it is a named input, which is what these two checks pin.
+
+
+@pytest.mark.unit
+def test_every_job_stages_dist_through_the_shared_action() -> None:
+    """A second inline copy is how the callers drifted apart in the first place.
+
+    The point of the action is not that the shell is written once - it is that the
+    data-wheel exclusion below is a parameter rather than something a reader has to
+    notice. A job that stages dist/ with its own `run:` opts out of that silently.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    callers = _jobs_using(workflow, STAGE_ACTION_REF)
+    assert callers, (
+        f"no job in {BUILD_WORKFLOW.name} uses {STAGE_ACTION_REF} - this check is "
+        "vacuous, so the action has been moved or renamed"
+    )
+
+    inline = sorted(
+        name
+        for name, job in workflow["jobs"].items()
+        for step in job["steps"]
+        if "mkdir -p dist/" in str(step.get("run", ""))
+    )
+    assert not inline, (
+        f"jobs in {BUILD_WORKFLOW.name} that stage dist/ inline instead of through "
+        f"{STAGE_ACTION_REF}: {inline}"
+    )
+
+
+@pytest.mark.unit
+def test_the_pypi_upload_stages_no_data_wheel() -> None:
+    """What keeps timezonefinder-data off `timezonefinder`'s trusted publisher.
+
+    The upload action takes no file list: it publishes whatever sits in dist/, with
+    the identity this job's environment is bound to. A data wheel staged here is
+    therefore released as part of the code project - it cannot be unpublished, and
+    it burns a version number the real data release then cannot use.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    for name in _jobs_using(workflow, PYPI_PUBLISH_ACTION):
+        staging = [
+            step
+            for step in workflow["jobs"][name]["steps"]
+            if _uses(step) == STAGE_ACTION_REF
+        ]
+        assert staging, (
+            f"{name} uploads to PyPI without staging dist/ through "
+            f"{STAGE_ACTION_REF}, so nothing excludes the data wheel"
+        )
+        for step in staging:
+            assert (step.get("with") or {}).get(DATA_WHEEL_INPUT) == "false", (
+                f"{name} stages dist/ with the data wheel included and uploads it as "
+                "`timezonefinder`"
+            )
+
+    action = yaml.safe_load(STAGE_ACTION.read_text(encoding="utf-8"))
+    assert action["inputs"][DATA_WHEEL_INPUT]["default"] == "true", (
+        f"{DATA_WHEEL_INPUT} defaults to excluding the data wheel, so the end-to-end "
+        "test would install a published dataset instead of this branch's"
+    )
+    assert DATA_WHEEL_PREFIX in str(action["runs"]["steps"]), (
+        f"{STAGE_ACTION.name} no longer names {DATA_WHEEL_PREFIX}, so "
+        f"{DATA_WHEEL_INPUT} excludes nothing"
+    )
+
+
+@pytest.mark.unit
+def test_a_job_using_a_local_action_checks_out_the_repo_first() -> None:
+    """``uses: ./...`` resolves from the workspace, not from the remote.
+
+    Without a checkout the step fails with "can't find action.yml". It is the
+    non-obvious cost of extracting one: `end-to-end-test` and `publish-pypi` had no
+    reason to check out at all before this, and `publish-pypi`'s remaining checkout
+    exists for nothing else.
+    """
+    for name, job in _workflow(BUILD_WORKFLOW)["jobs"].items():
+        steps = job["steps"]
+        local_action = next(
+            (i for i, step in enumerate(steps) if _uses(step).startswith("./")),
+            None,
+        )
+        if local_action is None:
+            continue
+        checkout = next(
+            (
+                i
+                for i, step in enumerate(steps)
+                if _uses(step).startswith("actions/checkout")
+            ),
+            None,
+        )
+        assert checkout is not None and checkout < local_action, (
+            f"{name} uses a local action without checking out the repository first"
+        )
