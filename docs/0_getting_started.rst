@@ -50,11 +50,12 @@ rather than a dependency because it only makes the package faster, never more co
 
 ``timezonefinder-data`` is a distribution of this same project, published separately so that a new
 timezone-boundary-builder release ships without a ``timezonefinder`` release. ``pip install
-timezonefinder`` pulls it in automatically; pin it explicitly to hold a deployment to one dataset:
+timezonefinder`` pulls it in automatically; pin it explicitly to hold a deployment to one dataset,
+choosing the version from its `release history <https://pypi.org/project/timezonefinder-data/#history>`__:
 
 .. code-block:: console
 
-    pip install timezonefinder "timezonefinder-data==1.2026.3"
+    pip install timezonefinder "timezonefinder-data==<version>"
 
 ``pyproject.toml`` remains the authoritative source for the supported version ranges.
 

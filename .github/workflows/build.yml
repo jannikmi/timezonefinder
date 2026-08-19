@@ -274,6 +274,22 @@ jobs:
       #         repository-url: https://test.pypi.org/legacy/
       #         skip-existing: true
 
+      # The two distributions release independently, and on a data format change the
+      # order is fixed: data first, then the code requiring it. Backwards, the wheel is
+      # uninstallable for everyone until the data lands - and PyPI never accepts a
+      # version number twice, so the fix is a whole new release.
+      #
+      # It sits here rather than next to the upload in `publish-pypi` because the step
+      # below is the first irreversible one: it publishes a GitHub Release, with the
+      # wheels attached, and creates the tag. `publish-pypi` needs this job, so guarding
+      # here guards the upload too. Tag pushes only - a push to master reaches this job
+      # as well, and before the first data release there is nothing on the index for the
+      # declared bound to resolve to, which would turn master red for a release nobody
+      # is making.
+      - name: Verify the required data version is published
+        if: startsWith(github.ref, 'refs/tags/')
+        run: uv run --with packaging python -m scripts.check_data_dependency
+
       - name: Create GitHub Release
         id: create_gh_release
         uses: ncipollo/release-action@v1
@@ -326,14 +342,6 @@ jobs:
           find . -name '*.tar.gz' -exec mv '{}' dist/ \;
           find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
           ls -lR dist/
-
-      # The two distributions release independently, and on a data format change the
-      # order is fixed: data first, then the code requiring it. Backwards, the wheel
-      # is uninstallable for everyone until the data lands - and PyPI never accepts a
-      # version number twice, so the fix is a whole new release. This is the last
-      # moment the mistake is still free.
-      - name: Verify the required data version is published
-        run: uv run --with packaging python -m scripts.check_data_dependency
 
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1

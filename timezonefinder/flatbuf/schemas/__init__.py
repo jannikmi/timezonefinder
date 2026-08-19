@@ -18,9 +18,10 @@ def iter_schema_files() -> Iterator[Path]:
 def get_schemas_dir(data_dir: Path) -> Path:
     """Where a compiled data directory keeps the schemas describing its own binaries.
 
-    A subdirectory rather than the data root, because ``.fbs`` there already means a
-    serialised buffer (``coordinates.fbs``, ``hybrid_shortcuts_uint16.fbs``) - mixing
-    schemas into that namespace is the confusion this is meant to remove.
+    A subdirectory rather than the data root, so that the schemas stay separable from
+    the buffers they describe: the data root is regenerated from the upstream boundary
+    release, these are copied from this package, and only one of the two is rewritten
+    by a schema change.
     """
     return data_dir / "schemas"
 

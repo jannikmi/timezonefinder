@@ -63,6 +63,32 @@ def test_insertion_rejects_a_version_no_later_check_could_find(version: str) -> 
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("version", "data_tag"),
+    [("1.2026.3", "2026d"), ("1.2026.4", "2026c"), ("1.2026.3", "2026c")],
+    ids=["same-version", "same-tag", "both"],
+)
+def test_insertion_rejects_a_release_already_listed(
+    version: str, data_tag: str
+) -> None:
+    """A re-run of the data update must not record the release a second time.
+
+    Re-running ``update_data.sh`` over an unchanged upstream release derives the same
+    version and the same date, and equal dates pass the descending-order check - so
+    nothing else here would notice the duplicate, in the text that is the
+    distribution's PyPI page.
+    """
+    with pytest.raises(ValueError, match="already has an entry"):
+        insert_data_release(
+            _releases(),
+            version=version,
+            release_date=date(2026, 9, 1),
+            data_tag=data_tag,
+            data_repo_url="https://example.test/data",
+        )
+
+
+@pytest.mark.unit
 def test_insertion_rejects_a_date_older_than_the_latest_release() -> None:
     with pytest.raises(ValueError, match="descending"):
         _insert(_releases(), release_date=date(2026, 1, 1))

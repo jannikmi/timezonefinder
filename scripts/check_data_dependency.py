@@ -4,8 +4,10 @@ The two distributions are released independently, and on a data format change th
 have to go out in a fixed order: the data first, then the code that requires it. Get
 it backwards and the code wheel is uninstallable for everyone until the data lands -
 and the mistake cannot be taken back, because PyPI never accepts a version number
-twice. The recovery is a new release of the code, so the only cheap moment to catch
-this is before the upload.
+twice. The recovery is a new release of the code, so this has to run before anything
+irreversible: build.yml calls it in the `release` job, ahead of the GitHub Release that
+job publishes and creates the tag for, which is earlier than the PyPI upload in the job
+downstream of it.
 
 The requirement is read out of the **built wheel**, not out of ``pyproject.toml``: the
 wheel is what gets published, and it is what a user's resolver will read. The check

@@ -63,8 +63,23 @@ def insert_data_release(
     data_tag: str,
     data_repo_url: str,
 ) -> str:
-    """Prepend a data release to the list, keeping it newest-first."""
+    """Prepend a data release to the list, keeping it newest-first.
+
+    :raises ValueError: if ``version`` or ``data_tag`` is already listed. A re-run of
+        ``update_data.sh`` over an unchanged upstream release derives the same version
+        and the same date, and equal dates satisfy the descending-order check - so
+        without this the list would grow a second copy of a release nobody published
+        twice, in the text that is the distribution's PyPI page.
+    """
     validate_release_order(readme)
+
+    for listed in _RELEASE_ENTRY.finditer(readme):
+        if listed.group("version") == version or listed.group("tag") == data_tag:
+            raise ValueError(
+                f"the release list already has an entry for {listed.group('version')} "
+                f"/ {listed.group('tag')!r}: {listed.group(0)}. A data release is "
+                "recorded once; correct that line rather than adding a second."
+            )
 
     entry = (
         f"- `{version}` - timezone-boundary-builder "

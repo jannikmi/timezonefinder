@@ -118,7 +118,7 @@ assets are versioned with the package and carry no compatibility promise (`CLAUD
 changed `.fbs` layout is therefore a minor at most — it costs users a regeneration, not a rewrite.
 An `Internal:`-only section is a patch however long it is.
 
-A boundary-data update is **not on this table at all** since #446: it releases
+A boundary-data update is **not on this table at all**: it releases
 `timezonefinder-data`, leaves this version untouched, and never reaches `CHANGELOG.rst`. What does
 belong here is a *format* change, which bumps `DATA_FORMAT_VERSION` and the data distribution's
 major — and then the ordering is load-bearing: publish the data release first, then this one, or
@@ -263,7 +263,7 @@ tag triggers. A second copy here drifts, and the copy that drifts is the one an 
 
 **The changelog-ordering stop.** §1 carried a fourth row for "a dated section sits *above*
 `X.X.X (unreleased)`", because `update_data.sh` spliced its entry under the file header. It no
-longer writes to `CHANGELOG.rst` at all: since #446 a data update releases `timezonefinder-data`
+longer writes to `CHANGELOG.rst` at all: a data update releases `timezonefinder-data`
 and records itself in that package's README, so the automation cannot produce that state, and
 nothing else writes release sections unattended. Do not re-add the row.
 
