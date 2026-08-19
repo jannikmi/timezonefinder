@@ -273,10 +273,10 @@ the data. Now it releases a distribution containing no code, so the question doe
 
 The two namespaces share a branch, so what keeps them apart is enforced rather than conventional:
 ``build.yml`` excludes ``data-v*`` at its trigger, and again on the job that creates the GitHub
-Release, because the ``release: types: [published]`` trigger consults no tag filter. The data
-stream publishes by PyPI Trusted Publishing rather than with a token: PyPI trusts that one workflow
-file, gated on its own deployment environment, so it holds no credential that could upload
-``timezonefinder`` and none that could leak. The tag is pushed with a GitHub App token because
+Release, because the ``release: types: [published]`` trigger consults no tag filter. Both
+streams publish by PyPI Trusted Publishing rather than with a token: PyPI trusts one workflow file
+per project, each gated on its own deployment environment, so neither holds a credential that could
+upload the other's distribution and neither holds one that could leak. The tag is pushed with a GitHub App token because
 a tag pushed with the default ``GITHUB_TOKEN`` does not trigger downstream workflows - the release
 would be tagged and never built. The run reads ``master`` before the merge and checks the squash
 commit's first parent against it afterwards, so a push that landed in between withholds the tag

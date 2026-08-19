@@ -14,6 +14,12 @@ name: build
 # deliberately creates no GitHub Release, so this can only fire for a data tag if
 # someone publishes one by hand. That is why the `release` job carries the ref guard as
 # well; `publish-pypi` needs it, so skipping it skips the upload too.
+#
+# The name of this file is load-bearing: the trusted publisher on PyPI for
+# `timezonefinder` names it, alongside this repository and the `pypi` deployment
+# environment. Renaming it breaks publishing silently - PyPI simply refuses the OIDC
+# identity, at tag-push time, when the release is already half out. A rename means
+# updating the publisher on pypi.org in the same breath.
 on:
   pull_request:
   push:
@@ -263,17 +269,6 @@ jobs:
           find . -name '*.whl' -exec mv '{}' dist/ \;
           ls -lR dist/
 
-      # TODO re-enable Test PyPI publishing. disabled due to project size limits
-      # -   name: Test PyPI Publishing
-      #     # NOTE: PRs from forks fail due to: "missing or insufficient OIDC token permissions,
-      #     #  the ACTIONS_ID_TOKEN_REQUEST_TOKEN environment variable was unset"
-      #     # -> test publishing cannot be triggered in PRs?!
-      #     uses: pypa/gh-action-pypi-publish@release/v1
-      #     with:
-      #         password: ${{ secrets.TEST_PYPI_DEPLOYMENT_API_KEY }}
-      #         repository-url: https://test.pypi.org/legacy/
-      #         skip-existing: true
-
       # The two distributions release independently, and on a data format change the
       # order is fixed: data first, then the code requiring it. Backwards, the wheel is
       # uninstallable for everyone until the data lands - and PyPI never accepts a
@@ -310,8 +305,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release]
     if: startsWith(github.ref, 'refs/tags/')
+    # the environment the trusted publisher on PyPI is bound to; a run outside it gets
+    # no OIDC identity PyPI will accept
+    environment: pypi
     permissions:
-        id-token: write
+      # required for Trusted Publishing: the job exchanges this for a short-lived
+      # PyPI token, which is why no secret appears anywhere below
+      id-token: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -333,8 +333,8 @@ jobs:
         uses: actions/download-artifact@v8
 
       # the data wheel is deliberately left out of dist/: this job uploads whatever
-      # is in it with the `timezonefinder` token, and publishing timezonefinder-data
-      # is publish_data.yml's, on its own tag and its own credentials
+      # is in it as `timezonefinder`, and publishing timezonefinder-data is
+      # publish_data.yml's, on its own tag and its own trusted publisher
       - name: Copy artifacts to dist/ folder
         run: |
           find . -name 'artifact-*' -exec unzip '{}' \;
@@ -348,5 +348,4 @@ jobs:
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}
           skip-existing: true

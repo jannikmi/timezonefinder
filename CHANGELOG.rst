@@ -7,6 +7,10 @@ Changelog
 X.X.X (unreleased)
 ------------------
 
+Internal:
+
+* ``timezonefinder`` is now published to PyPI by Trusted Publishing (OIDC) rather than with a long-lived API token, matching how ``timezonefinder-data`` already publishes. The upload job runs in the ``pypi`` deployment environment and exchanges its OIDC identity for a short-lived, project-scoped upload token, so no publishing credential exists in repository secrets to leak or rotate, and each stream's identity is bound to an environment the other does not use. This requires a trusted publisher configured for the ``timezonefinder`` project on PyPI; without it the release upload fails - and since a publisher names the workflow *file*, each of the two workflows now records that renaming it breaks publishing. The commented-out Test PyPI step, disabled since the project outgrew the index's size limit and holding the last reference to a third token, is gone. Solves issue #525
+
 
 8.3.0 (2026-08-19)
 ------------------
