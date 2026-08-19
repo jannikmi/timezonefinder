@@ -310,8 +310,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [release]
     if: startsWith(github.ref, 'refs/tags/')
+    # the environment the trusted publisher on PyPI is bound to; a run outside it gets
+    # no OIDC identity PyPI will accept
+    environment: pypi
     permissions:
-        id-token: write
+      # required for Trusted Publishing: the job exchanges this for a short-lived
+      # PyPI token, which is why no secret appears anywhere below
+      id-token: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -333,8 +338,8 @@ jobs:
         uses: actions/download-artifact@v8
 
       # the data wheel is deliberately left out of dist/: this job uploads whatever
-      # is in it with the `timezonefinder` token, and publishing timezonefinder-data
-      # is publish_data.yml's, on its own tag and its own credentials
+      # is in it as `timezonefinder`, and publishing timezonefinder-data is
+      # publish_data.yml's, on its own tag and its own trusted publisher
       - name: Copy artifacts to dist/ folder
         run: |
           find . -name 'artifact-*' -exec unzip '{}' \;
@@ -348,5 +353,4 @@ jobs:
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_DEPLOYMENT_API_KEY }}
           skip-existing: true
