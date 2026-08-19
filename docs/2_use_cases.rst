@@ -49,9 +49,10 @@ recommended way to attach an IANA timezone to a datetime.
 
     ``Etc/GMT±X`` zone names use an **inverted** sign convention: ``Etc/GMT+5`` is
     UTC-5 and ``Etc/GMT-5`` is UTC+5. The packaged data covers the oceans, so any
-    coordinate at sea resolves to one of these zones. Computing an offset by
-    parsing the returned name will silently produce the wrong sign — always call
-    ``utcoffset()`` on an aware datetime instead.
+    coordinate at sea resolves to an ``Etc/GMT`` zone, the UTC+0 band to the
+    signless ``Etc/GMT`` itself. Computing an offset by parsing the returned name
+    will silently produce the wrong sign — always call ``utcoffset()`` on an
+    aware datetime instead.
 
 
 Django
