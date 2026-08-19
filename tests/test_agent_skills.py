@@ -6,9 +6,9 @@ skill reachable only by name. Nothing surfaces that - the file still parses,
 the skill still loads, and the only symptom is that it stops being suggested.
 
 The truncation is easy to write by accident, because these descriptions name
-issues. In a plain (unquoted) YAML scalar a ``#`` preceded by a space starts a
-comment, so ``description: ... roadmap issue #506 by one pass ...`` stores the
-five words before ``#506`` and silently discards the rest.
+issues and entry ids. In a plain (unquoted) YAML scalar a ``#`` preceded by a
+space starts a comment, so ``description: ... advance issue #506 by one pass
+...`` stores the three words before ``#506`` and silently discards the rest.
 """
 
 from pathlib import Path

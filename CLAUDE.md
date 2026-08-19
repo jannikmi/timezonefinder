@@ -189,26 +189,31 @@ state**, never the path taken to it:
 - **Remember to acknowledge outside contributions**, in the form the existing `Thanks to …` bullets
   use. Credit the contributor's own PR, which is not the maintainer PR that superseded it.
 
-## Roadmap Issue
+## Improvement Register
 
-Issue #506 is the index for all open work: the ranking, how the issues relate, and the decisions
-that would otherwise be rediscovered. It is the only place any of that is written down, so it goes
-stale silently — nothing in the repository references it and no check reads it.
+`potential-improvements.md` at the repository root is the single register of what is worth doing
+next: every finding, one ranking across structural work and internal quality alike, the sequencing
+rules, and the decisions already taken. `.claude/skills/improvement-pass/SKILL.md` drives one pass
+over it, and `tests/test_improvement_ledger.py` asserts that the ranking table and the entries name
+the same items.
 
-**Sync it as part of the work that changes it**, not afterwards, whenever you ship an item, open
-or close an issue, re-scope or retitle one, or settle a design question the roadmap ranked. That
-means editing the body — strike shipped items, correct entries whose premise moved, update §4
-sequencing — *and* posting a comment saying what changed and, explicitly, what did **not**
-(sequencing above all: "no sequencing changed" is information). Match the existing comments' shape.
+It replaced a roadmap issue on the tracker, and the reason generalises: reasoning that lives
+outside the repository goes stale silently, because nothing references it, no check reads it, and a
+reviewer never sees it in a diff. Issues remain the place a single item is worked out; the ranking,
+the sequencing and the decisions live in the file.
 
-Two things that cost more than they look:
+**Update it as part of the work that changes it**, not afterwards, whenever you ship an item, open
+or close an issue, re-scope one, or settle a design question the register ranked. Two things that
+cost more than they look:
 
-- **A recorded decision in §5 is kept, never deleted** — including rejected options, which is most
-  of their value. The next pass re-proposes whatever is not written down as already refused
+- **A recorded decision is kept, never deleted** — including rejected options, which is most of
+  their value. The next pass re-proposes whatever is not written down as already refused
 - **Correct the reasoning, not just the status.** An entry whose conclusion survived on a premise
   that has since been disproved is the failure mode worth catching: it reads as settled and sends
-  the next pass down a path already ruled out. Say what moved, the way the #350/#513 and #446
-  entries do
+  the next pass down a path already ruled out. Say what moved
+
+A shipped entry is **deleted**, and its ranking row with it — the code is the evidence it is done
+and the changelog says what changed. A rejected or withdrawn one stays, with its one line of reason.
 
 ## Generated Files
 
