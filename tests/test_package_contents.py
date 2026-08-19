@@ -501,8 +501,11 @@ class DistributionFilesFixture:
         """Initialize the fixture with empty attributes."""
         self.dist = dist
         self.dist_type = dist_type  # "sdist" or "wheel"
-        self.archive_path = None
-        self.archive_files = None
+        # Annotated because ``built_files`` promises a ``list[Path]`` and reads them
+        # straight off the fixture: inferred from this line alone both are plain
+        # ``None``, so nothing connects the promise to what ``initialize`` assigns.
+        self.archive_path: Path | None = None
+        self.archive_files: list[Path] | None = None
         self._initialized = False
 
     def initialize(self):
@@ -540,6 +543,7 @@ def built_files(dist: Distribution, dist_type: str) -> list[Path]:
     """The files in ``dist``'s built ``dist_type`` artefact, building it if needed."""
     fixture = fixtures[(dist.name, dist_type)]
     fixture.initialize()
+    assert fixture.archive_files is not None
     return fixture.archive_files
 
 

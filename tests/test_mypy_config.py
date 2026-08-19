@@ -75,15 +75,25 @@ def test_generated_bindings_are_still_exempted() -> None:
 
 
 @pytest.mark.unit
-def test_scripts_are_type_checked_by_the_hook() -> None:
-    """`scripts/` must stay outside the mypy hook's `exclude` pattern.
+@pytest.mark.parametrize(
+    "directory, what_it_holds",
+    [
+        ("scripts", "the data converter and the benchmark tooling"),
+        ("tests", "the test suite"),
+    ],
+)
+def test_directory_is_type_checked_by_the_hook(
+    directory: str, what_it_holds: str
+) -> None:
+    """A directory that must stay outside the mypy hook's `exclude` pattern.
 
     The exclude is a second, quieter way to stop type-checking a directory: it
     takes no override entry and reports nothing, so the two tests above cannot
-    see it. `scripts/` holds the data converter and the benchmark tooling, and
-    while it was excluded its annotations drifted far enough to accumulate 15
-    errors - a return type contradicted by the value returned, implicit
-    `Optional` defaults, and `# type: ignore` codes mypy no longer emits.
+    see it. Both directories named here demonstrated what that costs while they
+    were excluded - 15 errors in `scripts/`, a return type contradicted by the
+    value returned and implicit `Optional` defaults among them; 8 in `tests/`,
+    including three reads of an attribute the base test class did not declare
+    and two subclasses contradicting a base annotation nobody had written.
     """
     hook_config = yaml.safe_load(PRE_COMMIT_CONFIG_PATH.read_text())
     excludes = [
@@ -93,8 +103,10 @@ def test_scripts_are_type_checked_by_the_hook() -> None:
         if hook["id"] == "mypy"
     ]
     assert excludes, "no mypy hook found in .pre-commit-config.yaml"
-    offenders = [pattern for pattern in excludes if re.search(r"\bscripts\b", pattern)]
+    offenders = [
+        pattern for pattern in excludes if re.search(rf"\b{directory}\b", pattern)
+    ]
     assert not offenders, (
-        "the mypy pre-commit hook excludes scripts/ again, which silently stops "
-        f"type-checking the data converter and benchmark tooling: {offenders}"
+        f"the mypy pre-commit hook excludes {directory}/ again, which silently "
+        f"stops type-checking {what_it_holds}: {offenders}"
     )

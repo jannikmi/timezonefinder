@@ -54,8 +54,11 @@ repos:
         rev: v2.2.0
         hooks:
             -   id: mypy
-                exclude: ^((tests|prototypes|docs|benchmarks)/)
-                additional_dependencies: [types-pytz, types-cffi]
+                exclude: ^((prototypes|docs|benchmarks)/)
+                # the stubs for every third-party import the checked code makes: this
+                # hook runs in its own environment, so a package being installed for
+                # the test suite says nothing about mypy being able to see it here
+                additional_dependencies: [types-pytz, types-cffi, types-PyYAML]
 
     -   repo: https://github.com/mgedmin/check-manifest
         rev: "0.51"
