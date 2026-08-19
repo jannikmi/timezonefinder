@@ -17,7 +17,7 @@ from typing import Any, Iterator
 import numpy as np
 import pytest
 
-from scripts.configs import DEBUG, read_data_version
+from scripts.configs import DEBUG, PROJECT_ROOT, read_data_version
 from scripts.utils import validate_coord_array_shape
 from timezonefinder import utils
 from timezonefinder.configs import (
@@ -25,7 +25,6 @@ from timezonefinder.configs import (
     MAX_LAT_VAL_INT,
     MAX_LNG_VAL,
     MAX_LNG_VAL_INT,
-    PACKAGE_DIR,
 )
 from timezonefinder.polygon_array import PolygonArray
 from timezonefinder.utils_numba import convert2coords
@@ -35,7 +34,11 @@ from timezonefinder.utils_numba import convert2coords
 # PATH CONSTANTS
 #######################
 
-PROJECT_ROOT = PACKAGE_DIR.parent
+# imported rather than derived a second time: this was ``PACKAGE_DIR.parent``, which
+# anchors the *checkout* on where the ``timezonefinder`` package is installed. That
+# holds only for an editable install - from a wheel it resolves to ``site-packages``,
+# and every path below it (the workflow files, ``dist/``, the benchmark fixtures) then
+# points at somewhere that does not exist, for tests whose subject is the repository.
 DIST_DIR = PROJECT_ROOT / "dist"
 # this repository's root distribution; the data one is named by
 # scripts.configs.DATA_DISTRIBUTION_NAME, which also owns the path to it
