@@ -164,18 +164,31 @@ def run_command(
         raise
 
 
-def build_wheel(clean_dist: bool = True, package: str | None = None) -> Path:
+def build_wheel(
+    clean_dist: bool = True,
+    package: str | None = None,
+    source_root: Path = PROJECT_ROOT,
+) -> Path:
     """Build a wheel distribution and return its path.
 
     ``package`` names a workspace member to build instead of the root distribution
-    (``timezonefinder-data``). Both wheels land in the same ``dist/``, so the glob
-    names the distribution rather than taking whatever wheel is there - and a caller
-    building both must pass ``clean_dist=False`` for the second, or it deletes the
-    first.
+    (``timezonefinder-data``), and ``source_root`` is where that member lives. Both
+    wheels land in the same ``dist/``, so the glob names the distribution rather than
+    taking whatever wheel is there - and a caller building both must pass
+    ``clean_dist=False`` for the second, or it deletes the first.
+
+    ``<source_root>/build`` is removed first. setuptools copies package data into
+    ``build/lib`` and never prunes it, so a file that has since been renamed stays
+    there and is zipped into every later wheel - which is how a 63 MB
+    ``coordinates.fbs`` kept shipping next to the ``coordinates.bin`` that replaced it,
+    doubling the data wheel. CI never sees this because it builds from a fresh
+    checkout; that is exactly why the local build has to match it, or these tests
+    inspect an artefact nobody will ever publish.
     """
     # TODO reuse with DistributionFilesFixture (found in test_package_contents.py)
     if clean_dist and DIST_DIR.exists():
         shutil.rmtree(DIST_DIR)
+    shutil.rmtree(source_root / "build", ignore_errors=True)
 
     cmd = (
         BUILD_WHEEL_CMD if package is None else [*BUILD_WHEEL_CMD, "--package", package]

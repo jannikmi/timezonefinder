@@ -343,6 +343,8 @@ jobs:
           find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
           ls -lR dist/
 
+      # no data-dependency check here: `release` runs it before the GitHub Release,
+      # which is earlier and irreversible, and this job needs that one
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

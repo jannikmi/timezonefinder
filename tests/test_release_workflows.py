@@ -71,6 +71,34 @@ def _guarded_against_data_tags(workflow: dict, job_name: str) -> bool:
     )
 
 
+def _guarded_by_data_check(workflow: dict, job_name: str) -> bool:
+    """Whether the data-dependency check has run by the time ``job_name`` publishes.
+
+    Either in the job itself, ahead of its first publishing step and able to fail it,
+    or in a job it depends on - a skipped dependency skips its dependents.
+    """
+    job = workflow["jobs"][job_name]
+    steps = job["steps"]
+    guard = [
+        i
+        for i, step in enumerate(steps)
+        if "scripts.check_data_dependency" in str(step.get("run", ""))
+    ]
+    if guard:
+        publishing = [
+            i
+            for i, step in enumerate(steps)
+            if _uses(step).startswith(PYPI_PUBLISH_ACTION)
+            or _uses(step).startswith(GITHUB_RELEASE_ACTION)
+        ]
+        if publishing and max(guard) > min(publishing):
+            return False
+        return all("continue-on-error" not in steps[i] for i in guard)
+    return any(
+        _guarded_by_data_check(workflow, dependency) for dependency in _needs(job)
+    )
+
+
 @pytest.mark.unit
 def test_the_code_pipeline_does_not_run_on_a_data_tag() -> None:
     """The push path: one tag filter, in one place, impossible to half-apply.
@@ -115,36 +143,36 @@ def test_nothing_publishing_the_code_is_reachable_from_a_data_tag() -> None:
 
 
 @pytest.mark.unit
-def test_the_code_release_checks_its_data_dependency_before_uploading() -> None:
-    """Ordering is the whole invariant: a check after the upload checks nothing.
+def test_nothing_irreversible_runs_before_the_data_dependency_is_checked() -> None:
+    """Ordering is the whole invariant: a check after the fact checks nothing.
 
     On a data format change the data distribution must be published first, and
-    publishing the code first puts a wheel on PyPI that nobody can install - which
-    cannot be undone, because the version number is spent. So the guard has to sit in
-    the job that uploads, ahead of the upload, and it must be able to fail the job.
+    releasing the code first puts a wheel on PyPI that nobody can install - which
+    cannot be undone, because the version number is spent. The upload is not the first
+    step that cannot be taken back, though: the `release` job publishes a GitHub
+    Release with the wheels attached and creates the tag, before `publish-pypi` runs at
+    all. So the guard is asserted against *both* kinds of publishing step, and a job
+    may satisfy it through a dependency - a skipped `needs` skips its dependents, which
+    is why the upload job carries no copy of its own.
     """
     workflow = _workflow(BUILD_WORKFLOW)
-    for name, job in _jobs_using(workflow, PYPI_PUBLISH_ACTION).items():
-        steps = job["steps"]
-        guard = [
-            i
-            for i, step in enumerate(steps)
-            if "scripts.check_data_dependency" in str(step.get("run", ""))
-        ]
-        upload = [
-            i
-            for i, step in enumerate(steps)
-            if _uses(step).startswith(PYPI_PUBLISH_ACTION)
-        ]
-        assert guard, f"{name} uploads without checking that the required data exists"
-        assert max(guard) < min(upload), (
-            f"{name} runs the data-dependency check after the upload, where it can no "
-            "longer prevent anything"
-        )
-        assert "continue-on-error" not in steps[guard[0]], (
-            f"{name}'s data-dependency check cannot fail the job, so it cannot block "
-            "the upload"
-        )
+    publishing = {
+        **_jobs_using(workflow, PYPI_PUBLISH_ACTION),
+        **_jobs_using(workflow, GITHUB_RELEASE_ACTION),
+    }
+    assert publishing, (
+        f"no publishing job found in {BUILD_WORKFLOW.name} - this check is vacuous, "
+        "so the action names above have gone stale"
+    )
+
+    unguarded = sorted(
+        name for name in publishing if not _guarded_by_data_check(workflow, name)
+    )
+    assert not unguarded, (
+        f"jobs in {BUILD_WORKFLOW.name} that publish without the data-dependency check "
+        f"having already run: {unguarded}. Put it in the job ahead of its first "
+        "publishing step, or in a job it needs."
+    )
 
 
 @pytest.mark.unit

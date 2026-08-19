@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.configs import DATA_DISTRIBUTION_NAME, PROJECT_ROOT
+from scripts.configs import DATA_DISTRIBUTION_NAME, DATA_PACKAGE_ROOT, PROJECT_ROOT
 from tests.auxiliaries import (
     DIST_DIR,
     ROOT_DISTRIBUTION_NAME,
@@ -94,7 +94,11 @@ def package_paths() -> dict[str, Path]:
         shutil.rmtree(DIST_DIR)
 
     wheel_path = build_wheel(clean_dist=True)
-    build_wheel(clean_dist=False, package=DATA_DISTRIBUTION_NAME)
+    build_wheel(
+        clean_dist=False,
+        package=DATA_DISTRIBUTION_NAME,
+        source_root=DATA_PACKAGE_ROOT,
+    )
     sdist_path = build_sdist(clean_dist=False)
     return {
         "wheel": wheel_path,
