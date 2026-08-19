@@ -1,0 +1,45 @@
+name: Stage the built distributions in dist/
+description: >
+  Download every artifact this run's build jobs uploaded and flatten them into a
+  single dist/ directory, which is what both the GitHub Release and the PyPI
+  upload read. Written once so the one intentional difference between its
+  callers - whether the data distribution's wheel is included - is a named input
+  rather than a diff a reader has to spot between three copies.
+
+inputs:
+  include-data-wheel:
+    description: >
+      Whether timezonefinder_data-*.whl is staged alongside the code
+      distributions. Set it to false wherever dist/ is uploaded as
+      `timezonefinder`: the data distribution publishes from publish_data.yml,
+      under its own tag and its own trusted publisher, so anything staged here
+      would go out with the wrong project's credentials.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v8
+
+    - name: Copy artifacts to dist/ folder
+      shell: bash
+      env:
+        INCLUDE_DATA_WHEEL: ${{ inputs.include-data-wheel }}
+      run: |
+        set -euo pipefail
+
+        # `-name 'artifact-*.zip'`, not `artifact-*`: download-artifact unpacks
+        # into directories of that name, and handing one to unzip is an error
+        # that `find -exec` does not propagate - so the loose pattern fails
+        # silently instead of doing nothing.
+        find . -name 'artifact-*.zip' -print -exec unzip '{}' \;
+        mkdir -p dist/
+        find . -name '*.tar.gz' -exec mv '{}' dist/ \;
+        if [[ "$INCLUDE_DATA_WHEEL" == "true" ]]; then
+          find . -name '*.whl' -exec mv '{}' dist/ \;
+        else
+          find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
+        fi
+        ls -lR dist/

@@ -181,22 +181,26 @@ jobs:
         matrix:
             uv-python-version: ["cp311", "cp312", "cp313", "cp314"]
     steps:
+      # `uses: ./...` resolves from the workspace, so the staging action has to be on
+      # disk. Sparse and non-cone deliberately: the test below builds a throwaway
+      # project with `uv init` in the workspace root, and a full checkout would put
+      # this repository's own pyproject.toml there - `uv init` refuses to overwrite
+      # it, and uv would then resolve the e2e project against this workspace instead
+      # of against the artefacts. Cone mode would materialise the root files too.
+      - name: Check out the local actions only
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+
       # Only install uv without creating a project
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           ignore-empty-workdir: true
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-
-      - name: Copy artifacts to dist/ folder
-        run: |
-          find . -name 'artifact-*.zip' -print -exec unzip '{}' \;
-          mkdir -p dist/
-          find . -name '*.tar.gz' -exec mv '{}' dist/ \;
-          find . -name '*.whl' -exec mv '{}' dist/ \;
-          ls -lR dist/
+      - name: Stage artifacts in dist/
+        uses: ./.github/actions/stage-artifacts
 
       - name: Run end-to-end test
         run: |
@@ -306,16 +310,8 @@ jobs:
         id: fetch_version
         run: echo "version_nr=$(uv version --short)" >> $GITHUB_OUTPUT
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-
-      - name: Copy artifacts to dist/ folder
-        run: |
-          find . -name 'artifact-*.zip' -print -exec unzip '{}' \;
-          mkdir -p dist/
-          find . -name '*.tar.gz' -exec mv '{}' dist/ \;
-          find . -name '*.whl' -exec mv '{}' dist/ \;
-          ls -lR dist/
+      - name: Stage artifacts in dist/
+        uses: ./.github/actions/stage-artifacts
 
       # The two distributions release independently, and on a data format change the
       # order is fixed: data first, then the code requiring it. Backwards, the wheel is
@@ -358,35 +354,19 @@ jobs:
       # PyPI token, which is why no secret appears anywhere below
       id-token: write
     steps:
+      # nothing here runs uv or pip - the publishing action brings its own
+      # environment - so the checkout exists for one reason: `uses: ./...` resolves
+      # from the workspace, and the staging action below has to be on disk
       - name: Checkout repo
         uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-
-      - name: Upgrade pip version
-        run: pip install --upgrade pip
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Fetch version
-        id: fetch_version
-        run: echo "version_nr=$(uv version --short)" >> $GITHUB_OUTPUT
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
 
       # the data wheel is deliberately left out of dist/: this job uploads whatever
       # is in it as `timezonefinder`, and publishing timezonefinder-data is
       # publish_data.yml's, on its own tag and its own trusted publisher
-      - name: Copy artifacts to dist/ folder
-        run: |
-          find . -name 'artifact-*' -exec unzip '{}' \;
-          mkdir -p dist/
-          find . -name '*.tar.gz' -exec mv '{}' dist/ \;
-          find . -name '*.whl' ! -name 'timezonefinder_data-*' -exec mv '{}' dist/ \;
-          ls -lR dist/
+      - name: Stage artifacts in dist/
+        uses: ./.github/actions/stage-artifacts
+        with:
+          include-data-wheel: "false"
 
       # no data-dependency check here: `release` runs it before the GitHub Release,
       # which is earlier and irreversible, and this job needs that one
