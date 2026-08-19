@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787127701648,
+  "lastUpdate": 1787127704427,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4223,6 +4223,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "memory::TimezoneFinder[in_memory]::steady_heap",
             "value": 65.7084379196167,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b0642ad3bdc488421ced2ae69af55bc64d0c05a7",
+          "message": "Collapse the artifact-staging steps into one composite action (#535)\n\n`build.yml` wrote the same \"unzip every artifact, flatten into dist/\" block\nthree times, in `end-to-end-test`, `release` and `publish-pypi`. The copies had\ndrifted - two matched `artifact-*.zip`, one `artifact-*`, which unzips a\ndirectory and fails without anyone noticing, since `find -exec` does not\npropagate its command's exit status - and that accidental drift sat next to the\none difference that is deliberate: `publish-pypi` excludes the data wheel,\nbecause it uploads whatever is in dist/ as `timezonefinder` while the data\ndistribution publishes from publish_data.yml under its own tag and publisher.\nNothing told a reader which of the two was load-bearing.\n\nThe block is now `.github/actions/stage-artifacts`, taking that exclusion as a\nnamed input. Only the prologue moved: the data-dependency check and both\npublishing steps stay inline, so the ordering test that walks each job's steps\nstill sees them.\n\n`publish-pypi` also drops four steps nothing consumed. `Fetch version` set an\noutput only `release` reads; with it gone no step ran uv or pip, so setting up\nPython, upgrading pip and installing uv had no consumer either. Its checkout\nstays, now for one reason: `uses: ./...` resolves from the workspace.\n`end-to-end-test` gains a sparse, non-cone checkout for the same reason - a\nfull one would put this repository's pyproject.toml in the workspace root,\nwhere the job builds a throwaway project with `uv init`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-19T10:20:16+02:00",
+          "tree_id": "9bf23e0d369ce8e2ef21f2d87ef07d20bc19da44",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b0642ad3bdc488421ced2ae69af55bc64d0c05a7"
+        },
+        "date": 1787127703548,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466585159301758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466748237609863,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.532464981079102,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.541266441345215,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 65.69916248321533,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 65.70796012878418,
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
