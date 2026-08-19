@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787117780478,
+  "lastUpdate": 1787119162873,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1845,6 +1845,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.001606563376866152",
             "extra": "mean: 31.069504000001302 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6671aadf82bbb91dc1b3f0a62cb9415dbe5e2f7e",
+          "message": "Release 8.3.0 (#532)\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-19T07:58:10+02:00",
+          "tree_id": "84b372e777e2f128ca5ef259b6c278c1e11338fb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6671aadf82bbb91dc1b3f0a62cb9415dbe5e2f7e"
+        },
+        "date": 1787119161661,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 70.1001928035461,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003681912326230307",
+            "extra": "mean: 14.265296000004923 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 222.7170004117642,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000878725718099139",
+            "extra": "mean: 4.490003000000797 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.250411887187465,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00028724743429096725",
+            "extra": "mean: 41.23641299999292 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
           }
         ]
       }
