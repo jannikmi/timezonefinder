@@ -27,10 +27,18 @@ bug), and general-purpose geometry — spatial code exists only in service of ti
 
 ## Project Structure
 
-**Two distributions, one uv workspace** (issue #446): `timezonefinder` at the root, and
+**Two distributions, one uv workspace**: `timezonefinder` at the root, and
 `packages/timezonefinder-data/` holding the boundary binaries plus `DATA_LICENSE`. The data package
-is deliberately dumb — one `DATA_DIR` constant and a version — and ships no reader; that was
-considered and rejected, with reasons in `plans/446-data-as-separate-distribution.md` §2.
+is deliberately dumb — one `DATA_DIR` constant and a version.
+
+**Moving the binary-format reader into it was considered and rejected**; don't re-propose it. It is
+neutral on size (the reader is pure Python, and the C extension forcing the platform-wheel matrix
+is in the lookup layer either way), it makes a reader bug cost a ~63 MB upload, and it trades a
+cheap in-file format guard for an unguarded cross-distribution Python API on a package whose
+version numbers upstream *data* releases. Data version, reader-API version and format version are
+three axes and there is one number. It also inverts the converter, which imports `flatbuf/io` to
+*write*.
+
 
 Most modules are self-describing; the non-obvious ones:
 
@@ -92,13 +100,15 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed
-- **Never cite an issue or PR number in code** — comments, docstrings, workflow headers, config
-  comments. `# Since #446` and `(issue #446)` are the shape to avoid. A number is an indirection to
-  a tracker the reader may not be able to open, whose contents get retitled, re-scoped and closed
-  independently of the code, so the *reason* silently stops being where the code is. Write the
-  reasoning itself; if it is too long for a comment, it belongs in `docs/`. `CHANGELOG.rst` is the
-  exception — there the number is the release's provenance, and `Thanks to … PR #123` is required
-  (see *Changelog*)
+- **Never point at something outside the repository for a reason.** Two shapes, one failure mode:
+  an issue or PR number in code (`# Since #446`, `(issue #446)`) — comments, docstrings, workflow
+  headers, config comments — and a path under `plans/`, which is **gitignored and temporary**, so
+  the reference is already dangling for everyone but its author. Either way the *reason* stops
+  being where the code is: a tracker gets retitled, re-scoped and closed independently, and a plan
+  file is deleted when the work lands. Write the reasoning itself; if it is too long for a comment,
+  it belongs in `docs/`, and a rejected option belongs wherever it can actually refuse the next
+  proposal. `CHANGELOG.rst` is the exception — there an issue number is the release's provenance,
+  and `Thanks to … PR #123` is required (see *Changelog*)
 
 ## Testing
 

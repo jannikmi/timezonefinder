@@ -24,7 +24,7 @@ from timezonefinder.utils import close_resource
 def test_single_polygon_collection_round_trip(tmp_path, polygons):
     """Test that writing and reading a single polygon collection gives the same results."""
     # Define output path
-    output_file = tmp_path / "polygons.fbs"
+    output_file = tmp_path / "polygons.bin"
 
     # Write polygons to a single binary file
     write_polygon_collection_flatbuffer(output_file, polygons)
@@ -123,7 +123,7 @@ def test_on_disk_coordinate_layout(tmp_path, polygons):
     pair that is wrong in mutually cancelling ways - every round trip still passes.
     Reading the raw vector back is the only thing that pins the wire format down.
     """
-    output_file = tmp_path / "polygons.fbs"
+    output_file = tmp_path / "polygons.bin"
     write_polygon_collection_flatbuffer(output_file, polygons)
 
     with open(output_file, "rb") as file:

@@ -22,20 +22,20 @@ def latlng_to_cell(lng: float, lat: float) -> int:
 
 
 def test_single_shortcut_binary_exists(hybrid_shortcut_file_path):
-    """Test that only a single .fbs binary file for the shortcut index exists in the data folder."""
+    """Test that only a single binary file for the shortcut index exists in the data folder."""
     data_dir = DEFAULT_DATA_DIR
 
-    # Find all .fbs files that could be shortcut-related
-    fbs_files = list(data_dir.glob("*shortcut*.fbs"))
+    # Find all binaries that could be shortcut-related
+    shortcut_files = list(data_dir.glob("*shortcut*.bin"))
 
-    # We expect exactly one shortcut .fbs file (hybrid_shortcuts_uint8.fbs or hybrid_shortcuts_uint16.fbs)
-    assert len(fbs_files) == 1, (
-        f"Expected exactly 1 shortcut .fbs file in {data_dir}, "
-        f"but found {len(fbs_files)}: {[f.name for f in fbs_files]}"
+    # We expect exactly one shortcut binary (hybrid_shortcuts_uint8.bin or hybrid_shortcuts_uint16.bin)
+    assert len(shortcut_files) == 1, (
+        f"Expected exactly 1 shortcut binary in {data_dir}, "
+        f"but found {len(shortcut_files)}: {[f.name for f in shortcut_files]}"
     )
 
     # Verify it's the correct hybrid shortcuts file
-    shortcut_file = fbs_files[0]
+    shortcut_file = shortcut_files[0]
     assert shortcut_file.name.startswith("hybrid_shortcuts_"), (
         f"Expected hybrid shortcuts file, but found {shortcut_file.name}"
     )

@@ -200,7 +200,7 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
         Coordinates are stored one axis at a time; reading a file written in the old
         interleaved layout produces a correctly shaped array of nonsense, which the
         range checks below catch. Deliberately not marked ``slow``: a stale or
-        unmigrated ``coordinates.fbs`` should fail in ``make test``, and sweeping the
+        unmigrated ``coordinates.bin`` should fail in ``make test``, and sweeping the
         whole dataset without the per-polygon printing below costs well under a second.
         """
         for polygons in (self.test_instance.boundaries, self.test_instance.holes):

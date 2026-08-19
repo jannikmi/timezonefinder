@@ -74,8 +74,8 @@ class TestOptimizedHybridShortcuts:
     def _create_temp_file(self, zone_id_dtype, suffix_prefix=""):
         """Helper to create a temporary file path for testing."""
         suffix = f"_{suffix_prefix}" if suffix_prefix else ""
-        # the reader picks its schema from this marker, hence not a plain ".fbs"
-        suffix += f"_{schema_of(zone_id_dtype).dtype_name}.fbs"
+        # the reader picks its schema from this marker, hence not a plain ".bin"
+        suffix += f"_{schema_of(zone_id_dtype).dtype_name}.bin"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_file:
             return Path(tmp_file.name)
 
@@ -122,9 +122,9 @@ class TestOptimizedHybridShortcuts:
         file_path = get_hybrid_shortcut_file_path(zone_id_dtype, test_dir)
 
         if zone_id_dtype.itemsize == 1:
-            assert file_path.name == "hybrid_shortcuts_uint8.fbs"
+            assert file_path.name == "hybrid_shortcuts_uint8.bin"
         else:
-            assert file_path.name == "hybrid_shortcuts_uint16.fbs"
+            assert file_path.name == "hybrid_shortcuts_uint16.bin"
 
         assert file_path.parent == test_dir
 
@@ -278,7 +278,7 @@ class TestOptimizedHybridShortcuts:
         does not need the name to say anything. Rejection of a buffer whose identifier
         is missing or foreign lives in ``tests/test_flatbuf_format_guard.py``.
         """
-        path = tmp_path / "hybrid_shortcuts.fbs"
+        path = tmp_path / "hybrid_shortcuts.bin"
         write_hybrid_shortcuts_flatbuffers(
             {0x85283473FFFFFFF: 42}, np.dtype("<u1"), path
         )

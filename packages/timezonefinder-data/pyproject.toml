@@ -44,4 +44,5 @@ packages = ["timezonefinder_data"]
 license-files = ["DATA_LICENSE"]
 
 [tool.setuptools.package-data]
-timezonefinder_data = ["data/**/*.npy", "data/**/*.fbs", "data/**/*.txt", "data/**/*.json"]
+# `.bin` is the serialised buffers, `.fbs` the schema copies under data/schemas/
+timezonefinder_data = ["data/**/*.npy", "data/**/*.bin", "data/**/*.fbs", "data/**/*.txt", "data/**/*.json"]

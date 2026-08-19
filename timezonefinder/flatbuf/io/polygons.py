@@ -83,8 +83,14 @@ def reshape_to_polygon_coords(coords: np.ndarray) -> np.ndarray:
 
 
 def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
-    """Return the path to the boundaries flatbuffer file."""
-    return data_dir / "coordinates.fbs"
+    """Return the path to the boundaries flatbuffer file.
+
+    ``.bin`` rather than ``.fbs``: the latter is the FlatBuffers *schema* extension,
+    and a schema is what ``timezonefinder/flatbuf/schemas/`` holds. This is a
+    serialised buffer, which says what it is through its file identifier
+    (``POLYGON_FILE_IDENTIFIER``) rather than through its name.
+    """
+    return data_dir / "coordinates.bin"
 
 
 def write_polygon_collection_flatbuffer(

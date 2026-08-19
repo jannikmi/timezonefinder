@@ -84,7 +84,7 @@ class ShortcutSchema:
     @property
     def file_name(self) -> str:
         """Name of the shortcut binary written with this schema."""
-        return f"hybrid_shortcuts_{self.dtype_name}.fbs"
+        return f"hybrid_shortcuts_{self.dtype_name}.bin"
 
     @property
     def max_zone_id(self) -> int:

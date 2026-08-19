@@ -197,7 +197,8 @@ ESSENTIAL_DATA_PATTERNS = {
     "*__init__.py",
     # data files:
     "*.npy",  # Numpy binary data files
-    "*.fbs",  # Flatbuffer binaries and the schemas describing them
+    "*.bin",  # Flatbuffer binaries (the serialised polygon and shortcut data)
+    "*.fbs",  # the schema definitions describing them, under data/schemas/
     "*.json",  # used for hole registry
     "*.txt",  # Text files (timezone names, the dataset version stamp)
 }
