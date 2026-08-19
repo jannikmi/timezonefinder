@@ -61,7 +61,7 @@ It is recommended to install it together with the optional `Numba <https://numba
 
     pip install timezonefinder[numba]
 
-The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset: ``pip install timezonefinder "timezonefinder-data==1.2026.3"``.
+The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset - the `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the versions to choose from: ``pip install timezonefinder "timezonefinder-data==<version>"``.
 
 
 .. code-block:: python

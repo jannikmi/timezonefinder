@@ -58,8 +58,9 @@ test=[
     "hypothesis>=6",
     # used in example scripts
     "pytz>=2022.7.1",
-    # setuptoosl required for integration tests: building sdist and wheel
-    "setuptools>=61",
+    # setuptools required for integration tests: building sdist and wheel.
+    # Floor matches the build requirement below - the tests assert what it produces
+    "setuptools>=62.3",
     "pytest-run-parallel>=0.8.2",
     # statistically sound benchmark measurement (calibration, warmup, outlier
     # detection); see benchmarks/. Never combine with pytest-run-parallel's
@@ -68,6 +69,10 @@ test=[
     "pytest-benchmark>=5,<6",
     # parsing the CI workflow definitions in tests/test_benchmark_workflows.py
     "PyYAML>=6",
+    # reading version specifiers and requirements: the tests that hold the
+    # timezonefinder-data bound to DATA_FORMAT_VERSION, and the release guard in
+    # scripts/check_data_dependency.py that build.yml runs with `--with packaging`
+    "packaging>=23",
 ]
 dev = [
     "pre-commit",
@@ -121,7 +126,8 @@ members = ["packages/*"]
 timezonefinder-data = { workspace = true }
 
 [build-system]
-requires = ["setuptools>=61", "cffi"]
+# 62.3: `**` in package-data below is only expanded recursively from that version on
+requires = ["setuptools>=62.3", "cffi"]
 # Use setuptools build backend to build CFFI extensions via setup.py
 build-backend = "setuptools.build_meta"
 

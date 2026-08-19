@@ -248,6 +248,17 @@ other's payload, which is the difference between a layout convention and somethi
 That guard is easy to disarm by accident, so it is guarded in turn - see *Tests that protect
 guarantees, not behaviour* above.
 
+**A code release cannot outrun the data it declares.** The two distributions are versioned and
+published independently, so on a data format change the order is fixed: the data first, then the
+code requiring it. Backwards, the wheel is uninstallable until the data lands, and PyPI never
+accepts a version number twice - the fix is a whole new release. The release job therefore reads
+the data requirement out of the wheel it is about to publish and asks the index whether any released,
+non-yanked version satisfies it, refusing to go on if none does. Reading the wheel rather than
+``pyproject.toml`` is deliberate: the wheel is the artefact a resolver will read. The check runs
+ahead of the GitHub Release rather than next to the PyPI upload, because that Release is the first
+step of the two that cannot be taken back - and the upload job depends on this one, so one placement
+covers both.
+
 **A tag pushed from a non-master branch aborts the release.** Tags can be pushed from anywhere, so
 the release job verifies that the tagged commit is contained in ``origin/master`` before publishing
 rather than trusting the ref it was handed.

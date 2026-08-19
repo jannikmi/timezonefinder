@@ -100,7 +100,14 @@ def write_schemas(output_path: Path) -> None:
     canonical schemas here and again over the committed data in the test suite.
     """
     schemas_dir = get_schemas_dir(output_path)
-    schemas_dir.mkdir(parents=True, exist_ok=True)
+    # replaced wholesale rather than copied over: merging into an existing directory
+    # leaves a schema that has since been renamed or dropped sitting next to the
+    # current ones, and ``validate_shipped_schemas`` below then rejects the directory
+    # this function just produced - telling the operator to regenerate the data, which
+    # is what they were doing.
+    if schemas_dir.exists():
+        shutil.rmtree(schemas_dir)
+    schemas_dir.mkdir(parents=True)
     for schema in iter_schema_files():
         shutil.copyfile(schema, schemas_dir / schema.name)
 

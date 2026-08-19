@@ -2175,6 +2175,7 @@ pytz = [
 ]
 test = [
     { name = "hypothesis" },
+    { name = "packaging" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-run-parallel" },
@@ -2226,12 +2227,13 @@ proto = [
 pytz = [{ name = "pytz", specifier = ">=2022.7.1" }]
 test = [
     { name = "hypothesis", specifier = ">=6" },
+    { name = "packaging", specifier = ">=23" },
     { name = "pytest" },
     { name = "pytest-benchmark", specifier = ">=5,<6" },
     { name = "pytest-run-parallel", specifier = ">=0.8.2" },
     { name = "pytz", specifier = ">=2022.7.1" },
     { name = "pyyaml", specifier = ">=6" },
-    { name = "setuptools", specifier = ">=61" },
+    { name = "setuptools", specifier = ">=62.3" },
     { name = "tox" },
 ]
 

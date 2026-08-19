@@ -31,7 +31,10 @@ repository = "https://github.com/jannikmi/timezonefinder"
 documentation = "https://timezonefinder.readthedocs.io/en/latest/"
 
 [build-system]
-requires = ["setuptools>=61"]
+# 62.3 is where setuptools started expanding `**` in package-data recursively.
+# Below it the globs below match nothing and this builds a wheel with no dataset in
+# it - which installs cleanly and fails at the first lookup.
+requires = ["setuptools>=62.3"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]

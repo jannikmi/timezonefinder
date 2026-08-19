@@ -28,4 +28,4 @@ format change is refused by the resolver instead of at the first lookup.
 ## License
 
 The boundary data is licensed under the Open Database License (ODbL), see
-[DATA_LICENSE](DATA_LICENSE). The `timezonefinder` source code is MIT licensed.
+[DATA_LICENSE](https://github.com/jannikmi/timezonefinder/blob/master/packages/timezonefinder-data/DATA_LICENSE). The `timezonefinder` source code is MIT licensed.

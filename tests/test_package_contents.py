@@ -176,6 +176,13 @@ ESSENTIAL_CODE_PATTERNS = {
     "*.so",  # Compiled shared objects
     # data files:
     "*.fbs",  # Flatbuffer schema files
+    # The dataset is the data distribution's, below - this one carries none of it.
+    # These two match only under tests/, which the sdist grafts and whose suite cannot
+    # run without them: the benchmark fixtures and the converter's test input. No
+    # "*.txt" entry, because after the split nothing in this distribution matches one,
+    # and a pattern matching nothing asserts nothing.
+    "*.npy",
+    "*.json",
 }
 
 # these files are not included in wheels
@@ -508,7 +515,9 @@ class DistributionFilesFixture:
             self.archive_path = build_sdist()
             self.archive_files = extract_archive(self.archive_path)
         elif self.dist_type == WHEEL_TYPE:
-            self.archive_path = build_wheel(package=self.dist.build_package)
+            self.archive_path = build_wheel(
+                package=self.dist.build_package, source_root=self.dist.source_root
+            )
             self.archive_files = extract_wheel(self.archive_path)
         else:
             raise ValueError(f"Unknown distribution type: {self.dist_type}")
@@ -754,6 +763,54 @@ def test_essential_files_in_distribution(
     )
     assert nr_matched_files == 1, (
         f"Essential file '{pattern}' not found in the {dist.name} {dist_type}."
+    )
+
+
+# where the dataset sits inside the data wheel, and inside its source tree
+DATA_PAYLOAD_PREFIX = ("timezonefinder_data", "data")
+
+
+def _payload(paths) -> set[Path]:
+    """The dataset entries among ``paths``, relative to the data directory."""
+    depth = len(DATA_PAYLOAD_PREFIX)
+    return {
+        Path(*path.parts[depth:])
+        for path in paths
+        if path.parts[:depth] == DATA_PAYLOAD_PREFIX
+    }
+
+
+@pytest.mark.integration
+def test_the_data_wheel_carries_exactly_the_committed_dataset():
+    """Set equality, because both directions are silent failures with real cost.
+
+    A missing binary is a lookup that raises on first use. An *extra* one is worse to
+    catch: setuptools copies package data into ``build/lib`` and never prunes it, so a
+    file renamed in the source tree keeps being zipped into every later wheel from a
+    developer checkout. That is not hypothetical - the ``.fbs`` -> ``.bin`` rename left
+    a 63 MB ``coordinates.fbs`` shipping next to its replacement, doubling a wheel
+    whose size is the entire reason this distribution was split out. Every other check
+    in this module looked straight past it: the unwanted-file scan only knows
+    ``.gitignore`` patterns, which are repo-relative and cannot match a path inside an
+    archive, and the essential-file checks ask only whether each expected file is
+    present.
+    """
+    shipped = _payload(built_files(DATA_DIST, WHEEL_TYPE))
+    committed = _payload(get_distributable_files(DATA_DIST))
+
+    assert committed, (
+        f"no dataset found under {'/'.join(DATA_PAYLOAD_PREFIX)} in "
+        f"{DATA_DIST.source_root} - this check is vacuous, so the layout has moved"
+    )
+    extra = sorted(str(path) for path in shipped - committed)
+    missing = sorted(str(path) for path in committed - shipped)
+    assert not (extra or missing), (
+        f"the {DATA_DIST.name} wheel does not carry the committed dataset.\n"
+        f"  shipped but not in the source tree: {extra}\n"
+        f"  in the source tree but not shipped: {missing}\n"
+        "Stale entries are usually a previous build left in "
+        f"{DATA_DIST.source_root / 'build'}; missing ones mean "
+        "[tool.setuptools.package-data] does not name their extension."
     )
 
 

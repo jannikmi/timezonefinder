@@ -126,8 +126,8 @@ jobs:
           repo: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
           body: >
-            @${{ github.repository_owner }} the changelog guard passed but this
-            automated data update could not be merged and released
+            @${{ github.repository_owner }} this automated data update could not
+            be merged and released
             ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
             Check that run for the reason - a merge conflict, a change to
             master landing mid-merge, or a merge that went through without the

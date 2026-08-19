@@ -26,9 +26,7 @@ def get_zone_names_path(output_path: Path = DEFAULT_DATA_DIR) -> Path:
     return output_path / "timezone_names.txt"
 
 
-def write_zone_names(
-    zone_names: list[str], output_path: Path = DEFAULT_DATA_DIR
-) -> None:
+def write_zone_names(zone_names: list[str], output_path: Path) -> None:
     """
     Write timezone names to a persistent text file.
 
@@ -36,7 +34,11 @@ def write_zone_names(
     store the list of all timezone identifiers in the dataset.
 
     :param zone_names: List of timezone names to write
-    :param output_path: Directory where output file will be written
+    :param output_path: Directory where output file will be written. Required, unlike
+        the read side above: ``DEFAULT_DATA_DIR`` resolves to wherever the
+        ``timezonefinder-data`` distribution is installed, so defaulting to it would
+        make an omitted argument rewrite the installed dataset in site-packages.
+        Generators pass ``scripts.configs.SOURCE_DATA_DIR``.
     :raises OSError: If file cannot be written
     """
     path = get_zone_names_path(output_path)

@@ -1,6 +1,6 @@
 ---
 name: cut-release
-description: "Turns the accumulated `X.X.X (unreleased)` section of CHANGELOG.rst into a numbered release of timezonefinder: check the section is release-ready, propose patch/minor/major with the bullets that justify it, and stop for the maintainer's decision - then land the version bump as a release PR and, once they have merged it, push the tag that publishes to PyPI. Two stops, both the maintainer's: the bump level and the tag. Use this whenever the user asks to cut, prepare, trigger or ship a release, publish a new version, bump the version, release the unreleased changelog section, tag a release, or asks what the next version number would be and why - even if they never say the word skill. Data-only releases are published automatically by release_data_update.yml and do not go through here."
+description: "Turns the accumulated `X.X.X (unreleased)` section of CHANGELOG.rst into a numbered release of timezonefinder: check the section is release-ready, derive patch/minor/major from the bullets and justify that level in the release PR - then land the version bump as that PR and, once the maintainer has merged it, push the tag that publishes to PyPI. One stop, the maintainer's: the tag. The bump level is decided by the skill and reviewed on the PR. Use this whenever the user asks to cut, prepare, trigger or ship a release, publish a new version, bump the version, release the unreleased changelog section, tag a release, or asks what the next version number would be and why - even if they never say the word skill. Data-only releases are published automatically by release_data_update.yml and do not go through here."
 ---
 
 # Cut a release
@@ -11,24 +11,30 @@ Turn the accumulated `X.X.X (unreleased)` section of `CHANGELOG.rst` into a rele
 The work splits at the maintainer's merge, so this skill has two halves and one invocation runs
 exactly one of them (§1): **prepare** ends with a release PR, **tag** ends with a pushed tag.
 
-## 0. This skill stops twice. Both stops are the point.
+## 0. This skill stops once. That stop is the point.
 
 `.claude/skills/code-quality-pass/SKILL.md` runs start to finish without asking, because an
-internal refactor has an obvious correct answer. A release does not:
+internal refactor has an obvious correct answer. Most of a release does too: the bump level follows
+from §4's table applied to bullets that are already written down, and it lands in a pull request
+the maintainer reads before merging. Asking in chat put the same question to them twice, the first
+time without the diff attached. §7's **Why this level** is where that judgement is now checked,
+which is why it is mandatory and has a required shape.
 
-- **The bump level is a judgement about what users are promised**, and `CLAUDE.md` makes the public
-  API a contract across minor versions. §4 puts the level to the maintainer as three concrete
-  version numbers with the bullets behind each, and the pass halts there until answered.
+What is not a judgement anyone reviews afterwards:
+
 - **The tag is the publish.** Pushing it builds the wheels and uploads them, and PyPI refuses a
-  re-upload of a version that already exists. A wrong tag is not fixed by deleting it.
+  re-upload of a version that already exists. A wrong tag is not fixed by deleting it. By then the
+  PR review is over, and the tag can name a commit that PR never contained.
 
-Do not "improve" this file by making it autonomous. Everything else here — worktree hygiene, the
+Do not "improve" this file by removing that stop, and do not restore the bump-level one - see
+*Autonomy, and where it stops* at the end. Everything else here — worktree hygiene, the
 verification gate, the PR body, the final report — follows the sibling skills and is not restated.
 
 Hard gates, above everything else:
 
 - **Never merge the release PR and never enable auto-merge.** A green check list can mean CI never
-  ran. The maintainer merges.
+  ran. The maintainer merges — and since the level is no longer put to them in chat, that review is
+  the only place a wrong one is caught.
 - **Never tag without asking in the same session** (§8), never force-push or delete a tag, never
   upload to PyPI by hand. `build.yml` owns publishing.
 - **Never run `make reports`, `make data`, `make benchmark-fixtures` or `update_data.sh` here.**
@@ -93,10 +99,10 @@ exempt by `CLAUDE.md`; anything else that has no bullet is a gap — add one des
 state, and name it in the report so the maintainer sees what you wrote rather than discovering it
 in the release notes.
 
-Show the resulting diff in chat before §4. The bump level is read off this text, so the maintainer
-should see the text they are being asked about.
+Show the resulting diff in chat before §4. The bump level is read off this text, so the text has to
+be visible next to the level derived from it.
 
-## 4. Gate 1: propose the bump
+## 4. Decide the bump
 
 Compute the three candidates rather than doing the arithmetic yourself — `--dry-run` writes
 nothing:
@@ -118,19 +124,25 @@ assets are versioned with the package and carry no compatibility promise (`CLAUD
 changed `.fbs` layout is therefore a minor at most — it costs users a regeneration, not a rewrite.
 An `Internal:`-only section is a patch however long it is.
 
-A boundary-data update is **not on this table at all** since #446: it releases
+A boundary-data update is **not on this table at all**: it releases
 `timezonefinder-data`, leaves this version untouched, and never reaches `CHANGELOG.rst`. What does
 belong here is a *format* change, which bumps `DATA_FORMAT_VERSION` and the data distribution's
 major — and then the ordering is load-bearing: publish the data release first, then this one, or
 the new bound resolves to nothing.
 
-Put it to the maintainer with `AskUserQuestion`: one question, the three options as the actual
-version numbers (`8.3.0 — minor`, …), recommended first, each with the bullet that drives it quoted
-in the description. **Do not proceed on silence or inference.** If they choose a level other than
-the recommendation, take it without arguing — the promise is theirs to make.
+**Decide it here; do not ask.** The table above is the whole rule, and the bullets it applies to
+are already written. State the level and the resulting version number in chat as you go on, so the
+run is readable without opening the PR.
 
-If the invocation already named the level ("cut a minor release"), that is the answer: skip the
-question, state the resulting number, and go on. Gate 2 still stands.
+Deciding it unasked is paid for in §7, and both halves are obligatory there: quote the single
+bullet that drove the level and name the table row it matches, then name the level you did *not*
+pick and why. "minor, not major: no exported signature changed" can be checked in seconds; "minor"
+cannot.
+
+If the invocation already named the level ("cut a minor release"), that is the answer: state the
+resulting number and go on. Say in the PR that the level was given rather than derived, and if the
+table would have given a higher one, say that too — the promise is the maintainer's to make, but
+the PR has to show them what they are making. The tag gate still stands.
 
 ## 5. Apply
 
@@ -184,8 +196,10 @@ Do not merge, do not enable auto-merge, do not tag. Body:
 `<old> → <version>` (<level>), changelog section dated `<date>`.
 
 ## Why this level
-The bullets that decide it, one line each. Note it if the maintainer chose a level other than the
-proposed one.
+`<level>`, because: the one bullet that drove it, quoted, and the §4 row it matches. Then the level
+*not* taken, and why not, in one line. This is the only review the bump level gets, so it has to be
+checkable without re-reading the whole section. Note it if the level came from the invocation
+rather than from the table.
 
 ## Changelog edits
 What §3 merged, cut or added — especially any bullet written here for a change that had none.
@@ -246,7 +260,7 @@ the run URL either way.
 
 ## 10. Final report
 
-In chat: the version and level, and who chose it; the PR URL (prepare) or the tag and run URL
+In chat: the version and level, how it was derived (or that the invocation named it); the PR URL (prepare) or the tag and run URL
 (tag); what §3 changed in the changelog, listing any bullet you wrote for a change that had none;
 the verification commands and their real outcomes, failures stated plainly; and what the maintainer
 does next — merge, or nothing.
@@ -263,12 +277,21 @@ tag triggers. A second copy here drifts, and the copy that drifts is the one an 
 
 **The changelog-ordering stop.** §1 carried a fourth row for "a dated section sits *above*
 `X.X.X (unreleased)`", because `update_data.sh` spliced its entry under the file header. It no
-longer writes to `CHANGELOG.rst` at all: since #446 a data update releases `timezonefinder-data`
+longer writes to `CHANGELOG.rst` at all: a data update releases `timezonefinder-data`
 and records itself in that package's README, so the automation cannot produce that state, and
 nothing else writes release sections unattended. Do not re-add the row.
 
-**Autonomy.** §0 explains why the two stops exist. Removing them makes the skill able to publish an
-unreviewable, unrepeatable artifact without a human in the loop.
+**Autonomy, and where it stops.** The bump level used to be a second `AskUserQuestion` stop, on the
+reasoning that the level is a promise about the public API and so the maintainer's to make. It is
+still theirs — they make it by merging the release PR. The stop went away because it asked them to
+answer, from §4's table and without the diff, a question the PR then asked again with both
+attached. Do not re-add it. If a wrong level ever gets through, the fix is a sharper §7 — the
+justification is what the reviewer actually checks.
+
+The tag stop is different in kind and stays. Nothing reviews it afterwards: the PR review is over,
+`build.yml` publishes on the push, and PyPI will not take the version twice. A skill that both
+decides the level and pushes the tag can publish an unreviewable, unrepeatable artifact with no
+human in the loop at any point.
 
 What *should* change here: the §8 race note, if `build.yml`'s `release` job stops creating the tag;
 the §4 table, if the versioning contract in `CLAUDE.md` changes.
