@@ -36,19 +36,35 @@ lets a cheap item proceed while a large one waits on a decision.
 tracked by issue `<n>`, the other prefixes are mnemonics, and neither says how a pass should treat
 the entry. Locations are given by file plus a code anchor (a function or symbol name), never a line
 number, so they survive reformatting. `Size` is a rough count of changed lines.
-`Status` is one of `open`, `needs a decision`, `blocked (reason)`, `rejected (reason)`,
-`out of scope (reason)` or `withdrawn (reason)` — everything still written down is unfinished or
-deliberately declined. Do not re-litigate a closed entry and do not re-add it under a new id.
+
+`Status` opens with one of `open`, `needs …`, `blocked …`, `conditional …`, `parked …`,
+`rejected …`, `out of scope …` or `withdrawn …`, and `tests/test_improvement_ledger.py` rejects
+anything else. **There is deliberately no status meaning "done"** — everything written down here is
+unfinished or declined, and work that landed is *deleted* rather than marked. Do not re-litigate a
+closed entry and do not re-add it under a new id.
+
+**The ranking has no numbers**, because the row order is the ranking. A number column would have to
+be re-flowed on every insertion and deletion — churn on the one operation this file exists to make
+cheap, and a conflict between any two passes that both ship something.
 
 **How it is maintained.** `.claude/skills/improvement-pass/SKILL.md` drives one pass over it. The
 file is committed so that it reaches the next pass through `master`: every pass reads it before
 touching a source file, re-verifies the entries it is considering against the current code, and
-writes back what it found. It is a to-do list, not a history — a pass that ships an entry *deletes*
-it, and its ranking row with it, in the same pull request, since the code is the evidence that it
-is done, the changelog says what changed, and `git log -- potential-improvements.md` still has the
-text. Entries that were *rejected*, ruled *out of scope* or *withdrawn* stay: they encode a dead
-end, and re-discovering one costs a whole pass. So do *Recorded decisions* and *Deliberately
-checked and found sound*, which are never deleted.
+writes back what it found.
+
+**It is a to-do list, not a history.** Work that landed is *deleted* — the entry and its ranking
+row, in the same pull request that ships it — because the code is the evidence it is done, the
+changelog says what changed, and `git log -- potential-improvements.md` still has the text. Nothing
+renumbers and nothing else moves. Entries that were *rejected*, ruled *out of scope* or *withdrawn*
+stay: they encode a dead end, and re-discovering one costs a whole pass. So do *Recorded decisions*
+and *Deliberately checked and found sound*, which are never deleted.
+
+An entry left in after its work shipped is the failure this file cannot detect on its own: it reads
+exactly like an open one, and the next pass pays full price to rediscover that there is nothing to
+do. Re-verify before ranking. **A `GH-<n>` entry whose issue has closed is the cheapest staleness
+signal there is** — either the work landed or the item was dropped, and both mean the entry is
+resolved rather than open. `gh issue view <n> --json state` over the ids costs seconds, and it is
+what caught the one entry this file arrived with that had shipped the day before.
 
 Every entry has exactly one row in the ranking and every row has exactly one entry;
 `tests/test_improvement_ledger.py` fails otherwise. The table is the only statement of order, so
@@ -58,43 +74,42 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 ## The ranking
 
-| # | Id | What | Area | Size | Eligibility |
-|---|---|---|---|---|---|
-| 1 | GH-499 | Batch / array lookup API | public API | L | needs decisions |
-| 2 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | needs a decision |
-| 3 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by DATA-BINARIES |
-| 4 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~6 | needs a decision |
-| 5 | GH-498 | Expose the packaged dataset version at runtime | public API | S | free |
-| 6 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| 7 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
-| 8 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions |
-| 9 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
-| 10 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
-| 11 | GH-301 | Sort shortcut polygons by overlap area | performance | M | needs the `shapely` decision |
-| 12 | GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | free |
-| 13 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
-| 14 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | needs a decision |
-| 15 | GH-332 | Reduced timezone dataset as a second distribution | packaging | M | needs a decision |
-| 16 | TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | needs a decision |
-| 17 | TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~10 | needs a decision |
-| 18 | API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | needs a decision |
-| 19 | API-2 | Every submodule is reachable as a package attribute | public API | ~20 | needs a decision |
-| 20 | BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | check whether it is a behaviour change |
-| 21 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | M | needs a decision + benchmark |
-| 22 | GH-317 | Reduce the release artifact count | packaging | S | free |
-| 23 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
-| 24 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
-| 25 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
-| 26 | PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~15 | needs a measurement |
-| 27 | DUP-1 | The coordinate bounds are declared three times | internal | ~6 | needs a measurement |
-| 28 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
-| 29 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
-| 30 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~35 | needs a decision |
-| 31 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
-| 32 | GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-301 + GH-500 |
-| 33 | GH-505 | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
-| 34 | GH-334 | Official mapping for the reduced set | data | S | parked upstream |
-| 35 | GH-318 | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
+| Id | What | Area | Size | Eligibility |
+|---|---|---|---|---|
+| GH-499 | Batch / array lookup API | public API | L | needs decisions |
+| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | needs a decision |
+| GH-449 | Polygon encoding: delta + varint | data format | L | blocked by DATA-BINARIES |
+| BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~6 | needs a decision |
+| DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
+| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
+| GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions |
+| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
+| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
+| GH-301 | Sort shortcut polygons by overlap area | performance | M | needs the `shapely` decision |
+| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | free |
+| GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
+| GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | needs a decision |
+| GH-332 | Reduced timezone dataset as a second distribution | packaging | M | needs a decision |
+| TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | needs a decision |
+| TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~10 | needs a decision |
+| API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | needs a decision |
+| API-2 | Every submodule is reachable as a package attribute | public API | ~20 | needs a decision |
+| BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | check whether it is a behaviour change |
+| BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | M | needs a decision + benchmark |
+| GH-317 | Reduce the release artifact count | packaging | S | free |
+| GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
+| GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
+| BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
+| PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~15 | needs a measurement |
+| DUP-1 | The coordinate bounds are declared three times | internal | ~6 | needs a measurement |
+| BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
+| TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
+| DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~35 | needs a decision |
+| GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
+| GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-301 + GH-500 |
+| GH-505 | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
+| GH-334 | Official mapping for the reduced set | data | S | parked upstream |
+| GH-318 | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
 
 ---
 
@@ -110,8 +125,6 @@ DATA-BINARIES ──┬─→ GH-449 (encode)
 GH-477 (flat arrays) ─→ the vectorised half of GH-499 (batch API)
 
 GH-301 (shortcut ordering) ─→ GH-513 (drop holes)   ←── GH-500 (ordering invariant enforced)
-
-GH-498 (provenance) ─→ prerequisite for GH-501's diff report
 
 GH-500 ←→ GH-428: one CLI design, settled by whichever lands first
 
@@ -354,14 +367,6 @@ independent: GH-502, GH-362, GH-524, GH-536
 - **Last touched:** 2026-08-08 — found and measured while correcting the `:raises:` lines of the
   same two methods.
 
-### GH-498 — expose the packaged dataset version at runtime
-
-- **Tracks:** issue #498.
-- **Why here:** best value per line of anything on this list. Nothing can name the dataset it is
-  answering from today, which every provenance question and GH-501's diff report needs.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 4 there.
-
 ### GH-502 — first-class `zoneinfo` / UTC-offset helpers
 
 - **Tracks:** issue #502.
@@ -434,13 +439,14 @@ independent: GH-502, GH-362, GH-524, GH-536
 - **What it is:** the weekly pipeline auto-merges and auto-tags a PyPI release from an unpinned,
   unchecksummed, undiffed 64 MB upstream drop. The release-notes half shipped in #519 — a data
   release is now withheld whenever anything else is pending. What remains is that nothing knows
-  what the 64 MB actually changed.
+  what the 64 MB actually changed. Its one prerequisite is met: #523 exposed the dataset version at
+  runtime (`timezonefinder_data.__version__`), so a diff report has something to name.
 - **Decisions still open:** which thresholds block an automated release, and what happens when one
   trips.
 - **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad. That
   lowers the urgency and not the value — the argument never rested on a past incident, it rests on
   the pipeline auto-merging and auto-tagging with no human diff review.
-- **Status:** needs decisions. Depends on GH-498 for the diff report.
+- **Status:** needs decisions.
 - **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 5 there.
 
 ### GH-317 — reduce the release artifact count
@@ -914,7 +920,7 @@ be resolved by the pass that reads it, so it stays open for ever.
 | 8 (the data report generator) | 2026-08-14 | `scripts/reporting.py` read in full — the last large module no pass had read end to end; `scripts/hex_utils.py`'s `Hex` cache properties and `scripts/utils.py` re-read. `uv run mypy` run by hand over `scripts/`, which the pre-commit hook excluded — the first time any pass had done so, and the mechanism behind most findings that pass | `docs/` prose; `scripts/shortcuts.py`, `benchmark_utils.py`, `file_converter.py`, `timezone_data.py`, `measure_memory.py`; `scripts/data_integrity.py` |
 | 9 (scripts/ entry point and typing) | 2026-08-14 | The five `scripts/` modules pass 8 named as unreached, read at their mypy error sites and around them; `Makefile`, `update_data.sh` and `docs/2_use_cases.rst` compared for how the converter is invoked; `tests/main_test.py`'s cleanup class and `tests/auxiliaries.py` re-read. `uv run mypy` over `scripts/` (15 errors, all cleared, directory now in the hook) and over `tests/` (14 errors) | `docs/` prose; `scripts/data_integrity.py`; `scripts/reporting.py` internals |
 | 10 (the data-package split, and `tests/` typing) | 2026-08-19 | The six modules the distribution split added or rewrote, none of which any pass had read: `packages/timezonefinder-data/timezonefinder_data/__init__.py`, `scripts/data_integrity.py`, `scripts/check_data_dependency.py`, `scripts/data_releases.py`, `timezonefinder/flatbuf/schemas/__init__.py` and `timezonefinder/zone_names.py` — plus `tests/test_integration.py` and `tests/test_script_invocations.py`. Every open entry re-verified against the current code; `uv run mypy` re-run over `tests/` (19 errors, the 8 real ones cleared and the directory now in the hook) | `docs/` prose; the larger new test modules read only at their headers; no repeat of the repo-wide `--select ALL` triage |
-| 11 (register unification) | 2026-08-20 | No source sweep: the roadmap issue's ranking, sequencing and recorded decisions were migrated into this file and the two pass skills merged into one | everything — this pass read the register and the skills, not the code |
+| 11 (register unification) | 2026-08-20 | No source sweep: the roadmap issue's ranking, sequencing and recorded decisions were migrated into this file and the two pass skills merged into one. Every entry's anchor re-verified against the working tree, and every issue the file names checked for state - which found #498 (runtime dataset provenance) shipped in #523 and deleted it | everything else — this pass read the register and the skills, not the code |
 
 Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8
 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with

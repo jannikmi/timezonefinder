@@ -101,8 +101,16 @@ Entries from earlier passes are evidence, not gospel — the code has moved sinc
   against the current code before spending time on it, and re-locate it by content rather than by
   a recorded line number.
 - If an entry no longer describes reality, work out which case it is. **Already done** — by you, by
-  a sibling pass, or by unrelated work: delete it. **Wrong, or a dead end**: keep it, marked
-  `withdrawn` with one line of reason, so it is not rediscovered at full price.
+  a sibling pass, or by unrelated work: delete it, row and all, and say so in the pull request.
+  **Wrong, or a dead end**: keep it, marked `withdrawn` with one line of reason, so it is not
+  rediscovered at full price.
+- **Check the state of every issue the register names before you rank.** A `GH-<n>` entry whose
+  issue has closed either shipped or was dropped; both mean the entry is resolved. It is one
+  command over the whole file and it is the only staleness signal that needs no reading:
+  ```
+  grep -o 'GH-[0-9]*' potential-improvements.md | sort -u | cut -d- -f2 |
+    xargs -I{} gh issue view {} --json number,state --jq '"\(.number) \(.state)"'
+  ```
 - **Correct the reasoning, not just the status.** An entry whose conclusion survived on a premise
   since disproved is the failure worth catching: it reads as settled and sends the next pass down a
   path already ruled out. Say what moved.
@@ -123,11 +131,14 @@ code anchor durable enough to survive reformatting) or the issue it tracks; the 
 the change proposed; the fix and a rough size in changed lines; the value — what breaks, drifts or
 misleads if it stays; a status; and the pass that last touched it, dated.
 
-**The register is a to-do list, not a history.** An entry you ship is **deleted** in the same pull
-request, not kept with a `shipped` status: the code is the evidence it is done, the changelog says
-what changed, and `git log -- potential-improvements.md` still has the text. Left in, shipped
-entries are dead weight every later pass reads past — and the largest source of conflict between
-concurrent passes. The deletion rule is **only** for shipped work. Rejected, out-of-scope and
+**The register is a to-do list, not a history.** An entry whose work landed is **deleted — the
+entry and its ranking row — in the same pull request that ships it**, never kept with a status
+saying it is done. The code is the evidence, the changelog says what changed, and
+`git log -- potential-improvements.md` still has the text. Left in, a finished entry reads exactly
+like an open one, so the next pass pays full price to rediscover that there is nothing to do; it is
+also the largest source of conflict between concurrent passes. There is no status meaning done, and
+`tests/test_improvement_ledger.py` rejects one — if you are tempted to write `shipped`, the entry
+should be gone instead. The deletion rule is **only** for work that landed. Rejected, out-of-scope and
 withdrawn entries stay with their one line of reason, as does the *deliberately checked and found
 sound* list: each encodes a dead end, and re-discovering one costs a whole pass.
 
@@ -381,8 +392,9 @@ What that implies in practice:
    particular, do not run the `slow` suites reflexively; do run the ones your change maps to. A
    change with no test exercising the new seam is not finished.
 4. **Commit the code**, message naming the entry id.
-5. **Delete the entry** (or update it, if the slice left a remainder) and commit the register on
-   its own.
+5. **Delete the entry and its ranking row**, in one commit of their own. If the slice left a
+   remainder, the entry stays instead — rewritten to describe only what is left, keeping its id and
+   its row, so the next pass reads the remainder and not the original scope.
 6. **Push** (§3.1), then go to the gate.
 
 ## 9. Gate before opening the pull request
@@ -405,9 +417,10 @@ All of these, with output you have actually read:
 - [ ] `git diff origin/master --stat` shows only files you intended to touch — no stray scratch
       files, and `potential-improvements.md` present.
 - [ ] `CHANGELOG.rst` entry present.
-- [ ] `potential-improvements.md` updated and committed: this pass's findings recorded, the shipped
-      entry **deleted**, its ranking row removed with it, rejected or withdrawn entries kept with a
-      reason, decisions recorded, coverage noted.
+- [ ] `potential-improvements.md` updated and committed: this pass's findings recorded; the entry
+      whose work landed **deleted, with its ranking row** — grep the id in the diff and confirm no
+      occurrence survives; rejected or withdrawn entries kept with a reason; decisions recorded;
+      coverage noted.
 
 If a gate fails and you cannot fix it, do not open the pull request — report what failed and stop.
 Still commit the register and push the branch, and name that branch in your report: the findings

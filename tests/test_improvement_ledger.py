@@ -2,11 +2,16 @@
 
 ``potential-improvements.md`` states its order in one place - the ranking table -
 and its detail in another, the entry sections below it. That split is what keeps
-the entries groupable by kind while the ranking stays a single walkable list, and
+the entries groupable by area while the ranking stays a single walkable list, and
 it is also how the two drift: an entry added without a row is invisible to the
 pass that walks the ranking, and a row left behind by a shipped entry sends that
 pass looking for something that is no longer there. Neither shows up in a diff
 review, because both halves read as correct on their own.
+
+The status vocabulary is checked for the same reason. Work that landed is deleted
+from the file rather than marked, so no status may say it is done - and an agent
+reaching for ``shipped`` is exactly how a register turns back into a changelog
+nobody reads.
 """
 
 import re
@@ -19,7 +24,21 @@ LEDGER_FILE = PROJECT_ROOT / "potential-improvements.md"
 
 RANKING_HEADING = "## The ranking"
 ENTRY_HEADING = re.compile(r"^### ([A-Z0-9-]+) [-\u2014]")
-RANKING_ROW = re.compile(r"^\| *\d+ *\| *([A-Z0-9-]+) *\|")
+RANKING_ROW = re.compile(r"^\| *([A-Z][A-Z0-9-]+) *\|")
+ENTRY_STATUS = re.compile(r"^- \*\*Status:\*\* +(\S+)")
+# the file documents this list; there is deliberately no status meaning "done"
+STATUS_OPENINGS = frozenset(
+    {
+        "open",
+        "needs",
+        "blocked",
+        "conditional",
+        "parked",
+        "rejected",
+        "out",
+        "withdrawn",
+    }
+)
 
 
 @pytest.fixture(scope="module")
@@ -31,9 +50,8 @@ def ledger_text() -> str:
 def ranking_section(text: str) -> str:
     """Return the ranking table alone.
 
-    Other tables in the file are numbered the same way - the coverage log opens
-    with a pass number - so a repository-wide row match would read their first
-    column as an entry id.
+    The file holds other tables - the coverage log, and tables inside entries -
+    so a repository-wide row match would read their first column as an entry id.
     """
     _, _, below = text.partition(RANKING_HEADING)
     assert below, f"{LEDGER_FILE} no longer has a {RANKING_HEADING!r} section"
@@ -77,4 +95,19 @@ def test_ranking_and_entries_name_the_same_items(ledger_text: str) -> None:
     assert ranked - described == set(), (
         f"{sorted(ranked - described)} are ranked but have no entry - a shipped entry must "
         "take its row with it"
+    )
+
+
+@pytest.mark.unit
+def test_no_status_claims_the_work_is_done(ledger_text: str) -> None:
+    """A shipped entry is deleted, so no status may report one as finished."""
+    statuses = ids_of(ENTRY_STATUS, ledger_text)
+    assert statuses, "no entry declares a status"
+    unknown = {
+        word for word in statuses if word.rstrip(".,:").lower() not in STATUS_OPENINGS
+    }
+    assert not unknown, (
+        f"{sorted(unknown)} open a status line, but the register documents "
+        f"{sorted(STATUS_OPENINGS)} - and none of them means done, because work that landed "
+        "is deleted from the file rather than marked"
     )
