@@ -2,6 +2,12 @@ name: build
 
 # Triggers:
 # - push to master, version tags, or publishing a GitHub Release (fallback if a tag push did not start a run).
+# A master push tests and stops; a version tag publishes and does not re-test. The tox
+# matrix is the whole critical path (6-10 min per job, everything else under a minute),
+# and a tag points at a commit already on master, so running it on both refs bought a
+# second copy of the only expensive thing here. What makes the tag side sound is not the
+# ancestry check - that proves the commit is on master, not that it was ever green - but
+# the `release` job asserting that a successful `build` run for this exact SHA exists.
 # GitHub limits: tag push webhooks are not emitted when more than three tags are pushed in one operation.
 # Tag push runs use the workflow file as it exists in the commit the tag points to (the workflow must exist there).
 #
@@ -42,6 +48,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    # Tag refs skip it: the tag names a commit already on master, whose push run tested
+    # the identical tree. The `release` job checks that run exists rather than assuming it.
+    if: "!startsWith(github.ref, 'refs/tags/')"
     strategy:
       # By default, GitHub will maximize the number of jobs run in parallel
       # depending on the available runners on GitHub-hosted virtual machines.
@@ -209,16 +218,34 @@ jobs:
     runs-on: ubuntu-latest
     # Note: only run, when test publishing worked
     needs: [test, make-wheels, make-sdist, end-to-end-test, pre-commit-hooks]
-    # Run on pushes to master or tag pushes to create releases.
-    # The verification step below ensures tags are only released if on master.
+    # Tag refs only. A push to master used to reach this job too, and since the release
+    # action is handed `tag:` it created the tag itself - so master's own run published,
+    # and the maintainer's `git push` of the tag then raced it.
+    # The verification steps below ensure tags are only released if on master, and only
+    # if that master commit was tested green.
     # The `data-v*` exclusion repeats the trigger's tag filter because the
     # `release: types: [published]` trigger bypasses it (see the header). This job is
     # the one that must carry it: it creates the GitHub Release, and `publish-pypi`
     # needs it, so guarding here guards both.
+    #
+    # `!cancelled()` is load-bearing and so is everything after it: a skipped `needs`
+    # job skips its dependents, and `test` is skipped on exactly the refs this job runs
+    # on. Naming any status function also drops the implicit `success()` over `needs`,
+    # which is why each job that does still run is checked by hand.
     if: >
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
-      !startsWith(github.ref, 'refs/tags/data-v')
+      !cancelled() &&
+      startsWith(github.ref, 'refs/tags/') &&
+      !startsWith(github.ref, 'refs/tags/data-v') &&
+      needs.test.result != 'failure' &&
+      needs.test.result != 'cancelled' &&
+      needs['make-wheels'].result == 'success' &&
+      needs['make-sdist'].result == 'success' &&
+      needs['end-to-end-test'].result == 'success' &&
+      needs['pre-commit-hooks'].result == 'success'
     permissions:
+        # reading this commit's other workflow runs is what replaces re-running the
+        # matrix; declaring any permission zeroes the rest, so it has to be listed
+        actions: read
         id-token: write
         contents: write
     steps:
@@ -232,11 +259,32 @@ jobs:
       # This is crucial because tags can be pushed from any branch, but releases should only occur from master.
       - name: Verify commit is on master branch
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            if ! git branch -r --contains HEAD | grep -q origin/master; then
-              echo "Tag is not on master branch. Aborting release."
-              exit 1
-            fi
+          if ! git branch -r --contains HEAD | grep -q origin/master; then
+            echo "Tag is not on master branch. Aborting release."
+            exit 1
+          fi
+
+      # The tox matrix does not run on this ref, so the fact that it passed has to come
+      # from somewhere. The step above proves ancestry, which is not the same claim: a
+      # commit can sit on master with a red run, or with no run at all. Assert the run
+      # instead of inheriting the assumption - it is the difference between a check and
+      # a belief, and it costs one API call against ten minutes of matrix.
+      - name: Verify this commit tested green on master
+        id: verify_tested_on_master
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          green=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&event=push&per_page=100" \
+            --jq '[.workflow_runs[]
+                   | select(.name == "build" and .head_branch == "master" and .conclusion == "success")]
+                  | length')
+          echo "successful master build runs for ${GITHUB_SHA}: ${green}"
+          if [[ "${green}" -eq 0 ]]; then
+            echo "No successful 'build' run on master for ${GITHUB_SHA}." >&2
+            echo "The tag was pushed before master's run finished, or that run was red." >&2
+            echo "Wait for it to pass, then re-run this job - do not re-tag." >&2
+            exit 1
           fi
 
       - name: Set up Python
@@ -282,12 +330,9 @@ jobs:
       # It sits here rather than next to the upload in `publish-pypi` because the step
       # below is the first irreversible one: it publishes a GitHub Release, with the
       # wheels attached, and creates the tag. `publish-pypi` needs this job, so guarding
-      # here guards the upload too. Tag pushes only - a push to master reaches this job
-      # as well, and before the first data release there is nothing on the index for the
-      # declared bound to resolve to, which would turn master red for a release nobody
-      # is making.
+      # here guards the upload too. It needs no ref guard of its own any more: the job
+      # is tag-only, so it can no longer turn master red for a release nobody is making.
       - name: Verify the required data version is published
-        if: startsWith(github.ref, 'refs/tags/')
         run: uv run --with packaging python -m scripts.check_data_dependency
 
       - name: Create GitHub Release

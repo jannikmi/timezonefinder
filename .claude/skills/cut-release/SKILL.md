@@ -222,12 +222,12 @@ Only after the release PR is merged. Preconditions, each verified:
 - [ ] `uv version --short` equals the top dated section in `CHANGELOG.rst`. The tag-push run checks
       out the tag and re-reads `pyproject.toml`, so a disagreement releases the wrong number.
 - [ ] `git tag -l <version>` and `git ls-remote --tags origin <version>` are both empty (§9 if not).
-- [ ] **The release PR's own CI run was green.** That is the signal — the same tree master now
-      carries. Do not wait for master's push run to finish, and this is not laziness: that run's
-      `release` job creates the GitHub Release itself, which creates the tag, and a `git push` of a
-      tag the remote already has reports "Everything up-to-date" and fires no webhook. The
-      automated data path (`release_data_update.yml`, which pushes a `data-v*` tag) does the
-      same for this reason.
+- [ ] **Master's own push run for the release commit is green** — `gh run list --branch master
+      --limit 3`, and the run whose head SHA is `git rev-parse HEAD`. Wait for it; the tag run does
+      not re-run the tox matrix, and its `release` job refuses to publish unless a successful
+      `build` run for that exact SHA exists on master. Tagging early therefore fails the release
+      rather than slipping something untested past it — recoverable (§9), but only by re-running a
+      job, never by re-tagging.
 
 Then ask — plainly, in chat, naming what it does: tag `<version>` on `master` and push it, which
 builds the wheels and uploads them to PyPI, and PyPI will not accept that version again. On a clear
@@ -249,11 +249,16 @@ the run URL either way.
 
 ## 9. When it goes wrong
 
-- **`git push` said "Everything up-to-date" / the tag already exists remotely.** Master's push run
-  created the release and its tag first. `build.yml` also triggers on `release: published`, whose
-  ref *is* the tag, so publishing may still happen on its own — check `gh run list` and report what
-  you find. Do not delete the tag to "retry": `make rmtag` on a version that already reached PyPI
-  cannot be undone there.
+- **The tag run failed at "Verify this commit tested green on master".** The tag was pushed before
+  master's push run for that commit finished, or that run was red. Nothing has been published — the
+  check sits ahead of the GitHub Release, which is the first irreversible step. Once master's run is
+  green, re-run the failed job from the tag run (`gh run rerun <id> --failed`). Do **not** re-tag,
+  and do not delete the tag to "retry": `make rmtag` on a version that already reached PyPI cannot
+  be undone there. If master's run is genuinely red, the version is not releasable — fix master and
+  cut a new one.
+- **The tag already exists remotely / `git push` said "Everything up-to-date".** Nothing in
+  `build.yml` creates the tag any more, so this means a human or an earlier pass pushed it. Check
+  `gh run list` for a run on that tag ref and report what you find rather than pushing again.
 - **CI red on the tag run.** Report it with the failing job. Do not re-tag; the version is spent.
 - **Preconditions in §2 fail.** Stop and name the one that failed. A release is not a place to work
   around a dirty tree.
@@ -293,5 +298,11 @@ The tag stop is different in kind and stays. Nothing reviews it afterwards: the 
 decides the level and pushes the tag can publish an unreviewable, unrepeatable artifact with no
 human in the loop at any point.
 
-What *should* change here: the §8 race note, if `build.yml`'s `release` job stops creating the tag;
-the §4 table, if the versioning contract in `CLAUDE.md` changes.
+**The tag race, and what replaced it.** §8 used to say the opposite of what it says now: not to
+wait for master's push run, because that run's `release` job created the GitHub Release and with it
+the tag, so the maintainer's `git push` found the tag already there. `build.yml`'s `release` job is
+tag-only now, so master publishes nothing and the race is gone — but the tag run no longer re-runs
+the tox matrix either, and refuses to publish without a green master run for the same SHA. Waiting
+is therefore mandatory rather than merely harmless. Do not restore the old advice.
+
+What *should* change here: the §4 table, if the versioning contract in `CLAUDE.md` changes.

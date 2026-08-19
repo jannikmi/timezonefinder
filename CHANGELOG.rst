@@ -7,6 +7,10 @@ Changelog
 X.X.X (unreleased)
 ------------------
 
+Internal:
+
+* a release no longer runs the tox test matrix twice. It was the entire critical path of ``build.yml`` - four jobs of six to ten minutes each, against under a minute for every wheel, sdist and end-to-end job together - and it ran once for the push to ``master`` and again for the tag naming that same commit. The matrix is now skipped on tag refs and the job that publishes is gated to tag refs only, so ``master`` tests and the tag releases. That also removes the race the release procedure had to work around: the release job is handed the tag name, so a push to ``master`` used to create the GitHub Release and its tag on its own, and the maintainer's tag push then found it already there. Skipping the matrix is backed by a check rather than an assumption - the release job asks the API whether a successful ``build`` run exists for that exact commit on ``master`` and refuses to publish if none does, since the pre-existing ancestry check proves only that the commit is on ``master``, not that it was ever green. A tag pushed before ``master``'s run finishes therefore fails the release job, which is re-run once that run passes rather than re-tagged
+
 
 8.3.0 (2026-08-19)
 ------------------

@@ -263,6 +263,23 @@ covers both.
 the release job verifies that the tagged commit is contained in ``origin/master`` before publishing
 rather than trusting the ref it was handed.
 
+**The test matrix runs once per release, on master.** The tox matrix is the whole critical path -
+four jobs of six to ten minutes each, against under a minute for every wheel, sdist and end-to-end
+job put together - so running it on the master push *and* again on the tag that names the same
+commit doubled the only expensive thing in the pipeline. It now runs on the master push and is
+skipped on tag refs, and the release job publishes only from a tag: master tests, the tag releases.
+That also removed a race the release procedure had to work around, since the release action is
+handed a ``tag:`` and so master's own run used to create the tag itself, before the maintainer
+could push it.
+
+What makes skipping it sound is a check rather than an assumption. The ancestry check above proves
+the tagged commit is on master; it does not prove the commit was ever green, since a commit can sit
+on master with a red run or with none. So the release job asks the API whether a successful
+``build`` run exists for that exact SHA on master, and refuses to go on if none does - one API call
+standing in for ten minutes of matrix, ahead of the first irreversible step. The cost is that a tag
+pushed before master's run finishes fails the release job instead of publishing; nothing is lost,
+because the job can be re-run once master is green.
+
 **The data pipeline releases itself.** A weekly workflow compares ``DATA_VERSION`` against the latest
 timezone-boundary-builder release, regenerates the data and opens a pull request; when that pull
 request's CI passes, a second workflow merges it and pushes a ``data-v*`` tag, which publishes

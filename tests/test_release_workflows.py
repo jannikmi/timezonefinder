@@ -15,6 +15,8 @@ attached to it, and nothing about that looks wrong until someone reads the relea
 page.
 """
 
+import re
+
 import pytest
 import yaml
 
@@ -28,6 +30,8 @@ DATA_TAG_PREFIX = "data-v"
 # from the other stream's tag
 PYPI_PUBLISH_ACTION = "pypa/gh-action-pypi-publish"
 GITHUB_RELEASE_ACTION = "ncipollo/release-action"
+# the release job's stand-in for the tox matrix it skips on a tag ref
+GREEN_RUN_STEP_ID = "verify_tested_on_master"
 
 
 def _workflow(path):
@@ -248,4 +252,168 @@ def test_the_data_stream_publishes_without_a_shared_credential() -> None:
     assert not borrowed, (
         f"{PUBLISH_DATA_WORKFLOW.name} references the code stream's credential "
         f"{borrowed}; that token can upload `timezonefinder`"
+    )
+
+
+# --- what a ref actually reaches -------------------------------------------------
+#
+# The code stream now splits by ref: a master push runs the tox matrix and publishes
+# nothing, a version tag publishes and skips the matrix. That split is expressed
+# entirely in `if:` conditions over `needs` results, where the failure mode is silent
+# and only surfaces during a real release - a skipped `needs` job skips its dependents,
+# and naming any status check function drops the implicit `success()` over the rest. So
+# these evaluate the conditions rather than read them.
+
+_STATUS_FUNCTIONS = ("success()", "always()", "cancelled()", "failure()")
+_PUBLISHING_ACTIONS = (PYPI_PUBLISH_ACTION, GITHUB_RELEASE_ACTION)
+
+
+def _as_python(condition: str) -> str:
+    """Translate the subset of GitHub expression syntax these conditions use."""
+    expression = condition.replace("!=", "\0NE\0")
+    expression = re.sub(r"needs\['([^']+)'\]\.result", r"needs['\1']", expression)
+    expression = re.sub(r"needs\.([A-Za-z0-9_-]+)\.result", r"needs['\1']", expression)
+    expression = expression.replace("cancelled()", "cancelled")
+    expression = expression.replace("github.ref", "ref")
+    expression = re.sub(
+        r"startsWith\(\s*([^,]+?)\s*,\s*('[^']*')\s*\)",
+        r"\1.startswith(\2)",
+        expression,
+    )
+    expression = expression.replace("&&", " and ").replace("||", " or ")
+    expression = expression.replace("!", " not ")
+    return expression.replace("\0NE\0", "!=")
+
+
+def _simulate(workflow: dict, ref: str, failing: frozenset[str] = frozenset()) -> dict:
+    """Every job's result for a run on ``ref``, with ``failing`` jobs failing.
+
+    Models the two rules that make this workflow's conditions non-obvious: a job with no
+    ``if`` runs only when every ``needs`` succeeded, and an ``if`` naming a status check
+    function replaces that rule entirely instead of narrowing it.
+    """
+    results: dict[str, str] = {}
+
+    def resolve(name: str) -> str:
+        if name in results:
+            return results[name]
+        job = workflow["jobs"][name]
+        needs = {dependency: resolve(dependency) for dependency in _needs(job)}
+        condition = job.get("if")
+        all_needs_succeeded = all(result == "success" for result in needs.values())
+        if condition is None:
+            runs = all_needs_succeeded
+        else:
+            condition = str(condition)
+            value = eval(  # noqa: S307 - the input is this repository's own workflow
+                _as_python(condition),
+                {},
+                {"ref": ref, "needs": needs, "cancelled": False},
+            )
+            names_status_function = any(fn in condition for fn in _STATUS_FUNCTIONS)
+            runs = bool(value) and (names_status_function or all_needs_succeeded)
+        results[name] = (
+            ("failure" if name in failing else "success") if runs else "skipped"
+        )
+        return results[name]
+
+    for name in workflow["jobs"]:
+        resolve(name)
+    return results
+
+
+@pytest.mark.unit
+def test_a_push_to_master_tests_and_publishes_nothing() -> None:
+    """The tag is the publish. Master's own run must not get there first.
+
+    It used to: the release job accepted `refs/heads/master`, and it hands the release
+    action a `tag:`, so master's run created the GitHub Release *and* the tag. The
+    maintainer's `git push` of that tag then found it already there, reported
+    "Everything up-to-date" and fired no webhook.
+    """
+    results = _simulate(_workflow(BUILD_WORKFLOW), "refs/heads/master")
+    assert results["test"] == "success", (
+        "the tox matrix must run on master - it is the only run that tests the tree a "
+        "tag will later publish without re-testing"
+    )
+    for name in ("release", "publish-pypi"):
+        assert results[name] == "skipped", (
+            f"a push to master reaches `{name}`, which publishes; the tag then races it"
+        )
+
+
+@pytest.mark.unit
+def test_a_version_tag_publishes_without_re_running_the_matrix() -> None:
+    """The skip-semantics check: `test` is skipped here, and skipping cascades.
+
+    A skipped `needs` job skips its dependents no matter what the dependent's `if` says,
+    unless that `if` names a status check function - which in turn discards the implicit
+    `success()` over every *other* dependency. Get either half wrong and nothing is
+    visible until a release either publishes nothing or publishes off a red matrix.
+    """
+    results = _simulate(_workflow(BUILD_WORKFLOW), "refs/tags/9.9.9")
+    assert results["test"] == "skipped", (
+        "the tox matrix runs on the tag ref as well, which is the duplicate run this "
+        "split exists to remove"
+    )
+    for name in ("release", "publish-pypi"):
+        assert results[name] == "success", (
+            f"`{name}` is skipped on a version tag: a skipped `needs` job skips its "
+            "dependents, so the condition has to name a status check function"
+        )
+
+
+@pytest.mark.unit
+def test_a_tag_release_still_requires_every_job_that_did_run() -> None:
+    """Naming a status function drops the implicit `success()` over *all* of `needs`.
+
+    So each dependency that is not skipped has to be re-checked by hand, and forgetting
+    one publishes off a red check.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    dependencies = _needs(workflow["jobs"]["release"])
+    assert dependencies, "`release` depends on nothing - this check is vacuous"
+    for dependency in dependencies:
+        results = _simulate(
+            workflow, "refs/tags/9.9.9", failing=frozenset({dependency})
+        )
+        if results[dependency] == "skipped":
+            continue
+        assert results["release"] == "skipped", (
+            f"`release` publishes even though `{dependency}` failed"
+        )
+
+
+@pytest.mark.unit
+def test_the_skipped_matrix_is_replaced_by_a_check_and_not_an_assumption() -> None:
+    """Skipping the matrix on a tag is only sound if that SHA passed on master.
+
+    Ancestry is the weaker claim and the one already checked: a commit can sit on master
+    with a red run, or with no run at all. So the release job has to assert the green run
+    exists, and assert it before the first step that cannot be taken back. The step is
+    pinned by `id`, not by its name or its shell - a rewording must not fail this, a
+    deletion must.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    if _simulate(workflow, "refs/tags/9.9.9")["test"] != "skipped":
+        pytest.skip("the matrix runs on tags again, so it needs no stand-in")
+
+    steps = workflow["jobs"]["release"]["steps"]
+    guard = [i for i, step in enumerate(steps) if step.get("id") == GREEN_RUN_STEP_ID]
+    assert guard, (
+        f"no step with id `{GREEN_RUN_STEP_ID}` in the release job, but the tox matrix "
+        "is skipped on tags - nothing establishes that this commit ever passed it"
+    )
+    publishing = [
+        i for i, step in enumerate(steps) if _uses(step).startswith(_PUBLISHING_ACTIONS)
+    ]
+    assert publishing and max(guard) < min(publishing), (
+        "the green-run check runs after the release is already published"
+    )
+    assert (
+        workflow["jobs"]["release"].get("permissions", {}).get("actions") == "read"
+    ), (
+        "the green-run check reads this commit's other workflow runs, which needs "
+        "`actions: read`; declaring any permission zeroes the rest, and the omission "
+        "fails only at release time, on a tag that cannot be pushed twice"
     )
