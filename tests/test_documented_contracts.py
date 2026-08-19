@@ -12,10 +12,12 @@ Distinct from ``test_error_diagnostics.py``, which pins what the messages *say*;
 pins which exception type comes out at all.
 """
 
+import importlib
 from pathlib import Path
 
 import pytest
 
+import timezonefinder
 from timezonefinder import TimezoneFinder, TimezoneFinderL
 from timezonefinder.coord_accessors import FileCoordAccessor, MemoryCoordAccessor
 from timezonefinder.zone_names import get_zone_names_path, read_zone_names
@@ -133,3 +135,38 @@ def test_usage_docs_example_returns_the_annotated_zone(
     finder = request.getfixturevalue(finder_fixture)
     lookup = getattr(finder, method_name)
     assert lookup(**USAGE_DOCS_EXAMPLE_COORDS) == USAGE_DOCS_EXAMPLE_ZONE
+
+
+def _packages_declaring_a_surface() -> list[str]:
+    """Every importable package under ``timezonefinder`` that declares an ``__all__``."""
+    root = Path(timezonefinder.__file__).parent
+    names = []
+    for init_path in sorted(root.rglob("__init__.py")):
+        relative = init_path.parent.relative_to(root.parent)
+        module_name = ".".join(relative.parts)
+        if "generated" in relative.parts:
+            continue
+        if hasattr(importlib.import_module(module_name), "__all__"):
+            names.append(module_name)
+    return names
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("module_name", _packages_declaring_a_surface())
+def test_declared_public_names_resolve(module_name: str):
+    """Every name in an ``__all__`` is an attribute the module actually has.
+
+    ``__all__`` is the package's own statement of its public surface, and nothing
+    else checks it: a name listed there that does not exist costs nothing until
+    someone writes ``import *``, which then fails with an ``AttributeError`` naming
+    a symbol they never asked for. ``timezonefinder.flatbuf.schemas`` listed its
+    three ``.fbs`` files that way - data files next to the module, not submodules of
+    it - so the declared surface described something unimportable for several
+    releases.
+    """
+    module = importlib.import_module(module_name)
+    missing = [name for name in module.__all__ if not hasattr(module, name)]
+    assert not missing, (
+        f"{module_name}.__all__ declares {missing}, which the module does not "
+        f"define - `from {module_name} import *` raises AttributeError on them"
+    )
