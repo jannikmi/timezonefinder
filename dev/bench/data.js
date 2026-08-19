@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787119165069,
+  "lastUpdate": 1787121039279,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -1890,6 +1890,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00028724743429096725",
             "extra": "mean: 41.23641299999292 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f2cffeede3d1a9d666667b9c8b3ea328fdb99049",
+          "message": "Run the tox matrix once per release, not twice (#534)\n\nThe matrix is the whole critical path of build.yml - four jobs of 6-10\nminutes each, against under a minute for every other job combined - and\nit ran for the push to master and again for the tag naming that same\ncommit. Skip it on tag refs, and gate the release job to tag refs only:\nmaster tests, the tag releases. That also removes the race the release\nprocedure worked around, since the release action is handed the tag name\nand so a master push created the tag on its own.\n\nThe skip is backed by a check, not an assumption. The pre-existing\nancestry step proves the commit is on master, not that it was ever\ngreen, so the release job now asks the API for a successful build run on\nmaster for that exact SHA and refuses to publish if none exists.\n\nIts `if` needs !cancelled() because a skipped `needs` job skips its\ndependents - and naming any status function drops the implicit\nsuccess(), so every dependency that does still run is checked by hand.\ntests/test_release_workflows.py evaluates those conditions rather than\nreading them, since the failure mode surfaces only during a release.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-19T08:24:41+02:00",
+          "tree_id": "2af6f3c18f6345f2a685d0b15a740d22be44ec8a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f2cffeede3d1a9d666667b9c8b3ea328fdb99049"
+        },
+        "date": 1787121038018,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 68.64774446509198,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003934554357366776",
+            "extra": "mean: 14.567120999998906 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 228.81420698169845,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008885842477503965",
+            "extra": "mean: 4.3703580000169495 msec\nrounds: 183 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.433264325650782,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002274761119860143",
+            "extra": "mean: 40.927809999999454 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
           }
         ]
       }
