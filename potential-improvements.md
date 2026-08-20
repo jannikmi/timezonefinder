@@ -91,26 +91,28 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| GH-499 | Batch / array lookup API | public API | L | needs decisions |
-| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | needs a decision |
-| GH-449 | Polygon encoding: delta + varint | data format | L | blocked by DATA-BINARIES |
+| GH-499 | Batch / array lookup API | public API | L | decided — blocked by GH-477 + BUG-1 |
+| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
+| GH-542 | Establish what coordinate precision is worth | data format | M | free |
+| GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
-| GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions |
+| GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
 | GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | needs a decision |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
-| GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | needs a decision |
-| GH-332 | Reduced timezone dataset as a second distribution | packaging | M | needs a decision |
-| TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | needs a decision |
-| TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~10 | needs a decision |
-| API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | needs a decision |
-| API-2 | Every submodule is reachable as a package attribute | public API | ~20 | needs a decision |
+| GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
+| GH-332 | Reduced timezone dataset as a second distribution | packaging | M | parked until GH-334 |
+| TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | free — decided |
+| TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~40 | needs a decision |
+| API-2 | Every submodule is reachable as a package attribute | public API | ~20 | decided — held for the next major |
+| API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
-| GH-317 | Reduce the release artifact count | packaging | S | free — largely answered, see the entry |
+| PYPI-1 | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | free — maintainer action |
+| GH-317 | Reduce the release artifact count | packaging | S | withdrawn |
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
@@ -122,9 +124,9 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | DEAD-6 | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
-| GH-301 | Sort shortcut polygons by overlap area | performance | M | needs the `shapely` decision |
+| GH-301 | Sort shortcut polygons by overlap area | performance | M | rejected |
 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
-| GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-301 + GH-500 |
+| GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-500 |
 | GH-505 | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
 | GH-334 | Official mapping for the reduced set | data | S | parked upstream |
 | GH-318 | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
@@ -264,8 +266,26 @@ the denominators, and how to tell whether they still describe the tree.
 - **Sequencing:** GH-477 is the enabler for the vectorised half — a flat array is the only shape
   in which the shortcut lookup vectorises, and there the scalar penalty that sinks it as a
   standalone change does not apply.
-- **Status:** needs decisions.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank unchanged.
+- **Decided, 2026-08-21 — all four open questions answered:**
+  1. **Return type.** `timezone_ids_at(lngs, lats) -> np.ndarray` is the primary;
+     `timezone_names_at(...) -> list[str | None]` the convenience. Ids are where the win is — a
+     caller doing 10⁶ lookups should not pay for 10⁶ string lookups it maps straight back.
+  2. **Input.** Any array-like, `np.asarray` internally, with a documented zero-copy path for
+     C-contiguous float64 arrays. Sequences must work or the API serves only numpy users.
+  3. **Invalid elements.** `on_invalid="raise" | "skip"`, defaulting to `"raise"` to match the
+     scalar methods. Raising on element 999,999 and discarding the rest is hostile, so the escape
+     hatch exists; silently sentinelling by default would change the contract.
+  4. **Scope.** `timezone_at` only in the first slice. `timezone_at_land` follows once PERF-1 lands;
+     `certain_timezone_at` is a different loop and is not bundled.
+- **Ordering constraint that follows:** the `"skip"` sentinel is `-1` for ids, which is exactly the
+  value BUG-1 makes dangerous — `zone_name_from_id(-1)` answers `Etc/GMT+12` today. **BUG-1 lands
+  first**, and its recorded decision (validate at the public edge) is what makes `-1` safe to hand
+  out. Bound also by #504's recorded decision: keyword-only `lngs`/`lats`, never a single `(N, 2)`
+  array whose column order would have to be inferred.
+- **Status:** open — design decided, blocked by GH-477 for the vectorised half and by BUG-1 for the
+  sentinel.
+- **Last touched:** 2026-08-21 — the four design questions answered; the sequencing they imply
+  recorded.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -279,8 +299,47 @@ the denominators, and how to tell whether they still describe the tree.
   the table at all.
 - **Shape:** a binary format change cannot half-land, so this is prototyped and measured before it
   is migrated in one piece.
-- **Status:** blocked by DATA-BINARIES.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 2 there.
+- **Postponed, 2026-08-21 — the trade-off cannot be decided on the evidence available.** The two
+  encodings are not comparable: the varint row keeps today's 1e-7 precision, the escape row spends
+  it, and ~3 MB separates them. Choosing between them means pricing ~11 cm of resolution, and
+  nothing in the repository says what that resolution is worth — so the decision would be a guess
+  dressed as an evaluation. **GH-542 establishes the missing facts**: what precision the closest
+  competitor (`tzfpy`/`tzf-rs`, which ships a simplified dataset by default) actually offers and how
+  far its answers diverge near borders, and what users have ever asked for. Either answer unblocks
+  this: if ~1.1 cm is a real differentiator, this becomes a lossless-encoding question only; if it
+  is not, the design space is wider.
+- **Do not re-take the 1e-6 accuracy result as it stands.** The existing "0 of 200,000 lookups
+  changed" figure left `hybrid_shortcuts_uint16.bin` unregenerated, and the shortcut index is
+  derived from the geometry — the number has to be re-taken with the index rebuilt, and over points
+  sampled *near borders* rather than uniformly, since uniform points are overwhelmingly ocean.
+- **One constraint on the encoding half regardless of precision:** decode cost lands on the
+  candidate loop, where GH-536 already measures ~4.9 µs per candidate just to fetch. A ~8.5 ms
+  decode for the largest polygon would be catastrophic there and ~828 µs still bad, so **either
+  variant needs GH-536's cache or GH-364's native loop first** — a precondition neither this entry
+  nor the issue named.
+- **Status:** blocked by GH-542 and DATA-BINARIES.
+- **Last touched:** 2026-08-21 — postponed; the precision question split out to GH-542 so this
+  entry stops carrying two decisions at once.
+
+### GH-542 — establish what coordinate precision is worth
+
+- **Tracks:** issue #542, opened 2026-08-21 to unblock GH-449.
+- **Why it exists:** GH-449's two candidate encodings are not comparable — one keeps today's 1e-7
+  precision, the other spends it — and ~3 MB separates them. Choosing means pricing ~11 cm of
+  resolution, and nothing in the repository says what that resolution is worth. `CLAUDE.md` calls
+  the ~1.1 cm ceiling deliberate and `docs/data_format.rst` advertises it, but neither says who
+  needs it.
+- **What it has to establish:** the precision the closest competitor actually ships
+  (`tzfpy`/`tzf-rs`, which uses a simplified dataset by default), how far its answers diverge from
+  this package **near borders** rather than over uniform points, and what users have ever asked for
+  — no issue has requested sub-metre accuracy, and the size complaints were about artifact count,
+  which the distribution split has answered.
+- **Shape:** a prototype under `prototypes/` so the comparison can be re-run, plus a recommendation.
+  Explicitly *not* an encoding change.
+- **Value:** high as a decision unblocker and low as code — it produces evidence, and the evidence
+  decides an L-sized item that is otherwise stalled.
+- **Status:** open. Blocks GH-449.
+- **Last touched:** 2026-08-21 — created.
 
 ### GH-477 — replace the shortcut dict with flat arrays
 
@@ -342,10 +401,13 @@ the denominators, and how to tell whether they still describe the tree.
   ordering. Ranking GH-513 behind a performance item has been sending it after the wrong thing;
   the blocker is an ordering **proof**, including the interaction with the early break, and it
   needs no `shapely` and no re-measurement after GH-536.
-- **Status:** needs the `shapely` decision — now with a recommendation to refuse it and keep the
-  item alive only as GH-513's ordering guarantee. Prerequisite for GH-513.
-- **Last touched:** 2026-08-20 — bounded by enumeration. The performance rationale is spent; the
-  correctness one is not, and the two should be separated when this is answered.
+- **Rejected, 2026-08-21; issue #301 closed as not planned**, with the enumeration above as the
+  justification. `shapely` is not added. **It is no longer a prerequisite for GH-513** — see there;
+  that dependency was a mistake in the ranking, not a property of either item.
+- **Status:** rejected — 2.90 % of point-in-polygon tests on 0.63 % of cells is not worth a
+  re-ordering or a dependency. Kept, not deleted, because the sort key is genuinely the right one
+  and the idea will otherwise be re-proposed on its merits.
+- **Last touched:** 2026-08-21 — bounded by enumeration, then rejected and the issue closed.
 
 ### GH-536 — the memory-mapped coordinate accessor costs 4.9 µs per candidate polygon
 
@@ -422,8 +484,19 @@ the denominators, and how to tell whether they still describe the tree.
   cases covered only by a union of zones.
 - `prototypes/hole_boundary_redundancy.py` reads the upstream GeoJSON, so re-running it against a
   new release re-verifies the premise rather than restating it.
-- **Status:** blocked by GH-301 + GH-500.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 10 there.
+- **No longer blocked by GH-301, 2026-08-21, and the reason generalises.** That item was ranked
+  ahead of this one because dropping holes needs a guarantee about which zone a query reaches
+  first, and shortcut ordering looked like where such a guarantee would live. It is not. Zone
+  precedence is a property of the zones and their geometry; **expressing it per H3 cell would make
+  correctness depend on the spatial index**, which is an implementation detail free to change — its
+  resolution, its layout, the hybrid unique-zone encoding. Recorded below, since it binds anything
+  that reaches for the shortcut index to express a correctness property.
+- **What it is still blocked by** is unchanged: the ordering *proof* itself, and GH-500's enforcement
+  of whatever invariant that proof relies on, including the interaction with `last_zone_change_idx`'s
+  early break.
+- **Status:** blocked by GH-500.
+- **Last touched:** 2026-08-21 — the GH-301 dependency removed as mis-ranked; the H3-independence
+  constraint recorded.
 
 ### GH-505 — distance to the nearest timezone border
 
@@ -663,9 +736,20 @@ the denominators, and how to tell whether they still describe the tree.
 - **DOC-3 is the other half of the same paragraph and is still open**, so whichever of the two is
   taken should take both: a helper inherits the Windows `tzdata` gap, and the page that warns about
   the sign still does not warn about the database.
-- **Status:** needs a decision on the API surface.
-- **Last touched:** 2026-08-20 — re-verified against the tree; the sign warning is present since
-  #538, the `tzdata` caveat is absent from `docs/`, `README.rst` and `pyproject.toml` alike.
+- **Decided, 2026-08-21 — ship the full set:** `zoneinfo_at`, `utc_offset_at` and `localize` on
+  `AbstractTimezoneFinder`, mirrored in `global_functions.py`. Chosen over docs-only and over an
+  offset-only helper. `zoneinfo` is stdlib, so this adds no dependency; what it adds is a permanent
+  public surface, which is why it belongs with the other API work rather than trickling out.
+  **Additive**, so unlike API-1 and API-2 it does not *need* a major — but it should ride the same
+  release, so the API documentation is rewritten once.
+- **Two things it must carry**, both currently absent from the code and one of them from the docs:
+  the `Etc/GMT±X` inversion (`utc_offset_at` is the method that makes the trap unreachable, which is
+  the point of owning the conversion), and the Windows `tzdata` caveat that DOC-3 covers — a helper
+  returning a `ZoneInfo` raises `ZoneInfoNotFoundError` on a clean Windows install just as the
+  documented snippet does. **DOC-3 ships with it or before it, not after.**
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-21 — decided; the sign warning is present since #538, the `tzdata`
+  caveat is absent from `docs/`, `README.rst` and `pyproject.toml` alike.
 
 ### API-1 — `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses
 
@@ -688,9 +772,14 @@ the denominators, and how to tell whether they still describe the tree.
   `--in-memory` with `-f 3`/`-f 4`, under the comment that accepting it "would promise a speedup it
   cannot deliver, which is worse than refusing it". The Python API and its own CLI disagree, which
   is the sharpest form of the question.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-20 — re-verified; the root-importability premise disproved and the CLI
-  precedent recorded. The entry's conclusion is unchanged, its blast radius is smaller than stated.
+- **Decided, 2026-08-21 — drop it everywhere.** From `AbstractTimezoneFinder.__init__` and from
+  `TimezoneFinderL.__init__`, which is a pure pass-through and goes with it. `TimezoneFinderL(
+  in_memory=True)` becomes a `TypeError`, which is what the CLI already does for the same call and
+  is the whole point: a parameter that cannot do anything should say so. **This is a breaking
+  change**, so it ships in a major — see the release-strategy decision below, which is why this
+  entry no longer moves on its own.
+- **Status:** open — decision taken, held for the next major.
+- **Last touched:** 2026-08-21 — decided, and bound to the batched-major decision.
 
 ### API-2 — every submodule is reachable as a package attribute, so the public API is wider than `__all__` says
 
@@ -717,9 +806,18 @@ the denominators, and how to tell whether they still describe the tree.
   one-line fix wait on an arguable design decision.
 - **It also decides API-1's blast radius**, since `AbstractTimezoneFinder` is public only through
   this seam. Answer this one first.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-20 — re-verified by running `dir(timezonefinder)`: 20 reachable names,
-  12 submodules plus the leaked exception. The exception half separated out as free.
+- **Decided, 2026-08-21 — PEP 562 `__getattr__`, without a deprecation cycle.** Chosen over
+  warning for a minor first, and over documenting the surface and changing nothing. The break is
+  narrower than it looks: `import timezonefinder.utils` keeps working, and only attribute access on
+  the already-imported package changes. It also removes the eager submodule binding from
+  `import timezonefinder`, which is a small import-time win. **Breaking**, so it ships in the same
+  major as API-1 — and it goes **first within that major**, since it decides how much surface API-1
+  touches.
+- **The `PackageNotFoundError` half does not wait for the major.** Renaming it to
+  `_PackageNotFoundError` breaks nothing anyone could have relied on deliberately and can ship at
+  any time.
+- **Status:** open — decision taken, held for the next major (bar the exception rename).
+- **Last touched:** 2026-08-21 — decided, and bound to the batched-major decision.
 
 ---
 
@@ -741,8 +839,26 @@ the denominators, and how to tell whether they still describe the tree.
   checkout unless the matching data version resolves per commit.
 - **Decisions still open:** where the binaries come from for a development checkout and for CI once
   they are not in the tree.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, where it was ranked 3 as "#446
+- **Decided, 2026-08-21 — keep the workspace member, git-ignore its `data/`, fetch it in one
+  bootstrap step.** Chosen over resolving `timezonefinder-data` from PyPI (which would need the
+  workspace source override put back for every format change, and makes a dev checkout's data
+  version a resolver outcome rather than a stated one) and over Git LFS (which reclaims none of the
+  existing history and puts a bandwidth quota in front of every fork and CI run).
+- **What implementing it means:** `packages/timezonefinder-data/timezonefinder_data/data/` is
+  git-ignored; a `make bootstrap` populates it from the published wheel or the GitHub Release; CI
+  runs the same target, so dev and CI have one path rather than two. The converter is untouched —
+  it still writes to `scripts.configs.SOURCE_DATA_DIR`, which is that same directory. Two things to
+  get right: the bootstrap has to be **idempotent and version-aware**, or a stale checkout silently
+  tests yesterday's data against today's code; and every entry point that currently assumes the
+  data is present (`make test`, `make reports`, the ledger of packaging guards in
+  `tests/test_package_contents.py`) needs to fail with "run `make bootstrap`" rather than a
+  `FileNotFoundError` from three frames down.
+- **Accepted costs, restated so they are not re-litigated:** `git bisect` across a format change
+  stops working from a bare checkout unless the matching data version resolves per commit; and this
+  does **not** shrink the existing 357 MiB pack — only GH-522 does, and strictly after this is in
+  force, or the next data update re-adds ~62 MB and the rewrite has to be repeated.
+- **Status:** open — decision taken, implementation not started. Unblocks GH-449 and GH-522.
+- **Last touched:** 2026-08-21 — decided. Migrated from the roadmap issue, where it was ranked 3 as "#446
   decision 2". Ranked above GH-449 here because the list is walked top-down and GH-449 is
   blocked by it.
 
@@ -754,13 +870,45 @@ the denominators, and how to tell whether they still describe the tree.
   release is now withheld whenever anything else is pending. What remains is that nothing knows
   what the 64 MB actually changed. Its one prerequisite is met: #523 exposed the dataset version at
   runtime (`timezonefinder_data.__version__`), so a diff report has something to name.
-- **Decisions still open:** which thresholds block an automated release, and what happens when one
-  trips.
+- **Thresholds, calibrated against the last three upstream transitions** (2025c→2026a→2026b→2026c,
+  measured from the committed data 2026-08-21) rather than guessed:
+
+  | signal | 2026a | 2026b | 2026c | proposed gate |
+  |---|---|---|---|---|
+  | zone set | unchanged | unchanged | unchanged | see below |
+  | boundary payload | +0.29 % | +0.65 % | +1.47 % | **any decrease, or growth > +5 %, blocks** |
+  | hole payload | −0.07 % | +0.09 % | −0.31 % | report only |
+  | boundary polygon count | +4 | −3 | +2 | **change > ±2 % blocks** |
+  | changed-answer rate | not computable — see below | | | **> 0.5 % blocks**, once it exists |
+
+  Two calibrations worth keeping. **Boundary data has grown monotonically** across all four
+  releases — refinement adds vertices, it does not remove them — so the useful gate is *asymmetric*:
+  a decrease is the anomaly, not a symmetric ±band. And the observed moves are an order of magnitude
+  below the ±10 % first proposed here, which would have caught gross truncation and nothing else.
+- **Zone changes must not block, which corrects this entry's first proposal.** Upstream adding a
+  zone, or splitting one, is routine. A **rename is a removal plus an addition and cannot be told
+  apart from the data alone**, so "any zone removed or renamed blocks" would fire on a normal event
+  and train the maintainer to click through it. Report the full added/removed list every time —
+  it is the most readable line in the diff — and block only on a **net decrease in zone count**,
+  which is the shape a truncated or partial dataset takes.
+- **The diff report cannot be built by comparing two packaged datasets.** This is the finding that
+  changes the design, not just the numbers: the binary format changed three times in August 2026
+  (per-axis coordinates in #457, hole references in #509, `.bin` naming in #528), and the current
+  reader cannot open the 2026c binaries at all. A report that loads "the previous packaged data"
+  breaks on exactly the releases where review matters most. **Commit a fixed sample of points with
+  their answers instead**, regenerated as part of each data release: the diff is then one text file
+  against another, survives every format change, reviews in a pull request, and is the changelog
+  entry for a data update rather than something written from the version number.
+- **Decisions still open:** whether the gates above are the right ones, and what happens when one
+  trips — the proposal is to label `automation-failed` and open the notification issue instead of
+  merging, since that failure path already exists in `check_data_updates.yml`.
 - **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad. That
   lowers the urgency and not the value — the argument never rested on a past incident, it rests on
   the pipeline auto-merging and auto-tagging with no human diff review.
-- **Status:** needs decisions.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 5 there.
+- **Status:** needs decisions — the thresholds above, and the trip behaviour. Part (a), pinning and
+  checksumming the download, needs no threshold and no decision and can be taken on its own.
+- **Last touched:** 2026-08-21 — thresholds calibrated against the last three transitions, the
+  zone-change gate corrected, and the binary-diff approach found unworkable across format changes.
 
 ### GH-317 — reduce the release artifact count
 
@@ -784,10 +932,38 @@ the denominators, and how to tell whether they still describe the tree.
   lever is deleting old releases, not shipping fewer wheels; worth splitting out as its own item
   rather than leaving it inside this one.
 - **Pulls the other way:** GH-364 would *raise* the artifact count — see there.
-- **Status:** open — and a candidate for closing as answered, with the release-deletion half
-  re-opened separately.
-- **Last touched:** 2026-08-20 — figures re-measured against PyPI and the published wheels; the
-  near-identical claim corrected rather than deleted, since the site still looks like a saving.
+- **Decided, 2026-08-21 — closed as answered by the distribution split.** The question it asked,
+  *"do we really need 10 wheels?"*, was about artifact count when an artifact was ~55 MB of packaged
+  data. It is now 82 KiB, so dropping two of the three platform wheels saves 0.17 MB of a 1.02 MB
+  release and costs manylinux2014 or musl users their wheel. The quota problem it was opened for is
+  real and entirely historical, so it moves to PYPI-1 rather than staying here under a title about
+  artifact count.
+- **Status:** withdrawn — superseded by the distribution split; the storage half continues as
+  PYPI-1.
+- **Last touched:** 2026-08-21 — figures re-measured against PyPI and the published wheels, the
+  near-identical claim corrected rather than deleted, then withdrawn.
+
+### PYPI-1 — the PyPI project holds 11.37 GB of pre-split releases
+
+- **Location:** not the repository — the `timezonefinder` project on PyPI. Split out of GH-317,
+  which was about artifact *count* and is answered; this is what was actually driving that issue.
+- **The numbers, read off the index 2026-08-20:** 11.37 GB across **241 files and 57 versions**,
+  against a 10 GB project quota that was already hit once (a support request and the deletion of
+  every release up to 3.4.2 recovered the space). Current releases are not the cause and cannot
+  become it: `timezonefinder` 8.3.0 is 1.02 MB and `timezonefinder-data` 1.2026.3 is 51.94 MB in a
+  project of its own with its own quota — order 190 data releases of headroom.
+- **Fix:** a one-off deletion of the pre-8.x releases, which are the ~55 MB-per-file ones. It is a
+  maintainer action against PyPI, not a code change, which is why it is an entry here and not an
+  issue anybody else could take.
+- **Weigh before deleting**, because it is irreversible and PyPI never re-accepts a version number:
+  a deleted release breaks any pin to it and any lockfile hash referencing it. Yanking is the
+  reversible half-measure and **does not free storage**, so it does not solve this. The honest
+  framing is that old releases of a package whose whole payload was a since-superseded dataset have
+  little archival value, but that is a judgement about this package's users, not a general rule.
+- **Value:** moderate and non-urgent — nothing breaks until the quota is hit again, and the split
+  has made that far slower to arrive.
+- **Status:** open.
+- **Last touched:** 2026-08-21 — split out of GH-317 when its artifact-count half was answered.
 
 ### GH-332 — reduced timezone dataset as a second distribution
 
@@ -797,8 +973,14 @@ the denominators, and how to tell whether they still describe the tree.
   packaging decision.
 - **Now unblocked:** the distribution split shipped the machinery it needs — a workspace member, a
   `DATA_DIR` indirection and a version scheme — and it no longer depends on DATA-BINARIES.
-- **Status:** needs a decision on whether to publish a second data distribution at all.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue.
+- **Decided, 2026-08-21 — park it until GH-334 unblocks.** Shipping with a hand-maintained mapping
+  was declined, and so was closing it outright: the distribution split removed the hard engineering
+  problem, so this is worth doing *when* the official mapping exists. Until then a hand-curated
+  table is the same liability the zone-precedence engine was rejected for. GH-334 already tracks
+  the upstream trigger (evansiroky/timezone-boundary-builder#195), so nothing else has to watch it.
+- **Status:** parked until GH-334 unblocks — decision taken, not a candidate for any pass before
+  then.
+- **Last touched:** 2026-08-21 — decided to park; migrated from the roadmap issue.
 
 ### GH-334 — official mapping for the reduced timezone set
 
@@ -841,8 +1023,20 @@ the denominators, and how to tell whether they still describe the tree.
   disagree. Size: ~10 lines.
 - **Why it needs a decision:** it changes when the script exits `2`, for an input that exits `0`
   today, in the gate ahead of an irreversible publish.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-19 — found on the first read of the module.
+- **Decided, 2026-08-21 — assert that `dist/` holds exactly one version, and refuse otherwise.**
+  Stricter than reading every wheel and comparing their requirements, and chosen over it: a `dist/`
+  holding two versions is not a disagreement to adjudicate, it is a staging accident, and the guard
+  cannot tell which version is the one being released. It also catches the case reading-and-comparing
+  misses entirely — a stale wheel of an *older* version left behind, whose `Requires-Dist` agrees
+  with the new one and so passes a comparison while proving nothing about what is about to be
+  published.
+- **What implementing it means:** `find_wheel` returns all matches; raise `UndeterminedError` naming
+  the versions found when the set has more than one. Exit 2 already means "could not be carried
+  out" and already blocks, so no new failure mode reaches the release job — only a new reason to
+  reach an existing one. **Add a test**: this is the guard nothing else covers, and no pull request
+  ever exercises it, since it runs on tag refs only. Changelog bullet in the **Internal** list.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-21 — decided; found on the first read of the module.
 
 ---
 
@@ -897,13 +1091,50 @@ the denominators, and how to tell whether they still describe the tree.
 - **Fix:** write the report beside the parsed data when the output directory is not the packaged
   one, or have `parse_data` skip the report for a non-default `-out` and leave it to
   `make reports`. Size: ~10 lines.
-- **Why it needs a decision:** either fix changes where a file is written for anyone calling
-  `parse_data(output_path=...)`, which is a behaviour change. In the meantime `make testparse`
-  carries a comment saying to restore the file.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-14 — found immediately after making `make testparse` runnable again;
-  before that the target could not reach the report-writing code at all, which is why no earlier
-  pass saw it.
+- **Both fixes above were the wrong shape, and the better one is to delete the decorator.**
+  `redirect_output_to_file` is applied exactly three times, all in `scripts/reporting.py`, all with
+  the same constant, over three functions called consecutively from the one place. It is not an
+  abstraction — it is the *reason* the destination cannot be a parameter, because a decorator binds
+  its argument at import time. Removing it collapses the problem:
+
+  ```python
+  def write_data_report_from_binary(
+      data_path=..., zone_id_dtype=..., report_path=DATA_REPORT_FILE
+  ):
+      data = load_binary_data(data_path)
+      with redirect_output_to_file_contextmanager(report_path):  # opens "w"
+          report_data_statistics(...)
+          print_shortcut_statistics(...)
+          report_file_sizes(...)
+  ```
+
+  The destination becomes an ordinary defaulted parameter, which is all `parse_data` ever needed.
+  Four things fall out that neither earlier option got:
+  - the `if DATA_REPORT_FILE.exists(): unlink()` dance goes, because the context manager opens
+    `"w"` and truncates. The current code truncates then appends three times; one truncating block
+    around all three is byte-identical output
+  - the file is opened **once** instead of three times
+  - the three functions become plain functions that `print`, testable with `capsys` instead of by
+    writing a file and reading it back — none of them has a test today
+  - `main()`'s `--data-path` gains a matching `--out`, closing the same defect in the CLI, which has
+    it too
+- **Interacts with a *Deliberately checked and found sound* entry**, which has to be updated rather
+  than quietly contradicted: pass 8 recorded that the decorator and the context manager "look like
+  duplicates but differ in append-vs-truncate, and both have callers that depend on which they got".
+  That was true. It stops being true here — with one block around all three calls, append mode has
+  no caller left and the decorator goes with it. `redirect_output_to_file_contextmanager` stays;
+  `scripts/benchmark_utils.py` uses it.
+- **Neutrality is provable in seconds**, which is what makes this safe: `uv run python -m
+  scripts.reporting`, then confirm `git diff docs/data_report.rst` is empty. Verified 2026-08-21
+  that the committed report already regenerates byte-identically from the packaged data, so the
+  diff is a real signal rather than a coin toss.
+- **Size:** ~40 lines, most of it deletion. **Still a behaviour change** for anyone calling
+  `parse_data(output_path=...)` — they get their report next to their data instead of overwriting
+  the checkout's — which is the change worth having.
+- **Status:** needs a decision — between this and leaving the `Makefile` note.
+- **Last touched:** 2026-08-21 — re-scoped. The decorator, not the destination, is the defect;
+  found immediately after making `make testparse` runnable again, which is why no earlier pass saw
+  the site at all.
 
 ### TOOL-1 — ruff runs close to its default rule set
 
@@ -1172,6 +1403,27 @@ premise moves; do not reverse a decision silently.
   `timezone_at_land` receives a name and `is_ocean_timezone` takes one, so an id-indexed table means
   restructuring both plus a per-instance array — and the one-liner does not foreclose it. Re-propose
   it only against an actual upstream rename.
+- **Breaking API changes are batched into one major, never trickled out.** Settled 2026-08-21,
+  while deciding API-1 and API-2. Each is individually small — a dead parameter, a wider-than-stated
+  attribute surface — and each on its own would be a major version whose entire content is one
+  removal nobody asked for. Every *known* breaking change ships together instead: API-1 (drop
+  `in_memory` from the base and from `TimezoneFinderL`), API-2 (PEP 562 submodule access), and any
+  further removal found before that release. Consequences worth stating, because they are what the
+  rule costs: an entry can be *decided* and still not eligible for a pass, so decided-and-held is a
+  real state the ranking has to show; API-2 goes first within the major, since it decides how much
+  surface API-1 touches; and additive work that does not need a major (GH-502, GH-499) should still
+  ride the same release, so the API documentation is rewritten once rather than three times. The
+  public API must not break between minors — that constraint is unchanged; this is about not
+  spending majors one removal at a time.
+- **A correctness property is never expressed in terms of the H3 shortcut index.** Settled
+  2026-08-21, while removing GH-301 as GH-513's blocker. Zone precedence — which zone a query should
+  reach first where several cover a point — is a property of the zones and their geometry. Stating
+  it per H3 cell would make correctness depend on the spatial index, whose resolution, layout and
+  hybrid unique-zone encoding are implementation details the package is free to change; a future
+  resolution change would then silently move answers rather than only performance. The index is a
+  candidate *filter* and may be reordered, rebuilt or replaced freely, which is exactly why nothing
+  load-bearing may be derived from its structure. Applies to GH-513 first, and to any future
+  argument that reaches for the shortcuts to prove something about answers.
 - **A reduced-zone mapping comes from upstream or not at all.** Settled 2026-08-20 while deleting
   `REDUCED_TIMEZONE_MAPPING` (DEAD-5), a hand-derived 18-pair fragment of the 444 → 92
   `timezones-now` mapping, left behind when #381 reverted to the full dataset. It is recorded here
