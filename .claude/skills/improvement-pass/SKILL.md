@@ -343,12 +343,9 @@ What that implies in practice:
 - **A genuinely atomic migration is not sliced — it is prototyped.** A binary format change cannot half-land.
   The deliverable is then the prototype plus its measurements in `prototypes/` — not shipped, not a benchmark, no CI, no committed figures — and the numbers recorded in the entry.
   The migration lands later, in one piece, once the numbers have settled the design.
-- **Keep the slice reviewable: roughly ≤400 changed lines with a single story**, measured against the merge base with the register excluded, since register churn is bookkeeping rather than review load:
-  ```
-  git diff origin/master --shortstat -- . ':(exclude)potential-improvements.md'
-  ```
-  400 is a ceiling that forces slicing, **not a budget to spend**: an item worth 40 lines ends the pass at 40.
-  If the item outgrows the ceiling mid-flight, cut it back to what you can finish and verify, and put the remainder back in the register as a new ranked entry.
+- **One story per slice, and no line count.** A slice is the right size when it carries one story, can be described by the changelog sentence above, and can be reviewed in one sitting — never because it came in under a threshold.
+  A number decides nothing a reviewer cares about: the same count is a trivial rename or a subtle rewrite of the lookup path, and having one invites both padding up to it and cutting an item mid-thought to stay beneath it.
+  If an item outgrows what you can finish and verify in this pass, cut it back to what you can, and put the remainder back in the register as a new ranked entry.
 
 ## 8. Working loop
 
@@ -471,7 +468,7 @@ In chat, in this order:
 1. **The item taken**, and why it beat everything above it in the ranking — including which higher entries were ineligible and what made them so.
 2. **Decisions** — asked and answered, with the answers, or asked and still outstanding.
 3. **What shipped** — the pull request URL, or plainly "no code, and why that was the right outcome".
-   The changed-line total against the §7.1 ceiling.
+   The one sentence §7.1 asks for, that says what the slice leaves `master` able to do.
 4. **What was deferred**, one line of reason each, and what the next pass should pick up.
 5. **What changed in the register** — new entries, the entry deleted as shipped, closures, areas swept.
 6. **Verification** — the exact commands and their results, failures stated plainly, including anything skipped and why;
