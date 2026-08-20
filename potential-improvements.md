@@ -120,6 +120,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | DUP-1 | The coordinate bounds are declared three times | internal | ~6 | free — the exposure is bounded below noise |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
+| TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~35 | needs a decision |
 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
 | GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-301 + GH-500 |
@@ -802,6 +803,34 @@ the denominators, and how to tell whether they still describe the tree.
   purpose is the maintainer's call; recorded so it is made once.
 - **Status:** needs a decision.
 - **Last touched:** 2026-08-19 — annotation half shipped, deletion still open.
+
+### TOOL-8 — agent-facing prose is hard-wrapped, so every edit reflows the paragraph
+
+- **Location:** `potential-improvements.md` and `CLAUDE.md`, both hard-wrapped at ~99 columns.
+- **Nothing enforces it.** There is no markdown formatter in `.pre-commit-config.yaml` and no test
+  asserts a width; it is authoring habit, and not a consistent one — `CONTRIBUTING.md` and
+  `README.rst` are effectively unwrapped.
+- **Defect:** it optimises for a rendered view these files never get. A single newline inside a
+  paragraph renders as a space, so the wrapping is invisible where Markdown is rendered — and these
+  two are read raw, by an agent loading them into context and by a maintainer reading a diff, which
+  is the one mode the mid-sentence breaks show up in. The cost that is not cosmetic: editing a word
+  early in a paragraph reflows every line after it, so a one-word change arrives as six changed
+  lines and two passes that touched the same paragraph conflict over sentences neither disagreed
+  about. The skill already names that cost — *"Reflowing a paragraph you did not change turns a
+  clean merge into a conflict for no gain"* — without naming hard wrapping as its cause.
+- **Fix:** semantic line breaks — one sentence per line, long sentences split at clause boundaries.
+  `.claude/skills/improvement-pass/SKILL.md` is already converted; it was a new file in the pull
+  request that introduced it, so its reflow cost a reviewer nothing.
+- **Piecewise, never wholesale.** A single reflow commit over this file is a whole-file diff that
+  buries whatever substantive change ships beside it and conflicts with every pass in flight.
+  Convert a section when a pass is already rewriting it, where the churn is already paid.
+- **Verify by word identity, not by eye** — `original.split() == converted.split()` over the file,
+  which is what proves a reflow changed no wording. Structure has to be copied verbatim rather than
+  reflowed: frontmatter, fenced code, tables, block quotes, headings.
+- **Value:** low as readability, real as merge behaviour — this is the file concurrent passes are
+  most likely to collide in, and paragraph reflow is what turns their edits into conflicts.
+- **Status:** open.
+- **Last touched:** 2026-08-20 — raised when the reflow of `SKILL.md` made the rest visible.
 
 ---
 
