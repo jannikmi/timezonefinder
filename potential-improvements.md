@@ -1013,7 +1013,9 @@ premise moves; do not reverse a decision silently.
   pass of any hot path here.
 - **Precomputing `last_zone_change_idx` into the shortcut binaries — measured, and refused.**
   Proposed twice: issue #256, closed in 2025 on the argument that throughput is dominated by the
-  point-in-polygon work, and draft PR #348, still open and implementing it. #497 sizes what it
+  point-in-polygon work, and draft PR #348, which implemented it and is now closed with this
+  reasoning. The half of that draft worth having shipped by another route — the hybrid shortcut
+  binary stores a unique cell's zone id inline, so the common case never reaches a polygon list. #497 sizes what it
   removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
   query, and nothing at all on a unique-shortcut one — 1–2 % there, ~1 % of a random workload,
   below the 3–9 % noise of the machine that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
