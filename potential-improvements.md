@@ -121,6 +121,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | DUP-1 | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
+| GH-543 | The numba group's `numpy<2.4` pin is stale and redundant | tooling | ~4 | free |
 | TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | DEAD-6 | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
@@ -1381,6 +1382,33 @@ the denominators, and how to tell whether they still describe the tree.
   accordingly.
 - **Status:** open.
 - **Last touched:** 2026-08-20 — found while tracing BIG-1's call sites.
+
+### GH-543 — the numba group's `numpy<2.4` pin is stale and redundant
+
+- **Tracks:** issue #543, opened 2026-08-21 from a finding while scoping GH-364.
+- **Location:** `pyproject.toml`, the identical `numpy<2.4` + comment in **two** blocks —
+  `[dependency-groups] numba` and `[project.optional-dependencies] numba`.
+- **Defect:** the comment *"Numba requires NumPy 2.3.x or lower"* has been false since numba 0.64.0.
+  `numpy<2.4` matches numba **0.63.0**'s bound; 0.64.0 raised it to `<2.5` and 0.67.0 to `<2.6`.
+  The sharp form: `uv.lock` holds numba **0.65.1**, which itself declares `numpy<2.5` — so the
+  hand-written pin is stricter than the numba it is locked against, not merely than the latest one.
+  numpy sits at 2.3.5 against a current 2.5.2.
+- **Fix:** delete the pin from both blocks. numba declares its own numpy ceiling, so the resolver
+  enforces it without help, and the group exists only to install numba — there is no non-numba path
+  the pin could be protecting. What is left is a second place to be wrong. Size: ~4 lines removed.
+- **A hypothesis worth one run**, recorded because it would explain how this survived four numba
+  releases: `make outdated` runs `scripts/check_upgradeable.sh`, whose stated job is to hide
+  packages "constrained by other dependencies". A hand-written `numpy<2.4` is such a constraint, so
+  the check meant to surface staleness may be silenced by the stale pin itself. Unconfirmed — the
+  script temporarily rewrites `uv.lock`, which is why no pass has run it in a shared checkout.
+- **Two lock lags ride with it:** `cffi` 2.0.0 against 2.1.1, and `h3` 4.4.2 against 4.5.0. The cffi
+  one is a **precondition for evaluating GH-364's cheaper packaging option at all**, since 2.1.0 is
+  where `abi3t` support arrived; the h3 floor has to move again in any case once the `Py_mod_gil`
+  fix is released.
+- **Value:** low as code, moderate as unblocking — it is dependency metadata, and it gates a real
+  decision under GH-364.
+- **Status:** open.
+- **Last touched:** 2026-08-21 — verified against PyPI and created.
 
 ### TOOL-8 — agent-facing prose is hard-wrapped, so every edit reflows the paragraph
 
