@@ -120,7 +120,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
 | TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
-| DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~35 | needs a decision |
+| DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | DEAD-6 | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
 | GH-301 | Sort shortcut polygons by overlap area | performance | M | needs the `shapely` decision |
 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
@@ -1022,9 +1022,16 @@ the denominators, and how to tell whether they still describe the tree.
   the full dataset. GH-334 exists precisely to obtain the **official** mapping from upstream, so
   whatever GH-332 eventually uses, it is not this. If GH-332 is ever closed as won't-do, this
   deletion follows without a further decision.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-20 — re-verified unreferenced; its provenance traced and tied to
-  GH-332's outcome, which is what would decide it either way.
+- **Decided, 2026-08-20 — delete it.** The alternatives put were moving it to `prototypes/` or a
+  docs note, and keeping it as reference data; both were declined. `git log -S
+  REDUCED_TIMEZONE_MAPPING` still has the table, which is the archive a deleted fragment deserves.
+  The half that outlives this entry — that a reduced-zone mapping comes from upstream or not at all
+  — is under *Recorded decisions*, so deleting the entry does not lose it.
+- **What implementing it means:** delete the constant and its two comment lines from
+  `tests/locations.py`; nothing imports it, so nothing else moves. This entry and its ranking row go
+  in the same pull request. Changelog bullet in the **Internal** list.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — re-verified unreferenced, provenance traced, then decided.
 
 ### DEAD-6 — `_iter_boundaries_in_shortcut` has no caller outside the test suite
 
@@ -1165,6 +1172,16 @@ premise moves; do not reverse a decision silently.
   `timezone_at_land` receives a name and `is_ocean_timezone` takes one, so an id-indexed table means
   restructuring both plus a per-instance array — and the one-liner does not foreclose it. Re-propose
   it only against an actual upstream rename.
+- **A reduced-zone mapping comes from upstream or not at all.** Settled 2026-08-20 while deleting
+  `REDUCED_TIMEZONE_MAPPING` (DEAD-5), a hand-derived 18-pair fragment of the 444 → 92
+  `timezones-now` mapping, left behind when #381 reverted to the full dataset. It is recorded here
+  rather than left in that entry, because the entry disappears with the deletion and the question
+  comes back the moment anyone picks up GH-332: **do not re-derive a mapping by hand.** GH-334
+  exists to obtain the official one and is blocked upstream on
+  evansiroky/timezone-boundary-builder#195; until that lands, a hand-maintained mapping is the same
+  liability the zone-precedence engine was rejected for — timezone answers depending on a table
+  somebody curated, in a package whose selling point is that it does not simplify. `git log -S` has
+  the deleted table if a future reader wants to see what was there.
 - **Data serving an optional path is cached lazily, not loaded at construction.** Settled
   2026-08-20 for BIG-1. Construction is not a free place to put work here: it is a tracked benchmark
   (`docs/benchmark_results_initialization.rst`), and the documented one-instance-per-thread pattern
