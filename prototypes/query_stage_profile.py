@@ -65,6 +65,21 @@ same commit execute the same workload.
 
 FINDINGS (2026-08-19, Apple arm64, Python 3.13, data 2026c, fixture set v2)
 
+These are one machine's, and the three kinds of figure below do not travel equally.
+A *hit count* is a property of the code rather than the hardware and survives any
+move - 1.13 candidates per ambiguous query, one accessor rebuild per candidate, one
+FFI crossing per candidate on clang - so state what a change removes as a count
+first. A *share* travels as an order of magnitude only: the stages are bound by
+different resources (memory latency for the mapped accessor, interpreter dispatch
+for the Python prologue, FP throughput for the kernel), so another machine
+re-weights them against each other. Absolute *nanoseconds* travel nowhere, and are
+not comparable with CI's or with a report page's. Two further corrections before
+comparing anything: read the clang / ``in_memory=False`` column, which is what a
+plain install in a constrained container runs and what CI tracks for that reason,
+and convert a stratum share into a workload share - uniformly random points are
+~25% ambiguous and an ambiguous query costs ~11x a unique one, so ambiguous work is
+~80% of a mixed wall clock. Both are in docs/benchmarking_methodology.rst.
+
 All figures are nanoseconds per query. Ladder figures are the min over 15 passes of
 2,000 fixture points; the ``real`` row is ``tf.timezone_at(lng=, lat=)`` itself, and the
 gap above it is the bound-method call the ladder does not pay.
