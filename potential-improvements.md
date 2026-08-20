@@ -101,7 +101,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
 | GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | needs a decision |
-| BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | needs a decision |
+| BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | needs a decision |
 | GH-332 | Reduced timezone dataset as a second distribution | packaging | M | needs a decision |
@@ -114,7 +114,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
-| PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~15 | free — the ceiling is one profiler run |
+| PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~2 | free — decided |
 | PERF-2 | Two numpy calls over a handful of candidates cost 0.8 µs | performance | ~25 | free — ranked on simplicity, not on the timing |
 | DUP-1 | The coordinate bounds are declared three times | internal | ~6 | free — the exposure is bounded below noise |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
@@ -465,8 +465,19 @@ the denominators, and how to tell whether they still describe the tree.
 - **Value:** low to moderate. `timezone_at_land` is public and the packaged data covers the oceans,
   so the branch is taken constantly — but the regex runs on the *result*, after the lookup that
   dominates the query.
-- **Status:** open.
-- **Last touched:** 2026-08-13 — found by a wide-angle review.
+- **Decided, 2026-08-20 — take the one-line `str.startswith`, not the boolean array.** The options
+  put were: the equivalent one-liner; the precomputed array indexed by zone id that this entry was
+  written around; or the one-liner now and the array only if upstream ever renames the `Etc/GMT`
+  family. The first was chosen. It ships as a simplification rather than as a speed-up, per the
+  measured ceiling above. The array is refused for now and the reason recorded below, so it is not
+  re-proposed when this entry is deleted.
+- **What implementing it means:** one line in `timezonefinder/utils.py`, and the `import re` goes
+  with it if nothing else in the module uses it. Keep `OCEAN_TIMEZONE_PREFIX` as the constant so the
+  prefix is still declared once. Changelog bullet in the **Internal** list — no observable behaviour
+  changes.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — ceiling measured, the proposed fix corrected to its one-line
+  equivalent, then decided.
 
 ### BIG-1 — `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call
 
@@ -496,14 +507,26 @@ the denominators, and how to tell whether they still describe the tree.
   strictly better rather than paying for the fast one. `zone_ids` (2,772 B) is already read eagerly
   in the same `__init__`, which makes the current laziness an inconsistency rather than a strategy.
   Needs one `__slots__` entry.
-- **Still a decision, but a narrower one:** whether to read it eagerly (no open mapping, cost at
-  construction, which the one-instance-per-thread pattern multiplies) or to cache the mapping
-  lazily on first use (free construction, one pinned mapping for the instance lifetime, and a
-  `cleanup()` path). Unlike GH-536 the pinning question is not load-bearing here, because the file
-  is a kilobyte.
-- **Status:** needs a decision.
-- **Last touched:** 2026-08-20 — measured, and re-ranked into the performance cluster on the
-  strength of it. The benchmark the entry was waiting on has been taken.
+- **Decided, 2026-08-20 — cache lazily on first use, do not read it at construction.** The options
+  put were: read the array eagerly in `__init__` (no open mapping, but the cost lands on every
+  construction); cache the mapping lazily on first use (free construction, one mapping pinned for
+  the instance lifetime, a `cleanup()` path to write); or leave it. The second was chosen, against
+  the eager reading this entry originally recommended, and **the reason is the one the eager case
+  under-weighted**: `zone_positions` serves only `certain_timezone_at` and `get_geometry`, which the
+  `timezone_at` majority never calls, so an eager read charges every user for an array most of them
+  do not touch — on a path that is *itself* a tracked benchmark
+  (`docs/benchmark_results_initialization.rst`) and that the documented one-instance-per-thread
+  pattern multiplies by the thread count. Lazily, the cost is paid once by the callers who want it
+  and by nobody else. The pinning objection that makes this trade hard in GH-536 does not apply at
+  a kilobyte.
+- **What implementing it means:** one `__slots__` entry holding the mapping, populated on first
+  call and released in `cleanup()` next to the boundary and hole accessors — `close_resource`
+  already takes anything with a `close()`, so `__del__` and the context manager are covered by the
+  existing two-tier handler rather than by a third path. The "load only on demand" comment stays
+  true and starts being accurate.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — measured, re-ranked into the performance cluster on the strength of
+  it, then decided. The benchmark the entry was waiting on has been taken.
 
 ### DUP-1 — the coordinate bounds are declared three times
 
@@ -1104,6 +1127,28 @@ premise moves; do not reverse a decision silently.
   8.2.5, so no version in the wild reads or writes it and there was nothing to protect against. The
   bump would have rewritten the 63 MB boundary coordinate file for a single byte. Check whether the
   layout being superseded has actually shipped before bumping.
+- **Ocean-ness is tested with `str.startswith`; the zone-id lookup table was refused.** Settled
+  2026-08-20 for PERF-1. `OCEAN_TIMEZONE_PREFIX` is `r"Etc/GMT"`, which has no regex
+  metacharacters, and `re.match` anchors at the start — so `startswith` is exactly equivalent and
+  captures the whole measured saving (~250 ns per `timezone_at_land`, ~6 % of a mixed workload,
+  inside the noise floor) in one line. The rejected alternative is worth keeping because it reads as
+  the more principled fix: a boolean array indexed by zone id, precomputed at load, which would also
+  decouple the behaviour from zone *naming* so that an upstream rename of the `Etc/GMT` family
+  could not silently change which results count as ocean. It was refused on cost, not on merit —
+  `timezone_at_land` receives a name and `is_ocean_timezone` takes one, so an id-indexed table means
+  restructuring both plus a per-instance array — and the one-liner does not foreclose it. Re-propose
+  it only against an actual upstream rename.
+- **Data serving an optional path is cached lazily, not loaded at construction.** Settled
+  2026-08-20 for BIG-1. Construction is not a free place to put work here: it is a tracked benchmark
+  (`docs/benchmark_results_initialization.rst`), and the documented one-instance-per-thread pattern
+  multiplies whatever it costs by the thread count — so an eager load charges the whole user base
+  for something only some methods read. `zone_positions` is read by `certain_timezone_at` and
+  `get_geometry` and by nothing on the `timezone_at` path, which makes it exactly that case.
+  Rejected: reading it eagerly in `__init__`, which is otherwise attractive because the array is a
+  kilobyte and eager loading opens no mapping. The rule pairs with the validation decision below —
+  both are about **not making every construction pay for a question only some callers ask**, which
+  is also why data-directory validation is opt-in. Applies directly to GH-536, whose open decision
+  is the same one at a size where the pinning half is load-bearing too.
 - **An id-taking interface validates at the public edge, never on the internal path.** Settled
   2026-08-20 for BUG-1, where four public methods index a list or array directly and so read a
   negative id as a valid index from the end — `zone_name_from_id(-1)` answers `Etc/GMT+12` rather
