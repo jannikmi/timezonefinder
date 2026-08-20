@@ -99,11 +99,11 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
-| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
-| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
-| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | needs a decision |
+| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the invariant list |
+| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — CLI shape decided |
+| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | ~40 | check the offset-table variant first |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
-| GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
+| GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
 | GH-332 | Reduced timezone dataset as a second distribution | packaging | M | parked until GH-334 |
 | TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | free — decided |
@@ -424,8 +424,27 @@ the denominators, and how to tell whether they still describe the tree.
   which is a memory trade in the mode that exists to avoid one. Second, per-instance initialisation
   cost lands on every `TimezoneFinder()` construction, which the documented one-instance-per-thread
   pattern multiplies. Both belong to the maintainer.
-- **Status:** needs a decision — cache lifetime versus pinning the mapping, and where the
-  initialisation cost lands.
+- **A fourth option has appeared that dissolves the decision, and it should be checked before the
+  other three are weighed.** Found while scoping GH-364. The framing above assumes the cache holds
+  *views*, which is what pins the mapping — but the expensive part is not the view, it is
+  **re-walking the FlatBuffers vtable in Python to find where polygon *i*'s bytes are**. Cache the
+  `(byte offset, length)` pair per polygon instead — plain integers, ~10 KiB as `uint32` for 1,322
+  polygons — and fetch with
+  `np.frombuffer(buf, "<i4", count=LEN[i], offset=OFF[i]).reshape(2, -1)`. Integers pin nothing, so
+  **the cache-lifetime-versus-pinning trade does not arise at all**, and neither does the 8 ms
+  build: deriving the table was measured at ~0.5 ms.
+- **Independently verified here, 2026-08-21:** `coords_of` on the mapped path measures **5,646 ns**
+  against **568 ns** for the `frombuffer` + `reshape` this reduces to — **~5.1 µs removed per
+  candidate, 9.9×**, which is essentially all of what this entry is about. What is *not* yet
+  verified is the table's construction: that it can be derived correctly for every polygon and that
+  the result is byte-identical to today's reader across the whole dataset. That check is the first
+  thing an implementing pass does, and it is cheap.
+- **If it holds, this entry stops needing a decision and becomes ~40 lines of pure Python** — no C,
+  no data-format change, no cache policy. It also becomes the prerequisite GH-364's native candidate
+  loop needs, since handing C a base pointer plus an offset table is far simpler than implementing
+  FlatBuffers traversal in C.
+- **Status:** needs a decision — but check the offset-table variant first, which would remove the
+  decision rather than answer it.
 - **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 8 there with GH-364.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
@@ -442,22 +461,55 @@ the denominators, and how to tell whether they still describe the tree.
   one-instance-per-thread pattern stop being necessary, which is where GH-477 reappears.
   `pytest-run-parallel` is already a test dependency, so the harness exists. Worth writing into the
   issue body before anyone picks it up.
-- **(b) is answered: yes.** numpy 2.5.2, h3 4.5.0 and cffi 2.1.1 all publish `cp313t`/`cp314t`
-  wheels today; `flatbuffers` is pure Python and needs none, and `cffi<3` already admits 2.x. No
-  dependency blocks this.
-- **(a) has a floor worth stating.** Releasing the GIL around a *single* point-in-polygon call is
-  not worth it — a call is 239–252 ns on a 114-vertex polygon. It only pays around a whole candidate
-  loop, which is the same change that removes GH-536's per-candidate accessor rebuild and the
-  per-candidate FFI crossing. Scope the three as one item, not three.
-- **The packaging cost, which is written down nowhere else.** The wheel strategy is one `abi3`
-  wheel per platform (`py_limited_api = "cp311"` in `setup.py`). A free-threaded build cannot be
-  served by it, so supporting free-threading means a separate `cp313t`/`cp314t` wheel per platform —
-  roughly doubling the artifact count, directly against GH-317. That belongs in the issue body: it
-  is the part a contributor would discover only after the C work was done.
-- **Status:** needs scoping.
-- **Last touched:** 2026-08-20 — dependency readiness verified against PyPI, the GIL-release floor
-  and the abi3 consequence added. Still needs scoping, but two of the three questions now have
-  answers to write into the issue.
+- **(a) is settled: the extension already releases the GIL, on every call, and always has.** cffi's
+  recompiler emits `Py_BEGIN_ALLOW_THREADS` automatically, and cffi declares the module
+  `Py_MOD_GIL_NOT_USED` under `Py_GIL_DISABLED`. Verified in the *published* wheel — `nm -u` on the
+  shipped `.so` lists `_PyEval_SaveThread`/`_PyEval_RestoreThread`. The cost is already inside every
+  timing this file quotes; the recorded 239 ns (numba, GIL held) against 252 ns (clang, GIL
+  released) on the same polygon bounds the release/acquire pair at ≤13 ns.
+- **(b) was answered wrongly here, and the correction is the whole item.** *"numpy, h3 and cffi all
+  publish free-threaded wheels"* is true and **not sufficient**: a `cp3XXt` wheel says the package
+  builds there, not that it is GIL-free. **`h3` 4.5.0 ships the wheel and does not declare
+  `Py_mod_gil`, so `import timezonefinder` re-enables the GIL** — measured on a real
+  `cpython-3.14.2+freethreaded`. Fixed upstream in uber/h3-py#493, merged 2026-08-12 and **not yet
+  released**. So the correct status is *blocked on an h3 release*, and the check that matters is
+  `sys._is_gil_enabled()` after import, not the wheel list. **A wheel tag is not a GIL declaration**
+  — the generalisable half.
+- **(c) is answered, and inverts the reason.** A shared instance is *correct*: every attribute is
+  assigned in `__init__`/`cleanup`, there is no cache on the lookup path, and 640,000 concurrent
+  queries across 8 and 16 threads produced 0 mismatches. But it does not *scale* — shared peaks at
+  2.28× on 4 threads and regresses to 1.60× on 8, while per-thread instances reach 4.84×.
+  `TimezoneFinderL`, which holds no polygon data at all, collapses the same way, so this is
+  reference-count contention on shared objects, not the mmap. **One instance per thread therefore
+  stops being a correctness requirement and becomes the correct performance advice** — the opposite
+  of the expectation that free-threading would retire it.
+- **The packaging cost, restated with the arithmetic.** One `abi3` wheel per platform
+  (`py_limited_api = "cp311"`) cannot serve a free-threaded interpreter — CPython's own position,
+  and cffi enforces it independently by disabling the limited API under `Py_GIL_DISABLED`. A
+  release is 4 files today; adding 3.13t and 3.14t makes it **10 (2.5×), growing +3 per CPython
+  release**. But **CPython 3.15's `abi3t`** — a stable ABI covering free-threaded builds, already
+  supported by cffi 2.1.0 — makes 3.15t-and-later cost **+3 once, with no growth**. So "support
+  free-threading from 3.15t only" is a materially cheaper option than "support it now", and worth
+  deciding as such. Note `setup.py` currently *fails hard* on a free-threaded build, because
+  `[[tool.cibuildwheel.overrides]] select = "*"` sets `BUILD_ABI3=true` for every identifier.
+- **The open question the scoping could not settle, and it is the important one:** whether the
+  native candidate loop is worth it *after* GH-536's offset table. That table already removes ~5.1 µs
+  of the ~9.3 µs a candidate costs, leaving roughly 570 ns of fetch plus ~500 ns of FFI plus the
+  Python bbox/hole work, over 1.13 candidates on ~25 % of queries — which lands in the single-digit
+  percent of a mixed workload, i.e. inside the noise floor. If that holds, **the native loop cannot
+  be justified on speed**, and the free-threading justification is weak too, since per-thread
+  instances already scale 4.84× without it. Settling it means re-profiling after GH-536 lands.
+- **Two incidental findings, recorded so they are not rediscovered:** the thread-safety
+  documentation contradicts itself — `docs/architecture.rst` says the global functions are *not*
+  thread-safe while `global_functions.py`'s docstring and `docs/1_usage.rst` call them a
+  thread-safe singleton, and on the evidence the singleton is safe for concurrent reads. And
+  `pytest-run-parallel` is installed and registered but passed by **no** Makefile target, tox env or
+  workflow, so the harness is dormant rather than present.
+- **Status:** blocked on an h3 release for any claim of support; the slices that do not depend on it
+  (the `setup.py` abi3 guard, a free-threaded tox env with an `xfail(strict=True)` GIL assertion,
+  read-only arrays plus a state-immutability test, and the docs contradiction) are free now.
+- **Last touched:** 2026-08-21 — scoped against a real free-threaded interpreter. (a) settled, (b)
+  corrected from yes to blocked, (c) answered and inverted, and the artifact arithmetic replaced.
 
 ### GH-513 — drop hole polygons entirely
 
@@ -1050,8 +1102,12 @@ the denominators, and how to tell whether they still describe the tree.
 - **Constrained by a recorded decision:** validation belongs to the build and the test suite, never
   to `__init__`. Its `--validate-data` CLI mode is the right shape precisely because it is explicit
   and opt-in.
-- **Decisions still open:** which invariants, and the CLI shape it shares with GH-428.
-- **Status:** needs the CLI-shape decision.
+- **The CLI shape is decided (2026-08-21): subcommands.** See GH-428 for the decision and what it
+  costs; it applies to both entries and neither now waits on the other.
+- **Decisions still open:** which invariants `--validate-data` checks. The list in the issue is a
+  starting point, and the one that matters most is the shortcut grouping the fast path's early
+  break depends on.
+- **Status:** open — CLI shape settled, invariant list still to agree.
 - **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 6 there.
 
 ### GH-428 — data parsing UX, and the CLI shape it shares with GH-500
@@ -1067,8 +1123,23 @@ the denominators, and how to tell whether they still describe the tree.
   rather than adding a seventh flag and leaving the question to the one after.
 - Note also that the distribution split may obsolete part of this outright: "generate the full
   dataset after pip installing" competes with "pip install the dataset".
-- **Status:** needs the CLI-shape decision.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue.
+- **Decided, 2026-08-21 — subcommands, with the bare positional form kept as an alias.**
+  `timezonefinder query`, `rows` (today's `--stdin` mode), `validate-data`, `update-data`; bare
+  `timezonefinder 13.4 52.5` keeps working as `query`, so nothing breaks. Chosen over adding
+  `--validate-data` and `--update-data` as more flags, and over a second console script.
+- **What it buys, concretely:** the four options that mean nothing outside `--stdin` stop being
+  refused by hand in `_parse_arguments` and become flags argparse enforces structurally, because
+  they belong to `rows`. `-f {0,1,3,4,5}` — with 2 documented as "removed" — can become named
+  subcommand options rather than a numeric menu with a hole in it.
+- **Migration care, since this is user-facing:** `-f` and the existing flags must keep working on
+  the bare form for at least one minor, and `tests/cli_test.py` is the guard — it already covers the
+  current surface, so extend it rather than rewrite it. This is additive, so it needs no major.
+- **Still to settle within GH-428**, and worth deciding before designing `update-data`: whether that
+  subcommand is wanted at all. "Generate the full dataset after pip installing" competes directly
+  with "pip install the dataset", which now exists — so the subcommand may be answering a question
+  the distribution split already closed.
+- **Status:** open — CLI shape decided, the `update-data` scope question still open.
+- **Last touched:** 2026-08-21 — the shared CLI decision taken here, unblocking GH-500 too.
 
 ### GH-362 — reuse the `PolygonArray` binaries in file conversion
 
@@ -1415,6 +1486,14 @@ premise moves; do not reverse a decision silently.
   ride the same release, so the API documentation is rewritten once rather than three times. The
   public API must not break between minors — that constraint is unchanged; this is about not
   spending majors one removal at a time.
+- **A free-threaded wheel tag is not a GIL declaration.** Settled 2026-08-21 while scoping GH-364,
+  and recorded because the wrong version of this was written into that entry a day earlier and read
+  as settled. A `cp313t`/`cp314t` wheel says a package *builds* on a free-threaded interpreter; only
+  a `Py_mod_gil` declaration says it will not force the GIL back on. `h3` 4.5.0 ships the wheel and
+  omits the declaration, so `import timezonefinder` re-enables the GIL today — which the wheel
+  survey missed entirely. The check that means anything is `sys._is_gil_enabled()` after the import,
+  on a real free-threaded build; anything derived from PyPI metadata alone is a necessary condition
+  presented as a sufficient one.
 - **A correctness property is never expressed in terms of the H3 shortcut index.** Settled
   2026-08-21, while removing GH-301 as GH-513's blocker. Zone precedence — which zone a query should
   reach first where several cover a point — is a property of the zones and their geometry. Stating
