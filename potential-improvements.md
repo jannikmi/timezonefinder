@@ -107,7 +107,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
 | GH-332 | Reduced timezone dataset as a second distribution | packaging | M | parked until GH-334 |
 | TOOL-7 | The data-dependency guard checks one wheel of however many it finds | release | ~10 | free — decided |
-| TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~40 | needs a decision |
+| TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~150 | free — decided |
 | API-2 | Every submodule is reachable as a package attribute | public API | ~20 | decided — held for the next major |
 | API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
@@ -1202,10 +1202,40 @@ the denominators, and how to tell whether they still describe the tree.
 - **Size:** ~40 lines, most of it deletion. **Still a behaviour change** for anyone calling
   `parse_data(output_path=...)` — they get their report next to their data instead of overwriting
   the checkout's — which is the change worth having.
-- **Status:** needs a decision — between this and leaving the `Makefile` note.
-- **Last touched:** 2026-08-21 — re-scoped. The decorator, not the destination, is the defect;
-  found immediately after making `make testparse` runnable again, which is why no earlier pass saw
-  the site at all.
+- **Decided, 2026-08-21 — go further than deleting the decorator: the renderers return strings.**
+  The decorator is a symptom; the defect is that these functions use **stdout as a return channel**,
+  and redirection — decorator or context manager — is the workaround for that. Turning
+  `print_rst_table` into `render_rst_table() -> str` and the three report functions into
+  string-returning functions leaves `write_data_report_from_binary` as
+  `report_path.write_text(render_report(data))`, with **no stdout redirection anywhere in
+  `scripts/`**. Chosen over deleting only the decorator (~40 lines, keeps the workaround
+  parameterised) and over threading a `file=` argument through every helper (~50 lines, puts I/O
+  into pure formatting code).
+- **What makes it reachable rather than a rewrite:**
+  - the module is **already half-converted** — `rst_title` returns a string, `print_rst_table`
+    prints. That one helper is the keystone, and it is imported by *both* report generators
+  - `BenchmarkReporter` (`scripts/benchmark_utils.py`) already accumulates `(kind, …)` tuples and
+    renders once, and still reaches for `redirect_output_to_file_contextmanager` in `write_report`
+    **because** `print_rst_table` prints. Fixing the helper frees it too, so **both redirectors lose
+    their last caller and are deleted** — not just the decorator
+  - `main()` and `load_binary_data` also print, and that output is genuine console progress that
+    must **not** reach `docs/data_report.rst`. Today it stays out only because of where those calls
+    sit; afterwards the separation is structural. Moving one `print("Loading…")` inside a decorated
+    function currently ships it in the committed docs page
+  - `print_frequencies` and `print_polygon_distribution_table` are tested through `capsys` in
+    `tests/utils_test.py`; they become plain return-value assertions
+- **Size:** ~150 lines touched, **net deletion**. `main()` gains the `--out` it is missing, which
+  closes the same defect in the CLI.
+- **Verification, both halves confirmed available 2026-08-21:** `uv run python -m scripts.reporting`
+  then an empty `git diff docs/data_report.rst`; and
+  `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json` then an
+  empty diff on the three benchmark pages. **Omit `--memory-json`** — the stored `tmp/memory.json`
+  is not the one behind the committed memory page and rewrites it.
+- **Still a behaviour change** for anyone calling `parse_data(output_path=…)`: the report lands
+  beside their data instead of overwriting the checkout's. Changelog bullet in the **Internal** list.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-21 — re-scoped twice and decided. The decorator was not the defect
+  either; stdout-as-return-channel is.
 
 ### TOOL-1 — ruff runs close to its default rule set
 
@@ -1785,14 +1815,19 @@ Do not re-raise these.
   (ruff `PLW0603`) — deliberate and documented as not thread-safe, with per-thread instances the
   stated alternative; `scripts/hex_utils.py`'s `get_corrected_hex_boundaries` (the antimeridian and
   pole clipping, covered by `tests/hex_utils_test.py`).
-- Pass 8: `scripts/reporting.py`'s two output redirectors — `redirect_output_to_file` (a decorator,
-  opening `"a"`) and `redirect_output_to_file_contextmanager` (opening `"w"`) — which look like
-  duplicates but differ in append-vs-truncate, and both have callers that depend on which they got;
-  `calculate_shortcut_index_stats`'s `naive_storage_bytes`, whose conditional covers the whole
+- Pass 8: `calculate_shortcut_index_stats`'s `naive_storage_bytes`, whose conditional covers the whole
   parenthesised expression rather than just the division, so a zero entry count yields `0 * 0` and
   not a `ZeroDivisionError` — correct, and confusing enough to re-derive rather than re-raise;
   `generate_metrics_rows`'s non-numeric `str(value)` fallback, kept reachable by annotating the
   parameter `Mapping[str, object]` rather than deleted to satisfy a narrower annotation.
+- Pass 8, **superseded 2026-08-21 — kept with the correction rather than deleted**, because the site
+  still looks defensible and the next pass would otherwise re-derive it: `scripts/reporting.py`'s two
+  output redirectors, `redirect_output_to_file` (a decorator, opening `"a"`) and
+  `redirect_output_to_file_contextmanager` (opening `"w"`), were recorded as *not* duplicates,
+  differing in append-vs-truncate with callers depending on which they got. That was true, and it
+  answered the wrong question: neither should exist. TOOL-6's decision has the renderers return
+  strings, after which append mode has no caller and both redirectors have none. Do not conclude
+  from the original note that they are fine as they are.
 - Pass 10: `scripts/data_integrity.py` (read in full — its two validators each build their own
   `PolygonArray`/`HoleArray`, which looks like duplication and is not worth collapsing: they are
   separate entry points with different subjects, one about whether a directory's files agree and
