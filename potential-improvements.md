@@ -109,14 +109,14 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | TOOL-6 | `parse_data` rewrites the committed data report whatever `-out` it was given | tooling | ~10 | needs a decision |
 | API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | needs a decision |
 | API-2 | Every submodule is reachable as a package attribute | public API | ~20 | needs a decision |
-| BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — not a behaviour change |
+| BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
 | GH-317 | Reduce the release artifact count | packaging | S | free — largely answered, see the entry |
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
 | PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~2 | free — decided |
 | PERF-2 | Two numpy calls over a handful of candidates cost 0.8 µs | performance | ~25 | free — ranked on simplicity, not on the timing |
-| DUP-1 | The coordinate bounds are declared three times | internal | ~6 | free — the exposure is bounded below noise |
+| DUP-1 | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
 | TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
@@ -561,9 +561,25 @@ the denominators, and how to tell whether they still describe the tree.
   cost is the `UNARY_NEGATIVE`, not the global load, which 3.11's specialising interpreter makes
   free. **So declare `MIN_LAT_VAL` / `MIN_LNG_VAL` alongside the existing maxima and import both;
   do not negate at the call site.** With that, the substitution has no cost to weigh at all.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — measured. The bounded-exposure argument stands and is now joined by
-  a positive result: in the pre-negated form the change is free outright.
+- **Decided, 2026-08-20 — import the constants, in the pre-negated form.** `MIN_LAT_VAL` and
+  `MIN_LNG_VAL` are declared next to the existing maxima in `configs.py` and imported by both
+  `utils.py`'s `validate_lat` / `validate_lng` and `utils_numba.py`'s `is_valid_lat` /
+  `is_valid_lng`, so the validator, the message describing it and the canonical constant stop being
+  three independent statements of the same fact.
+- **What implementing it means.** Four sites read the constants and none of them negates. Two
+  details that are easy to get wrong:
+  - **Put the reason next to the constants, not in a commit message.** *Why* they are declared
+    negative rather than derived with a `-` at each use is exactly the kind of fact `CLAUDE.md` says
+    belongs at the point of decision — one comment on the `MIN_*` pair, saying the negation is what
+    costs and the global load is not, so the next reader does not "simplify" them away.
+  - **`MAX_LAT_VAL` / `MAX_LNG_VAL` are in `configs.__all__`, so the `MIN_*` pair joins them** —
+    that widens the declared surface by two names while API-2 is about narrowing the *undeclared*
+    one. No tension in practice: `configs` is reachable today only through the seam API-2 would
+    close, and a constant that two modules import is exactly what `__all__` is for.
+  - No changelog bullet in the main list — nothing observable changes; **Internal** is the place.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — measured, then decided. The bounded-exposure argument stands and is
+  joined by a positive result: in the pre-negated form the change is free outright.
 
 ### PERF-2 — two numpy calls over a handful of candidates cost 0.8 µs per ambiguous query
 
@@ -972,9 +988,20 @@ the denominators, and how to tell whether they still describe the tree.
   covered the function being 37 statements with a function-local import mid-body; PR #509 rewrote
   the loads through `PolygonArray`/`HoleArray`, taking it to 24 statements with no local import, so
   only the silent-empty branch is left.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — the behaviour-change question answered against the converter, so
-  the entry no longer carries a precondition. What is left is which of the two fixes you want.
+- **Decided, 2026-08-20 — raise.** The alternative put was to state the absence in the report, which
+  was refused because it makes one report describe two different things: a reader cannot tell a
+  hole-less dataset from an incomplete directory without checking which sentence the generator
+  chose. Raising means every hole figure in `docs/data_report.rst` is either real or the file is not
+  written at all. No *Recorded decisions* line: once this ships the reasoning lives in the exception
+  message, which is where a reader meets it.
+- **What implementing it means:** replace the bare `if hole_registry_path.exists() and
+  hole_coord_path.exists():` with a check that raises naming **which** of the two files is missing —
+  the useful half of the diagnosis, since the two fail for different reasons. `make testparse` and
+  the packaged data both keep working unchanged, so the existing suite covers the happy path and the
+  new test is over a directory with a file removed. Changelog bullet in the **Internal** list.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — the behaviour-change question answered against the converter, then
+  decided.
 
 ### DEAD-5 — `REDUCED_TIMEZONE_MAPPING` has no consumer
 
