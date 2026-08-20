@@ -260,6 +260,13 @@ is real: rank that item on correctness or simplicity and say so, rather than sel
 speed-up. If nobody has measured it, the item *is* a measurement — one profiler run, a few
 minutes per backend, and the numbers go in the entry.
 
+Those numbers came off one development machine, so state a benefit in the form that survives
+leaving it: **the count a change removes** (hit counts do not depend on hardware) before the
+time it removes, read from the **`clang` / `in_memory=False`** column rather than the dev
+checkout's numba one, and converted from a stratum share to a **workload** share — the register
+carries the conversion. Then apply the 2x rule: act on a difference only if it survives any one
+stage turning out twice as cheap or twice as expensive on someone else's hardware.
+
 An item is **eligible** when all of these hold:
 
 - **Unclaimed** (§3.1). An open pull request referencing it, or a live branch, means it is taken.

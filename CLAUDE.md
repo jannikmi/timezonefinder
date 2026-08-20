@@ -79,8 +79,10 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   than reasoning from a microbenchmark. **Those numbers are pinned to the commit they were taken
   at and go stale silently**: a change under `timezonefinder/` or to the packaged data can move
   every share quoted from them, so re-measuring belongs to the pull request that moves the
-  critical path, not to a later one. `potential-improvements.md` (*The measured baseline*) holds
-  the anchor, the denominators and a one-command freshness check
+  critical path, not to a later one. They are also **one machine's**: rank on the counts a change
+  removes (machine-independent) and on the `clang` / mapped column that a plain install actually
+  runs, not on absolute nanoseconds. `potential-improvements.md` (*The measured baseline*) holds
+  the anchor, the denominators, the workload conversion and a one-command freshness check
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
   code, data formats, and binary assets are versioned with the package and need no compatibility.

@@ -36,6 +36,11 @@ the benchmark suite even when the change is real: such an item has to stand on c
 simplicity instead, and is ranked on that. Unmeasured is not a third case — it means the item is
 a measurement, and the measurement is one profiler run.
 
+State the ceiling as a **workload** share, not a stratum share, and prefer the count a change
+removes to the time it removes: the counts are machine-independent and the shares are not. *The
+measured baseline* below carries the conversion and the rest of what one machine's numbers can and
+cannot be asked.
+
 An item sits **below its own blocker**, because the list is walked top-down.
 
 A pass takes the highest-ranked item that is *eligible*: unclaimed, preconditions met, its
@@ -198,6 +203,36 @@ the denominators, and how to tell whether they still describe the tree.
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
   shortcut readers or the packaged data does not. *Classified inert since the anchor:*
   `timezonefinder/flatbuf/schemas/__init__.py`, an `__all__` list.
+- **One machine took these, so rank on what survives leaving it.** In descending order of how
+  well a figure travels:
+
+  1. **Counts, which are exact and machine-independent** — a line's hit count does not depend on
+     the hardware, only on the code. 1.13 candidate polygons per ambiguous query; one accessor
+     rebuild per candidate; one FFI crossing per candidate on the clang path; two numpy calls per
+     ambiguous query. State what a change removes as a count first, and use time only to size it.
+  2. **Shares within one query**, which travel but not uniformly: the stages are bound by different
+     things — memory latency for the mapped accessor, interpreter dispatch for the Python prologue,
+     floating-point throughput for the kernel — so another machine re-weights them against each
+     other. Read a share as an order of magnitude, never to one percentage point.
+  3. **Absolute nanoseconds, which are this machine's alone.** Never rank on one, and never compare
+     one to a figure from CI or from a report page.
+- **Rank the `clang` / `in_memory=False` column, not the development machine's.** A dev checkout
+  runs numba on whatever laptop is to hand; a plain `pip install` in a constrained container runs
+  the C extension against memory-mapped data, which is why `docs/benchmarking_methodology.rst`
+  makes that the tracked configuration for CI too. Both are measured, so this costs nothing but the
+  discipline of reading the right column.
+- **A share of a stratum is not a share of a workload.** Uniformly random points are ~25 % ambiguous
+  (that page again), and an ambiguous query costs ~11x a unique one on the mapped path, so ambiguous
+  work is ~80 % of a realistic mixed wall clock and unique work ~20 %. Multiply the stratum share
+  through before comparing two items that live on different strata — that multiplication is a
+  property of the fixtures, not of the machine, so it survives the move.
+- **The 2x rule, for what none of the above fixes.** Act on a difference only if it survives any
+  single stage turning out 2x cheaper or 2x more expensive elsewhere. It keeps the large calls
+  (a 37 % workload share stays large at half the size) and refuses the ones that only exist on this
+  laptop. An item that fails the rule and still matters needs a second machine class — the profiler
+  is one script over committed fixtures, so a run in a Linux x86 container is the cheap way to get
+  one; record it as a second column here, described the way
+  `scripts/describe_benchmark_machine.py` describes a benchmark run's machine.
 - **Re-measuring belongs to the change that invalidates it**, not to a follow-up pass. A pull
   request that moves the critical path re-runs the profiler on both backends (a few minutes each),
   and updates the `FINDINGS` block, this anchor and every share it moved, in that same pull request.
@@ -281,7 +316,9 @@ the denominators, and how to tell whether they still describe the tree.
 - **Tracks:** issue #536, opened from #497's measurement — a finding nothing was looking for.
 - **Why it matters:** on the default mapped mode, fetching a candidate's coordinates costs an order
   more than the FFI crossing or the geometry kernel for anything but the largest polygons — 47 % of
-  an ambiguous query, paid by exactly the constrained-memory deployments the mapped mode exists for.
+  an ambiguous query, ~37 % of a uniformly random workload, paid by exactly the constrained-memory
+  deployments the mapped mode exists for. What it removes is machine-independent: one accessor
+  rebuilt in Python per candidate polygon.
   It is removed by the same native candidate loop as GH-364, which is why the two are ranked
   together. The largest measured lever in the file, and the reason it heads the performance cluster.
 - **Decisions still open**, which is why this is not simply free: the accessor is rebuilt per
@@ -426,8 +463,8 @@ the denominators, and how to tell whether they still describe the tree.
 - **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no data-format
   change, no behaviour change. Precomputing the index into the shortcut binaries instead is refused
   under *Recorded decisions*.
-- **Ranked on simplicity, not on the timing.** A 6 % ceiling on one stratum is the same order as the
-  machine's own noise, so the benchmark suite cannot demonstrate it and it must not be sold as a
+- **Ranked on simplicity, not on the timing.** ~6 % of an ambiguous query is ~5 % of a random
+  workload — the same order as the machine's own noise, so the benchmark suite cannot demonstrate it and it must not be sold as a
   speed-up; what carries it is that a scalar loop over three elements is also the simpler code. Take
   the before/after with `prototypes/query_stage_profile.py` on both backends anyway, and record it
   here — it is the only place the number will exist.
@@ -978,8 +1015,8 @@ premise moves; do not reverse a decision silently.
   Proposed twice: issue #256, closed in 2025 on the argument that throughput is dominated by the
   point-in-polygon work, and draft PR #348, still open and implementing it. #497 sizes what it
   removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
-  query, and nothing at all on a unique-shortcut one — 1–2 %, below the 3–9 % noise of the machine
-  that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
+  query, and nothing at all on a unique-shortcut one — 1–2 % there, ~1 % of a random workload,
+  below the 3–9 % noise of the machine that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
   `DATA_FORMAT_VERSION` bump, therefore an ordered two-distribution release. The 2025 verdict was
   right and now has a number under it; the open draft is superseded by this entry rather than
   pending. The Python-side half of the same block stays open as PERF-2, which needs no format
