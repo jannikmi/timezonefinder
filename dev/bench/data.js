@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787185367308,
+  "lastUpdate": 1787185370072,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4559,6 +4559,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "20ae948fc8d72357e97ed0c01e6128afc550bd83",
+          "message": "Merge pull request #537 from jannikmi/roadmap/497-profile-query-time\n\nProfile where per-query time actually goes (#497)",
+          "timestamp": "2026-08-20T02:21:37+02:00",
+          "tree_id": "ba0ad600fcde8de14e3b2bf5975bdc32f436ccf2",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/20ae948fc8d72357e97ed0c01e6128afc550bd83"
+        },
+        "date": 1787185369201,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 4.466641426086426,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 4.466804504394531,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 4.5323686599731445,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 4.541172981262207,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 65.699538230896,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 65.70815086364746,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
