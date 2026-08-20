@@ -73,7 +73,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Before adding any version-gated import, `__future__` feature, or compatibility shim, check
   `requires-python` and confirm the feature actually needs it on the minimum supported version
-- Preserve the fast lookup path; profile hot code (polygon math, shortcut lookups) when modifying it
+- Preserve the fast lookup path. `prototypes/query_stage_profile.py` attributes a `timezone_at`
+  query to its stages, per backend and per coordinate-access mode, off the committed fixtures —
+  read its `FINDINGS` block before arguing about where query time goes, and re-run it rather
+  than reasoning from a microbenchmark. **Those numbers are pinned to the commit they were taken
+  at and go stale silently**: a change under `timezonefinder/` or to the packaged data can move
+  every share quoted from them, so re-measuring belongs to the pull request that moves the
+  critical path, not to a later one. `potential-improvements.md` (*The measured baseline*) holds
+  the anchor, the denominators and a one-command freshness check
 - Keep `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT` in sync between runtime and data converter
 - The public API (exported functions and classes) must not break between minor versions; internal
   code, data formats, and binary assets are versioned with the package and need no compatibility.

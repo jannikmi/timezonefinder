@@ -249,6 +249,17 @@ smaller item goes first. Do not otherwise let size reorder the list; a pass that
 item because it is cheap ships the least important thing in the repository. An item sits **below
 its own blocker**, because the ranking is walked top-down and a blocked item at the top is noise.
 
+**A performance item needs a measured share before it can be ranked as one.**
+`prototypes/query_stage_profile.py` attributes a `timezone_at` query to its stages, per backend
+and per coordinate-access mode, off the committed fixtures; the register's *The measured
+baseline* carries the denominators, the commit they were taken at, and a one-command freshness
+check. Benefit is the **ceiling** — the share the change removes at best — and cost is size plus
+the decisions it needs plus whether it forces a data-format change. A ceiling under the
+machine's own 3–9 % run-to-run noise cannot be shown by the benchmark suite even when the change
+is real: rank that item on correctness or simplicity and say so, rather than selling it as a
+speed-up. If nobody has measured it, the item *is* a measurement — one profiler run, a few
+minutes per backend, and the numbers go in the entry.
+
 An item is **eligible** when all of these hold:
 
 - **Unclaimed** (§3.1). An open pull request referencing it, or a live branch, means it is taken.
@@ -290,7 +301,8 @@ because they cannot know your boundary, so treat them as prohibitions here:
 - Dependency, lockfile, Python-version or release-version changes.
 - Whole-file reformatting or "modernisation" for style alone — churn a reviewer cannot tie to a
   concrete defect.
-- `prototypes/`.
+- `prototypes/` — **except** the `FINDINGS` block of `prototypes/query_stage_profile.py`, which
+  the pass that invalidates it updates (§9).
 - A behaviour change with no recorded decision behind it. If you cannot prove a change is
   behaviour-preserving, treat it as a behaviour change: it needs §6 first.
 
@@ -411,6 +423,11 @@ All of these, with output you have actually read:
 - [ ] `make testall` once, as a final gate.
 - [ ] Benchmark evidence naming its backend, if the fast path was touched or any performance claim
       is made.
+- [ ] If anything under `timezonefinder/` or the packaged data moved: the register's freshness
+      check run, and **either** the profiler re-run on both backends with `FINDINGS`, the
+      baseline anchor and every share it moved updated in this pull request, **or** one line in
+      the register classifying the change as inert for timings. A stale share does not announce
+      itself — the next pass ranks on it.
 - [ ] The slice passes §7.1's changelog sentence test.
 - [ ] `git status --short packages/timezonefinder-data/timezonefinder_data/data` is **empty**,
       unless data regeneration was the explicit, agreed subject of this pass.

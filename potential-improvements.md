@@ -25,8 +25,18 @@ Issues remain the place a single item is worked out and where outside contributo
 worth little; what costs something is deciding which findings earn a reviewer's attention, and
 writing down why the rest do not. Entries are ranked by expected value — *defects that will cause a
 real bug later > work that unblocks other work > duplication that will drift > readability* — with
-size breaking ties only. An item sits **below its own blocker**, because the list is walked
-top-down.
+size breaking ties only.
+
+**A performance item is ranked on a measured share, never on an intuition about what looks
+slow.** Benefit is the fraction of a query the change removes *at best* — its ceiling, read off
+*The measured baseline* below — and cost is size, plus the decisions it needs, plus whether it
+forces a data-format change (which is a two-distribution ordered release, the expensive
+category). A ceiling below the machine's own run-to-run noise, 3–9 %, cannot be demonstrated by
+the benchmark suite even when the change is real: such an item has to stand on correctness or
+simplicity instead, and is ranked on that. Unmeasured is not a third case — it means the item is
+a measurement, and the measurement is one profiler run.
+
+An item sits **below its own blocker**, because the list is walked top-down.
 
 A pass takes the highest-ranked item that is *eligible*: unclaimed, preconditions met, its
 maintainer-owned decisions already recorded or obtainable, and small enough to review. That is what
@@ -85,8 +95,8 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the CLI-shape decision |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs the CLI-shape decision |
+| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | needs a decision |
 | GH-301 | Sort shortcut polygons by overlap area | performance | M | needs the `shapely` decision |
-| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | M | free |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | needs scoping |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | needs a decision |
 | GH-332 | Reduced timezone dataset as a second distribution | packaging | M | needs a decision |
@@ -100,8 +110,9 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
-| PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~15 | needs a measurement |
-| DUP-1 | The coordinate bounds are declared three times | internal | ~6 | needs a measurement |
+| PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~15 | free — the ceiling is one profiler run |
+| PERF-2 | Two numpy calls over a handful of candidates cost 0.8 µs | performance | ~25 | free — ranked on simplicity, not on the timing |
+| DUP-1 | The coordinate bounds are declared three times | internal | ~6 | free — the exposure is bounded below noise |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~35 | needs a decision |
@@ -124,11 +135,13 @@ DATA-BINARIES ──┬─→ GH-449 (encode)
 
 GH-477 (flat arrays) ─→ the vectorised half of GH-499 (batch API)
 
+GH-536 (mapped accessor) ─→ re-prices GH-301, GH-364, GH-513   [re-measure after it, not before]
+
 GH-301 (shortcut ordering) ─→ GH-513 (drop holes)   ←── GH-500 (ordering invariant enforced)
 
 GH-500 ←→ GH-428: one CLI design, settled by whichever lands first
 
-independent: GH-502, GH-362, GH-524, GH-536
+independent: GH-502, GH-362, GH-524, PERF-2
 ```
 
 - **Any change that regenerates the packaged data needs the maintainer's explicit go-ahead** in the
@@ -151,9 +164,45 @@ independent: GH-502, GH-362, GH-524, GH-536
   on tag refs, so **no pull request ever exercises it**, and the first time it can speak is the run
   that is already publishing. Dry-running it against a locally built wheel costs a minute and is
   the only way to learn its answer while the version is still spendable.
+- **GH-536 is not independent of the geometry work — it is its denominator.** 4.9 µs of the
+  ~9.3 µs a candidate polygon costs is the mapped accessor, so landing GH-536 roughly halves
+  what candidate *ordering* can win and moves the ~3,000-vertex point below which a candidate's
+  cost is the fetch rather than the geometry. Anything ranked on the size of the candidate loop
+  — GH-301, GH-364, GH-513 — is measured **after** GH-536 lands, not before.
 - **GH-505 is gated on publicly voiced user interest.** Never implement it; only report whether
   interest has appeared.
 - **Do not re-propose anything under *Recorded decisions*.**
+
+---
+
+## The measured baseline
+
+Every timing quoted in this file comes from one run of `prototypes/query_stage_profile.py`, whose
+`FINDINGS` block holds the full per-stage breakdown. Repeated here is only what the ranking needs:
+the denominators, and how to tell whether they still describe the tree.
+
+- **Taken at** `b0642ad`, 2026-08-19 — Apple arm64, Python 3.13, data 2026c, fixture set v2, both
+  acceleration backends, both coordinate-access modes.
+- **The denominators.** A unique-shortcut query is ~1.17 µs and contains no geometry at all; an
+  ambiguous one is ~13.3 µs on the default mapped mode and ~9.1 µs with `in_memory=True`. The two
+  backends differ by under 6 % on both. Every share below is a share of one of these, and the entry
+  says which — a share of an ambiguous query is not a share of a workload.
+- **Freshness check**, before ranking anything on one of them:
+
+  ```
+  git diff --stat b0642ad..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  ```
+
+  Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an
+  `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
+  not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
+  shortcut readers or the packaged data does not. *Classified inert since the anchor:*
+  `timezonefinder/flatbuf/schemas/__init__.py`, an `__all__` list.
+- **Re-measuring belongs to the change that invalidates it**, not to a follow-up pass. A pull
+  request that moves the critical path re-runs the profiler on both backends (a few minutes each),
+  and updates the `FINDINGS` block, this anchor and every share it moved, in that same pull request.
+  Numbers left behind do not announce themselves: an entry ranked on a share that is no longer true
+  reads exactly like one that is, which is the failure this file exists to prevent.
 
 ---
 
@@ -221,6 +270,9 @@ independent: GH-502, GH-362, GH-524, GH-536
   Ordering therefore wins by reducing **how many** candidates are opened, not by opening cheaper
   ones first — "large polygons are expensive" holds only for the largest stratum, while
   overlap-area ordering remains the right key for the reason the issue gives.
+- **Measure it after GH-536, not before.** Its ceiling is the candidate loop, and GH-536 removes
+  ~half of what a candidate costs; a before/after taken on today's tree credits ordering with
+  time that another item is about to delete.
 - **Status:** needs the `shapely` decision. Prerequisite for GH-513.
 - **Last touched:** 2026-08-20 — migrated from the roadmap issue.
 
@@ -228,9 +280,17 @@ independent: GH-502, GH-362, GH-524, GH-536
 
 - **Tracks:** issue #536, opened from #497's measurement — a finding nothing was looking for.
 - **Why it matters:** on the default mapped mode, fetching a candidate's coordinates costs an order
-  more than the FFI crossing or the geometry kernel for anything but the largest polygons. It is
-  removed by the same native candidate loop as GH-364, which is why the two are ranked together.
-- **Status:** open.
+  more than the FFI crossing or the geometry kernel for anything but the largest polygons — 47 % of
+  an ambiguous query, paid by exactly the constrained-memory deployments the mapped mode exists for.
+  It is removed by the same native candidate loop as GH-364, which is why the two are ranked
+  together. The largest measured lever in the file, and the reason it heads the performance cluster.
+- **Decisions still open**, which is why this is not simply free: the accessor is rebuilt per
+  candidate, so the fix caches something — and a cached view is a holder that **pins the mapping**,
+  which is a memory trade in the mode that exists to avoid one. Second, per-instance initialisation
+  cost lands on every `TimezoneFinder()` construction, which the documented one-instance-per-thread
+  pattern multiplies. Both belong to the maintainer.
+- **Status:** needs a decision — cache lifetime versus pinning the mapping, and where the
+  initialisation cost lands.
 - **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 8 there with GH-364.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
@@ -296,10 +356,13 @@ independent: GH-502, GH-362, GH-524, GH-536
   an upstream rename of the `Etc/GMT` family would silently change which results count as ocean.
 - **Fix:** precompute a boolean array indexed by zone id once at load and test that instead.
   Correct by construction, faster, and decoupled from naming. Size: ~15 lines.
-- **Cost, and why this is still open:** it sits on a query path, so per DUP-1's precedent and
-  `CONTRIBUTING.md` it needs a before/after measurement in a no-numba environment, where the
-  surrounding code is plain Python. It also adds a small per-instance array, which `make memory`
-  would show. **No measurement has been taken yet** — do not retry blind, record the numbers here.
+- **Take the ceiling before the before/after.** `prototypes/query_stage_profile.py` prices the
+  stage on the `on_land` stratum in one run; that number is the most this can ever win, and it
+  decides whether the full before/after in a no-numba environment (`uv sync --group test`, then
+  `make benchmark-noise`) is worth taking at all. Expect it at or below the noise floor, for the
+  reason the next bullet gives, in which case this ships as a correctness-and-clarity change or not
+  at all and is ranked there. It also adds a small per-instance array, which `make memory` would
+  show. **Neither number has been taken yet** — record both here when you do.
 - **Value:** low to moderate. `timezone_at_land` is public and the packaged data covers the oceans,
   so the branch is taken constantly — but the regex runs on the *result*, after the lookup that
   dominates the query.
@@ -335,15 +398,42 @@ independent: GH-502, GH-362, GH-524, GH-536
 - **Value:** low. Unlike a file name or an H3 resolution, ±90/±180 are physical facts about the
   coordinate system and will never change; the duplication is real but the drift risk is close to
   nil.
-- **Cost, and why this is still open:** both remaining copies sit on the lookup fast path.
+- **Cost, and why it stayed open:** both remaining copies sit on the lookup fast path.
   `validate_coordinates` runs on every query, and in the tracked no-numba configuration `njit` is a
   no-op, so `is_valid_lat` is plain Python — the substitution trades two `LOAD_CONST` for two
-  `LOAD_GLOBAL` plus a negation, per call. Per `CONTRIBUTING.md` this needs a before/after
-  measurement in a no-numba environment (`uv sync --group test`, then `make benchmark-noise`).
-  Worth doing only if that comes back neutral. **No measurement has been taken yet** — do not
-  retry blind, record the numbers here when you do.
+  `LOAD_GLOBAL` plus a negation, per call.
+- **The exposure is now bounded, which unblocks it.** The whole of `validate_coordinates` is
+  218–270 ns of a ~1,174 ns unique-zone query; a few bytecodes inside it are a fraction of that,
+  which is far below the 3–9 % run-to-run noise the benchmark suite would have to see it through.
+  So no before/after can either justify or refuse this change, and it is decided on the duplication
+  alone. Confirm with `make benchmark-noise` in a no-numba environment if you want the number on
+  record, but do not gate the change on it.
 - **Status:** open.
 - **Last touched:** 2026-08-07 — re-verified, unchanged.
+
+### PERF-2 — two numpy calls over a handful of candidates cost 0.8 µs per ambiguous query
+
+- **Location:** `timezonefinder/timezonefinder.py` — `zone_ids_of`, and the `get_last_change_idx`
+  call directly below it in the candidate-narrowing block (bound in `utils.py`, implemented in
+  `utils_numba.py`).
+- **Measured:** `zone_ids_of` 617/578 ns and `get_last_change_idx` 149/283 ns (numba/clang) —
+  together ~6 % of an ambiguous query, which is *more than coordinate validation, the H3 cell
+  lookup and the shortcut lookup put together*, and ~9 % of an `in_memory=True` query. The
+  unique-shortcut path pays none of it.
+- **Why it is there:** both are numpy operations over a candidate list of a handful of elements,
+  where the per-call overhead dominates whatever is computed — `zone_ids_of` is a fancy-index,
+  `get_last_change_idx` a scan over the result.
+- **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no data-format
+  change, no behaviour change. Precomputing the index into the shortcut binaries instead is refused
+  under *Recorded decisions*.
+- **Ranked on simplicity, not on the timing.** A 6 % ceiling on one stratum is the same order as the
+  machine's own noise, so the benchmark suite cannot demonstrate it and it must not be sold as a
+  speed-up; what carries it is that a scalar loop over three elements is also the simpler code. Take
+  the before/after with `prototypes/query_stage_profile.py` on both backends anyway, and record it
+  here — it is the only place the number will exist.
+- **Status:** open.
+- **Last touched:** 2026-08-20 — from #497's finding 6, which reached no entry when the rest of that
+  profiling did.
 
 ---
 
@@ -856,9 +946,14 @@ premise moves; do not reverse a decision silently.
   pure-Python comparison they replace (270 vs 218 ns). Recorded because "numba is the fast path" is
   the natural reading of the tox matrix and of `utils.py` preferring it, and it is not what the
   numbers say. Any future argument that reaches for a faster kernel has to say which kernel.
-- **Below ~10 µs, `line_profiler` distorts the ratio it is being asked about — profile with a stage
-  ladder and cross-check by sampling.** Settled in #497. The obvious objection ("subtract the probe
-  cost") does not work, because its cost is **not** a per-line probe: enabling it deoptimises the
+- **Below ~10 µs, `line_profiler` distorts the ratio it is being asked about — attribute time by
+  sampling and by a stage ladder, and use `line_profiler` only for line *ordering* and for its
+  exact hit counts.** Settled in #497 and implemented in `prototypes/query_stage_profile.py`, whose
+  primary instrument is those hit counts — invariant under the perturbation, since deoptimising the
+  interpreter does not change how many times a line runs — scaled by the time share of a signal
+  sampler that installs no hooks. The ladder is the second instrument, for splits inside a block
+  and for the ~1 µs strata no profiler resolves. The obvious objection ("subtract the probe cost")
+  does not work, because its cost is **not** a per-line probe: enabling it deoptimises the
   whole interpreter, so code that never calls the profiled function slows down too — with only
   `timezone_at` registered, `validate_coordinates` measures 284 → 2,251 ns and `h3.latlng_to_cell`
   390 → 1,090 ns in loops calling neither, both reverting when it is switched off. The inflation is
@@ -870,13 +965,25 @@ premise moves; do not reverse a decision silently.
   underneath every table. *The ladder's own weaknesses, since it is a hand-rolled instrument:* it is
   a copy that can drift from the function it mirrors, and a stage measured as the difference of two
   large numbers is noise. The right independent check is a **sampling** profiler, not another
-  instrumenting one — `py-spy` needs root on macOS, so the cross-check used a signal-based
-  (`ITIMER_PROF`) sampler, which needs no privileges and installs no tracing hooks. It agrees:
-  candidate loop 79.4 % of an ambiguous query against the ladder's 87.5 %, H3 4.7 % against 2.9 %,
-  validation 2.4 % against 2.1 %. Its one apparent disagreement is a known artefact — signal
+  instrumenting one — `py-spy` needs root on macOS, so the sampling half is a signal-based
+  (`ITIMER_REAL`) sampler, which needs no privileges and installs no tracing hooks. **Wall clock,
+  not `ITIMER_PROF`, on purpose:** CPU-time sampling hides memory stalls, and the mapped coordinate
+  accessor (GH-536) — the largest single finding — is one, so a CPU-time profile would have missed
+  it. It agrees: candidate loop 79.4 % of an ambiguous query against the ladder's 87.5 %, H3 4.7 %
+  against 2.9 %, validation 2.4 % against 2.1 %. Its one apparent disagreement is a known artefact — signal
   delivery is deferred to the next bytecode boundary, so a numpy call's time lands on the
   *following* line. Read a sampler's line attribution as ±1 line. Applies to the next profiling
   pass of any hot path here.
+- **Precomputing `last_zone_change_idx` into the shortcut binaries — measured, and refused.**
+  Proposed twice: issue #256, closed in 2025 on the argument that throughput is dominated by the
+  point-in-polygon work, and draft PR #348, still open and implementing it. #497 sizes what it
+  removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
+  query, and nothing at all on a unique-shortcut one — 1–2 %, below the 3–9 % noise of the machine
+  that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
+  `DATA_FORMAT_VERSION` bump, therefore an ordered two-distribution release. The 2025 verdict was
+  right and now has a number under it; the open draft is superseded by this entry rather than
+  pending. The Python-side half of the same block stays open as PERF-2, which needs no format
+  change.
 - **Shrink the runtime dependency surface (numpy / h3 / cffi / flatbuffers) — considered and
   parked.** Each does one small thing, so the idea recurs. Reimplementing H3 indexing is a
   well-known source of subtle bugs and `h3` sits on the common path of every query; an open item
