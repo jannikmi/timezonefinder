@@ -21,6 +21,18 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollectionStartPolygonsVector,
 )
 
+# Byte offset of a field inside a FlatBuffers vtable, as the generated accessors spell
+# it: `Polygon.CoordsAsNumpy` opens with `self._tab.Offset(4)` and
+# `PolygonCollection.Polygons` with the same 4. Named here because
+# `derive_coord_offset_table` walks those vtables itself instead of going through the
+# generated classes, and a bare 4 in that arithmetic says nothing.
+COORDS_VTABLE_SLOT: Final[int] = 4
+POLYGONS_VTABLE_SLOT: Final[int] = 4
+
+# Widths of the FlatBuffers primitives the vtable walk steps over.
+_UOFFSET_BYTES: Final[int] = 4  # table/vector references, and a vector's length prefix
+_VOFFSET_BYTES: Final[int] = 2  # a vtable entry
+
 # FlatBuffers file identifier (bytes 4-8), answering "is this a timezonefinder
 # polygon file at all?". Files written before this marker existed carry none.
 POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
@@ -193,7 +205,14 @@ def get_polygon_collection(
 def read_polygon_array_from_binary(
     poly_collection: PolygonCollection, idx: IntegerLike
 ) -> np.ndarray:
-    """Read a polygon's coordinates from a FlatBuffers collection."""
+    """Read a polygon's coordinates from a FlatBuffers collection.
+
+    The reference implementation of what a stored polygon means, and the slow one: it
+    re-walks the vtables through the generated accessors on every call. The lookup path
+    goes through :func:`derive_coord_offset_table` and :func:`read_polygon_array_at`
+    instead; this is what those are checked against, by
+    ``scripts.data_integrity.validate_coordinate_offset_table``.
+    """
     # value checks not required as this is a private function
     # processed polygon indices are expected to be in range
     # nr_polygons = collection.PolygonsLength()
@@ -204,4 +223,96 @@ def read_polygon_array_from_binary(
     poly = poly_collection.Polygons(idx)
     coords = poly.CoordsAsNumpy()  # flat 1D array: all x values, then all y values
     # Reshape to a (2, N) view with contiguous rows
+    return reshape_to_polygon_coords(coords)
+
+
+def derive_coord_offset_table(
+    poly_collection: PolygonCollection,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Locate every polygon's coordinate vector once, as plain integers.
+
+    Returns ``(offsets, lengths)``: for polygon *i*, the byte offset of its first
+    coordinate into the underlying buffer and how many ``int32`` values follow. That is
+    everything :func:`read_polygon_array_at` needs, so fetching a candidate polygon
+    costs one ``np.frombuffer`` rather than a FlatBuffers vtable walk rebuilt in Python
+    per lookup - which on the memory-mapped path was the dominant cost of a query.
+
+    **Integers, not arrays, and that is the whole design.** Caching the polygon arrays
+    would be shorter and just as fast, but each cached array is a live export of the
+    memory map, so the cache would pin the mapping for the accessor's lifetime - in the
+    mode that exists precisely so the data need not be held in memory. Two ``uint32``
+    vectors pin nothing, and cost ~10 KiB for the packaged dataset.
+
+    **Derived with whole-array arithmetic, not a loop over ``Polygons(i)``.** Not a
+    micro-optimisation: the loop costs ~6 ms for the packaged boundaries against ~0.1 ms
+    here, and a per-construction cost of that size is what would make *when* to build
+    the table a decision - one paid again by every thread, since concurrent workloads
+    are told to use one instance each. At 0.1 ms there is nothing to weigh and the table
+    is simply built eagerly.
+
+    The walk mirrors what the generated accessors do, one step at a time over all
+    polygons at once: read the polygons vector's relative offsets, turn them into table
+    positions, follow each table's negative offset to its vtable, take the coords entry,
+    and land on the coordinate vector's length prefix. It reads 4- and 2-byte words
+    through whole-buffer views, which relies on FlatBuffers' guarantee that tables and
+    vectors are aligned to ``uoffset`` and vtables to ``voffset``. Nothing here rejects a
+    file that violates that - a misaligned position would read a neighbouring word and
+    yield wrong coordinates silently, so what establishes it is
+    ``scripts.data_integrity.validate_coordinate_offset_table``, comparing this table
+    against :func:`read_polygon_array_from_binary` for every polygon where the data is
+    produced and again over what the repository ships.
+
+    :param poly_collection: A collection returned by :func:`get_polygon_collection`
+    :return: ``(offsets, lengths)``, both ``uint32`` and both owning their data
+    """
+    root = poly_collection._tab
+    buf = root.Bytes
+
+    # Whole-buffer views, so a step can be taken for all polygons at once. Advanced
+    # indexing reads only the words addressed, which is why walking 1.3k vtables this
+    # way never touches the ~63 MB of coordinates in between.
+    as_i32 = np.frombuffer(buf, dtype="<i4", count=len(buf) // _UOFFSET_BYTES)
+    as_u32 = as_i32.view("<u4")
+    as_u16 = np.frombuffer(buf, dtype="<u2", count=len(buf) // _VOFFSET_BYTES)
+
+    slot = root.Offset(POLYGONS_VTABLE_SLOT)
+    vector_start = np.int64(root.Vector(slot))
+    count = root.VectorLen(slot)
+
+    # Each element of a vector of tables is a reference relative to its own position.
+    element_pos = vector_start + np.arange(count, dtype=np.int64) * _UOFFSET_BYTES
+    table_pos = element_pos + as_u32[element_pos // _UOFFSET_BYTES]
+
+    # A table opens with a *signed* offset backwards to its vtable, which lists where
+    # each field sits relative to the table. FlatBuffers shares one vtable between
+    # identically shaped tables, so these positions repeat - harmlessly.
+    vtable_pos = table_pos - as_i32[table_pos // _UOFFSET_BYTES]
+    field_offset = as_u16[(vtable_pos + COORDS_VTABLE_SLOT) // _VOFFSET_BYTES].astype(
+        np.int64
+    )
+
+    # The field holds a reference to the coordinate vector, whose length prefix sits
+    # immediately before its data.
+    reference_pos = table_pos + field_offset
+    length_pos = reference_pos + as_u32[reference_pos // _UOFFSET_BYTES]
+
+    lengths = as_u32[length_pos // _UOFFSET_BYTES].astype(np.uint32)
+    offsets = (length_pos + _UOFFSET_BYTES).astype(np.uint32)
+    return offsets, lengths
+
+
+def read_polygon_array_at(
+    buf: bytes | mmap.mmap, offset: IntegerLike, length: IntegerLike
+) -> np.ndarray:
+    """Read a polygon's coordinates straight out of ``buf`` at a known position.
+
+    The fetch half of :func:`derive_coord_offset_table`. Returns the same ``(2, N)``
+    zero-copy view with contiguous rows that :func:`read_polygon_array_from_binary`
+    does, without consulting the FlatBuffers structure at all.
+
+    :param buf: The buffer the offsets were derived against
+    :param offset: Byte offset of the polygon's first coordinate
+    :param length: Number of ``int32`` coordinate values
+    """
+    coords = np.frombuffer(buf, dtype="<i4", count=int(length), offset=int(offset))
     return reshape_to_polygon_coords(coords)

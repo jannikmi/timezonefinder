@@ -59,7 +59,11 @@ from scripts.configs import (
     resolve_data_version,
     resolve_zone_id_dtype,
 )
-from scripts.data_integrity import validate_hole_references, validate_shipped_schemas
+from scripts.data_integrity import (
+    validate_coordinate_offset_table,
+    validate_hole_references,
+    validate_shipped_schemas,
+)
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
@@ -269,6 +273,7 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     # of a data directory is established - the runtime trusts it and does not re-derive it.
     print("Verifying the integrity of the written data...")
     validate_hole_references(output_path)
+    validate_coordinate_offset_table(output_path)
     print("Binary files written successfully")
 
 

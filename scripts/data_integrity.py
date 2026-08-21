@@ -12,13 +12,23 @@ bounding box, which is O(all hole vertices) and would be indefensible on an
 initialisation path.
 """
 
+import mmap
 from pathlib import Path
+
+import numpy as np
 
 from scripts.configs import MIN_HOLE_DEDUP_RATIO
 from timezonefinder.flatbuf.schemas import (
     SCHEMA_SUFFIX,
     get_schemas_dir,
     iter_schema_files,
+)
+from timezonefinder.flatbuf.io.polygons import (
+    derive_coord_offset_table,
+    get_coordinate_path,
+    get_polygon_collection,
+    read_polygon_array_at,
+    read_polygon_array_from_binary,
 )
 from timezonefinder.np_binary_helpers import get_poly_ref_path
 from timezonefinder.polygon_array import HoleArray, PolygonArray
@@ -181,3 +191,67 @@ def validate_shipped_schemas(data_dir: Path) -> None:
             "rather than by editing the copy - and check whether the binaries next to "
             "it still match the schema that changed."
         )
+
+
+def validate_coordinate_offset_table(data_dir: Path) -> None:
+    """Check that the offset table addresses the same bytes the FlatBuffers reader does.
+
+    The lookup path does not walk the FlatBuffers structure. It resolves every polygon's
+    ``(byte offset, length)`` once, with whole-array arithmetic over the vtables
+    (``timezonefinder.flatbuf.io.polygons.derive_coord_offset_table``), and afterwards
+    slices coordinates straight out of the buffer. That is what makes a candidate
+    polygon cheap to fetch on the memory-mapped path, and it means the reader's
+    guarantees - that a table is where its reference says, that a vtable is aligned, that
+    the coords field is present - are assumed there rather than checked.
+
+    Nothing about a violated assumption announces itself: an offset landing one word
+    early still yields plausible ``int32`` coordinates and therefore a plausible wrong
+    timezone. So it is established here, over every polygon in both coordinate files, by
+    comparing against ``read_polygon_array_from_binary`` - the same bytes read the slow,
+    structural way. Exhaustive on purpose, which is affordable because this runs where
+    the data is produced and in the test suite, never when a ``TimezoneFinder`` is built.
+
+    :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
+    :raises DataIntegrityError: if the table disagrees with the reader for any polygon
+    """
+    for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
+        coordinate_path = get_coordinate_path(polygon_dir)
+        with open(coordinate_path, "rb") as coord_file:
+            with mmap.mmap(
+                coord_file.fileno(), 0, access=mmap.ACCESS_READ
+            ) as coord_buf:
+                collection = get_polygon_collection(coord_buf, coordinate_path)
+                offsets, lengths = derive_coord_offset_table(collection)
+
+                nr_polygons = collection.PolygonsLength()
+                if len(offsets) != nr_polygons:
+                    raise DataIntegrityError(
+                        f"the offset table derived from {coordinate_path} has "
+                        f"{len(offsets)} entries but the file holds {nr_polygons} "
+                        f"polygons."
+                    )
+
+                # Both readers hand out zero-copy views, and a mapping refuses to
+                # close while an export of it is alive - so the comparison happens
+                # inside a scope the views do not outlive, on the raising path too.
+                def compare(idx: int) -> tuple[bool, tuple[int, ...], tuple[int, ...]]:
+                    expected = read_polygon_array_from_binary(collection, idx)
+                    actual = read_polygon_array_at(
+                        coord_buf, offsets[idx], lengths[idx]
+                    )
+                    agree = actual.shape == expected.shape and np.array_equal(
+                        actual, expected
+                    )
+                    return agree, actual.shape, expected.shape
+
+                for idx in range(nr_polygons):
+                    agree, actual_shape, expected_shape = compare(idx)
+                    if not agree:
+                        raise DataIntegrityError(
+                            f"polygon {idx} of {coordinate_path} reads as "
+                            f"{actual_shape} coordinates at byte offset "
+                            f"{int(offsets[idx])} but as {expected_shape} through the "
+                            f"FlatBuffers reader. The offset table does not address "
+                            f"this file's layout, so lookups against it would return "
+                            f"wrong coordinates silently."
+                        )

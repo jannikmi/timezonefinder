@@ -112,7 +112,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the invariant list |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — CLI shape decided |
-| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | ~40 | free — verified, no decision left |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
@@ -157,8 +156,8 @@ DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision
 GH-477 (flat arrays) ──┐
 BUG-1 (negative ids) ──┴─→ GH-499 (batch API)   [flat arrays enable it; BUG-1 makes -1 safe]
 
-GH-536 (mapped accessor) ─→ re-prices GH-364, GH-513   [re-measure after it, not before]
-                          └─→ also the prerequisite GH-364's native loop needs
+GH-536 (mapped accessor) — SHIPPED, so GH-364 and GH-513 are now re-priceable, and
+                            GH-364's native loop has the offset table it needed
 
 GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
 
@@ -192,13 +191,15 @@ independent: GH-362, GH-524, PERF-2, GH-543
   on tag refs, so **no pull request ever exercises it**, and the first time it can speak is the run
   that is already publishing. Dry-running it against a locally built wheel costs a minute and is
   the only way to learn its answer while the version is still spendable.
-- **GH-536 is not independent of the geometry work — it is its denominator.** 4.9 µs of the
-  ~9.3 µs a candidate polygon costs is the mapped accessor, so landing GH-536 roughly halves what
-  the candidate loop costs and moves the ~3,000-vertex point below which a candidate's cost is the
-  fetch rather than the geometry. Anything ranked on the *time* in that loop — GH-364, GH-513 — is
-  measured **after** GH-536 lands, not before. This is now the sharpest open question under GH-364:
-  after the offset table, what is left of the candidate loop may be inside the noise floor, in
-  which case a native loop cannot be justified on speed at all.
+- **GH-536 was the geometry work's denominator, and it has landed — so the re-pricing it was
+  blocking is now owed.** It removed ~5 µs of the ~9.3 µs a candidate polygon cost, which moves the
+  vertex count below which a candidate's cost is the fetch rather than the geometry, and takes the
+  mapped mode from ~30 % slower than in-memory to within ~5 % of it. Anything ranked on the *time*
+  in that loop — GH-364, GH-513 — was to be measured after it, and that measurement has not been
+  taken yet: `prototypes/query_stage_profile.py`'s `FINDINGS` are pinned to a commit before this
+  change and every share quoted from them has moved. Re-running it is the first move for either
+  item, and it is the sharpest open question under GH-364: what is left of the candidate loop may
+  now sit inside the noise floor, in which case a native loop cannot be justified on speed at all.
   **A count is the exception, and it is the cheaper instrument.** What a change removes in
   candidates *tested* does not depend on what a candidate costs, so it can be enumerated over the
   packaged index today and the answer survives GH-536, a new machine and a data update alike. That
@@ -304,9 +305,10 @@ the denominators, and how to tell whether they still describe the tree.
   precision, the other spends it — so choosing means pricing ~11 cm of resolution, and nothing in
   the repository says what that is worth. GH-542 establishes it; either answer unblocks this.
 - **The precondition neither the issue nor this entry had, and it belongs here because it is a
-  cross-item constraint:** decode cost lands on the candidate loop, where GH-536 measures ~4.9 µs
-  per candidate just to *fetch*. A ~8.5 ms decode for the largest polygon is catastrophic there and
-  ~828 µs still bad, so **either variant needs GH-536 landed first**.
+  cross-item constraint:** decode cost lands on the candidate loop. A ~8.5 ms decode for the largest
+  polygon is catastrophic there and ~828 µs still bad. This required GH-536 first, which has
+  **shipped** — the fetch is now ~570 ns rather than ~4.9 µs, which makes the constraint *tighter*,
+  not looser: a decode step now has to fit into a candidate loop with nothing left to hide behind.
 - **Shape:** a binary format change cannot half-land, so this is prototyped and measured before it
   is migrated in one piece.
 - **Status:** blocked by GH-542 and DATA-BINARIES.
@@ -356,49 +358,10 @@ the denominators, and how to tell whether they still describe the tree.
 - **`shapely` was never the real objection** — it would sit in the `data` group next to `pydantic`,
   a converter-time dependency costing users nothing. It is simply not worth adding for that.
 - **The method is the lasting part** and is recorded under *Sequencing*: the question was a count,
-  so it needed no machine and no wait for GH-536.
+  so it needed no machine and no wait for GH-536 — which has since shipped, leaving the answer
+  untouched, as a count-based answer should be.
 - **Status:** rejected.
 - **Last touched:** 2026-08-21 — bounded, rejected, issue closed.
-
-### GH-536 — the memory-mapped coordinate accessor costs 4.9 µs per candidate polygon
-
-- **Tracks:** issue #536, which carries the per-step breakdown, the three cache shapes and the
-  offset-table correction.
-- **Why it heads the performance cluster:** the largest measured lever in the file. What it removes
-  is machine-independent — **one accessor rebuilt in Python per candidate polygon** — and it is
-  47 % of an ambiguous query, ~37 % of a uniformly random workload, paid by exactly the
-  constrained-memory deployments the mapped mode exists for.
-- **It is the denominator for the geometry work**, which is the part that lives here: landing it
-  roughly halves what the candidate loop costs, so GH-364 and GH-513 are priced **after** it.
-  GH-364 additionally *depends* on it — handing C a base pointer plus an offset table is far simpler
-  than implementing FlatBuffers traversal in C.
-- **The decision is dissolved, verified end to end 2026-08-21.** The three cache shapes all assume
-  caching *views*, which is what pins the mapping. Caching `(offset, length)` **integers** instead
-  pins nothing, and all four claims that rests on now hold against the packaged data: a derived
-  table is **byte-identical to today's reader for every polygon** — all 1,322 boundaries and all 27
-  hole rings, same dtype and shape, both rows still C-contiguous and still a zero-copy view — and
-  patched into `FileCoordAccessor` it returns **identical answers over all 30,000 committed fixture
-  points**. The pinning claim is measured, not assumed: with only the table alive `mmap.close()`
-  succeeds, with one fetched view alive it raises `BufferError`. And the win survives the trip out
-  of the microbenchmark — ~5.3 µs per fetch, **21 %/27 %/23 % faster per query** on the mapped path
-  for the random, ambiguous and on-land fixtures. (Unique-shortcut moves ±6 %, i.e. noise: that path
-  short-circuits before any coordinate is fetched.)
-- **The correction this entry owed itself: the cheap build is not automatic, it is a property of
-  *how* the table is derived.** The obvious derivation — a Python loop over `collection.Polygons(i)`
-  — costs **~6.2 ms**, materially the same as the ~8 ms view-cache build this variant claims to
-  avoid, which would hand the construction-cost half of the decision straight back. What reaches
-  **~0.1 ms** is walking the vtables **with numpy**: the polygons vector's uoffsets in one
-  `frombuffer`, add positions, subtract the soffsets to reach the vtables, take field slot 4, land
-  on the vector headers — whole-array arithmetic, no per-polygon Python. At 0.1 ms against a ~400 ms
-  mapped construction, BIG-1's cache-lazily rule does not even need applying: eager is free. Two
-  facts make the vectorised walk safe and are worth asserting once at build time (microseconds over
-  ~1.3k `uint16`s): every polygon table carries the coords field, and **all 1,322 share a single
-  vtable**, since FlatBuffers dedupes identical ones.
-- **Status:** open — no decision left; ~40 lines of pure Python, no C, no data-format change, no
-  cache policy. The implementing pass owes the alignment and vtable-uniformity assertions, and
-  tests over both coordinate files.
-- **Last touched:** 2026-08-21 — offset-table variant verified end to end against the packaged data;
-  the derivation constraint is new and is the reason the ~0.5 ms figure needed qualifying.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
 
@@ -414,12 +377,13 @@ the denominators, and how to tell whether they still describe the tree.
   call (cffi does it automatically, ≤13 ns), and a shared instance is *correct* but does not scale —
   1.60× at 8 threads against 4.84× per-thread — so one-instance-per-thread becomes the performance
   advice rather than ceasing to be necessary.
-- **The open question that decides the item**, and the reason it is not simply ranked: after GH-536's
-  offset table removes ~5.3 µs of the ~9.3 µs a candidate costs, what remains may sit **inside the
-  3–9 % noise floor**. If so this cannot be justified on speed, and the free-threading case is weak
-  too, since per-thread instances already scale 4.84× without it. Settling it means re-profiling
-  after GH-536 lands — which is now a matter of *when*, not *whether*: the offset table is verified
-  and carries no decision, so the re-profile has a date rather than a precondition.
+- **The open question that decides the item, and it is now answerable:** GH-536 has shipped and its
+  offset table removed ~5 µs of the ~9.3 µs a candidate cost, so what remains — roughly 570 ns of
+  fetch plus ~500 ns of FFI plus the Python bbox/hole work, over 1.13 candidates on ~25 % of queries
+  — may sit **inside the 3–9 % noise floor**. If it does, this cannot be justified on speed, and the
+  free-threading case is weak too, since per-thread instances already scale 4.84× without it.
+  Settling it is a re-run of `prototypes/query_stage_profile.py`, which no longer waits on
+  anything.
 - **Status:** blocked on an h3 release for any claim of support. Four slices are free now — the
   `setup.py` abi3 guard, a free-threaded tox env with a strict-xfail GIL assertion, read-only arrays
   plus a state-immutability test, and the docs contradiction — and are listed on the issue.
@@ -503,8 +467,9 @@ the denominators, and how to tell whether they still describe the tree.
   only on demand"*. Off the `timezone_at` hot path — that method inlines the shortcut branch and
   never calls the iterator — but on `certain_timezone_at`'s and `get_geometry`'s.
 - **What it removes, as a count:** **one file open, header parse and `mmap` per call**, for a file
-  that is read twice and never changes. Same shape as GH-536 — a per-call rebuild of something
-  constant — on a different function.
+  that is read twice and never changes. Same shape as the mapped accessor GH-536 fixed — a per-call
+  rebuild of something constant — on a different function, which is the reason to expect more of
+  these rather than to treat that one as done with.
 - **Measured.** Numba backend, mapped mode, anchor machine class; `certain_timezone_at` is not one
   of *The measured baseline*'s denominators, so the share below is of that call, not of a workload:
 

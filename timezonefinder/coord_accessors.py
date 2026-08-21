@@ -18,8 +18,9 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
 )
 from timezonefinder.flatbuf.io.polygons import (
+    derive_coord_offset_table,
     get_polygon_collection,
-    read_polygon_array_from_binary,
+    read_polygon_array_at,
 )
 
 
@@ -93,8 +94,14 @@ class FileCoordAccessor(AbstractCoordAccessor):
             self.coord_buf: mmap.mmap = mmap.mmap(
                 self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
             )
-            self.polygon_collection: PolygonCollection = get_polygon_collection(
+            collection: PolygonCollection = get_polygon_collection(
                 self.coord_buf, self.coordinate_file_path
+            )
+            # Where each polygon's coordinates live, resolved once. The collection is
+            # not kept: everything read after this point is addressed by offset, so
+            # holding it would only keep a second reference to the mapping alive.
+            self.coord_offsets, self.coord_lengths = derive_coord_offset_table(
+                collection
             )
         except Exception:
             # Clean up any partially initialized resources
@@ -111,10 +118,12 @@ class FileCoordAccessor(AbstractCoordAccessor):
         Returns:
             A numpy array containing the polygon coordinates
         """
-        return read_polygon_array_from_binary(self.polygon_collection, idx)
+        return read_polygon_array_at(
+            self.coord_buf, self.coord_offsets[idx], self.coord_lengths[idx]
+        )
 
     def __len__(self) -> int:
-        return self.polygon_collection.PolygonsLength()
+        return len(self.coord_offsets)
 
     def cleanup(self) -> None:
         """Clean up resources.
@@ -140,8 +149,9 @@ class FileCoordAccessor(AbstractCoordAccessor):
         # refused, these are the only remaining owners besides the caller's views, so
         # releasing them lets the mapping go as soon as the last view is dropped rather
         # than pinning it for the lifetime of this accessor.
-        # polygon_collection owns no resources itself, but keeps coord_buf alive.
-        for attr in ("polygon_collection", "coord_buf", "coord_file"):
+        # The offset table is plain integers owning their own storage - it references
+        # nothing and is dropped only so a cleaned-up accessor has no usable state left.
+        for attr in ("coord_offsets", "coord_lengths", "coord_buf", "coord_file"):
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -163,15 +173,19 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
         # Initialize polygon collection
         polygon_collection = get_polygon_collection(coord_buf, coordinate_file_path)
 
-        # Get number of polygons
-        num_polygons = polygon_collection.PolygonsLength()
+        # Resolve every polygon's position in one pass, then slice them out. Going
+        # through the generated accessors per polygon reads the same bytes but rebuilds
+        # the vtable walk 1300 times, which is most of this loop's cost.
+        offsets, lengths = derive_coord_offset_table(polygon_collection)
 
         # Preload all polygons. The key type mirrors __getitem__: numpy integers
         # hash and compare equal to the plain ints stored here, so a np.int64
         # lookup hits the same entry without a conversion.
         self.polygons: dict[IntegerLike, np.ndarray] = {}
-        for idx in range(num_polygons):
-            self.polygons[idx] = read_polygon_array_from_binary(polygon_collection, idx)
+        for idx in range(len(offsets)):
+            self.polygons[idx] = read_polygon_array_at(
+                coord_buf, offsets[idx], lengths[idx]
+            )
 
         # Once polygons are loaded, we don't need to keep polygon_collection or coord_buf references
         # They'll be garbage collected
