@@ -116,13 +116,13 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| GH-499 | Batch / array lookup API | public API | L | decided — blocked by GH-477 + BUG-1 |
+| GH-499 | Batch / array lookup API | public API | L | decided — blocked by BUG-1 |
 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
 | GH-542 | Establish what coordinate precision is worth | data format | M | free |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
+| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured, one decision left |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs a decision — the invariant list |
@@ -168,8 +168,8 @@ DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision
   (stop committing └─→ GH-522 (reclaim existing history)   [strictly after]
    the binaries)
 
-GH-477 (flat arrays) ──┐
-BUG-1 (negative ids) ──┴─→ GH-499 (batch API)   [flat arrays enable it; BUG-1 makes -1 safe]
+BUG-1 (negative ids) ──→ GH-499 (batch API)   [BUG-1 makes -1 safe as the "skip" sentinel]
+GH-477 (flat arrays) ┄┄→ GH-499              [measured: an improvement to it, NOT a precondition]
 
 
 GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
@@ -248,7 +248,9 @@ the denominators, and how to tell whether they still describe the tree.
   `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
   shortcut readers or the packaged data does not. *Classified inert since the anchor:*
-  nothing yet — the anchor is the commit that last moved the critical path.
+  `fcd032c` changes how the coordinate offset table is derived at construction, not what a
+  query does with it, and `bcd78f5` is comment and test only — neither moves a figure here.
+  `prototypes/shortcut_layout_bench.py`'s own block is anchored separately, at `fcd032c`.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
@@ -299,15 +301,24 @@ the denominators, and how to tell whether they still describe the tree.
 - **Decided, 2026-08-21 — all four design questions answered on the issue:** ids primary and names
   as a convenience; any array-like in; `on_invalid="raise"` by default; `timezone_at` only in the
   first slice.
-- **Sequencing, and it is the part that lives here rather than on the issue:** GH-477 is the enabler
-  for the vectorised half — a flat array is the only shape the shortcut lookup vectorises in, and
-  the scalar penalty that sinks GH-477 standalone does not apply to a batch path, which is the
-  strongest argument for landing its flat layout at all. **BUG-1 lands first**: the `"skip"`
-  sentinel is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's
-  recorded decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
-- **Status:** open — design decided, blocked by GH-477 and BUG-1.
-- **Last touched:** 2026-08-21 — design settled and written to the issue; the entry keeps the
-  sequencing and drops the detail.
+- **Sequencing:** **BUG-1 lands first**, and it is now the only hard blocker — the `"skip"` sentinel
+  is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
+  decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
+- **GH-477 was recorded as an enabler and is not one — measured, `prototypes/shortcut_layout_bench.py`.**
+  A batch resolver over today's dict already reaches **1.35x on the unique stratum and 1.15x on a
+  random workload**; the direct-index layout takes those to 2.01x and 1.15x→1.21x. So the flat
+  layout is an *improvement* to this item, not a precondition for it, and GH-499 can be built
+  first. The argument that moved is the vectorisation one: `np.searchsorted` over N cell ids is
+  indeed one call rather than N, **and one call over N is still slower than N dict lookups**
+  (0.93x at N=10,000 — a binary search over 41,162 keys is memory-latency-bound at the same ~90 ns
+  a dict lookup costs). Only the direct-index arithmetic vectorises into a win (32.7x).
+- **The ceiling this item actually runs into is h3, and that is new.** Of a 498 ns batched
+  unique-zone lookup, **490 ns is `h3.latlng_to_cell`** — h3-py 4.4 exposes no vectorised version,
+  so N points cost N scalar C calls and no shortcut layout touches that. Anything beyond ~2x on the
+  unique stratum has to come from there. Do not rank a further lookup-side optimisation above it.
+- **Status:** open — design decided, blocked by BUG-1 only.
+- **Last touched:** 2026-08-21 — the GH-477 dependency downgraded from blocker to improvement on
+  measurement, and the h3 ceiling recorded.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -345,20 +356,34 @@ the denominators, and how to tell whether they still describe the tree.
 ### GH-477 — replace the shortcut dict with flat arrays
 
 - **Tracks:** issue #477.
-- **What it is:** a measured issue that correctly concludes the obvious implementation *loses* —
-  `searchsorted` at 424 ns against `dict.get` at 68 ns, a +38 % regression on the unique-zone path
-  the hybrid design exists to make fast. The `uint64` landmine (15.3 µs, 220× slower, silently
-  correct) is worth the issue on its own.
-- **The reframing that matters:** it is filed as a memory optimisation, and its real value is as
-  the enabler for GH-499. Ranked as memory it competes with nothing; ranked as an enabler it
-  sequences before the batch API. The **direct-index variant** (+57 ns, *smaller* table) is the
-  promising one.
-- **Confirmed from the query side by #497** — a different measurement from the issue's
-  microbenchmark: `shortcut_mapping.get` is 78 ns of a real 1,150 ns unique-zone query, so the
-  `searchsorted` variant costs ~30 % of the whole query and the direct-index one ~5 %. The scalar
-  path has to stay, and the ranking of the two variants is unchanged.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 7 there.
+- **What it is:** a memory optimisation — the loaded dict is 4.44 MiB of which ~46 KB is payload,
+  the rest `PyLong` keys, `ndarray` view objects and the dict itself.
+- **Prototyped and measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, three
+  candidate layouts swapped underneath a real `timezone_at` and through an N-point resolver, on
+  both backends. This supersedes both the issue's lookup-in-isolation microbenchmark and #497's
+  query-side estimate; where they disagree with it, it wins, because it measures whole queries.
+- **`searchsorted` is refused, on both paths.** Not +355 ns but **+996 ns on a 986 ns unique
+  query** — it roughly doubles it — and it loses on the batch path too (conclusion 5 under GH-499).
+  Kept as a rejected option so it is not re-proposed on the "flat arrays vectorise" argument.
+- **The direct index is free on the fast path**: +4 ns on a unique query and +2 ns on
+  `TimezoneFinderL`, both under the ±35 ns noise floor, against the +57 ns/~5 % that the issue and
+  #497 predicted from isolation — that estimate was right in isolation and overstated in context.
+  It is also the *smallest* layout at 0.40 MiB, **−4.03 MiB, ~91 % of the dict**.
+- **Its bit slicing is a bijection, not a lucky hash**, which closes the issue's open caveat: every
+  res-3 cell id carries the same constant outside the 16 index bits, so pentagons and deleted digit
+  subsequences leave holes in the table and never collisions. The two couplings it buys that with —
+  h3's unpromised internal encoding, and a `122 * 8**res` table that is untenable past res 4 —
+  are real and belong in code as assertions on `SHORTCUT_H3_RES`.
+- **The one decision left, and it is the maintainer's:** the payload. A CSR pair reconstructs a
+  candidate slice in three numpy scalar reads where the dict hands out a ready array, which costs
+  **+0.7 % of a random `TimezoneFinder` workload and +6 % of a `TimezoneFinderL` one** (+22 % on
+  that finder's ambiguous stratum). Keeping a Python list of `int | ndarray` values instead costs
+  roughly nothing and saves −2.03 MiB rather than −4.03. So: **−4 MiB for +6 % on the finder the
+  memory is for, or −2 MiB for free.** The numbers are in the prototype; the choice is not one a
+  measurement makes.
+- **Status:** open — measured, ready to implement once the payload question is answered.
+- **Last touched:** 2026-08-21 — prototyped and measured; `searchsorted` rejected, the direct index
+  confirmed free on the scalar path, the enabler framing withdrawn (see GH-499).
 
 ### GH-301 — sort shortcut polygons by overlap area
 
