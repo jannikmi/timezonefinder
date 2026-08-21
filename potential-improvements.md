@@ -8,16 +8,27 @@ including the options that were considered and refused.
 correctness defect, a slow path, an awkward API, a docs page that lies, a release step that can
 fail silently, a test that cannot fail, duplication that will drift, a data encoding that wastes
 half its bytes. There is one list because there is one reviewer's attention to spend, and sorting
-candidates into kinds first is how the cheap ones get taken because they are cheap. Where an item
-has an issue, the entry names it as a pointer; the reasoning lives here. Entries are grouped below
-by the part of the repository they touch, purely so the file can be scanned — the grouping decides
-nothing.
+candidates into kinds first is how the cheap ones get taken because they are cheap. Entries are
+grouped below by the part of the repository they touch, purely so the file can be scanned — the
+grouping decides nothing.
+
+**The division of labour with an issue, where an entry has one.** This file holds what a *pass*
+needs in order to choose: where the item ranks and why, what blocks it, the decision taken and the
+options refused. The issue holds the item's **detail** — the measurements, the design tables, the
+implementation notes, the reproduction. An entry names its issue and says what is on it, rather than
+restating it, because two copies of a measurement drift and only one of them is ever re-read. **An
+entry with no issue is the complete record**, and most are: the detail stays here, because there is
+nowhere else for it. What never moves to an issue in either case is the *ranking*, the *sequencing*
+and the *recorded decisions* — those are the file's point, and the next section says why.
 
 **Why here and not on the tracker.** The ranking, the sequencing and the recorded decisions used to
 live in a roadmap issue. Reasoning that sits outside the repository goes stale silently: nothing
 references it, no check reads it, and a reviewer never sees it in a diff. In this file an entry is
 reviewed in the pull request that changes it, and every change to the ranking arrives as a diff.
-Issues remain the place a single item is worked out and where outside contributors comment.
+Issues remain the place a single item is worked out and where outside contributors comment — which
+is exactly why an item's detail belongs there and its *rank* does not. A stale measurement on an
+issue is one wrong number; a stale ranking outside the repository silently misdirects every pass
+that reads it.
 
 ## How to read it
 
@@ -264,89 +275,53 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-499 — batch / array lookup API
 
-- **Tracks:** issue #499.
-- **Why here:** the stated primary user does high-volume lookups and the API answers one point per
-  call. The profiling in #497 breaks that query down: 1.1–1.2 µs, *no stage of it geometry*, of
-  which H3 cell computation (~390 ns) and coordinate validation (~250 ns) are the two that
-  vectorise over an array of points — over half the query, addressable before any lookup logic is
-  touched.
-- **Sequencing:** GH-477 is the enabler for the vectorised half — a flat array is the only shape
-  in which the shortcut lookup vectorises, and there the scalar penalty that sinks it as a
-  standalone change does not apply.
-- **Decided, 2026-08-21 — all four open questions answered:**
-  1. **Return type.** `timezone_ids_at(lngs, lats) -> np.ndarray` is the primary;
-     `timezone_names_at(...) -> list[str | None]` the convenience. Ids are where the win is — a
-     caller doing 10⁶ lookups should not pay for 10⁶ string lookups it maps straight back.
-  2. **Input.** Any array-like, `np.asarray` internally, with a documented zero-copy path for
-     C-contiguous float64 arrays. Sequences must work or the API serves only numpy users.
-  3. **Invalid elements.** `on_invalid="raise" | "skip"`, defaulting to `"raise"` to match the
-     scalar methods. Raising on element 999,999 and discarding the rest is hostile, so the escape
-     hatch exists; silently sentinelling by default would change the contract.
-  4. **Scope.** `timezone_at` only in the first slice. `timezone_at_land` follows once PERF-1 lands;
-     `certain_timezone_at` is a different loop and is not bundled.
-- **Ordering constraint that follows:** the `"skip"` sentinel is `-1` for ids, which is exactly the
-  value BUG-1 makes dangerous — `zone_name_from_id(-1)` answers `Etc/GMT+12` today. **BUG-1 lands
-  first**, and its recorded decision (validate at the public edge) is what makes `-1` safe to hand
-  out. Bound also by #504's recorded decision: keyword-only `lngs`/`lats`, never a single `(N, 2)`
-  array whose column order would have to be inferred.
-- **Status:** open — design decided, blocked by GH-477 for the vectorised half and by BUG-1 for the
-  sentinel.
-- **Last touched:** 2026-08-21 — the four design questions answered; the sequencing they imply
-  recorded.
+- **Tracks:** issue #499, which carries the full design and the profiling behind it.
+- **Why it is ranked here:** the stated primary user does high-volume lookups and the API answers
+  one point per call. A unique-shortcut query is ~1.17 µs of almost pure per-call overhead — no
+  geometry at all — and 30,651 of 41,162 index entries are that case, so this is a ~1 M lookups/s
+  ceiling made of interpreter overhead. That is what a batch path amortises.
+- **Decided, 2026-08-21 — all four design questions answered on the issue:** ids primary and names
+  as a convenience; any array-like in; `on_invalid="raise"` by default; `timezone_at` only in the
+  first slice.
+- **Sequencing, and it is the part that lives here rather than on the issue:** GH-477 is the enabler
+  for the vectorised half — a flat array is the only shape the shortcut lookup vectorises in, and
+  the scalar penalty that sinks GH-477 standalone does not apply to a batch path, which is the
+  strongest argument for landing its flat layout at all. **BUG-1 lands first**: the `"skip"`
+  sentinel is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's
+  recorded decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
+- **Status:** open — design decided, blocked by GH-477 and BUG-1.
+- **Last touched:** 2026-08-21 — design settled and written to the issue; the entry keeps the
+  sequencing and drops the detail.
 
 ### GH-449 — polygon encoding: delta + varint
 
-- **Tracks:** issue #449. The highest-value open issue on its own merits.
-- **What it is:** the issue already carries the measurements — delta + zigzag + varint at full 1e-7
-  precision is *lossless* and cuts the payload 63.4 → 35.3 MB, wheel ~30 MB — the decode-cost risk
-  (~8.5 ms on the largest polygon), and a better-behaved alternative (int16-delta + per-delta
-  escape, ~32 MB, ~0.9 ms). Steps 1 (AoS → SoA) and 2 (a data format version constant) both
-  shipped; steps 3 (encode) and 4 (precision, separately) remain.
-- **The one decision left here, and it is not takeable yet:** pure varint against int16-delta +
-  per-delta escape. *Whether precision reduction is on the table at all* was the second half and is
-  no longer this entry's question — GH-542 answers it, and the answer decides which of the two
-  variants is even a candidate. Nothing to weigh until it lands.
+- **Tracks:** issue #449, which carries the measurements, the three transforms and the two candidate
+  encodings.
+- **Why it is ranked here:** the highest-value data-format item on its own merits — lossless
+  delta+zigzag+varint cuts the payload 63.4 → 35.3 MB. Steps 1 (AoS → SoA) and 2 (a format version
+  constant) shipped; encoding and precision remain.
+- **Postponed, 2026-08-21.** The two candidate encodings are not comparable — one keeps 1e-7
+  precision, the other spends it — so choosing means pricing ~11 cm of resolution, and nothing in
+  the repository says what that is worth. GH-542 establishes it; either answer unblocks this.
+- **The precondition neither the issue nor this entry had, and it belongs here because it is a
+  cross-item constraint:** decode cost lands on the candidate loop, where GH-536 measures ~4.9 µs
+  per candidate just to *fetch*. A ~8.5 ms decode for the largest polygon is catastrophic there and
+  ~828 µs still bad, so **either variant needs GH-536 landed first**.
 - **Shape:** a binary format change cannot half-land, so this is prototyped and measured before it
   is migrated in one piece.
-- **Postponed, 2026-08-21 — the trade-off cannot be decided on the evidence available.** The two
-  encodings are not comparable: the varint row keeps today's 1e-7 precision, the escape row spends
-  it, and ~3 MB separates them. Choosing between them means pricing ~11 cm of resolution, and
-  nothing in the repository says what that resolution is worth — so the decision would be a guess
-  dressed as an evaluation. **GH-542 establishes the missing facts**: what precision the closest
-  competitor (`tzfpy`/`tzf-rs`, which ships a simplified dataset by default) actually offers and how
-  far its answers diverge near borders, and what users have ever asked for. Either answer unblocks
-  this: if ~1.1 cm is a real differentiator, this becomes a lossless-encoding question only; if it
-  is not, the design space is wider.
-- **Do not re-take the 1e-6 accuracy result as it stands.** The existing "0 of 200,000 lookups
-  changed" figure left `hybrid_shortcuts_uint16.bin` unregenerated, and the shortcut index is
-  derived from the geometry — the number has to be re-taken with the index rebuilt, and over points
-  sampled *near borders* rather than uniformly, since uniform points are overwhelmingly ocean.
-- **One constraint on the encoding half regardless of precision:** decode cost lands on the
-  candidate loop, where GH-536 already measures ~4.9 µs per candidate just to fetch. A ~8.5 ms
-  decode for the largest polygon would be catastrophic there and ~828 µs still bad, so **either
-  variant needs GH-536's cache or GH-364's native loop first** — a precondition neither this entry
-  nor the issue named.
 - **Status:** blocked by GH-542 and DATA-BINARIES.
-- **Last touched:** 2026-08-21 — postponed; the precision question split out to GH-542 so this
-  entry stops carrying two decisions at once.
+- **Last touched:** 2026-08-21 — postponed; the precision half split out to GH-542 and the reasoning
+  written to the issue.
 
 ### GH-542 — establish what coordinate precision is worth
 
-- **Tracks:** issue #542, opened 2026-08-21 to unblock GH-449.
-- **Why it exists:** GH-449's two candidate encodings are not comparable — one keeps today's 1e-7
-  precision, the other spends it — and ~3 MB separates them. Choosing means pricing ~11 cm of
-  resolution, and nothing in the repository says what that resolution is worth. `CLAUDE.md` calls
-  the ~1.1 cm ceiling deliberate and `docs/data_format.rst` advertises it, but neither says who
-  needs it.
-- **What it has to establish:** the precision the closest competitor actually ships
-  (`tzfpy`/`tzf-rs`, which uses a simplified dataset by default), how far its answers diverge from
-  this package **near borders** rather than over uniform points, and what users have ever asked for
-  — no issue has requested sub-metre accuracy, and the size complaints were about artifact count,
-  which the distribution split has answered.
-- **Shape:** a prototype under `prototypes/` so the comparison can be re-run, plus a recommendation.
-  Explicitly *not* an encoding change.
-- **Value:** high as a decision unblocker and low as code — it produces evidence, and the evidence
-  decides an L-sized item that is otherwise stalled.
+- **Tracks:** issue #542, opened 2026-08-21 to unblock GH-449; it carries what has to be established
+  and why.
+- **Why it exists:** GH-449's two candidate encodings differ in whether they spend precision, and
+  ~3 MB separates them. Nothing in the repository says what ~1.1 cm is worth, so that choice cannot
+  be made — this produces the evidence, not a format change.
+- **Value:** high as a decision unblocker, low as code. It decides an L-sized item that is otherwise
+  stalled.
 - **Status:** open. Blocks GH-449.
 - **Last touched:** 2026-08-21 — created.
 
@@ -370,199 +345,83 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
-- **Tracks:** issue #301.
-- **What it is:** overlap area is the probability a uniform query point falls in that polygon, which
-  is the right sort key. One caveat survives: it proposes adding `shapely`.
-- **The mechanism survives and its stated reason does not.** #497 puts the candidate loop at 73 % of
-  an ambiguous query on the default mapped mode (61 % in memory), which is the ceiling on what
-  ordering can win. A bbox-passing candidate costs ~4.9 µs to open (GH-536) plus 0.24–22 µs of
-  kernel, so below ~3,000 vertices what a candidate costs is the *fetch*, not the geometry.
-  Ordering therefore wins by reducing **how many** candidates are opened, not by opening cheaper
-  ones first — "large polygons are expensive" holds only for the largest stratum, while
-  overlap-area ordering remains the right key for the reason the issue gives.
-- **It never needed a machine, and the count refuses it.** The bullet above concluded ordering wins
-  by opening *fewer* candidates — which is a **count**, so it can be bounded exactly and without
-  waiting for GH-536, whatever a candidate turns out to cost. Enumerated over the packaged shortcut
-  index (41,162 cells, 10,511 ambiguous, 23,373 polygon references), counting the candidates each
-  cell tests when no early hit occurs:
-
-  | | tests | per ambiguous cell |
-  |---|---|---|
-  | current ordering | 12,600 | 1.199 |
-  | the best any ordering could do | 12,234 | 1.164 |
-  | **headroom** | **366 — 2.90 %** | on **259 cells, 0.63 % of all cells** |
-
-  So re-ordering can remove at most 2.9 % of point-in-polygon tests, and on 99.4 % of cells it
-  changes nothing at all. That is below the noise floor before it is multiplied by the ~25 %
-  ambiguous stratum share.
-- **Why the headroom is that small, structurally.** `last_zone_change_idx` already makes the *last*
-  zone free, and `optimise_shortcut_ordering` already sorts zones by ascending total vertex count —
-  so the biggest zone is already the one never tested. And **9,046 of 10,511** ambiguous cells hold
-  exactly two zones, where every ordering costs exactly one test. The current heuristic is close to
-  optimal for the thing ordering controls.
-- **Consequence for the `shapely` question:** the dependency was never the real objection — it would
-  sit in the `data` group next to `pydantic`, a converter-time dependency that costs users nothing.
-  It is simply not worth adding for 2.9 % of the tests on 0.6 % of cells. If the key is ever wanted
-  anyway, sampling points uniformly in each H3 cell and counting hits with the existing kernel
-  estimates the same probability with code already in the tree.
-- **Consequence for GH-513, which is the larger one.** What that item needs from this one is a
-  *guarantee* that the right zone is reached first — a correctness property — not a faster
-  ordering. Ranking GH-513 behind a performance item has been sending it after the wrong thing;
-  the blocker is an ordering **proof**, including the interaction with the early break, and it
-  needs no `shapely` and no re-measurement after GH-536.
-- **Rejected, 2026-08-21; issue #301 closed as not planned**, with the enumeration above as the
-  justification. `shapely` is not added. **It is no longer a prerequisite for GH-513** — see there;
-  that dependency was a mistake in the ranking, not a property of either item.
-- **Status:** rejected — 2.90 % of point-in-polygon tests on 0.63 % of cells is not worth a
-  re-ordering or a dependency. Kept, not deleted, because the sort key is genuinely the right one
-  and the idea will otherwise be re-proposed on its merits.
-- **Last touched:** 2026-08-21 — bounded by enumeration, then rejected and the issue closed.
+- **Tracks:** issue #301, **closed as not planned 2026-08-21** with the enumeration as
+  justification.
+- **Rejected, and kept rather than deleted** because the sort key is genuinely the right one and the
+  idea will otherwise be re-proposed on its merits. Bounded by enumeration over the packaged index:
+  **12,600 point-in-polygon tests today against 12,234 for the best ordering that exists — 2.90 %
+  headroom, on 259 of 41,162 cells.** `last_zone_change_idx` already makes the last zone free and
+  the existing sort already puts the largest zone there, and 9,046 of 10,511 ambiguous cells hold
+  exactly two zones, where every order costs exactly one test.
+- **`shapely` was never the real objection** — it would sit in the `data` group next to `pydantic`,
+  a converter-time dependency costing users nothing. It is simply not worth adding for that.
+- **The method is the lasting part** and is recorded under *Sequencing*: the question was a count,
+  so it needed no machine and no wait for GH-536.
+- **Status:** rejected.
+- **Last touched:** 2026-08-21 — bounded, rejected, issue closed.
 
 ### GH-536 — the memory-mapped coordinate accessor costs 4.9 µs per candidate polygon
 
-- **Tracks:** issue #536, opened from #497's measurement — a finding nothing was looking for.
-- **Why it matters:** on the default mapped mode, fetching a candidate's coordinates costs an order
-  more than the FFI crossing or the geometry kernel for anything but the largest polygons — 47 % of
-  an ambiguous query, ~37 % of a uniformly random workload, paid by exactly the constrained-memory
-  deployments the mapped mode exists for. What it removes is machine-independent: one accessor
-  rebuilt in Python per candidate polygon.
-  A native candidate loop (GH-364) would also remove it, which is why the two were once ranked
-  together — but that is no longer the relation. **GH-536 comes first and GH-364 depends on it**:
-  handing C a base pointer plus an offset table is far simpler than implementing FlatBuffers
-  traversal in C, and GH-364 is in any case blocked on an upstream h3 release. The largest measured
-  lever in the file, and the reason it heads the performance cluster.
-- **Why this was not simply free**, and the framing the bullet below supersedes: the accessor is
-  rebuilt per candidate, so the fix caches something — and a cached **view** is a holder that pins
-  the mapping, which is a memory trade in the mode that exists to avoid one; while per-instance
-  build cost lands on every `TimezoneFinder()` construction, which the one-instance-per-thread
-  pattern multiplies. The second half is answered by BIG-1's recorded decision (cache lazily, never
-  at construction). The first half is what the offset-table variant removes rather than answers —
-  **so there may be no decision here at all**, and that is what to establish first.
-- **A fourth option has appeared that dissolves the decision, and it should be checked before the
-  other three are weighed.** Found while scoping GH-364. The framing above assumes the cache holds
-  *views*, which is what pins the mapping — but the expensive part is not the view, it is
-  **re-walking the FlatBuffers vtable in Python to find where polygon *i*'s bytes are**. Cache the
-  `(byte offset, length)` pair per polygon instead — plain integers, ~10 KiB as `uint32` for 1,322
-  polygons — and fetch with
-  `np.frombuffer(buf, "<i4", count=LEN[i], offset=OFF[i]).reshape(2, -1)`. Integers pin nothing, so
-  **the cache-lifetime-versus-pinning trade does not arise at all**, and neither does the 8 ms
-  build: deriving the table was measured at ~0.5 ms.
-- **Independently verified here, 2026-08-21:** `coords_of` on the mapped path measures **5,646 ns**
-  against **568 ns** for the `frombuffer` + `reshape` this reduces to — **~5.1 µs removed per
-  candidate, 9.9×**, which is essentially all of what this entry is about. What is *not* yet
-  verified is the table's construction: that it can be derived correctly for every polygon and that
-  the result is byte-identical to today's reader across the whole dataset. That check is the first
-  thing an implementing pass does, and it is cheap.
-- **If it holds, this entry stops needing a decision and becomes ~40 lines of pure Python** — no C,
-  no data-format change, no cache policy. It also becomes the prerequisite GH-364's native candidate
-  loop needs, since handing C a base pointer plus an offset table is far simpler than implementing
-  FlatBuffers traversal in C.
+- **Tracks:** issue #536, which carries the per-step breakdown, the three cache shapes and the
+  offset-table correction.
+- **Why it heads the performance cluster:** the largest measured lever in the file. What it removes
+  is machine-independent — **one accessor rebuilt in Python per candidate polygon** — and it is
+  47 % of an ambiguous query, ~37 % of a uniformly random workload, paid by exactly the
+  constrained-memory deployments the mapped mode exists for.
+- **It is the denominator for the geometry work**, which is the part that lives here: landing it
+  roughly halves what the candidate loop costs, so GH-364 and GH-513 are priced **after** it.
+  GH-364 additionally *depends* on it — handing C a base pointer plus an offset table is far simpler
+  than implementing FlatBuffers traversal in C.
+- **The decision may not exist, 2026-08-21.** The three cache shapes all assume caching *views*,
+  which is what pins the mapping. Caching `(offset, length)` **integers** instead pins nothing, so
+  the trade does not arise; verified here that `coords_of` is 5,646 ns against 568 ns for the
+  `frombuffer`+`reshape` it reduces to — 9.9×. **Unverified:** that the table derives correctly for
+  every polygon. Establishing that is the first move, and if it holds this becomes ~40 lines of pure
+  Python with no decision at all.
 - **Status:** needs a decision — but check the offset-table variant first, which would remove the
   decision rather than answer it.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 8 there with GH-364.
+- **Last touched:** 2026-08-21 — the offset-table correction measured and written to the issue.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
 
-- **Tracks:** issue #364, currently a one-line body (a link), so it is not actionable by anyone.
-- **What it is:** one FFI crossing per query instead of per polygon; the prerequisite for releasing
-  the GIL.
-- **Premise corrected by #497:** the crossing is ~500 ns per candidate — real, but an order below
-  the 4.9 µs the mapped mode spends *fetching* that candidate's coordinates (GH-536). Both are
-  removed by the same native loop, so the item stands and its justification changes.
-- **The scoping work:** (a) does the C extension release the GIL, and can it — which is really the
-  native-candidate-loop question, since a self-contained native lookup is what makes a GIL-free
-  section possible; (b) are numpy/h3/cffi free-threaded-ready; (c) does the documented
-  one-instance-per-thread pattern stop being necessary, which is where GH-477 reappears.
-  `pytest-run-parallel` is already a test dependency, so the harness exists. Worth writing into the
-  issue body before anyone picks it up.
-- **(a) is settled: the extension already releases the GIL, on every call, and always has.** cffi's
-  recompiler emits `Py_BEGIN_ALLOW_THREADS` automatically, and cffi declares the module
-  `Py_MOD_GIL_NOT_USED` under `Py_GIL_DISABLED`. Verified in the *published* wheel — `nm -u` on the
-  shipped `.so` lists `_PyEval_SaveThread`/`_PyEval_RestoreThread`. The cost is already inside every
-  timing this file quotes; the recorded 239 ns (numba, GIL held) against 252 ns (clang, GIL
-  released) on the same polygon bounds the release/acquire pair at ≤13 ns.
-- **(b) was answered wrongly here, and the correction is the whole item.** *"numpy, h3 and cffi all
-  publish free-threaded wheels"* is true and **not sufficient**: a `cp3XXt` wheel says the package
-  builds there, not that it is GIL-free. **`h3` 4.5.0 ships the wheel and does not declare
-  `Py_mod_gil`, so `import timezonefinder` re-enables the GIL** — measured on a real
-  `cpython-3.14.2+freethreaded`. Fixed upstream in uber/h3-py#493, merged 2026-08-12 and **not yet
-  released**. So the correct status is *blocked on an h3 release*, and the check that matters is
-  `sys._is_gil_enabled()` after import, not the wheel list. **A wheel tag is not a GIL declaration**
-  — the generalisable half.
-- **(c) is answered, and inverts the reason.** A shared instance is *correct*: every attribute is
-  assigned in `__init__`/`cleanup`, there is no cache on the lookup path, and 640,000 concurrent
-  queries across 8 and 16 threads produced 0 mismatches. But it does not *scale* — shared peaks at
-  2.28× on 4 threads and regresses to 1.60× on 8, while per-thread instances reach 4.84×.
-  `TimezoneFinderL`, which holds no polygon data at all, collapses the same way, so this is
-  reference-count contention on shared objects, not the mmap. **One instance per thread therefore
-  stops being a correctness requirement and becomes the correct performance advice** — the opposite
-  of the expectation that free-threading would retire it.
-- **The packaging cost, restated with the arithmetic.** One `abi3` wheel per platform
-  (`py_limited_api = "cp311"`) cannot serve a free-threaded interpreter — CPython's own position,
-  and cffi enforces it independently by disabling the limited API under `Py_GIL_DISABLED`. A
-  release is 4 files today; adding 3.13t and 3.14t makes it **10 (2.5×), growing +3 per CPython
-  release**. But **CPython 3.15's `abi3t`** — a stable ABI covering free-threaded builds, already
-  supported by cffi 2.1.0 — makes 3.15t-and-later cost **+3 once, with no growth**. So "support
-  free-threading from 3.15t only" is a materially cheaper option than "support it now", and worth
-  deciding as such. Note `setup.py` currently *fails hard* on a free-threaded build, because
-  `[[tool.cibuildwheel.overrides]] select = "*"` sets `BUILD_ABI3=true` for every identifier.
-- **The open question the scoping could not settle, and it is the important one:** whether the
-  native candidate loop is worth it *after* GH-536's offset table. That table already removes ~5.1 µs
-  of the ~9.3 µs a candidate costs, leaving roughly 570 ns of fetch plus ~500 ns of FFI plus the
-  Python bbox/hole work, over 1.13 candidates on ~25 % of queries — which lands in the single-digit
-  percent of a mixed workload, i.e. inside the noise floor. If that holds, **the native loop cannot
-  be justified on speed**, and the free-threading justification is weak too, since per-thread
-  instances already scale 4.84× without it. Settling it means re-profiling after GH-536 lands.
-- **Two incidental findings, recorded so they are not rediscovered:** the thread-safety
-  documentation contradicts itself — `docs/architecture.rst` says the global functions are *not*
-  thread-safe while `global_functions.py`'s docstring and `docs/1_usage.rst` call them a
-  thread-safe singleton, and on the evidence the singleton is safe for concurrent reads. And
-  `pytest-run-parallel` is installed and registered but passed by **no** Makefile target, tox env or
-  workflow, so the harness is dormant rather than present.
-- **Status:** blocked on an h3 release for any claim of support; the slices that do not depend on it
-  (the `setup.py` abi3 guard, a free-threaded tox env with an `xfail(strict=True)` GIL assertion,
-  read-only arrays plus a state-immutability test, and the docs contradiction) are free now.
-- **Last touched:** 2026-08-21 — scoped against a real free-threaded interpreter. (a) settled, (b)
-  corrected from yes to blocked, (c) answered and inverted, and the artifact arithmetic replaced.
+- **Tracks:** issue #364, whose body now carries the full scoping — the GIL question, the
+  thread-safety audit, the packaging arithmetic, the test plan and a slicing table.
+- **Why it is ranked here:** one FFI crossing per query instead of per polygon, and the prerequisite
+  for releasing the GIL.
+- **The correction that matters, 2026-08-21:** this entry previously recorded *"numpy, h3 and cffi
+  all publish free-threaded wheels, so nothing blocks"*. That was true and insufficient — **h3 4.5.0
+  ships the wheel and omits `Py_mod_gil`, so `import timezonefinder` re-enables the GIL.** Fixed
+  upstream (uber/h3-py#493), unreleased. The generalisable half is under *Recorded decisions*.
+- **Two premises settled by the scoping:** the C extension **already** releases the GIL on every
+  call (cffi does it automatically, ≤13 ns), and a shared instance is *correct* but does not scale —
+  1.60× at 8 threads against 4.84× per-thread — so one-instance-per-thread becomes the performance
+  advice rather than ceasing to be necessary.
+- **The open question that decides the item**, and the reason it is not simply ranked: after GH-536's
+  offset table removes ~5.1 µs of the ~9.3 µs a candidate costs, what remains may sit **inside the
+  3–9 % noise floor**. If so this cannot be justified on speed, and the free-threading case is weak
+  too, since per-thread instances already scale 4.84× without it. Settling it means re-profiling
+  after GH-536 lands.
+- **Status:** blocked on an h3 release for any claim of support. Four slices are free now — the
+  `setup.py` abi3 guard, a free-threaded tox env with a strict-xfail GIL assertion, read-only arrays
+  plus a state-immutability test, and the docs contradiction — and are listed on the issue.
+- **Last touched:** 2026-08-21 — scoped against a real free-threaded interpreter; the report is the
+  issue body and this entry keeps only the ranking-relevant half.
 
 ### GH-513 — drop hole polygons entirely
 
-- **Tracks:** issue #513.
-- **What it would delete:** the whole hole subsystem — the holes directory, `hole_registry.json`,
-  `HoleArray`, `_iter_hole_ids_of`, the holes-before-boundary branch in `inside_of_polygon`, and the
-  reference encoding #509 added along with it.
-- **Blocked, and measurably so.** Dropping holes from the packaged data and re-running `timezone_at`
-  changes answers today:
-
-  | variant | hole interior points changed | random global points changed |
-  |---|---|---|
-  | drop only the 27 with no boundary twin | 160 / 6,048 (20 of the 27) | 0 / 20,000 |
-  | drop all holes | 1,703 / 6,048 (224 of 756) | 16 / 20,000 |
-
-  and the changed answers are wrong, not merely different: `Asia/Hebron → Asia/Jerusalem`,
-  `America/Argentina/Cordoba → America/Asuncion`, `Europe/Brussels → Europe/Amsterdam`.
-- **The trap worth carrying forward:** the coverage evidence is true and insufficient. Probing shows
-  all 27 unmatched holes are fully covered by other zones (0 of 1,620 sampled points fell outside
-  every other zone), but coverage only says the right zone is *among* the candidates — not that it
-  is reached first. `optimise_shortcut_ordering`'s size-ascending sort gets many enclaves right by
-  accident and these wrong. So this needs an ordering guarantee **established**, not verified,
-  including the interaction with `last_zone_change_idx`'s early break (GH-500) and the composite
-  cases covered only by a union of zones.
-- `prototypes/hole_boundary_redundancy.py` reads the upstream GeoJSON, so re-running it against a
-  new release re-verifies the premise rather than restating it.
-- **No longer blocked by GH-301, 2026-08-21, and the reason generalises.** That item was ranked
-  ahead of this one because dropping holes needs a guarantee about which zone a query reaches
-  first, and shortcut ordering looked like where such a guarantee would live. It is not. Zone
-  precedence is a property of the zones and their geometry; **expressing it per H3 cell would make
-  correctness depend on the spatial index**, which is an implementation detail free to change — its
-  resolution, its layout, the hybrid unique-zone encoding. Recorded below, since it binds anything
-  that reaches for the shortcut index to express a correctness property.
-- **What it is still blocked by** is unchanged: the ordering *proof* itself, and GH-500's enforcement
-  of whatever invariant that proof relies on, including the interaction with `last_zone_change_idx`'s
-  early break.
+- **Tracks:** issue #513, which carries the measured evidence and the coverage trap.
+- **Why it is ranked here:** it would delete the whole hole subsystem. **Blocked, and measurably
+  so** — dropping holes changes answers today and the changed answers are wrong.
+- **No longer blocked by GH-301, 2026-08-21.** That was a mis-ranking: what this needs is a
+  correctness *proof*, not a faster ordering, and GH-301 is rejected in any case.
+- **The constraint that came out of it**, now a recorded decision: the proof must be **independent
+  of the H3 shortcut index**. Zone precedence is a property of the zones and their geometry;
+  expressed per cell it would make correctness depend on an index whose resolution and layout are
+  implementation details, so a future resolution change would move answers rather than only
+  performance.
 - **Status:** blocked by GH-500.
-- **Last touched:** 2026-08-21 — the GH-301 dependency removed as mis-ranked; the H3-independence
-  constraint recorded.
+- **Last touched:** 2026-08-21 — the GH-301 dependency removed and the H3-independence constraint
+  recorded on the issue and above.
 
 ### GH-505 — distance to the nearest timezone border
 
@@ -790,32 +649,20 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-502 — first-class `zoneinfo` / UTC-offset helpers
 
-- **Tracks:** issue #502.
-- **Why here:** moves the two most common downstream steps into the library. See DOC-3 for the
-  Windows caveat any such helper inherits.
-- **Its strongest argument has been half spent by #538, and the entry should say so.** The issue
-  rests on the inverted `Etc/GMT±X` sign — `timezone_at(lng=-150, lat=0)` returns `Etc/GMT+10`,
-  whose offset is −10:00 — and on the library being the only party that knows the convention. #538
-  put that warning in `docs/2_use_cases.rst`, so a reader who gets that far is now told. What
-  remains is the readers who never open the page, which is a real but weaker argument than "nothing
-  anywhere says this".
-- **DOC-3 is the other half of the same paragraph and is still open**, so whichever of the two is
-  taken should take both: a helper inherits the Windows `tzdata` gap, and the page that warns about
-  the sign still does not warn about the database.
-- **Decided, 2026-08-21 — ship the full set:** `zoneinfo_at`, `utc_offset_at` and `localize` on
-  `AbstractTimezoneFinder`, mirrored in `global_functions.py`. Chosen over docs-only and over an
-  offset-only helper. `zoneinfo` is stdlib, so this adds no dependency; what it adds is a permanent
-  public surface, which is why it belongs with the other API work rather than trickling out.
-  **Additive**, so unlike API-1 and API-2 it does not *need* a major — but it should ride the same
-  release, so the API documentation is rewritten once.
-- **Two things it must carry**, both currently absent from the code and one of them from the docs:
-  the `Etc/GMT±X` inversion (`utc_offset_at` is the method that makes the trap unreachable, which is
-  the point of owning the conversion), and the Windows `tzdata` caveat that DOC-3 covers — a helper
-  returning a `ZoneInfo` raises `ZoneInfoNotFoundError` on a clean Windows install just as the
-  documented snippet does. **DOC-3 ships with it or before it, not after.**
+- **Tracks:** issue #502, which carries the API sketch and the sign-convention trap.
+- **Why it is ranked here:** moves the two most common downstream steps into the library, and the
+  library is the only party that knows the `Etc/GMT±X` convention is inverted.
+- **Decided, 2026-08-21 — ship the full set** (`zoneinfo_at`, `utc_offset_at`, `localize`, mirrored
+  in `global_functions.py`). Additive, so it needs no major — but it should ride the API major so
+  the documentation is rewritten once.
+- **Its strongest argument is half spent, and the entry says so rather than letting it read as
+  current:** #538 added the sign warning to `docs/2_use_cases.rst`, so the case is now the narrower
+  one of readers who never open that page. **DOC-3 is still entirely open** — `tzdata` appears
+  nowhere in `docs/`, `README.rst` or `pyproject.toml`, and any helper returning a `ZoneInfo`
+  inherits that. DOC-3 ships with this or before it, never after.
 - **Status:** open — decision taken, implementation not started.
-- **Last touched:** 2026-08-21 — decided; the sign warning is present since #538, the `tzdata`
-  caveat is absent from `docs/`, `README.rst` and `pyproject.toml` alike.
+- **Last touched:** 2026-08-21 — decided; the reasoning and the #538 correction written to the
+  issue.
 
 ### API-1 — `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses
 
@@ -929,84 +776,36 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-501 — guardrails on the automated data update pipeline
 
-- **Tracks:** issue #501.
-- **What it is:** the weekly pipeline auto-merges and auto-tags a PyPI release from an unpinned,
-  unchecksummed, undiffed 64 MB upstream drop. The release-notes half shipped in #519 — a data
-  release is now withheld whenever anything else is pending. What remains is that nothing knows
-  what the 64 MB actually changed. Its one prerequisite is met: #523 exposed the dataset version at
-  runtime (`timezonefinder_data.__version__`), so a diff report has something to name.
-- **Thresholds, calibrated against the last three upstream transitions** (2025c→2026a→2026b→2026c,
-  measured from the committed data 2026-08-21) rather than guessed:
-
-  | signal | 2026a | 2026b | 2026c | proposed gate |
-  |---|---|---|---|---|
-  | zone set | unchanged | unchanged | unchanged | see below |
-  | boundary payload | +0.29 % | +0.65 % | +1.47 % | **any decrease, or growth > +5 %, blocks** |
-  | hole payload | −0.07 % | +0.09 % | −0.31 % | report only |
-  | boundary polygon count | +4 | −3 | +2 | **change > ±2 % blocks** |
-  | changed-answer rate | not computable — see below | | | **> 0.5 % blocks**, once it exists |
-
-  Two calibrations worth keeping. **Boundary data has grown monotonically** across all four
-  releases — refinement adds vertices, it does not remove them — so the useful gate is *asymmetric*:
-  a decrease is the anomaly, not a symmetric ±band. And the observed moves are an order of magnitude
-  below the ±10 % first proposed here, which would have caught gross truncation and nothing else.
-- **Zone changes must not block, which corrects this entry's first proposal.** Upstream adding a
-  zone, or splitting one, is routine. A **rename is a removal plus an addition and cannot be told
-  apart from the data alone**, so "any zone removed or renamed blocks" would fire on a normal event
-  and train the maintainer to click through it. Report the full added/removed list every time —
-  it is the most readable line in the diff — and block only on a **net decrease in zone count**,
-  which is the shape a truncated or partial dataset takes.
-- **The diff report cannot be built by comparing two packaged datasets.** This is the finding that
-  changes the design, not just the numbers: the binary format changed three times in August 2026
-  (per-axis coordinates in #457, hole references in #509, `.bin` naming in #528), and the current
-  reader cannot open the 2026c binaries at all. A report that loads "the previous packaged data"
-  breaks on exactly the releases where review matters most. **Commit a fixed sample of points with
-  their answers instead**, regenerated as part of each data release: the diff is then one text file
-  against another, survives every format change, reviews in a pull request, and is the changelog
-  entry for a data update rather than something written from the version number.
-- **Decisions still open:** whether the gates above are the right ones, and what happens when one
-  trips — the proposal is to label `automation-failed` and open the notification issue instead of
-  merging, since that failure path already exists in `check_data_updates.yml`.
+- **Tracks:** issue #501, whose comments now carry the calibrated thresholds and the design finding
+  below.
+- **Why it is ranked here:** the weekly pipeline auto-merges and auto-tags a PyPI release from an
+  unpinned, unchecksummed, undiffed ~62 MB upstream drop. The release-notes half shipped in #519;
+  what remains is that nothing knows what the bytes actually changed.
+- **Thresholds are proposed and measured** against 2025c → 2026a → 2026b → 2026c rather than
+  guessed. Two calibrations worth keeping here because they are conclusions, not detail: the size
+  gate should be **asymmetric** (boundary data has grown monotonically across four releases, so a
+  decrease is the anomaly), and **zone changes must not block** — a rename is a removal plus an
+  addition and cannot be told apart from the data, so gating on it fires on a routine event.
+- **The design finding that changes (b):** the diff report **cannot** be built by comparing two
+  packaged datasets. The format changed three times in August 2026 and the current reader cannot
+  open the 2026c binaries, so a report that loads "the previous packaged data" breaks on exactly the
+  releases where review matters most. Commit a fixed sample of points with their answers instead —
+  text against text, survives every format change, and doubles as the data-update changelog entry.
 - **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad. That
-  lowers the urgency and not the value — the argument never rested on a past incident, it rests on
-  the pipeline auto-merging and auto-tagging with no human diff review.
-- **Status:** needs decisions — the thresholds above, and the trip behaviour. Part (a), pinning and
-  checksumming the download, needs no threshold and no decision and can be taken on its own.
-- **Last touched:** 2026-08-21 — thresholds calibrated against the last three transitions, the
-  zone-change gate corrected, and the binary-diff approach found unworkable across format changes.
+  lowers urgency and not value — the argument rests on the auto-merge, not on an incident.
+- **Status:** needs decisions — the thresholds, and the trip behaviour. Part (a), pinning and
+  checksumming the download, needs neither and can be taken alone.
+- **Last touched:** 2026-08-21 — thresholds calibrated and written to the issue.
 
 ### GH-317 — reduce the release artifact count
 
-- **Tracks:** issue #317.
-- **What it is:** the PyPI project storage quota (10 GB, already hit, old releases deleted to
-  recover space), driven by *artifact count × artifact size*. GH-449 owns size; this owns count.
-- **Largely answered by the distribution split:** the data is no longer one of the artifacts. A code
-  release now ships three platform wheels plus an sdist, and the data ships once per data release as
-  a single `py3-none-any` wheel with no sdist. Read off PyPI: **`timezonefinder` 8.3.0 is 1.02 MB
-  across 4 files** (wheels at 82.0 / 81.8 / 83.9 KiB, sdist 764 KB); `timezonefinder-data` 1.2026.3
-  is 51.94 MB in one file.
-- **The near-identical claim was stale and is corrected.** The three wheels are not "99.995 %
-  identical differing in a 2,915-byte `.so`" — that predates the split, when a wheel was ~55 MB of
-  data. Diffed entry by entry, they agree on **58 of 61** members and differ in exactly three:
-  `RECORD`, `WHEEL`, and `inside_polygon_ext.abi3.so` at 32,392 / 31,760 / 36,464 bytes. So dropping
-  two of them saves ~0.17 MB per release and costs manylinux2014 or musl users their wheel. **That
-  is not a trade worth making**, which effectively answers the item's own question.
-- **The quota is a history problem, not a release-size one.** The `timezonefinder` project holds
-  **11.37 GB across 241 files and 57 versions** — the pre-split fat releases. At ~52 MB per data
-  release the data project has order 190 releases of headroom. If the quota is to be reclaimed the
-  lever is deleting old releases, not shipping fewer wheels; worth splitting out as its own item
-  rather than leaving it inside this one.
-- **Pulls the other way:** GH-364 would *raise* the artifact count — see there.
-- **Decided, 2026-08-21 — closed as answered by the distribution split.** The question it asked,
-  *"do we really need 10 wheels?"*, was about artifact count when an artifact was ~55 MB of packaged
-  data. It is now 82 KiB, so dropping two of the three platform wheels saves 0.17 MB of a 1.02 MB
-  release and costs manylinux2014 or musl users their wheel. The quota problem it was opened for is
-  real and entirely historical, so it moves to PYPI-1 rather than staying here under a title about
-  artifact count.
-- **Status:** withdrawn — superseded by the distribution split; the storage half continues as
-  PYPI-1.
-- **Last touched:** 2026-08-21 — figures re-measured against PyPI and the published wheels, the
-  near-identical claim corrected rather than deleted, then withdrawn.
+- **Tracks:** issue #317, **closed as answered 2026-08-21**; the closing comment carries the figures.
+- **Withdrawn.** Its question — *"do we really need 10 wheels?"* — was about artifact count when an
+  artifact was ~55 MB of packaged data. A release is now **1.02 MB across 4 files**, so dropping two
+  of the three platform wheels saves ~0.17 MB and costs manylinux2014 or musl users their wheel.
+- **The storage half was the real driver and continues as PYPI-1.**
+- **Status:** withdrawn — superseded by the distribution split.
+- **Last touched:** 2026-08-21 — figures re-measured, withdrawn, issue closed.
 
 ### PYPI-1 — the PyPI project holds 11.37 GB of pre-split releases
 
@@ -1032,20 +831,14 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-332 — reduced timezone dataset as a second distribution
 
-- **Tracks:** issue #332 (and GH-334 for the mapping).
-- **The reframing:** 92 zones instead of 444. It reads as a build-time switch and is really a second
-  published data distribution the user installs instead — which turns a hard problem into a
-  packaging decision.
-- **Now unblocked:** the distribution split shipped the machinery it needs — a workspace member, a
-  `DATA_DIR` indirection and a version scheme — and it no longer depends on DATA-BINARIES.
-- **Decided, 2026-08-21 — park it until GH-334 unblocks.** Shipping with a hand-maintained mapping
-  was declined, and so was closing it outright: the distribution split removed the hard engineering
-  problem, so this is worth doing *when* the official mapping exists. Until then a hand-curated
-  table is the same liability the zone-precedence engine was rejected for. GH-334 already tracks
-  the upstream trigger (evansiroky/timezone-boundary-builder#195), so nothing else has to watch it.
-- **Status:** parked until GH-334 unblocks — decision taken, not a candidate for any pass before
-  then.
-- **Last touched:** 2026-08-21 — decided to park; migrated from the roadmap issue.
+- **Tracks:** issue #332 (and GH-334 for the mapping), which carry the reframing and the costs.
+- **Why it is ranked here:** 92 zones instead of 444, and the distribution split turned it from a
+  build-time switch into a packaging decision.
+- **Decided, 2026-08-21 — parked until GH-334 unblocks.** Shipping with a hand-maintained mapping
+  was declined: until the official table exists it is the same liability the zone-precedence engine
+  was rejected for. GH-334 tracks the upstream trigger, so nothing else has to watch it.
+- **Status:** parked until GH-334 unblocks — not a candidate for any pass before then.
+- **Last touched:** 2026-08-21 — decided to park; the costs written to the issue.
 
 ### GH-334 — official mapping for the reduced timezone set
 
@@ -1109,50 +902,32 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-500 — validate a data directory's cross-file invariants
 
-- **Tracks:** issue #500.
-- **What it is:** the fast path's core invariant is enforced only at generation time, and custom
-  data directories are public API. The first slice and the placement rule shipped in #509.
+- **Tracks:** issue #500, which carries the proposed invariant list and the design notes.
+- **Why it is ranked here:** the fast path's core invariant — shortcut candidates grouped by zone id
+  — is enforced only at generation time, and custom data directories are public API. The first slice
+  and the placement rule shipped in #509.
 - **Constrained by a recorded decision:** validation belongs to the build and the test suite, never
-  to `__init__`. Its `--validate-data` CLI mode is the right shape precisely because it is explicit
-  and opt-in.
-- **The CLI shape is decided (2026-08-21): subcommands.** See GH-428 for the decision and what it
-  costs; it applies to both entries and neither now waits on the other.
-- **Decisions still open:** which invariants `--validate-data` checks. The list in the issue is a
-  starting point, and the one that matters most is the shortcut grouping the fast path's early
-  break depends on.
-- **Status:** open — CLI shape settled, invariant list still to agree.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 6 there.
+  to `__init__`. Its opt-in CLI mode is the right shape precisely because of that — and being off
+  the init path is what lets the check afford to be exhaustive.
+- **CLI shape settled 2026-08-21 (subcommands)** — see GH-428. Neither entry waits on the other.
+- **Status:** open — CLI shape settled, the invariant list still to agree.
+- **Last touched:** 2026-08-21 — unblocked by the CLI decision.
 
 ### GH-428 — data parsing UX, and the CLI shape it shares with GH-500
 
-- **Tracks:** issue #428. User-driven, from #363.
-- **The overlap that has to be settled:** the proposed `timezonefinder update_data` CLI is the
-  natural sibling of GH-500's proposed `--validate-data`, and both should share one CLI design
-  rather than accreting subcommands separately. This is no longer hypothetical. `--stdin` landed as
-  six options on the one flat command — `--stdin`, `-d`/`--delimiter`, `--lng-col`, `--lat-col`,
-  `--header`/`--no-header` and `--in-memory` — four of which mean nothing outside `--stdin` and are
-  refused there by hand in `_parse_arguments`, because argparse has no way to express it. So
-  whichever of GH-428 / GH-500 lands next has to settle flags versus subcommands **for both**,
-  rather than adding a seventh flag and leaving the question to the one after.
-- Note also that the distribution split may obsolete part of this outright: "generate the full
-  dataset after pip installing" competes with "pip install the dataset".
-- **Decided, 2026-08-21 — subcommands, with the bare positional form kept as an alias.**
-  `timezonefinder query`, `rows` (today's `--stdin` mode), `validate-data`, `update-data`; bare
-  `timezonefinder 13.4 52.5` keeps working as `query`, so nothing breaks. Chosen over adding
-  `--validate-data` and `--update-data` as more flags, and over a second console script.
-- **What it buys, concretely:** the four options that mean nothing outside `--stdin` stop being
-  refused by hand in `_parse_arguments` and become flags argparse enforces structurally, because
-  they belong to `rows`. `-f {0,1,3,4,5}` — with 2 documented as "removed" — can become named
-  subcommand options rather than a numeric menu with a hole in it.
-- **Migration care, since this is user-facing:** `-f` and the existing flags must keep working on
-  the bare form for at least one minor, and `tests/cli_test.py` is the guard — it already covers the
-  current surface, so extend it rather than rewrite it. This is additive, so it needs no major.
-- **Still to settle within GH-428**, and worth deciding before designing `update-data`: whether that
-  subcommand is wanted at all. "Generate the full dataset after pip installing" competes directly
-  with "pip install the dataset", which now exists — so the subcommand may be answering a question
-  the distribution split already closed.
+- **Tracks:** issue #428, user-driven from #363; the decision and its migration notes are on the
+  issue.
+- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for
+  `query`: `query`, `rows`, `validate-data`, `update-data`. Chosen over more flags on the flat
+  command and over a separate console script. It settles the shape for **both** this and GH-500.
+- **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin`
+  and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
+  Under subcommands argparse enforces that structurally.
+- **Still open, and worth answering before anything is designed:** whether `update-data` is wanted
+  at all — "generate the full dataset after pip installing" competes directly with "pip install the
+  dataset", which now exists.
 - **Status:** open — CLI shape decided, the `update-data` scope question still open.
-- **Last touched:** 2026-08-21 — the shared CLI decision taken here, unblocking GH-500 too.
+- **Last touched:** 2026-08-21 — CLI shape decided here for both entries.
 
 ### GH-362 — reuse the `PolygonArray` binaries in file conversion
 
@@ -1397,28 +1172,16 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-543 — the numba group's `numpy<2.4` pin is stale and redundant
 
-- **Tracks:** issue #543, opened 2026-08-21 from a finding while scoping GH-364.
-- **Location:** `pyproject.toml`, the identical `numpy<2.4` + comment in **two** blocks —
-  `[dependency-groups] numba` and `[project.optional-dependencies] numba`.
-- **Defect:** the comment *"Numba requires NumPy 2.3.x or lower"* has been false since numba 0.64.0.
-  `numpy<2.4` matches numba **0.63.0**'s bound; 0.64.0 raised it to `<2.5` and 0.67.0 to `<2.6`.
-  The sharp form: `uv.lock` holds numba **0.65.1**, which itself declares `numpy<2.5` — so the
-  hand-written pin is stricter than the numba it is locked against, not merely than the latest one.
-  numpy sits at 2.3.5 against a current 2.5.2.
-- **Fix:** delete the pin from both blocks. numba declares its own numpy ceiling, so the resolver
-  enforces it without help, and the group exists only to install numba — there is no non-numba path
-  the pin could be protecting. What is left is a second place to be wrong. Size: ~4 lines removed.
-- **A hypothesis worth one run**, recorded because it would explain how this survived four numba
-  releases: `make outdated` runs `scripts/check_upgradeable.sh`, whose stated job is to hide
-  packages "constrained by other dependencies". A hand-written `numpy<2.4` is such a constraint, so
-  the check meant to surface staleness may be silenced by the stale pin itself. Unconfirmed — the
-  script temporarily rewrites `uv.lock`, which is why no pass has run it in a shared checkout.
-- **Two lock lags ride with it:** `cffi` 2.0.0 against 2.1.1, and `h3` 4.4.2 against 4.5.0. The cffi
-  one is a **precondition for evaluating GH-364's cheaper packaging option at all**, since 2.1.0 is
-  where `abi3t` support arrived; the h3 floor has to move again in any case once the `Py_mod_gil`
-  fix is released.
-- **Value:** low as code, moderate as unblocking — it is dependency metadata, and it gates a real
-  decision under GH-364.
+- **Tracks:** issue #543, which carries the per-release numba bounds and the two lock lags.
+- **Defect:** `numpy<2.4` plus the comment *"Numba requires NumPy 2.3.x or lower"*, duplicated
+  verbatim in `[dependency-groups] numba` and `[project.optional-dependencies] numba`. It matches
+  numba 0.63.0's bound; **`uv.lock` holds numba 0.65.1, which itself declares `numpy<2.5`**, so the
+  hand-written pin is stricter than the numba it is locked against.
+- **Fix:** delete it from both blocks — numba declares its own ceiling and the group exists only to
+  install numba, so the pin adds nothing but a second place to be wrong. ~4 lines removed.
+- **Why it is ranked above pure tidying:** the `cffi` 2.0.0 → 2.1.1 lag riding with it is a
+  **precondition for evaluating GH-364's cheaper packaging option at all**, since 2.1.0 is where
+  `abi3t` support arrived.
 - **Status:** open.
 - **Last touched:** 2026-08-21 — verified against PyPI and created.
 
