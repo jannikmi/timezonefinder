@@ -112,7 +112,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the invariant list |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — CLI shape decided |
-| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | ~40 | check the offset-table variant first |
+| GH-536 | The mapped coordinate accessor costs 4.9 µs per candidate | performance | ~40 | free — verified, no decision left |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
@@ -372,15 +372,33 @@ the denominators, and how to tell whether they still describe the tree.
   roughly halves what the candidate loop costs, so GH-364 and GH-513 are priced **after** it.
   GH-364 additionally *depends* on it — handing C a base pointer plus an offset table is far simpler
   than implementing FlatBuffers traversal in C.
-- **The decision may not exist, 2026-08-21.** The three cache shapes all assume caching *views*,
-  which is what pins the mapping. Caching `(offset, length)` **integers** instead pins nothing, so
-  the trade does not arise; verified here that `coords_of` is 5,646 ns against 568 ns for the
-  `frombuffer`+`reshape` it reduces to — 9.9×. **Unverified:** that the table derives correctly for
-  every polygon. Establishing that is the first move, and if it holds this becomes ~40 lines of pure
-  Python with no decision at all.
-- **Status:** needs a decision — but check the offset-table variant first, which would remove the
-  decision rather than answer it.
-- **Last touched:** 2026-08-21 — the offset-table correction measured and written to the issue.
+- **The decision is dissolved, verified end to end 2026-08-21.** The three cache shapes all assume
+  caching *views*, which is what pins the mapping. Caching `(offset, length)` **integers** instead
+  pins nothing, and all four claims that rests on now hold against the packaged data: a derived
+  table is **byte-identical to today's reader for every polygon** — all 1,322 boundaries and all 27
+  hole rings, same dtype and shape, both rows still C-contiguous and still a zero-copy view — and
+  patched into `FileCoordAccessor` it returns **identical answers over all 30,000 committed fixture
+  points**. The pinning claim is measured, not assumed: with only the table alive `mmap.close()`
+  succeeds, with one fetched view alive it raises `BufferError`. And the win survives the trip out
+  of the microbenchmark — ~5.3 µs per fetch, **21 %/27 %/23 % faster per query** on the mapped path
+  for the random, ambiguous and on-land fixtures. (Unique-shortcut moves ±6 %, i.e. noise: that path
+  short-circuits before any coordinate is fetched.)
+- **The correction this entry owed itself: the cheap build is not automatic, it is a property of
+  *how* the table is derived.** The obvious derivation — a Python loop over `collection.Polygons(i)`
+  — costs **~6.2 ms**, materially the same as the ~8 ms view-cache build this variant claims to
+  avoid, which would hand the construction-cost half of the decision straight back. What reaches
+  **~0.1 ms** is walking the vtables **with numpy**: the polygons vector's uoffsets in one
+  `frombuffer`, add positions, subtract the soffsets to reach the vtables, take field slot 4, land
+  on the vector headers — whole-array arithmetic, no per-polygon Python. At 0.1 ms against a ~400 ms
+  mapped construction, BIG-1's cache-lazily rule does not even need applying: eager is free. Two
+  facts make the vectorised walk safe and are worth asserting once at build time (microseconds over
+  ~1.3k `uint16`s): every polygon table carries the coords field, and **all 1,322 share a single
+  vtable**, since FlatBuffers dedupes identical ones.
+- **Status:** open — no decision left; ~40 lines of pure Python, no C, no data-format change, no
+  cache policy. The implementing pass owes the alignment and vtable-uniformity assertions, and
+  tests over both coordinate files.
+- **Last touched:** 2026-08-21 — offset-table variant verified end to end against the packaged data;
+  the derivation constraint is new and is the reason the ~0.5 ms figure needed qualifying.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
 
@@ -397,10 +415,11 @@ the denominators, and how to tell whether they still describe the tree.
   1.60× at 8 threads against 4.84× per-thread — so one-instance-per-thread becomes the performance
   advice rather than ceasing to be necessary.
 - **The open question that decides the item**, and the reason it is not simply ranked: after GH-536's
-  offset table removes ~5.1 µs of the ~9.3 µs a candidate costs, what remains may sit **inside the
+  offset table removes ~5.3 µs of the ~9.3 µs a candidate costs, what remains may sit **inside the
   3–9 % noise floor**. If so this cannot be justified on speed, and the free-threading case is weak
   too, since per-thread instances already scale 4.84× without it. Settling it means re-profiling
-  after GH-536 lands.
+  after GH-536 lands — which is now a matter of *when*, not *whether*: the offset table is verified
+  and carries no decision, so the re-profile has a date rather than a precondition.
 - **Status:** blocked on an h3 release for any claim of support. Four slices are free now — the
   `setup.py` abi3 guard, a free-threaded tox env with a strict-xfail GIL assertion, read-only arrays
   plus a state-immutability test, and the docs contradiction — and are listed on the issue.
@@ -515,8 +534,8 @@ the denominators, and how to tell whether they still describe the tree.
   do not touch — on a path that is *itself* a tracked benchmark
   (`docs/benchmark_results_initialization.rst`) and that the documented one-instance-per-thread
   pattern multiplies by the thread count. Lazily, the cost is paid once by the callers who want it
-  and by nobody else. The pinning objection that makes this trade hard in GH-536 does not apply at
-  a kilobyte.
+  and by nobody else. The pinning objection that once made this trade hard in GH-536 does not apply
+  at a kilobyte — and no longer applies there either, since that entry caches integers.
 - **What implementing it means:** one `__slots__` entry holding the mapping, populated on first
   call and released in `cleanup()` next to the boundary and hole accessors — `close_resource`
   already takes anything with a `close()`, so `__del__` and the context manager are covered by the
@@ -1355,8 +1374,11 @@ premise moves; do not reverse a decision silently.
   Rejected: reading it eagerly in `__init__`, which is otherwise attractive because the array is a
   kilobyte and eager loading opens no mapping. The rule pairs with the validation decision below —
   both are about **not making every construction pay for a question only some callers ask**, which
-  is also why data-directory validation is opt-in. Applies directly to GH-536, whose open decision
-  is the same one at a size where the pinning half is load-bearing too.
+  is also why data-directory validation is opt-in. It *stopped* applying to GH-536, and how is the
+  instructive part: that entry looked like the same trade at a size where the pinning half is
+  load-bearing too, until caching plain integers rather than views removed both halves at once. The
+  rule survives — the lesson is to check whether a cheaper thing than the object can be cached
+  before paying for a cache policy.
 - **An id-taking interface validates at the public edge, never on the internal path.** Settled
   2026-08-20 for BUG-1, where four public methods index a list or array directly and so read a
   negative id as a valid index from the end — `zone_name_from_id(-1)` answers `Etc/GMT+12` rather
