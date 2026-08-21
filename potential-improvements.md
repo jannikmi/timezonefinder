@@ -109,6 +109,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
+| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the invariant list |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — CLI shape decided |
@@ -217,29 +218,31 @@ Every timing quoted in this file comes from one run of `prototypes/query_stage_p
 `FINDINGS` block holds the full per-stage breakdown. Repeated here is only what the ranking needs:
 the denominators, and how to tell whether they still describe the tree.
 
-- **Taken at** `b0642ad`, 2026-08-19 — Apple arm64, Python 3.13, data 2026c, fixture set v2, both
-  acceleration backends, both coordinate-access modes.
-- **The denominators.** A unique-shortcut query is ~1.17 µs and contains no geometry at all; an
-  ambiguous one is ~13.3 µs on the default mapped mode and ~9.1 µs with `in_memory=True`. The two
-  backends differ by under 6 % on both. Every share below is a share of one of these, and the entry
+- **Taken at** `b331eee`, 2026-08-21 — Apple arm64, Python 3.14, data 2026c, fixture set v2, both
+  acceleration backends, both coordinate-access modes. Re-measured wholesale when the offset table
+  landed; the previous anchor was `b0642ad`, and figures from the two runs are not comparable
+  stage by stage.
+- **The denominators.** A unique-shortcut query is ~1.0 µs and contains no geometry at all; an
+  ambiguous one is ~10.7 µs on the default mapped mode and ~9.3 µs with `in_memory=True`. The two
+  backends differ by under 7 % on both. Every share below is a share of one of these, and the entry
   says which — a share of an ambiguous query is not a share of a workload.
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat b0642ad..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat b331eee..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
   ```
 
   Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an
   `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
   shortcut readers or the packaged data does not. *Classified inert since the anchor:*
-  `timezonefinder/flatbuf/schemas/__init__.py`, an `__all__` list.
+  nothing yet — the anchor is the commit that last moved the critical path.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
   1. **Counts, which are exact and machine-independent** — a line's hit count does not depend on
-     the hardware, only on the code. 1.13 candidate polygons per ambiguous query; one accessor
-     rebuild per candidate; one FFI crossing per candidate on the clang path; two numpy calls per
+     the hardware, only on the code. 1.13 candidate polygons per ambiguous query; one FFI crossing
+     and one buffer acquisition per candidate on the clang/mapped path; two numpy calls per
      ambiguous query. State what a change removes as a count first, and use time only to size it.
   2. **Shares within one query**, which travel but not uniformly: the stages are bound by different
      things — memory latency for the mapped accessor, interpreter dispatch for the Python prologue,
@@ -362,6 +365,30 @@ the denominators, and how to tell whether they still describe the tree.
   untouched, as a count-based answer should be.
 - **Status:** rejected.
 - **Last touched:** 2026-08-21 — bounded, rejected, issue closed.
+
+### PERF-4 — the mapped fetch re-acquires the mmap's buffer on every candidate
+
+- **Location:** `timezonefinder/flatbuf/io/polygons.py`, `read_polygon_array_at`.
+- **What is left after the offset table.** Addressing polygons by `(offset, length)` took the
+  mapped fetch from ~4.9 µs to ~830 ns, against ~60 ns for `in_memory=True`. The remaining 14× is
+  not I/O and not the vtable any more: `np.frombuffer(self.coord_buf, …)` re-acquires the `mmap`
+  object's buffer on every call. Slicing a **single whole-file `int32` view** instead measures
+  **415 ns against 788 ns** per fetch in isolation — roughly 370 ns per candidate, ~4 % of an
+  ambiguous query and ~3 % of a mixed workload.
+- **The trade this reintroduces, and why it was not simply done in the same pass.** That view is a
+  live export of the mapping held for the accessor's lifetime, which is exactly the pinning the
+  integer table was chosen to avoid — and it is not hypothetical: `mmap.close()` refusing while an
+  export is alive is the `BufferError` fixed in 8.3.0, and `FileCoordAccessor.cleanup` is written
+  around it. A whole-file view does not make pages resident, so the cost is to *cleanup semantics*
+  rather than to memory: the mapping would only be released when the accessor's own view is
+  dropped, which `cleanup()` already handles for the views it hands out.
+- **The ranking-relevant caveat:** ~370 ns sits above the 3–9 % noise floor as a share of an
+  ambiguous query but not far above it as a share of a workload, so this needs the 2× rule applied
+  before it is taken. Verify the saving inside `timezone_at` rather than in isolation first — the
+  microbenchmark above is a per-fetch figure and the query pays other things around it.
+- **Status:** open — measured, decision needed on whether an accessor-lifetime export is acceptable
+  now that `cleanup()` is built for exactly that case.
+- **Last touched:** 2026-08-21 — found by the re-measurement the offset table obliged.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
 
