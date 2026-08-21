@@ -225,6 +225,43 @@ def test_accessors_return_what_the_reader_returns(tmp_path, in_memory):
     del accessor
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("in_memory", [False, True])
+def test_a_lookup_mutates_no_accessor_state(tmp_path, in_memory):
+    """The offset table is built eagerly, and this is the invariant that says so.
+
+    Not a style preference. Polygon coordinates are not optional-path data - every
+    query a ``TimezoneFinder`` does not answer from a unique-zone shortcut cell reaches
+    the accessor - so a lazily built table would defer a certain cost rather than avoid
+    one, and would pay for it twice: an ``is None`` branch per fetch on the hot path,
+    and a write to ``self`` from a lookup. The second is the expensive half. A shared
+    instance is safe for concurrent reads precisely because every attribute is assigned
+    in ``__init__`` or ``cleanup()`` and nothing on the lookup path mutates state; a
+    lazy cache would be the first thing to break that, silently and only under load.
+
+    So: fetch every polygon and assert the accessor is byte-for-byte the object it was.
+    """
+    path = tmp_path / "coordinates.bin"
+    write_polygon_collection_flatbuffer(path, POLYGONS)
+
+    accessor_type = MemoryCoordAccessor if in_memory else FileCoordAccessor
+    accessor = accessor_type(path)
+
+    def state():
+        # identity, not equality: a rebuilt-but-equal array is still a write
+        return {name: id(value) for name, value in vars(accessor).items()}
+
+    before = state()
+    for idx in range(len(accessor)):
+        accessor[idx]
+    assert state() == before, (
+        "a lookup replaced accessor state - the offset table must be built in "
+        "__init__, never on first use"
+    )
+    # released through __del__ when the test returns: `del` here would leave the
+    # `state()` closure referring to an unbound name.
+
+
 @pytest.mark.integration
 def test_packaged_data_offset_table_matches_the_reader():
     """The exhaustive check, over what the repository actually ships.

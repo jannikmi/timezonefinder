@@ -302,13 +302,14 @@ def derive_coord_offset_table(
     mode that exists precisely so the data need not be held in memory. Two ``uint32``
     vectors pin nothing, and cost ~10 KiB for the packaged dataset.
 
-    **Derived with whole-array arithmetic, not a loop over ``Polygons(i)``.** Not a
-    micro-optimisation: the loop costs ~6 ms for the packaged boundaries, and a
-    per-construction cost of that size is what would make *when* to build the table a
-    decision - one paid again by every thread, since concurrent workloads are told to
-    use one instance each. Against a ~390 ms construction there is nothing to weigh and
-    the table is simply built eagerly: ~0.1 ms reading the words out of a buffer, ~4 ms
-    reading them through a file, which is what ``coordinate_file`` buys and why.
+    **Derived with whole-array arithmetic, not a loop over ``Polygons(i)``.** The loop
+    costs ~6 ms for the packaged boundaries against ~0.1 ms here, or ~4 ms through a
+    file - which is what ``coordinate_file`` buys and why. That cost decides *how* the
+    table is derived, never *whether* to defer it: callers build this eagerly because
+    polygon coordinates are certainly needed, not because it is cheap (see
+    ``FileCoordAccessor.__init__``). Keeping it cheap is what stops that decision from
+    being paid for, on a construction the one-instance-per-thread pattern multiplies by
+    the thread count.
 
     The walk mirrors what the generated accessors do, one step at a time over all
     polygons at once: read the polygons vector's relative offsets, turn them into table

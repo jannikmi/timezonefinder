@@ -101,12 +101,27 @@ class FileCoordAccessor(AbstractCoordAccessor):
             collection: PolygonCollection = get_polygon_collection(
                 self.coord_buf, self.coordinate_file_path
             )
-            # Where each polygon's coordinates live, resolved once. Read through the
-            # file rather than the mapping: the header words sit next to the polygons
-            # they describe, so walking them through the mapping would fault in a page
-            # per polygon and inflate the resident set of a finder that has answered
-            # nothing yet. The collection is not kept either - everything read after
-            # this point is addressed by offset.
+            # Where each polygon's coordinates live, resolved once and eagerly.
+            #
+            # Eagerly on purpose, and NOT because the table is cheap to build. Polygon
+            # coordinates are not optional-path data: a `TimezoneFinder` exists to test
+            # points against polygons, and every query that is not answered outright by
+            # a unique-zone shortcut cell reaches this accessor. There is no population
+            # of callers who never need the table, so deferring it would move a certain
+            # cost to the first query rather than avoid it - and would buy that with a
+            # per-fetch `is None` branch on the hot path and a write to `self` from a
+            # lookup, which is exactly what a shared instance being safe for concurrent
+            # reads currently rests on: every attribute is assigned here or in
+            # `cleanup()`, and nothing on the lookup path mutates state. The lazy rule
+            # that governs `zone_positions` (read only by `certain_timezone_at` and
+            # `get_geometry`, which the `timezone_at` majority never calls) is the
+            # opposite case, not a precedent for this one.
+            #
+            # Read through the file rather than the mapping: the header words sit next
+            # to the polygons they describe, so walking them through the mapping would
+            # fault in a page per polygon and inflate the resident set of a finder that
+            # has answered nothing yet. The collection is not kept either - everything
+            # read after this point is addressed by offset.
             self.coord_offsets, self.coord_lengths = derive_coord_offset_table(
                 collection, self.coord_file
             )

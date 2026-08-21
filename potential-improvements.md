@@ -1366,11 +1366,25 @@ premise moves; do not reverse a decision silently.
   Rejected: reading it eagerly in `__init__`, which is otherwise attractive because the array is a
   kilobyte and eager loading opens no mapping. The rule pairs with the validation decision below —
   both are about **not making every construction pay for a question only some callers ask**, which
-  is also why data-directory validation is opt-in. It *stopped* applying to GH-536, and how is the
-  instructive part: that entry looked like the same trade at a size where the pinning half is
-  load-bearing too, until caching plain integers rather than views removed both halves at once. The
-  rule survives — the lesson is to check whether a cheaper thing than the object can be cached
-  before paying for a cache policy.
+  is also why data-directory validation is opt-in.
+- **The other side of that rule, and it is not symmetric: data the object's primary method
+  certainly needs is built eagerly, and cheapness is not what decides it.** Settled 2026-08-21 with
+  GH-536's offset table. It was briefly argued the lazy way — the entry read as the same trade at a
+  larger size — and that was wrong twice over. The table is not optional-path data: a
+  `TimezoneFinder` exists to test points against polygons, so every query not answered outright by
+  a unique-zone shortcut cell reaches it, and there is no population of callers who never do.
+  Deferring it would move a certain cost to the first query instead of avoiding one. And it would
+  buy that with two things worth more than the milliseconds: an `is None` branch per fetch on the
+  hot path, and **a write to `self` from a lookup** — which is what a shared instance being safe
+  for concurrent reads currently rests on (GH-364's finding (c): every attribute assigned in
+  `__init__`/`cleanup`, nothing on the lookup path mutating state). A lazy cache would be the first
+  thing to break that, silently and only under load. Rejected, therefore: making it lazy *because*
+  it costs something, and equally, defending it as eager *because* it is cheap — the derivation
+  cost decides how the table is derived, never whether to defer it.
+  `tests/test_coord_offset_table.py::test_a_lookup_mutates_no_accessor_state` pins the invariant.
+  The separate lesson GH-536 does carry for the rule above: check whether a cheaper thing than the
+  object can be cached before paying for a cache policy at all — integers rather than views is what
+  removed its pinning half.
 - **An id-taking interface validates at the public edge, never on the internal path.** Settled
   2026-08-20 for BUG-1, where four public methods index a list or array directly and so read a
   negative id as a valid index from the end — `zone_name_from_id(-1)` answers `Etc/GMT+12` rather
