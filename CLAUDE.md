@@ -225,6 +225,16 @@ cost more than they look:
 A shipped entry is **deleted**, and its ranking row with it — the code is the evidence it is done
 and the changelog says what changed. A rejected or withdrawn one stays, with its one line of reason.
 
+**Deleting the entry is not the whole job: the id must stop appearing anywhere in the file.** Other
+entries cite it as a blocker, the dependency graph gives it a node, *Sequencing* prices work against
+it, and recorded decisions cite it as the case that settled them. Left behind, every one of those is
+a dangling handle — it resolves to nothing, so the next pass either hunts for an entry that is not
+there or reads "GH-N has shipped" as live status in a file that is a to-do list, not a history.
+`grep` the id after deleting and rewrite each hit to **describe the thing instead of naming the
+issue**: what a candidate polygon now costs, not "after GH-536". The reasoning is what was worth
+keeping; the number was only ever a handle to it. Recorded decisions are kept, so they get rewritten
+this way rather than deleted.
+
 ## Generated Files
 
 **Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and
@@ -316,6 +326,15 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   - `prototypes/README.md` → one row per script in `prototypes/`
   When you touch one side, re-read the other. Describing *why* a choice was made survives longer
   than restating *what* the file says — prefer it
+- **A change that moves a measured path regenerates the report pages, in the pull request that
+  moves it** — the same obligation `prototypes/query_stage_profile.py`'s `FINDINGS` carry under
+  *Code Guidelines*, and easy to discharge for the prototype while forgetting these, because that
+  one is named there and these were only ever documented as *how* to run. `make reports` is the
+  whole job. It applies to a footprint as much as to a timing: `benchmark_results_memory.rst` is a
+  committed measurement too, and a change to what an accessor builds at construction moves it.
+  Stale generated measurements are the worst kind of stale — nothing fails, the page still builds
+  and renders, and a figure describing a tree that no longer exists reads exactly like a current
+  one. Say in the pull request which machine took them, since they are not comparable with CI's
 - **`make reports` re-measures everything** — it has both `benchmarks` and `memory` as
   prerequisites — so it rewrites every committed figure on all four report pages. To change only
   the *rendering*, invoke the renderer directly against the stored JSONs; measurement and
