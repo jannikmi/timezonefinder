@@ -139,19 +139,26 @@ the entry sections below are grouped by the area they touch rather than sorted.
 Check these explicitly before taking an item, and name the blocking one when you skip it.
 
 ```
-DATA-BINARIES ──┬─→ GH-449 (encode)
-  (stop committing ├─→ GH-317 (artifact count)   [mostly answered already]
-   the binaries)   └─→ GH-522 (reclaim existing history)   [strictly after]
+DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision is worth)
+  (stop committing └─→ GH-522 (reclaim existing history)   [strictly after]
+   the binaries)
 
-GH-477 (flat arrays) ─→ the vectorised half of GH-499 (batch API)
+GH-477 (flat arrays) ──┐
+BUG-1 (negative ids) ──┴─→ GH-499 (batch API)   [flat arrays enable it; BUG-1 makes -1 safe]
 
-GH-536 (mapped accessor) ─→ re-prices GH-301, GH-364, GH-513   [re-measure after it, not before]
+GH-536 (mapped accessor) ─→ re-prices GH-364, GH-513   [re-measure after it, not before]
+                          └─→ also the prerequisite GH-364's native loop needs
 
-GH-301 (shortcut ordering) ─→ GH-513 (drop holes)   ←── GH-500 (ordering invariant enforced)
+GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
 
-GH-500 ←→ GH-428: one CLI design, settled by whichever lands first
+GH-500 (ordering invariant enforced) ─→ GH-513 (drop holes)   [GH-301 is NOT a blocker — rejected]
 
-independent: GH-502, GH-362, GH-524, PERF-2
+API-2 ─→ API-1   [same major; API-2 first, it decides how much surface API-1 touches]
+
+GH-500 ←→ GH-428: one CLI design — SETTLED (subcommands), so neither waits on the other
+
+independent: GH-362, GH-524, PERF-2, GH-543
+   GH-502 is independent too, but should ride the API major so the docs are rewritten once
 ```
 
 - **Any change that regenerates the packaged data needs the maintainer's explicit go-ahead** in the
@@ -175,10 +182,12 @@ independent: GH-502, GH-362, GH-524, PERF-2
   that is already publishing. Dry-running it against a locally built wheel costs a minute and is
   the only way to learn its answer while the version is still spendable.
 - **GH-536 is not independent of the geometry work — it is its denominator.** 4.9 µs of the
-  ~9.3 µs a candidate polygon costs is the mapped accessor, so landing GH-536 roughly halves
-  what candidate *ordering* can win and moves the ~3,000-vertex point below which a candidate's
-  cost is the fetch rather than the geometry. Anything ranked on the *time* in the candidate loop
-  — GH-364, GH-513 — is measured **after** GH-536 lands, not before.
+  ~9.3 µs a candidate polygon costs is the mapped accessor, so landing GH-536 roughly halves what
+  the candidate loop costs and moves the ~3,000-vertex point below which a candidate's cost is the
+  fetch rather than the geometry. Anything ranked on the *time* in that loop — GH-364, GH-513 — is
+  measured **after** GH-536 lands, not before. This is now the sharpest open question under GH-364:
+  after the offset table, what is left of the candidate loop may be inside the noise floor, in
+  which case a native loop cannot be justified on speed at all.
   **A count is the exception, and it is the cheaper instrument.** What a change removes in
   candidates *tested* does not depend on what a candidate costs, so it can be enumerated over the
   packaged index today and the answer survives GH-536, a new machine and a data update alike. That
@@ -261,9 +270,6 @@ the denominators, and how to tell whether they still describe the tree.
   which H3 cell computation (~390 ns) and coordinate validation (~250 ns) are the two that
   vectorise over an array of points — over half the query, addressable before any lookup logic is
   touched.
-- **Decisions still open:** what a batch call returns, and what happens to element 999,999 when it
-  is invalid. Also bound by the recorded decision that a coordinate-taking interface never infers
-  which column is which.
 - **Sequencing:** GH-477 is the enabler for the vectorised half — a flat array is the only shape
   in which the shortcut lookup vectorises, and there the scalar penalty that sinks it as a
   standalone change does not apply.
@@ -296,8 +302,10 @@ the denominators, and how to tell whether they still describe the tree.
   (~8.5 ms on the largest polygon), and a better-behaved alternative (int16-delta + per-delta
   escape, ~32 MB, ~0.9 ms). Steps 1 (AoS → SoA) and 2 (a data format version constant) both
   shipped; steps 3 (encode) and 4 (precision, separately) remain.
-- **Decisions still open:** pure varint vs int16-delta + escape; whether precision reduction is on
-  the table at all.
+- **The one decision left here, and it is not takeable yet:** pure varint against int16-delta +
+  per-delta escape. *Whether precision reduction is on the table at all* was the second half and is
+  no longer this entry's question — GH-542 answers it, and the answer decides which of the two
+  variants is even a candidate. Nothing to weigh until it lands.
 - **Shape:** a binary format change cannot half-land, so this is prototyped and measured before it
   is migrated in one piece.
 - **Postponed, 2026-08-21 — the trade-off cannot be decided on the evidence available.** The two
@@ -418,13 +426,18 @@ the denominators, and how to tell whether they still describe the tree.
   an ambiguous query, ~37 % of a uniformly random workload, paid by exactly the constrained-memory
   deployments the mapped mode exists for. What it removes is machine-independent: one accessor
   rebuilt in Python per candidate polygon.
-  It is removed by the same native candidate loop as GH-364, which is why the two are ranked
-  together. The largest measured lever in the file, and the reason it heads the performance cluster.
-- **Decisions still open**, which is why this is not simply free: the accessor is rebuilt per
-  candidate, so the fix caches something — and a cached view is a holder that **pins the mapping**,
-  which is a memory trade in the mode that exists to avoid one. Second, per-instance initialisation
-  cost lands on every `TimezoneFinder()` construction, which the documented one-instance-per-thread
-  pattern multiplies. Both belong to the maintainer.
+  A native candidate loop (GH-364) would also remove it, which is why the two were once ranked
+  together — but that is no longer the relation. **GH-536 comes first and GH-364 depends on it**:
+  handing C a base pointer plus an offset table is far simpler than implementing FlatBuffers
+  traversal in C, and GH-364 is in any case blocked on an upstream h3 release. The largest measured
+  lever in the file, and the reason it heads the performance cluster.
+- **Why this was not simply free**, and the framing the bullet below supersedes: the accessor is
+  rebuilt per candidate, so the fix caches something — and a cached **view** is a holder that pins
+  the mapping, which is a memory trade in the mode that exists to avoid one; while per-instance
+  build cost lands on every `TimezoneFinder()` construction, which the one-instance-per-thread
+  pattern multiplies. The second half is answered by BIG-1's recorded decision (cache lazily, never
+  at construction). The first half is what the offset-table variant removes rather than answers —
+  **so there may be no decision here at all**, and that is what to establish first.
 - **A fourth option has appeared that dissolves the decision, and it should be checked before the
   other three are weighed.** Found while scoping GH-364. The framing above assumes the cache holds
   *views*, which is what pins the mapping — but the expensive part is not the view, it is
@@ -886,12 +899,11 @@ the denominators, and how to tell whether they still describe the tree.
   regeneration still adds ~64 MB to this repository's history permanently, which is the constraint
   that makes all the data-format work expensive.
 - **Value:** measured across the distribution split, a code release went from 220.05 MB to 1.02 MB
-  for the same four files. This half is what dissolves the regeneration cost, and it unblocks
-  GH-449, GH-317 and GH-522.
+  for the same four files. This half is what dissolves the regeneration cost, and it unblocks GH-449
+  and GH-522. (It was also listed as unblocking GH-317, which is withdrawn — the artifact-count
+  question it asked was answered by the split itself.)
 - **Accepted cost, already weighed:** `git bisect` across a format change stops working from a bare
   checkout unless the matching data version resolves per commit.
-- **Decisions still open:** where the binaries come from for a development checkout and for CI once
-  they are not in the tree.
 - **Decided, 2026-08-21 — keep the workspace member, git-ignore its `data/`, fetch it in one
   bootstrap step.** Chosen over resolving `timezonefinder-data` from PyPI (which would need the
   workspace source override put back for every format change, and makes a dev checkout's data
