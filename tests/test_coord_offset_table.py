@@ -79,6 +79,76 @@ def test_table_agrees_with_the_flatbuffers_reader(written_collection):
 
 
 @pytest.mark.unit
+def test_file_read_table_matches_the_buffer_read_one(tmp_path):
+    """The two readers must not drift: same walk, different way of fetching the words."""
+    path = tmp_path / "coordinates.bin"
+    write_polygon_collection_flatbuffer(path, POLYGONS)
+
+    with open(path, "rb", buffering=0) as coordinate_file:
+        with mmap.mmap(coordinate_file.fileno(), 0, access=mmap.ACCESS_READ) as buf:
+            collection = get_polygon_collection(buf, path)
+            from_buffer = derive_coord_offset_table(collection)
+            from_file = derive_coord_offset_table(collection, coordinate_file)
+            np.testing.assert_array_equal(from_file[0], from_buffer[0])
+            np.testing.assert_array_equal(from_file[1], from_buffer[1])
+            del collection
+
+
+@pytest.mark.unit
+def test_a_given_file_is_read_instead_of_the_buffer(tmp_path):
+    """Why it matters that the file is used at all, and it does not show in the result.
+
+    The header words sit next to the polygons they describe, so reading them through a
+    memory map faults in a page per polygon - the resident set of a finder that has
+    answered nothing yet more than doubled that way, on the one mode whose reason for
+    existing is that it stays small. Both readers return the same table, so nothing
+    about the return value says which ran.
+    """
+    path = tmp_path / "coordinates.bin"
+    write_polygon_collection_flatbuffer(path, POLYGONS)
+
+    class CountingFile:
+        def __init__(self, wrapped):
+            self._wrapped = wrapped
+            self.reads = 0
+
+        def seek(self, position):
+            return self._wrapped.seek(position)
+
+        def read(self, size):
+            self.reads += 1
+            return self._wrapped.read(size)
+
+    with open(path, "rb", buffering=0) as coordinate_file:
+        counting = CountingFile(coordinate_file)
+        with mmap.mmap(coordinate_file.fileno(), 0, access=mmap.ACCESS_READ) as buf:
+            collection = get_polygon_collection(buf, path)
+            derive_coord_offset_table(collection, counting)
+            del collection
+    # three scattered words per polygon (vtable reference, coords reference, length)
+    assert counting.reads >= 3 * len(POLYGONS)
+
+
+@pytest.mark.unit
+def test_the_mapped_accessor_opens_its_file_unbuffered(tmp_path):
+    """Buffered, every seek discards a read-ahead buffer the next seek refills.
+
+    Nothing else reads through this object - the mapping serves the coordinates - so a
+    later tidy-up to a plain ``open(path, "rb")`` would look harmless and cost ~6x on
+    the table's scattered reads, silently.
+    """
+    path = tmp_path / "coordinates.bin"
+    write_polygon_collection_flatbuffer(path, POLYGONS)
+
+    accessor = FileCoordAccessor(path)
+    try:
+        # io.BufferedReader wraps a raw stream and exposes it as `.raw`; FileIO is raw
+        assert not hasattr(accessor.coord_file, "raw")
+    finally:
+        accessor.cleanup()
+
+
+@pytest.mark.unit
 def test_fetched_rows_are_contiguous(written_collection):
     """Both acceleration backends reject a strided row, so the reshape must stay a view."""
     buffer, collection = written_collection

@@ -1,8 +1,9 @@
 import flatbuffers
 import mmap
 import numpy as np
+from collections.abc import Callable
 from pathlib import Path
-from typing import Final
+from typing import BinaryIO, Final
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
 from timezonefinder.flatbuf.io.layout import incompatible_layout_error
@@ -32,6 +33,16 @@ POLYGONS_VTABLE_SLOT: Final[int] = 4
 # Widths of the FlatBuffers primitives the vtable walk steps over.
 _UOFFSET_BYTES: Final[int] = 4  # table/vector references, and a vector's length prefix
 _VOFFSET_BYTES: Final[int] = 2  # a vtable entry
+
+# The three word types the walk reads, and how wide each is.
+_SOFFSET: Final[str] = "<i4"  # signed: a table's offset back to its vtable
+_UOFFSET: Final[str] = "<u4"
+_VOFFSET: Final[str] = "<u2"
+_WORD_BYTES: Final[dict[str, int]] = {
+    _SOFFSET: _UOFFSET_BYTES,
+    _UOFFSET: _UOFFSET_BYTES,
+    _VOFFSET: _VOFFSET_BYTES,
+}
 
 # FlatBuffers file identifier (bytes 4-8), answering "is this a timezonefinder
 # polygon file at all?". Files written before this marker existed carry none.
@@ -226,8 +237,56 @@ def read_polygon_array_from_binary(
     return reshape_to_polygon_coords(coords)
 
 
+def _buffer_word_reader(buf: bytes | mmap.mmap) -> Callable:
+    """Read scattered header words out of ``buf`` itself.
+
+    Whole-buffer views plus advanced indexing, which is a gather: only the words
+    addressed are read. Correct for any buffer, and the right choice when the bytes are
+    already in memory - which for ``MemoryCoordAccessor`` and for the integrity check
+    they are.
+    """
+    views = {
+        dtype: np.frombuffer(buf, dtype=dtype, count=len(buf) // width)
+        for dtype, width in _WORD_BYTES.items()
+    }
+
+    def read(positions: np.ndarray, dtype: str) -> np.ndarray:
+        return views[dtype][positions // _WORD_BYTES[dtype]]
+
+    return read
+
+
+def _file_word_reader(coordinate_file: BinaryIO) -> Callable:
+    """Read scattered header words through the file rather than through a mapping.
+
+    Why this exists, and why it is worth ~4 ms of construction. The header words are
+    ~5 KiB in total but sit next to the polygons they describe, so they are spread over
+    every part of the file - 788 distinct pages of the packaged boundaries, across
+    60 MiB. Reading them through the mapping faults every one of those pages in, and
+    the kernel's readahead multiplies that: the resident set of a freshly constructed
+    memory-mapped finder more than doubled, on the one mode whose reason for existing
+    is that it stays small. Reading them through the file puts them in the page cache -
+    shared, reclaimable, and nobody's resident set - and copies ~5 KiB into the heap.
+
+    Requires ``coordinate_file`` to be **unbuffered** (``buffering=0``). Through a
+    buffered object each seek discards a 128 KiB read-ahead buffer that the next seek
+    refills, which measures 6x slower over the same reads.
+    """
+
+    def read(positions: np.ndarray, dtype: str) -> np.ndarray:
+        width = _WORD_BYTES[dtype]
+        chunks = []
+        for position in positions.tolist():
+            coordinate_file.seek(position)
+            chunks.append(coordinate_file.read(width))
+        return np.frombuffer(b"".join(chunks), dtype=dtype)
+
+    return read
+
+
 def derive_coord_offset_table(
     poly_collection: PolygonCollection,
+    coordinate_file: BinaryIO | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Locate every polygon's coordinate vector once, as plain integers.
 
@@ -244,11 +303,12 @@ def derive_coord_offset_table(
     vectors pin nothing, and cost ~10 KiB for the packaged dataset.
 
     **Derived with whole-array arithmetic, not a loop over ``Polygons(i)``.** Not a
-    micro-optimisation: the loop costs ~6 ms for the packaged boundaries against ~0.1 ms
-    here, and a per-construction cost of that size is what would make *when* to build
-    the table a decision - one paid again by every thread, since concurrent workloads
-    are told to use one instance each. At 0.1 ms there is nothing to weigh and the table
-    is simply built eagerly.
+    micro-optimisation: the loop costs ~6 ms for the packaged boundaries, and a
+    per-construction cost of that size is what would make *when* to build the table a
+    decision - one paid again by every thread, since concurrent workloads are told to
+    use one instance each. Against a ~390 ms construction there is nothing to weigh and
+    the table is simply built eagerly: ~0.1 ms reading the words out of a buffer, ~4 ms
+    reading them through a file, which is what ``coordinate_file`` buys and why.
 
     The walk mirrors what the generated accessors do, one step at a time over all
     polygons at once: read the polygons vector's relative offsets, turn them into table
@@ -263,17 +323,18 @@ def derive_coord_offset_table(
     produced and again over what the repository ships.
 
     :param poly_collection: A collection returned by :func:`get_polygon_collection`
+    :param coordinate_file: An **unbuffered** file open on the same data. When given,
+        the header words are read through it instead of out of the collection's buffer,
+        so building the table does not make a memory map resident - see
+        :func:`_file_word_reader`. Pass nothing when the buffer is already in memory.
     :return: ``(offsets, lengths)``, both ``uint32`` and both owning their data
     """
     root = poly_collection._tab
-    buf = root.Bytes
-
-    # Whole-buffer views, so a step can be taken for all polygons at once. Advanced
-    # indexing reads only the words addressed, which is why walking 1.3k vtables this
-    # way never touches the ~63 MB of coordinates in between.
-    as_i32 = np.frombuffer(buf, dtype="<i4", count=len(buf) // _UOFFSET_BYTES)
-    as_u32 = as_i32.view("<u4")
-    as_u16 = np.frombuffer(buf, dtype="<u2", count=len(buf) // _VOFFSET_BYTES)
+    read = (
+        _buffer_word_reader(root.Bytes)
+        if coordinate_file is None
+        else _file_word_reader(coordinate_file)
+    )
 
     slot = root.Offset(POLYGONS_VTABLE_SLOT)
     vector_start = np.int64(root.Vector(slot))
@@ -281,22 +342,20 @@ def derive_coord_offset_table(
 
     # Each element of a vector of tables is a reference relative to its own position.
     element_pos = vector_start + np.arange(count, dtype=np.int64) * _UOFFSET_BYTES
-    table_pos = element_pos + as_u32[element_pos // _UOFFSET_BYTES]
+    table_pos = element_pos + read(element_pos, _UOFFSET)
 
     # A table opens with a *signed* offset backwards to its vtable, which lists where
     # each field sits relative to the table. FlatBuffers shares one vtable between
     # identically shaped tables, so these positions repeat - harmlessly.
-    vtable_pos = table_pos - as_i32[table_pos // _UOFFSET_BYTES]
-    field_offset = as_u16[(vtable_pos + COORDS_VTABLE_SLOT) // _VOFFSET_BYTES].astype(
-        np.int64
-    )
+    vtable_pos = table_pos - read(table_pos, _SOFFSET)
+    field_offset = read(vtable_pos + COORDS_VTABLE_SLOT, _VOFFSET).astype(np.int64)
 
     # The field holds a reference to the coordinate vector, whose length prefix sits
     # immediately before its data.
     reference_pos = table_pos + field_offset
-    length_pos = reference_pos + as_u32[reference_pos // _UOFFSET_BYTES]
+    length_pos = reference_pos + read(reference_pos, _UOFFSET)
 
-    lengths = as_u32[length_pos // _UOFFSET_BYTES].astype(np.uint32)
+    lengths = read(length_pos, _UOFFSET).astype(np.uint32)
     offsets = (length_pos + _UOFFSET_BYTES).astype(np.uint32)
     return offsets, lengths
 

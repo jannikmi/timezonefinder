@@ -88,8 +88,12 @@ class FileCoordAccessor(AbstractCoordAccessor):
         self.coordinate_file_path = coordinate_file_path
         # Initialize file resources using proper resource management.
         try:
-            # Use memory-mapped file for on-demand reading
-            self.coord_file: BinaryIO = open(self.coordinate_file_path, "rb")
+            # Unbuffered: nothing reads coordinates through this object - the mapping
+            # below serves them - and the offset table's scattered header reads are 6x
+            # slower through a buffer that every seek discards.
+            self.coord_file: BinaryIO = open(
+                self.coordinate_file_path, "rb", buffering=0
+            )
             # Create memory map
             self.coord_buf: mmap.mmap = mmap.mmap(
                 self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
@@ -97,11 +101,14 @@ class FileCoordAccessor(AbstractCoordAccessor):
             collection: PolygonCollection = get_polygon_collection(
                 self.coord_buf, self.coordinate_file_path
             )
-            # Where each polygon's coordinates live, resolved once. The collection is
-            # not kept: everything read after this point is addressed by offset, so
-            # holding it would only keep a second reference to the mapping alive.
+            # Where each polygon's coordinates live, resolved once. Read through the
+            # file rather than the mapping: the header words sit next to the polygons
+            # they describe, so walking them through the mapping would fault in a page
+            # per polygon and inflate the resident set of a finder that has answered
+            # nothing yet. The collection is not kept either - everything read after
+            # this point is addressed by offset.
             self.coord_offsets, self.coord_lengths = derive_coord_offset_table(
-                collection
+                collection, self.coord_file
             )
         except Exception:
             # Clean up any partially initialized resources
