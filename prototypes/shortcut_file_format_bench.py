@@ -30,119 +30,94 @@ query comparison is about the data rather than about three different code paths:
 THE RECOMMENDED STRUCTURE, in full
 ---------------------------------
 
-Four arrays, of which two are stored and two are derived at load. Sizes are the packaged
-dataset at ``SHORTCUT_H3_RES`` = 3.
+Four arrays. Sizes are the packaged dataset at ``SHORTCUT_H3_RES`` = 3.
 
-On disk, 137.0 KiB::
+On disk, 126.3 KiB::
 
-    header       16 B   two int64: the byte width of the start column, and of the length
-    starts    81.7 KiB  uint16 x 41,846   one per *compact* slot
-    lengths   40.9 KiB  uint8  x 41,846   one per compact slot
-    payload   14.3 KiB  uint16 x  7,344   every distinct entry, back to back
+    header      24 B   three int64: ambiguous count, start width, length width
+    table    81.7 KiB  int16  x 41,846   one per *compact* slot - the answers
+    starts   20.5 KiB  uint16 x 10,511   one per *ambiguous* cell
+    lengths  10.3 KiB  uint8  x 10,511   one per ambiguous cell
+    payload  13.8 KiB  uint16 x  7,073   every distinct polygon list, back to back
 
-**Lengths are stored and ends are derived**, although the lookup wants ends, because the
-two are narrow for different reasons: an end addresses the whole payload and needs the
-offset width, while an entry holds at most a few dozen values and fits a ``uint8``. Storing
-the byte instead of the second offset saves 61 KiB - **31% of the file** - for one
-vectorised add at load. The file is sized for bytes and the runtime shape for reads, and
-the two are allowed to differ; the alternative, keeping the length in memory and adding at
-lookup time, costs numpy scalar arithmetic on every ambiguous query.
+In memory after load, 176.8 KiB::
 
-One consequence worth stating because it is easy to get wrong: the offset column must be
-sized from **ends**, not from starts. The reader reconstructs ``ends = starts + lengths``
-in the start column's dtype, and the largest end is the payload length itself, which no
-start ever reaches - so a width that fits every start can still be one the final end wraps
-around.
+    table    int16  x 62,464  122.0 KiB   expanded from the compact form
+    starts   uint16 x 10,511   20.5 KiB   read straight from the file
+    ends     uint16 x 10,511   20.5 KiB   derived: starts + lengths
+    payload  uint16 x  7,073   13.8 KiB   read straight from the file
 
-In memory after load, 380.3 KiB::
+**table** is the whole structure for most queries. One ``int16`` per slot::
 
-    starts        uint16 x 62,464  122.0 KiB   expanded from the file's compact form
-    ends          uint16 x 62,464  122.0 KiB   derived: starts + lengths
-    payload       uint16 x  7,344   14.3 KiB   read straight from the file
-    zone_by_slot  int16  x 62,464  122.0 KiB   derived, see below
+    >= 0   the zone id, and the answer - 30,651 of the 41,162 cells
+    == -1  no cell here
+    <  -1  ambiguous; entry ``-(value + 2)`` of the offset arrays below
 
-**The file is compact and the memory table is padded, deliberately.** The slot arithmetic
-is base-8 per digit while H3 digits only take 0-6, so 20,618 of the 62,464 slots can never
-be addressed by a valid cell, and a further 684 are pentagon deleted subsequences - 34%
-dead. Which slots are live depends on the *resolution* alone and never on the data, so the
-file stores the compact base-7 form (41,846 entries, 1.6% dead) and the reader expands it.
-The expansion is a slice assignment rather than a scatter, because base-8 slot =
-``base*512 + d1*64 + d2*8 + d3`` is exactly the C-order ravel of a ``(122, 8, 8, 8)``
-array, so dropping a ``(122, 7, 7, 7)`` block into its corner puts every value where it
-belongs: **0.039 ms per array, against 0.427 ms to build an index array to scatter
-through.** That is 60 KiB off the file - **31%** - for ~0.07 ms of load and nothing else.
+Nothing is derived at load: the table is what the file holds. That is why loading is
+**0.066 ms** and not the ~0.5 ms every other candidate spends building an equivalent.
 
-Removing the same padding from *memory* is a different and worse trade, and is not done.
-It means addressing the table in base-7 at lookup time, which costs **+78 ns per query**
-(76.8 ns of arithmetic becoming 155.1) to save 121 KiB. The shortcut lookup is ~8.7% of a
-unique-zone query to begin with, so that is ~7% of the whole query spent on a stage too
-small to be worth spending on - the asymmetry in
-``docs/benchmarking_methodology.rst``.
+**starts / ends** address the payload, and are indexed by *ambiguous entry*, not by slot -
+10,511 entries rather than 62,464. A unique-zone cell never reads them, so they need no
+room for one, which is where most of the footprint went.
 
-**payload** is the only array holding data. Each value is a zone id *or* a boundary polygon
-id - one namespace, because both fit ``uint16`` - and which it is follows from the entry's
-length, never from a tag. Entries are variable length and packed with no separators.
+**payload** holds polygon lists only, each distinct list once. The single zone ids that
+used to live here are in the table instead, where they are read directly.
 
-**starts / ends** are the addressing, indexed by slot rather than by cell id. Slot ``s``
-owns ``payload[starts[s]:ends[s]]``. Two slots holding identical data carry *equal* values
-here, which is the whole of the deduplication: no shared-entry table, no indirection, and
-a repeated entry costs a lookup exactly what a unique one costs.
-
-**zone_by_slot** is a derived accelerator, one ``int16`` per slot:
-
-* ``>= 0`` - the cell resolves to a single zone, and this value *is* the answer
-* ``-1``   - two or more candidate polygons; read the payload
-* ``-2``   - no cell here (a hole in the table, or data that does not cover it)
-
-It exists because 30,651 of the 41,162 cells are single-zone, and without it that
-majority path would have to read two offsets and subtract them to discover there is only
-one value in the range. One read against three.
-
-**The slot function** turns a cell id into a dense array index by arithmetic alone::
+**The slot function** turns a cell id into a table index by arithmetic alone::
 
     slot = ((cell >> 45) & 0x7F) * 512 + ((cell >> 36) & 0x1FF)
              \_____ base cell _____/         \__ digits 1,2,3 __/
                     0..121                        3 bits each
 
 At a fixed resolution everything else in the index is constant - mode, the resolution
-field, and the unused digits 4-15, together ``0x830000fffffffff`` - so those 16 bits *are*
-the cell, and the map is a bijection rather than a hash. The table is 122 x 512 = 62,464
-slots for 41,162 cells - 66% dense, the holes being digit value 7, which no cell uses.
-That padding is paid in memory and not on disk; see the note above.
+field, the unused digits 4-15, together ``0x830000fffffffff`` - so those 16 bits *are* the
+cell and the map is a bijection, not a hash.
+
+**Three sizes, two of them padded on purpose.** The digits are base-8 while H3 digits only
+take 0-6, so of 62,464 slots 20,618 can never be addressed and a further 684 are pentagon
+deleted subsequences: 34% dead. Which are live follows from the *resolution* and never from
+the data, so the file stores the compact base-7 form (41,846) and the reader expands it -
+by slice assignment, since base-8 slot is exactly the C-order ravel of a ``(122, 8, 8, 8)``
+array, so a ``(122, 7, 7, 7)`` block dropped in its corner lands correctly. 0.039 ms
+against 0.427 ms to build an index array to scatter through. The *memory* table keeps its
+padding: base-7 addressing at lookup time costs **+78 ns per query** to save 121 KiB, ~7%
+of a unique-zone query on a stage that is only ~8.7% of it.
 
 **A lookup**, in full::
 
-    slot = <the arithmetic above>              # no memory touched
-    zone = zone_by_slot[slot]
-    if zone >= 0:   return zone                # 1 read  - 74% of cells
-    if zone == -2:  return None                # 1 read
-    return payload[starts[slot]:ends[slot]]    # 3 reads + a slice
+    slot = <the arithmetic above>          # no memory touched
+    z = int(table[slot])
+    if z >= 0:  return z                   # 1 read - 74% of cells
+    if z == -1: return None                # 1 read
+    i = -(z + 2)
+    return payload[starts[i]:ends[i]]      # 3 reads + a slice
 
 Worked, on the packaged data::
 
     deep inside France   cell 0x831fb0fffffffff  base 15, digits 432 -> slot  8,112
-                         zone_by_slot[8,112] = 346 -> "Europe/Paris"          1 read, done
+                         table[8,112] = 346 -> "Europe/Paris"            1 read, done
     mid-Pacific          cell 0x83798afffffffff  base 60, digits 394 -> slot 31,114
-                         zone_by_slot[31,114] = 440 -> "Etc/GMT+9"            1 read, done
+                         table[31,114] = 440 -> "Etc/GMT+9"              1 read, done
     Berlin               cell 0x831f1dfffffffff  base 15, digits 285 -> slot  7,965
-                         zone_by_slot = -1; payload[1891:1893] = [911, 795]
+                         table < -1 -> entry -> [911, 795]
                          -> Europe/Berlin, Europe/Warsaw -> point-in-polygon loop
     Basel (on a border)  cell 0x831f83fffffffff  base 15, digits 387 -> slot  8,067
-                         zone_by_slot = -1; payload[1965:1968] = [915, 877, 795]
+                         table < -1 -> entry -> [915, 877, 795]
                          -> Europe/Berlin, Europe/Paris, Europe/Zurich -> PIP loop
 
-**How much is shared:** 41,162 occupied slots resolve to 2,846 distinct ``(start, length)``
-pairs. The largest group is 1,432 slots all addressing ``payload[281:282]``, the single
-value for ``Etc/GMT+9`` - the ocean is why deduplication pays.
+**How much is shared:** the 10,511 polygon lists reduce to 2,575 distinct ones, 23,373
+values to 7,073. Duplicates carry *equal* offsets - there is no shared-entry index, so a
+repeated list costs a lookup exactly what a unique one costs.
 
-**Three build-time guards**, all in ``scripts/data_integrity.py`` when this ships, asserted
-by the converter over what it wrote and by the test suite over what is committed, and never
-on the finder's init path:
+**Guards, all at build time** in ``scripts/data_integrity.py`` when this ships - asserted by
+the converter over what it wrote and by the test suite over what is committed, never on the
+finder's init path:
 
 1. the bit arithmetic agrees with h3's public ``get_base_cell_number`` and
    ``cell_to_child_pos`` on every cell (``verify_slot_layout_against_h3_api``);
-2. offsets fit their column and lengths fit theirs (``check_fits``);
-3. no stored entry has length 1, which is what makes the length a discriminator.
+2. offsets, lengths and the ambiguous index each fit their column (``check_fits``), the
+   offset column sized from *ends* rather than starts;
+3. no stored polygon list has length 1, which is what leaves ``-1`` free to mean "absent".
 
 
 Correctness first: every one of the 41,162 cells must resolve to exactly what the shipped
@@ -156,33 +131,35 @@ Neither the load path nor the lookup touches point-in-polygon, so unlike the com
 script this one is backend-independent.
 
 
-FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+FINDINGS (2026-08-23, `44618e8`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
 
-    payload: 54,024 values -> 7,344 distinct (105.5 -> 14.3 KiB, 7.4x)
-    column widths: offsets uint16, lengths uint8 (largest entry 59) - narrowest that
-    fits, guarded by `check_fits` rather than by headroom
+    payload: 54,024 values -> 7,073 in distinct polygon lists; the 30,651 single-zone
+    answers live in the table instead and are never stored as payload at all
+    column widths: offsets uint16, lengths uint8, table int16 - narrowest that fits,
+    guarded by `check_fits` rather than by headroom
     agreement: all 41,162 cells resolve identically under all three structures
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    395.8    4.44         109      117
-    keys-plain           508      0.659  0.46         211      419
-    keys-dedup           457      0.665  0.37         210      423
-    slot-dedup  <=       137      0.586  0.37         209      426
+    dict (shipped)     1,530    393.2    4.44         108      117
+    keys-plain           508      0.663  0.46         209      418
+    keys-dedup           457      0.661  0.37         211      419
+    slot-split  <=       126      0.066  0.17         188      437
 
     QUERY: full timezone_at(), paired and order-alternated, 61 rounds of 2,000 points
 
     stratum      shipped ns  proposed ns  on minima  median d   10-90% of d  rounds faster
-    unique            1,070        1,067      -0.3%       -56   -337 .. +62          44/61
-    ambiguous        10,027       10,081      +0.5%       +74  -415 .. +531          26/61
-    random            3,457        3,388      -2.0%       -35   -292 .. +173         32/61
-    on_land           5,950        5,898      -0.9%      -116   -383 .. +256         39/61
+    unique            1,060        1,052      -0.8%      -105   -297 .. +18          51/61
+    ambiguous         9,982       10,206      +2.2%       +15  -450 .. +436          29/61
+    random            3,456        3,371      -2.5%      -151   -344 .. +68          47/61
+    on_land           5,942        5,819      -2.1%      -223  -500 .. +133          46/61
 
 CONCLUSIONS
 
-1. **On query speed the two are indistinguishable, and that is the answer.** Every stratum
-   is within +-2% on minima, every median per-round difference sits well inside its own
-   10-90% spread, and the sign is not even consistent - the proposal wins on minima for
-   three strata and loses on one, wins the round count on two and loses it on two. The
+1. **On query speed the two are near enough indistinguishable, and that is the answer.**
+   Every stratum is within ~2% on minima. Three of the four now lean the proposal's way on
+   *both* estimators - unique -0.8% and 51 of 61 rounds, random -2.5% and 47, on_land -2.1%
+   and 46 - which is a weak signal rather than a speedup, and the ambiguous stratum leans
+   the other way (+2.2%, 29 of 61) where the extra offset indirection lands. The
    shortcut structure exists to avoid point-in-polygon tests, and **the proposal avoids
    exactly the same ones**: it changes how a cell's candidate list is stored, never which
    candidates come back. Nothing here should be sold as a speedup, and nothing here costs
@@ -205,16 +182,19 @@ CONCLUSIONS
    is the one that makes no assumption about the noise distribution. Where a difference is
    real both move together; where it is not, they disagree, which is what they do above.
 
-4. **The structure decision, then, is settled entirely on the non-query axes**, and there
-   the step that matters is dict against flat: **4.44 MiB to ~0.4, ~394 ms to ~0.66,
-   1,530 KiB to 137 - 12x memory, 600x load, 11x file.** The spread *among* the flat
-   structures is ~50 KiB and ~0.09 MiB, under 2% of the packaged data, so no flat variant
-   is a mistake and that choice should not be relitigated once made.
+4. **The structure decision is settled entirely on the non-query axes**, and there
+   `slot-split` wins by a distance: **4.44 MiB to 0.17, ~393 ms to 0.066, 1,530 KiB to 126
+   - 26x memory, 6,000x load, 12x file.**
 
-5. **`keys-dedup` is the one to build.** Smaller on both axes than `keys-plain` at identical
-   load and lookup, and no harder to read. Sharing is free at lookup because duplicates
-   carry *equal offsets* rather than a shared index - nothing is dereferenced twice, so a
-   repeated entry costs exactly what a unique one costs.
+5. **What separates it from the other flat candidates is that a unique-zone cell reads
+   nothing but the table.** 30,651 of the 41,162 cells answer from one ``int16``, so their
+   offsets and their payload entries are dead weight - and once the table holds the answer
+   rather than a sentinel, the offsets shrink from one per *slot* to one per *ambiguous
+   cell* (10,511 against 62,464) and the single zone ids leave the payload entirely. That
+   is the 0.37 MiB to 0.17. Nothing is derived at load either, which is the 0.66 ms to
+   0.066: every other candidate spends ~0.5 ms building a table this one simply reads.
+   Sharing still applies to the polygon lists that remain - 23,373 values to 7,073 - and is
+   free at lookup because duplicates carry *equal offsets* rather than a shared index.
 
 6. **Correction to the previous block: deduplication does not "pay for its own addressing
    by narrowing the offsets".** That rested on the plain payload needing `uint32`, which
@@ -744,9 +724,15 @@ def compact_slots_of(hex_ids: np.ndarray) -> np.ndarray:
     )
 
 
-def expand_compact(compact: np.ndarray) -> np.ndarray:
-    """Compact base-7 table -> the base-8 slot table the lookup indexes."""
-    out = np.zeros((NUM_BASE_CELLS, 8, 8, 8), dtype=compact.dtype)
+def expand_compact(compact: np.ndarray, fill: int = 0) -> np.ndarray:
+    """Compact base-7 table -> the base-8 slot table the lookup indexes.
+
+    ``fill`` is what the unreachable slots get. No valid cell addresses them, so it cannot
+    change an answer - but it must still be the value that *means* "nothing here", or the
+    invariant "every slot without an entry reads as absent" stops being checkable, and a
+    table whose padding reads as zone id 0 is one nobody can assert over.
+    """
+    out = np.full((NUM_BASE_CELLS, 8, 8, 8), fill, dtype=compact.dtype)
     out[:, :7, :7, :7] = compact.reshape(NUM_BASE_CELLS, 7, 7, 7)
     return out.reshape(-1)
 
@@ -804,12 +790,115 @@ def read_slot_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return starts, ends, np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
 
 
+# The split structure. For a unique-zone cell the lookup answers out of the slot table and
+# never touches an offset or the payload - which means those entries need not exist. So the
+# table stores the answer itself, the offsets shrink from one per *slot* to one per
+# *ambiguous* cell (10,511 rather than 62,464), and the payload carries polygon lists only.
+#
+#   table[slot] >= 0   the zone id, and the answer
+#   table[slot] == -1  no cell here
+#   table[slot] <  -1  ambiguous; entry -(table[slot] + 2) of the offset arrays
+#
+# The negative branch is free: zone ids reach 443 and the ambiguous count 10,511, so both
+# fit an int16 with three orders of magnitude to spare - and length 1, which a stored
+# polygon list can never have, is what leaves -1 available for "absent".
+ABSENT_SPLIT = -1
+
+
+def write_slot_split(path: Path, keys, lengths, payload) -> None:
+    ambiguous = lengths > 1
+    bounds = np.concatenate([[0], np.cumsum(lengths)])
+    amb_payload = np.concatenate(
+        [payload[bounds[i] : bounds[i + 1]] for i in np.flatnonzero(ambiguous)]
+    )
+    starts, ends, deduped = deduplicate(lengths[ambiguous], amb_payload)
+    n_amb = int(ambiguous.sum())
+
+    start_dtype = narrowest_dtype_for(int(ends.max()), what="payload offset")
+    len_dtype = narrowest_dtype_for(int((ends - starts).max()), what="entry length")
+    check_fits(
+        ends,
+        start_dtype,
+        what="a payload offset",
+        remedy="Widen the offset column to the next unsigned width.",
+    )
+    check_fits(
+        ends - starts,
+        len_dtype,
+        what="a shortcut entry's length",
+        remedy="Widen the length column to the next unsigned width.",
+    )
+    marker = -(np.arange(n_amb, dtype=np.int64) + 2)
+    check_fits(
+        -marker,
+        np.dtype(np.int16),
+        what="an ambiguous entry index",
+        remedy="Widen the slot table to int32.",
+    )
+
+    table = np.full(COMPACT_TABLE_SIZE, ABSENT_SPLIT, dtype=np.int16)
+    table[compact_slots_of(keys[~ambiguous])] = payload[bounds[:-1][~ambiguous]].astype(
+        np.int16
+    )
+    table[compact_slots_of(keys[ambiguous])] = marker.astype(np.int16)
+    _write(
+        path,
+        np.array([n_amb, start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
+        table,
+        starts.astype(start_dtype),
+        (ends - starts).astype(len_dtype),
+        deduped,
+    )
+
+
+def read_slot_split(
+    buf: bytes,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    n_amb, sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3))
+    pos = 24
+    table = expand_compact(
+        np.frombuffer(buf, dtype=np.int16, count=COMPACT_TABLE_SIZE, offset=pos),
+        fill=ABSENT_SPLIT,
+    )
+    pos += COMPACT_TABLE_SIZE * 2
+    start_dtype = np.dtype(f"uint{sw * 8}")
+    starts = np.frombuffer(buf, dtype=start_dtype, count=n_amb, offset=pos).copy()
+    pos += n_amb * sw
+    lengths = np.frombuffer(
+        buf, dtype=np.dtype(f"uint{lw * 8}"), count=n_amb, offset=pos
+    )
+    pos += n_amb * lw
+    # `ends` materialised here for the same reason as everywhere else: two arrays the
+    # lookup can index without arithmetic, from a file column narrow enough to be a byte
+    ends = starts + lengths
+    payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
+    return table, starts, ends, payload
+
+
+def lookup_split(table, starts, ends, payload, hex_id: int):
+    slot = ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE + (
+        (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK
+    )
+    zone_id = int(table[slot])
+    if zone_id >= 0:
+        return zone_id
+    if zone_id == ABSENT_SPLIT:
+        return None
+    i = -(zone_id + 2)
+    return payload[starts[i] : ends[i]]
+
+
+# `slot-dedup` - the same slot addressing without the split - is superseded by
+# `slot-split` on every axis (137 KiB against 126, 380 KiB of memory against 177, the same
+# lookup) and its writer and reader are gone with it. What it established survives in
+# `slot-split`: compact base-7 storage expanded at load, and deduplicated polygon lists.
 STRUCTURES: dict[str, tuple[Callable, Callable]] = {
     "keys-plain": (write_keys_plain, read_keys_plain),
     "keys-dedup": (write_keys_dedup, read_keys),
-    "slot-dedup": (write_slot_dedup, read_slot_dedup),
+    "slot-split": (write_slot_split, read_slot_split),
 }
-RECOMMENDED = "slot-dedup"
+RECOMMENDED = "slot-split"
+SPLIT_STRUCTURES = frozenset({"slot-split"})
 
 
 def derive_zone_table(
@@ -874,11 +963,11 @@ class FlatTimezoneFinder(TimezoneFinder):
 
     def __init__(self, structure_path: Path, **kwargs) -> None:
         super().__init__(**kwargs)
-        starts, ends, payload = read_keys(structure_path.read_bytes())
+        table, starts, ends, payload = read_slot_split(structure_path.read_bytes())
         self._starts = starts
         self._ends = ends
         self._payload = payload
-        self._zone_by_slot = derive_zone_table(starts, ends, payload)
+        self._zone_by_slot = table
 
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
         lng, lat = utils.validate_coordinates(lng, lat)
@@ -886,12 +975,13 @@ class FlatTimezoneFinder(TimezoneFinder):
         slot = (
             (hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
         ) * SLOT_STRIDE + ((hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK)
-        zone_id = self._zone_by_slot[slot]
+        zone_id = int(self._zone_by_slot[slot])
         if zone_id >= 0:
-            return self.zone_name_from_id(int(zone_id))
-        if zone_id == ABSENT:
+            return self.zone_name_from_id(zone_id)
+        if zone_id == ABSENT_SPLIT:
             return None
-        possible_boundaries = self._payload[self._starts[slot] : self._ends[slot]]
+        i = -(zone_id + 2)
+        possible_boundaries = self._payload[self._starts[i] : self._ends[i]]
 
         # --- verbatim from TimezoneFinder.timezone_at below this line ---
         nr_possible_polygons = len(possible_boundaries)
@@ -1021,6 +1111,51 @@ def check_agreement(mapping, starts, ends, payload, zone_by_slot, label: str) ->
         )
 
 
+def check_agreement_split(mapping, table, starts, ends, payload, label: str) -> None:
+    """Same gate over the split shape: the table answers, or points at an entry."""
+    for hex_id, expected in mapping.items():
+        got = lookup_split(table, starts, ends, payload, hex_id)
+        if isinstance(expected, (int, np.integer)):
+            ok = isinstance(got, int) and got == int(expected)
+        else:
+            ok = isinstance(got, np.ndarray) and np.array_equal(got, expected)
+        if not ok:
+            raise AssertionError(
+                f"{label} disagrees on cell {hex_id:#x}: {got!r} != {expected!r}"
+            )
+    absent = int((table == ABSENT_SPLIT).sum())
+    if absent != SLOT_TABLE_SIZE - len(mapping):
+        raise AssertionError(
+            f"{label}: {absent} absent slots, expected {SLOT_TABLE_SIZE - len(mapping)}"
+        )
+
+
+def lookup_ns_split(cells, table, starts, ends, payload) -> float:
+    """Inlined, so no Python call is charged to a lookup that has none."""
+    return (
+        measure(
+            lambda: [
+                (
+                    z
+                    if (z := int(table[sl])) >= 0
+                    else (
+                        None
+                        if z == ABSENT_SPLIT
+                        else payload[starts[-(z + 2)] : ends[-(z + 2)]]
+                    )
+                )
+                for c in cells
+                for sl in (
+                    ((c >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE
+                    + ((c >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK),
+                )
+            ]
+        )
+        / len(cells)
+        * 1e9
+    )
+
+
 def lookup_ns(cells, starts, ends, payload, zone_by_slot) -> float:
     """ns per lookup, with the dispatch inlined so no Python call is charged to it."""
     return (
@@ -1065,8 +1200,8 @@ def memory_probe(target: str) -> dict:
         path = OUT_DIR / f"{target}.bin"
         tracemalloc.start()
         buf = path.read_bytes()
-        starts, ends, payload = STRUCTURES[target][1](buf)
-        kept = (starts, ends, payload, derive_zone_table(starts, ends, payload))
+        out = STRUCTURES[target][1](buf)
+        kept = out if target in SPLIT_STRUCTURES else (*out, derive_zone_table(*out))
         del buf
     gc.collect()
     current, _peak = tracemalloc.get_traced_memory()
@@ -1142,10 +1277,15 @@ def main() -> None:
     for name, (write, read) in STRUCTURES.items():
         path = OUT_DIR / f"{name}.bin"
         write(path, keys, lengths, payload)
-        starts, ends, pay = read(path.read_bytes())
-        zbs = derive_zone_table(starts, ends, pay)
-        check_agreement(mapping, starts, ends, pay, zbs, name)
-        loaded[name] = (starts, ends, pay, zbs)
+        if name in SPLIT_STRUCTURES:
+            slot_table, starts, ends, pay = read(path.read_bytes())
+            check_agreement_split(mapping, slot_table, starts, ends, pay, name)
+            loaded[name] = (slot_table, starts, ends, pay)
+        else:
+            starts, ends, pay = read(path.read_bytes())
+            zbs = derive_zone_table(starts, ends, pay)
+            check_agreement(mapping, starts, ends, pay, zbs, name)
+            loaded[name] = (zbs, starts, ends, pay)
     print(
         f"agreement: every one of {len(mapping):,} cells resolves identically under all "
         f"{len(STRUCTURES)} structures"
@@ -1196,22 +1336,28 @@ def main() -> None:
         ]
     ]
     for name in STRUCTURES:
-        starts, ends, pay, zbs = loaded[name]
+        first, starts, ends, pay = loaded[name]
         path = OUT_DIR / f"{name}.bin"
         read = STRUCTURES[name][1]
+        split = name in SPLIT_STRUCTURES
 
-        def load(read=read, path=path):
-            s, e, p = read(path.read_bytes())
-            return s, e, p, derive_zone_table(s, e, p)
+        def load(read=read, path=path, split=split):
+            out = read(path.read_bytes())
+            return out if split else (*out, derive_zone_table(*out))
 
+        ns = (
+            (lambda c: lookup_ns_split(c, first, starts, ends, pay))
+            if split
+            else (lambda c: lookup_ns(c, starts, ends, pay, first))
+        )
         rows.append(
             [
                 name + ("  <=" if name == RECOMMENDED else ""),
                 f"{path.stat().st_size / 1024:,.0f}",
                 f"{measure(load, 30) * 1e3:,.3f}",
                 f"{mem[name] / 2**20:,.2f}" if mem else "-",
-                f"{lookup_ns(uniq, starts, ends, pay, zbs):,.0f}",
-                f"{lookup_ns(amb, starts, ends, pay, zbs):,.0f}",
+                f"{ns(uniq):,.0f}",
+                f"{ns(amb):,.0f}",
             ]
         )
     table(
