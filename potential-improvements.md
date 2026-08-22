@@ -376,14 +376,36 @@ the denominators, and how to tell whether they still describe the tree.
 - **The sorted-key / `np.searchsorted` layout is REJECTED** — it loses the scalar path and the
   batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will otherwise
   re-propose it. The **direct-index** variant is the one that survives.
+- **The shape that delivers it, proposed 2026-08-22: put the flat layout in the *file*, not only in
+  memory.** One payload holding every entry's values back to back — a unique zone id, or a polygon
+  id list — addressed by an offset and a length, the way the polygon binaries already address
+  coordinates. Three things check out against the packaged data rather than being assumed. **The
+  length is a free discriminator**: 0 absent, 1 a zone id, >=2 polygon ids, and a stored list can
+  never have length 1 *by construction*, because `compute_unique_shortcut_mapping` collapses any
+  cell whose polygons share a zone and a one-polygon cell trivially does — so the union tag
+  disappears entirely. Zone ids and polygon ids both fit `uint16` today, so **one payload array
+  serves both**, which may also retire the uint8/uint16 schema split. And the payload is a tenth of
+  the current file, so the **packaged binary shrinks several-fold** as well.
+- **What that shape is worth is only what PERF-5 leaves**, and the difference is the whole point of
+  sequencing them. PERF-5 takes the ~400 ms construction to ~21 ms with no format change. This
+  takes the remaining ~21 ms to roughly nothing — the load becomes two `frombuffer` calls and a
+  cumsum — **and** the ~4 MiB, **and** the file size, in one change. What it costs is exactly what
+  PERF-5 avoids: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
+  two-distribution release. So PERF-5 first regardless; this is then a memory-and-size item with a
+  ~21 ms tail, never a 400 ms one.
+- **"Load the shortcuts into memory whatever `in_memory` says" is already the case** and needs no
+  work — `AbstractTimezoneFinder.__init__` reads the index unconditionally, and `in_memory` selects
+  the *polygon coordinate* access mode alone. Recorded so it is not proposed a third time.
 - **The premise this entry was ranked on is disproved.** It stood here as the enabler for GH-499
   and is not one; see that entry for what replaced the dependency. Rank it on the memory alone.
-- **What is left is a decision, not work:** which payload the direct index addresses — CSR arrays
-  or a Python list of values. Roughly 2 MiB against a few percent of `TimezoneFinderL`, priced on
-  the issue, and not a choice another measurement makes. The maintainer's.
+- **Two decisions are left, and neither is work.** Which payload the direct index addresses — CSR
+  arrays or a Python list of values, roughly 2 MiB against a few percent of `TimezoneFinderL`,
+  priced on the issue. And whether the file-format shape above is taken at all, which is a
+  judgement about spending an ordered two-distribution release, not about the numbers. Both the
+  maintainer's.
 - **Status:** open — implementable once the payload question is answered.
-- **Last touched:** 2026-08-22 — the measurement detail cut to the issue now that it is written
-  there; measured and re-reasoned 2026-08-21.
+- **Last touched:** 2026-08-22 — the measurement detail cut to the issue; the file-format delivery
+  shape recorded and its discriminator verified; measured and re-reasoned 2026-08-21.
 
 ### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
 
