@@ -382,8 +382,8 @@ the denominators, and how to tell whether they still describe the tree.
   and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
   otherwise re-propose it.
 - **Prototyped on the file side 2026-08-22** — `prototypes/shortcut_file_format_bench.py`. **The
-  step that matters is dict → flat: 4.44 → 0.17 MiB, ~393 → 0.066 ms, 1,530 → 126 KiB — 26x
-  memory, 6,000x load, 12x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
+  step that matters is dict → flat: 4.44 → 0.15 MiB, ~396 → 0.065 ms, 1,530 → 106 KiB — 30x
+  memory, 6,000x load, 14x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
   under 2 % of the packaged data, so no flat variant is a mistake and that choice should not be
   relitigated once made. The one to build is a flat file storing each *distinct* entry once, keyed
   by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
@@ -420,6 +420,14 @@ the denominators, and how to tell whether they still describe the tree.
   additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
   Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
   two-distribution release.
+- **`last_zone_change_idx` is precomputed into the structure, decided 2026-08-23** — reversing a
+  refusal recorded twice before (issue #256, draft PR #348). It was refused on two grounds: it wins
+  ~1 % of a workload, and it costs a layout version bump and an ordered two-distribution release.
+  **This change spends that bump anyway**, so only the ~1 % remained — and in the split structure
+  that ~1 % is what pays for the extra indirection the split introduces, which is why the ambiguous
+  stratum comes out level rather than behind. It costs **2.5 KiB**: one `uint8` per *distinct*
+  entry, since it depends only on the polygon list and deduplicates with everything else. It ships
+  with this item or not at all; alone it is still not worth a release.
 - **Decided 2026-08-22: address entries by h3's bit layout, guarded.** 126 KiB against 457, a 10x
   faster load and less than half the memory, at an unchanged query. The objection was
   that the *format* would then encode an index encoding h3-py does not promise as API, and it does
@@ -438,8 +446,10 @@ the denominators, and how to tell whether they still describe the tree.
 - **A unique-zone cell reads nothing but the slot table, and the structure is built around that.**
   30,651 of the 41,162 cells answer from one `int16`, so their offsets and payload entries are dead
   weight. Once the table holds the *answer* rather than a sentinel, the offsets shrink from one per
-  slot to one per **ambiguous** cell (10,511 against 62,464) and the single zone ids leave the
-  payload altogether — memory 0.37 → **0.17 MiB**. And nothing is derived at load any more, which
+  slot to one per **distinct entry** — 2,575, against 10,511 ambiguous cells and 62,464 slots,
+  because duplicates already collapse to one entry and holding the offsets per cell would re-spend
+  the repetition the deduplication found — and the single zone ids leave the payload altogether.
+  Memory 0.37 → **0.15 MiB**. And nothing is derived at load any more, which
   is load 0.66 → **0.066 ms**: every other candidate spends ~0.5 ms building a table this one
   reads. The cost is one extra indirection on the ambiguous path, which is where the
   point-in-polygon loop already dominates.
@@ -1758,27 +1768,18 @@ premise moves; do not reverse a decision silently.
   delivery is deferred to the next bytecode boundary, so a numpy call's time lands on the
   *following* line. Read a sampler's line attribution as ±1 line. Applies to the next profiling
   pass of any hot path here.
-- **Precomputing `last_zone_change_idx` into the shortcut binaries — measured, and refused.**
-  Proposed twice: issue #256, closed in 2025 on the argument that throughput is dominated by the
-  point-in-polygon work, and draft PR #348, which implemented it and is now closed with this
-  reasoning. The half of that draft worth having shipped by another route — the hybrid shortcut
-  binary stores a unique cell's zone id inline, so the common case never reaches a polygon list. #497 sizes what it
-  removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
-  query, and nothing at all on a unique-shortcut one — 1–2 % there, ~1 % of a random workload,
-  below the 3–9 % noise of the machine that would have to demonstrate it. The 2025 verdict was
-  right and now has a number under it; the open draft is superseded by this entry rather than
-  pending.
-  **Half of the reason has since expired, and the surviving half is the one that mattered — noted
-  2026-08-23 so the next pass does not mistake it for newly viable.** This also cost a
-  shortcut-layout version bump, therefore a `DATA_FORMAT_VERSION` bump and an ordered
-  two-distribution release. GH-477 now proposes exactly that bump for other reasons, so *if it
-  lands, this cost is sunk* and precomputing the index becomes a spare `uint8` column, ~10 KiB, on
-  a file already being rewritten. It is still refused, on the half that never depended on the
-  price: ~1 % of a random workload is below what any benchmark here resolves, and by the
-  stage-share rule under *The measured baseline* a stage that small is a constraint rather than an
-  opportunity. Re-propose it only with a measurement that resolves 1 %, which BENCH-1 says the
-  current tooling cannot. The Python-side half of the same block stays open as PERF-2, which needs no format
-  change.
+- **Precomputing `last_zone_change_idx` into the shortcut binaries — refused twice, and reversed
+  2026-08-23.** Proposed as issue #256, closed in 2025 because throughput is dominated by
+  point-in-polygon work, and as draft PR #348. The refusal rested on two legs: #497 sizes the win
+  at 149 ns on numba and 283 ns on clang of an ambiguous query and nothing on a unique one — ~1 %
+  of a random workload, below the 3–9 % noise of the machine that would have to demonstrate it —
+  and the cost was a shortcut-layout version bump, therefore `DATA_FORMAT_VERSION`, therefore an
+  ordered two-distribution release. **GH-477 now spends that bump for its own reasons, so the
+  second leg is gone**, and the maintainer has taken it: it ships with GH-477's structure as a
+  `uint8` per distinct entry, 2.5 KiB, where the ~1 % is what offsets the indirection that
+  structure's split introduces. Kept here rather than deleted because the *standalone* verdict is
+  unchanged — on its own it is still ~1 % for a release, and the 2025 reasoning was right. What
+  moved is that the price is now sunk, not that the win grew.
 - **Shrink the runtime dependency surface (numpy / h3 / cffi / flatbuffers) — considered and
   parked.** Each does one small thing, so the idea recurs. Reimplementing H3 indexing is a
   well-known source of subtle bugs and `h3` sits on the common path of every query; an open item

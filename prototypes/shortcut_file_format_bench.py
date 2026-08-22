@@ -32,33 +32,43 @@ THE RECOMMENDED STRUCTURE, in full
 
 Four arrays. Sizes are the packaged dataset at ``SHORTCUT_H3_RES`` = 3.
 
-On disk, 126.3 KiB::
+On disk, 105.6 KiB::
 
-    header      24 B   three int64: ambiguous count, start width, length width
-    table    81.7 KiB  int16  x 41,846   one per *compact* slot - the answers
-    starts   20.5 KiB  uint16 x 10,511   one per *ambiguous* cell
-    lengths  10.3 KiB  uint8  x 10,511   one per ambiguous cell
-    payload  13.8 KiB  uint16 x  7,073   every distinct polygon list, back to back
+    header         24 B  three int64: distinct entry count, start width, length width
+    table      81.7 KiB  int16  x 41,846  one per *compact slot* - the answers
+    starts      5.0 KiB  uint16 x  2,575  one per *distinct* polygon list
+    lengths     2.5 KiB  uint8  x  2,575  one per distinct list
+    last_change 2.5 KiB  uint8  x  2,575  where the candidate loop may stop
+    payload    13.8 KiB  uint16 x  7,073  every distinct polygon list, back to back
 
-In memory after load, 176.8 KiB::
+In memory after load, 148.4 KiB::
 
-    table    int16  x 62,464  122.0 KiB   expanded from the compact form
-    starts   uint16 x 10,511   20.5 KiB   read straight from the file
-    ends     uint16 x 10,511   20.5 KiB   derived: starts + lengths
-    payload  uint16 x  7,073   13.8 KiB   read straight from the file
+    table       int16  x 62,464  122.0 KiB  expanded from the compact form
+    starts      uint16 x  2,575    5.0 KiB  read straight from the file
+    ends        uint16 x  2,575    5.0 KiB  derived: starts + lengths
+    last_change uint8  x  2,575    2.5 KiB  read straight from the file
+    payload     uint16 x  7,073   13.8 KiB  read straight from the file
 
 **table** is the whole structure for most queries. One ``int16`` per slot::
 
     >= 0   the zone id, and the answer - 30,651 of the 41,162 cells
     == -1  no cell here
-    <  -1  ambiguous; entry ``-(value + 2)`` of the offset arrays below
+    <  -1  ambiguous; distinct entry ``-(value + 2)``
 
 Nothing is derived at load: the table is what the file holds. That is why loading is
-**0.066 ms** and not the ~0.5 ms every other candidate spends building an equivalent.
+**0.065 ms** and not the ~0.5 ms every other candidate spends building an equivalent.
 
-**starts / ends** address the payload, and are indexed by *ambiguous entry*, not by slot -
-10,511 entries rather than 62,464. A unique-zone cell never reads them, so they need no
-room for one, which is where most of the footprint went.
+**starts / ends / lengths / last_change** are indexed by *distinct entry* - 2,575 - and not
+by cell (10,511) nor by slot (62,464). Since duplicates already collapse to one entry,
+holding these per cell would re-spend exactly the repetition the deduplication found; and a
+unique-zone cell never reads them at all, so they need no room for one either.
+
+**last_change** is ``utils.get_last_change_idx`` computed once at build time. It depends
+only on the entry's polygon list, so it deduplicates with everything else and costs one
+byte per distinct entry - 2.5 KiB - to take a numpy call off every ambiguous query.
+Precomputing it was refused twice before on the grounds that it wins ~1 % of a workload and
+costs a layout version bump; this structure spends that bump anyway, so only the ~1 %
+remained, and here it is what pays for the extra indirection the split introduces.
 
 **payload** holds polygon lists only, each distinct list once. The single zone ids that
 used to live here are in the table instead, where they are read directly.
@@ -89,8 +99,8 @@ of a unique-zone query on a stage that is only ~8.7% of it.
     z = int(table[slot])
     if z >= 0:  return z                   # 1 read - 74% of cells
     if z == -1: return None                # 1 read
-    i = -(z + 2)
-    return payload[starts[i]:ends[i]]      # 3 reads + a slice
+    i = -(z + 2)                           # ambiguous: the candidate list, plus
+    return payload[starts[i]:ends[i]]      # last_change[i] for where to stop
 
 Worked, on the packaged data::
 
@@ -131,35 +141,36 @@ Neither the load path nor the lookup touches point-in-polygon, so unlike the com
 script this one is backend-independent.
 
 
-FINDINGS (2026-08-23, `44618e8`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+FINDINGS (2026-08-23, `ae1af20`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
 
-    payload: 54,024 values -> 7,073 in distinct polygon lists; the 30,651 single-zone
-    answers live in the table instead and are never stored as payload at all
-    column widths: offsets uint16, lengths uint8, table int16 - narrowest that fits,
-    guarded by `check_fits` rather than by headroom
-    agreement: all 41,162 cells resolve identically under all three structures
+    41,162 cells: 30,651 answered by the table alone, 10,511 with candidate lists that
+    reduce to 2,575 distinct ones (23,373 values to 7,073)
+    agreement: all 41,162 cells resolve identically under all three structures, and the
+    precomputed last_zone_change_idx equals what the query would compute for every one
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    393.2    4.44         108      117
-    keys-plain           508      0.663  0.46         209      418
-    keys-dedup           457      0.661  0.37         211      419
-    slot-split  <=       126      0.066  0.17         188      437
+    dict (shipped)     1,530    395.6    4.44         109      117
+    keys-plain           508      0.658  0.46         210      419
+    keys-dedup           457      0.665  0.37         218      428
+    slot-split  <=       106      0.065  0.15         190      436
 
     QUERY: full timezone_at(), paired and order-alternated, 61 rounds of 2,000 points
 
     stratum      shipped ns  proposed ns  on minima  median d   10-90% of d  rounds faster
-    unique            1,060        1,052      -0.8%      -105   -297 .. +18          51/61
-    ambiguous         9,982       10,206      +2.2%       +15  -450 .. +436          29/61
-    random            3,456        3,371      -2.5%      -151   -344 .. +68          47/61
-    on_land           5,942        5,819      -2.1%      -223  -500 .. +133          46/61
+    unique            1,058        1,039      -1.8%      -136    -293 .. -6          56/61
+    ambiguous         9,941        9,985      +0.4%        +2  -463 .. +258          30/61
+    random            3,437        3,298      -4.1%      -119   -288 .. +34          50/61
+    on_land           5,891        5,814      -1.3%      -106   -398 .. +162         41/61
 
 CONCLUSIONS
 
-1. **On query speed the two are near enough indistinguishable, and that is the answer.**
-   Every stratum is within ~2% on minima. Three of the four now lean the proposal's way on
-   *both* estimators - unique -0.8% and 51 of 61 rounds, random -2.5% and 47, on_land -2.1%
-   and 46 - which is a weak signal rather than a speedup, and the ambiguous stratum leans
-   the other way (+2.2%, 29 of 61) where the extra offset indirection lands. The
+1. **On query speed the proposal is now slightly ahead, and the unique stratum is the one
+   case where that survives scrutiny.** Its whole 10-90% band is below zero (-293 to -6 ns)
+   with 56 of 61 rounds faster and -1.8% on minima: both estimators agree, which is the bar
+   this file sets for believing a difference. Random follows at -4.1% / 50 of 61. The
+   ambiguous stratum is a wash (+0.4%, 30 of 61) - the extra indirection it pays for the
+   split is met by the `last_zone_change_idx` it no longer computes. None of this is why to
+   do the change, and it is small enough to stay off any headline. The
    shortcut structure exists to avoid point-in-polygon tests, and **the proposal avoids
    exactly the same ones**: it changes how a cell's candidate list is stored, never which
    candidates come back. Nothing here should be sold as a speedup, and nothing here costs
@@ -529,16 +540,18 @@ def build_payload(
 
 def deduplicate(
     lengths: np.ndarray, payload: np.ndarray
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Collapse identical entries. Returns per-entry (starts, ends, deduped payload).
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Collapse identical entries. Returns (entry index per cell, starts, lengths, payload).
 
-    Duplicates come out holding *equal* offsets into a shared payload. There is no
-    indirection and no entry-number table, so a lookup does exactly what it does without
-    deduplication - see REFUSED OPTIONS on the indirect variant that does add one.
+    The starts and lengths are **per distinct entry**, not per cell: 2,575 rather than
+    10,511. Returning them per cell - duplicates repeated - was what the first version did,
+    and it wastes the very repetition the deduplication just found. The table points at the
+    distinct entry, so nothing needs a per-cell copy.
     """
-    seen: dict[bytes, tuple[int, int]] = {}
-    starts = np.empty(len(lengths), dtype=np.int64)
-    ends = np.empty(len(lengths), dtype=np.int64)
+    seen: dict[bytes, int] = {}
+    index = np.empty(len(lengths), dtype=np.int64)
+    starts: list[int] = []
+    lens: list[int] = []
     chunks: list[np.ndarray] = []
     cursor = 0
     pos = 0
@@ -546,15 +559,22 @@ def deduplicate(
         chunk = payload[pos : pos + length]
         pos += length
         key = chunk.tobytes()
-        span = seen.get(key)
-        if span is None:
-            span = (cursor, cursor + length)
-            seen[key] = span
+        found = seen.get(key)
+        if found is None:
+            found = len(starts)
+            seen[key] = found
+            starts.append(cursor)
+            lens.append(int(length))
             chunks.append(chunk)
-            cursor += length
-        starts[i], ends[i] = span
+            cursor += int(length)
+        index[i] = found
     deduped = np.concatenate(chunks) if chunks else np.empty(0, dtype=PAYLOAD_DTYPE)
-    return starts, ends, deduped
+    return (
+        index,
+        np.array(starts, dtype=np.int64),
+        np.array(lens, dtype=np.int64),
+        deduped,
+    )
 
 
 def scatter_to_slots(
@@ -629,8 +649,8 @@ def read_keys_plain(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def write_keys_dedup(path: Path, keys, lengths, payload) -> None:
-    starts, ends, deduped = deduplicate(lengths, payload)
-    _write_entries(path, keys, starts, ends - starts, deduped)
+    index, e_starts, e_lengths, deduped = deduplicate(lengths, payload)
+    _write_entries(path, keys, e_starts[index], e_lengths[index], deduped)
 
 
 def _write_entries(path: Path, keys, starts, lengths, payload) -> None:
@@ -805,17 +825,18 @@ def read_slot_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 ABSENT_SPLIT = -1
 
 
-def write_slot_split(path: Path, keys, lengths, payload) -> None:
+def write_slot_split(path: Path, keys, lengths, payload, zone_ids_of=None) -> None:
     ambiguous = lengths > 1
     bounds = np.concatenate([[0], np.cumsum(lengths)])
     amb_payload = np.concatenate(
         [payload[bounds[i] : bounds[i + 1]] for i in np.flatnonzero(ambiguous)]
     )
-    starts, ends, deduped = deduplicate(lengths[ambiguous], amb_payload)
-    n_amb = int(ambiguous.sum())
+    index, starts, entry_lengths, deduped = deduplicate(lengths[ambiguous], amb_payload)
+    n_entries = len(starts)
+    ends = starts + entry_lengths
 
     start_dtype = narrowest_dtype_for(int(ends.max()), what="payload offset")
-    len_dtype = narrowest_dtype_for(int((ends - starts).max()), what="entry length")
+    len_dtype = narrowest_dtype_for(int(entry_lengths.max()), what="entry length")
     check_fits(
         ends,
         start_dtype,
@@ -823,23 +844,38 @@ def write_slot_split(path: Path, keys, lengths, payload) -> None:
         remedy="Widen the offset column to the next unsigned width.",
     )
     check_fits(
-        ends - starts,
+        entry_lengths,
         len_dtype,
         what="a shortcut entry's length",
         remedy="Widen the length column to the next unsigned width.",
     )
-    marker = -(np.arange(n_amb, dtype=np.int64) + 2)
+    marker = -(index + 2)
     check_fits(
         -marker,
         np.dtype(np.int16),
-        what="an ambiguous entry index",
+        what="a distinct entry index",
         remedy="Widen the slot table to int32.",
     )
 
-    # The table's two populations share one int16 and are checked separately: zone ids
-    # occupy the non-negative half and ambiguous markers the negative one, so neither
-    # bounds the other and a cast that silently wrapped would hand back a real-looking
-    # zone id. This is the check the marker check above would not have caught.
+    # Where the candidate loop can stop, precomputed. A property of the entry's polygon
+    # list and therefore of the *distinct* entry, so it deduplicates with everything else
+    # and costs one byte per distinct entry rather than per cell. See
+    # `utils.get_last_change_idx`, which this saves the query from calling.
+    last_change = np.array(
+        [
+            _last_change_idx(zone_ids_of(deduped[s : s + n]))
+            for s, n in zip(starts, entry_lengths)
+        ],
+        dtype=np.int64,
+    )
+    check_fits(
+        last_change,
+        len_dtype,
+        what="a last-zone-change index",
+        remedy="Widen the length column to the next unsigned width.",
+    )
+
+    table = np.full(COMPACT_TABLE_SIZE, ABSENT_SPLIT, dtype=np.int16)
     unique_zone_ids = payload[bounds[:-1][~ambiguous]]
     check_fits(
         unique_zone_ids,
@@ -847,24 +883,30 @@ def write_slot_split(path: Path, keys, lengths, payload) -> None:
         what="a unique cell's zone id",
         remedy="Widen the slot table to int32.",
     )
-
-    table = np.full(COMPACT_TABLE_SIZE, ABSENT_SPLIT, dtype=np.int16)
     table[compact_slots_of(keys[~ambiguous])] = unique_zone_ids.astype(np.int16)
     table[compact_slots_of(keys[ambiguous])] = marker.astype(np.int16)
     _write(
         path,
-        np.array([n_amb, start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
+        np.array([n_entries, start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
         table,
         starts.astype(start_dtype),
-        (ends - starts).astype(len_dtype),
+        entry_lengths.astype(len_dtype),
+        last_change.astype(len_dtype),
         deduped,
     )
 
 
-def read_slot_split(
-    buf: bytes,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    n_amb, sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3))
+def _last_change_idx(zone_ids: np.ndarray) -> int:
+    """What ``utils.get_last_change_idx`` computes, at build time."""
+    last = zone_ids[-1]
+    for i in range(len(zone_ids) - 1, -1, -1):
+        if zone_ids[i] != last:
+            return i + 1
+    return 0
+
+
+def read_slot_split(buf: bytes):
+    n, sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3))
     pos = 24
     table = expand_compact(
         np.frombuffer(buf, dtype=np.int16, count=COMPACT_TABLE_SIZE, offset=pos),
@@ -872,17 +914,16 @@ def read_slot_split(
     )
     pos += COMPACT_TABLE_SIZE * 2
     start_dtype = np.dtype(f"uint{sw * 8}")
-    starts = np.frombuffer(buf, dtype=start_dtype, count=n_amb, offset=pos).copy()
-    pos += n_amb * sw
-    lengths = np.frombuffer(
-        buf, dtype=np.dtype(f"uint{lw * 8}"), count=n_amb, offset=pos
-    )
-    pos += n_amb * lw
-    # `ends` materialised here for the same reason as everywhere else: two arrays the
-    # lookup can index without arithmetic, from a file column narrow enough to be a byte
+    len_dtype = np.dtype(f"uint{lw * 8}")
+    starts = np.frombuffer(buf, dtype=start_dtype, count=n, offset=pos).copy()
+    pos += n * sw
+    lengths = np.frombuffer(buf, dtype=len_dtype, count=n, offset=pos)
+    pos += n * lw
+    last_change = np.frombuffer(buf, dtype=len_dtype, count=n, offset=pos).copy()
+    pos += n * lw
     ends = starts + lengths
     payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
-    return table, starts, ends, payload
+    return table, starts, ends, last_change, payload
 
 
 def lookup_split(table, starts, ends, payload, hex_id: int):
@@ -969,13 +1010,16 @@ class FlatTimezoneFinder(TimezoneFinder):
     against the original on every fixture point before timing.
     """
 
-    __slots__ = ("_ends", "_payload", "_starts", "_zone_by_slot")
+    __slots__ = ("_ends", "_last_change", "_payload", "_starts", "_zone_by_slot")
 
     def __init__(self, structure_path: Path, **kwargs) -> None:
         super().__init__(**kwargs)
-        table, starts, ends, payload = read_slot_split(structure_path.read_bytes())
+        table, starts, ends, last_change, payload = read_slot_split(
+            structure_path.read_bytes()
+        )
         self._starts = starts
         self._ends = ends
+        self._last_change = last_change
         self._payload = payload
         self._zone_by_slot = table
 
@@ -993,12 +1037,13 @@ class FlatTimezoneFinder(TimezoneFinder):
         i = -(zone_id + 2)
         possible_boundaries = self._payload[self._starts[i] : self._ends[i]]
 
-        # --- verbatim from TimezoneFinder.timezone_at below this line ---
+        # --- verbatim from TimezoneFinder.timezone_at below, except that
+        # `last_zone_change_idx` is read rather than computed ---
         nr_possible_polygons = len(possible_boundaries)
         if nr_possible_polygons == 0:
             return None
         zone_ids = self.zone_ids_of(possible_boundaries)
-        last_zone_change_idx = utils.get_last_change_idx(zone_ids)
+        last_zone_change_idx = self._last_change[i]
         x = utils.coord2int(lng)
         y = utils.coord2int(lat)
         for i, boundary_id in enumerate(possible_boundaries):
@@ -1119,6 +1164,31 @@ def check_agreement(mapping, starts, ends, payload, zone_by_slot, label: str) ->
         raise AssertionError(
             f"{label}: {absent} absent slots, expected {SLOT_TABLE_SIZE - len(mapping)}"
         )
+
+
+def check_last_change(
+    mapping, table, starts, ends, last_change, payload, finder
+) -> None:
+    """The precomputed stop index must equal what the query would have computed."""
+    for hex_id, expected in mapping.items():
+        if isinstance(expected, (int, np.integer)):
+            continue
+        z = int(table[compact_to_slot(hex_id)])
+        i = -(z + 2)
+        want = utils.get_last_change_idx(
+            finder.zone_ids_of(payload[starts[i] : ends[i]])
+        )
+        if int(last_change[i]) != int(want):
+            raise AssertionError(
+                f"precomputed last_zone_change_idx for cell {hex_id:#x} is "
+                f"{int(last_change[i])}, the query computes {int(want)}"
+            )
+
+
+def compact_to_slot(hex_id: int) -> int:
+    return ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE + (
+        (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK
+    )
 
 
 def check_agreement_split(mapping, table, starts, ends, payload, label: str) -> None:
@@ -1267,7 +1337,7 @@ def main() -> None:
     shortcut_path = get_hybrid_shortcut_file_path(tf.zone_ids.dtype, tf.data_location)
     mapping = read_hybrid_shortcuts_binary(shortcut_path)
     keys, lengths, payload = build_payload(mapping)
-    _s, _e, deduped = deduplicate(lengths, payload)
+    _idx, _s, _l, deduped = deduplicate(lengths, payload)
     print(
         f"payload: {len(payload):,} values -> {len(deduped):,} distinct "
         f"({payload.nbytes / 1024:,.1f} -> {deduped.nbytes / 1024:,.1f} KiB, "
@@ -1286,10 +1356,14 @@ def main() -> None:
     loaded = {}
     for name, (write, read) in STRUCTURES.items():
         path = OUT_DIR / f"{name}.bin"
-        write(path, keys, lengths, payload)
         if name in SPLIT_STRUCTURES:
-            slot_table, starts, ends, pay = read(path.read_bytes())
+            write(path, keys, lengths, payload, zone_ids_of=lambda p: tf.zone_ids[p])
+        else:
+            write(path, keys, lengths, payload)
+        if name in SPLIT_STRUCTURES:
+            slot_table, starts, ends, last_change, pay = read(path.read_bytes())
             check_agreement_split(mapping, slot_table, starts, ends, pay, name)
+            check_last_change(mapping, slot_table, starts, ends, last_change, pay, tf)
             loaded[name] = (slot_table, starts, ends, pay)
         else:
             starts, ends, pay = read(path.read_bytes())
