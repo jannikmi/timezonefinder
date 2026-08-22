@@ -125,6 +125,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | PERF-5 | The shortcut decode rebuilds 41,162 FlatBuffers tables in Python | performance | ~80 | free — measured |
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured, one decision left |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
+| BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs a decision — the invariant list |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — CLI shape decided |
@@ -915,6 +916,45 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-21 — decided. Migrated from the roadmap issue, where it was ranked 3 as "#446
   decision 2". Ranked above GH-449 here because the list is walked top-down and GH-449 is
   blocked by it.
+
+### BENCH-1 — the pull request benchmark comparison cannot resolve the changes worth reviewing
+
+- **Location:** `scripts/compare_benchmark_runs.py`, `scripts/benchmark_utils.py`
+  (`DEFAULT_BENCHMARK_ESTIMATOR`), `benchmarks/`.
+- **What it is.** Base and head are measured in two sequential runs, minutes apart, each reduced to
+  a single `min`. Everything that drifts between them is attributed to the change, and nothing in
+  the output lets a reader tell a real difference from that drift. The comparison is flagged at
+  110 % and is reporting-only, and `docs/benchmarking_methodology.rst` already concedes it is
+  "blind to the 10-30 % changes actually worth reviewing".
+- **Why it is now more than a known limitation:** it was measured, while comparing two shortcut
+  structures. **Within a single process**, alternating the two paths round by round against running
+  one after the other moved a measured difference from **−13.3 % to −0.3 %** on the unique
+  stratum — the whole thirteen points were the first path warming `validate_coordinates`,
+  `h3.latlng_to_cell` and `zone_name_from_id` for the second. Two separate processes minutes apart
+  have at least that much room, and nothing characterises it. Separately, `min` alone reported
+  +0.5 % where a round-level sign count said 26 of 61 — the disagreement being the correct answer,
+  "no effect", which a single estimator cannot express.
+- **Why it is ranked here:** three open performance items — GH-477, PERF-5, GH-364 — each have to
+  demonstrate an effect in the low single digits, and none of them can be reviewed with this
+  tooling. Every one of them currently needs a hand-rolled prototype harness, which is how both
+  `prototypes/shortcut_layout_bench.py` and `prototypes/shortcut_file_format_bench.py` came to
+  contain one.
+- **Fixes, in increasing cost, and the first is most of the value:**
+  1. **Report dispersion beside the `min`.** pytest-benchmark already records every round, so the
+     JSON holds it and the comparison discards it. A reader could then see whether the two
+     estimators agree. Small, no workflow change.
+  2. **A paired A/B harness** for two candidate implementations of one stage, alternating order —
+     the thing both prototypes hand-rolled. Medium, and it belongs in `benchmarks/` rather than in
+     `prototypes/` precisely because it will be wanted again.
+  3. Interleaving base and head inside one job. **Likely infeasible and recorded so it is not
+     attempted blind:** it needs two versions of the library importable in one process, and
+     `utils.py` binds its backend at import time.
+- **Not a gate.** Whatever is added stays reporting-only until a single-runner noise study says
+  what the residual floor is — the same condition `docs/benchmarking_methodology.rst` already puts
+  on `--fail-on-regression`. A gate that fires on drift is worse than no gate.
+- **Status:** open — free.
+- **Last touched:** 2026-08-22 — created, from the measurement flaws found while comparing shortcut
+  structures; the methodology doc carries the three A/B designs that produced wrong answers.
 
 ### GH-501 — guardrails on the automated data update pipeline
 
