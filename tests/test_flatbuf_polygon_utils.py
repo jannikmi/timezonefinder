@@ -141,5 +141,46 @@ def test_on_disk_coordinate_layout(tmp_path, polygons):
     close_resource(buffer)
 
 
+def test_wider_integer_input_is_stored_as_int32(tmp_path):
+    """A polygon that is not already int32 must still be written 4 bytes per coordinate.
+
+    ``np.array([[0, 1], [2, 3]])`` is int64 on every platform this runs on, and callers
+    build polygons that way - most of the cases above do. The writer hands the array to
+    ``Builder.CreateNumpyVector``, which takes the element width from its dtype, so
+    without the cast this would lay down 8-byte elements while the schema, the reader
+    and the offset table all read int32: every second value would be a zero from the
+    high half of its neighbour.
+    """
+    polygon = np.array([[0, 1, 2], [3, 4, 5]])
+    assert polygon.dtype != np.int32, "fixture no longer exercises the cast"
+    output_file = tmp_path / "polygons.bin"
+
+    write_polygon_collection_flatbuffer(output_file, [polygon])
+
+    with open(output_file, "rb") as file:
+        buffer = file.read()
+    raw = get_polygon_collection(buffer).Polygons(0).CoordsAsNumpy()
+
+    assert len(raw) == polygon.size, "coordinate count changed with the element width"
+    np.testing.assert_array_equal(raw, np.concatenate([polygon[0], polygon[1]]))
+    close_resource(buffer)
+
+
+def test_coordinate_outside_the_int32_range_is_refused(tmp_path):
+    """A value that does not fit must raise rather than wrap.
+
+    ``astype`` truncates silently, and a wrapped coordinate is a plausible one: it is
+    still a valid int32 at a valid position, so neither the reader nor
+    ``validate_coordinate_offset_table`` can tell it from an intended value - both read
+    the same bytes. This is the check ``Builder.PrependInt32`` used to perform per
+    coordinate, kept once per polygon instead.
+    """
+    too_large = np.iinfo(np.int32).max + 1
+    polygon = np.array([[0, too_large], [1, 2]], dtype=np.int64)
+
+    with pytest.raises(ValueError, match="outside the"):
+        write_polygon_collection_flatbuffer(tmp_path / "polygons.bin", [polygon])
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
