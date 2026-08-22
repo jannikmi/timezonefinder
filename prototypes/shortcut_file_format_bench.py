@@ -836,10 +836,20 @@ def write_slot_split(path: Path, keys, lengths, payload) -> None:
         remedy="Widen the slot table to int32.",
     )
 
-    table = np.full(COMPACT_TABLE_SIZE, ABSENT_SPLIT, dtype=np.int16)
-    table[compact_slots_of(keys[~ambiguous])] = payload[bounds[:-1][~ambiguous]].astype(
-        np.int16
+    # The table's two populations share one int16 and are checked separately: zone ids
+    # occupy the non-negative half and ambiguous markers the negative one, so neither
+    # bounds the other and a cast that silently wrapped would hand back a real-looking
+    # zone id. This is the check the marker check above would not have caught.
+    unique_zone_ids = payload[bounds[:-1][~ambiguous]]
+    check_fits(
+        unique_zone_ids,
+        np.dtype(np.int16),
+        what="a unique cell's zone id",
+        remedy="Widen the slot table to int32.",
     )
+
+    table = np.full(COMPACT_TABLE_SIZE, ABSENT_SPLIT, dtype=np.int16)
+    table[compact_slots_of(keys[~ambiguous])] = unique_zone_ids.astype(np.int16)
     table[compact_slots_of(keys[ambiguous])] = marker.astype(np.int16)
     _write(
         path,

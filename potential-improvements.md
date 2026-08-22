@@ -1765,10 +1765,19 @@ premise moves; do not reverse a decision silently.
   binary stores a unique cell's zone id inline, so the common case never reaches a polygon list. #497 sizes what it
   removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
   query, and nothing at all on a unique-shortcut one — 1–2 % there, ~1 % of a random workload,
-  below the 3–9 % noise of the machine that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
-  `DATA_FORMAT_VERSION` bump, therefore an ordered two-distribution release. The 2025 verdict was
+  below the 3–9 % noise of the machine that would have to demonstrate it. The 2025 verdict was
   right and now has a number under it; the open draft is superseded by this entry rather than
-  pending. The Python-side half of the same block stays open as PERF-2, which needs no format
+  pending.
+  **Half of the reason has since expired, and the surviving half is the one that mattered — noted
+  2026-08-23 so the next pass does not mistake it for newly viable.** This also cost a
+  shortcut-layout version bump, therefore a `DATA_FORMAT_VERSION` bump and an ordered
+  two-distribution release. GH-477 now proposes exactly that bump for other reasons, so *if it
+  lands, this cost is sunk* and precomputing the index becomes a spare `uint8` column, ~10 KiB, on
+  a file already being rewritten. It is still refused, on the half that never depended on the
+  price: ~1 % of a random workload is below what any benchmark here resolves, and by the
+  stage-share rule under *The measured baseline* a stage that small is a constraint rather than an
+  opportunity. Re-propose it only with a measurement that resolves 1 %, which BENCH-1 says the
+  current tooling cannot. The Python-side half of the same block stays open as PERF-2, which needs no format
   change.
 - **Shrink the runtime dependency surface (numpy / h3 / cffi / flatbuffers) — considered and
   parked.** Each does one small thing, so the idea recurs. Reimplementing H3 indexing is a
