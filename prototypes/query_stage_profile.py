@@ -159,10 +159,17 @@ CONCLUSIONS, in the order #497 asks them:
    touched. This conclusion is untouched by the offset table, which does not run here.
 
 2. **#477's flat-array layout must keep a scalar path.** ``shortcut_mapping.get`` is
-   88 ns, ~9% of a real unique-zone query - so #477's ``searchsorted`` variant (+355 ns)
-   costs ~35% of the whole query, and its direct-index variant (+57 ns) ~6%. #477's
-   verdict is unchanged and its ranking of the two variants is confirmed from the query
-   side rather than the microbenchmark side.
+   88 ns, ~9% of a real unique-zone query, so a layout that makes the lookup slower pays
+   for it out of a stage that is already a tenth of the query. That much stands.
+
+   The two per-variant costs this conclusion originally carried (+355 ns and +57 ns,
+   ~35% and ~6% of a query) were **extrapolated** from #477's lookup-in-isolation
+   microbenchmark, and ``prototypes/shortcut_layout_bench.py`` has since measured both
+   variants inside a real ``timezone_at`` instead. They do not survive: ``searchsorted``
+   costs about three times the extrapolation (+996 ns, roughly doubling a unique query),
+   and the direct-index variant costs nothing measurable (+4 ns, under the noise floor)
+   rather than ~6%. Take the per-variant numbers from that script; the 88 ns above is a
+   measurement of this one and is unaffected.
 
 3. **Per-polygon FFI marshalling is now comparable to the fetch it used to be dwarfed
    by, and that is what re-opens #364.** ``ffi.from_buffer`` over both axes is ~650 ns

@@ -11,7 +11,6 @@ from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,
     PolygonAddCoords,
-    PolygonStartCoordsVector,
 )
 from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
@@ -43,6 +42,12 @@ _WORD_BYTES: Final[dict[str, int]] = {
     _UOFFSET: _UOFFSET_BYTES,
     _VOFFSET: _VOFFSET_BYTES,
 }
+
+# What a coordinate is on disk, and so what the writer emits and the reader reads.
+# Named once because the two sides have to agree on it: `Builder.CreateNumpyVector`
+# takes the element width from the array's dtype, so an int64 array would write 8-byte
+# elements that `read_polygon_array_at` then reads back as pairs of int32.
+COORD_DTYPE: Final[np.dtype] = np.dtype("<i4")
 
 # FlatBuffers file identifier (bytes 4-8), answering "is this a timezonefinder
 # polygon file at all?". Files written before this marker existed carry none.
@@ -105,6 +110,26 @@ def reshape_to_polygon_coords(coords: np.ndarray) -> np.ndarray:
     return coords.reshape(2, -1)
 
 
+def _as_coord_dtype(coords: np.ndarray) -> np.ndarray:
+    """Return ``coords`` as :data:`COORD_DTYPE`, refusing values that do not fit.
+
+    The range check is what ``Builder.PrependInt32`` performed per coordinate before the
+    whole block was written in one copy. It is kept because ``astype`` wraps silently,
+    and a wrapped coordinate is a plausible wrong one that no later check would catch:
+    the offset table and the FlatBuffers reader would agree on the same wrong bytes.
+    One comparison over the array costs nothing next to writing it.
+    """
+    if coords.dtype == COORD_DTYPE:
+        return coords
+    limits = np.iinfo(COORD_DTYPE)
+    if coords.size and (coords.min() < limits.min or coords.max() > limits.max):
+        raise ValueError(
+            f"coordinate outside the {COORD_DTYPE} range "
+            f"[{limits.min}, {limits.max}]: [{coords.min()}, {coords.max()}]"
+        )
+    return coords.astype(COORD_DTYPE)
+
+
 def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
     """Return the path to the boundaries flatbuffer file.
 
@@ -135,14 +160,13 @@ def write_polygon_collection_flatbuffer(
 
     # Create each polygon and store its offset
     for polygon in polygons:
-        # Flatten coordinates to [x0...xN-1, y0...yN-1] format
-        coords = flatten_polygon_coords(polygon)
-
-        # Create coords vector
-        PolygonStartCoordsVector(builder, len(coords))
-        for coord in reversed(coords):
-            builder.PrependInt32(int(coord))  # Use signed 32-bit integer
-        coords_offset = builder.EndVector()
+        # Flatten coordinates to [x0...xN-1, y0...yN-1] format and write the block in
+        # one copy. A `PrependInt32` per coordinate costs ~8.6 s for the 15.85 M
+        # coordinates of the packaged boundaries against ~0.03 s here, for output that
+        # is byte-identical - the builder lays a numpy vector down exactly as the
+        # element-wise loop did.
+        coords = _as_coord_dtype(flatten_polygon_coords(polygon))
+        coords_offset = builder.CreateNumpyVector(coords)
 
         # Create polygon
         PolygonStart(builder)
@@ -374,5 +398,7 @@ def read_polygon_array_at(
     :param offset: Byte offset of the polygon's first coordinate
     :param length: Number of ``int32`` coordinate values
     """
-    coords = np.frombuffer(buf, dtype="<i4", count=int(length), offset=int(offset))
+    coords = np.frombuffer(
+        buf, dtype=COORD_DTYPE, count=int(length), offset=int(offset)
+    )
     return reshape_to_polygon_coords(coords)
