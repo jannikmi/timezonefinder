@@ -207,6 +207,17 @@ taken. `.claude/skills/improvement-pass/SKILL.md` drives one pass
 over it, and `tests/test_improvement_ledger.py` asserts that the ranking table and the entries name
 the same items.
 
+**A pass asks the maintainer nothing.** It runs unattended, so a question put mid-run reaches nobody
+and stalls every item ranked below it, and an answer given in a chat session is never written where
+the pass that finally implements the item can read it. A choice that is genuinely the maintainer's
+is recorded instead — `Status: needs …` plus a `**Decision needed:**` bullet carrying the question,
+the options and a recommendation, a pairing `tests/test_improvement_ledger.py` enforces in both
+directions — and the pass takes the next eligible item.
+`.claude/skills/maintainer-decisions/SKILL.md` is the other half: it collects those questions,
+re-verifies each against the current code, briefs them, puts them to the maintainer and records the
+answers. It never implements what it asked about, so the design lands as a reviewable decision
+before any code is built on it.
+
 It replaced a roadmap issue on the tracker, and the reason generalises: reasoning that lives
 outside the repository goes stale silently, because nothing references it, no check reads it, and a
 reviewer never sees it in a diff. Issues remain the place a single item is worked out; the ranking,

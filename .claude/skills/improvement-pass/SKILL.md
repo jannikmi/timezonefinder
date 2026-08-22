@@ -1,6 +1,6 @@
 ---
 name: improvement-pass
-description: "Advances timezonefinder by one improvement pass — read the ranked register in potential-improvements.md, re-verify and re-rank it, take the highest-ranked item that is eligible, put any maintainer-owned design choice to them as concrete options, implement one reviewable slice, and end in a single pull request against master plus an updated register. One pass, one item, one pull request. Any improvement is in scope, whatever its area: correctness, performance, public API, data format, docs, packaging, release and CI, tests, developer tooling, internal structure. Use this whenever the user asks for an improvement, quality, cleanup, refactoring or roadmap pass, wants technical debt found or paid down, says improve the code quality or tidy up the codebase or find what is worth refactoring, asks to work on or continue the roadmap, wants the next item picked up, asks what improvements are still outstanding or what the next pass would do or what is blocking an item, or wants a pull request prepared for review — even if they never say the word skill."
+description: "Advances timezonefinder by one improvement pass — read the ranked register in potential-improvements.md, re-verify and re-rank it, take the highest-ranked item that is eligible, implement one reviewable slice, and end in a single pull request against master plus an updated register. It runs unattended and asks nothing: a design choice that belongs to the maintainer is recorded as a briefed question and the item is left for a later pass, rather than stalling this one. One pass, one item, one pull request. Any improvement is in scope, whatever its area: correctness, performance, public API, data format, docs, packaging, release and CI, tests, developer tooling, internal structure. Use this whenever the user asks for an improvement, quality, cleanup, refactoring or roadmap pass, wants technical debt found or paid down, says improve the code quality or tidy up the codebase or find what is worth refactoring, asks to work on or continue the roadmap, wants the next item picked up, asks what improvements are still outstanding or what the next pass would do or what is blocking an item, or wants a pull request prepared for review — even if they never say the word skill."
 ---
 
 # Improvement pass
@@ -22,7 +22,8 @@ Two questions do that, and both belong to the individual change:
 - **Does it change observable behaviour?** Same results, same public API, same binary formats, same exception types for the same inputs — or not.
   If you cannot prove it does not, it does (§5).
 - **Does it carry a choice that belongs to the maintainer?** One that outlives the pass and is expensive to reverse — what a batch call returns, whether a dependency is hard, which thresholds block a release.
-  If so, §6 applies **before any code is written**; if not, decide and proceed, since stopping to ask would be declining to make a routine call.
+  If so and the choice is not already on record, the item is **not eligible this pass**: record the question as §6 says and walk on down the ranking.
+  If not, decide and proceed, since stopping to ask would be declining to make a routine call.
 
 Ask both per item, not per category: a rename that looks like tidying can change an exception type, and a month-sized item whose design was settled two passes ago needs no question at all.
 
@@ -32,8 +33,9 @@ Ask both per item, not per category: a rename that looks like tidying can change
 Both are authoritative and nothing here repeats them.
 
 - **Never merge, never enable auto-merge, never push to `master`, never tag.** Open the pull request and stop.
-- **Never regenerate the packaged data as a side effect** — it rewrites ~64 MB, and a weekly workflow already opens *and auto-merges* data-update pull requests.
-  Only when an item's whole point is the data format, and only with the maintainer's go-ahead in this session.
+- **Never put a question to the maintainer.** A pass runs unattended and ends without them, so a question asked mid-run reaches nobody and stalls the item behind it; §6 says what to do with one instead.
+- **Never regenerate the packaged data** — it rewrites ~64 MB, and a weekly workflow already opens *and auto-merges* data-update pull requests.
+  §5 rules it out for every pass, with no in-session exception: an item that cannot be built without it is waiting on a decision, not on your judgement.
 - **The changelog entry is mandatory**, shaped as `CLAUDE.md` says; amend the item's existing bullet rather than appending a second.
 - **The lookup fast path is not traded for elegance.** If the item touches it, `CONTRIBUTING.md`'s benchmarking section applies in full — before/after on one machine, the noise spread alongside, the acceleration backend named.
   Not clearly neutral or better ⇒ revert and record the measurement.
@@ -61,7 +63,7 @@ Anything a pass learns that a later pass needs lands there before the pass ends 
   New evidence against a decision is itself a question for the maintainer (§6) — never reverse one silently.
 - Spend fresh discovery on areas the coverage log shows no coverage of, and record what you swept.
 
-**Writing it.** Every candidate goes in, including the ones you will not implement, reject, or could not get a decision for.
+**Writing it.** Every candidate goes in, including the ones you will not implement, the ones you reject, and the ones waiting on a decision.
 One entry per finding: a stable id and one-line title; location by file plus a code anchor, or the issue it tracks; the defect; the fix and a rough size; what breaks or drifts if it stays; a status; and the pass that last touched it, dated.
 
 - **It is a to-do list, not a history.** An entry whose work landed is **deleted with its ranking row, in the pull request that ships it** — the code is the evidence and `git log` still has the text.
@@ -98,7 +100,7 @@ Install into it, then record a baseline **before editing**: `make test` and `mak
 Anything already failing is pre-existing — note it, do not fix it here.
 `make hook` runs pre-commit over all files, so stage only what belongs to your change and `git checkout --` the rest.
 
-**Claim the moment §4 picks your item** — before editing, and before asking §6's questions, since an unclaimed item is fair game while you wait:
+**Claim the moment §4 picks your item**, before editing anything:
 
 ```
 git push -u origin improve/<slug>
@@ -133,8 +135,9 @@ An item is **eligible** when all of these hold:
   A branch with no pull request means a previous pass started it: **resume that branch**.
 - **Its preconditions are met**, checked explicitly against the register's sequencing rules.
   Unmet ⇒ not eligible this pass; take the next item, or the prerequisite itself if it is free.
-- **Its maintainer-owned decisions are recorded**, or you can get them this session (§6).
-  If not, record the questions and move down the ranking — that is what stops one blocked item stalling every pass behind it.
+- **Its maintainer-owned decisions are already recorded** (§6).
+  Not recorded means not eligible: record the question and move down the ranking, which is what stops one blocked item stalling every pass behind it.
+  Do not wait for an answer, and do not supply your own.
 - **It fits one reviewable pull request**, or can be sliced into one (§7); if neither, the decomposition is the deliverable.
 
 Prefer resuming an item a previous pass started — half-advanced items are the ones that go stale.
@@ -155,25 +158,47 @@ Out of bounds for every pass — the repository docs describe some of these neut
 
 ## 6. Decisions that belong to the maintainer
 
-**Read before asking.** A question the repository already answers is the agent failing to read: the register's recorded decisions, the entry and its issue body, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/architecture.rst`, `docs/data_format.rst`.
-Never ask about naming, formatting, file placement, test structure, or anything reversible in five minutes — decide, state it in the pull request, move on.
-**The bar: would two reasonable answers lead to materially different work?**
+**A pass never asks one.**
+It records the question, leaves the item, and takes the next eligible one.
+`.claude/skills/maintainer-decisions/SKILL.md` is where the accumulated questions are put to the maintainer — briefed, in a batch, in a session they invoked and are present for.
 
-**Ask well.** Structured multiple-choice, the alternatives usually already named with their trade-offs, and **lead with a recommendation** — a question without one hands the work back instead of reducing it.
-Batch every blocking question for the item into as few rounds as possible.
+Two things follow from a pass running unattended, and they are the whole reason the asking lives elsewhere.
+A question asked mid-run reaches nobody, so the item stalls and every item behind it waits with it.
+And an answer given in a chat session and used in that same session is never written down: the pass that finally implements the item cannot read it, so it either re-asks and gets a different answer or guesses.
+Recording the question costs one bullet, and is the only form in which an answer reaches the code.
 
-**Record every answer in the register** — question, decision, one line of rationale, dated — and **commit and push it before implementing against it**, so a crash mid-pass does not lose it.
-A decision with consequences beyond its own item goes in *recorded decisions*, the part that is never deleted.
+**Read before you record.**
+A question the repository already answers is the agent failing to read: the register's recorded decisions, the entry and its issue body, `CLAUDE.md`, `CONTRIBUTING.md`, `docs/architecture.rst`, `docs/data_format.rst`.
+Never record one about naming, formatting, file placement, test structure, or anything reversible in five minutes — decide it, state it in the pull request, move on.
 
-**If the maintainer does not answer, do not guess.** Record the questions as awaiting a decision and move down the ranking.
-If nothing below is eligible either, those questions are this pass's deliverable (§7).
+> **The bar: would two reasonable answers lead to materially different work, and is the choice expensive to reverse?**
+
+Both halves, or it is yours to make.
+Recording a question that fails the bar is not caution: it hands routine work back to the maintainer and buries the questions that do matter among ones that never needed asking.
+
+**Recording one.**
+An entry that is waiting is marked in two places, and `tests/test_improvement_ledger.py` fails if they disagree:
+
+- its `Status` opens with `needs`, and
+- it carries exactly one `**Decision needed:**` bullet — the question, what turns on it, the options with their trade-offs, and **your recommendation with the reasoning that picks it out from the others**.
+
+Its row in the ranking says the same in the eligibility column, so a pass walking the ranking sees it without opening the entry.
+
+Write the recommendation even though you are not the one asking, and especially when you found the choice close.
+You have just read the code the question is about, and that reading is what goes stale first — the skill that asks will re-verify it, but it should be checking your reasoning rather than starting without any.
+A brief with no recommendation hands over the whole problem instead of the last step of it.
+
+**A recorded decision is binding.**
+Implement exactly what it says, and never reverse one silently.
+New evidence against a decision is itself a question for the maintainer — record it as one, leading with what changed.
 
 ## 7. What one pass delivers
 
 Four outcomes are all successes — say which you are aiming at, and do not manufacture code to make a pass feel productive:
 
 1. **One item implemented** — the ordinary case.
-2. **Decisions surfaced and recorded, no code** — *"these are the four decisions blocking this item, the trade-off in each, and my recommendation"* unblocks every later pass.
+2. **Questions surfaced and briefed, no code** — *"these are the four decisions blocking this item, the trade-off in each, and my recommendation"*, written into the register where the sibling skill that asks them will find them.
+   That unblocks every later pass, and is a success rather than a pass that failed to produce code.
 3. **A design written up and the item decomposed, no code**, when it cannot be cut into releasable slices by inspection.
 4. **Nothing eligible**, triage recorded.
 
@@ -198,7 +223,8 @@ In practice:
 
 1. **Re-verify** the item against the current code (§2).
    Already done or wrong ⇒ resolve the entry and go back to §4 without spending a commit on it.
-2. **Get and record any decision it needs** (§6), pushed before you implement against it.
+2. **Confirm every decision it needs is already on record** (§6), and build exactly what those decisions say.
+   A missing one means the item was never eligible — record the question and go back to §4.
 3. **Implement it, and only it.** Test scope follows `CLAUDE.md`'s *Testing* section — do not run the `slow` suites reflexively, do run the ones your change maps to.
    A change with no test exercising the new seam is not finished.
 4. **Commit the code**, message naming the entry id.
@@ -268,7 +294,7 @@ What the following pass should pick up, and anything still awaiting a decision.
 ## 11. Triage-only mode
 
 When invoked for status — *"what would the next pass pick"*, *"what is blocking this item"*, `triage`, `status`, `dry-run` — run §1, §2 and §4 and **report only**.
-**Change nothing**: no worktree, no branch, no push, no register edit, no pull request, no questions.
+**Change nothing**: no worktree, no branch, no push, no register edit, no pull request.
 That absolute prohibition is what makes the skill safe to run for a status check; if a triage run turns up something worth writing down, say so and let the user ask for a full pass.
 
 ## 12. Deciding alone
@@ -284,7 +310,7 @@ That absolute prohibition is what makes the skill safe to run for a status check
 ## 13. Final report
 
 In chat, in this order: **the item taken** and why it beat everything above it, including which higher entries were ineligible;
-**decisions** asked and answered, or still outstanding;
+**decisions** — the recorded ones this built on, and any question it recorded instead of taking an item, naming `maintainer-decisions` as how those get answered;
 **what shipped** — the pull request URL, or plainly "no code, and why that was the right outcome" — with §7's one sentence;
 **what was deferred**, one line of reason each;
 **what changed in the register**;
@@ -301,7 +327,12 @@ A pass that guessed a design decision and implemented it has done damage that is
 **One skill, one register, one ranking, and no item categories that gate behaviour.**
 §0's two questions are asked of each change; that is the whole of what varies between passes.
 Splitting this file by kind of work — or splitting the ranking — puts the decision back on a category, which is what makes an agent ask a routine question or skip a consequential one.
-Equally, do not collapse §6 away so that every item is decided by the agent.
+**Autonomy, and where it stops.** §6 used to put its questions to the maintainer mid-pass, and a pass could wait for the answer.
+That stop is gone — a pass now runs start to finish without one, and `.claude/skills/maintainer-decisions/SKILL.md` asks the accumulated questions in a session the maintainer themselves invoked.
+It went not because the questions stopped mattering: collapsing §6 away so that every item is decided by the agent is the opposite failure and the more expensive one, and it must not happen either.
+It went because a pass runs unattended, so the question reached nobody, the item stalled behind it, and an answer given in chat and consumed in the same session was never written down anywhere a later pass could read it.
+Do not restore it.
+If a wrong design is ever implemented, the fix is a sharper bar in §6 and a better brief, not a stop in a run that has no audience.
 
 Three things are deliberately absent and should stay absent: **repo rules written down elsewhere**, since the copy that drifts is the one an agent obeys;
 **a ranked worklist**, which would give two rankings and no way to tell which is current;
