@@ -32,20 +32,19 @@ THE RECOMMENDED STRUCTURE, in full
 
 Four arrays. Sizes are the packaged dataset at ``SHORTCUT_H3_RES`` = 3.
 
-On disk, 105.6 KiB::
+On disk, 103.1 KiB::
 
-    header         24 B  three int64: distinct entry count, start width, length width
+    header         24 B  three int64: distinct entry count, offset width, length width
     table      81.7 KiB  int16  x 41,846  one per *compact slot* - the answers
-    starts      5.0 KiB  uint16 x  2,575  one per *distinct* polygon list
-    lengths     2.5 KiB  uint8  x  2,575  one per distinct list
+    bounds      5.0 KiB  uint16 x  2,576  CSR over the distinct polygon lists
     last_change 2.5 KiB  uint8  x  2,575  where the candidate loop may stop
     payload    13.8 KiB  uint16 x  7,073  every distinct polygon list, back to back
 
-In memory after load, 148.4 KiB::
+In memory after load, 143.5 KiB::
 
     table       int16  x 62,464  122.0 KiB  expanded from the compact form
-    starts      uint16 x  2,575    5.0 KiB  read straight from the file
-    ends        uint16 x  2,575    5.0 KiB  derived: starts + lengths
+    bounds      uint16 x  2,576    5.0 KiB  read straight from the file; starts and ends
+                                            are two views of it, so neither is stored
     last_change uint8  x  2,575    2.5 KiB  read straight from the file
     payload     uint16 x  7,073   13.8 KiB  read straight from the file
 
@@ -58,10 +57,26 @@ In memory after load, 148.4 KiB::
 Nothing is derived at load: the table is what the file holds. That is why loading is
 **0.065 ms** and not the ~0.5 ms every other candidate spends building an equivalent.
 
-**starts / ends / lengths / last_change** are indexed by *distinct entry* - 2,575 - and not
-by cell (10,511) nor by slot (62,464). Since duplicates already collapse to one entry,
-holding these per cell would re-spend exactly the repetition the deduplication found; and a
-unique-zone cell never reads them at all, so they need no room for one either.
+**bounds / last_change** are indexed by *distinct entry* - 2,575 - and not by cell (10,511)
+nor by slot (62,464). Since duplicates already collapse to one entry, holding these per cell
+would re-spend exactly the repetition the deduplication found; and a unique-zone cell never
+reads them at all, so they need no room for one either.
+
+``bounds`` is a CSR array and there is no length column: the distinct entries are packed
+back to back, so ``ends[i] == starts[i+1]`` and one array of n+1 carries both, read as two
+views. Sharing destroys contiguity at the *cell* level - two cells pointing at one range are
+not adjacent - which is why the earlier per-cell form needed a start and a length; the
+distinct entries those cells point into were contiguous the whole time.
+
+**The table's spare capacity cannot absorb any of this, which is worth writing down because
+it looks like it should.** The value stored for an ambiguous cell is not a placeholder - it
+is the distinct entry index, the cheapest thing that could be there. Of the ``int16``,
+positive values hold zone ids (444 of 32,768, 9 bits of 15) and negative ones the entry
+index (2,575 of 32,767, 12 bits of 15); every slot needs only 3,020 distinct values in all,
+which would fit in 12 bits. But packing a second field beside the index needs
+``2,575 x 60 = 154,500`` combinations for the smallest candidate (``last_change``), against
+32,768 in the negative half and 65,536 in a full ``uint16``. Only ``int32`` fits, and that
+spends 122 KiB on the table - which is 85% of the structure - to delete a 2.5 KiB array.
 
 **last_change** is ``utils.get_last_change_idx`` computed once at build time. It depends
 only on the entry's polygon list, so it deduplicates with everything else and costs one
@@ -141,7 +156,7 @@ Neither the load path nor the lookup touches point-in-polygon, so unlike the com
 script this one is backend-independent.
 
 
-FINDINGS (2026-08-23, `ae1af20`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+FINDINGS (2026-08-23, `e243ec5`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
 
     41,162 cells: 30,651 answered by the table alone, 10,511 with candidate lists that
     reduce to 2,575 distinct ones (23,373 values to 7,073)
@@ -149,10 +164,10 @@ FINDINGS (2026-08-23, `ae1af20`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2
     precomputed last_zone_change_idx equals what the query would compute for every one
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    395.6    4.44         109      117
-    keys-plain           508      0.658  0.46         210      419
-    keys-dedup           457      0.665  0.37         218      428
-    slot-split  <=       106      0.065  0.15         190      436
+    dict (shipped)     1,530    392.7    4.44         108      117
+    keys-plain           508      0.663  0.46         212      423
+    keys-dedup           457      0.663  0.37         210      421
+    slot-split  <=       103      0.064  0.14         187      440
 
     QUERY: full timezone_at(), paired and order-alternated, 61 rounds of 2,000 points
 
@@ -843,12 +858,11 @@ def write_slot_split(path: Path, keys, lengths, payload, zone_ids_of=None) -> No
         what="a payload offset",
         remedy="Widen the offset column to the next unsigned width.",
     )
-    check_fits(
-        entry_lengths,
-        len_dtype,
-        what="a shortcut entry's length",
-        remedy="Widen the length column to the next unsigned width.",
-    )
+    # No length column: `deduplicate` packs the distinct entries back to back, so
+    # ends[i] == starts[i+1] and one CSR array of n+1 bounds carries both. Sharing broke
+    # that at the *cell* level - two cells pointing at one range are not adjacent - but the
+    # distinct entries they point into were contiguous all along.
+    csr_bounds = np.append(starts, int(ends[-1]) if len(ends) else 0)
     marker = -(index + 2)
     check_fits(
         -marker,
@@ -889,8 +903,7 @@ def write_slot_split(path: Path, keys, lengths, payload, zone_ids_of=None) -> No
         path,
         np.array([n_entries, start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
         table,
-        starts.astype(start_dtype),
-        entry_lengths.astype(len_dtype),
+        csr_bounds.astype(start_dtype),
         last_change.astype(len_dtype),
         deduped,
     )
@@ -915,15 +928,14 @@ def read_slot_split(buf: bytes):
     pos += COMPACT_TABLE_SIZE * 2
     start_dtype = np.dtype(f"uint{sw * 8}")
     len_dtype = np.dtype(f"uint{lw * 8}")
-    starts = np.frombuffer(buf, dtype=start_dtype, count=n, offset=pos).copy()
-    pos += n * sw
-    lengths = np.frombuffer(buf, dtype=len_dtype, count=n, offset=pos)
-    pos += n * lw
+    # one array, two views: entry i spans bounds[i]:bounds[i+1]. No arithmetic at lookup
+    # and no second column on disk.
+    bounds = np.frombuffer(buf, dtype=start_dtype, count=n + 1, offset=pos).copy()
+    pos += (n + 1) * sw
     last_change = np.frombuffer(buf, dtype=len_dtype, count=n, offset=pos).copy()
     pos += n * lw
-    ends = starts + lengths
     payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
-    return table, starts, ends, last_change, payload
+    return table, bounds[:-1], bounds[1:], last_change, payload
 
 
 def lookup_split(table, starts, ends, payload, hex_id: int):

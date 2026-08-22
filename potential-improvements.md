@@ -382,8 +382,8 @@ the denominators, and how to tell whether they still describe the tree.
   and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
   otherwise re-propose it.
 - **Prototyped on the file side 2026-08-22** — `prototypes/shortcut_file_format_bench.py`. **The
-  step that matters is dict → flat: 4.44 → 0.15 MiB, ~396 → 0.065 ms, 1,530 → 106 KiB — 30x
-  memory, 6,000x load, 14x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
+  step that matters is dict → flat: 4.44 → 0.14 MiB, ~393 → 0.064 ms, 1,530 → 103 KiB — 32x
+  memory, 6,000x load, 15x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
   under 2 % of the packaged data, so no flat variant is a mistake and that choice should not be
   relitigated once made. The one to build is a flat file storing each *distinct* entry once, keyed
   by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
