@@ -69,14 +69,28 @@ anything else. **There is deliberately no status meaning "done"** — everything
 unfinished or declined, and work that landed is *deleted* rather than marked. Do not re-litigate a
 closed entry and do not re-add it under a new id.
 
+**`needs …` means a person has to decide something**, and it is the one status that names a piece of
+work nobody can do by reading harder. Such an entry carries exactly one `**Decision needed:**`
+bullet holding the question, the options with their trade-offs and a recommendation — and its row in
+the ranking says so too, so the queue is visible from the table. `tests/test_improvement_ledger.py`
+asserts the pairing in both directions: a `needs` status without the bullet is an entry that says it
+is waiting without saying what for, and the bullet without the status is a question no pass looking
+at statuses will find. Answering one turns it back into `open` and the bullet into the decision and
+its rationale, with the refused options kept.
+
 **The ranking has no numbers**, because the row order is the ranking. A number column would have to
 be re-flowed on every insertion and deletion — churn on the one operation this file exists to make
 cheap, and a conflict between any two passes that both ship something.
 
-**How it is maintained.** `.claude/skills/improvement-pass/SKILL.md` drives one pass over it. The
-file is committed so that it reaches the next pass through `master`: every pass reads it before
-touching a source file, re-verifies the entries it is considering against the current code, and
-writes back what it found.
+**How it is maintained.** Two coding-agent skills, split by whether the maintainer is at the
+keyboard. `.claude/skills/improvement-pass/SKILL.md` drives one pass over the file and asks nothing:
+it runs unattended, so a choice that is genuinely the maintainer's is written down as a
+`**Decision needed:**` question and the item is left for later rather than stalling the pass and
+everything ranked below it. `.claude/skills/maintainer-decisions/SKILL.md` is the other half — it
+collects those questions, re-verifies each against the current code, briefs them, puts them to the
+maintainer and records the answers here. The file is committed so that all of it reaches the next
+pass through `master`: every pass reads it before touching a source file, re-verifies the entries it
+is considering against the current code, and writes back what it found.
 
 **It is a to-do list, not a history.** Work that landed is *deleted* — the entry and its ranking
 row, in the same pull request that ships it — because the code is the evidence it is done, the
@@ -111,8 +125,8 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
-| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs the invariant list |
-| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — CLI shape decided |
+| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs a decision — the invariant list |
+| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — CLI shape decided |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
@@ -385,8 +399,19 @@ the denominators, and how to tell whether they still describe the tree.
   ambiguous query but not far above it as a share of a workload, so this needs the 2× rule applied
   before it is taken. Verify the saving inside `timezone_at` rather than in isolation first — the
   microbenchmark above is a per-fetch figure and the query pays other things around it.
-- **Status:** open — measured, decision needed on whether an accessor-lifetime export is acceptable
-  now that `cleanup()` is built for exactly that case.
+- **Decision needed:** may `FileCoordAccessor` hold one whole-file `int32` view for its own
+  lifetime? **(a) Hold it** — every fetch becomes a slice, ~370 ns per candidate, and the mapping is
+  released when the accessor is dropped rather than when the last query ends. **(b) Leave the
+  per-fetch `np.frombuffer`** and close this entry, keeping the mapping unpinned and the 14× gap to
+  `in_memory=True` with it. **Recommended: (a), conditional on the saving surviving a measurement
+  inside `timezone_at` rather than in isolation.** What it turns on is that the pinning objection
+  was raised against caching the coordinate *arrays*, which grow without bound as queries are
+  answered and make pages resident; one whole-file view is a single bounded export that faults in
+  nothing, and `cleanup()` already implements exactly the deferred close it needs. If the in-query
+  measurement does not reproduce the per-fetch figure, (b) — a saving that only exists in a
+  microbenchmark is not one.
+- **Status:** needs a decision — measured; the question is whether an accessor-lifetime export is
+  acceptable now that `cleanup()` is built for exactly that case.
 - **Last touched:** 2026-08-21 — found by the re-measurement the offset table obliged.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
@@ -805,8 +830,19 @@ the denominators, and how to tell whether they still describe the tree.
   text against text, survives every format change, and doubles as the data-update changelog entry.
 - **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad. That
   lowers urgency and not value — the argument rests on the auto-merge, not on an incident.
-- **Status:** needs decisions — the thresholds, and the trip behaviour. Part (a), pinning and
-  checksumming the download, needs neither and can be taken alone.
+- **Decision needed:** what a tripped guardrail *does*. **(a) Block the auto-merge** on any gate,
+  labelling the PR and notifying through the `automation-failed` path that already exists. **(b)
+  Report only** — always post the diff, never block, so the guardrails are evidence rather than a
+  gate. **(c) Block on the two hard signals only** — a size *decrease* and a changed-answer rate
+  above the threshold — and report everything else. **Recommended: (c).** The calibration above
+  already rules out gating on zone changes, and the same reasoning generalises: a gate that fires on
+  a routine upstream event is disabled within two releases, and then (a) has bought nothing while
+  costing the automation. (b) is the safe answer and the weak one — it leaves an unattended pipeline
+  publishing whatever it downloaded. Least evidence behind the changed-answer threshold, since no
+  bad release exists to calibrate one against; the four-release calibration on the issue bounds the
+  *normal* range, which is the most that can be asked of it.
+- **Status:** needs a decision — the trip behaviour above, and the thresholds it applies to. Part
+  (a), pinning and checksumming the download, needs neither and can be taken alone.
 - **Last touched:** 2026-08-21 — thresholds calibrated and written to the issue.
 
 ### GH-317 — reduce the release artifact count
@@ -922,7 +958,18 @@ the denominators, and how to tell whether they still describe the tree.
   to `__init__`. Its opt-in CLI mode is the right shape precisely because of that — and being off
   the init path is what lets the check afford to be exhaustive.
 - **CLI shape settled 2026-08-21 (subcommands)** — see GH-428. Neither entry waits on the other.
-- **Status:** open — CLI shape settled, the invariant list still to agree.
+- **Decision needed:** which invariants the first slice checks. **(a) The whole list in the issue
+  body**, geometry included — every bounding box actually containing its polygon. **(b) Only what
+  the fast path assumes**: shortcut candidates grouped by zone id, `zone_positions` monotonic and
+  terminated, every id in range — the assumptions behind `timezone_at`'s early break and its
+  untested last candidate. **Recommended: (b) as the slice, with (a) as the rule for what earns a
+  check later** — an invariant belongs here when the reader *relies* on it and nothing re-establishes
+  it, which is what makes a violation return a plausible wrong timezone instead of an error. The
+  issue says the same: the one that carries it is the candidate grouping. The geometry check in (a)
+  is the most likely of all of them to find something and also the most expensive; being off the
+  init path, it is affordable — as a second slice, so that a finding in the shipped data does not
+  block the invariant that motivated the feature.
+- **Status:** needs a decision — CLI shape settled, the invariant list still to agree.
 - **Last touched:** 2026-08-21 — unblocked by the CLI decision.
 
 ### GH-428 — data parsing UX, and the CLI shape it shares with GH-500
@@ -938,7 +985,19 @@ the denominators, and how to tell whether they still describe the tree.
 - **Still open, and worth answering before anything is designed:** whether `update-data` is wanted
   at all — "generate the full dataset after pip installing" competes directly with "pip install the
   dataset", which now exists.
-- **Status:** open — CLI shape decided, the `update-data` scope question still open.
+- **Decision needed:** is `update-data` wanted at all, and if so pointed at what? **(a) Keep it as
+  proposed** — the installed CLI downloads the upstream release and regenerates the dataset. **(b)
+  Drop it**, leaving `query`, `rows` and `validate-data`. **(c) Keep the capability, aimed at the
+  user's own GeoJSON rather than at upstream** — a `convert`/`parse` subcommand over an input the
+  user supplies. **Recommended: (c).** The original request was "generate the full dataset after pip
+  installing rather than cloning the repo", and `pip install timezonefinder-data` now answers that
+  outright, which is what the issue's own comment predicted would happen. What it does *not* answer
+  is the audience that survives: people compiling custom data, who have no supported entry point at
+  all, because `scripts/` is not in the wheel (`MANIFEST.in` ships `timezonefinder` only) and
+  `python -m scripts.file_converter` therefore only exists in a checkout. (a) also puts a ~62 MB
+  download and `update_data.sh` behind an installed console script, which is a maintenance surface
+  for a need that no longer exists.
+- **Status:** needs a decision — CLI shape decided, the `update-data` scope question still open.
 - **Last touched:** 2026-08-21 — CLI shape decided here for both entries.
 
 ### GH-362 — reuse the `PolygonArray` binaries in file conversion
