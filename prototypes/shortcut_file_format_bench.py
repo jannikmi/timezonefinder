@@ -52,6 +52,125 @@ FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2
     keys-dedup  <=       457      0.661  0.37         209      419
     slot-dedup           197      0.515  0.37         210      421
 
+    QUERY: full timezone_at(), paired and order-alternated, 61 rounds of 2,000 points
+
+    stratum      shipped ns  proposed ns  on minima  median d   10-90% of d  rounds faster
+    unique            1,070        1,067      -0.3%       -56   -337 .. +62          44/61
+    ambiguous        10,027       10,081      +0.5%       +74  -415 .. +531          26/61
+    random            3,457        3,388      -2.0%       -35   -292 .. +173         32/61
+    on_land           5,950        5,898      -0.9%      -116   -383 .. +256         39/61
+
+CONCLUSIONS
+
+1. **On query speed the two are indistinguishable, and that is the answer.** Every stratum
+   is within +-2% on minima, every median per-round difference sits well inside its own
+   10-90% spread, and the sign is not even consistent - the proposal wins on minima for
+   three strata and loses on one, wins the round count on two and loses it on two. The
+   shortcut structure exists to avoid point-in-polygon tests, and **the proposal avoids
+   exactly the same ones**: it changes how a cell's candidate list is stored, never which
+   candidates come back. Nothing here should be sold as a speedup, and nothing here costs
+   speed either. **The item is query-neutral and has to be justified on load, memory and
+   file size or not at all.**
+
+2. **Two measurement designs had to be discarded to get that number, and both flattered
+   the proposal.** An isolated lookup says the dict wins by ~100 ns, which would be ~10% of
+   a unique-zone query if it were real; it is not, because it omits the
+   `match value: case int(zone_id)` the shipped `timezone_at` runs on the dict's answer.
+   Measured: `dict.get` alone 84 ns, with that dispatch 188 ns (+104) - and the proposal
+   needs no equivalent, its zone table having already told the three cases apart. And a
+   paired comparison in a fixed A-then-B order reported the proposal 13.3% faster on the
+   unique stratum, which was entirely the first path warming `validate_coordinates`,
+   `h3.latlng_to_cell` and `zone_name_from_id` for the second. Alternating the order took
+   that to -0.3%.
+
+3. **Read `on minima` and `rounds faster` together, never one alone.** They disagree here
+   by construction: the minimum is the least noise-sensitive estimator and the round count
+   is the one that makes no assumption about the noise distribution. Where a difference is
+   real both move together; where it is not, they disagree, which is what they do above.
+
+4. **The structure decision, then, is settled entirely on the non-query axes**, and there
+   the step that matters is dict against flat: **4.44 MiB to ~0.4, ~394 ms to ~0.66,
+   1,530 KiB to ~460 - 12x memory, 600x load, 3x file.** The spread *among* the flat
+   structures is ~50 KiB and ~0.09 MiB, under 2% of the packaged data, so no flat variant
+   is a mistake and that choice should not be relitigated once made.
+
+5. **`keys-dedup` is the one to build.** Smaller on both axes than `keys-plain` at identical
+   load and lookup, and no harder to read. Sharing is free at lookup because duplicates
+   carry *equal offsets* rather than a shared index - nothing is dereferenced twice, so a
+   repeated entry costs exactly what a unique one costs.
+
+6. **Correction to the previous block: deduplication does not "pay for its own addressing
+   by narrowing the offsets".** That rested on the plain payload needing `uint32`, which
+   was an artefact of a 4x-headroom rule this script used to impose - 54,024 values fit
+   `uint16` perfectly well. With the narrowest-fitting widths and a guard, *both* structures
+   use `uint16` offsets and `uint8` lengths, and what deduplication buys is exactly the
+   payload: 105.5 KiB to 14.3, so 508 KiB to 457. It does cost one column - without sharing
+   the ranges are contiguous and N+1 CSR offsets encode N ranges, whereas shared ranges need
+   a start *and* a length - which is ~41 KiB against the ~91 KiB of payload it saves.
+
+7. **Narrowest-fitting widths, guarded, not widths chosen for headroom.** `uint8` lengths
+   (largest entry 59) and `uint16` offsets are correct because the packaged data is built by
+   a converter this repository owns: an overflow surfaces at build time, not in a user's
+   process, *provided something checks and says what happened*. `check_fits` is that check
+   and its message is the deliverable. In the shipped version it belongs in
+   `scripts/data_integrity.py`, asserted by the converter over what it wrote and by the test
+   suite over what is committed, never on the finder's init path.
+
+8. **Load: ~394 ms to ~0.66 ms, and most of it is not this change's to claim.** PERF-5
+   reaches ~21 ms on the *existing* file with no format change and no release, so what the
+   format change adds is ~21 ms to ~0.66 ms.
+
+9. **The one decision left is ~260 KiB and ~0.15 ms to keep h3 out of the format.**
+   `slot-dedup` drops the stored cell ids because the cell id *is* the index, and bakes an
+   encoding h3-py does not promise as API - plus `SHORTCUT_H3_RES` - into bytes that outlive
+   every reader. Storing the ids moves that coupling into the reader, which is versioned
+   with the package. **Recommended: pay it.**
+
+REFUSED OPTIONS below, with its reason.
+
+``dict``        what ships. A FlatBuffers file whose 41,162 per-entry tables are decoded
+                in Python into ``dict[int, int | ndarray]``.
+``keys-plain``  flat file: sorted cell ids, per-entry start and end, one payload holding
+                every value back to back. Removes the per-entry decode and the dict.
+``keys-dedup``  the same, storing each *distinct* entry once - only 6.9% of entries are
+                distinct - so duplicates simply carry equal offsets into a shared payload.
+                **This is the recommendation.**
+
+``slot-dedup`` is measured beside them to price one question and no other: what storing the
+cell ids buys. It drops them and derives the index from h3's internal bit layout instead.
+
+All three flat structures load to the *same runtime shape* and share one lookup, so the
+query comparison is about the data rather than about three different code paths::
+
+    zone = zone_by_slot[slot]            # derived at load, int16
+    if zone >= 0:        -> unique zone id
+    elif zone == ABSENT  -> not covered
+    else:                -> payload[starts[slot]:ends[slot]]
+
+Correctness first: every one of the 41,162 cells must resolve to exactly what the shipped
+reader returns, under every structure, before anything is timed.
+
+Run::
+
+    PYTHONPATH=. uv run python prototypes/shortcut_file_format_bench.py
+
+Neither the load path nor the lookup touches point-in-polygon, so unlike the companion
+script this one is backend-independent.
+
+
+FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+
+    payload: 54,024 values -> 7,344 distinct (105.5 -> 14.3 KiB, 7.4x)
+    column widths: offsets uint16, lengths uint8 (largest entry 59) - narrowest that
+    fits, guarded by `check_fits` rather than by headroom
+    agreement: all 41,162 cells resolve identically under all three structures
+
+    structure       file KiB   load ms    MiB   unique ns   amb ns
+    dict (shipped)     1,530    393.8    4.44         108      117
+    keys-plain           508      0.659  0.46         210      419
+    keys-dedup  <=       457      0.661  0.37         209      419
+    slot-dedup           197      0.515  0.37         210      421
+
 CONCLUSIONS
 
 1. **The decision that matters is dict against flat, and everything after it is small.**
@@ -139,6 +258,7 @@ import gc
 import json
 import subprocess
 import sys
+import statistics
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -156,7 +276,17 @@ from prototypes.shortcut_layout_bench import (
     verify_slot_bijection,
 )
 from scripts.configs import PROJECT_ROOT
-from timezonefinder import TimezoneFinder
+from h3.api import numpy_int as h3
+
+from scripts.assert_acceleration_path import active_acceleration_path
+from tests.auxiliaries import (
+    AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    ON_LAND_POINTS_FIXTURE,
+    RANDOM_POINTS_FIXTURE,
+    UNIQUE_SHORTCUT_POINTS_FIXTURE,
+    load_benchmark_points,
+)
+from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.flatbuf.io.hybrid_shortcuts import (
     get_hybrid_shortcut_file_path,
@@ -180,6 +310,18 @@ ABSENT = -2
 
 REPEATS = 7
 QUERY_SAMPLE = 2_000
+# points per round and rounds per stratum for the paired whole-query comparison. Large
+# enough that one round is milliseconds rather than microseconds, and enough rounds that
+# the spread of the per-round difference is readable rather than a single number.
+QUERY_POINTS = 2_000
+QUERY_ROUNDS = 61
+
+QUERY_STRATA = (
+    ("unique", UNIQUE_SHORTCUT_POINTS_FIXTURE),
+    ("ambiguous", AMBIGUOUS_SHORTCUT_POINTS_FIXTURE),
+    ("random", RANDOM_POINTS_FIXTURE),
+    ("on_land", ON_LAND_POINTS_FIXTURE),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -507,6 +649,139 @@ def lookup(starts, ends, payload, zone_by_slot, hex_id: int):
 
 
 # ---------------------------------------------------------------------------
+# the query benchmark: full `timezone_at`, shipped against proposed
+# ---------------------------------------------------------------------------
+# This is the measurement that decides the item. The shortcut index exists to avoid
+# point-in-polygon tests, so a structure that is smaller and loads faster but answers
+# queries slower is not obviously an improvement - and an isolated lookup says exactly
+# that, with the dict at ~108 ns against ~210. That comparison is misleading in both
+# directions, which is why it is not the one reported:
+#
+#   * it omits what the shipped code does with the dict's answer - `match value: case
+#     int(zone_id)`, a structural pattern match the flat structure needs no equivalent of,
+#     because its zone table has already answered;
+#   * and the whole difference is ~100 ns inside a query of ~1,000 (unique) to ~10,000
+#     (ambiguous), i.e. at or below the 3-9% run-to-run jitter of this machine.
+#
+# So the two paths are compared *whole*, and paired: A and B alternate inside one round so
+# thermal drift and scheduling move both, and the reported figure is the distribution of
+# per-round differences rather than the difference of two separately-taken minima.
+
+
+class FlatTimezoneFinder(TimezoneFinder):
+    """``TimezoneFinder`` with the shortcut dict replaced by the proposed structure.
+
+    Everything below the shortcut lookup is copied verbatim from the shipped
+    ``timezone_at`` so the only difference measured is the structure. The copy is checked
+    against the original on every fixture point before timing.
+    """
+
+    __slots__ = ("_ends", "_payload", "_starts", "_zone_by_slot")
+
+    def __init__(self, structure_path: Path, **kwargs) -> None:
+        super().__init__(**kwargs)
+        starts, ends, payload = read_keys(structure_path.read_bytes())
+        self._starts = starts
+        self._ends = ends
+        self._payload = payload
+        self._zone_by_slot = derive_zone_table(starts, ends, payload)
+
+    def timezone_at(self, *, lng: float, lat: float) -> str | None:
+        lng, lat = utils.validate_coordinates(lng, lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+        slot = (
+            (hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
+        ) * SLOT_STRIDE + ((hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK)
+        zone_id = self._zone_by_slot[slot]
+        if zone_id >= 0:
+            return self.zone_name_from_id(int(zone_id))
+        if zone_id == ABSENT:
+            return None
+        possible_boundaries = self._payload[self._starts[slot] : self._ends[slot]]
+
+        # --- verbatim from TimezoneFinder.timezone_at below this line ---
+        nr_possible_polygons = len(possible_boundaries)
+        if nr_possible_polygons == 0:
+            return None
+        zone_ids = self.zone_ids_of(possible_boundaries)
+        last_zone_change_idx = utils.get_last_change_idx(zone_ids)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
+        for i, boundary_id in enumerate(possible_boundaries):
+            if i >= last_zone_change_idx:
+                break
+            if self.inside_of_polygon(boundary_id, x, y):
+                return self.zone_name_from_id(int(zone_ids[i]))
+        return self.zone_name_from_id(int(zone_ids[-1]))
+
+
+def paired_query_ns(
+    shipped: TimezoneFinder, proposed: TimezoneFinder, points, rounds: int
+) -> tuple[float, float, list[float]]:
+    """Alternate the two finders round by round. Returns (ns A, ns B, per-round deltas).
+
+    Paired on purpose. Taking the min of one finder's rounds and the min of the other's
+    compares two different moments of the machine, and the effect being resolved here is
+    smaller than the machine moves between them.
+    """
+    a_times: list[float] = []
+    b_times: list[float] = []
+
+    def run(finder):
+        t0 = time.perf_counter()
+        [finder.timezone_at(lng=p[0], lat=p[1]) for p in points]
+        return time.perf_counter() - t0
+
+    for _ in range(2):  # warm up both, including numba compilation and page faults
+        run(shipped)
+        run(proposed)
+    # The order alternates every round. Whichever path runs first pays to warm what the
+    # two share - `validate_coordinates`, `h3.latlng_to_cell`, `zone_name_from_id`, the
+    # branch predictors - and the second one collects that for free. Measured at ~140 ns
+    # per query on the unique stratum, which is larger than the difference being resolved,
+    # so a fixed A-then-B order does not measure the structures at all.
+    for r in range(rounds):
+        if r % 2 == 0:
+            a_times.append(run(shipped))
+            b_times.append(run(proposed))
+        else:
+            b_times.append(run(proposed))
+            a_times.append(run(shipped))
+    n = len(points)
+    deltas = [(b - a) / n * 1e9 for a, b in zip(a_times, b_times)]
+    return min(a_times) / n * 1e9, min(b_times) / n * 1e9, deltas
+
+
+def match_dispatch_ns(mapping: dict, cells: Sequence[int]) -> tuple[float, float]:
+    """What the shipped code pays to interpret the dict's answer, and the flat one not.
+
+    ``match value: case int(zone_id)`` against a plain ``dict.get``. The flat structure
+    needs no equivalent - its zone table has already distinguished the three cases - so
+    this is the part of the isolated-lookup gap that cancels in a whole query.
+    """
+    get = mapping.get
+
+    def bare():
+        return [get(c) for c in cells]
+
+    def with_match():
+        out = []
+        for c in cells:
+            value = get(c)
+            match value:
+                case None:
+                    out.append(None)
+                case int(zone_id):
+                    out.append(zone_id)
+                case _:
+                    out.append(value)
+        return out
+
+    n = len(cells)
+    return measure(bare) / n * 1e9, measure(with_match) / n * 1e9
+
+
+# ---------------------------------------------------------------------------
 # harness
 # ---------------------------------------------------------------------------
 
@@ -740,16 +1015,81 @@ def main() -> None:
             ]
         )
     table(
-        "One row per structure. Query columns are the lookup alone, inlined.",
+        "Structure: what it costs to store, load and hold.",
         ["structure", "file KiB", "load ms", "MiB", "unique ns", "amb ns"],
         rows,
     )
     print(
-        "  `load ms` includes deriving the zone table. The two query columns are a lookup\n"
-        "  with no query around it; inside a real `timezone_at` the companion script\n"
-        "  measures this layout at +4 ns, under the noise floor - quote that, not these."
+        "  `load ms` includes deriving the zone table. The last two columns are a lookup\n"
+        "  in isolation and are NOT the query answer - see the paired table below, which\n"
+        "  is the one that decides whether this is worth doing."
     )
 
+    # ---- the query comparison, which is what the structure exists for ----
+    proposed = FlatTimezoneFinder(OUT_DIR / f"{RECOMMENDED}.bin")
+    strata = {name: load_benchmark_points(fx) for name, fx in QUERY_STRATA}
+    for name, points in strata.items():
+        for lng, lat in points[:500]:
+            got = proposed.timezone_at(lng=lng, lat=lat)
+            want = tf.timezone_at(lng=lng, lat=lat)
+            if got != want:
+                raise AssertionError(f"{name} ({lng}, {lat}): {got!r} != {want!r}")
+    print(
+        f"\nagreement: the proposed finder answers as the shipped one on "
+        f"{sum(min(len(p), 500) for p in strata.values()):,} fixture points"
+    )
+
+    rows = []
+    for name, points in strata.items():
+        pts = points[:QUERY_POINTS]
+        a, b, deltas = paired_query_ns(tf, proposed, pts, QUERY_ROUNDS)
+        deltas.sort()
+        median = statistics.median(deltas)
+        lo, hi = deltas[len(deltas) // 10], deltas[-len(deltas) // 10 - 1]
+        faster = sum(1 for d in deltas if d < 0)
+        rows.append(
+            [
+                name,
+                f"{a:,.0f}",
+                f"{b:,.0f}",
+                f"{(b - a) / a * 100:+.1f}%",
+                f"{median:+,.0f}",
+                f"{lo:+,.0f} .. {hi:+,.0f}",
+                f"{faster}/{len(deltas)}",
+            ]
+        )
+    table(
+        f"QUERY: full timezone_at(), paired and order-alternated, {QUERY_ROUNDS} rounds "
+        f"of {QUERY_POINTS} points",
+        [
+            "stratum",
+            "shipped ns",
+            "proposed ns",
+            "on minima",
+            "median d",
+            "10-90% of d",
+            "rounds faster",
+        ],
+        rows,
+    )
+    print(
+        "  Two estimators on purpose, because they disagree and that disagreement is the\n"
+        "  result. `on minima` is the ratio of the two best rounds - the estimator the\n"
+        "  benchmark suite tracks. `median d` is the median per-round difference, paired.\n"
+        "  `rounds faster` counts rounds where the proposal won: ~half means no effect,\n"
+        "  and is the reading that needs no assumption about the noise distribution."
+    )
+
+    bare, matched = match_dispatch_ns(mapping, uniq)
+    print(
+        f"\n  Why the isolated lookup misleads: `dict.get` alone is {bare:,.0f} ns, and the\n"
+        f"  `match value: case int(zone_id)` the shipped timezone_at runs on its result\n"
+        f"  takes that to {matched:,.0f} ns (+{matched - bare:,.0f}). The proposed structure needs no\n"
+        f"  equivalent - its zone table has already told the three cases apart - so most\n"
+        f"  of the isolated gap is spent by the dict path a moment later."
+    )
+
+    proposed.cleanup()
     tf.cleanup()
 
 

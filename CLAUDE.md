@@ -106,6 +106,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   check be *thorough* — the hole-reference check resolves every ring in the dataset, which no
   per-construction budget would allow. A defensive `if` at load time is the tempting version of
   this and the wrong one: it is slower, and being forced to stay cheap makes it shallower
+- **Pick the narrowest integer dtype that fits, guard it, and never reject a width for lack of
+  headroom alone.** A width chosen with 1.2x margin is fine; a width chosen *for* margin is
+  padding. The data is produced by a converter this repository owns, so an overflow surfaces at
+  build time rather than in a user's process — provided something checks, which is the bullet
+  above: assert it in the generator and in the test suite, sharing one implementation. The error
+  message is the deliverable, not the assertion: name the value that overflowed, the dtype's
+  ceiling, which width to move to, and the version bumps that follow. A guarded narrow type is
+  strictly better than an unguarded wide one — smaller, and loud instead of silently truncating
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed

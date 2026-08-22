@@ -375,6 +375,17 @@ the denominators, and how to tell whether they still describe the tree.
   by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
   at identical load and lookup. Six alternatives lost and are recorded in that script's `REFUSED
   OPTIONS` block, including two of its own wrong turns.
+- **Query speed: indistinguishable, and that is the answer to the obvious objection.** The
+  shortcut index exists to avoid point-in-polygon tests, so a structure that is smaller but
+  answers slower would not be an improvement. Measured full `timezone_at`, paired and
+  order-alternated, 61 rounds x 2,000 points on four fixture strata: **within ±2 % on minima
+  everywhere, every median per-round difference inside its own 10–90 % spread, and the sign
+  inconsistent across strata.** The proposal changes how a cell's candidate list is stored, never
+  which candidates come back, so it avoids exactly the same PIP tests. **Justify this item on load,
+  memory and file size or not at all — never as a speedup.** Two designs that suggested otherwise
+  were discarded: an isolated lookup omits the `match` the shipped code runs on the dict's answer
+  (84 → 188 ns, and the proposal needs no equivalent), and a fixed A-then-B order credited the
+  proposal with 13.3 % that was the first path warming shared code for the second.
 - **Only 6.9 % of the 41,162 entries are distinct**, because the ocean zones repeat one zone id
   across thousands of cells. Sharing is free at lookup — duplicates carry *equal offsets*, so
   nothing is dereferenced twice. It costs one column: without sharing the ranges are contiguous and
