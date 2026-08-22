@@ -108,6 +108,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
+| PERF-5 | The shortcut decode rebuilds 41,162 FlatBuffers tables in Python | performance | ~80 | free — measured |
 | GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured, one decision left |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
@@ -347,10 +348,16 @@ the denominators, and how to tell whether they still describe the tree.
 
 - **Tracks:** issue #477, which carries the memory breakdown, the candidate layouts, and the
   measurements behind every judgement below.
-- **Why it is ranked here:** a memory item and only that — a few MiB per instance, on a structure
-  that is essentially the whole heap of `TimezoneFinderL`, multiplied by the thread count because
-  concurrent workloads are told to use one instance each. On the layout that survives it buys no
-  speed and costs none, so nothing else weighs against the memory.
+- **Why it is ranked here:** a memory item, plus the tail of a construction-time one — a few MiB
+  per instance, on a structure that is essentially the whole heap of `TimezoneFinderL`, multiplied
+  by the thread count because concurrent workloads are told to use one instance each. On the layout
+  that survives it costs no *query* speed and buys none; that half of the ranking is unchanged.
+- **What "buys no speed" was silently scoped to, corrected 2026-08-22.** It means a *query*, the
+  only denominator *The measured baseline* carries. Building the dict is ~400 ms of a ~405 ms
+  `TimezoneFinder()` and no version of this entry priced it. It is still not this entry's prize:
+  ~379 ms of that is the FlatBuffers per-table decode, which **PERF-5 removes with no format change
+  and no release**, and what a flat layout takes on top is the ~21 ms of dict materialisation left
+  after it. Sequence PERF-5 first, then rank this on the memory plus ~21 ms — never on the 400.
 - **Measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, over whole queries
   rather than lookups in isolation. It supersedes the issue's original microbenchmark and #497's
   query-side estimate alike; where the three disagree, it wins.
@@ -365,6 +372,40 @@ the denominators, and how to tell whether they still describe the tree.
 - **Status:** open — implementable once the payload question is answered.
 - **Last touched:** 2026-08-22 — the measurement detail cut to the issue now that it is written
   there; measured and re-reasoned 2026-08-21.
+
+### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
+
+- **Location:** `timezonefinder/flatbuf/io/hybrid_shortcuts.py`,
+  `_read_hybrid_shortcuts_with_schema`.
+- **What it costs, and in which denominator.** ~400 ms of a ~405 ms `TimezoneFinder()`, and of a
+  ~396 ms `TimezoneFinderL()` whose construction is otherwise nothing at all. The denominator is a
+  **construction, not a query**, so *The measured baseline* prices none of this and no share here
+  may be compared with one there. It is paid per instance — which the one-instance-per-thread rule
+  this package gives concurrent callers multiplies by the thread count — and once per process by
+  every CLI call, script and serverless cold start.
+- **The count, which is the half that travels:** decoding 41,162 cells costs ~4.5 M Python-level
+  calls, ~91 % of them inside the `flatbuffers` runtime (`table.Get`, `encode.Get`,
+  `enforce_number`) rather than in this module. One table and one union member per cell, read field
+  by field.
+- **Measured 2026-08-22, and the fix is the one already proven next door.** A prototype that walks
+  the entries vector the way `derive_coord_offset_table` walks the polygons vector — whole-array
+  numpy arithmetic over all 41,162 entries at once, then one pass to build the dict — reproduces
+  the shipped mapping exactly, same key order and same values for every cell, at **21.0 ms against
+  399.7 ms**. Same file bytes: no schema change, hence no `SHORTCUT_LAYOUT_VERSION` bump, hence no
+  `DATA_FORMAT_VERSION` bump and no ordered two-distribution release. That is what separates it
+  from GH-477, which reaches a similar place by changing the format.
+- **The cost of the item is the safety obligation, not the walk.** A hand-rolled vtable walk
+  assumes what the generated accessors guarantee — that a table sits where its reference says, that
+  vtables are aligned, that an absent field means its default — and a violated assumption yields
+  plausible wrong zone ids silently, exactly as it would for coordinates. So it carries the same
+  answer: an exhaustive check in `scripts/data_integrity.py` comparing the walk against the
+  generated-accessor reader for every cell, run by the converter over what it wrote and by the test
+  suite over what ships, and never on the construction path. Budget that as most of the change.
+- **It blocks nothing and nothing blocks it.** It makes GH-477's construction-time argument smaller
+  rather than larger, the two do not conflict, and this one needs no decision from anyone.
+- **Status:** open — free.
+- **Last touched:** 2026-08-22 — found and measured while pricing the `flatbuffers` dependency; see
+  *Recorded decisions* for why the answer is this rather than dropping it.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
@@ -1557,6 +1598,19 @@ premise moves; do not reverse a decision silently.
   well-known source of subtle bugs and `h3` sits on the common path of every query; an open item
   would be an invitation to attempt it. Revisit only if import time or cold start is ever measured
   to be a real problem.
+- **Dropping `flatbuffers` for the custom binary format it replaced in 6.6.0 — measured 2026-08-22
+  and refused.** The dependency is not what anything costs. It adds **0.033 %** to the 63 MB
+  coordinate file, **1.1 ms** of import once numpy is loaded, and — since the offset table of
+  GH-536 — **nothing per query**, the lookup path reading coordinates with a bare `np.frombuffer`.
+  Writing the same shortcut payload as flat vectors *inside* a FlatBuffers buffer reads in
+  **0.050 ms against 0.039 ms** for a hand-rolled raw blob of the same bytes, so the container is
+  worth ~11 µs and 58 bytes. What is expensive is the **shape of the shortcut schema** — a vector
+  of 41,162 tables, ranked as PERF-5 — and that is a schema question in either format. Against ~0
+  gain, removing it costs the file identifiers and `layout_version` fields the load-time guards are
+  built on, the `schemas/` copy that lets a compiled data directory be read back without the
+  package that wrote it, the alignment guarantee the zero-copy views rest on, and the independent
+  reference decoder that `scripts.data_integrity.validate_coordinate_offset_table` checks the fast
+  path against. Not to be re-proposed without a measurement contradicting one of those figures.
 
 ---
 
