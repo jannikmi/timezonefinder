@@ -57,6 +57,26 @@ def run_cli(*args: str, input: str | None = None) -> subprocess.CompletedProcess
     )
 
 
+def cli_diagnostics(result: subprocess.CompletedProcess) -> list[str]:
+    """The CLI's own messages on stderr, in order.
+
+    stderr is shared with whatever else the process writes there, and the
+    interpreter uses it too - a free-threaded build reports re-enabling the GIL
+    to import h3, one line before the CLI has run any code of its own. Counting
+    lines therefore asserts a property of the interpreter rather than of the
+    CLI; select the lines the CLI wrote instead, which are the ones it prefixes
+    with its two severities.
+
+    :param result: A finished ``run_cli`` invocation
+    :return: The ``error:`` and ``warning:`` lines, without other stderr output
+    """
+    return [
+        line
+        for line in result.stderr.splitlines()
+        if line.startswith(("error:", "warning:"))
+    ]
+
+
 @pytest.mark.unit
 @pytest.mark.parametrize("function_id", FUNCTION_IDS)
 def test_lookup_prints_the_zone_name_and_nothing_else(function_id: int):
@@ -394,8 +414,9 @@ def test_stdin_mode_rejects_a_column_number_wider_than_the_input():
     assert result.stdout == "", (
         "nothing may be answered against a column that is absent"
     )
-    assert result.stderr.count("\n") == 1, result.stderr
-    assert "--lng-col addresses column 9" in result.stderr
+    assert cli_diagnostics(result) == [
+        "error: --lng-col addresses column 9, but the input has 3 column(s)"
+    ], result.stderr
 
 
 @pytest.mark.unit
