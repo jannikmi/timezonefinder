@@ -13,12 +13,13 @@ exactly one of them (§1): **prepare** ends with a release PR, **tag** ends with
 
 ## 0. This skill stops once. That stop is the point.
 
-`.claude/skills/improvement-pass/SKILL.md` runs start to finish without asking whenever the item it
-took is an internal refactor, because such a change has an obvious correct answer. Most of a release
-does too: the bump level follows from §4's table applied to bullets that are already written down,
-and it lands in a pull request the maintainer reads before merging. Asking in chat put the same
-question to them twice, the first time without the diff attached. §7's **Why this level** is where
-that judgement is now checked, which is why it is mandatory and has a required shape.
+`.claude/skills/improvement-pass/SKILL.md` runs start to finish without asking at all, and hands the
+choices it may not make to `.claude/skills/maintainer-decisions/SKILL.md`, which puts them to the
+maintainer in a session they invoked. A release needs neither route: the bump level follows from
+§4's table applied to bullets that are already written down, and it lands in a pull request the
+maintainer reads before merging. Asking in chat put the same question to them twice, the first time
+without the diff attached. §7's **Why this level** is where that judgement is now checked, which is
+why it is mandatory and has a required shape.
 
 What is not a judgement anyone reviews afterwards:
 
