@@ -18,8 +18,9 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
 )
 from timezonefinder.flatbuf.io.polygons import (
+    derive_coord_offset_table,
     get_polygon_collection,
-    read_polygon_array_from_binary,
+    read_polygon_array_at,
 )
 
 
@@ -87,14 +88,42 @@ class FileCoordAccessor(AbstractCoordAccessor):
         self.coordinate_file_path = coordinate_file_path
         # Initialize file resources using proper resource management.
         try:
-            # Use memory-mapped file for on-demand reading
-            self.coord_file: BinaryIO = open(self.coordinate_file_path, "rb")
+            # Unbuffered: nothing reads coordinates through this object - the mapping
+            # below serves them - and the offset table's scattered header reads are 6x
+            # slower through a buffer that every seek discards.
+            self.coord_file: BinaryIO = open(
+                self.coordinate_file_path, "rb", buffering=0
+            )
             # Create memory map
             self.coord_buf: mmap.mmap = mmap.mmap(
                 self.coord_file.fileno(), 0, access=mmap.ACCESS_READ
             )
-            self.polygon_collection: PolygonCollection = get_polygon_collection(
+            collection: PolygonCollection = get_polygon_collection(
                 self.coord_buf, self.coordinate_file_path
+            )
+            # Where each polygon's coordinates live, resolved once and eagerly.
+            #
+            # Eagerly on purpose, and NOT because the table is cheap to build. Polygon
+            # coordinates are not optional-path data: a `TimezoneFinder` exists to test
+            # points against polygons, and every query that is not answered outright by
+            # a unique-zone shortcut cell reaches this accessor. There is no population
+            # of callers who never need the table, so deferring it would move a certain
+            # cost to the first query rather than avoid it - and would buy that with a
+            # per-fetch `is None` branch on the hot path and a write to `self` from a
+            # lookup, which is exactly what a shared instance being safe for concurrent
+            # reads currently rests on: every attribute is assigned here or in
+            # `cleanup()`, and nothing on the lookup path mutates state. The lazy rule
+            # that governs `zone_positions` (read only by `certain_timezone_at` and
+            # `get_geometry`, which the `timezone_at` majority never calls) is the
+            # opposite case, not a precedent for this one.
+            #
+            # Read through the file rather than the mapping: the header words sit next
+            # to the polygons they describe, so walking them through the mapping would
+            # fault in a page per polygon and inflate the resident set of a finder that
+            # has answered nothing yet. The collection is not kept either - everything
+            # read after this point is addressed by offset.
+            self.coord_offsets, self.coord_lengths = derive_coord_offset_table(
+                collection, self.coord_file
             )
         except Exception:
             # Clean up any partially initialized resources
@@ -111,10 +140,12 @@ class FileCoordAccessor(AbstractCoordAccessor):
         Returns:
             A numpy array containing the polygon coordinates
         """
-        return read_polygon_array_from_binary(self.polygon_collection, idx)
+        return read_polygon_array_at(
+            self.coord_buf, self.coord_offsets[idx], self.coord_lengths[idx]
+        )
 
     def __len__(self) -> int:
-        return self.polygon_collection.PolygonsLength()
+        return len(self.coord_offsets)
 
     def cleanup(self) -> None:
         """Clean up resources.
@@ -140,8 +171,9 @@ class FileCoordAccessor(AbstractCoordAccessor):
         # refused, these are the only remaining owners besides the caller's views, so
         # releasing them lets the mapping go as soon as the last view is dropped rather
         # than pinning it for the lifetime of this accessor.
-        # polygon_collection owns no resources itself, but keeps coord_buf alive.
-        for attr in ("polygon_collection", "coord_buf", "coord_file"):
+        # The offset table is plain integers owning their own storage - it references
+        # nothing and is dropped only so a cleaned-up accessor has no usable state left.
+        for attr in ("coord_offsets", "coord_lengths", "coord_buf", "coord_file"):
             if hasattr(self, attr):
                 delattr(self, attr)
 
@@ -163,15 +195,19 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
         # Initialize polygon collection
         polygon_collection = get_polygon_collection(coord_buf, coordinate_file_path)
 
-        # Get number of polygons
-        num_polygons = polygon_collection.PolygonsLength()
+        # Resolve every polygon's position in one pass, then slice them out. Going
+        # through the generated accessors per polygon reads the same bytes but rebuilds
+        # the vtable walk 1300 times, which is most of this loop's cost.
+        offsets, lengths = derive_coord_offset_table(polygon_collection)
 
         # Preload all polygons. The key type mirrors __getitem__: numpy integers
         # hash and compare equal to the plain ints stored here, so a np.int64
         # lookup hits the same entry without a conversion.
         self.polygons: dict[IntegerLike, np.ndarray] = {}
-        for idx in range(num_polygons):
-            self.polygons[idx] = read_polygon_array_from_binary(polygon_collection, idx)
+        for idx in range(len(offsets)):
+            self.polygons[idx] = read_polygon_array_at(
+                coord_buf, offsets[idx], lengths[idx]
+            )
 
         # Once polygons are loaded, we don't need to keep polygon_collection or coord_buf references
         # They'll be garbage collected

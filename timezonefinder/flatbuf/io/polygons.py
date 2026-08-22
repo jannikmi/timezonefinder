@@ -1,8 +1,9 @@
 import flatbuffers
 import mmap
 import numpy as np
+from collections.abc import Callable
 from pathlib import Path
-from typing import Final
+from typing import BinaryIO, Final
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
 from timezonefinder.flatbuf.io.layout import incompatible_layout_error
@@ -20,6 +21,28 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollectionAddLayoutVersion,
     PolygonCollectionStartPolygonsVector,
 )
+
+# Byte offset of a field inside a FlatBuffers vtable, as the generated accessors spell
+# it: `Polygon.CoordsAsNumpy` opens with `self._tab.Offset(4)` and
+# `PolygonCollection.Polygons` with the same 4. Named here because
+# `derive_coord_offset_table` walks those vtables itself instead of going through the
+# generated classes, and a bare 4 in that arithmetic says nothing.
+COORDS_VTABLE_SLOT: Final[int] = 4
+POLYGONS_VTABLE_SLOT: Final[int] = 4
+
+# Widths of the FlatBuffers primitives the vtable walk steps over.
+_UOFFSET_BYTES: Final[int] = 4  # table/vector references, and a vector's length prefix
+_VOFFSET_BYTES: Final[int] = 2  # a vtable entry
+
+# The three word types the walk reads, and how wide each is.
+_SOFFSET: Final[str] = "<i4"  # signed: a table's offset back to its vtable
+_UOFFSET: Final[str] = "<u4"
+_VOFFSET: Final[str] = "<u2"
+_WORD_BYTES: Final[dict[str, int]] = {
+    _SOFFSET: _UOFFSET_BYTES,
+    _UOFFSET: _UOFFSET_BYTES,
+    _VOFFSET: _VOFFSET_BYTES,
+}
 
 # FlatBuffers file identifier (bytes 4-8), answering "is this a timezonefinder
 # polygon file at all?". Files written before this marker existed carry none.
@@ -193,7 +216,14 @@ def get_polygon_collection(
 def read_polygon_array_from_binary(
     poly_collection: PolygonCollection, idx: IntegerLike
 ) -> np.ndarray:
-    """Read a polygon's coordinates from a FlatBuffers collection."""
+    """Read a polygon's coordinates from a FlatBuffers collection.
+
+    The reference implementation of what a stored polygon means, and the slow one: it
+    re-walks the vtables through the generated accessors on every call. The lookup path
+    goes through :func:`derive_coord_offset_table` and :func:`read_polygon_array_at`
+    instead; this is what those are checked against, by
+    ``scripts.data_integrity.validate_coordinate_offset_table``.
+    """
     # value checks not required as this is a private function
     # processed polygon indices are expected to be in range
     # nr_polygons = collection.PolygonsLength()
@@ -204,4 +234,145 @@ def read_polygon_array_from_binary(
     poly = poly_collection.Polygons(idx)
     coords = poly.CoordsAsNumpy()  # flat 1D array: all x values, then all y values
     # Reshape to a (2, N) view with contiguous rows
+    return reshape_to_polygon_coords(coords)
+
+
+def _buffer_word_reader(buf: bytes | mmap.mmap) -> Callable:
+    """Read scattered header words out of ``buf`` itself.
+
+    Whole-buffer views plus advanced indexing, which is a gather: only the words
+    addressed are read. Correct for any buffer, and the right choice when the bytes are
+    already in memory - which for ``MemoryCoordAccessor`` and for the integrity check
+    they are.
+    """
+    views = {
+        dtype: np.frombuffer(buf, dtype=dtype, count=len(buf) // width)
+        for dtype, width in _WORD_BYTES.items()
+    }
+
+    def read(positions: np.ndarray, dtype: str) -> np.ndarray:
+        return views[dtype][positions // _WORD_BYTES[dtype]]
+
+    return read
+
+
+def _file_word_reader(coordinate_file: BinaryIO) -> Callable:
+    """Read scattered header words through the file rather than through a mapping.
+
+    Why this exists, and why it is worth ~4 ms of construction. The header words are
+    ~5 KiB in total but sit next to the polygons they describe, so they are spread over
+    every part of the file - 788 distinct pages of the packaged boundaries, across
+    60 MiB. Reading them through the mapping faults every one of those pages in, and
+    the kernel's readahead multiplies that: the resident set of a freshly constructed
+    memory-mapped finder more than doubled, on the one mode whose reason for existing
+    is that it stays small. Reading them through the file puts them in the page cache -
+    shared, reclaimable, and nobody's resident set - and copies ~5 KiB into the heap.
+
+    Requires ``coordinate_file`` to be **unbuffered** (``buffering=0``). Through a
+    buffered object each seek discards a 128 KiB read-ahead buffer that the next seek
+    refills, which measures 6x slower over the same reads.
+    """
+
+    def read(positions: np.ndarray, dtype: str) -> np.ndarray:
+        width = _WORD_BYTES[dtype]
+        chunks = []
+        for position in positions.tolist():
+            coordinate_file.seek(position)
+            chunks.append(coordinate_file.read(width))
+        return np.frombuffer(b"".join(chunks), dtype=dtype)
+
+    return read
+
+
+def derive_coord_offset_table(
+    poly_collection: PolygonCollection,
+    coordinate_file: BinaryIO | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Locate every polygon's coordinate vector once, as plain integers.
+
+    Returns ``(offsets, lengths)``: for polygon *i*, the byte offset of its first
+    coordinate into the underlying buffer and how many ``int32`` values follow. That is
+    everything :func:`read_polygon_array_at` needs, so fetching a candidate polygon
+    costs one ``np.frombuffer`` rather than a FlatBuffers vtable walk rebuilt in Python
+    per lookup - which on the memory-mapped path was the dominant cost of a query.
+
+    **Integers, not arrays, and that is the whole design.** Caching the polygon arrays
+    would be shorter and just as fast, but each cached array is a live export of the
+    memory map, so the cache would pin the mapping for the accessor's lifetime - in the
+    mode that exists precisely so the data need not be held in memory. Two ``uint32``
+    vectors pin nothing, and cost ~10 KiB for the packaged dataset.
+
+    **Derived with whole-array arithmetic, not a loop over ``Polygons(i)``.** The loop
+    costs ~6 ms for the packaged boundaries against ~0.1 ms here, or ~4 ms through a
+    file - which is what ``coordinate_file`` buys and why. That cost decides *how* the
+    table is derived, never *whether* to defer it: callers build this eagerly because
+    polygon coordinates are certainly needed, not because it is cheap (see
+    ``FileCoordAccessor.__init__``). Keeping it cheap is what stops that decision from
+    being paid for, on a construction the one-instance-per-thread pattern multiplies by
+    the thread count.
+
+    The walk mirrors what the generated accessors do, one step at a time over all
+    polygons at once: read the polygons vector's relative offsets, turn them into table
+    positions, follow each table's negative offset to its vtable, take the coords entry,
+    and land on the coordinate vector's length prefix. It reads 4- and 2-byte words
+    through whole-buffer views, which relies on FlatBuffers' guarantee that tables and
+    vectors are aligned to ``uoffset`` and vtables to ``voffset``. Nothing here rejects a
+    file that violates that - a misaligned position would read a neighbouring word and
+    yield wrong coordinates silently, so what establishes it is
+    ``scripts.data_integrity.validate_coordinate_offset_table``, comparing this table
+    against :func:`read_polygon_array_from_binary` for every polygon where the data is
+    produced and again over what the repository ships.
+
+    :param poly_collection: A collection returned by :func:`get_polygon_collection`
+    :param coordinate_file: An **unbuffered** file open on the same data. When given,
+        the header words are read through it instead of out of the collection's buffer,
+        so building the table does not make a memory map resident - see
+        :func:`_file_word_reader`. Pass nothing when the buffer is already in memory.
+    :return: ``(offsets, lengths)``, both ``uint32`` and both owning their data
+    """
+    root = poly_collection._tab
+    read = (
+        _buffer_word_reader(root.Bytes)
+        if coordinate_file is None
+        else _file_word_reader(coordinate_file)
+    )
+
+    slot = root.Offset(POLYGONS_VTABLE_SLOT)
+    vector_start = np.int64(root.Vector(slot))
+    count = root.VectorLen(slot)
+
+    # Each element of a vector of tables is a reference relative to its own position.
+    element_pos = vector_start + np.arange(count, dtype=np.int64) * _UOFFSET_BYTES
+    table_pos = element_pos + read(element_pos, _UOFFSET)
+
+    # A table opens with a *signed* offset backwards to its vtable, which lists where
+    # each field sits relative to the table. FlatBuffers shares one vtable between
+    # identically shaped tables, so these positions repeat - harmlessly.
+    vtable_pos = table_pos - read(table_pos, _SOFFSET)
+    field_offset = read(vtable_pos + COORDS_VTABLE_SLOT, _VOFFSET).astype(np.int64)
+
+    # The field holds a reference to the coordinate vector, whose length prefix sits
+    # immediately before its data.
+    reference_pos = table_pos + field_offset
+    length_pos = reference_pos + read(reference_pos, _UOFFSET)
+
+    lengths = read(length_pos, _UOFFSET).astype(np.uint32)
+    offsets = (length_pos + _UOFFSET_BYTES).astype(np.uint32)
+    return offsets, lengths
+
+
+def read_polygon_array_at(
+    buf: bytes | mmap.mmap, offset: IntegerLike, length: IntegerLike
+) -> np.ndarray:
+    """Read a polygon's coordinates straight out of ``buf`` at a known position.
+
+    The fetch half of :func:`derive_coord_offset_table`. Returns the same ``(2, N)``
+    zero-copy view with contiguous rows that :func:`read_polygon_array_from_binary`
+    does, without consulting the FlatBuffers structure at all.
+
+    :param buf: The buffer the offsets were derived against
+    :param offset: Byte offset of the polygon's first coordinate
+    :param length: Number of ``int32`` coordinate values
+    """
+    coords = np.frombuffer(buf, dtype="<i4", count=int(length), offset=int(offset))
     return reshape_to_polygon_coords(coords)
