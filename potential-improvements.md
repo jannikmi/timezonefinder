@@ -386,9 +386,17 @@ the denominators, and how to tell whether they still describe the tree.
   disappears entirely. Zone ids and polygon ids both fit `uint16` today, so **one payload array
   serves both**, which may also retire the uint8/uint16 schema split. And the payload is a tenth of
   the current file, so the **packaged binary shrinks several-fold** as well.
-- **Prototyped and measured 2026-08-22** — `prototypes/shortcut_file_format_bench.py`, three
+- **Prototyped and measured 2026-08-22** — `prototypes/shortcut_file_format_bench.py`, five
   encodings written, read back, and gated on all 41,162 cells resolving identically. Load falls
-  from ~399 ms to **~0.03 ms** and the packaged binary shrinks **2.6–9.2x** depending on encoding.
+  from ~377 ms to **~0.03 ms** and the packaged binary shrinks **2.6–10.4x** depending on encoding.
+- **Storing each distinct entry once is the format's largest single lever.** Only **6.9 %** of the
+  41,162 entries are distinct — 30,651 of them are a single zone id and just 271 distinct values
+  appear among those, because the ocean zones cover enormous areas at one zone id each. Sharing
+  collapses the payload **7.4x**, takes memory a further **0.20 MiB** down to −4.17 against the
+  dict, and costs **nothing on the unique path** and ~1 % of an ambiguous query (~10 % of a
+  `TimezoneFinderL` one). A further quarter of the distinct polygon lists are a suffix of a longer
+  one, so more sharing exists; not prototyped, since it turns hash-consing into substring packing
+  for a payload already down to 14 KiB.
 - **Rank it on ~21 ms and the file size, never on the ~400 ms.** PERF-5 takes the same construction
   to ~21 ms with no format change and no release, so the load figure above is mostly PERF-5's to
   win; what this takes on top is the ~21 ms it leaves, of which **at least 5.2 ms is dict insertion
@@ -401,8 +409,12 @@ the denominators, and how to tell whether they still describe the tree.
   table, which the reader derives in 0.46 ms at load. And **h3's bit layout must stay out of the
   format** — addressing entries by slot makes the file smallest and fastest, but bakes an encoding
   h3-py does not promise as API, plus `SHORTCUT_H3_RES`, into bytes that outlive the reader.
-  Storing cell ids and deriving the slot table at load costs 238 KiB and 0.26 ms, which against a
-  format that cannot be revised without a release is not a close call.
+  Storing cell ids and deriving the slot table at load costs 0.1 ms and, once entries are
+  deduplicated, 2.9x the file rather than 1.7x — the keys become its dominant term. Still 3.6x
+  smaller than what ships, and still not a close call against a format that cannot be revised
+  without a release. The escape from it is refused on measurement: the index is dense, so the cell
+  ids could be enumerated at load from h3's *public* API instead of stored, but that costs **4.5 ms
+  against 0.13 ms**, a fifth of PERF-5's whole budget.
 - **"Load the shortcuts into memory whatever `in_memory` says" is already the case** and needs no
   work — `AbstractTimezoneFinder.__init__` reads the index unconditionally, and `in_memory` selects
   the *polygon coordinate* access mode alone. Recorded so it is not proposed a third time.
@@ -414,9 +426,10 @@ the denominators, and how to tell whether they still describe the tree.
   judgement about spending an ordered two-distribution release, not about the numbers. Both the
   maintainer's.
 - **Status:** open — implementable once the payload question is answered.
-- **Last touched:** 2026-08-22 — the file-format shape prototyped and measured, its encoding and
-  dispatch settled, and its ranking moved off the ~400 ms onto what PERF-5 leaves; the query
-  measurement detail cut to the issue 2026-08-22, taken 2026-08-21.
+- **Last touched:** 2026-08-22 — the file-format shape prototyped and measured, entry
+  deduplication added and found to be its largest lever, encoding and dispatch settled, and its
+  ranking moved off the ~400 ms onto what PERF-5 leaves; the query measurement detail cut to the
+  issue 2026-08-22, taken 2026-08-21.
 
 ### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
 
