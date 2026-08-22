@@ -292,14 +292,12 @@ the denominators, and how to tell whether they still describe the tree.
 - **Sequencing:** **BUG-1 lands first**, and it is now the only hard blocker — the `"skip"` sentinel
   is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
   decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
-- **GH-477 was recorded as an enabler and is not one — measured, `prototypes/shortcut_layout_bench.py`.**
-  A batch resolver over today's dict already reaches **1.35x on the unique stratum and 1.15x on a
-  random workload**; the direct-index layout takes those to 2.01x and 1.15x→1.21x. So the flat
-  layout is an *improvement* to this item, not a precondition for it, and GH-499 can be built
-  first. The argument that moved is the vectorisation one: `np.searchsorted` over N cell ids is
-  indeed one call rather than N, **and one call over N is still slower than N dict lookups**
-  (0.93x at N=10,000 — a binary search over 41,162 keys is memory-latency-bound at the same ~90 ns
-  a dict lookup costs). Only the direct-index arithmetic vectorises into a win (32.7x).
+- **GH-477 is an improvement to this item, not a precondition for it — measured**
+  (`prototypes/shortcut_layout_bench.py`; the figures are on issue #477). A batch resolver over
+  today's dict already gets most of the available win, and the vectorisation argument that made
+  GH-477 a blocker does not survive: one `np.searchsorted` over N cell ids is slower than N dict
+  lookups at every batch size measured, and only GH-477's direct-index variant vectorises into a
+  win. **So this can be built first.**
 - **The ceiling this item actually runs into is h3, and that is new.** Of a 498 ns batched
   unique-zone lookup, **490 ns is `h3.latlng_to_cell`** — h3-py 4.4 exposes no vectorised version,
   so N points cost N scalar C calls and no shortcut layout touches that. Anything beyond ~2x on the
@@ -343,35 +341,27 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-477 — replace the shortcut dict with flat arrays
 
-- **Tracks:** issue #477.
-- **What it is:** a memory optimisation — the loaded dict is 4.44 MiB of which ~46 KB is payload,
-  the rest `PyLong` keys, `ndarray` view objects and the dict itself.
-- **Prototyped and measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, three
-  candidate layouts swapped underneath a real `timezone_at` and through an N-point resolver, on
-  both backends. This supersedes both the issue's lookup-in-isolation microbenchmark and #497's
-  query-side estimate; where they disagree with it, it wins, because it measures whole queries.
-- **`searchsorted` is refused, on both paths.** Not +355 ns but **+996 ns on a 986 ns unique
-  query** — it roughly doubles it — and it loses on the batch path too (conclusion 5 under GH-499).
-  Kept as a rejected option so it is not re-proposed on the "flat arrays vectorise" argument.
-- **The direct index is free on the fast path**: +4 ns on a unique query and +2 ns on
-  `TimezoneFinderL`, both under the ±35 ns noise floor, against the +57 ns/~5 % that the issue and
-  #497 predicted from isolation — that estimate was right in isolation and overstated in context.
-  It is also the *smallest* layout at 0.40 MiB, **−4.03 MiB, ~91 % of the dict**.
-- **Its bit slicing is a bijection, not a lucky hash**, which closes the issue's open caveat: every
-  res-3 cell id carries the same constant outside the 16 index bits, so pentagons and deleted digit
-  subsequences leave holes in the table and never collisions. The two couplings it buys that with —
-  h3's unpromised internal encoding, and a `122 * 8**res` table that is untenable past res 4 —
-  are real and belong in code as assertions on `SHORTCUT_H3_RES`.
-- **The one decision left, and it is the maintainer's:** the payload. A CSR pair reconstructs a
-  candidate slice in three numpy scalar reads where the dict hands out a ready array, which costs
-  **+0.7 % of a random `TimezoneFinder` workload and +6 % of a `TimezoneFinderL` one** (+22 % on
-  that finder's ambiguous stratum). Keeping a Python list of `int | ndarray` values instead costs
-  roughly nothing and saves −2.03 MiB rather than −4.03. So: **−4 MiB for +6 % on the finder the
-  memory is for, or −2 MiB for free.** The numbers are in the prototype; the choice is not one a
-  measurement makes.
-- **Status:** open — measured, ready to implement once the payload question is answered.
-- **Last touched:** 2026-08-21 — prototyped and measured; `searchsorted` rejected, the direct index
-  confirmed free on the scalar path, the enabler framing withdrawn (see GH-499).
+- **Tracks:** issue #477, which carries the memory breakdown, the candidate layouts, and the
+  measurements behind every judgement below.
+- **Why it is ranked here:** a memory item and only that — a few MiB per instance, on a structure
+  that is essentially the whole heap of `TimezoneFinderL`, multiplied by the thread count because
+  concurrent workloads are told to use one instance each. On the layout that survives it buys no
+  speed and costs none, so nothing else weighs against the memory.
+- **Measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, over whole queries
+  rather than lookups in isolation. It supersedes the issue's original microbenchmark and #497's
+  query-side estimate alike; where the three disagree, it wins.
+- **Rejected: the sorted-key / `np.searchsorted` layout.** Kept here rather than deleted because
+  "flat arrays vectorise" will otherwise re-propose it on its merits — it loses the scalar path by
+  about the length of a whole unique-zone query, and it loses the batch path too, which was the
+  entire argument for it. The **direct-index** variant is the one that survives.
+- **The premise this entry was ranked on is disproved.** It stood here as the enabler for GH-499
+  and is not one; see that entry for what replaced the dependency. Rank it on the memory alone.
+- **What is left is a decision, not work:** which payload the direct index addresses — CSR arrays
+  or a Python list of values. Roughly 2 MiB against a few percent of `TimezoneFinderL`, priced on
+  the issue, and not a choice another measurement makes. The maintainer's.
+- **Status:** open — implementable once the payload question is answered.
+- **Last touched:** 2026-08-22 — the measurement detail cut to the issue now that it is written
+  there; measured and re-reasoned 2026-08-21.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
