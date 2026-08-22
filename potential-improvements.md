@@ -123,7 +123,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | PERF-5 | The shortcut decode rebuilds 41,162 FlatBuffers tables in Python | performance | ~80 | free — measured |
-| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured, one decision left |
+| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured and decided |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
@@ -420,13 +420,27 @@ the denominators, and how to tell whether they still describe the tree.
   additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
   Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
   two-distribution release.
-- **The one decision left is ~260 KiB and ~0.15 ms to keep h3 out of the format.** Dropping the
-  stored cell ids and addressing by the H3 bit layout gives a 197 KiB file, and bakes an encoding
-  h3-py does not promise as API — plus `SHORTCUT_H3_RES` — into bytes that outlive every reader.
-  Storing the ids moves that coupling into the reader, which is versioned with the package.
-  Recommended: pay it.
-- **Status:** open — sequenced behind PERF-5; the structure is settled and the remaining choice is
-  the maintainer's.
+- **Decided 2026-08-22: address entries by h3's bit layout (`slot-dedup`), guarded.** 197 KiB
+  against 457 and a 22 % faster load, at identical memory and identical query. The objection was
+  that the *format* would then encode an index encoding h3-py does not promise as API, and it does
+  not survive: storing the cell ids does not remove the dependency but pays ~260 KiB to store
+  something derivable — if h3's encoding moved, stored 64-bit ids would no longer denote the same
+  cells either — and the reader slices bits in **both** designs, because that is what makes the
+  lookup fast.
+- **What makes it safe is a guard, not the stored ids.** `get_base_cell_number` and
+  `cell_to_child_pos` are public h3 API and between them fix a cell's position exactly as the bits
+  do, at ~218 ns against ~87 — unaffordable per lookup, free once per build.
+  `verify_slot_layout_against_h3_api` confirms agreement on all 41,162 cells and fails naming the
+  cell, both answers and the version bumps required. **Without that guard `keys-dedup` is the safer
+  choice**, since an encoding change would otherwise return a neighbour's timezone silently; with
+  it the failure is loud and lands where the data is produced. It belongs in
+  `scripts/data_integrity.py` beside the width checks — same rule, same reason.
+- **A denser index exists and is refused.** The public-API route gives exactly 41,162 slots against
+  the bit form's 62,464 — base-8 arithmetic over base-7 data — worth ~62 KiB of the 197. Realising
+  it at lookup time costs the 218 ns, and reproducing it from bits needs per-digit arithmetic that
+  pentagons, with 286 children rather than 343, do not obviously satisfy.
+- **Status:** open — sequenced behind PERF-5; the structure and its addressing are both settled,
+  so what remains is implementation plus the ordered two-distribution release.
 - **Last touched:** 2026-08-22 — the file structure prototyped and settled on one recommendation
   with the losing options recorded in the prototype; column widths narrowed to what fits under a
   build-time guard, which retracted a claim about what deduplication buys; the ranking moved off

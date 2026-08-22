@@ -15,10 +15,9 @@ and everything else it turned up is refused under REFUSED OPTIONS below, with it
                 every value back to back. Removes the per-entry decode and the dict.
 ``keys-dedup``  the same, storing each *distinct* entry once - only 6.9% of entries are
                 distinct - so duplicates simply carry equal offsets into a shared payload.
-                **This is the recommendation.**
-
-``slot-dedup`` is measured beside them to price one question and no other: what storing the
-cell ids buys. It drops them and derives the index from h3's internal bit layout instead.
+``slot-dedup``  the same again, without the cell ids: the cell *is* the index, via h3's
+                bit layout. **This is the recommendation**, on the strength of the layout
+                guard described in conclusion 9.
 
 All three flat structures load to the *same runtime shape* and share one lookup, so the
 query comparison is about the data rather than about three different code paths::
@@ -120,11 +119,38 @@ CONCLUSIONS
    reaches ~21 ms on the *existing* file with no format change and no release, so what the
    format change adds is ~21 ms to ~0.66 ms.
 
-9. **The one decision left is ~260 KiB and ~0.15 ms to keep h3 out of the format.**
-   `slot-dedup` drops the stored cell ids because the cell id *is* the index, and bakes an
-   encoding h3-py does not promise as API - plus `SHORTCUT_H3_RES` - into bytes that outlive
-   every reader. Storing the ids moves that coupling into the reader, which is versioned
-   with the package. **Recommended: pay it.**
+9. **Addressing by h3's bit layout is the right choice, and the objection to it does not
+   survive.** `slot-dedup` drops the stored cell ids for a **2.3x smaller file (197 KiB
+   against 457) and a 22% faster load**, at identical memory and identical query. The
+   argument against it was that the format would then encode an index encoding h3-py does
+   not promise as API. Three things dissolve that:
+
+   * **Storing the cell ids does not remove the dependency, it pays 260 KiB to store
+     something derivable.** If h3's encoding moved, stored 64-bit ids would no longer
+     denote the same cells either - `keys-dedup` breaks just as surely. And the *reader*
+     slices bits in both designs, because that is what makes the lookup fast, so the code
+     carries the coupling whichever file it reads.
+   * **The coupling is checkable against public API, which is what matters.**
+     `get_base_cell_number` and `cell_to_child_pos` are public, and between them they fix a
+     cell's position exactly as the bits do. `verify_slot_layout_against_h3_api` confirms
+     agreement on **all 41,162 cells** and fails with a message naming the cell, both
+     answers and the version bumps required. That converts an unpromised coupling into a
+     checked invariant - the same move as `check_fits` for the column widths.
+   * **The check is only unaffordable per lookup, not per build.** The public route costs
+     ~218 ns against ~87 for the arithmetic: 2.5x the whole shortcut lookup per query, and
+     nothing at all once where the data is produced.
+
+   The guard belongs in `scripts/data_integrity.py` with the width checks - asserted by the
+   converter over what it wrote and by the test suite over what is committed, never on the
+   init path. **Without it, `keys-dedup` is the safer choice**, because an encoding change
+   would otherwise return a neighbour's timezone silently. With it, the failure is loud and
+   lands where the data is built.
+
+10. **A denser index exists and is not taken.** The public-API route yields exactly 41,162
+    slots against the bit form's 62,464 - the arithmetic is base-8 per digit where the data
+    is base-7 - so a compact addressing would save ~62 KiB of the 197. Refused: realising it
+    at lookup time costs the 218 ns above, and reproducing it from bits needs per-digit
+    arithmetic that pentagons, with 286 children rather than 343, do not obviously satisfy.
 
 REFUSED OPTIONS below, with its reason.
 
@@ -134,10 +160,9 @@ REFUSED OPTIONS below, with its reason.
                 every value back to back. Removes the per-entry decode and the dict.
 ``keys-dedup``  the same, storing each *distinct* entry once - only 6.9% of entries are
                 distinct - so duplicates simply carry equal offsets into a shared payload.
-                **This is the recommendation.**
-
-``slot-dedup`` is measured beside them to price one question and no other: what storing the
-cell ids buys. It drops them and derives the index from h3's internal bit layout instead.
+``slot-dedup``  the same again, without the cell ids: the cell *is* the index, via h3's
+                bit layout. **This is the recommendation**, on the strength of the layout
+                guard described in conclusion 9.
 
 All three flat structures load to the *same runtime shape* and share one lookup, so the
 query comparison is about the data rather than about three different code paths::
@@ -274,6 +299,7 @@ from prototypes.shortcut_layout_bench import (
     SLOT_TABLE_SIZE,
     slots_of,
     verify_slot_bijection,
+    verify_slot_layout_against_h3_api,
 )
 from scripts.configs import PROJECT_ROOT
 from h3.api import numpy_int as h3
@@ -615,7 +641,7 @@ STRUCTURES: dict[str, tuple[Callable, Callable]] = {
     "keys-dedup": (write_keys_dedup, read_keys),
     "slot-dedup": (write_slot_dedup, read_slot_dedup),
 }
-RECOMMENDED = "keys-dedup"
+RECOMMENDED = "slot-dedup"
 
 
 def derive_zone_table(
@@ -913,9 +939,15 @@ def main() -> None:
         return
 
     n_cells, invariant = verify_slot_bijection()
+    checked, dense_size = verify_slot_layout_against_h3_api()
     print(
         f"slot map: injective over all {n_cells:,} cells at resolution {SHORTCUT_H3_RES}; "
         f"invariant {invariant:#x}"
+    )
+    print(
+        f"layout guard: the bit arithmetic agrees with h3's public "
+        f"get_base_cell_number / cell_to_child_pos on all {checked:,} cells "
+        f"(a public-API index would be {dense_size:,} slots against {SLOT_TABLE_SIZE:,})"
     )
 
     tf = TimezoneFinder()

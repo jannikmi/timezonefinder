@@ -293,6 +293,64 @@ def all_cells_at_shortcut_res() -> np.ndarray:
     return np.array(sorted(cells), dtype=np.int64)
 
 
+def verify_slot_layout_against_h3_api() -> tuple[int, int]:
+    """Check the bit arithmetic against h3's *public* API, cell by cell.
+
+    This is what makes addressing entries by H3 bit position a checked invariant rather
+    than a trusted one, and it is the whole answer to "h3-py does not promise the index
+    encoding as API". It does not have to: ``get_base_cell_number`` and
+    ``cell_to_child_pos`` are public, and between them they determine a cell's position
+    exactly as the bits do. So the fast path can slice bits while a build-time check
+    proves that slicing agrees with the supported accessors over every cell that exists.
+    If h3 ever changes the layout, this fails loudly where the data is produced instead
+    of silently returning a neighbour's timezone.
+
+    Cost is why it lives here and not on the lookup path: the public route is ~218 ns
+    against ~87 ns for the arithmetic, which is irrelevant once per build and 2.5x the
+    whole shortcut lookup per query.
+
+    Returns (cells checked, size of the dense index the public API would give).
+    """
+    cells = all_cells_at_shortcut_res()
+
+    # a dense index derived only from public API, used as the reference
+    res0 = sorted(int(c) for c in h3.get_res0_cells())
+    base_offset: dict[int, int] = {}
+    run = 0
+    for cell in res0:
+        base_offset[int(h3.get_base_cell_number(cell))] = run
+        run += int(h3.cell_to_children_size(cell, SHORTCUT_H3_RES))
+
+    base_from_bits = (cells >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
+    public_index = np.empty(len(cells), dtype=np.int64)
+    for i, cell in enumerate(cells):
+        cell = int(cell)
+        base = int(h3.get_base_cell_number(cell))
+        if base != int(base_from_bits[i]):
+            raise AssertionError(
+                f"h3's index encoding has moved: cell {cell:#x} reports base cell {base} "
+                f"through get_base_cell_number and {int(base_from_bits[i])} at bits "
+                f"{SLOT_BASE_CELL_SHIFT}-{SLOT_BASE_CELL_SHIFT + 6}. The shortcut binary "
+                f"addresses entries by those bits, so every lookup in it is now wrong. "
+                f"Regenerate the data and bump SHORTCUT_LAYOUT_VERSION with "
+                f"DATA_FORMAT_VERSION."
+            )
+        public_index[i] = base_offset[base] + int(h3.cell_to_child_pos(cell, 0))
+
+    slots = slots_of(cells)
+    # the two must order the cells identically: same base cell first, then same digit
+    # sequence. Equality of the indices themselves is not expected - the bit form is
+    # base-8 per digit and therefore sparser than the public form.
+    if not np.array_equal(np.argsort(slots), np.argsort(public_index)):
+        raise AssertionError(
+            "the bit-derived slot orders cells differently from h3's public "
+            "get_base_cell_number / cell_to_child_pos. The shortcut binary's entry order "
+            "no longer means what it did; regenerate the data and bump "
+            "SHORTCUT_LAYOUT_VERSION with DATA_FORMAT_VERSION."
+        )
+    return len(cells), int(public_index.max()) + 1
+
+
 def verify_slot_bijection() -> tuple[int, int]:
     """Prove the slot map is injective over the whole resolution, not the key set.
 
