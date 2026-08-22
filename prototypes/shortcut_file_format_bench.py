@@ -40,6 +40,20 @@ On disk, 197.4 KiB::
     lengths   61.0 KiB  uint8  x 62,464   one per slot
     payload   14.3 KiB  uint16 x  7,344   every distinct entry, back to back
 
+**Lengths are stored and ends are derived**, although the lookup wants ends, because the
+two are narrow for different reasons: an end addresses the whole payload and needs the
+offset width, while an entry holds at most a few dozen values and fits a ``uint8``. Storing
+the byte instead of the second offset saves 61 KiB - **31% of the file** - for one
+vectorised add at load. The file is sized for bytes and the runtime shape for reads, and
+the two are allowed to differ; the alternative, keeping the length in memory and adding at
+lookup time, costs numpy scalar arithmetic on every ambiguous query.
+
+One consequence worth stating because it is easy to get wrong: the offset column must be
+sized from **ends**, not from starts. The reader reconstructs ``ends = starts + lengths``
+in the start column's dtype, and the largest end is the payload length itself, which no
+start ever reaches - so a width that fits every start can still be one the final end wraps
+around.
+
 In memory after load, 380.3 KiB::
 
     starts        uint16 x 62,464  122.0 KiB   read straight from the file
@@ -627,14 +641,17 @@ def _write_entries(path: Path, keys, starts, lengths, payload) -> None:
     start addresses the whole payload, so ``uint8`` serves one and never the other.
     Splitting them saves a byte per entry that a symmetric (start, end) pair spends.
     """
+    ends = starts + lengths
+    # sized from `ends`: the reader reconstructs them in this column's dtype, and the
+    # largest end is the payload length, which no start ever reaches
     start_dtype = narrowest_dtype_for(
-        int(starts.max()) if len(starts) else 0, what="payload offset"
+        int(ends.max()) if len(ends) else 0, what="payload offset"
     )
     len_dtype = narrowest_dtype_for(
         int(lengths.max()) if len(lengths) else 0, what="entry length"
     )
     check_fits(
-        starts,
+        ends,
         start_dtype,
         what="a payload offset",
         remedy="Widen the offset column to the next unsigned width.",
@@ -677,10 +694,14 @@ def read_keys(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 def write_slot_dedup(path: Path, keys, lengths, payload) -> None:
     starts, ends, deduped = deduplicate(lengths, payload)
     entry_lengths = ends - starts
-    start_dtype = narrowest_dtype_for(int(starts.max()), what="payload offset")
+    # sized from `ends`, not from `starts`, and this is not pedantry: the file stores
+    # starts and the reader reconstructs `ends = starts + lengths` in the start column's
+    # dtype. A width that fits every start can still be one the last end wraps around,
+    # since the largest end is the payload length itself. Checking `ends` covers both.
+    start_dtype = narrowest_dtype_for(int(ends.max()), what="payload offset")
     len_dtype = narrowest_dtype_for(int(entry_lengths.max()), what="entry length")
     check_fits(
-        starts,
+        ends,
         start_dtype,
         what="a payload offset",
         remedy="Widen the offset column to the next unsigned width.",
