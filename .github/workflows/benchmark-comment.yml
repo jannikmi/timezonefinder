@@ -62,6 +62,9 @@ jobs:
       # the commit's own page - so the job stayed green while the comparison
       # was invisible. A force push would orphan one besides. Do not move this
       # back to createCommitComment; tests/test_benchmark_workflows.py fails.
+      # The same permission covers deleting the comment this workflow posted
+      # on the previous push, which is how one table stays at the end of the
+      # conversation instead of one edit staying at the top.
       pull-requests: write
     steps:
       # the base repo at its default branch - never the PR's code. The
@@ -119,9 +122,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          # identifies this workflow's own comment among the pull request's,
-          # so every run edits the same one in place. Without it each push
-          # would append another full table to the conversation.
+          # the run that measured what is compared above - this workflow's
+          # own run only rendered it
+          MEASUREMENT_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          # identifies this workflow's own comments among the pull request's,
+          # so the superseded one can be found and removed. Without it each
+          # push would leave another full table in the conversation.
           MARKER: "<!-- benchmark-comparison -->"
         run: |
           set -euo pipefail
@@ -136,18 +142,39 @@ jobs:
             echo "::notice::no open pull request for $HEAD_SHA - nothing to comment on"
             exit 0
           fi
-          jq -Rs --arg marker "$MARKER" '{body: ($marker + "\n\n" + .)}' \
-            comparison.md > body.json
-          existing=$(gh api --paginate \
-            "repos/$GITHUB_REPOSITORY/issues/$pr/comments" \
-            --jq '[.[]
-                   | select(.user.login == "github-actions[bot]")
-                   | select(.body | startswith(env.MARKER))][0].id // empty')
-          # --paginate applies the filter per page, so keep the first hit only
-          existing=${existing%%$'\n'*}
-          if [ -n "$existing" ]; then
-            gh api --method PATCH \
-              "repos/$GITHUB_REPOSITORY/issues/comments/$existing" --input body.json
-          else
-            gh api "repos/$GITHUB_REPOSITORY/issues/$pr/comments" --input body.json
-          fi
+          # Which commit the table describes, stated in the table itself. It
+          # is only ever as current as the push that produced it, and a reader
+          # arriving mid-review has nothing else to check it against.
+          {
+            printf '%s\n\n' "$MARKER"
+            printf '_Head [`%s`](%s/%s/commit/%s) - [measurement run](%s)._\n\n' \
+              "${HEAD_SHA:0:7}" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" \
+              "$HEAD_SHA" "$MEASUREMENT_RUN_URL"
+            cat comparison.md
+          } > body.md
+          jq -Rs '{body: .}' body.md > body.json
+          # Posted anew and the previous one deleted, rather than edited in
+          # place. A pull request's conversation orders by creation time and
+          # an edit does not move a comment, so an edited table stays where
+          # the pull request's first push left it - above every commit and
+          # review comment made since, reading as a measurement of a head that
+          # has been superseded, which is exactly what an out-of-date table
+          # would look like too. Post first and delete after: the reverse
+          # order leaves the pull request with no comparison at all whenever
+          # the post fails.
+          new_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$pr/comments" \
+            --input body.json --jq '.id')
+          gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$pr/comments" \
+            --jq '.[]
+                  | select(.user.login == "github-actions[bot]")
+                  | select(.body | startswith(env.MARKER))
+                  | .id' \
+          | while read -r id; do
+              if [ "$id" != "$new_id" ]; then
+                # a run finishing alongside this one may have removed it
+                # already, which is the state this wants either way
+                gh api --method DELETE \
+                  "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
+                  || echo "::notice::superseded comparison $id was already gone"
+              fi
+            done

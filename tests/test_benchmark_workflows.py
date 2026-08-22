@@ -237,3 +237,57 @@ def test_the_comparison_is_posted_to_the_pull_request_conversation(
         "(`commits/{sha}/comments`). Those do not appear in a pull request's "
         "conversation timeline - use `issues/{number}/comments` instead."
     )
+
+
+# `gh api --method PATCH .../issues/comments/{id}` edits a comment where it
+# stands; `--method DELETE` removes it. `--input` is the only way the job
+# sends a request body, so it marks the call that posts the table.
+COMMENT_EDIT = re.compile(r"--method\s+PATCH")
+COMMENT_DELETE = re.compile(r"--method\s+DELETE")
+COMMENT_CREATE = re.compile(r"--input\s+\S+")
+
+
+@pytest.mark.unit
+def test_the_comparison_is_posted_anew_rather_than_edited_in_place(
+    comment_workflow: dict[str, Any],
+) -> None:
+    """One table per pull request, always at the end of the conversation.
+
+    A conversation orders its comments by creation time and an edit does not
+    move one, so a comparison edited in place stays where the pull request's
+    first push put it - above every commit and review comment made since,
+    reading as a measurement of a superseded head, which is indistinguishable
+    from the table actually being out of date. Nothing fails when it happens:
+    the job goes green and the numbers are current, they just look stale to
+    everyone reviewing. So each run posts a fresh comment and deletes the one
+    it supersedes.
+
+    The order of those two is part of the invariant, and the reason it is
+    pinned here rather than left to the shell: deleting first reads as the
+    more obvious way round, and it leaves the pull request with no comparison
+    at all whenever the post that should have replaced it fails.
+    """
+    job = comment_workflow["jobs"]["comment"]
+    scripts = "\n".join(str(step.get("run", "")) for step in job["steps"])
+    assert not COMMENT_EDIT.search(scripts), (
+        f"{BENCHMARK_COMMENT_WORKFLOW.name} edits its comment in place "
+        "(`--method PATCH`), which leaves the table wherever the first push "
+        "put it - above everything that happened since. Post a new comment "
+        "and delete the superseded one instead."
+    )
+    created = COMMENT_CREATE.search(scripts)
+    deleted = COMMENT_DELETE.search(scripts)
+    assert created is not None, (
+        f"no step in {BENCHMARK_COMMENT_WORKFLOW.name} sends a comment body "
+        "(`gh api --input`), so nothing posts the comparison."
+    )
+    assert deleted is not None, (
+        f"{BENCHMARK_COMMENT_WORKFLOW.name} never deletes (`--method DELETE`) "
+        "the comment it posted on the previous push, so every push leaves "
+        "another full table in the conversation."
+    )
+    assert created.start() < deleted.start(), (
+        f"{BENCHMARK_COMMENT_WORKFLOW.name} deletes the previous comparison "
+        "before posting the new one. A failure in between then leaves the "
+        "pull request with no comparison at all - post first, delete after."
+    )
