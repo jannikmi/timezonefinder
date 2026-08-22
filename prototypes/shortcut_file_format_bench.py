@@ -35,6 +35,11 @@ Three encodings, because the choice is not obvious:
                   nothing about h3's bit layout; the slot table is derived at load by one
                   scatter. Larger file, and the coupling moves from the format to the reader.
 
+and the same two again with **identical entries stored once**, since most are not distinct:
+
+``slot-dedup``    a ``uint16`` index per slot into a small table of distinct entries.
+``keys-dedup``    the same, keyed by stored cell ids rather than by slot.
+
 And two runtime dispatches over the same bytes, because the length-as-discriminator trick
 is elegant in the file and not obviously free in the query:
 
@@ -55,93 +60,127 @@ Both backends were checked and neither the load path nor the dispatch touches
 point-in-polygon, so unlike the companion script this one is backend-independent.
 
 
-FINDINGS (2026-08-22, `32580f1`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+FINDINGS (2026-08-22, `3352a5a`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
 
-Every encoding reproduces the shipped mapping exactly - all 41,162 cells, under three
-encodings x two dispatches - before anything below was timed.
+Every encoding reproduces the shipped mapping exactly - all 41,162 cells, three plain
+encodings x two dispatches plus two deduplicated ones - before anything below was timed.
 
     payload: 54,024 uint16 values (105.5 KiB) over 41,162 entries; lengths 1-59,
     30,651 of them unique-zone
+    dedup:   2,847 distinct entries of 41,162 (6.9%), payload 54,024 -> 7,344 values
+             (105.5 -> 14.3 KiB, 7.4x)
 
 File size, KiB on disk:
 
-    FlatBuffers (shipped)   1,530.1    1.0x
-    slot-offsets              349.5    4.4x
-    slot-lengths              166.5    9.2x
-    keys-offsets              587.9    2.6x
+    FlatBuffers (shipped)   1,530.1     1.0x
+    slot-offsets              349.5     4.4x
+    slot-lengths              166.5     9.2x
+    keys-offsets              587.9     2.6x
+    slot-dedup                147.5    10.4x
+    keys-dedup                427.5     3.6x
 
 Load, ms for a cold construction of the shortcut structure:
 
-    FlatBuffers -> dict       399.03        1x
-    slot-offsets                0.035  11,333x   parse 0.009 / +zone table 0.461
-    slot-lengths                0.164   2,440x   parse 0.143 / +zone table 0.464
-    keys-offsets                0.294   1,358x   parse 0.263 / +zone table 0.466
+    FlatBuffers -> dict       377.17         1x
+    slot-offsets                0.034   11,245x   parse 0.009 / +zone table 0.464
+    slot-lengths                0.164    2,305x   parse 0.142 / +zone table 0.466
+    keys-offsets                0.297    1,271x   parse 0.262 / +zone table 0.466
+    slot-dedup                  0.026   14,483x   parse 0.006 / +zone table 0.550
+    keys-dedup                  0.131    2,878x   parse 0.107 / +zone table 0.552
 
 One lookup, inlined, with no query around it - ns per call:
 
     stratum      dict.get  len-disp  derived   d-len  d-derived
-    unique            122       386      201    +264        +79
-    ambiguous         136       428      459    +292       +324
+    unique            121       352      194    +230        +73
+    ambiguous         131       412      438    +281       +307
 
-Memory, MiB traced, one fresh subprocess per structure: the dict 4.44, every flat
-encoding 0.46 (**-3.98**). They converge because they hold identical arrays once loaded;
-an earlier run had them differing, which was this script returning `np.frombuffer` views
-that kept the file buffer alive - `np.ascontiguousarray` does not copy an
-already-contiguous view, and only `.copy()` does. Exactly the trap the shipped loader
-carries a comment about, reproduced here by accident.
+    what deduplication adds, both sides on the derived table:
+    stratum         plain  deduped   delta
+    unique            195      194      -1
+    ambiguous         426      535    +109
+
+Memory, MiB traced, one fresh subprocess per structure: the dict 4.44, every plain
+encoding 0.46 (**-3.98**), both deduplicated ones 0.26 (**-4.17**). The plain three
+converge because they hold identical arrays once loaded; an earlier run had them
+differing, which was this script returning `np.frombuffer` views that kept the file buffer
+alive - `np.ascontiguousarray` does not copy an already-contiguous view, and only
+`.copy()` does. Exactly the trap the shipped loader carries a comment about, reproduced
+here by accident.
 
 CONCLUSIONS
 
-1. **The load win is real but it is almost all PERF-5's, not this change's.** 399 ms to
-   0.035 ms is 11,000x, and it is the wrong comparison to rank on: PERF-5 takes the same
-   399 ms to ~21 ms with no format change and no release. What a flat file takes *on top*
-   of that is the ~21 ms PERF-5 leaves - of which **at least 5.2 ms is dict insertion
-   alone**, measured here from values already extracted, and the rest is the per-entry
-   value objects a flat file never builds. Sequence PERF-5 first; then this is worth
-   ~21 ms, not ~400.
+1. **The load win is real but it is almost all PERF-5's, not this change's.** 377 ms to
+   0.03 ms is four orders of magnitude, and it is the wrong comparison to rank on: PERF-5
+   takes the same construction to ~21 ms with no format change and no release. What a flat
+   file takes *on top* of that is the ~21 ms PERF-5 leaves - of which **at least 5.1 ms is
+   dict insertion alone**, measured here from values already extracted, and the rest is the
+   per-entry value objects a flat file never builds. Sequence PERF-5 first; then this is
+   worth ~21 ms, not ~400.
 
-2. **The format shrinks the packaged binary 2.6-9.2x**, which no in-memory change can do
-   and which the memory item alone never claimed. That is the argument this change has
-   that neither GH-477's original framing nor PERF-5 has.
+2. **The format shrinks the packaged binary 2.6-10.4x**, which no in-memory change can do
+   and which the memory item alone never claimed. That is the argument this change has that
+   neither GH-477's original framing nor PERF-5 has.
 
-3. **The memory saving is the same -3.98 MiB the in-memory layout already buys**, so it is
-   not additive with GH-477 - it is the same win reached without a load-time conversion.
+3. **Most entries are not distinct, and this is the largest single lever in the format.**
+   2,847 distinct of 41,162 - **6.9%** - collapsing the payload 7.4x. It is not a
+   coincidence to be re-checked per release but a consequence of the shape of the data:
+   30,651 entries are a single zone id and only 271 distinct values appear among them,
+   because the ocean zones cover enormous areas at one zone id each (`(440,)` alone repeats
+   1,432 times). Deduplication also **shrinks memory a further 0.20 MiB** and costs
+   **nothing on the unique path** (-1 ns; the derived zone table answers before the
+   indirection is reached) and **+109 ns on the ambiguous one**, ~1 % of an ambiguous query
+   - though ~10 % of `TimezoneFinderL`'s, which has no geometry to hide it.
+
+   A further ~26 % of the distinct polygon lists (658 of 2,575) are a *suffix* of a longer
+   one, so overlap-sharing would compress further. Not prototyped: it turns a hash-consing
+   pass into a substring-packing problem for a payload already down to 14 KiB.
 
 4. **Dispatch on a derived table, never on the length.** The length discriminator is right
    in the *file* - it removes the union tag and costs nothing to store - and wrong at
-   runtime: +264 ns against +79 ns on the unique path, because it needs two offset reads
+   runtime: +230 ns against +73 ns on the unique path, because it needs two offset reads
    and a subtraction where an `int16` zone table needs one read. Deriving that table costs
-   **0.46 ms at load**, more than the parse itself and still nothing against 21 ms. So the
-   file stores lengths implicitly and the reader materialises a zone table; those are not
-   the same decision and the elegant answer to the first is the wrong answer to the second.
+   ~0.5 ms at load, more than the parse itself and still nothing against 21 ms. So the file
+   stores lengths implicitly and the reader materialises a zone table; those are not the
+   same decision and the elegant answer to the first is the wrong answer to the second.
 
-   The +79 ns here is a lookup in isolation and **overstates the query cost**: it compares
+   The +73 ns here is a lookup in isolation and **overstates the query cost**: it compares
    against an `isinstance` dispatch where the shipped code uses a `match` statement, which
    is slower. `prototypes/shortcut_layout_bench.py` measured the same layout inside a real
    `timezone_at` at +4 ns, under the noise floor, and that whole-query figure is the one to
    quote.
 
-5. **Do not put h3's bit layout in the data format.** `slot-offsets` is the smallest and
+5. **Do not put h3's bit layout in the data format.** Addressing by slot is smallest and
    fastest because the cell id *is* the index - and it bakes an encoding h3-py does not
-   promise as API, plus `SHORTCUT_H3_RES`, into bytes that outlive the reader.
-   `keys-offsets` stores the cell ids instead and derives the slot table at load, moving
-   that coupling into the reader, which is versioned with the package and can change
-   freely. It costs **238 KiB of file and 0.26 ms of load**. Against 21 ms and a format
-   that cannot be revised without a release, that is not a close call.
+   promise as API, plus `SHORTCUT_H3_RES`, into bytes that outlive the reader. Storing the
+   cell ids instead moves that coupling into the reader, which is versioned with the
+   package and can change freely.
 
-6. **`slot-lengths` is the smallest file and should still be refused.** Its 166.5 KiB rests
-   on every entry fitting a `uint8` length - the packaged maximum is 59, which is a fact
-   about the data and not a guarantee of the format. A dataset with a 256-polygon cell
-   would silently need a new layout version. `uint32` offsets cost 183 KiB more and cannot
-   be falsified by data.
+   **Deduplication raises this premium and does not overturn it.** Before dedup it cost
+   238 KiB (587.9 against 349.5); after, the keys are 329 KiB of a 427.5 KiB file and the
+   premium is 2.9x rather than 1.7x. Still 3.6x smaller than what ships today, and still
+   worth it against a format that cannot be revised without a release.
+
+   The obvious escape - drop the keys entirely and enumerate the cells at load, since the
+   index is dense and h3's *public* API can list them - is **refused on measurement**:
+   enumerating all 41,162 res-3 cells takes **4.5 ms**, 35x the whole `keys-dedup` load and
+   about a fifth of PERF-5's 21 ms. Storing 329 KiB is far cheaper than recomputing it.
+
+6. **`slot-lengths` is the smallest non-deduplicated file and should still be refused.** Its
+   166.5 KiB rests on every entry fitting a `uint8` length - the packaged maximum is 59,
+   which is a fact about the data and not a guarantee of the format. A dataset with a
+   256-polygon cell would silently need a new layout version. Note the same caution does
+   *not* apply to the `uint16` dedup index, which is checked against the distinct-entry
+   count at write time and has four orders of magnitude of headroom.
 
 RECOMMENDATION
 
-If this is built: **`keys-offsets` on disk, zone table derived at load.** ~588 KiB (2.6x
-smaller than today), ~0.3 ms to load, -3.98 MiB resident, no h3 internals in the format,
-and the query path is the one already measured at +4 ns. But build **PERF-5 first** - it
-is free, needs no release, and it takes this item's headline number from ~400 ms to ~21 ms
-before the format question is even asked.
+If this is built: **`keys-dedup` on disk** - stored cell ids, a `uint16` index per entry
+into a deduplicated entry table, one `uint16` payload - **with the zone table derived at
+load**. ~428 KiB (3.6x smaller than today), ~0.13 ms to load, **-4.17 MiB** resident, no
+h3 internals in the format, free on the unique query path and ~1 % of an ambiguous one.
+
+But build **PERF-5 first**. It is free, needs no release, and it takes this item's headline
+number from ~400 ms to ~21 ms before the format question is even asked.
 
 """
 
@@ -317,6 +356,154 @@ ENCODINGS: dict[str, tuple[Callable, Callable]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# deduplication: most entries are not distinct
+# ---------------------------------------------------------------------------
+# 30,651 of the 41,162 entries are a single zone id and there are only a few hundred
+# zones, so the unique-zone half of the payload is almost entirely repetition - the
+# ocean cells especially, since `Etc/GMT+-XX` covers vast areas at one zone id each.
+# Pointing every entry that holds the same sequence at the same payload range costs
+# nothing at runtime beyond one extra array read, and only on the ambiguous path: the
+# unique path is answered by the derived zone table either way.
+#
+# The deduped runtime shape is deliberately NOT a CSR `offsets` array. Dedup breaks the
+# contiguity CSR relies on - slot i and slot i+1 no longer point at adjacent ranges - so
+# expanding it back to per-slot starts and ends would need two full-width arrays and come
+# out *larger* than not deduplicating at all. Keeping the indirection is both smaller and
+# simpler: a narrow index per slot into a small table of (offset, length).
+
+DEDUP_INDEX_DTYPE = np.uint16
+
+
+def build_dedup(
+    keys: np.ndarray, lengths: np.ndarray, payload: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (entry index per entry, distinct-entry offsets, deduped payload)."""
+    seen: dict[bytes, int] = {}
+    index = np.empty(len(keys), dtype=np.int64)
+    chunks: list[np.ndarray] = []
+    starts: list[int] = []
+    cursor = 0
+    pos = 0
+    for i, length in enumerate(lengths):
+        chunk = payload[pos : pos + length]
+        pos += length
+        key = chunk.tobytes()
+        found = seen.get(key)
+        if found is None:
+            found = len(starts)
+            seen[key] = found
+            starts.append(cursor)
+            chunks.append(chunk)
+            cursor += length
+        index[i] = found
+    if len(starts) + 1 > np.iinfo(DEDUP_INDEX_DTYPE).max:
+        raise AssertionError(
+            f"{len(starts):,} distinct entries do not fit {DEDUP_INDEX_DTYPE.__name__}; "
+            "the per-slot index would have to widen"
+        )
+    # twice: the first closes the last real entry, the second gives the absent marker
+    # (index `len(starts) - 2` after both appends) an empty range of its own, so an
+    # uncovered slot slices nothing rather than running off the end
+    starts.append(cursor)
+    starts.append(cursor)
+    deduped = np.concatenate(chunks) if chunks else np.empty(0, dtype=PAYLOAD_DTYPE)
+    return index, np.array(starts, dtype=OFFSET_DTYPE), deduped
+
+
+def index_by_slot(keys: np.ndarray, index: np.ndarray, absent: int) -> np.ndarray:
+    """Scatter the per-entry index onto the dense slot table."""
+    out = np.full(SLOT_TABLE_SIZE, absent, dtype=DEDUP_INDEX_DTYPE)
+    out[slots_of(keys)] = index
+    return out
+
+
+def write_slot_dedup(path: Path, keys, lengths, payload) -> None:
+    index, entry_offsets, deduped = build_dedup(keys, lengths, payload)
+    # the absent marker is one past the last real entry; its range is empty
+    absent = len(entry_offsets) - 2
+    per_slot = index_by_slot(keys, index, absent)
+    with open(path, "wb") as f:
+        f.write(np.int64(len(entry_offsets)).tobytes())
+        f.write(per_slot.tobytes())
+        f.write(entry_offsets.tobytes())
+        f.write(deduped.tobytes())
+
+
+def read_slot_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n_off = int(np.frombuffer(buf, dtype=np.int64, count=1)[0])
+    pos = 8
+    per_slot = np.frombuffer(
+        buf, dtype=DEDUP_INDEX_DTYPE, count=SLOT_TABLE_SIZE, offset=pos
+    ).copy()
+    pos += SLOT_TABLE_SIZE * DEDUP_INDEX_DTYPE().itemsize
+    entry_offsets = np.frombuffer(
+        buf, dtype=OFFSET_DTYPE, count=n_off, offset=pos
+    ).copy()
+    pos += n_off * OFFSET_DTYPE().itemsize
+    payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
+    return per_slot, entry_offsets, payload
+
+
+def write_keys_dedup(path: Path, keys, lengths, payload) -> None:
+    index, entry_offsets, deduped = build_dedup(keys, lengths, payload)
+    with open(path, "wb") as f:
+        f.write(np.int64(len(keys)).tobytes())
+        f.write(np.int64(len(entry_offsets)).tobytes())
+        f.write(keys.tobytes())
+        f.write(index.astype(DEDUP_INDEX_DTYPE).tobytes())
+        f.write(entry_offsets.tobytes())
+        f.write(deduped.tobytes())
+
+
+def read_keys_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n, n_off = np.frombuffer(buf, dtype=np.int64, count=2)
+    n, n_off = int(n), int(n_off)
+    pos = 16
+    keys = np.frombuffer(buf, dtype=np.int64, count=n, offset=pos)
+    pos += n * 8
+    index = np.frombuffer(buf, dtype=DEDUP_INDEX_DTYPE, count=n, offset=pos)
+    pos += n * DEDUP_INDEX_DTYPE().itemsize
+    entry_offsets = np.frombuffer(
+        buf, dtype=OFFSET_DTYPE, count=n_off, offset=pos
+    ).copy()
+    pos += n_off * OFFSET_DTYPE().itemsize
+    payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
+    per_slot = index_by_slot(keys, index, len(entry_offsets) - 2)
+    return per_slot, entry_offsets, payload
+
+
+DEDUP_ENCODINGS: dict[str, tuple[Callable, Callable]] = {
+    "slot-dedup": (write_slot_dedup, read_slot_dedup),
+    "keys-dedup": (write_keys_dedup, read_keys_dedup),
+}
+
+
+def derive_zone_table_dedup(
+    per_slot: np.ndarray, entry_offsets: np.ndarray, payload: np.ndarray
+) -> np.ndarray:
+    """The ``int16`` zone-or-sentinel table, over the deduped shape."""
+    lens = np.diff(entry_offsets.astype(np.int64))[per_slot]
+    out = np.full(SLOT_TABLE_SIZE, ABSENT, dtype=np.int16)
+    out[lens >= 2] = POLYGON_LIST
+    unique = lens == UNIQUE_LEN
+    out[unique] = payload[entry_offsets[per_slot[unique]]].astype(np.int16)
+    return out
+
+
+def lookup_dedup(per_slot, entry_offsets, payload, zone_by_slot, hex_id: int):
+    slot = ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE + (
+        (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK
+    )
+    zone_id = zone_by_slot[slot]
+    if zone_id >= 0:
+        return int(zone_id)
+    if zone_id == ABSENT:
+        return None
+    e = per_slot[slot]
+    return payload[entry_offsets[e] : entry_offsets[e + 1]]
+
+
 def derive_zone_table(offsets: np.ndarray, payload: np.ndarray) -> np.ndarray:
     """An ``int16`` zone-or-sentinel per slot, for the ``derived-table`` dispatch.
 
@@ -415,11 +602,39 @@ def check_agreement(mapping, offsets, payload, zone_by_slot, label: str) -> None
         )
 
 
+def check_agreement_dedup(
+    mapping, per_slot, entry_offsets, payload, zone_by_slot, label: str
+) -> None:
+    """Same gate, over the deduplicated shape - sharing must not leak a neighbour's ids."""
+    for hex_id, expected in mapping.items():
+        got = lookup_dedup(per_slot, entry_offsets, payload, zone_by_slot, hex_id)
+        if isinstance(expected, (int, np.integer)):
+            ok = isinstance(got, int) and got == int(expected)
+        else:
+            ok = isinstance(got, np.ndarray) and np.array_equal(got, expected)
+        if not ok:
+            raise AssertionError(
+                f"{label} disagrees on cell {hex_id:#x}: {got!r} != {expected!r}"
+            )
+    absent = int((zone_by_slot == ABSENT).sum())
+    if absent != SLOT_TABLE_SIZE - len(mapping):
+        raise AssertionError(
+            f"{label}: {absent} absent slots, expected {SLOT_TABLE_SIZE - len(mapping)}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # memory: one subprocess per structure, as scripts/_memory_probe.py argues
 # ---------------------------------------------------------------------------
 
-MEMORY_TARGETS = ("dict", "slot-offsets", "slot-lengths", "keys-offsets")
+MEMORY_TARGETS = (
+    "dict",
+    "slot-offsets",
+    "slot-lengths",
+    "keys-offsets",
+    "slot-dedup",
+    "keys-dedup",
+)
 
 
 def memory_probe(target: str) -> dict:
@@ -437,8 +652,17 @@ def memory_probe(target: str) -> dict:
         path = OUT_DIR / f"{target}.bin"
         tracemalloc.start()
         buf = path.read_bytes()
-        offsets, payload = ENCODINGS[target][1](buf)
-        kept = (offsets, payload, derive_zone_table(offsets, payload))
+        if target in DEDUP_ENCODINGS:
+            per_slot, ent_off, payload = DEDUP_ENCODINGS[target][1](buf)
+            kept = (
+                per_slot,
+                ent_off,
+                payload,
+                derive_zone_table_dedup(per_slot, ent_off, payload),
+            )
+        else:
+            offsets, payload = ENCODINGS[target][1](buf)
+            kept = (offsets, payload, derive_zone_table(offsets, payload))
         del buf
     gc.collect()
     current, peak = tracemalloc.get_traced_memory()
@@ -494,23 +718,38 @@ def main() -> None:
         f"{int((lengths == UNIQUE_LEN).sum()):,} unique-zone"
     )
 
-    for name, (write, _read) in ENCODINGS.items():
+    for name, (write, _read) in {**ENCODINGS, **DEDUP_ENCODINGS}.items():
         write(OUT_DIR / f"{name}.bin", keys, lengths, payload)
+
+    index, entry_offsets, deduped = build_dedup(keys, lengths, payload)
+    print(
+        f"dedup: {len(entry_offsets) - 1:,} distinct entries of {len(keys):,} "
+        f"({(len(entry_offsets) - 1) / len(keys) * 100:.1f}%), payload "
+        f"{len(payload):,} -> {len(deduped):,} values "
+        f"({payload.nbytes / 1024:,.1f} -> {deduped.nbytes / 1024:,.1f} KiB, "
+        f"{len(payload) / len(deduped):.1f}x)"
+    )
 
     # correctness gate, before any timing
     for name, (_write, read) in ENCODINGS.items():
         buf = (OUT_DIR / f"{name}.bin").read_bytes()
         offsets, pay = read(buf)
         check_agreement(mapping, offsets, pay, derive_zone_table(offsets, pay), name)
+    for name, (_write, read) in DEDUP_ENCODINGS.items():
+        buf = (OUT_DIR / f"{name}.bin").read_bytes()
+        per_slot, ent_off, pay = read(buf)
+        zbs = derive_zone_table_dedup(per_slot, ent_off, pay)
+        check_agreement_dedup(mapping, per_slot, ent_off, pay, zbs, name)
     print(
         f"agreement: every one of {len(mapping):,} cells resolves identically under "
-        f"{len(ENCODINGS)} encodings x 2 dispatches"
+        f"{len(ENCODINGS)} plain encodings x 2 dispatches and "
+        f"{len(DEDUP_ENCODINGS)} deduplicated ones"
     )
 
     # ---- size ----
     shipped = shortcut_path.stat().st_size
     rows = [["FlatBuffers (shipped)", f"{shipped / 1024:,.1f}", "1.00x"]]
-    for name in ENCODINGS:
+    for name in {**ENCODINGS, **DEDUP_ENCODINGS}:
         size = (OUT_DIR / f"{name}.bin").stat().st_size
         rows.append([name, f"{size / 1024:,.1f}", f"{shipped / size:.1f}x"])
     table("File size - KiB on disk", ["encoding", "KiB", "smaller by"], rows)
@@ -535,6 +774,33 @@ def main() -> None:
         def load_and_derive(read=read, path=path):
             offsets, pay = read(path.read_bytes())
             return offsets, pay, derive_zone_table(offsets, pay)
+
+        t_parse = measure(lambda read=read, buf=buf: read(buf), 50)
+        t_full = measure(load_full, 50)
+        t_derived = measure(load_and_derive, 50)
+        rows.append(
+            [
+                name,
+                f"{t_full * 1e3:,.3f}",
+                f"{shipped_load / t_full:,.0f}x",
+                f"parse {t_parse * 1e3:.3f} / +table {(t_derived - t_full) * 1e3:.3f}",
+            ]
+        )
+    for name, (_write, read) in DEDUP_ENCODINGS.items():
+        path = OUT_DIR / f"{name}.bin"
+        buf = path.read_bytes()
+
+        def load_full(read=read, path=path):
+            return read(path.read_bytes())
+
+        def load_and_derive(read=read, path=path):
+            per_slot, ent_off, pay = read(path.read_bytes())
+            return (
+                per_slot,
+                ent_off,
+                pay,
+                derive_zone_table_dedup(per_slot, ent_off, pay),
+            )
 
         t_parse = measure(lambda read=read, buf=buf: read(buf), 50)
         t_full = measure(load_full, 50)
@@ -643,6 +909,68 @@ def main() -> None:
     table(
         "Lookup dispatch over the flat bytes - ns per call, inlined, no query around it",
         ["stratum", "dict.get", "len-disp", "derived", "d-len", "d-derived"],
+        rows,
+    )
+
+    # what the extra indirection costs: dedup adds one array read, and only where the
+    # derived zone table does not already answer - the ambiguous path
+    dbuf = (OUT_DIR / "slot-dedup.bin").read_bytes()
+    d_slot, d_off, d_pay = read_slot_dedup(dbuf)
+    d_zbs = derive_zone_table_dedup(d_slot, d_off, d_pay)
+    rows = []
+    for label, cells in (("unique", uniq), ("ambiguous", amb)):
+        n = len(cells)
+        t_plain = (
+            measure(
+                lambda cells=cells: [
+                    (
+                        int(z)
+                        if (z := zone_by_slot[s]) >= 0
+                        else (None if z == ABSENT else pay[offsets[s] : offsets[s + 1]])
+                    )
+                    for c in cells
+                    for s in (
+                        ((c >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK)
+                        * SLOT_STRIDE
+                        + ((c >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK),
+                    )
+                ]
+            )
+            / n
+        )
+        t_dedup = (
+            measure(
+                lambda cells=cells: [
+                    (
+                        int(z)
+                        if (z := d_zbs[s]) >= 0
+                        else (
+                            None
+                            if z == ABSENT
+                            else d_pay[d_off[(e := d_slot[s])] : d_off[e + 1]]
+                        )
+                    )
+                    for c in cells
+                    for s in (
+                        ((c >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK)
+                        * SLOT_STRIDE
+                        + ((c >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK),
+                    )
+                ]
+            )
+            / n
+        )
+        rows.append(
+            [
+                label,
+                f"{t_plain * 1e9:,.0f}",
+                f"{t_dedup * 1e9:,.0f}",
+                f"{(t_dedup - t_plain) * 1e9:+,.0f}",
+            ]
+        )
+    table(
+        "What deduplication costs at lookup - ns per call, both on the derived table",
+        ["stratum", "plain", "deduped", "delta"],
         rows,
     )
 
