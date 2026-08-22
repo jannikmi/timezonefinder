@@ -39,59 +39,77 @@ Neither the load path nor the lookup touches point-in-polygon, so unlike the com
 script this one is backend-independent.
 
 
-FINDINGS (2026-08-22, `157a476`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
+FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2026c)
 
     payload: 54,024 values -> 7,344 distinct (105.5 -> 14.3 KiB, 7.4x)
-    offset width: uint32 plain (uint16 would leave only 1.2x headroom),
-                  uint16 deduplicated (8.9x headroom)
+    column widths: offsets uint16, lengths uint8 (largest entry 59) - narrowest that
+    fits, guarded by `check_fits` rather than by headroom
     agreement: all 41,162 cells resolve identically under all three structures
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    390.2    4.44         109      117
-    keys-plain           749      0.675  0.70         210      427
-    keys-dedup  <=       497      0.655  0.37         210      420
-    slot-dedup           258      0.512  0.37         209      428
+    dict (shipped)     1,530    393.8    4.44         108      117
+    keys-plain           508      0.659  0.46         210      419
+    keys-dedup  <=       457      0.661  0.37         209      419
+    slot-dedup           197      0.515  0.37         210      421
 
 CONCLUSIONS
 
-1. **`keys-dedup` is the structure to build, and the choice is not a trade-off.** It
-   dominates `keys-plain` outright - 497 KiB against 749, 0.37 MiB against 0.70, the same
-   load and the same lookup to within noise. Deduplication is free at lookup because
-   duplicates carry *equal offsets* rather than a shared index: nothing is dereferenced
-   twice, so a repeated entry costs exactly what a unique one costs. There is no version
-   of this comparison where storing 41,162 entries beats storing the 2,846 distinct ones.
+1. **The decision that matters is dict against flat, and everything after it is small.**
+   4.44 MiB to ~0.4, ~394 ms to ~0.66, 1,530 KiB to ~460: **12x memory, 600x load, 3x
+   file**. The spread *among* the flat structures is ~50 KiB of file and ~0.09 MiB - under
+   2% of the packaged data - so no flat variant is a mistake and the choice between them
+   should not be relitigated once made.
 
-2. **Deduplication also pays for its own addressing, which is the non-obvious part.**
-   Sharing destroys the contiguity a CSR layout rests on - entry i no longer ends where
-   entry i+1 begins - so each slot needs its own start *and* end, 2N numbers instead of
-   N+1. That doubling would cost more than the payload it saves, except that collapsing
-   54,024 values to 7,344 lets the offsets narrow from `uint32` to `uint16`, which halves
-   it back. Net: the addressing is unchanged and the payload is 7.4x smaller. Note the
-   narrowing is only defensible *because* of deduplication - at 54,024 values `uint16`
-   has 1.2x headroom, which is a bet on the data, and at 7,344 it has 8.9x.
+2. **`keys-dedup` is the one to build.** Smaller on both axes than `keys-plain` at identical
+   load and lookup, and no harder to read. Sharing is free at lookup because duplicates
+   carry *equal offsets* rather than a shared index - nothing is dereferenced twice, so a
+   repeated entry costs exactly what a unique one costs.
 
-3. **The one real decision left is `keys-dedup` against `slot-dedup`: 239 KiB of file and
-   0.14 ms of load, to keep h3 out of the data format.** `slot-dedup` drops the stored cell
-   ids because the cell id *is* the index - and that bakes an encoding h3-py does not
-   promise as API, plus `SHORTCUT_H3_RES`, into bytes that outlive every reader. Storing
-   the ids moves that coupling into the reader, which is versioned with the package and can
-   be changed in any release. Both are still 3-6x smaller than what ships. **Pay the
-   239 KiB.**
+3. **Correction to the previous block: deduplication does not "pay for its own addressing
+   by narrowing the offsets".** That claim rested on the plain payload needing `uint32`,
+   which was an artefact of a 4x-headroom rule this script used to impose - 54,024 values
+   fit `uint16` perfectly well. With the narrowest-fitting widths and a guard, *both*
+   structures use `uint16` offsets and `uint8` lengths, and what deduplication buys is
+   exactly the payload: 105.5 KiB down to 14.3, so 508 KiB down to 457. Less than the
+   previous block claimed, and still a strict improvement.
 
-4. **Load: ~390 ms to ~0.66 ms, ~600x - and most of it is not this change's to claim.**
-   PERF-5 reaches ~21 ms on the *existing* file with no format change and no release, so
-   what the format change adds is ~21 ms to ~0.66 ms. Rank it on that, on the 4.1 MiB, and
-   on the file being 3x smaller; never on the 390.
+4. **Sharing does cost one column, and that is the whole of its cost.** Without it ranges
+   are contiguous, so a CSR array of N+1 offsets encodes N ranges - entry i ends where
+   entry i+1 begins. Sharing destroys that, so each entry needs its own start *and* length.
+   In the file that is ~41 KiB against the 91 KiB of payload it saves; in memory both
+   structures materialise two per-slot arrays here because they share one runtime contract.
+   `keys-plain` could instead keep its CSR array and index it twice, which would put it at
+   ~0.34 MiB against `keys-dedup`'s 0.37 - **a known and deliberately untaken option**, on
+   the grounds that one lookup shared by every structure is worth more than 0.03 MiB.
 
-5. **The query is unchanged in practice, though not in isolation.** A lookup on its own is
-   ~210 ns against the dict's ~109. That gap does not survive contact with a real query:
-   the companion script measures the same layout inside `timezone_at` at **+4 ns**, under
-   the noise floor. The mechanism is that the shipped code answers a `dict.get` with
-   `match value: case int(zone_id)`, a structural pattern match costing about what the flat
-   lookup costs extra - so the two roughly cancel. **Quote the whole-query figure.** Note
-   also that sampling cells in `mapping` order rather than at random hands `dict.get` a
-   cache-friendly walk of its own table and reads 109 ns as 77; the numbers above are
-   randomly sampled.
+5. **Narrowest-fitting widths, guarded, not widths chosen for headroom.** `uint8` lengths
+   (largest entry 59) and `uint16` offsets are correct because the packaged data is built
+   by a converter this repository owns: an overflow surfaces at build time, not in a user's
+   process, *provided something checks and says what happened*. `check_fits` is that check,
+   and its message - what overflowed, what the ceiling was, which width to move to, and the
+   version bumps that follow - is the deliverable rather than the assertion. In the shipped
+   version it belongs in `scripts/data_integrity.py`, asserted by the converter over what it
+   wrote and by the test suite over what is committed, never on the finder's init path.
+
+6. **Load: ~394 ms to ~0.66 ms, and most of it is not this change's to claim.** PERF-5
+   reaches ~21 ms on the *existing* file with no format change and no release, so what the
+   format change adds is ~21 ms to ~0.66 ms. Rank it on that, on the memory, and on the 3x
+   smaller binary; never on the 394.
+
+7. **The query is unchanged in practice, though not in isolation.** A lookup on its own is
+   ~210 ns against the dict's ~108. That gap does not survive a real query: the companion
+   script measures this layout inside `timezone_at` at **+4 ns**, under the noise floor,
+   because the shipped code answers a `dict.get` with `match value: case int(zone_id)` - a
+   structural pattern match costing about what the flat lookup costs extra. Quote the
+   whole-query figure. Sampling cells in `mapping` order rather than at random also hands
+   `dict.get` a cache-friendly walk of its own table and reads 108 ns as 77; the numbers
+   above are randomly sampled.
+
+8. **The one decision left is ~260 KiB and ~0.15 ms to keep h3 out of the format.**
+   `slot-dedup` drops the stored cell ids because the cell id *is* the index, and bakes an
+   encoding h3-py does not promise as API - plus `SHORTCUT_H3_RES` - into bytes that
+   outlive every reader. Storing the ids moves that coupling into the reader, which is
+   versioned with the package and can change in any release. **Recommended: pay it.**
 
 REFUSED OPTIONS, with the reason, so they are not re-proposed
 
@@ -100,22 +118,19 @@ REFUSED OPTIONS, with the reason, so they are not re-proposed
   Measured in the companion script.
 * **A Python list of values instead of arrays** (in-memory) - 2.41 MiB against 0.37 for no
   query benefit. Companion script.
-* **`uint8` per-slot lengths** - the smallest non-deduplicated file at 166 KiB, and it
-  rests on every entry fitting 255 where the packaged maximum is 59. A property of the
-  data, not a guarantee of the format; a 256-polygon cell would need a layout version.
 * **Deduplication via an entry-number index** (slot -> entry -> range) - costs +74 ns on
-  the ambiguous path to save ~100 KiB, and is simply unnecessary: equal offsets achieve the
-  same sharing with no indirection at all. This was a wrong turn, kept here because it
-  looks like the obvious way to implement sharing and is not.
-* **Deduplication with `uint32` offsets** - 502 KiB, worse than not deduplicating. The
-  narrowing in conclusion 2 is what makes sharing pay.
+  the ambiguous path to save ~100 KiB, and is unnecessary: equal offsets achieve the same
+  sharing with no indirection. Kept here because it looks like the obvious way to implement
+  sharing and is not.
+* **Widths chosen for headroom rather than fit** - the reason `uint32` offsets appeared in
+  the previous block, and wrong: see conclusions 3 and 5.
 * **Dispatching on the entry length at runtime** instead of on a derived zone table -
-  +230 ns against +73 ns on the unique path, because it needs two offset reads and a
-  subtraction where the table needs one read. The length is the right discriminator *in
-  the file* and the wrong one at runtime; these are separate decisions.
-* **Dropping the stored cell ids and enumerating them from h3's public API at load** -
-  the index is dense, so this is possible; it costs 4.5 ms against 0.13 ms to read them,
-  a fifth of PERF-5's entire budget to save 329 KiB.
+  +230 ns against +73 ns on the unique path, because it needs two reads and a subtraction
+  where the table needs one. The length is the right column *in the file* and the wrong
+  discriminator at runtime; separate decisions.
+* **Dropping the stored cell ids and enumerating them from h3's public API at load** - the
+  index is dense, so this is possible; it costs 4.5 ms against 0.13 ms to read them, a
+  fifth of PERF-5's entire budget, to save 329 KiB.
 
 """
 
@@ -172,18 +187,44 @@ QUERY_SAMPLE = 2_000
 # ---------------------------------------------------------------------------
 
 
-def offset_dtype_for(n_values: int) -> np.dtype:
-    """The narrowest offset width that addresses ``n_values`` with headroom to spare.
+def narrowest_dtype_for(max_value: int, *, what: str) -> np.dtype:
+    """The narrowest unsigned width that holds ``max_value``. No headroom required.
 
-    Deliberately not "the narrowest that fits". A width chosen with 1.2x headroom is a bet
-    on the data rather than a property of the format, and losing that bet costs a layout
-    version bump. 4x is the bar here, and deduplication is what lets the recommended
-    structure clear it where the non-deduplicated one does not.
+    Headroom is not the safeguard here - ``check_fits`` is. The packaged data is produced
+    by a converter this repository owns, so an overflow surfaces when the data is built
+    rather than in a user's process, provided something checks and says what happened. A
+    guarded narrow width is strictly better than an unguarded wide one: smaller, and loud
+    instead of silently truncating. So take the smallest that fits and assert it.
     """
-    for dtype in (np.uint16, np.uint32):
-        if np.iinfo(dtype).max >= n_values * 4:
+    for dtype in (np.uint8, np.uint16, np.uint32):
+        if np.iinfo(dtype).max >= max_value:
             return np.dtype(dtype)
-    return np.dtype(np.uint64)
+    raise AssertionError(f"{what}: {max_value:,} exceeds uint32")
+
+
+def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -> None:
+    """Guard a narrow width, with the message that makes the width safe to choose.
+
+    In the shipped version this belongs in ``scripts/data_integrity.py`` - asserted by the
+    converter over what it just wrote *and* by the test suite over what is committed,
+    sharing one implementation, and never on the finder's init path.
+
+    The message is the deliverable, not the assertion: whoever hits this is regenerating
+    the data years from now and needs to be told what overflowed, what the ceiling was and
+    which width to move to - not that a check failed.
+    """
+    if len(values) == 0:
+        return
+    largest = int(values.max())
+    ceiling = int(np.iinfo(dtype).max)
+    if largest > ceiling:
+        raise AssertionError(
+            f"{what} no longer fits {dtype.name}: the largest is {largest:,}, the maximum "
+            f"{dtype.name} can hold is {ceiling:,}. This is a data change, not a bug - the "
+            f"width was chosen against the dataset of the day. {remedy} Doing so changes "
+            f"the binary layout, so bump SHORTCUT_LAYOUT_VERSION and DATA_FORMAT_VERSION "
+            f"with it and publish the data distribution before the code that reads it."
+        )
 
 
 def build_payload(
@@ -283,73 +324,152 @@ def _write(path: Path, *arrays: np.ndarray) -> None:
 
 
 def write_keys_plain(path: Path, keys, lengths, payload) -> None:
-    dtype = offset_dtype_for(len(payload))
-    ends = np.cumsum(lengths)
+    """Without sharing, ranges are contiguous, so CSR is this structure's best form.
+
+    One array of N+1 offsets encodes N ranges - entry i ends where entry i+1 begins - so
+    it stores and loads *one* column where the deduplicated structure needs two. That is
+    the real price of sharing, and it is paid in the addressing rather than at lookup.
+    """
+    offsets = np.zeros(len(lengths) + 1, dtype=np.int64)
+    np.cumsum(lengths, out=offsets[1:])
+    dtype = narrowest_dtype_for(int(offsets[-1]), what="payload offset")
+    check_fits(
+        offsets,
+        dtype,
+        what="a payload offset",
+        remedy="Widen the offset column to the next unsigned width.",
+    )
     _write(
         path,
-        np.array([len(keys), dtype.itemsize], dtype=np.int64),
+        np.array([len(keys), dtype.itemsize, 0], dtype=np.int64),
         keys,
-        (ends - lengths).astype(dtype),
-        ends.astype(dtype),
+        offsets.astype(dtype),
         payload,
     )
 
 
+def read_keys_plain(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n, width, _ = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3))
+    dtype = np.dtype(f"uint{width * 8}")
+    pos = 24
+    keys = np.frombuffer(buf, dtype=np.int64, count=n, offset=pos)
+    pos += n * 8
+    offsets = np.frombuffer(buf, dtype=dtype, count=n + 1, offset=pos)
+    pos += (n + 1) * width
+    payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
+    slot_starts, slot_ends = scatter_to_slots(keys, offsets[:-1], offsets[1:], dtype)
+    return slot_starts, slot_ends, payload
+
+
 def write_keys_dedup(path: Path, keys, lengths, payload) -> None:
     starts, ends, deduped = deduplicate(lengths, payload)
-    dtype = offset_dtype_for(len(deduped))
+    _write_entries(path, keys, starts, ends - starts, deduped)
+
+
+def _write_entries(path: Path, keys, starts, lengths, payload) -> None:
+    """Store a start and a *length* per entry, each at its own narrowest width.
+
+    A length rather than an end because they are narrow for different reasons and only a
+    length is narrow enough to matter: an entry holds at most a few dozen values while a
+    start addresses the whole payload, so ``uint8`` serves one and never the other.
+    Splitting them saves a byte per entry that a symmetric (start, end) pair spends.
+    """
+    start_dtype = narrowest_dtype_for(
+        int(starts.max()) if len(starts) else 0, what="payload offset"
+    )
+    len_dtype = narrowest_dtype_for(
+        int(lengths.max()) if len(lengths) else 0, what="entry length"
+    )
+    check_fits(
+        starts,
+        start_dtype,
+        what="a payload offset",
+        remedy="Widen the offset column to the next unsigned width.",
+    )
+    check_fits(
+        lengths,
+        len_dtype,
+        what="a shortcut entry's length",
+        remedy="Widen the length column to the next unsigned width.",
+    )
     _write(
         path,
-        np.array([len(keys), dtype.itemsize], dtype=np.int64),
+        np.array([len(keys), start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
         keys,
-        starts.astype(dtype),
-        ends.astype(dtype),
-        deduped,
+        starts.astype(start_dtype),
+        lengths.astype(len_dtype),
+        payload,
     )
 
 
 def read_keys(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    n, width = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=2))
-    dtype = np.dtype(f"uint{width * 8}")
-    pos = 16
+    n, sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3))
+    start_dtype = np.dtype(f"uint{sw * 8}")
+    pos = 24
     keys = np.frombuffer(buf, dtype=np.int64, count=n, offset=pos)
     pos += n * 8
-    starts = np.frombuffer(buf, dtype=dtype, count=n, offset=pos)
-    pos += n * width
-    ends = np.frombuffer(buf, dtype=dtype, count=n, offset=pos)
-    pos += n * width
+    starts = np.frombuffer(buf, dtype=start_dtype, count=n, offset=pos)
+    pos += n * sw
+    lengths = np.frombuffer(buf, dtype=np.dtype(f"uint{lw * 8}"), count=n, offset=pos)
+    pos += n * lw
     payload = np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
+    # ends are materialised here, not stored: the runtime shape wants two arrays it can
+    # index without arithmetic, and the file wants the narrow column. Different jobs.
+    ends = starts.astype(start_dtype) + lengths
     # the format says nothing about h3's bit layout; the reader derives the slot table
-    slot_starts, slot_ends = scatter_to_slots(keys, starts, ends, dtype)
+    slot_starts, slot_ends = scatter_to_slots(keys, starts, ends, start_dtype)
     return slot_starts, slot_ends, payload
 
 
 def write_slot_dedup(path: Path, keys, lengths, payload) -> None:
     starts, ends, deduped = deduplicate(lengths, payload)
-    dtype = offset_dtype_for(len(deduped))
-    slot_starts, slot_ends = scatter_to_slots(keys, starts, ends, dtype)
+    entry_lengths = ends - starts
+    start_dtype = narrowest_dtype_for(int(starts.max()), what="payload offset")
+    len_dtype = narrowest_dtype_for(int(entry_lengths.max()), what="entry length")
+    check_fits(
+        starts,
+        start_dtype,
+        what="a payload offset",
+        remedy="Widen the offset column to the next unsigned width.",
+    )
+    check_fits(
+        entry_lengths,
+        len_dtype,
+        what="a shortcut entry's length",
+        remedy="Widen the length column to the next unsigned width.",
+    )
+    slot_starts = np.zeros(SLOT_TABLE_SIZE, dtype=start_dtype)
+    slot_lengths = np.zeros(SLOT_TABLE_SIZE, dtype=len_dtype)
+    slots = slots_of(keys)
+    slot_starts[slots] = starts
+    slot_lengths[slots] = entry_lengths
     _write(
         path,
-        np.array([dtype.itemsize], dtype=np.int64),
+        np.array([start_dtype.itemsize, len_dtype.itemsize], dtype=np.int64),
         slot_starts,
-        slot_ends,
+        slot_lengths,
         deduped,
     )
 
 
 def read_slot_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    width = int(np.frombuffer(buf, dtype=np.int64, count=1)[0])
-    dtype = np.dtype(f"uint{width * 8}")
-    pos = 8
-    starts = np.frombuffer(buf, dtype=dtype, count=SLOT_TABLE_SIZE, offset=pos).copy()
-    pos += SLOT_TABLE_SIZE * width
-    ends = np.frombuffer(buf, dtype=dtype, count=SLOT_TABLE_SIZE, offset=pos).copy()
-    pos += SLOT_TABLE_SIZE * width
+    sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=2))
+    start_dtype = np.dtype(f"uint{sw * 8}")
+    pos = 16
+    starts = np.frombuffer(
+        buf, dtype=start_dtype, count=SLOT_TABLE_SIZE, offset=pos
+    ).copy()
+    pos += SLOT_TABLE_SIZE * sw
+    lengths = np.frombuffer(
+        buf, dtype=np.dtype(f"uint{lw * 8}"), count=SLOT_TABLE_SIZE, offset=pos
+    )
+    pos += SLOT_TABLE_SIZE * lw
+    ends = starts + lengths
     return starts, ends, np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
 
 
 STRUCTURES: dict[str, tuple[Callable, Callable]] = {
-    "keys-plain": (write_keys_plain, read_keys),
+    "keys-plain": (write_keys_plain, read_keys_plain),
     "keys-dedup": (write_keys_dedup, read_keys),
     "slot-dedup": (write_slot_dedup, read_slot_dedup),
 }
@@ -528,18 +648,19 @@ def main() -> None:
     mapping = read_hybrid_shortcuts_binary(shortcut_path)
     keys, lengths, payload = build_payload(mapping)
     _s, _e, deduped = deduplicate(lengths, payload)
-    plain_dtype = offset_dtype_for(len(payload))
-    dedup_dtype = offset_dtype_for(len(deduped))
     print(
         f"payload: {len(payload):,} values -> {len(deduped):,} distinct "
         f"({payload.nbytes / 1024:,.1f} -> {deduped.nbytes / 1024:,.1f} KiB, "
         f"{len(payload) / len(deduped):.1f}x)"
     )
+    plain_start = narrowest_dtype_for(len(payload), what="payload offset")
+    dedup_start = narrowest_dtype_for(len(deduped), what="payload offset")
+    len_dtype = narrowest_dtype_for(int(lengths.max()), what="entry length")
     print(
-        f"offset width: {plain_dtype.name} for the plain payload "
-        f"(uint16 would leave only {np.iinfo(np.uint16).max / len(payload):.1f}x headroom), "
-        f"{dedup_dtype.name} deduplicated "
-        f"({np.iinfo(dedup_dtype).max / len(deduped):.1f}x headroom)"
+        f"column widths: offsets {plain_start.name} plain / {dedup_start.name} "
+        f"deduplicated; lengths {len_dtype.name} (largest entry {int(lengths.max())}, "
+        f"{len_dtype.name} holds {np.iinfo(len_dtype).max}). Narrowest that fits, guarded "
+        f"by check_fits rather than by headroom."
     )
 
     loaded = {}

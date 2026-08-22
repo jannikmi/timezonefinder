@@ -367,37 +367,45 @@ the denominators, and how to tell whether they still describe the tree.
   alike. The **sorted-key / `np.searchsorted` layout is REJECTED** there: it loses the scalar path
   and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
   otherwise re-propose it.
-- **Prototyped on the file side 2026-08-22, and one structure wins outright** —
-  `prototypes/shortcut_file_format_bench.py`. A flat file storing each *distinct* entry once, keyed
-  by stored cell ids, with the zone table derived at load. It beats the non-deduplicated flat file
-  on **every axis at once** — 497 KiB against 749, 0.37 MiB against 0.70, same load, same lookup —
-  so deduplication is not a trade-off to weigh but a strictly better encoding. Against what ships:
-  **1,530 → 497 KiB, ~390 → ~0.7 ms, 4.44 → 0.37 MiB**, lookup unchanged inside a real query. Six
-  alternatives lost and are recorded with their reasons in that script's `REFUSED OPTIONS` block,
-  including two of its own wrong turns.
+- **Prototyped on the file side 2026-08-22** — `prototypes/shortcut_file_format_bench.py`. **The
+  step that matters is dict → flat: 4.44 → ~0.4 MiB, ~394 → ~0.66 ms, 1,530 → ~460 KiB — 12x
+  memory, 600x load, 3x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
+  under 2 % of the packaged data, so no flat variant is a mistake and that choice should not be
+  relitigated once made. The one to build is a flat file storing each *distinct* entry once, keyed
+  by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
+  at identical load and lookup. Six alternatives lost and are recorded in that script's `REFUSED
+  OPTIONS` block, including two of its own wrong turns.
 - **Only 6.9 % of the 41,162 entries are distinct**, because the ocean zones repeat one zone id
   across thousands of cells. Sharing is free at lookup — duplicates carry *equal offsets*, so
-  nothing is dereferenced twice — and it pays for its own addressing: sharing breaks CSR
-  contiguity, so each slot needs a start *and* an end rather than N+1 shared offsets, but the 7.4x
-  smaller payload lets those offsets narrow from `uint32` to `uint16` and cancel the doubling.
-- **Rank it on ~21 ms and the file size, never on the ~390 ms**, and note that "buys no speed" in
+  nothing is dereferenced twice. It costs one column: without sharing the ranges are contiguous and
+  a CSR array of N+1 offsets encodes N ranges, whereas shared ranges need a start *and* a length
+  per entry. That is ~41 KiB against the ~91 KiB of payload it saves.
+- **Column widths are the narrowest that fit and are guarded, not chosen for headroom** — `uint8`
+  lengths (largest entry 59), `uint16` offsets. The packaged data is built by a converter this
+  repository owns, so an overflow surfaces at build time rather than in a user's process *provided
+  something checks and says what happened*; the check belongs in `scripts/data_integrity.py`, over
+  what the converter wrote and over what is committed, never on the init path. An earlier draft of
+  this entry demanded 4x headroom instead and wrongly credited deduplication with enabling a
+  `uint32` → `uint16` narrowing that the headroom rule alone had blocked.
+- **Rank it on ~21 ms and the file size, never on the ~394 ms**, and note that "buys no speed" in
   this entry always meant a *query* — the only denominator *The measured baseline* carries.
   Construction was never priced here until 2026-08-22, and most of it is not this item's to claim:
   **PERF-5 takes it to ~21 ms with no format change and no release**, so what the format change
-  adds is ~21 ms → ~0.7 ms. The memory is the same win the in-memory layout already buys, not
+  adds is ~21 ms → ~0.66 ms. The memory is the same win the in-memory layout already buys, not
   additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
   Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
   two-distribution release.
-- **The one decision left is 239 KiB and 0.14 ms to keep h3 out of the format.** Dropping the
-  stored cell ids and addressing by the H3 bit layout gives a 258 KiB file, and bakes an encoding
+- **The one decision left is ~260 KiB and ~0.15 ms to keep h3 out of the format.** Dropping the
+  stored cell ids and addressing by the H3 bit layout gives a 197 KiB file, and bakes an encoding
   h3-py does not promise as API — plus `SHORTCUT_H3_RES` — into bytes that outlive every reader.
   Storing the ids moves that coupling into the reader, which is versioned with the package.
   Recommended: pay it.
 - **Status:** open — sequenced behind PERF-5; the structure is settled and the remaining choice is
   the maintainer's.
-- **Last touched:** 2026-08-22 — the file structure prototyped and settled on one recommendation,
-  the losing options recorded in the prototype, and the ranking moved off the ~390 ms onto what
-  PERF-5 leaves; the query measurement detail cut to issue #477, taken 2026-08-21.
+- **Last touched:** 2026-08-22 — the file structure prototyped and settled on one recommendation
+  with the losing options recorded in the prototype; column widths narrowed to what fits under a
+  build-time guard, which retracted a claim about what deduplication buys; the ranking moved off
+  the ~394 ms onto what PERF-5 leaves. Query detail cut to issue #477, taken 2026-08-21.
 
 ### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
 
