@@ -1,4 +1,4 @@
-"""Which shortcut data structure to build: one recommendation, and what it beats.
+r"""Which shortcut data structure to build: one recommendation, and what it beats.
 
 ``prototypes/shortcut_layout_bench.py`` settled the *in-memory* question - address entries
 by an H3-derived slot rather than by a dict key, which is free on the query path and saves
@@ -26,6 +26,91 @@ query comparison is about the data rather than about three different code paths:
     if zone >= 0:        -> unique zone id
     elif zone == ABSENT  -> not covered
     else:                -> payload[starts[slot]:ends[slot]]
+
+THE RECOMMENDED STRUCTURE, in full
+---------------------------------
+
+Four arrays, of which two are stored and two are derived at load. Sizes are the packaged
+dataset at ``SHORTCUT_H3_RES`` = 3.
+
+On disk, 197.4 KiB::
+
+    header       16 B   two int64: the byte width of the start column, and of the length
+    starts   122.0 KiB  uint16 x 62,464   one per *slot*
+    lengths   61.0 KiB  uint8  x 62,464   one per slot
+    payload   14.3 KiB  uint16 x  7,344   every distinct entry, back to back
+
+In memory after load, 380.3 KiB::
+
+    starts        uint16 x 62,464  122.0 KiB   read straight from the file
+    ends          uint16 x 62,464  122.0 KiB   derived: starts + lengths
+    payload       uint16 x  7,344   14.3 KiB   read straight from the file
+    zone_by_slot  int16  x 62,464  122.0 KiB   derived, see below
+
+**payload** is the only array holding data. Each value is a zone id *or* a boundary polygon
+id - one namespace, because both fit ``uint16`` - and which it is follows from the entry's
+length, never from a tag. Entries are variable length and packed with no separators.
+
+**starts / ends** are the addressing, indexed by slot rather than by cell id. Slot ``s``
+owns ``payload[starts[s]:ends[s]]``. Two slots holding identical data carry *equal* values
+here, which is the whole of the deduplication: no shared-entry table, no indirection, and
+a repeated entry costs a lookup exactly what a unique one costs.
+
+**zone_by_slot** is a derived accelerator, one ``int16`` per slot:
+
+* ``>= 0`` - the cell resolves to a single zone, and this value *is* the answer
+* ``-1``   - two or more candidate polygons; read the payload
+* ``-2``   - no cell here (a hole in the table, or data that does not cover it)
+
+It exists because 30,651 of the 41,162 cells are single-zone, and without it that
+majority path would have to read two offsets and subtract them to discover there is only
+one value in the range. One read against three.
+
+**The slot function** turns a cell id into a dense array index by arithmetic alone::
+
+    slot = ((cell >> 45) & 0x7F) * 512 + ((cell >> 36) & 0x1FF)
+             \_____ base cell _____/         \__ digits 1,2,3 __/
+                    0..121                        3 bits each
+
+At a fixed resolution everything else in the index is constant - mode, the resolution
+field, and the unused digits 4-15, together ``0x830000fffffffff`` - so those 16 bits *are*
+the cell, and the map is a bijection rather than a hash. The table is 122 x 512 = 62,464
+slots for 41,162 cells: 66% dense, the holes being digit values 7 that no cell uses.
+
+**A lookup**, in full::
+
+    slot = <the arithmetic above>              # no memory touched
+    zone = zone_by_slot[slot]
+    if zone >= 0:   return zone                # 1 read  - 74% of cells
+    if zone == -2:  return None                # 1 read
+    return payload[starts[slot]:ends[slot]]    # 3 reads + a slice
+
+Worked, on the packaged data::
+
+    deep inside France   cell 0x831fb0fffffffff  base 15, digits 432 -> slot  8,112
+                         zone_by_slot[8,112] = 346 -> "Europe/Paris"          1 read, done
+    mid-Pacific          cell 0x83798afffffffff  base 60, digits 394 -> slot 31,114
+                         zone_by_slot[31,114] = 440 -> "Etc/GMT+9"            1 read, done
+    Berlin               cell 0x831f1dfffffffff  base 15, digits 285 -> slot  7,965
+                         zone_by_slot = -1; payload[1891:1893] = [911, 795]
+                         -> Europe/Berlin, Europe/Warsaw -> point-in-polygon loop
+    Basel (on a border)  cell 0x831f83fffffffff  base 15, digits 387 -> slot  8,067
+                         zone_by_slot = -1; payload[1965:1968] = [915, 877, 795]
+                         -> Europe/Berlin, Europe/Paris, Europe/Zurich -> PIP loop
+
+**How much is shared:** 41,162 occupied slots resolve to 2,846 distinct ``(start, length)``
+pairs. The largest group is 1,432 slots all addressing ``payload[281:282]``, the single
+value for ``Etc/GMT+9`` - the ocean is why deduplication pays.
+
+**Three build-time guards**, all in ``scripts/data_integrity.py`` when this ships, asserted
+by the converter over what it wrote and by the test suite over what is committed, and never
+on the finder's init path:
+
+1. the bit arithmetic agrees with h3's public ``get_base_cell_number`` and
+   ``cell_to_child_pos`` on every cell (``verify_slot_layout_against_h3_api``);
+2. offsets fit their column and lengths fit theirs (``check_fits``);
+3. no stored entry has length 1, which is what makes the length a discriminator.
+
 
 Correctness first: every one of the 41,162 cells must resolve to exactly what the shipped
 reader returns, under every structure, before anything is timed.
