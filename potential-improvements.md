@@ -358,78 +358,46 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-477 — replace the shortcut dict with flat arrays
 
-- **Tracks:** issue #477, which carries the memory breakdown, the candidate layouts, and the
-  measurements behind every judgement below.
+- **Tracks:** issue #477, which carries the memory breakdown and the query-side measurements.
 - **Why it is ranked here:** a memory item, plus the tail of a construction-time one — a few MiB
   per instance, on a structure that is essentially the whole heap of `TimezoneFinderL`, multiplied
-  by the thread count because concurrent workloads are told to use one instance each. On the layout
-  that survives it costs no *query* speed and buys none; that half of the ranking is unchanged.
-- **What "buys no speed" was silently scoped to, corrected 2026-08-22.** It means a *query*, the
-  only denominator *The measured baseline* carries. Building the dict is ~400 ms of a ~405 ms
-  `TimezoneFinder()` and no version of this entry priced it. It is still not this entry's prize:
-  ~379 ms of that is the FlatBuffers per-table decode, which **PERF-5 removes with no format change
-  and no release**, and what a flat layout takes on top is the ~21 ms of dict materialisation left
-  after it. Sequence PERF-5 first, then rank this on the memory plus ~21 ms — never on the 400.
-- **Measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, over whole queries
-  rather than lookups in isolation. It supersedes the issue's original microbenchmark and #497's
-  query-side estimate alike; where the three disagree, it wins.
-- **The sorted-key / `np.searchsorted` layout is REJECTED** — it loses the scalar path and the
-  batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will otherwise
-  re-propose it. The **direct-index** variant is the one that survives.
-- **The shape that delivers it, proposed 2026-08-22: put the flat layout in the *file*, not only in
-  memory.** One payload holding every entry's values back to back — a unique zone id, or a polygon
-  id list — addressed by an offset and a length, the way the polygon binaries already address
-  coordinates. Three things check out against the packaged data rather than being assumed. **The
-  length is a free discriminator**: 0 absent, 1 a zone id, >=2 polygon ids, and a stored list can
-  never have length 1 *by construction*, because `compute_unique_shortcut_mapping` collapses any
-  cell whose polygons share a zone and a one-polygon cell trivially does — so the union tag
-  disappears entirely. Zone ids and polygon ids both fit `uint16` today, so **one payload array
-  serves both**, which may also retire the uint8/uint16 schema split. And the payload is a tenth of
-  the current file, so the **packaged binary shrinks several-fold** as well.
-- **Prototyped and measured 2026-08-22** — `prototypes/shortcut_file_format_bench.py`, five
-  encodings written, read back, and gated on all 41,162 cells resolving identically. Load falls
-  from ~377 ms to **~0.03 ms** and the packaged binary shrinks **2.6–10.4x** depending on encoding.
-- **Storing each distinct entry once is the format's largest single lever.** Only **6.9 %** of the
-  41,162 entries are distinct — 30,651 of them are a single zone id and just 271 distinct values
-  appear among those, because the ocean zones cover enormous areas at one zone id each. Sharing
-  collapses the payload **7.4x**, takes memory a further **0.20 MiB** down to −4.17 against the
-  dict, and costs **nothing on the unique path** and ~1 % of an ambiguous query (~10 % of a
-  `TimezoneFinderL` one). A further quarter of the distinct polygon lists are a suffix of a longer
-  one, so more sharing exists; not prototyped, since it turns hash-consing into substring packing
-  for a payload already down to 14 KiB.
-- **Rank it on ~21 ms and the file size, never on the ~400 ms.** PERF-5 takes the same construction
-  to ~21 ms with no format change and no release, so the load figure above is mostly PERF-5's to
-  win; what this takes on top is the ~21 ms it leaves, of which **at least 5.2 ms is dict insertion
-  alone**. The memory is the same −3.98 MiB the in-memory layout already buys, not additive with
-  it. **The file size is the one argument nothing else here has.** Cost: `SHORTCUT_LAYOUT_VERSION`,
-  therefore `DATA_FORMAT_VERSION`, therefore an ordered two-distribution release.
-- **Two design points the prototype settles, and they point opposite ways.** *In the file*, the
-  entry length is the right discriminator — it removes the union tag and costs nothing. *At
-  runtime* it is the wrong one: dispatching on it costs +230 ns against +74 ns for an `int16` zone
-  table, which the reader derives in 0.46 ms at load. And **h3's bit layout must stay out of the
-  format** — addressing entries by slot makes the file smallest and fastest, but bakes an encoding
-  h3-py does not promise as API, plus `SHORTCUT_H3_RES`, into bytes that outlive the reader.
-  Storing cell ids and deriving the slot table at load costs 0.1 ms and, once entries are
-  deduplicated, 2.9x the file rather than 1.7x — the keys become its dominant term. Still 3.6x
-  smaller than what ships, and still not a close call against a format that cannot be revised
-  without a release. The escape from it is refused on measurement: the index is dense, so the cell
-  ids could be enumerated at load from h3's *public* API instead of stored, but that costs **4.5 ms
-  against 0.13 ms**, a fifth of PERF-5's whole budget.
-- **"Load the shortcuts into memory whatever `in_memory` says" is already the case** and needs no
-  work — `AbstractTimezoneFinder.__init__` reads the index unconditionally, and `in_memory` selects
-  the *polygon coordinate* access mode alone. Recorded so it is not proposed a third time.
-- **The premise this entry was ranked on is disproved.** It stood here as the enabler for GH-499
-  and is not one; see that entry for what replaced the dependency. Rank it on the memory alone.
-- **Two decisions are left, and neither is work.** Which payload the direct index addresses — CSR
-  arrays or a Python list of values, roughly 2 MiB against a few percent of `TimezoneFinderL`,
-  priced on the issue. And whether the file-format shape above is taken at all, which is a
-  judgement about spending an ordered two-distribution release, not about the numbers. Both the
-  maintainer's.
-- **Status:** open — implementable once the payload question is answered.
-- **Last touched:** 2026-08-22 — the file-format shape prototyped and measured, entry
-  deduplication added and found to be its largest lever, encoding and dispatch settled, and its
-  ranking moved off the ~400 ms onto what PERF-5 leaves; the query measurement detail cut to the
-  issue 2026-08-22, taken 2026-08-21.
+  by the thread count because concurrent workloads are told to use one instance each.
+- **Measured on the query side 2026-08-21** — `prototypes/shortcut_layout_bench.py`, whole queries
+  rather than lookups in isolation, superseding the issue's microbenchmark and #497's estimate
+  alike. The **sorted-key / `np.searchsorted` layout is REJECTED** there: it loses the scalar path
+  and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
+  otherwise re-propose it.
+- **Prototyped on the file side 2026-08-22, and one structure wins outright** —
+  `prototypes/shortcut_file_format_bench.py`. A flat file storing each *distinct* entry once, keyed
+  by stored cell ids, with the zone table derived at load. It beats the non-deduplicated flat file
+  on **every axis at once** — 497 KiB against 749, 0.37 MiB against 0.70, same load, same lookup —
+  so deduplication is not a trade-off to weigh but a strictly better encoding. Against what ships:
+  **1,530 → 497 KiB, ~390 → ~0.7 ms, 4.44 → 0.37 MiB**, lookup unchanged inside a real query. Six
+  alternatives lost and are recorded with their reasons in that script's `REFUSED OPTIONS` block,
+  including two of its own wrong turns.
+- **Only 6.9 % of the 41,162 entries are distinct**, because the ocean zones repeat one zone id
+  across thousands of cells. Sharing is free at lookup — duplicates carry *equal offsets*, so
+  nothing is dereferenced twice — and it pays for its own addressing: sharing breaks CSR
+  contiguity, so each slot needs a start *and* an end rather than N+1 shared offsets, but the 7.4x
+  smaller payload lets those offsets narrow from `uint32` to `uint16` and cancel the doubling.
+- **Rank it on ~21 ms and the file size, never on the ~390 ms**, and note that "buys no speed" in
+  this entry always meant a *query* — the only denominator *The measured baseline* carries.
+  Construction was never priced here until 2026-08-22, and most of it is not this item's to claim:
+  **PERF-5 takes it to ~21 ms with no format change and no release**, so what the format change
+  adds is ~21 ms → ~0.7 ms. The memory is the same win the in-memory layout already buys, not
+  additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
+  Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
+  two-distribution release.
+- **The one decision left is 239 KiB and 0.14 ms to keep h3 out of the format.** Dropping the
+  stored cell ids and addressing by the H3 bit layout gives a 258 KiB file, and bakes an encoding
+  h3-py does not promise as API — plus `SHORTCUT_H3_RES` — into bytes that outlive every reader.
+  Storing the ids moves that coupling into the reader, which is versioned with the package.
+  Recommended: pay it.
+- **Status:** open — sequenced behind PERF-5; the structure is settled and the remaining choice is
+  the maintainer's.
+- **Last touched:** 2026-08-22 — the file structure prototyped and settled on one recommendation,
+  the losing options recorded in the prototype, and the ranking moved off the ~390 ms onto what
+  PERF-5 leaves; the query measurement detail cut to issue #477, taken 2026-08-21.
 
 ### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
 
