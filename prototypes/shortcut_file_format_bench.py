@@ -33,11 +33,11 @@ THE RECOMMENDED STRUCTURE, in full
 Four arrays, of which two are stored and two are derived at load. Sizes are the packaged
 dataset at ``SHORTCUT_H3_RES`` = 3.
 
-On disk, 197.4 KiB::
+On disk, 137.0 KiB::
 
     header       16 B   two int64: the byte width of the start column, and of the length
-    starts   122.0 KiB  uint16 x 62,464   one per *slot*
-    lengths   61.0 KiB  uint8  x 62,464   one per slot
+    starts    81.7 KiB  uint16 x 41,846   one per *compact* slot
+    lengths   40.9 KiB  uint8  x 41,846   one per compact slot
     payload   14.3 KiB  uint16 x  7,344   every distinct entry, back to back
 
 **Lengths are stored and ends are derived**, although the lookup wants ends, because the
@@ -56,10 +56,28 @@ around.
 
 In memory after load, 380.3 KiB::
 
-    starts        uint16 x 62,464  122.0 KiB   read straight from the file
+    starts        uint16 x 62,464  122.0 KiB   expanded from the file's compact form
     ends          uint16 x 62,464  122.0 KiB   derived: starts + lengths
     payload       uint16 x  7,344   14.3 KiB   read straight from the file
     zone_by_slot  int16  x 62,464  122.0 KiB   derived, see below
+
+**The file is compact and the memory table is padded, deliberately.** The slot arithmetic
+is base-8 per digit while H3 digits only take 0-6, so 20,618 of the 62,464 slots can never
+be addressed by a valid cell, and a further 684 are pentagon deleted subsequences - 34%
+dead. Which slots are live depends on the *resolution* alone and never on the data, so the
+file stores the compact base-7 form (41,846 entries, 1.6% dead) and the reader expands it.
+The expansion is a slice assignment rather than a scatter, because base-8 slot =
+``base*512 + d1*64 + d2*8 + d3`` is exactly the C-order ravel of a ``(122, 8, 8, 8)``
+array, so dropping a ``(122, 7, 7, 7)`` block into its corner puts every value where it
+belongs: **0.039 ms per array, against 0.427 ms to build an index array to scatter
+through.** That is 60 KiB off the file - **31%** - for ~0.07 ms of load and nothing else.
+
+Removing the same padding from *memory* is a different and worse trade, and is not done.
+It means addressing the table in base-7 at lookup time, which costs **+78 ns per query**
+(76.8 ns of arithmetic becoming 155.1) to save 121 KiB. The shortcut lookup is ~8.7% of a
+unique-zone query to begin with, so that is ~7% of the whole query spent on a stage too
+small to be worth spending on - the asymmetry in
+``docs/benchmarking_methodology.rst``.
 
 **payload** is the only array holding data. Each value is a zone id *or* a boundary polygon
 id - one namespace, because both fit ``uint16`` - and which it is follows from the entry's
@@ -89,7 +107,8 @@ one value in the range. One read against three.
 At a fixed resolution everything else in the index is constant - mode, the resolution
 field, and the unused digits 4-15, together ``0x830000fffffffff`` - so those 16 bits *are*
 the cell, and the map is a bijection rather than a hash. The table is 122 x 512 = 62,464
-slots for 41,162 cells: 66% dense, the holes being digit values 7 that no cell uses.
+slots for 41,162 cells - 66% dense, the holes being digit value 7, which no cell uses.
+That padding is paid in memory and not on disk; see the note above.
 
 **A lookup**, in full::
 
@@ -145,10 +164,10 @@ FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2
     agreement: all 41,162 cells resolve identically under all three structures
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    393.8    4.44         108      117
-    keys-plain           508      0.659  0.46         210      419
-    keys-dedup  <=       457      0.661  0.37         209      419
-    slot-dedup           197      0.515  0.37         210      421
+    dict (shipped)     1,530    395.8    4.44         109      117
+    keys-plain           508      0.659  0.46         211      419
+    keys-dedup           457      0.665  0.37         210      423
+    slot-dedup  <=       137      0.586  0.37         209      426
 
     QUERY: full timezone_at(), paired and order-alternated, 61 rounds of 2,000 points
 
@@ -188,7 +207,7 @@ CONCLUSIONS
 
 4. **The structure decision, then, is settled entirely on the non-query axes**, and there
    the step that matters is dict against flat: **4.44 MiB to ~0.4, ~394 ms to ~0.66,
-   1,530 KiB to ~460 - 12x memory, 600x load, 3x file.** The spread *among* the flat
+   1,530 KiB to 137 - 12x memory, 600x load, 11x file.** The spread *among* the flat
    structures is ~50 KiB and ~0.09 MiB, under 2% of the packaged data, so no flat variant
    is a mistake and that choice should not be relitigated once made.
 
@@ -219,8 +238,8 @@ CONCLUSIONS
    format change adds is ~21 ms to ~0.66 ms.
 
 9. **Addressing by h3's bit layout is the right choice, and the objection to it does not
-   survive.** `slot-dedup` drops the stored cell ids for a **2.3x smaller file (197 KiB
-   against 457) and a 22% faster load**, at identical memory and identical query. The
+   survive.** `slot-dedup` drops the stored cell ids for a **3.3x smaller file (137 KiB
+   against 457) and a 12% faster load**, at identical memory and identical query. The
    argument against it was that the format would then encode an index encoding h3-py does
    not promise as API. Three things dissolve that:
 
@@ -290,10 +309,10 @@ FINDINGS (2026-08-22, `84ebb03`, Apple arm64, Python 3.14.2, numpy 2.3.5, data 2
     agreement: all 41,162 cells resolve identically under all three structures
 
     structure       file KiB   load ms    MiB   unique ns   amb ns
-    dict (shipped)     1,530    393.8    4.44         108      117
-    keys-plain           508      0.659  0.46         210      419
-    keys-dedup  <=       457      0.661  0.37         209      419
-    slot-dedup           197      0.515  0.37         210      421
+    dict (shipped)     1,530    395.8    4.44         109      117
+    keys-plain           508      0.659  0.46         211      419
+    keys-dedup           457      0.665  0.37         210      423
+    slot-dedup  <=       137      0.586  0.37         209      426
 
 CONCLUSIONS
 
@@ -394,6 +413,7 @@ from prototypes.shortcut_layout_bench import (
     SLOT_BASE_CELL_SHIFT,
     SLOT_DIGITS_MASK,
     SLOT_DIGITS_SHIFT,
+    NUM_BASE_CELLS,
     SLOT_STRIDE,
     SLOT_TABLE_SIZE,
     slots_of,
@@ -691,6 +711,46 @@ def read_keys(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return slot_starts, slot_ends, payload
 
 
+# The slot table is base-8 per digit while H3 digits only take 0-6, so 20,618 of its
+# 62,464 entries can never be addressed by a valid cell (a further 684 are pentagon
+# deleted subsequences). Those are dead bytes - but only in the *file*, and only if it is
+# written in base-8. Which slots are live depends on the resolution alone and not on the
+# data, so the file stores the compact base-7 form and the reader expands it.
+#
+# The expansion is a slice assignment, not a scatter: base-8 slot = base*512 + d1*64 +
+# d2*8 + d3 is exactly the C-order ravel of a (122, 8, 8, 8) array, so dropping a
+# (122, 7, 7, 7) block into its corner puts every value where it belongs. Measured at
+# 0.039 ms per array against 0.427 ms for building an index array to scatter through.
+#
+# The memory table stays base-8 on purpose. Addressing it in base-7 at *lookup* time would
+# remove the same padding from RAM, and costs +78 ns per query - 76.8 ns of arithmetic
+# becoming 155.1 - which is ~7% of a unique-zone query to save 121 KiB. The shortcut
+# lookup is ~8.7% of that query to begin with: a stage that small is a constraint, not a
+# place to spend.
+COMPACT_DIGIT_BASE = 7
+COMPACT_TABLE_SIZE = NUM_BASE_CELLS * COMPACT_DIGIT_BASE**SHORTCUT_H3_RES
+
+
+def compact_slots_of(hex_ids: np.ndarray) -> np.ndarray:
+    """Base-7 compact slot: the same ordering as ``slots_of``, without the holes."""
+    d1 = (hex_ids >> (SLOT_BASE_CELL_SHIFT - 3)) & 7
+    d2 = (hex_ids >> (SLOT_BASE_CELL_SHIFT - 6)) & 7
+    d3 = (hex_ids >> (SLOT_BASE_CELL_SHIFT - 9)) & 7
+    return (
+        ((hex_ids >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * 343
+        + d1 * 49
+        + d2 * 7
+        + d3
+    )
+
+
+def expand_compact(compact: np.ndarray) -> np.ndarray:
+    """Compact base-7 table -> the base-8 slot table the lookup indexes."""
+    out = np.zeros((NUM_BASE_CELLS, 8, 8, 8), dtype=compact.dtype)
+    out[:, :7, :7, :7] = compact.reshape(NUM_BASE_CELLS, 7, 7, 7)
+    return out.reshape(-1)
+
+
 def write_slot_dedup(path: Path, keys, lengths, payload) -> None:
     starts, ends, deduped = deduplicate(lengths, payload)
     entry_lengths = ends - starts
@@ -712,9 +772,9 @@ def write_slot_dedup(path: Path, keys, lengths, payload) -> None:
         what="a shortcut entry's length",
         remedy="Widen the length column to the next unsigned width.",
     )
-    slot_starts = np.zeros(SLOT_TABLE_SIZE, dtype=start_dtype)
-    slot_lengths = np.zeros(SLOT_TABLE_SIZE, dtype=len_dtype)
-    slots = slots_of(keys)
+    slot_starts = np.zeros(COMPACT_TABLE_SIZE, dtype=start_dtype)
+    slot_lengths = np.zeros(COMPACT_TABLE_SIZE, dtype=len_dtype)
+    slots = compact_slots_of(keys)
     slot_starts[slots] = starts
     slot_lengths[slots] = entry_lengths
     _write(
@@ -730,14 +790,16 @@ def read_slot_dedup(buf: bytes) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     sw, lw = (int(v) for v in np.frombuffer(buf, dtype=np.int64, count=2))
     start_dtype = np.dtype(f"uint{sw * 8}")
     pos = 16
-    starts = np.frombuffer(
-        buf, dtype=start_dtype, count=SLOT_TABLE_SIZE, offset=pos
-    ).copy()
-    pos += SLOT_TABLE_SIZE * sw
-    lengths = np.frombuffer(
-        buf, dtype=np.dtype(f"uint{lw * 8}"), count=SLOT_TABLE_SIZE, offset=pos
+    starts = expand_compact(
+        np.frombuffer(buf, dtype=start_dtype, count=COMPACT_TABLE_SIZE, offset=pos)
     )
-    pos += SLOT_TABLE_SIZE * lw
+    pos += COMPACT_TABLE_SIZE * sw
+    lengths = expand_compact(
+        np.frombuffer(
+            buf, dtype=np.dtype(f"uint{lw * 8}"), count=COMPACT_TABLE_SIZE, offset=pos
+        )
+    )
+    pos += COMPACT_TABLE_SIZE * lw
     ends = starts + lengths
     return starts, ends, np.frombuffer(buf, dtype=PAYLOAD_DTYPE, offset=pos).copy()
 

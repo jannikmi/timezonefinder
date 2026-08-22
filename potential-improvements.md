@@ -382,8 +382,8 @@ the denominators, and how to tell whether they still describe the tree.
   and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
   otherwise re-propose it.
 - **Prototyped on the file side 2026-08-22** — `prototypes/shortcut_file_format_bench.py`. **The
-  step that matters is dict → flat: 4.44 → ~0.4 MiB, ~394 → ~0.66 ms, 1,530 → ~460 KiB — 12x
-  memory, 600x load, 3x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
+  step that matters is dict → flat: 4.44 → 0.37 MiB, ~394 → ~0.6 ms, 1,530 → 137 KiB — 12x
+  memory, 600x load, 11x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
   under 2 % of the packaged data, so no flat variant is a mistake and that choice should not be
   relitigated once made. The one to build is a flat file storing each *distinct* entry once, keyed
   by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
@@ -420,8 +420,8 @@ the denominators, and how to tell whether they still describe the tree.
   additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
   Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
   two-distribution release.
-- **Decided 2026-08-22: address entries by h3's bit layout (`slot-dedup`), guarded.** 197 KiB
-  against 457 and a 22 % faster load, at identical memory and identical query. The objection was
+- **Decided 2026-08-22: address entries by h3's bit layout (`slot-dedup`), guarded.** 137 KiB
+  against 457 and a 12 % faster load, at identical memory and identical query. The objection was
   that the *format* would then encode an index encoding h3-py does not promise as API, and it does
   not survive: storing the cell ids does not remove the dependency but pays ~260 KiB to store
   something derivable — if h3's encoding moved, stored 64-bit ids would no longer denote the same
@@ -435,6 +435,15 @@ the denominators, and how to tell whether they still describe the tree.
   choice**, since an encoding change would otherwise return a neighbour's timezone silently; with
   it the failure is loud and lands where the data is produced. It belongs in
   `scripts/data_integrity.py` beside the width checks — same rule, same reason.
+- **The dead slots are dropped from the file and kept in memory, and that asymmetry is the point.**
+  The slot arithmetic is base-8 per digit while H3 digits only take 0–6, so 34 % of the 62,464
+  slots can never be addressed by a valid cell. Which are live follows from the *resolution*, never
+  from the data, so the file stores the compact base-7 form and the reader expands it by slice
+  assignment — base-8 slot is exactly the C-order ravel of a `(122, 8, 8, 8)` array, so a
+  `(122, 7, 7, 7)` block dropped in its corner lands correctly. **0.039 ms per array, 60 KiB off
+  the file (31 %).** Removing the same padding from *memory* means base-7 addressing at lookup
+  time: **+78 ns per query to save 121 KiB**, ~7 % of a unique query spent on a stage that is only
+  ~8.7 % of it. Refused on the asymmetry rule above.
 - **A denser index exists and is refused.** The public-API route gives exactly 41,162 slots against
   the bit form's 62,464 — base-8 arithmetic over base-7 data — worth ~62 KiB of the 197. Realising
   it at lookup time costs the 218 ns, and reproducing it from bits needs per-digit arithmetic that
