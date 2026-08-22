@@ -293,30 +293,34 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-499 — batch / array lookup API
 
-- **Tracks:** issue #499, which carries the full design and the profiling behind it.
+- **Tracks:** issue #499, which carries the design, the four answered questions, and the profiling
+  from both sides of the argument about how large the prize is.
 - **Why it is ranked here:** the stated primary user does high-volume lookups and the API answers
-  one point per call. A unique-shortcut query is ~1.17 µs of almost pure per-call overhead — no
-  geometry at all — and 30,651 of 41,162 index entries are that case, so this is a ~1 M lookups/s
-  ceiling made of interpreter overhead. That is what a batch path amortises.
-- **Decided, 2026-08-21 — all four design questions answered on the issue:** ids primary and names
-  as a convenience; any array-like in; `on_invalid="raise"` by default; `timezone_at` only in the
-  first slice.
-- **Sequencing:** **BUG-1 lands first**, and it is now the only hard blocker — the `"skip"` sentinel
-  is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
+  one point per call, so every one of them writes the loop by hand. **That ergonomic half is the
+  durable one.** The throughput half has been revised down twice on measurement — first by h3
+  turning out not to vectorise, then by the batch path being prototyped — and now stands at
+  **~1.15x on a mixed workload and ~2x on unique-zone-only**, not the "over half the query" the
+  issue was opened on. Worth doing; not the order of magnitude originally claimed.
+- **Decided, 2026-08-21:** all four design questions are answered on the issue.
+- **Sequencing:** **BUG-1 lands first**, and it is the only hard blocker — the `"skip"` sentinel is
+  `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
   decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
 - **GH-477 is an improvement to this item, not a precondition for it — measured**
   (`prototypes/shortcut_layout_bench.py`; the figures are on issue #477). A batch resolver over
   today's dict already gets most of the available win, and the vectorisation argument that made
-  GH-477 a blocker does not survive: one `np.searchsorted` over N cell ids is slower than N dict
-  lookups at every batch size measured, and only GH-477's direct-index variant vectorises into a
-  win. **So this can be built first.**
-- **The ceiling this item actually runs into is h3, and that is new.** Of a 498 ns batched
-  unique-zone lookup, **490 ns is `h3.latlng_to_cell`** — h3-py 4.4 exposes no vectorised version,
-  so N points cost N scalar C calls and no shortcut layout touches that. Anything beyond ~2x on the
-  unique stratum has to come from there. Do not rank a further lookup-side optimisation above it.
+  GH-477 a blocker does not survive: it was argued from the sorted-key `np.searchsorted` layout,
+  which is rejected there, and only GH-477's direct-index variant vectorises into a win. **So this
+  can be built first.**
+- **The ceiling is h3, and nothing on the shortcut side moves it.** h3-py exposes no vectorised
+  `latlng_to_cell`, so N points cost N scalar C calls, and that is nearly the whole cost of a
+  batched unique-zone lookup once the layout question is settled. Two ranking consequences: do not
+  rank a further lookup-side optimisation above this expecting the two to compound, and treat
+  vectorised H3 as a separate decision rather than part of this item — it means a new Rust-backed
+  runtime dependency and the wheel matrix that follows.
 - **Status:** open — design decided, blocked by BUG-1 only.
-- **Last touched:** 2026-08-21 — the GH-477 dependency downgraded from blocker to improvement on
-  measurement, and the h3 ceiling recorded.
+- **Last touched:** 2026-08-22 — detail cut to the issue; the throughput rationale corrected to
+  what the two measurements found, and the h3 ceiling restated as a ranking rule rather than a
+  finding of this entry.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -362,10 +366,9 @@ the denominators, and how to tell whether they still describe the tree.
 - **Measured end to end, 2026-08-21** — `prototypes/shortcut_layout_bench.py`, over whole queries
   rather than lookups in isolation. It supersedes the issue's original microbenchmark and #497's
   query-side estimate alike; where the three disagree, it wins.
-- **Rejected: the sorted-key / `np.searchsorted` layout.** Kept here rather than deleted because
-  "flat arrays vectorise" will otherwise re-propose it on its merits — it loses the scalar path by
-  about the length of a whole unique-zone query, and it loses the batch path too, which was the
-  entire argument for it. The **direct-index** variant is the one that survives.
+- **The sorted-key / `np.searchsorted` layout is REJECTED** — it loses the scalar path and the
+  batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will otherwise
+  re-propose it. The **direct-index** variant is the one that survives.
 - **The premise this entry was ranked on is disproved.** It stood here as the enabler for GH-499
   and is not one; see that entry for what replaced the dependency. Rank it on the memory alone.
 - **What is left is a decision, not work:** which payload the direct index addresses — CSR arrays
