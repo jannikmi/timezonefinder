@@ -210,6 +210,59 @@ construction, and the comment workflow deliberately does not compare against it 
 ``tests/test_benchmark_workflows.py`` enforces rather than leaves to convention.
 
 
+Comparing two implementations of one stage
+------------------------------------------
+
+The suites above compare one implementation across commits or machines. Deciding between two
+*candidate* implementations of a single stage - a data structure, an accessor, a dispatch - is a
+different measurement, and three designs for it have produced wrong answers in this repository.
+All three flattered the newer candidate.
+
+**Do not microbenchmark the stage in isolation.** Two candidates rarely divide the work at the same
+place, so a boundary drawn around "the lookup" charges one of them for something the other pays a
+moment later. Replacing the shortcut dict was measured this way and the dict came out ~100 ns
+ahead, which would have been ~10 % of a unique-zone query. It was an artefact: the shipped code
+answers ``dict.get`` with a ``match value: case int(zone_id)`` that the flat structure needs no
+equivalent of, and which costs 84 -> 188 ns. Measure the whole public call and let the boundary
+fall where it falls.
+
+**Alternate the order of a paired comparison.** Running A then B inside each round lets A warm
+everything the two share - coordinate validation, the H3 call, the zone-name lookup, the branch
+predictors - and hands B the benefit for free. The same shortcut comparison read as **13.3 %
+faster** in a fixed order and **0.3 %** once the order alternated round by round.
+
+**Report two estimators and believe them only when they agree.** The ratio of the two best rounds
+is the least noise-sensitive estimator; the count of rounds where the candidate won assumes nothing
+about the noise distribution. Where a difference is real they move together. Where they disagree -
+one saying +0.5 % and the other 26 of 61 rounds - there is no effect to find, and that disagreement
+is a more useful output than either number alone.
+
+**Sample the inputs at random.** Iterating a dict's keys in its own order walks its table front to
+back and hands it a cache-friendly access pattern no real query stream has. Worth 77 ns against
+108 ns on the same lookup - a third of the quantity being compared.
+
+
+What a stage's share does and does not bound
+--------------------------------------------
+
+``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
+asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
+
+The shortcut lookup is 88 ns: **8.7 % of a unique-zone query, 0.8 % of an ambiguous one, ~2.7 % of
+a mixed workload** once the strata are weighted (uniformly random points are ~25 % ambiguous and an
+ambiguous query costs ~10x a unique one). So making that lookup infinitely fast wins at most 2.7 %
+of a realistic workload - inside the 3-9 % jitter of a single machine, i.e. not reliably
+measurable. Making it *slower* is not bounded that way: one plausible redesign of the same stage
+(``np.searchsorted`` over sorted keys) measured **+93 % of a unique query and +29 % of a mixed
+workload**.
+
+The rule that follows, for any stage the ladder puts in single digits: ask whether a change keeps
+it roughly free, never whether it makes it faster, and decide on a whole-query A/B rather than on
+the stage. Where a real win would have to come from is visible in the same ladder -
+``validate_coordinates`` at ~30 % and ``h3.latlng_to_cell`` at ~40 %, **70 % of a unique-zone query
+in two calls before any lookup logic runs.**
+
+
 Memory is measured the same way
 -------------------------------
 

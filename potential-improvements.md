@@ -275,6 +275,19 @@ the denominators, and how to tell whether they still describe the tree.
   work is ~80 % of a realistic mixed wall clock and unique work ~20 %. Multiply the stratum share
   through before comparing two items that live on different strata — that multiplication is a
   property of the fixtures, not of the machine, so it survives the move.
+- **A stage's share bounds its upside and says nothing about its downside, so a small stage is a
+  constraint rather than an opportunity.** The shortcut lookup is 88 ns — **8.7 % of a unique
+  query, 0.8 % of an ambiguous one, ~2.7 % of a mixed workload**. Making it infinitely fast wins at
+  most 2.7 %, inside this machine's own jitter. Making it slower is not bounded that way: GH-477's
+  `searchsorted` variant measured **+93 % of a unique query and +29 % of a mixed workload**. For
+  any stage the ladder puts in single digits — `zone_name_from_id` at 5.4 % is the other one — ask
+  whether a change keeps it free, never whether it makes it faster, and settle it on a whole-query
+  A/B rather than on a microbenchmark of the stage. `docs/benchmarking_methodology.rst` carries the
+  three A/B designs that got this wrong before it was settled.
+- **Where a unique query's time actually is, and therefore where a real win has to come from:**
+  `validate_coordinates` ~30 % and `h3.latlng_to_cell` ~40 % — **70 % in two calls before any
+  lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
+  the same place from opposite directions, and neither is a shortcut-side optimisation.
 - **The 2x rule, for what none of the above fixes.** Act on a difference only if it survives any
   single stage turning out 2x cheaper or 2x more expensive elsewhere. It keeps the large calls
   (a 37 % workload share stays large at half the size) and refuses the ones that only exist on this
