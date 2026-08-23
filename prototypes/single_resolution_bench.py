@@ -20,8 +20,8 @@ Run with::
 
     uv run python prototypes/single_resolution_bench.py [path/to/combined-with-oceans.json]
 
-Building an index at a resolution takes a while - resolution 4 alone is ~290,000 cells at
-~7 ms each, so budget the better part of an hour for the whole sweep.
+The whole sweep is a couple of minutes. Build time is not one of the axes compared below:
+it is paid once per data release, by the converter, and never by a user.
 
 
 FINDINGS (2026-08-23, `828262c`, Apple arm64, Python 3.14.2, data 2026c)
@@ -32,12 +32,19 @@ below is believed. Counts are exact and machine-independent; the two timing colu
 from this script's own dict-based finder, not from the shipped table lookup, so read them
 as a ratio between resolutions and never as an absolute.
 
-    res    cells   unique   distinct   file KiB   memory KiB   PIP tests   mean ns
-                             lists                              /10k
-    1        842    10.3%        556        9.5          9.7      28,693    20,395
-    2      5,882    47.0%      1,579       26.7         30.2       9,904     7,027
-    3     41,162    74.5%      2,575      103.1        143.4       3,877     4,483
-    4    288,122    89.1%      2,995      595.9        999.7       1,566     3,538
+    res      cells   unique   distinct   file KiB   memory KiB   PIP tests   mean ns
+                               lists                              /10k
+    1          842    10.3%        556        9.5          9.7      28,693    20,395
+    2        5,882    47.0%      1,579       26.7         30.2       9,904     7,027
+    3       41,162    74.5%      2,575      103.1        143.4       3,877     4,483
+    4      288,122    89.1%      2,995      595.9        999.7       1,566     3,538
+    5*   2,016,842    95.4%     ~3,200    ~4,030       ~7,833        ~937         -
+
+    * sampled, not built - see conclusion 4. Its candidate count counts every candidate
+      in a list where the built rows count only those tested before the loop stops, so it
+      is comparable with resolution 4's *sampled* 2,264 and not with its built 1,566. Its
+      file and memory are 99.7 % table, a term fixed by the resolution rather than by the
+      data, so they are insensitive to the sampled terms.
 
 CONCLUSIONS
 
@@ -57,16 +64,44 @@ CONCLUSIONS
    is the majority of an ambiguous query and ambiguous queries are the majority of a mixed
    workload.
 
-3. **What it costs is memory, cache and build time - not file size.** The resident table
-   goes 143 KiB -> 1,000 KiB. That lands hardest on ``TimezoneFinderL``, whose whole
-   footprint is this index, and on the constrained containers the memory-mapped mode
-   exists for. It also takes the table past a typical L2 cache, and this script's own
-   *median* query rose (1,791 -> 1,916 ns) while its mean fell (4,483 -> 3,538): fewer
-   queries reach geometry, but the one table read every query makes got dearer. That
-   effect is unmeasured on the shipped lookup and would have to be before acting.
-   Compiling the index also goes from minutes to most of an hour, on every data update.
+3. **What it costs is memory - not file size, and not measurably cache.** The resident
+   table goes 143 KiB -> 1,000 KiB, past a typical L2. That lands hardest on
+   ``TimezoneFinderL``, whose whole footprint is this index, and on the constrained
+   containers the memory-mapped mode exists for.
 
-4. **Below 3 is clearly worse and the curve is steep.** Resolution 2 leaves 53 % of cells
+   **The cache penalty that ought to follow does not show above this script's noise, and
+   an earlier version of this block wrongly reported that it did.** One run had the median
+   query rise 1,791 -> 1,916 ns from resolution 3 to 4 while the mean fell; the next run
+   had it fall, 1,833 -> 1,792. ``measure_table_read_ns`` is no more conclusive - it
+   separates the resolutions by 1 % in one run and 5 % in another, on a stage of ~110 ns
+   inside a query of thousands. Two estimators disagreeing across runs is the answer "no
+   resolvable effect", which is what to record. Rank resolution 4 on memory against
+   candidates removed, and treat the cache term as unmeasured rather than as small.
+
+4. **Resolution 5 is refused, and the exchange rate is what refuses it.** Two million
+   cells is too many to build to answer a question its table size settles on its own, so
+   ``report_oversized_resolutions`` samples 20,000 of them - after checking the sampler
+   against resolution 4's full build, which it reproduces at 89.1 % unique. Resolution 5
+   continues the trend: **95.4 % of cells unique against 89.1 %, and ~59 % fewer
+   candidates again** (937 against 2,264 per 10,000 random queries, both sampled and so
+   comparable with each other). But the table is fixed by the resolution and grows
+   eightfold per level, so the index becomes **~4.0 MiB on disk and ~7.8 MiB resident,
+   99.7 % of it table** - insensitive to the payload, which stays a rounding error even
+   if the distinct-list count doubled. Three things follow, any one of them sufficient:
+
+   * 4.0 MiB is **6.6 % of the packaged distribution**, back within reach of the size
+     argument that ruled resolution 4 out in the first place;
+   * 7.8 MiB resident is **more than the entire pre-2.x dict index** the current format
+     replaced, and takes ``TimezoneFinderL`` from ~176 KiB to ~7.9 MiB - ~45x, for the
+     class whose whole purpose is to be light;
+   * **the exchange rate collapses.** Resolution 3 -> 4 costs ~0.9 MiB of memory for its
+     gain; 4 -> 5 costs ~6.8 MiB for well under half of what remains. Eight times the
+     memory for a fraction of the benefit.
+
+   The one thing that does *not* refuse it is the table read, which does not separate the
+   resolutions above noise (conclusion 3). Memory is the whole argument, and it is enough.
+
+5. **Below 3 is clearly worse and the curve is steep.** Resolution 2 leaves 53 % of cells
    ambiguous and runs 2.6x the point-in-polygon tests of resolution 3; resolution 1 runs
    7.4x. The gain from 3 to 4 (-60 % tests) is smaller than the loss from 3 to 2 (+155 %),
    so resolution 3 sits past the knee rather than on it.
@@ -109,10 +144,16 @@ from timezonefinder.timezonefinder import TimezoneFinder
 
 MIN_RESOLUTION = 0 if DEBUG else 1
 # Resolutions above 5 are intentionally excluded because the index size explodes.
+# 5 is measured by sampling rather than built (FINDINGS conclusion 4) - two million
+# cells to answer a question its table size settles on its own
 MAX_RESOLUTION = 2 if DEBUG else 4
 RESOLUTIONS = range(MIN_RESOLUTION, MAX_RESOLUTION + 1)
 RANDOM_SAMPLE = 10_000
 SEED = 42
+#: Resolutions too large to build - two million cells and up - are characterised by
+#: sampling their cells instead. See `estimate_by_sampling`.
+SAMPLED_RESOLUTIONS = (5,)
+CELL_SAMPLE = 20_000
 INPUT_JSON_PATH = DEFAULT_INPUT_PATH
 
 
@@ -433,6 +474,140 @@ class SingleResolutionTimezoneFinder(TimezoneFinder):
         return self.zone_name_from_id(zone_ids[-1])
 
 
+def estimate_by_sampling(
+    data: TimezoneData, resolution: int, sample_size: int = CELL_SAMPLE
+) -> dict[str, float]:
+    """Characterise a resolution from a random sample of its cells rather than a build.
+
+    Resolution 5 is two million cells, and its file and memory are over 99 % table -
+    a term fixed by the resolution, not by the data - so building it would spend a long
+    time to refine a number that cannot move the decision. What sampling is needed for
+    is the *other* half: how many cells come out unique and how many candidates the rest
+    carry.
+
+    A uniform sample of cells is a near-uniform sample of where a globally random query
+    point lands, H3 cells at one resolution being near equal-area. The returned
+    ``candidates_per_10k`` is therefore an expectation over random queries - but it counts
+    every candidate in a list, where the benchmark above counts only those actually
+    tested before ``last_zone_change_idx`` stops the loop. **Compare it against another
+    resolution's sampled figure, never against a built one.**
+
+    ``validate_sampling_against_a_built_resolution`` is what keeps this honest.
+    """
+    cells = sorted(h3_cells_at_resolution(resolution))
+    rng = random.Random(SEED)
+    sample = cells if len(cells) <= sample_size else rng.sample(cells, sample_size)
+
+    zone_ids = data.poly_zone_ids
+    unique = ambiguous = candidates = 0
+    for cell in sample:
+        polygons = list(data.get_hex(cell).polys_in_cell)
+        if not polygons:
+            continue
+        zones = zone_ids[np.asarray(polygons, dtype=np.int64)]
+        if np.all(zones == zones[0]):
+            unique += 1
+        else:
+            ambiguous += 1
+            candidates += len(polygons)
+
+    covered = unique + ambiguous
+    unique_fraction = unique / covered if covered else 0.0
+    mean_candidates = candidates / ambiguous if ambiguous else 0.0
+    return {
+        "resolution": resolution,
+        "sampled_cells": covered,
+        "total_cells": len(cells),
+        "unique_fraction": unique_fraction,
+        "mean_candidates": mean_candidates,
+        "candidates_per_10k": 10_000 * (1 - unique_fraction) * mean_candidates,
+    }
+
+
+def validate_sampling_against_a_built_resolution(
+    data: TimezoneData, resolution: int, exact_unique_fraction: float
+) -> None:
+    """Hold the sampler to a resolution whose index was actually built.
+
+    Without this the sampled row is a number with no error bar next to rows that are
+    exact, and reads exactly like them.
+    """
+    estimated = estimate_by_sampling(data, resolution)["unique_fraction"]
+    error = abs(estimated - exact_unique_fraction)
+    print(
+        f"  sampling check at resolution {resolution}: "
+        f"{estimated:.1%} sampled against {exact_unique_fraction:.1%} built "
+        f"({error:.1%} apart)"
+    )
+    if error > 0.01:
+        raise AssertionError(
+            f"the cell sampler puts resolution {resolution} at {estimated:.1%} unique "
+            f"where the full build says {exact_unique_fraction:.1%}. Sampling is how the "
+            f"resolutions too large to build are characterised, so a sampled row cannot "
+            f"be believed while this disagrees."
+        )
+
+
+def measure_table_read_ns(
+    resolution: int, reads: int = 50_000, repeats: int = 9
+) -> float:
+    """Nanoseconds for the one table read every query makes, at this resolution's size.
+
+    The table is the whole index for a unique-zone cell, and it grows eightfold per
+    resolution, so at some point it stops fitting a cache level and the cheapest stage of
+    the query stops being cheap. Scalar reads at random indices, as the lookup makes them
+    - not a vectorised gather, which would measure bandwidth rather than latency.
+    """
+    rng = np.random.default_rng(SEED)
+    size = NUM_BASE_CELLS * 8**resolution
+    table = rng.integers(-1, 400, size=size, dtype=TABLE_DTYPE)
+    indices = rng.integers(0, size, size=reads, dtype=np.int64)
+    best = float("inf")
+    for _ in range(repeats):
+        start = time.perf_counter()
+        for i in indices:
+            _ = int(table[i])
+        best = min(best, (time.perf_counter() - start) / reads)
+    return best * 1e9
+
+
+def report_oversized_resolutions(data: TimezoneData, built: dict[int, float]) -> None:
+    """Price the resolutions that are too large to build, and say what they cost.
+
+    Runs after the built sweep so the sampler can be checked against it first.
+    """
+    print("\nResolutions characterised by sampling rather than by building:\n")
+    largest_built = max(built)
+    validate_sampling_against_a_built_resolution(
+        data, largest_built, built[largest_built]
+    )
+
+    rows = []
+    for resolution in (largest_built, *SAMPLED_RESOLUTIONS):
+        estimate = estimate_by_sampling(data, resolution)
+        # the payload terms barely move past resolution 3 and are <1 % of the total
+        # here, so the built resolution's counts are reused rather than sampled
+        file_bytes, memory_bytes = format_bytes(resolution, 3_200, 8_200, 59)
+        table_bytes = NUM_BASE_CELLS * 8**resolution * TABLE_DTYPE.itemsize
+        rows.append(
+            {
+                "resolution": resolution,
+                "cells": estimate["total_cells"],
+                "unique_fraction": estimate["unique_fraction"],
+                "candidates_per_10k": estimate["candidates_per_10k"],
+                "file_kib": file_bytes / 1024,
+                "memory_kib": memory_bytes / 1024,
+                "table_share": table_bytes / memory_bytes,
+                "table_read_ns": measure_table_read_ns(resolution),
+            }
+        )
+    print(pd.DataFrame(rows).to_markdown(index=False, floatfmt=".3f"))
+    print(
+        "\nBoth rows are sampled, so they are comparable with each other and not with "
+        "the built table above."
+    )
+
+
 def run_benchmark(tz_data: TimezoneData) -> None:
     """Run the main benchmark comparing single-resolution indices."""
     random.seed(SEED)
@@ -446,6 +621,7 @@ def run_benchmark(tz_data: TimezoneData) -> None:
         f"\nEvaluating single-resolution indexes from {MIN_RESOLUTION} to {MAX_RESOLUTION}..."
     )
     metrics_records: list[dict[str, Any]] = []
+    built_unique_fraction: dict[int, float] = {}
 
     check_size_model_against_the_shipped_binary()
 
@@ -513,6 +689,7 @@ def run_benchmark(tz_data: TimezoneData) -> None:
             "shortcut_misses": lookup_stats["shortcut_misses"],
         }
         metrics_records.append(record)
+        built_unique_fraction[resolution] = unique_entry_fraction
 
     metrics_df = pd.DataFrame(metrics_records)
     metrics_df.sort_values(["resolution"], inplace=True)
@@ -528,6 +705,8 @@ def run_benchmark(tz_data: TimezoneData) -> None:
     print("\nSingle-Resolution Index Comparison (Markdown):\n")
     print(metrics_df.to_markdown(index=False, floatfmt=".3f"))
     print("\nAll performance metrics above use random global query points only.\n")
+
+    report_oversized_resolutions(tz_data, built_unique_fraction)
 
 
 def _sample_points(count: int = 50, *, seed: int = SEED) -> list[tuple[float, float]]:

@@ -278,12 +278,22 @@ Measured over the packaged dataset, resolution 4 is a ~0.6 MiB file against ~0.1
 one percent of the distribution, and it removes about **60 % of the point-in-polygon tests** a
 uniformly random workload runs, with 89 % of cells resolving to a single zone against 75 %.
 
-What it costs instead is memory and cache. The resident table grows about sevenfold, which matters
-most to ``TimezoneFinderL``, whose entire footprint is this index, and to the constrained containers
-the memory-mapped mode exists for; and the table stops fitting a typical L2 cache, so the one read a
-unique-zone query makes gets dearer even as far fewer queries need geometry at all. Compiling the
-index also takes several times longer on every data update. Whether that trade is worth a second
-data format generation is not settled here.
+What it costs instead is memory. The resident table grows about sevenfold, from ~143 KiB to
+~1,000 KiB, which matters most to ``TimezoneFinderL``, whose entire footprint is this index, and to
+the constrained containers the memory-mapped mode exists for. The table also stops fitting a typical
+L2 cache, though repeated runs do not separate the resolutions on that above their own noise — treat
+it as unmeasured rather than as small. Whether the trade is worth a second data format generation is
+not settled here.
+
+**Resolution 5 is measured and refused.** It continues the trend — 95 % of cells unique and about
+60 % fewer point-in-polygon candidates again — but the table is fixed by the resolution and grows
+eightfold per level, so the index becomes **~4.0 MiB on disk and ~7.8 MiB resident**, of which the
+table is over 99 %. That is 6.6 % of the packaged distribution, back within reach of the size
+argument that ruled it out in the first place; it is more memory than the entire pre-2.x index this
+format replaced; and it would take ``TimezoneFinderL`` from ~176 KiB to ~7.9 MiB, roughly forty-five
+times, for a class whose whole purpose is to be light. The exchange rate is what settles it: going
+from resolution 3 to 4 buys its query gain for ~0.9 MiB, while 4 to 5 costs ~6.8 MiB — eight times
+the memory for well under half the remaining gain.
 
 **A hierarchical index — several resolutions at once, refining only where cells are ambiguous — was
 prototyped and dropped.** The maximum resolution dominates the size, so a multi-resolution index
