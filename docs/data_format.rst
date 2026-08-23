@@ -285,15 +285,18 @@ L2 cache, though repeated runs do not separate the resolutions on that above the
 it as unmeasured rather than as small. Whether the trade is worth a second data format generation is
 not settled here.
 
-**Resolution 5 is measured and refused.** It continues the trend — 95 % of cells unique and about
-60 % fewer point-in-polygon candidates again — but the table is fixed by the resolution and grows
-eightfold per level, so the index becomes **~4.0 MiB on disk and ~7.8 MiB resident**, of which the
-table is over 99 %. That is 6.6 % of the packaged distribution, back within reach of the size
-argument that ruled it out in the first place; it is more memory than the entire pre-2.x index this
-format replaced; and it would take ``TimezoneFinderL`` from ~176 KiB to ~7.9 MiB, roughly forty-five
-times, for a class whose whole purpose is to be light. The exchange rate is what settles it: going
-from resolution 3 to 4 buys its query gain for ~0.9 MiB, while 4 to 5 costs ~6.8 MiB — eight times
-the memory for well under half the remaining gain.
+**Resolution 5 is built, measured and refused.** Its gains are real — 95.4 % of cells unique and
+667 candidates tested per 10,000 random queries, another 57 % off resolution 4 — but the table is
+``122 * 8**res`` entries, fixed by the resolution rather than by the data, so the index becomes
+**4.0 MiB on disk and 7.8 MiB resident, 99.7 % of it table**. That is 6.6 % of the packaged
+distribution, back within reach of the size argument that ruled resolution 4 out in the first place;
+it is more memory than the entire pre-2.x index this format replaced; and it would take
+``TimezoneFinderL`` from ~176 KiB to ~7.9 MiB, roughly forty-five times, for a class whose whole
+purpose is to be light.
+
+The exchange rate is what settles it. Memory paid per candidate polygon removed from that workload
+is 0.019 KiB going from resolution 2 to 3, 0.371 KiB from 3 to 4, and **7.600 KiB from 4 to 5** —
+each level about twenty times worse than the last.
 
 **A hierarchical index — several resolutions at once, refining only where cells are ambiguous — was
 prototyped and dropped.** The maximum resolution dominates the size, so a multi-resolution index
