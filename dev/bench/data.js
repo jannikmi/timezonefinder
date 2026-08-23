@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787429373735,
+  "lastUpdate": 1787517181020,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2385,6 +2385,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0009902672366461516",
             "extra": "mean: 31.60425599999428 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd65e3a8def9b79cfaa652bc8d53e87f56dde0b0",
+          "message": "Merge pull request #550 from jannikmi/bench/tzfpy-comparison\n\nMeasure the tzfpy comparison instead of asserting it",
+          "timestamp": "2026-08-23T22:30:35+02:00",
+          "tree_id": "83649ae1d67c370588fd6f300cf84c402ce6846c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bd65e3a8def9b79cfaa652bc8d53e87f56dde0b0"
+        },
+        "date": 1787517179740,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 132.2507813376249,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007208475174284629",
+            "extra": "mean: 7.5613919999995005 msec\nrounds: 97 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 254.96603724948713,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006511283548688269",
+            "extra": "mean: 3.9220909999926334 msec\nrounds: 233 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 24.75592024216712,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003077884188878541",
+            "extra": "mean: 40.39437800000201 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
           }
         ]
       }
