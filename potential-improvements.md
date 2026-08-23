@@ -116,14 +116,15 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| GH-499 | Batch / array lookup API | public API | L | decided — blocked by GH-477 + BUG-1 |
+| GH-499 | Batch / array lookup API | public API | L | decided — blocked by BUG-1 |
 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
 | GH-542 | Establish what coordinate precision is worth | data format | M | free |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
+| BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
+| BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs a decision — the invariant list |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — CLI shape decided |
@@ -142,7 +143,8 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
 | PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~2 | free — decided |
-| PERF-2 | Two numpy calls over a handful of candidates cost 0.8 µs | performance | ~25 | free — ranked on simplicity, not on the timing |
+| PERF-2 | `zone_ids_of` is a numpy fancy-index over a handful of candidates | performance | ~25 | free — ranked on simplicity, not on the timing |
+| PERF-6 | Scalar `njit` helpers on the query path cost more to call than to compute | performance | ~20 | free — measured |
 | DUP-1 | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
@@ -168,8 +170,7 @@ DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision
   (stop committing └─→ GH-522 (reclaim existing history)   [strictly after]
    the binaries)
 
-GH-477 (flat arrays) ──┐
-BUG-1 (negative ids) ──┴─→ GH-499 (batch API)   [flat arrays enable it; BUG-1 makes -1 safe]
+BUG-1 (negative ids) ──→ GH-499 (batch API)   [BUG-1 makes -1 safe as the "skip" sentinel]
 
 
 GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
@@ -235,25 +236,25 @@ the denominators, and how to tell whether they still describe the tree.
   landed; the previous anchor was `b0642ad`, and figures from the two runs are not comparable
   stage by stage.
 - **The denominators.** A unique-shortcut query is ~1.0 µs and contains no geometry at all; an
-  ambiguous one is ~10.7 µs on the default mapped mode and ~9.3 µs with `in_memory=True`. The two
-  backends differ by under 7 % on both. Every share below is a share of one of these, and the entry
+  ambiguous one is ~10.6 µs on the default mapped mode and ~9.9 µs with `in_memory=True`. The two
+  backends differ by under 9 % on both. Every share below is a share of one of these, and the entry
   says which — a share of an ambiguous query is not a share of a workload.
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat b331eee..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat 24c8d28..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
   ```
 
   Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an
   `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
-  shortcut readers or the packaged data does not. *Classified inert since the anchor:*
-  nothing yet — the anchor is the commit that last moved the critical path.
+  shortcut reader or the packaged data does not.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
   1. **Counts, which are exact and machine-independent** — a line's hit count does not depend on
-     the hardware, only on the code. 1.13 candidate polygons per ambiguous query; one FFI crossing
+     the hardware, only on the code. 1.05 candidate polygons per ambiguous query, 0.11 per
+     uniformly random one; one FFI crossing
      and one buffer acquisition per candidate on the clang/mapped path; two numpy calls per
      ambiguous query. State what a change removes as a count first, and use time only to size it.
   2. **Shares within one query**, which travel but not uniformly: the stages are bound by different
@@ -267,11 +268,51 @@ the denominators, and how to tell whether they still describe the tree.
   the C extension against memory-mapped data, which is why `docs/benchmarking_methodology.rst`
   makes that the tracked configuration for CI too. Both are measured, so this costs nothing but the
   discipline of reading the right column.
-- **A share of a stratum is not a share of a workload.** Uniformly random points are ~25 % ambiguous
+- **A share of a stratum is not a share of a workload.** Uniformly random points are ~11 % ambiguous
   (that page again), and an ambiguous query costs ~11x a unique one on the mapped path, so ambiguous
-  work is ~80 % of a realistic mixed wall clock and unique work ~20 %. Multiply the stratum share
+  work is ~57 % of a realistic mixed wall clock and unique work ~43 %. Multiply the stratum share
   through before comparing two items that live on different strata — that multiplication is a
   property of the fixtures, not of the machine, so it survives the move.
+- **A stage's share bounds its upside and says nothing about its downside, so a small stage is a
+  constraint rather than an opportunity.** The shortcut lookup is 117-145 ns — **13-15 % of a
+  unique query, ~1 % of an ambiguous one, ~7 % of the uniformly random stratum**. Making it
+  infinitely fast wins at most ~7 %. Making it slower is not bounded that way: the `searchsorted`
+  layout refused for it measured **+93 % of a unique query**, and resolution 4 sharpened that
+  asymmetry rather than softening it — ~89 % of a random workload is now answered on the unique
+  path, so a unique-path regression is amplified where it used to be diluted. For
+  any stage the ladder puts in single digits — `zone_name_from_id` at 4-6 % is the other one — ask
+  whether a change keeps it free, never whether it makes it faster, and settle it on a whole-query
+  A/B rather than on a microbenchmark of the stage. `docs/benchmarking_methodology.rst` carries the
+  three A/B designs that got this wrong before it was settled.
+- **Where a unique query's time actually is, and therefore where a real win has to come from:**
+  `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~49 % — **83 % in two calls before any
+  lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
+  the same place from opposite directions, and neither is a shortcut-side optimisation.
+- **A second machine class exists for the shortcut format change, and it is CI's.** The
+  benchmark workflow measured base and head in one job on an **AMD EPYC 7763** (Linux, the C
+  extension, no numba - the tracked configuration), which is the cross-check this section asks
+  for and the only figures here not taken on one laptop. Head `524ebbe` against the merge base -
+  which is the format change alone, before the H3 resolution moved to 4 and traded part of the
+  footprint win back for query speed, so read the memory rows as what the format bought rather than
+  as where the branch landed:
+
+  | | base | head | |
+  |---|---:|---:|---|
+  | `timezone_at[unique_shortcut-in_memory]` | 4.305 ms | 3.832 ms | **-11.0 %** |
+  | `timezone_at[random-in_memory]` | 13.500 ms | 12.943 ms | -4.1 % |
+  | `timezone_at[ambiguous_shortcut-in_memory]` | 40.086 ms | 39.258 ms | -2.1 % |
+  | `TimezoneFinderL::init_heap` | 4.47 MiB | 175 KiB | **-96.2 %** |
+  | `TimezoneFinderL::init_rss` | 13.3 MiB | 244 KiB | **-98.2 %** |
+  | `TimezoneFinder[file_based]::init_heap` | 4.53 MiB | 246 KiB | **-94.7 %** |
+  | `TimezoneFinder[file_based]::init_rss` | 13.8 MiB | 860 KiB | **-93.9 %** |
+  | `TimezoneFinder[in_memory]::init_rss` | 74.9 MiB | 62.0 MiB | -17.3 % |
+
+  Two things to read from it. The **memory figures are `tracemalloc` heap and near-deterministic**,
+  so `-96 %` is signal and not jitter, unlike the query rows where a few percent is the runner's
+  own noise. And the `-11 %` on the unique stratum is the branch *whole*, not the format change:
+  that was measured neutral on its own, and the slot-arithmetic reduction accounts for ~5 % of it.
+  **Attribute a combined number to its parts before quoting it**, which is why the changelog says
+  the format change buys memory and load rather than speed.
 - **The 2x rule, for what none of the above fixes.** Act on a difference only if it survives any
   single stage turning out 2x cheaper or 2x more expensive elsewhere. It keeps the large calls
   (a 37 % workload share stays large at half the size) and refuses the ones that only exist on this
@@ -291,23 +332,33 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-499 — batch / array lookup API
 
-- **Tracks:** issue #499, which carries the full design and the profiling behind it.
+- **Tracks:** issue #499, which carries the design, the four answered questions, and the profiling
+  from both sides of the argument about how large the prize is.
 - **Why it is ranked here:** the stated primary user does high-volume lookups and the API answers
-  one point per call. A unique-shortcut query is ~1.17 µs of almost pure per-call overhead — no
-  geometry at all — and 30,651 of 41,162 index entries are that case, so this is a ~1 M lookups/s
-  ceiling made of interpreter overhead. That is what a batch path amortises.
-- **Decided, 2026-08-21 — all four design questions answered on the issue:** ids primary and names
-  as a convenience; any array-like in; `on_invalid="raise"` by default; `timezone_at` only in the
-  first slice.
-- **Sequencing, and it is the part that lives here rather than on the issue:** GH-477 is the enabler
-  for the vectorised half — a flat array is the only shape the shortcut lookup vectorises in, and
-  the scalar penalty that sinks GH-477 standalone does not apply to a batch path, which is the
-  strongest argument for landing its flat layout at all. **BUG-1 lands first**: the `"skip"`
-  sentinel is `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's
-  recorded decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
-- **Status:** open — design decided, blocked by GH-477 and BUG-1.
-- **Last touched:** 2026-08-21 — design settled and written to the issue; the entry keeps the
-  sequencing and drops the detail.
+  one point per call, so every one of them writes the loop by hand. **That ergonomic half is the
+  durable one.** The throughput half has been revised down twice on measurement — first by h3
+  turning out not to vectorise, then by the batch path being prototyped — and now stands at
+  **~1.15x on a mixed workload and ~2x on unique-zone-only**, not the "over half the query" the
+  issue was opened on. Worth doing; not the order of magnitude originally claimed.
+- **Decided, 2026-08-21:** all four design questions are answered on the issue.
+- **Sequencing:** **BUG-1 lands first**, and it is the only hard blocker — the `"skip"` sentinel is
+  `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
+  decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
+- **The shortcut structure was never a precondition for this — measured before it shipped.** A
+  batch resolver over the old decoded dict already got most of the available win, and the
+  vectorisation argument that once made the flat structure a blocker was argued from a sorted-key
+  `np.searchsorted` layout that is refused (see *Recorded decisions*). The slot-addressed table
+  that did ship vectorises into a win, so it helps this item; it never gated it.
+- **The ceiling is h3, and nothing on the shortcut side moves it.** h3-py exposes no vectorised
+  `latlng_to_cell`, so N points cost N scalar C calls, and that is nearly the whole cost of a
+  batched unique-zone lookup once the layout question is settled. Two ranking consequences: do not
+  rank a further lookup-side optimisation above this expecting the two to compound, and treat
+  vectorised H3 as a separate decision rather than part of this item — it means a new Rust-backed
+  runtime dependency and the wheel matrix that follows.
+- **Status:** open — design decided, blocked by BUG-1 only.
+- **Last touched:** 2026-08-22 — detail cut to the issue; the throughput rationale corrected to
+  what the two measurements found, and the h3 ceiling restated as a ranking rule rather than a
+  finding of this entry.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -341,24 +392,6 @@ the denominators, and how to tell whether they still describe the tree.
   stalled.
 - **Status:** open. Blocks GH-449.
 - **Last touched:** 2026-08-21 — created.
-
-### GH-477 — replace the shortcut dict with flat arrays
-
-- **Tracks:** issue #477.
-- **What it is:** a measured issue that correctly concludes the obvious implementation *loses* —
-  `searchsorted` at 424 ns against `dict.get` at 68 ns, a +38 % regression on the unique-zone path
-  the hybrid design exists to make fast. The `uint64` landmine (15.3 µs, 220× slower, silently
-  correct) is worth the issue on its own.
-- **The reframing that matters:** it is filed as a memory optimisation, and its real value is as
-  the enabler for GH-499. Ranked as memory it competes with nothing; ranked as an enabler it
-  sequences before the batch API. The **direct-index variant** (+57 ns, *smaller* table) is the
-  promising one.
-- **Confirmed from the query side by #497** — a different measurement from the issue's
-  microbenchmark: `shortcut_mapping.get` is 78 ns of a real 1,150 ns unique-zone query, so the
-  `searchsorted` variant costs ~30 % of the whole query and the direct-index one ~5 %. The scalar
-  path has to stay, and the ranking of the two variants is unchanged.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue, rank 7 there.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
@@ -430,7 +463,7 @@ the denominators, and how to tell whether they still describe the tree.
   advice rather than ceasing to be necessary.
 - **The open question that decides the item, and it is now answerable:** the coordinate offset
   table took ~5 µs out of the ~9.3 µs a candidate used to cost, so what remains — roughly 830 ns of
-  fetch plus ~650 ns of FFI plus the Python bbox/hole work, over 1.13 candidates on ~25 % of queries
+  fetch plus ~650 ns of FFI plus the Python bbox/hole work, over 1.13 candidates on ~11 % of queries
   — may sit **inside the 3–9 % noise floor**. If it does, this cannot be justified on speed, and the
   free-threading case is weak too, since per-thread instances already scale 4.84× without it. The
   profile behind those figures is current, so settling this needs no new measurement — only the
@@ -616,33 +649,94 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-20 — measured, then decided. The bounded-exposure argument stands and is
   joined by a positive result: in the pre-negated form the change is free outright.
 
-### PERF-2 — two numpy calls over a handful of candidates cost 0.8 µs per ambiguous query
+### PERF-2 — `zone_ids_of` is a numpy fancy-index over a handful of candidates
 
-- **Location:** `timezonefinder/timezonefinder.py` — `zone_ids_of`, and the `get_last_change_idx`
-  call directly below it in the candidate-narrowing block (bound in `utils.py`, implemented in
-  `utils_numba.py`).
-- **Measured:** `zone_ids_of` 617/578 ns and `get_last_change_idx` 149/283 ns (numba/clang) —
-  together ~6 % of an ambiguous query, which is *more than coordinate validation, the H3 cell
-  lookup and the shortcut lookup put together*, and ~9 % of an `in_memory=True` query. The
-  unique-shortcut path pays none of it.
-- **Why it is there:** both are numpy operations over a candidate list of a handful of elements,
-  where the per-call overhead dominates whatever is computed — `zone_ids_of` is a fancy-index,
-  `get_last_change_idx` a scan over the result.
-- **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no data-format
-  change, no behaviour change. Precomputing the index into the shortcut binaries instead is refused
-  under *Recorded decisions*.
+- **Location:** `timezonefinder/timezonefinder.py` — `zone_ids_of`, in the candidate-narrowing
+  block.
+- **Halved since it was written, and the reasoning has to move with it.** This entry used to
+  cover *two* numpy calls, the second being `get_last_change_idx` at 149/283 ns — and it recorded
+  that precomputing that index into the shortcut binaries was refused. **That refusal was
+  reversed and has shipped**: the stop index is now one `uint8` per distinct candidate list in
+  the shortcut index, read rather than computed, so this entry is down to `zone_ids_of` alone.
+  Anyone reading the old text would optimise a call that no longer runs.
+- **Measured (2026-08-23):** `zone_ids_of` 599/556 ns (numba/clang), ~5–6 % of an ambiguous query
+  and nothing at all on the unique-zone path, which never builds a candidate list.
+- **Why it is there:** a numpy fancy-index over a list of a handful of elements, where the
+  per-call overhead dominates whatever is computed. The candidate slice next to it (215/269 ns)
+  is the same shape of cost.
+- **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no
+  data-format change, no behaviour change.
 - **Ranked on simplicity, not on the timing.** ~6 % of an ambiguous query is ~5 % of a random
-  workload — the same order as the machine's own noise, so the benchmark suite cannot demonstrate it and it must not be sold as a
-  speed-up; what carries it is that a scalar loop over three elements is also the simpler code. Take
-  the before/after with `prototypes/query_stage_profile.py` on both backends anyway, and record it
-  here — it is the only place the number will exist.
+  workload — the same order as the machine's own noise, so the benchmark suite cannot demonstrate
+  it and it must not be sold as a speed-up; what carries it is that a scalar loop over three
+  elements is also the simpler code. Take the before/after with
+  `prototypes/query_stage_profile.py` on both backends anyway, and record it here — it is the only
+  place the number will exist.
 - **Status:** open.
-- **Last touched:** 2026-08-20 — from #497's finding 6, which reached no entry when the rest of that
-  profiling did.
+- **Last touched:** 2026-08-23 — halved when the stop index moved into the shortcut binary; see
+  *Recorded decisions* for the dispatch-boundary rule that governs the rest of this block.
+
+### PERF-6 — scalar `njit` helpers on the query path cost more to call than to compute
+
+- **Location:** `timezonefinder/utils_numba.py` — `is_valid_lat` / `is_valid_lng`, reached through
+  `utils.validate_coordinates` on **every** query, and `coord2int`, called twice on every
+  ambiguous one.
+- **Measured 2026-08-23**, per call, against writing the same expression inline:
+
+  | | `njit` call | inline Python | boundary |
+  |---|---|---|---|
+  | `is_valid_lat` | 87.8 ns | 40.6 ns | **+47 ns**, 2x per query |
+  | `coord2int` | 94.7 ns | 46.4 ns | **+48 ns**, 2x per ambiguous query |
+
+  So coordinate validation spends ~94 ns of a ~1,000 ns unique-zone query crossing a boundary to
+  perform two comparisons — **more than the whole slot-arithmetic reduction that shipped in the
+  same pass was worth**.
+- **Why these and not the kernel.** `pt_in_poly_python` is over an array of hundreds to tens of
+  thousands of vertices, so its dispatch is amortised to nothing and numba earns its place. These
+  three take scalars and do one operation. The rule is in *Recorded decisions*: no scalar
+  per-query stage in the single-digit hundreds of nanoseconds survives a dispatch boundary.
+- **What makes it awkward, and why it is not simply "inline them".** `njit` is a no-op decorator
+  when numba is absent (`_numba_replacements.py`), which is the tracked CI configuration and what
+  a plain `pip install` gives — so the penalty is paid by users who installed numba *for speed*,
+  and any fix has to leave the no-numba path no worse. Inlining the expressions at the call site
+  satisfies both, at the cost of the duplication DUP-1 is separately about.
+- **Sequencing:** overlaps DUP-1, which wants the same bounds literals imported rather than
+  duplicated, and reaches the opposite conclusion about touching this code. Settle them together
+  or the second will undo the first.
+- **Status:** open — free, needs a whole-query A/B rather than the microbenchmark above.
+- **Last touched:** 2026-08-23 — measured while refusing numba for the slot arithmetic.
 
 ---
 
 ## Public API and behaviour
+
+### BUG-3 — cells at the poles can omit the polygon that covers them
+
+- **Location:** `scripts/hex_utils.py`, the `surrounds_north_pole` / `surrounds_south_pole`
+  and `is_special` handling.
+- **Measured 2026-08-23.** Brute-forcing every polygon for 3,000 points sampled *uniformly in
+  latitude and longitude* finds the containing polygon absent from the shortcut for **7
+  points at resolution 3** and 1 at resolution 4 — every one of them above latitude 88.
+  `timezone_at` returns a neighbouring ocean zone there and `certain_timezone_at` returns
+  `None`, which is the honest signal that no candidate contains the point.
+- **Quote the area-weighted rate, not that one.** Uniform latitude oversamples the poles
+  enormously. Sampled by area — a realistic workload — **both resolutions return 0 wrong
+  answers in 3,000 points**, which is why this is a narrow defect and not a headline. An
+  earlier draft of this entry read the uniform figure as a 0.23 % general error rate; it is
+  not, and the two sampling schemes must never be quoted interchangeably.
+- **This is what is left after the edge-crossing test landed, and the boundary is now
+  measured rather than assumed.** Adding a segment-intersection test to `Hex.lies_in_cell`
+  took the uniform-sampled gaps from 7 to 4, and **all four survivors sit between latitude
+  88.3 and 89.1**. They survive because that test is deliberately skipped for the *special*
+  cells — those spanning the antimeridian or a pole — whose stored coordinates are corrected
+  rather than planar, so a Euclidean segment test would not mean what it says on them.
+- **So the fix is not "add the edge test there too".** It needs the pole-spanning geometry
+  handled in a projection where segment intersection is meaningful, which is a different and
+  larger piece of work than the general case was. `hex_utils` already special-cases these
+  cells (`surrounds_north_pole`, `is_special`), which is where it would go.
+- **Status:** open — free.
+- **Last touched:** 2026-08-23 — narrowed to the special cells once the general edge-crossing
+  test shipped and removed the rest.
 
 ### BUG-1 — a negative zone or boundary id silently returns the wrong zone
 
@@ -810,6 +904,45 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-21 — decided. Migrated from the roadmap issue, where it was ranked 3 as "#446
   decision 2". Ranked above GH-449 here because the list is walked top-down and GH-449 is
   blocked by it.
+
+### BENCH-1 — the pull request benchmark comparison cannot resolve the changes worth reviewing
+
+- **Location:** `scripts/compare_benchmark_runs.py`, `scripts/benchmark_utils.py`
+  (`DEFAULT_BENCHMARK_ESTIMATOR`), `benchmarks/`.
+- **What it is.** Base and head are measured in two sequential runs, minutes apart, each reduced to
+  a single `min`. Everything that drifts between them is attributed to the change, and nothing in
+  the output lets a reader tell a real difference from that drift. The comparison is flagged at
+  110 % and is reporting-only, and `docs/benchmarking_methodology.rst` already concedes it is
+  "blind to the 10-30 % changes actually worth reviewing".
+- **Why it is now more than a known limitation:** it was measured, while comparing two shortcut
+  structures. **Within a single process**, alternating the two paths round by round against running
+  one after the other moved a measured difference from **−13.3 % to −0.3 %** on the unique
+  stratum — the whole thirteen points were the first path warming `validate_coordinates`,
+  `h3.latlng_to_cell` and `zone_name_from_id` for the second. Two separate processes minutes apart
+  have at least that much room, and nothing characterises it. Separately, `min` alone reported
+  +0.5 % where a round-level sign count said 26 of 61 — the disagreement being the correct answer,
+  "no effect", which a single estimator cannot express.
+- **Why it is ranked here:** the remaining performance items — GH-364 and PERF-4 among them — each
+  have to demonstrate an effect in the low single digits, and none of them can be reviewed with
+  this tooling. Each one currently needs a hand-rolled prototype harness; the shortcut structure
+  work needed two, both of which were deleted with the prototypes once it shipped, so the harness
+  is written again every time.
+- **Fixes, in increasing cost, and the first is most of the value:**
+  1. **Report dispersion beside the `min`.** pytest-benchmark already records every round, so the
+     JSON holds it and the comparison discards it. A reader could then see whether the two
+     estimators agree. Small, no workflow change.
+  2. **A paired A/B harness** for two candidate implementations of one stage, alternating order —
+     the thing both prototypes hand-rolled. Medium, and it belongs in `benchmarks/` rather than in
+     `prototypes/` precisely because it will be wanted again.
+  3. Interleaving base and head inside one job. **Likely infeasible and recorded so it is not
+     attempted blind:** it needs two versions of the library importable in one process, and
+     `utils.py` binds its backend at import time.
+- **Not a gate.** Whatever is added stays reporting-only until a single-runner noise study says
+  what the residual floor is — the same condition `docs/benchmarking_methodology.rst` already puts
+  on `--fail-on-regression`. A gate that fires on drift is worse than no gate.
+- **Status:** open — free.
+- **Last touched:** 2026-08-22 — created, from the measurement flaws found while comparing shortcut
+  structures; the methodology doc carries the three A/B designs that produced wrong answers.
 
 ### GH-501 — guardrails on the automated data update pipeline
 
@@ -1028,9 +1161,7 @@ the denominators, and how to tell whether they still describe the tree.
   its argument at import time. Removing it collapses the problem:
 
   ```python
-  def write_data_report_from_binary(
-      data_path=..., zone_id_dtype=..., report_path=DATA_REPORT_FILE
-  ):
+  def write_data_report_from_binary(data_path=..., report_path=DATA_REPORT_FILE):
       data = load_binary_data(data_path)
       with redirect_output_to_file_contextmanager(report_path):  # opens "w"
           report_data_statistics(...)
@@ -1111,17 +1242,17 @@ the denominators, and how to tell whether they still describe the tree.
   (excluding `prototypes/`) and could be enabled on their own. `B905` is down to 9 sites: two in
   `scripts/timezone_data.py`'s validators and one in `tests/utils_test.py` where the lengths are
   checked on the line above, the rest genuinely paired by construction.
-  **One earlier conclusion here was wrong. It is corrected rather than deleted, because the site
-  still looks alarming and the next pass would otherwise re-raise it at full price.** The worry was
-  that `timezonefinder/flatbuf/io/hybrid_shortcuts.py`'s `zip(poly_id_hex_ids, poly_id_lengths)` —
-  the only `B905` site on the library's own load path — could truncate silently, dropping shortcut
-  entries while `_iter_boundaries_in_shortcut` reads a missing hex id as "no candidate polygons"
-  (`shortcut_mapping.get(hex_id)` is `None` → `return`), so those coordinates would answer `None`
-  rather than raise. The two lists cannot differ in length: they are local accumulators appended in
-  the same iteration of the same loop, a few lines above the `zip`, and no file — corrupt or
-  otherwise — is read between the two. `strict=True` there would assert what the control flow
-  already guarantees, so `B905` has no site on the load path and the family stands or falls on the
-  other eight.
+  **One earlier conclusion here was wrong. It is corrected rather than deleted, because the shape
+  recurs and the next pass would otherwise re-raise it at full price.** The worry was that the
+  FlatBuffers shortcut reader's `zip(poly_id_hex_ids, poly_id_lengths)` — then the only `B905` site
+  on the library's own load path — could truncate silently, dropping shortcut entries that the
+  lookup would read back as "no candidate polygons", so those coordinates would answer `None`
+  rather than raise. It could not: the two lists were local accumulators appended in the same
+  iteration of the same loop a few lines above the `zip`, with no file read between them, so
+  `strict=True` would have asserted what the control flow already guaranteed. That reader has since
+  been replaced by the slot-addressed shortcut index, which pairs nothing, so the site is gone
+  either way and the family stands or falls on the other eight. The lesson that survives it: a
+  `zip` over two accumulators built in one loop is not a truncation risk, whatever the load path.
 
 ### BIG-2 — `calculate_shortcut_index_stats` computes four unrelated things in one pass
 
@@ -1331,6 +1462,122 @@ the denominators, and how to tell whether they still describe the tree.
 pass re-proposes whatever is not written down as already refused. Correct the reasoning when a
 premise moves; do not reverse a decision silently.
 
+- **Accelerating the slot arithmetic with numba or the C extension — measured 2026-08-23 and
+  refused; the algebra was the win instead.** The lookup's bit arithmetic looked like a
+  candidate for `njit`. It is not, and the measurement forecloses the whole family rather than
+  one attempt: **an empty `njit` call costs ~98 ns**, against ~152 ns for the entire stage it
+  would replace — arithmetic *and* table read — so dispatch alone eats two thirds of the
+  budget before any kernel runs. Measured, both variants came out slower than plain Python
+  (156 and 166 ns against 152). The C extension is worse on the same grounds: a cffi crossing
+  is the same order (`ffi.from_buffer` is ~650 ns on the polygon path), and it would add an
+  entry point to the wheel matrix for a stage of ~150 ns. This generalises — **no scalar
+  per-query stage in the single-digit-hundreds of nanoseconds can be worth a dispatch
+  boundary**, which is the same reason `validate_coordinates` is *slower* under numba than in
+  pure Python (355 against 312 ns).
+- **What did pay was noticing the arithmetic reduces.** H3 puts the base cell immediately
+  above the digits, so `base * stride + digits` is one contiguous bit field and the six-operation
+  expression collapses to `(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK`. An identity over any
+  64-bit value, not a property of the cells that exist. Arithmetic 91 -> 40 ns, whole stage
+  152 -> 101 ns, and on a paired whole-query A/B **-5.1 % on a unique-zone query with 43 of 61
+  rounds faster** - both estimators agreeing, which is the bar. Shipped.
+
+- **The H3 shortcut resolution moved from 3 to 4 — measured 2026-08-23, with 5 refused.** Built,
+  not modelled: every resolution below was compiled from the 2026c boundaries and priced in the
+  shipped layout. Restated here rather than left in `prototypes/single_resolution_bench.py`,
+  because a prototype is deletable and this verdict has to outlive it.
+
+  | res | cells | unique | file | resident | candidates tested /10k queries |
+  |---|---|---|---|---|---|
+  | 3 | 41,162 | 74.5 % | 103 KiB | 143 KiB | 3,877 |
+  | **4** | **288,122** | **89.1 %** | **596 KiB** | **1,000 KiB** | **1,566** |
+  | 5 | 2,016,842 | 95.4 % | 4,029 KiB | 7,832 KiB | 667 |
+
+  * **What resolution 4 bought, paired and order-alternated against a resolution 3 index in one
+    process:** random −41.6 %, on_land −37.8 %, both 0 of 61 rounds where resolution 3 won. The
+    committed report page moved from ~3.40 µs to ~2.02 µs per random lookup. The unique stratum is
+    unchanged (−1.1 % on minima, 40 of 61 rounds — the estimators disagree, so: no effect), which
+    is the expected shape: a unique-cell query does the same work at either resolution, and what
+    changes is *how many* queries are unique.
+  * **What it cost:** `TimezoneFinderL`'s heap 176 KiB → 1.01 MiB, the default finder's 1.13 →
+    1.96 MiB, construction 7.98 → 8.28 ms. **The mapped mode's resident set went down**, 32.4 →
+    26.1 MiB, because far fewer candidate polygons are fetched and so far fewer coordinate pages
+    are faulted in — a second-order effect worth remembering when pricing a future level.
+  * **The `ambiguous` benchmark stratum is not comparable across this change**, and neither is
+    `unique`. Both are a *classification by the shortcut index*, so changing its resolution
+    re-labels the points: the easy members of the old ambiguous set became unique, leaving a harder
+    residue. `FIXTURE_VERSION` was bumped for exactly this. Compare `random` and `on_land`, which
+    are sampled independently of the index.
+  * **Resolution 5 is refused on the exchange rate, not on its gains, which are real.** Memory
+    paid per candidate polygon removed is 0.019 KiB going 2→3, 0.371 KiB going 3→4 and
+    **7.600 KiB going 4→5** — each level about twenty times worse than the last. The table is
+    `122 * 8**res`, fixed by the resolution rather than by the data, so it is 99.7 % of the index
+    at resolution 5. 7.8 MiB resident is more than the entire index format generation 1 used, and
+    would take `TimezoneFinderL` from ~176 KiB to ~7.9 MiB.
+  * **Resolutions above 5 are not worth measuring** — the table grows eightfold per level, so
+    resolution 6 is ~63 MiB resident, the size of the polygon data it indexes.
+  * **A hierarchical index over several resolutions is refused** and its prototype deleted. The
+    maximum resolution dominates the size, so a multi-resolution index is *larger* than the
+    single-resolution one it contains; H3 cells do not nest cleanly, so a parent must be kept even
+    once its children exist; and consulting several resolutions per query costs more than the
+    refinement saves.
+  * **A resolution change is only safe because the file now stamps its own.** The binary layout is
+    identical at every resolution, so `layout_version` cannot distinguish them and a stale data
+    directory would silently index the wrong cells. The reader rejects a mismatch by name.
+  * **It was also only safe after the edge-crossing test.** A resolution 4 index built before that
+    answered a point in the Strait of Malacca wrongly, because the overlap test ignored polygon
+    edges crossing a cell — a defect that grows as cells shrink. Any future level must re-check
+    that class before being adopted, not merely re-time.
+
+- **The shortcut index's shape — settled 2026-08-23 when it shipped, with six alternatives refused.**
+  It is a slot-addressed `int16` table plus deduplicated candidate lists; `docs/data_format.rst`
+  describes the layout and `timezonefinder/shortcut_index.py` says why it is shaped that way. What
+  lost, so that none of it is re-proposed:
+
+  * **`np.searchsorted` over stored, sorted cell ids.** Refused on both paths it was proposed for:
+    it roughly doubles a unique-zone query, and vectorised over 10,000 points it is *still* slower
+    than a Python loop of dict lookups, because a binary search over 41,162 keys is
+    memory-latency-bound at about what one dict lookup costs. "Flat arrays vectorise" is what
+    re-proposes this; it does not follow.
+  * **Storing the cell ids at all**, to keep h3's index encoding out of the format. It does not
+    remove the dependency — if the encoding moved, stored 64-bit ids would no longer denote the
+    same cells either, and the reader slices bits in both designs because that is what makes the
+    lookup fast — and it pays ~260 KiB and a ~12 % slower load to store something derivable. What
+    makes the bit form safe is the build-time check against h3's public `get_base_cell_number` /
+    `cell_to_child_pos` over every cell, not the stored ids. **Without that check the stored-id
+    form is the safer one**, since an encoding change would otherwise return a neighbour's
+    timezone silently.
+  * **Enumerating the cell ids from h3's public API at load** instead of storing them: 4.5 ms
+    against 0.13 ms to read them, to save 329 KiB. Refused before the ids were dropped entirely.
+  * **Offsets per cell rather than per distinct candidate list.** Duplicates already collapse to
+    one list, so a per-cell column re-spends exactly the repetition the deduplication found — and
+    a cell a single zone covers reads no offset at all. Related: **deduplication via an entry-number
+    index** (slot → entry → range) costs an extra indirection on the ambiguous path to save ~100 KiB
+    and is unnecessary, since *equal offsets* achieve the same sharing with none. It looks like the
+    obvious way to implement sharing and is not.
+  * **Column widths chosen for headroom rather than for fit.** A 4x-headroom rule is what once put
+    `uint32` offsets in a draft and produced a false claim that deduplication paid for its own
+    addressing by narrowing them. The narrowest width that fits, plus a check whose message names
+    the value, the ceiling, the width to move to and the version bumps that follow, is strictly
+    better: smaller, and loud instead of silently truncating.
+  * **Dispatching on a candidate list's length at runtime** instead of on the table's sign: two
+    reads and a subtraction where the table needs one, measured at +230 ns against +73 ns on the
+    unique path. The length is the right column *in a file* and the wrong discriminator at runtime;
+    they are separate decisions.
+  * **Base-7 addressing at lookup time**, to drop the ~34 % of table slots no H3 cell can address.
+    +78 ns per query to save 121 KiB, on a stage that is only ~20 % of a unique query to begin
+    with. The *file* stores the compact base-7 form and the reader expands it by slice assignment
+    (0.039 ms); the asymmetry is deliberate. A denser index the public API would give — 41,162
+    slots against 62,464 — is refused for the same reason, and reproducing it from bits needs
+    per-digit arithmetic that pentagons, with 286 children rather than 343, do not obviously
+    satisfy.
+- **Justify the shortcut structure on load, memory and file size — never as a speedup.** Measured
+  full `timezone_at`, paired and order-alternated, 61 rounds x 2,000 points on four fixture strata:
+  neutral to slightly ahead, and small enough to stay off any headline. It changes how a cell's
+  candidate list is stored, never which candidates come back, so it avoids exactly the same
+  point-in-polygon tests. Two measurement designs that suggested otherwise were discarded: an
+  isolated lookup omits the `match value: case int(zone_id)` the old code ran on the dict's answer
+  (84 → 188 ns, and the table needs no equivalent), and a fixed A-then-B order credited the new
+  structure with 13.3 % that was the first path warming shared code for the second.
 - **Raster fast-path in front of the H3 index — dropped.** A ~2 MB lookup table answering
   unambiguous cells with one array index, falling through to H3 otherwise. Rejected: it buys query
   time with storage, and storage is the dimension this package can least afford to spend on.
@@ -1582,23 +1829,39 @@ premise moves; do not reverse a decision silently.
   delivery is deferred to the next bytecode boundary, so a numpy call's time lands on the
   *following* line. Read a sampler's line attribution as ±1 line. Applies to the next profiling
   pass of any hot path here.
-- **Precomputing `last_zone_change_idx` into the shortcut binaries — measured, and refused.**
-  Proposed twice: issue #256, closed in 2025 on the argument that throughput is dominated by the
-  point-in-polygon work, and draft PR #348, which implemented it and is now closed with this
-  reasoning. The half of that draft worth having shipped by another route — the hybrid shortcut
-  binary stores a unique cell's zone id inline, so the common case never reaches a polygon list. #497 sizes what it
-  removes: `get_last_change_idx` is 149 ns on numba and 283 ns on clang of a ~13.3 µs ambiguous
-  query, and nothing at all on a unique-shortcut one — 1–2 % there, ~1 % of a random workload,
-  below the 3–9 % noise of the machine that would have to demonstrate it. What it costs is a shortcut-layout version bump, therefore a
-  `DATA_FORMAT_VERSION` bump, therefore an ordered two-distribution release. The 2025 verdict was
-  right and now has a number under it; the open draft is superseded by this entry rather than
-  pending. The Python-side half of the same block stays open as PERF-2, which needs no format
-  change.
+- **Precomputing `last_zone_change_idx` into the shortcut binaries — refused twice, and reversed
+  2026-08-23.** Proposed as issue #256, closed in 2025 because throughput is dominated by
+  point-in-polygon work, and as draft PR #348. The refusal rested on two legs: #497 sizes the win
+  at 149 ns on numba and 283 ns on clang of an ambiguous query and nothing on a unique one — ~1 %
+  of a random workload, below the 3–9 % noise of the machine that would have to demonstrate it —
+  and the cost was a shortcut-layout version bump, therefore `DATA_FORMAT_VERSION`, therefore an
+  ordered two-distribution release. **The shortcut index format change spent that bump for its own
+  reasons, so the second leg went**, and the maintainer took it: it ships as one `uint8` per
+  *distinct* candidate list — 2.5 KiB, since it depends only on the list and deduplicates with it —
+  where the ~1 % is what offsets the extra indirection that structure introduces. Kept here rather
+  than deleted because the *standalone* verdict is unchanged: on its own it is still ~1 % for a
+  release, and the 2025 reasoning was right. What moved is that the price became sunk, not that the
+  win grew.
 - **Shrink the runtime dependency surface (numpy / h3 / cffi / flatbuffers) — considered and
   parked.** Each does one small thing, so the idea recurs. Reimplementing H3 indexing is a
   well-known source of subtle bugs and `h3` sits on the common path of every query; an open item
   would be an invitation to attempt it. Revisit only if import time or cold start is ever measured
   to be a real problem.
+- **Dropping `flatbuffers` for the custom binary format it replaced in 6.6.0 — measured 2026-08-22
+  and refused.** The dependency is not what anything costs. It adds **0.033 %** to the 63 MB
+  coordinate file, **1.1 ms** of import once numpy is loaded, and — since the offset table of
+  GH-536 — **nothing per query**, the lookup path reading coordinates with a bare `np.frombuffer`.
+  Writing the same shortcut payload as flat vectors *inside* a FlatBuffers buffer reads in
+  **0.050 ms against 0.039 ms** for a hand-rolled raw blob of the same bytes, so the container is
+  worth ~11 µs and 58 bytes. What was expensive was the **shape of the old shortcut schema** — a
+  vector of 41,162 tables decoded one by one, ~400 ms of a construction — and that was a schema
+  question in either format, which is why replacing the schema fixed it and dropping the dependency
+  would not have. Against ~0
+  gain, removing it costs the file identifiers and `layout_version` fields the load-time guards are
+  built on, the `schemas/` copy that lets a compiled data directory be read back without the
+  package that wrote it, the alignment guarantee the zero-copy views rest on, and the independent
+  reference decoder that `scripts.data_integrity.validate_coordinate_offset_table` checks the fast
+  path against. Not to be re-proposed without a measurement contradicting one of those figures.
 
 ---
 

@@ -1,11 +1,13 @@
-"""Shared layout guard for the packaged FlatBuffers binaries.
+"""Shared layout guard for the packaged binaries.
 
-Both binary kinds - the polygon coordinates and the hybrid shortcuts - can change
-what they *mean* without changing anything a parse would notice: same schema, same
-vector lengths, values still in range. Parsing such a file succeeds and returns wrong
-timezones silently, so each writer stamps a file identifier plus a layout version and
-each reader rejects what it cannot read. The rejection is worded once, here, so the
-two kinds cannot drift into two different error formats.
+Both binary kinds - the FlatBuffers polygon coordinates and the shortcut index - can
+change what they *mean* without changing anything a parse would notice: same field
+widths, same array lengths, values still in range. Reading such a file succeeds and
+returns wrong timezones silently, so each writer stamps a file identifier plus a layout
+version and each reader rejects what it cannot read. The rejection is worded once, here,
+so the two kinds cannot drift into two different error formats.
+
+It sits outside ``flatbuf/`` because only one of the two kinds is FlatBuffers.
 """
 
 from pathlib import Path

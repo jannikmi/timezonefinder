@@ -9,9 +9,9 @@ from tests.auxiliaries import (
 )
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.io.hybrid_shortcuts import (
-    get_hybrid_shortcut_file_path,
-    read_hybrid_shortcuts_binary,
+from timezonefinder.shortcut_index import (
+    get_shortcut_file_path,
+    read_shortcuts_binary,
 )
 from timezonefinder.np_binary_helpers import get_zone_ids_path, read_per_polygon_vector
 from timezonefinder.polygon_array import PolygonArray
@@ -60,21 +60,21 @@ def zone_ids():
 
 
 @pytest.fixture(scope="session")
-def zone_id_dtype(zone_ids):
-    """Convenience fixture exposing the dtype of the zone_ids array."""
-    return zone_ids.dtype
+def shortcut_file_path():
+    """Path to the packaged shortcut index binary."""
+    return get_shortcut_file_path(DEFAULT_DATA_DIR)
 
 
 @pytest.fixture(scope="session")
-def hybrid_shortcut_file_path(zone_id_dtype):
-    """Path to the hybrid shortcuts file matching the zone ID dtype."""
-    return get_hybrid_shortcut_file_path(zone_id_dtype, DEFAULT_DATA_DIR)
+def shortcut_index(shortcut_file_path):
+    """The packaged shortcut index, loaded once per session."""
+    return read_shortcuts_binary(shortcut_file_path)
 
 
 @pytest.fixture(scope="session")
-def hybrid_shortcuts(hybrid_shortcut_file_path):
-    """Hybrid shortcut mapping loaded once per session."""
-    return read_hybrid_shortcuts_binary(hybrid_shortcut_file_path)
+def hybrid_shortcuts(shortcut_index):
+    """The shortcut index as the cell -> zone id | polygon ids mapping tests assert over."""
+    return shortcut_index.as_mapping()
 
 
 @pytest.fixture(scope="session")

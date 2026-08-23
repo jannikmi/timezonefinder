@@ -21,17 +21,14 @@ from scripts.configs import (
     ShortcutIndexStats,
     TableRow,
     TableRows,
-    ZONE_ID_DTYPE_CHOICES,
-    ZONE_ID_DTYPE_NAME,
     read_data_version,
-    resolve_zone_id_dtype,
 )
 from scripts.utils import percent
-from timezonefinder.configs import DEFAULT_DATA_DIR, DEFAULT_ZONE_ID_DTYPE
+from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
-from timezonefinder.flatbuf.io.hybrid_shortcuts import (
-    get_hybrid_shortcut_file_path,
-    read_hybrid_shortcuts_binary,
+from timezonefinder.shortcut_index import (
+    get_shortcut_file_path,
+    read_shortcuts_binary,
 )
 from timezonefinder.np_binary_helpers import (
     get_zone_ids_path,
@@ -111,9 +108,7 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
 
     # Load shortcuts
     zone_ids = read_per_polygon_vector(get_zone_ids_path(data_path))
-    zone_id_dtype = zone_ids.dtype
-    shortcut_file = get_hybrid_shortcut_file_path(zone_id_dtype, data_path)
-    shortcuts = read_hybrid_shortcuts_binary(shortcut_file)
+    shortcuts = read_shortcuts_binary(get_shortcut_file_path(data_path)).as_mapping()
 
     # Load timezone names
     all_tz_names = read_zone_names(data_path)
@@ -784,7 +779,7 @@ def report_data_statistics(
 
 
 @redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path, zone_id_dtype: np.dtype) -> None:
+def report_file_sizes(output_path: Path) -> None:
     """
     Reports the sizes of the biggest generated binary files.
 
@@ -792,7 +787,6 @@ def report_file_sizes(output_path: Path, zone_id_dtype: np.dtype) -> None:
 
     Args:
         output_path: Path to the output directory containing the binary files
-        zone_id_dtype: Data type for zone IDs (needed for hybrid shortcut file path)
     """
     print(rst_title("Binary File Sizes", level=1))
     holes_dir = get_holes_dir(output_path)
@@ -804,9 +798,7 @@ def report_file_sizes(output_path: Path, zone_id_dtype: np.dtype) -> None:
     names_and_paths = {
         "boundary polygon data": boundary_polygon_file,
         "hole polygon data": hole_polygon_file,
-        "hybrid shortcut index": get_hybrid_shortcut_file_path(
-            zone_id_dtype, output_path
-        ),
+        "shortcut index": get_shortcut_file_path(output_path),
     }
     names_and_sizes = {
         name: get_file_size_in_mb(path) for name, path in names_and_paths.items()
@@ -827,9 +819,7 @@ def report_file_sizes(output_path: Path, zone_id_dtype: np.dtype) -> None:
     print_rst_table(headers, rows)
 
 
-def write_data_report_from_binary(
-    data_path: Path = DEFAULT_DATA_DIR, zone_id_dtype: np.dtype = DEFAULT_ZONE_ID_DTYPE
-) -> None:
+def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
     """
     Writes a complete data report to the report file by loading data from binary files.
 
@@ -853,7 +843,7 @@ def write_data_report_from_binary(
         data["all_tz_names"],
     )
     print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
-    report_file_sizes(data["output_path"], zone_id_dtype)
+    report_file_sizes(data["output_path"])
 
     # Each table ends with a blank line, so the last one leaves the file with a
     # trailing one. end-of-file-fixer strips it, which used to make every freshly
@@ -887,12 +877,6 @@ Examples:
         default=DEFAULT_DATA_DIR,
         help=f"Path to directory containing binary data files (default: {DEFAULT_DATA_DIR})",
     )
-    parser.add_argument(
-        "--zone-id-dtype",
-        choices=ZONE_ID_DTYPE_CHOICES,
-        default=ZONE_ID_DTYPE_NAME,
-        help="Zone ID dtype to use when reporting file sizes",
-    )
 
     args = parser.parse_args()
 
@@ -906,9 +890,8 @@ Examples:
         return 1
 
     try:
-        zone_id_dtype = resolve_zone_id_dtype(args.zone_id_dtype)
         print(f"Generating data report from: {args.data_path}")
-        write_data_report_from_binary(args.data_path, zone_id_dtype=zone_id_dtype)
+        write_data_report_from_binary(args.data_path)
         print(f"Data report successfully generated at: {DATA_REPORT_FILE}")
         return 0
     except Exception as e:

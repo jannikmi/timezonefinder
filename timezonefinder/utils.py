@@ -42,7 +42,6 @@ coord2int = utils_numba.coord2int
 int2coord = utils_numba.int2coord
 convert2coords = utils_numba.convert2coords
 convert2coord_pairs = utils_numba.convert2coord_pairs
-get_last_change_idx = utils_numba.get_last_change_idx
 
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]

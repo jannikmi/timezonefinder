@@ -1,10 +1,9 @@
 """Attribute a ``timezone_at`` query to its individual stages, per backend.
 
 Several proposed optimisations are each justified by an assumption about which stage of
-a lookup dominates - the batch API (#499) by per-call overhead, the native candidate
-loop (#364) by per-polygon FFI marshalling, shortcut ordering (#301) by the polygon
-loop. This script measures the breakdown so those assumptions stop being assumptions.
-See issue #497.
+a lookup dominates - a batch API by per-call overhead, a native candidate loop by
+per-polygon FFI marshalling, better shortcut ordering by the polygon loop. This script
+measures the breakdown so those assumptions stop being assumptions.
 
 No instrument is unbiased here, so there are three, chosen to fail differently, and
 the report leads with the one that measures the *real* function untouched.
@@ -63,150 +62,158 @@ Inputs are the committed fixtures in ``tests/fixtures/benchmarks/``, so two runs
 same commit execute the same workload.
 
 
-FINDINGS (2026-08-21, `b331eee`, Apple arm64, Python 3.14, data 2026c, fixture set v2)
+FINDINGS (2026-08-23, `590e21b`, Apple arm64, Python 3.14.2, data 2026c, fixture set v3)
 
-Re-measured wholesale after the coordinate accessors stopped re-walking the
-FlatBuffers vtable per candidate (finding 5, now closed). Every figure below comes
-from the same four runs, so they are comparable with each other and with nothing
-else - do not diff an individual stage against the previous block, which was taken
-on a different interpreter and a different day, and where a stage that did not
-change still moves by the machine's own 3-9%.
+Re-measured wholesale after the H3 shortcut index moved from resolution 3 to 4. That
+changes how many queries reach the geometry at all *and* re-labels two of the strata -
+``unique`` and ``ambiguous`` are a classification **by** this index, so they are not the
+same points the previous block measured. Every figure below comes from the same four runs,
+so they are comparable with each other and with nothing else - do not diff an individual
+stage against the previous block, which was taken at another resolution on a different
+day, and where a stage that did not change still moves by the machine's own 3-8%.
 
 These are one machine's, and the three kinds of figure below do not travel equally.
 A *hit count* is a property of the code rather than the hardware and survives any
-move - 1.13 candidates per ambiguous query, one FFI crossing per candidate on clang
+move - 1.05 candidates per ambiguous query, one FFI crossing per candidate on clang
 - so state what a change removes as a count first. A *share* travels as an order of
 magnitude only: the stages are bound by different resources (memory latency for the
 mapped fetch, interpreter dispatch for the Python prologue, FP throughput for the
 kernel), so another machine re-weights them against each other. Absolute
 *nanoseconds* travel nowhere, and are not comparable with CI's or with a report
-page's. Two further corrections before comparing anything: read the clang /
+page's. One further correction before comparing anything: read the clang /
 ``in_memory=False`` column, which is what a plain install in a constrained container
-runs and what CI tracks for that reason, and convert a stratum share into a workload
-share - uniformly random points are ~25% ambiguous and an ambiguous query costs ~11x
-a unique one, so ambiguous work is ~80% of a mixed wall clock. Both are in
-docs/benchmarking_methodology.rst.
+runs and what CI tracks for that reason. The ``random`` stratum is the
+workload-representative one and is measured here directly, so rank on it rather than
+converting an ambiguous-stratum share by hand - uniformly random points are ~11%
+ambiguous at this resolution and an ambiguous query costs ~11x a unique one.
 
 All figures are nanoseconds per query. Ladder figures are the min over 15 passes of
 2,000 fixture points; the ``real`` row is ``tf.timezone_at(lng=, lat=)`` itself, and the
 gap above it is the bound-method call the ladder does not pay.
 
 Counts x sampled share, over the real function with nothing attached to it - blocks, so
-that the sampler's one-line skid stays inside a block:
+that the sampler's one-line skid stays inside a block. ``in_memory=False``:
 
-    block             ambiguous            unique
-                    numba    clang    numba    clang
-    prologue        1,184    1,166      919      798
-    bookkeeping     1,462    1,623        -        -
-    candidate loop  7,332    7,691        -        -
-    zone name         192      220      132      160
-    -----------------------------------------------
-    total          10,236   10,814    1,094    1,013
+    block            unique         ambiguous        random         on_land
+                  numba  clang    numba   clang   numba  clang   numba  clang
+    prologue        970    890    1,102   1,021     977    897   1,006    985
+    bookkeeping       -      -    1,554   1,352     147    136     298    272
+    candidate loop    -      -    8,302   8,655     742    765   2,218  2,362
+    zone name        38     33      185     216      62     83      86     86
+    unattributed     46     53      116      65      45     59      58     55
+    ---------------------------------------------------------------------------
+    total         1,055    977   11,260  11,309   1,972  1,939   3,667  3,760
 
-  `zone name` on the unique stratum is not just ``zone_name_from_id`` (the ladder puts
-  that at 45-54 ns): a frame's teardown is attributed to the line it returns from, so
-  that block absorbs the ~155-175 ns of call overhead the ladder measures separately.
+  The unique stratum is almost entirely `prologue`: 92.0% (numba) / 91.2% (clang),
+  because the table read *is* the answer and there is no separate dispatch on it. At
+  resolution 4 that stratum is ~89% of a uniformly random workload, which is why the
+  `random` column is now dominated by the prologue too (46-50%).
 
   The number this construction gives that neither other instrument does is **cost per
   candidate polygon tested**, since the candidate loop is one line and its hit count is
-  exact: **6,488 ns (numba) / 6,806 ns (clang)** per candidate on the ambiguous stratum,
-  8,850 / 9,182 ns on `on_land`, at 1.13 candidates per ambiguous query.
+  exact: **7,933 ns (numba) / 8,270 ns (clang)** per candidate on the ambiguous stratum,
+  10,538 / 11,220 ns on `on_land`, at 1.05 candidates per ambiguous query and 0.11 per
+  uniformly random one.
 
 Unique-shortcut stratum - the common case, and the one with no geometry in it at all:
 
     stage                       numba      clang
-    validate_coordinates          362        305
-    h3.latlng_to_cell             414        401
-    shortcut_mapping.get          105         88
-    zone_name_from_id              45         54
+    validate_coordinates          353        298
+    h3.latlng_to_cell             449        435
+    shortcut table read           123        129
+    zone_name_from_id              54         39
     ------------------------------------------------
-    ladder total                  944        833
-    real timezone_at()          1,099      1,007   (+155 / +174 call overhead)
+    ladder total                  962        885
+    real timezone_at()          1,038        975   (+76 / +90 call overhead)
 
 Ambiguous-shortcut stratum, default ``in_memory=False`` (the same run with
 ``--in-memory`` in brackets):
 
     stage                       numba              clang
-    validate + h3 + get           888    (845)       784    (784)
-    zone_ids_of                   577    (601)       569    (609)
-    get_last_change_idx           120    (131)       310    (313)
-    coord2int x2                  225    (200)       191    (122)
-    bbox rejection                863    (966)       757    (797)
-    hole checks                 1,335  (1,116)     1,257  (1,209)
-    boundary PIP                5,783  (5,309)     6,708  (5,366)
+    validate + h3 + table         932    (933)       846    (862)
+    candidate list slice          287    (286)       294    (291)
+    zone_ids_of                   608    (575)       590    (601)
+    last_change read              137    (128)        80    (100)
+    coord2int x2                  199    (218)       170    (177)
+    bbox rejection                802    (776)       755    (777)
+    hole checks                 1,186  (1,239)     1,148  (1,278)
+    boundary PIP                6,870  (6,096)     7,500  (6,800)
     --------------------------------------------------------------
-    ladder total                9,798  (9,200)    10,608  (9,233)
-    real timezone_at()         10,050  (9,303)    10,718  (9,296)
+    ladder total               11,015 (10,248)    11,395 (10,887)
+    real timezone_at()         11,164 (10,357)    11,682 (10,982)
 
 One point-in-polygon test, per call, by polygon size stratum:
 
     stratum   vertices    coords_of  coords_of   ffi.from_buffer   kernel    kernel
                             mapped   in-memory      (clang only)    numba     clang
-    small          114         834          62               651      301       254
-    medium       3,039         826          62               649    1,615     1,579
-    large       47,196         829          60               650   22,430    22,027
+    small          112         803          62               713      313       299
+    medium       3,486         785          62               732    1,828     1,773
+    large       46,823         793          60               723   21,723    21,612
 
-  ``coords_of`` on the mapped path is flat in polygon size, as it was before the offset
-  table - it never copied. What changed is its height: ~4.9 us to ~0.83 us.
+CONCLUSIONS
 
-CONCLUSIONS, in the order #497 asks them:
+1. **A batch API would amortise real overhead, not noise, and resolution 4 made that
+   larger.** A unique-zone query is ~0.98-1.06 us of which *no stage is geometry*:
+   ~890-970 ns of four fixed-cost calls plus ~76-90 ns for the bound-method call itself.
+   The two largest, h3 cell computation (~435-449 ns) and coordinate validation
+   (298-353 ns), are exactly the two that vectorise over an array of points - over two
+   thirds of the query, addressable before any lookup logic is touched. The finer
+   resolution answers ~89% of uniformly random points from that path rather than ~75%,
+   so the prologue is now ~46-50% of a random-workload query.
 
-1. **The batch API (#499) amortises real overhead, not noise.** A unique-zone query is
-   ~1.0-1.1 us of which *no stage is geometry*: ~830-940 ns of four fixed-cost calls plus
-   ~155-175 ns for the bound-method call itself. The two largest, h3 cell computation
-   (~400 ns) and coordinate validation (305-362 ns), are exactly the two that vectorise
-   over an array of points - over half the query, addressable before any lookup logic is
-   touched. This conclusion is untouched by the offset table, which does not run here.
+2. **The shortcut lookup is a slot-addressed table read, and it is not where a query's
+   time goes.** Reading it costs 117-145 ns: 13-15% of a unique-zone query, ~1.0-1.2% of
+   an ambiguous one, and 6.9-7.7% of the workload-representative random stratum. That is
+   the *ceiling* on what any further work on this structure could return.
 
-2. **#477's flat-array layout must keep a scalar path.** ``shortcut_mapping.get`` is
-   88 ns, ~9% of a real unique-zone query - so #477's ``searchsorted`` variant (+355 ns)
-   costs ~35% of the whole query, and its direct-index variant (+57 ns) ~6%. #477's
-   verdict is unchanged and its ranking of the two variants is confirmed from the query
-   side rather than the microbenchmark side.
+   Resolution 4 made the table seven times larger without making the read dearer - it is
+   one indexed load either way, and the arithmetic that addresses it is a shift and a
+   mask at every resolution. The structure was taken for its file size, its footprint and
+   its load time; nothing here is a speed argument for it in either direction.
 
-3. **Per-polygon FFI marshalling is now comparable to the fetch it used to be dwarfed
-   by, and that is what re-opens #364.** ``ffi.from_buffer`` over both axes is ~650 ns
-   per PIP call and flat in polygon size. It used to sit next to a 4.9 us fetch, ~10x
-   its size; the fetch is now ~830 ns, so the two are the same order and together are
-   ~1.5 us of a small-polygon candidate against a 254 ns kernel. A native candidate loop
-   removes both - but see 5 for how little of a *workload* that is.
+3. **Per-polygon FFI marshalling is the same order as the fetch it used to be dwarfed
+   by.** ``ffi.from_buffer`` over both axes is 713-732 ns per PIP call and flat in polygon
+   size, against a mapped fetch of 785-803 ns. Together they are ~1.5 us of a
+   small-polygon candidate against a 299 ns kernel. A native candidate loop removes both -
+   but see 5 for how little of a *workload* that is.
 
    Also measured, and contrary to what the backend split suggests: **the two PIP kernels
-   are within 15% of each other and numba is not reliably ahead** (small 301 vs 254 ns,
-   large 22.4 vs 22.0 us - clang faster in both). numba's advantage on an ambiguous query
-   is the marshalling it does not do, not a faster kernel; and on the unique-zone path
-   numba is slower, because ``validate_coordinates`` calls two njit'd scalar functions
-   whose dispatch costs more than the pure-Python comparison it replaces (362 vs 305 ns).
+   are within 5% of each other and numba is not ahead** (small 313 vs 299 ns, medium 1,828
+   vs 1,773 ns, large 21.7 vs 21.6 us). numba's advantage on an ambiguous query is the
+   marshalling it does not do, not a faster kernel; and on the unique-zone path numba is
+   *slower*, because ``validate_coordinates`` calls two njit'd scalar functions whose
+   dispatch costs more than the pure-Python comparison it replaces (353 vs 298 ns).
 
-4. **Better shortcut ordering (#301) has a ceiling of the boundary-PIP row**: 59-63% of
-   an ambiguous query mapped, 58% in memory. With the fetch down to ~830 ns the balance
-   inside a candidate has moved: the clang kernel runs at ~0.45 ns/vertex, so fetch plus
-   marshalling stops dominating at roughly 1,400 vertices rather than around ten thousand.
-   The medium stratum is now kernel-bound. Ordering still wins by reducing *how many*
-   candidates are opened rather than by opening cheaper ones first, and #301 was rejected
-   on a count, which no timing here disturbs.
+4. **Better shortcut ordering has a ceiling of the boundary-PIP row**: 62-66% of an
+   ambiguous query mapped, 60-63% in memory - but only 29-34% of a random one, which is
+   the workload. Inside a candidate the balance sits where the clang kernel's
+   ~0.46 ns/vertex overtakes the ~1.5 us of fetch plus marshalling, at roughly 3,300
+   vertices: the medium stratum (3,486 vertices, a 1,773 ns kernel against 1,516 ns of
+   overhead) is just past that crossover and is kernel-bound. Ordering still wins by
+   reducing *how many* candidates are opened rather than by opening cheaper ones first,
+   and it was rejected on a count, which no timing here disturbs.
 
-5. **Finding 5 of the previous block is closed, and this is what it was worth.** The
-   mapped path paid **4.9 us per candidate** to hand out coordinates, against 57 ns for
-   ``in_memory=True`` - 86x for the same bytes - because the accessor was rebuilt from
-   scratch per candidate. Addressing polygons by a precomputed ``(offset, length)`` table
-   brings it to **~830 ns against ~60 ns**, and an ambiguous clang query from 14.0 us to
-   10.7 us. The mapped mode now costs ~15% more than in-memory on an ambiguous query,
-   where it cost ~46%.
+5. **The mapped path's per-candidate fetch is ~790-800 ns against ~60 ns in memory.** It
+   once paid **4.9 us** - 80x for the same bytes - because the accessor was rebuilt from
+   scratch per candidate; addressing polygons by a precomputed ``(offset, length)`` table
+   is what closed that. The mapped mode now costs 6-8% more than in-memory on an ambiguous
+   query, where it cost ~46%.
 
-6. **``zone_ids_of`` + ``get_last_change_idx`` cost 0.70-0.88 us**, ~7-8% of an ambiguous
-   query - more than validation, h3 and the shortcut lookup put together, and now a
-   larger share than before because the denominator shrank. Both are numpy calls over a
-   candidate list of a handful of elements, where the per-call overhead dominates
-   whatever they compute, and neither appears in any open issue.
+6. **``zone_ids_of`` is the largest of the bookkeeping calls on its own.** It costs
+   0.58-0.61 us, ~5.2-5.6% of an ambiguous query, against the 0.08-0.14 us of reading
+   ``last_change`` - which used to be a ``get_last_change_idx`` scan and is now a single
+   array read, precomputed at build time. ``zone_ids_of`` is a numpy fancy-index over a
+   handful of elements, where the per-call overhead dominates whatever it computes; the
+   candidate slice next to it (0.29 us) is the same shape of cost.
 
 7. **What is left of the mapped-vs-in-memory gap is one buffer acquisition per fetch.**
-   ~830 ns against ~60 ns is still 14x, and it is not I/O: ``np.frombuffer`` re-acquires
+   ~790 ns against ~60 ns is still 13x, and it is not I/O: ``np.frombuffer`` re-acquires
    the ``mmap`` object's buffer on every call. Slicing a single whole-file ``int32`` view
-   instead measures 415 ns against 788 ns per fetch in isolation - but that view is a
-   live export held for the accessor's lifetime, which is the mapping-pinning trade the
-   offset table was chosen to avoid and which ``BufferError`` on ``cleanup()`` made real
-   once already. Recorded in ``potential-improvements.md`` rather than taken here.
+   instead measures **298 ns against 630 ns** per fetch in isolation, paired and
+   order-alternated - but that view is a live export held for the accessor's lifetime,
+   which is the mapping-pinning trade the offset table was chosen to avoid and which
+   ``BufferError`` on ``cleanup()`` made real once already. Recorded in
+   ``potential-improvements.md`` rather than taken here.
 
 """
 
@@ -234,6 +241,7 @@ from tests.auxiliaries import (
 )
 from timezonefinder import TimezoneFinder, utils, utils_clang
 from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.shortcut_index import slot_of
 
 # one pass over this many points is a round; the reported value is the min over
 # ``REPEATS`` rounds, the estimator the benchmark suite tracks (see
@@ -278,10 +286,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
     validate = utils.validate_coordinates
     latlng_to_cell = h3.latlng_to_cell
     res = SHORTCUT_H3_RES
-    shortcuts = tf.shortcut_mapping
+    shortcuts = tf.shortcuts
     zone_name_from_id = tf.zone_name_from_id
     zone_ids_of = tf.zone_ids_of
-    last_change_idx = utils.get_last_change_idx
     coord2int = utils.coord2int
     outside_bbox = tf.boundaries.outside_bbox
     holes_in_any = tf.holes.in_any_polygon
@@ -314,7 +321,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
+            entry = shortcuts.entry_of(hex_id)
             n += 1
         return n
 
@@ -323,9 +330,22 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
+            n += 1
+        return n
+
+    def s4b_candidates(points: Points) -> int:
+        n = 0
+        for lng, lat in points:
+            lng, lat = validate(lng, lat)
+            hex_id = latlng_to_cell(lat, lng, res)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
+                continue
+            candidates = shortcuts.candidates_of(entry)
             n += 1
         return n
 
@@ -334,11 +354,12 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
             n += 1
         return n
 
@@ -347,12 +368,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
-            last = last_change_idx(zone_ids)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
+            last = shortcuts.stop_index_of(entry)
             n += 1
         return n
 
@@ -361,12 +383,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
-            last = last_change_idx(zone_ids)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             n += 1
@@ -377,15 +400,16 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
-            last = last_change_idx(zone_ids)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
-            for i, boundary_id in enumerate(shortcut_value):
+            for i, boundary_id in enumerate(candidates):
                 if i >= last:
                     break
                 outside_bbox(boundary_id, x, y)
@@ -398,15 +422,16 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
-            last = last_change_idx(zone_ids)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
-            for i, boundary_id in enumerate(shortcut_value):
+            for i, boundary_id in enumerate(candidates):
                 if i >= last:
                     break
                 if outside_bbox(boundary_id, x, y):
@@ -422,16 +447,17 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            shortcut_value = shortcuts.get(hex_id)
-            if isinstance(shortcut_value, int):
-                zone_name_from_id(shortcut_value)
+            entry = shortcuts.entry_of(hex_id)
+            if entry >= 0:
+                zone_name_from_id(entry)
                 continue
-            zone_ids = zone_ids_of(shortcut_value)
-            last = last_change_idx(zone_ids)
+            candidates = shortcuts.candidates_of(entry)
+            zone_ids = zone_ids_of(candidates)
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             matched = False
-            for i, boundary_id in enumerate(shortcut_value):
+            for i, boundary_id in enumerate(candidates):
                 if i >= last:
                     break
                 if outside_bbox(boundary_id, x, y):
@@ -451,10 +477,11 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         ("loop overhead", s0_loop),
         ("validate_coordinates", s1_validate),
         ("h3.latlng_to_cell", s2_h3),
-        ("shortcut_mapping.get", s3_shortcut),
+        ("shortcut table read", s3_shortcut),
         ("zone_name_from_id", s4_zone_name),
+        ("candidate list slice", s4b_candidates),
         ("zone_ids_of", s5_zone_ids),
-        ("get_last_change_idx", s6_last_change),
+        ("last_change read", s6_last_change),
         ("coord2int x2", s7_coord2int),
         ("bbox rejection", s8_bbox),
         ("hole checks", s9_holes),
@@ -626,15 +653,17 @@ OVERHEAD_REFERENCE_SECONDS = 2.0
 BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("validate_coordinates", "prologue"),
     ("latlng_to_cell", "prologue"),
-    ("shortcut_mapping.get", "prologue"),
-    ("shortcut_value is None", "prologue"),
-    ("match shortcut_value", "prologue"),
-    ("case int(zone_id)", "prologue"),
+    ("entry = int(", "prologue"),
+    ("shortcuts.entry_of", "prologue"),
+    ("SLOT_BASE_CELL_SHIFT", "prologue"),
+    ("SLOT_DIGITS_SHIFT", "prologue"),
+    ("if entry >= 0", "prologue"),
+    ("if entry == ABSENT", "prologue"),
     ("zone_name_from_id", "zone name"),
-    ("possible_boundaries = shortcut_value", "bookkeeping"),
-    ("nr_possible_polygons", "bookkeeping"),
+    ("i = -(entry + 2)", "bookkeeping"),
+    ("shortcuts.candidates_of", "bookkeeping"),
     ("zone_ids_of", "bookkeeping"),
-    ("get_last_change_idx", "bookkeeping"),
+    ("shortcuts.stop_index_of", "bookkeeping"),
     ("coord2int", "bookkeeping"),
     ("for i, boundary_id", "bookkeeping"),
     ("i >= last_zone_change_idx", "bookkeeping"),

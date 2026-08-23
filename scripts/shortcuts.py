@@ -20,9 +20,10 @@ from scripts.configs import (
 from scripts.utils import (
     time_execution,
 )
-from timezonefinder.flatbuf.io.hybrid_shortcuts import (
-    get_hybrid_shortcut_file_path,
-    write_hybrid_shortcuts_flatbuffers,
+from timezonefinder.shortcut_index import (
+    build_shortcut_index,
+    get_shortcut_file_path,
+    write_shortcuts_binary,
 )
 from timezonefinder.utils_numba import using_numba
 
@@ -261,41 +262,41 @@ def build_hybrid_index_from_separate_indices(
     return hybrid_mapping
 
 
-def compile_hybrid_shortcuts(
+def compile_shortcut_index(
     shortcuts: ShortcutMapping,
     unique_shortcuts: dict[int, int],
-    zone_id_dtype: np.dtype,
+    poly_zone_ids: np.ndarray,
     output_path: Path,
 ) -> dict[int, int | list[int]]:
-    """Compile hybrid shortcuts combining legacy shortcuts and unique_shortcuts.
+    """Compile the shortcut index combining shortcuts and unique_shortcuts, and write it.
 
     Args:
         shortcuts: Dictionary mapping hex IDs to lists of polygon IDs
         unique_shortcuts: Dictionary mapping hex IDs to single zone IDs
-        zone_id_dtype: numpy dtype for zone IDs (determines output file schema)
-        output_path: Path where to save the hybrid shortcuts binary file
+        poly_zone_ids: zone id per boundary polygon; the index precomputes from it where
+            a candidate loop may stop
+        output_path: Path where to save the shortcut index binary file
 
     Returns:
         The compiled hybrid shortcuts mapping
     """
-    print("compiling hybrid shortcuts...")
+    print("compiling the shortcut index...")
 
     # Build the hybrid index using our algorithm
     hybrid_mapping = build_hybrid_index_from_separate_indices(
         shortcuts, unique_shortcuts
     )
 
-    # Generate output file path based on zone_id_dtype
-    output_file = get_hybrid_shortcut_file_path(zone_id_dtype, output_path)
-
-    # Write to FlatBuffer binary file
-    write_hybrid_shortcuts_flatbuffers(hybrid_mapping, zone_id_dtype, output_file)
+    output_file = get_shortcut_file_path(output_path)
+    write_shortcuts_binary(
+        build_shortcut_index(hybrid_mapping, poly_zone_ids), output_file
+    )
 
     # Report statistics
     zone_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, int))
     polygon_entries = sum(1 for v in hybrid_mapping.values() if isinstance(v, list))
 
-    print(f"hybrid shortcuts compiled: {len(hybrid_mapping)} total entries")
+    print(f"shortcut index compiled: {len(hybrid_mapping)} total entries")
     print(
         f"  - zone entries: {zone_entries} ({zone_entries / len(hybrid_mapping) * 100:.1f}%)"
     )
@@ -318,10 +319,10 @@ def compile_shortcuts(
     unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
 
     # Compile and write hybrid shortcuts binary file (replaces legacy formats)
-    compile_hybrid_shortcuts(
+    compile_shortcut_index(
         shortcuts=shortcuts,
         unique_shortcuts=unique_mapping,
-        zone_id_dtype=data.poly_zone_ids.dtype,
+        poly_zone_ids=data.poly_zone_ids,
         output_path=output_path,
     )
 
@@ -330,6 +331,5 @@ def compile_shortcuts(
 
 if __name__ == "__main__":
     data: TimezoneData = TimezoneData.from_path(DEFAULT_INPUT_PATH)
-    # This will generate the hybrid shortcuts binary file:
-    # hybrid_shortcuts_uint8.bin - optimized format (hex_id -> zone_id OR [polygon_ids])
+    # This writes the shortcut index binary (hex cell -> zone id OR candidate polygons)
     compile_shortcuts(output_path=SOURCE_DATA_DIR, data=data)

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from scripts import reporting
-from scripts.configs import ZONE_ID_DTYPE, BinaryData, ShortcutIndexStats
+from scripts.configs import BinaryData, ShortcutIndexStats
 from scripts.utils import convert2ints, convert_polygon, write_json
 from tests.auxiliaries import (
     convert_inside_polygon_input,
@@ -362,25 +362,6 @@ def test_validate_coordinates_accepts_finite_values(lng, lat):
     assert result == (lng, lat)
     assert isinstance(result[0], float)
     assert isinstance(result[1], float)
-
-
-@pytest.mark.parametrize(
-    "entry_list, expected",
-    [
-        ([], 0),
-        ([1], 0),
-        ([2], 0),
-        ([1, 1], 0),
-        ([1, 2], 1),
-        ([1, 3], 1),
-        ([1, 3, 3], 1),
-        ([1, 3, 3, 0], 3),
-        ([1, 3, 3, 0, 0, 0, 0], 3),
-    ],
-)
-def test_get_last_change_idx(entry_list, expected):
-    array = np.array(entry_list, dtype=ZONE_ID_DTYPE)
-    assert utils.get_last_change_idx(array) == expected
 
 
 @pytest.mark.unit
