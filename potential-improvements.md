@@ -124,13 +124,13 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| GH-499 | Batch / array lookup API | public API | L | free — decided |
 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
 | GH-542 | Establish what coordinate precision is worth | data format | M | free for the competitor half; the deciding figure needs a regeneration |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
+| BATCH-2 | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | free — decided |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — decided |
@@ -148,6 +148,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
 | PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~2 | free — decided |
+| BATCH-1 | `timezone_at_land` has no batch form | public API | ~30 | below PERF-1 |
 | PERF-2 | `zone_ids_of` is a numpy fancy-index over a handful of candidates | performance | ~25 | free — ranked on simplicity, not on the timing |
 | PERF-6 | Scalar `njit` helpers on the query path cost more to call than to compute | performance | ~20 | free — measured |
 | DUP-1 | The coordinate bounds are declared three times | internal | ~8 | free — decided |
@@ -194,6 +195,8 @@ API-2 ─→ API-1   [same major; API-2 first, it decides how much surface API-1
 
 GH-500 ←→ GH-428: one CLI design — SETTLED (subcommands), so neither waits on the other
 
+PERF-1 (ocean check without a regex) ─→ BATCH-1 (batch `timezone_at_land`)
+
 independent: GH-362, GH-524, PERF-2, GH-543
    GH-502 is independent too, but should ride the API major so the docs are rewritten once
 ```
@@ -232,6 +235,11 @@ independent: GH-362, GH-524, PERF-2, GH-543
   and a data update alike. That
   is what settled GH-301 without waiting: reach for the count first, and only price it in time if
   the count leaves the question open.
+- **BATCH-1 waits for PERF-1 so that the batch form is not born with a regex per point.** The
+  ocean check is the last step of `timezone_at_land`, and batching a lookup that ends in a
+  `re.match` per answer reintroduces exactly the per-point work a batch exists to remove. After
+  PERF-1 the check is a property of the *zone id*, which a batch can apply as one mask over the
+  whole answer — cheaper per point than the scalar method, rather than merely equal to it.
 - **GH-505 is gated on publicly voiced user interest.** Never implement it; only report whether
   interest has appeared.
 - **Do not re-propose anything under *Recorded decisions*.**
@@ -270,6 +278,17 @@ the denominators, and how to tell whether they still describe the tree.
     four public methods and moves the internal callers onto private accessors with identical
     bodies, so the query path executes the same number of calls over the same statements. Nothing
     in the `zone name` block or the ladder above it changed.
+  - **2026-08-23, the batch lookups: not inert on the ambiguous stratum, and measured.** The
+    candidate loop moved into `_zone_id_in_ambiguous_cell`, which `timezone_at` now calls, so an
+    ambiguous query executes exactly one more Python method call. Paired and order-alternated over
+    244 rounds a side: **+0.51 % (clang), +0.79 % min / +1.03 % median (numba)**, both estimators
+    agreeing on the direction — so it is real rather than noise, at ~57 ns (clang) of an ~11.1 µs
+    query. Multiplied through the workload conversion below that is **~+0.3 %** of a mixed
+    wall clock. Kept deliberately: the alternative was a second copy of the stop-index and
+    untested-last-zone logic, which is the drift this file exists to prevent. The unique stratum,
+    which is ~89 % of a random workload, executes not one changed statement. Everything above the
+    ladder's `zone name` block stands; the ambiguous `candidate loop` block is ~0.5 % heavier than
+    the anchor says.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
@@ -307,8 +326,10 @@ the denominators, and how to tell whether they still describe the tree.
   three A/B designs that got this wrong before it was settled.
 - **Where a unique query's time actually is, and therefore where a real win has to come from:**
   `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~49 % — **83 % in two calls before any
-  lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
-  the same place from opposite directions, and neither is a shortcut-side optimisation.
+  lookup logic runs.** The batch lookups hit the same wall from the other side: they hoist
+  validation and the table read out of the loop and are left paying one scalar `latlng_to_cell` per
+  point, which is why they buy ~1.6x on the unique stratum and not more. Neither is a
+  shortcut-side optimisation.
 - **A second machine class exists for the shortcut format change, and it is CI's.** The
   benchmark workflow measured base and head in one job on an **AMD EPYC 7763** (Linux, the C
   extension, no numba - the tracked configuration), which is the cross-check this section asks
@@ -350,36 +371,6 @@ the denominators, and how to tell whether they still describe the tree.
 ---
 
 ## Lookup, geometry and data format
-
-### GH-499 — batch / array lookup API
-
-- **Tracks:** issue #499, which carries the design, the four answered questions, and the profiling
-  from both sides of the argument about how large the prize is.
-- **Why it is ranked here:** the stated primary user does high-volume lookups and the API answers
-  one point per call, so every one of them writes the loop by hand. **That ergonomic half is the
-  durable one.** The throughput half has been revised down twice on measurement — first by h3
-  turning out not to vectorise, then by the batch path being prototyped — and now stands at
-  **~1.15x on a mixed workload and ~2x on unique-zone-only**, not the "over half the query" the
-  issue was opened on. Worth doing; not the order of magnitude originally claimed.
-- **Decided, 2026-08-21:** all four design questions are answered on the issue.
-- **Sequencing:** nothing blocks it any more. Its `"skip"` sentinel is `-1`, which used to be
-  exactly the value the public id-taking methods answered with the dataset's *last* zone; they now
-  reject it, so `-1` is safe to hand back. Bound also by #504's recorded decision — keyword-only
-  `lngs`/`lats`, never an `(N, 2)` array.
-- **The shortcut structure was never a precondition for this — measured before it shipped.** A
-  batch resolver over the old decoded dict already got most of the available win, and the
-  vectorisation argument that once made the flat structure a blocker was argued from a sorted-key
-  `np.searchsorted` layout that is refused (see *Recorded decisions*). The slot-addressed table
-  that did ship vectorises into a win, so it helps this item; it never gated it.
-- **The ceiling is h3, and nothing on the shortcut side moves it.** h3-py exposes no vectorised
-  `latlng_to_cell`, so N points cost N scalar C calls, and that is nearly the whole cost of a
-  batched unique-zone lookup once the layout question is settled. Two ranking consequences: do not
-  rank a further lookup-side optimisation above this expecting the two to compound, and treat
-  vectorised H3 as a separate decision rather than part of this item — it means a new Rust-backed
-  runtime dependency and the wheel matrix that follows.
-- **Status:** open — design decided, unblocked.
-- **Last touched:** 2026-08-23 — unblocked: the negative-id guard it was waiting on shipped, so
-  this is now the highest-ranked free item on the list.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -844,6 +835,30 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-21 — decided, and bound to the batched-major decision.
 
 ---
+
+### BATCH-1 — `timezone_at_land` has no batch form
+
+- **Location:** `timezonefinder/timezonefinder.py` — `timezone_at_land`, next to the
+  `timezone_ids_at` / `timezone_names_at` pair that shipped without it.
+- **Why it was left out**, and it was a scoping decision rather than an oversight: the ocean check
+  is `utils.is_ocean_timezone`, a `re.match` per *answer*. Batching a lookup whose last step is a
+  regex per point would put the regex where a batch is supposed to have removed the per-point work,
+  and the fix for that is PERF-1 — a prefix comparison instead of a regex — which is ranked, cheap
+  and already decided.
+- **Fix:** after PERF-1, add `timezone_at_land`-shaped batch answers. The natural shape is a
+  vectorised mask over the *ids*: an ocean zone is a property of the zone id, not of the point, so
+  the whole set of ocean ids can be computed once per finder and the batch answer masked with
+  `np.isin` — no per-point string work at all. That is strictly better than what a per-point loop
+  could do, which is the second reason to wait rather than to write the loop now.
+- **Value:** low-to-medium. It closes the asymmetry a user meets immediately (`timezone_at` batches,
+  `timezone_at_land` does not), and the mask makes it cheaper per point than the scalar method is.
+  `certain_timezone_at` is deliberately **not** in scope: it is a different loop, it tests every
+  candidate, and the issue's own scoping excluded it.
+- **Size:** ~30 lines plus tests, once PERF-1 has landed.
+- **Status:** open — ranked below PERF-1, which is its precondition.
+- **Last touched:** 2026-08-23 — split out when the batch lookups shipped, with the reason they
+  stopped at `timezone_at`.
+
 
 ## Packaging, distribution and release
 
@@ -1456,6 +1471,37 @@ the denominators, and how to tell whether they still describe the tree.
 
 ---
 
+### BATCH-2 — the batch lookups are measured by nothing the CI tracks
+
+- **Location:** `benchmarks/test_timezone_finding.py`, which has a case per stratum for
+  `timezone_at` and none for `timezone_ids_at` / `timezone_names_at`.
+- **Defect:** the batch path exists to be faster, and the only figures for it are the ones taken by
+  hand for the pull request that added it — one machine, one run, recorded in `CHANGELOG.rst` and
+  nowhere a regression could be caught. A change that quietly de-vectorises the prologue (a stray
+  `float()` per point, a lost `tolist()`) would move nothing the trend chart plots.
+- **Measured 2026-08-23**, `clang` / `in_memory=False`, min ns per point over the committed
+  fixtures, N = 2,000 — the numbers a benchmark case would have to reproduce:
+
+  | stratum | N scalar calls | batch names | batch ids |
+  |---|---:|---:|---:|
+  | unique | 830 | 556 (1.49x) | 523 (**1.59x**) |
+  | random | 1,791 | 1,508 (1.19x) | 1,471 (1.22x) |
+  | ambiguous | 11,096 | 10,860 (1.02x) | 10,753 (1.03x) |
+
+- **Fix, and why it is not free.** Adding cases is three lines; what they cost is the rest of the
+  chain. `tests/test_benchmark_names.py` pins the exact node id set, the trend chart keys on those
+  ids, and `docs/benchmark_results_timezonefinding.rst` is generated — so the pull request that adds
+  them owes a `make reports` run, which re-measures **every** committed figure on all four report
+  pages on whatever machine runs it. That is the whole reason the API shipped without them rather
+  than a slice that spent half its diff on report churn.
+- **Value:** medium. Two of the three strata show a difference far above the 3–9 % noise floor, so
+  unlike most performance items here this one *can* be defended by the suite.
+- **Size:** S–M — small in code, medium in the regeneration it obliges.
+- **Status:** open.
+- **Last touched:** 2026-08-23 — recorded when the batch lookups shipped, with the hand figures they
+  were measured with.
+
+
 ## Documentation
 
 ### DOC-3 — the `zoneinfo` snippets never say that Windows needs `tzdata`
@@ -1676,7 +1722,7 @@ premise moves; do not reverse a decision silently.
   further removal found before that release. Consequences worth stating, because they are what the
   rule costs: an entry can be *decided* and still not eligible for a pass, so decided-and-held is a
   real state the ranking has to show; API-2 goes first within the major, since it decides how much
-  surface API-1 touches; and additive work that does not need a major (GH-502, GH-499) should still
+  surface API-1 touches; and additive work that does not need a major (GH-502) should still
   ride the same release, so the API documentation is rewritten once rather than three times. The
   public API must not break between minors — that constraint is unchanged; this is about not
   spending majors one removal at a time.
@@ -1747,16 +1793,18 @@ premise moves; do not reverse a decision silently.
   id), and documenting the behaviour instead (leaves a public method answering a bad question with a
   real timezone name). The generalisable half is the placement rule, and it is the same shape as the
   validation decision above: a check belongs where the untrusted value enters, not where the
-  settled one is used. It binds any future id-taking or sentinel-returning API — GH-499's
-  `on_invalid` policy first, since `-1` is its natural sentinel.
+  settled one is used. It binds any future id-taking or sentinel-returning API, and the batch
+  lookups are the case that exercised it: `NO_ZONE_ID` is `-1`, which is safe to hand out only
+  because the public id-taking methods now refuse it.
 - **A coordinate-reading interface never infers which column is which.** Settled in #504. Its first
   cut read bare `lng,lat` pairs positionally; for any longitude between -90 and 90 — most of the
   populated world — the swapped pair is still a valid coordinate, so a wrong order returns a real
   but wrong zone rather than raising. 13 of 15 major cities tested have a silently valid swap, and
   the wrong answers look plausible (Moscow's pair swapped gives `Asia/Tehran`). What shipped
   resolves columns by header name or by an explicit flag, and rejects input it cannot resolve
-  instead of guessing. The same reasoning binds any future interface that takes coordinates in bulk
-  — a batch API signature under GH-499, a file format, an `update_data`-style subcommand.
+  instead of guessing. The same reasoning binds any interface that takes coordinates in bulk, and
+  the batch lookups are built on it: one keyword array per axis, an `(N, 2)` array rejected rather
+  than read by column position. It still binds a file format or an `update_data`-style subcommand.
 - **Has a timezone-boundary-builder release ever been bad? No.** So GH-501's guardrails are
   preventive, not corrective. That lowers their urgency but not their value: the argument never
   rested on a past incident, it rests on the pipeline auto-merging and auto-tagging with no human
@@ -1933,8 +1981,9 @@ premise moves; do not reverse a decision silently.
   to be a real problem.
 - **Dropping `flatbuffers` for the custom binary format it replaced in 6.6.0 — measured 2026-08-22
   and refused.** The dependency is not what anything costs. It adds **0.033 %** to the 63 MB
-  coordinate file, **1.1 ms** of import once numpy is loaded, and — since the offset table of
-  GH-536 — **nothing per query**, the lookup path reading coordinates with a bare `np.frombuffer`.
+  coordinate file, **1.1 ms** of import once numpy is loaded, and — since the coordinate accessors
+  started resolving every polygon's offset and length once at construction — **nothing per query**,
+  the lookup path reading coordinates with a bare `np.frombuffer`.
   Writing the same shortcut payload as flat vectors *inside* a FlatBuffers buffer reads in
   **0.050 ms against 0.039 ms** for a hand-rolled raw blob of the same bytes, so the container is
   worth ~11 µs and 58 bytes. What was expensive was the **shape of the old shortcut schema** — a
@@ -1986,6 +2035,7 @@ be resolved by the pass that reads it, so it stays open for ever.
 | 10 (the data-package split, and `tests/` typing) | 2026-08-19 | The six modules the distribution split added or rewrote, none of which any pass had read: `packages/timezonefinder-data/timezonefinder_data/__init__.py`, `scripts/data_integrity.py`, `scripts/check_data_dependency.py`, `scripts/data_releases.py`, `timezonefinder/flatbuf/schemas/__init__.py` and `timezonefinder/zone_names.py` — plus `tests/test_integration.py` and `tests/test_script_invocations.py`. Every open entry re-verified against the current code; `uv run mypy` re-run over `tests/` (19 errors, the 8 real ones cleared and the directory now in the hook) | `docs/` prose; the larger new test modules read only at their headers; no repeat of the repo-wide `--select ALL` triage |
 | 11 (register unification) | 2026-08-20 | No source sweep: the roadmap issue's ranking, sequencing and recorded decisions were migrated into this file and the two pass skills merged into one. Every entry's anchor re-verified against the working tree, and every issue the file names checked for state - which found #498 (runtime dataset provenance) shipped in #523 and deleted it | everything else — this pass read the register and the skills, not the code |
 | 12 (public id validation) | 2026-08-23 | `timezonefinder/timezonefinder.py`'s id-taking methods and their internal callers; the three data workflows (`check_data_updates.yml`, `release_data_update.yml`, `publish_data.yml`) read end to end while checking DATA-BINARIES' eligibility, which is what found the unanswered release half; the top of the ranking re-verified against the current code, and the baseline anchor reconciled with `prototypes/query_stage_profile.py`'s `FINDINGS`, which had been re-taken without it | `docs/` prose; `scripts/`; no fresh repo-wide triage |
+| 13 (batch lookup API) | 2026-08-23 | `timezonefinder/timezonefinder.py` read in full while implementing the batch path, plus `shortcut_index.py`'s query contract, `global_functions.py`, `configs.py` and `utils.py`; issue #499's four answered design questions and its prototype comment re-read against the shipped shortcut layout; every `GH-<n>` in this file checked for state, which found nothing newly closed | `docs/` prose beyond `1_usage.rst`/`4_api.rst`; `scripts/`; `benchmarks/` beyond reading the case list; no fresh repo-wide triage |
 
 Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8
 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with
