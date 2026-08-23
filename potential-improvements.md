@@ -116,11 +116,10 @@ the entry sections below are grouped by the area they touch rather than sorted.
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| GH-499 | Batch / array lookup API | public API | L | decided — blocked by BUG-1 |
-| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
-| GH-542 | Establish what coordinate precision is worth | data format | M | free |
+| GH-499 | Batch / array lookup API | public API | L | free — decided |
+| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | needs a decision — where a data release gets its binaries |
+| GH-542 | Establish what coordinate precision is worth | data format | M | free for the competitor half; the deciding figure needs a regeneration |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
-| BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
@@ -169,9 +168,6 @@ Check these explicitly before taking an item, and name the blocking one when you
 DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision is worth)
   (stop committing └─→ GH-522 (reclaim existing history)   [strictly after]
    the binaries)
-
-BUG-1 (negative ids) ──→ GH-499 (batch API)   [BUG-1 makes -1 safe as the "skip" sentinel]
-
 
 GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
 
@@ -231,24 +227,32 @@ Every timing quoted in this file comes from one run of `prototypes/query_stage_p
 `FINDINGS` block holds the full per-stage breakdown. Repeated here is only what the ranking needs:
 the denominators, and how to tell whether they still describe the tree.
 
-- **Taken at** `b331eee`, 2026-08-21 — Apple arm64, Python 3.14, data 2026c, fixture set v2, both
-  acceleration backends, both coordinate-access modes. Re-measured wholesale when the offset table
-  landed; the previous anchor was `b0642ad`, and figures from the two runs are not comparable
-  stage by stage.
+- **Taken at** `590e21b`, 2026-08-23 — Apple arm64, Python 3.14.2, data 2026c, fixture set v3, both
+  acceleration backends, both coordinate-access modes. Re-measured wholesale when the H3 shortcut
+  index moved from resolution 3 to 4, which re-labels the strata as well as re-weighting them; the
+  previous anchor was `b331eee`, and figures from the two runs are not comparable stage by stage.
 - **The denominators.** A unique-shortcut query is ~1.0 µs and contains no geometry at all; an
-  ambiguous one is ~10.6 µs on the default mapped mode and ~9.9 µs with `in_memory=True`. The two
-  backends differ by under 9 % on both. Every share below is a share of one of these, and the entry
-  says which — a share of an ambiguous query is not a share of a workload.
+  ambiguous one is ~11.2-11.7 µs on the default mapped mode and ~10.4-11.0 µs with
+  `in_memory=True`. The two backends differ by under 9 % on both. Every share below is a share of
+  one of these, and the entry says which — a share of an ambiguous query is not a share of a
+  workload.
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat 24c8d28..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat 590e21b..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
   ```
 
   Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an
   `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
   shortcut reader or the packaged data does not.
+
+  Classified since the anchor, so the next pass does not re-derive them:
+
+  - **2026-08-23, the negative-id guard on the public id-taking methods: inert.** It adds a check to
+    four public methods and moves the internal callers onto private accessors with identical
+    bodies, so the query path executes the same number of calls over the same statements. Nothing
+    in the `zone name` block or the ladder above it changed.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
@@ -341,9 +345,10 @@ the denominators, and how to tell whether they still describe the tree.
   **~1.15x on a mixed workload and ~2x on unique-zone-only**, not the "over half the query" the
   issue was opened on. Worth doing; not the order of magnitude originally claimed.
 - **Decided, 2026-08-21:** all four design questions are answered on the issue.
-- **Sequencing:** **BUG-1 lands first**, and it is the only hard blocker — the `"skip"` sentinel is
-  `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
-  decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
+- **Sequencing:** nothing blocks it any more. Its `"skip"` sentinel is `-1`, which used to be
+  exactly the value the public id-taking methods answered with the dataset's *last* zone; they now
+  reject it, so `-1` is safe to hand back. Bound also by #504's recorded decision — keyword-only
+  `lngs`/`lats`, never an `(N, 2)` array.
 - **The shortcut structure was never a precondition for this — measured before it shipped.** A
   batch resolver over the old decoded dict already got most of the available win, and the
   vectorisation argument that once made the flat structure a blocker was argued from a sorted-key
@@ -355,10 +360,9 @@ the denominators, and how to tell whether they still describe the tree.
   rank a further lookup-side optimisation above this expecting the two to compound, and treat
   vectorised H3 as a separate decision rather than part of this item — it means a new Rust-backed
   runtime dependency and the wheel matrix that follows.
-- **Status:** open — design decided, blocked by BUG-1 only.
-- **Last touched:** 2026-08-22 — detail cut to the issue; the throughput rationale corrected to
-  what the two measurements found, and the h3 ceiling restated as a ranking rule rather than a
-  finding of this entry.
+- **Status:** open — design decided, unblocked.
+- **Last touched:** 2026-08-23 — unblocked: the negative-id guard it was waiting on shipped, so
+  this is now the highest-ranked free item on the list.
 
 ### GH-449 — polygon encoding: delta + varint
 
@@ -390,8 +394,18 @@ the denominators, and how to tell whether they still describe the tree.
   be made — this produces the evidence, not a format change.
 - **Value:** high as a decision unblocker, low as code. It decides an L-sized item that is otherwise
   stalled.
+- **An unattended pass can produce half of it, and the half it cannot produce is the deciding one.**
+  The competitor half is now cheap and has a home: `benchmarks/test_comparison.py` already runs this
+  package and `tzfpy` over the same committed fixtures in one process, so the disagreement rate —
+  uniform and, separately, near borders — is an addition to an existing harness rather than the
+  prototype the issue proposed. The user half is not: the "0 of 200,000 changed at 1e-6" figure has
+  to be re-taken **with the shortcut index rebuilt from the quantized geometry**, and regenerating
+  packaged data is out of bounds for a pass. So a pass can establish where `tzfpy` sits on the
+  size/accuracy axis, and cannot produce the recommendation the entry exists for.
 - **Status:** open. Blocks GH-449.
-- **Last touched:** 2026-08-21 — created.
+- **Last touched:** 2026-08-23 — re-verified. The tzfpy comparison harness landed meanwhile, which
+  moves the competitor half out of `prototypes/` and into `benchmarks/`; recorded that the deciding
+  measurement needs a regeneration, so a pass cannot close this item.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
@@ -738,46 +752,6 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-23 — narrowed to the special cells once the general edge-crossing
   test shipped and removed the rest.
 
-### BUG-1 — a negative zone or boundary id silently returns the wrong zone
-
-- **Location:** `timezonefinder/timezonefinder.py`, `AbstractTimezoneFinder.zone_id_of`,
-  `zone_ids_of`, `zone_name_from_id` and `zone_name_from_boundary_id`.
-- **Defect:** all four index a Python list / numpy array directly, so a negative id is a valid index
-  counting from the end rather than an error. **Four public methods, not the two this entry was
-  written about** — re-verified against the packaged data (`nr_of_zones == 444`):
-
-  | call | returns today | should |
-  |---|---|---|
-  | `zone_name_from_id(-1)` | `'Etc/GMT+12'` | raise |
-  | `zone_id_of(-1)` | `443` | raise |
-  | `zone_name_from_boundary_id(-1)` | `'Etc/GMT+12'` | raise |
-  | `zone_ids_of(np.array([-1]))` | `array([443])` | raise |
-  | `get_geometry(tz_id=-1)` | `ValueError` | already correct |
-
-  `zone_name_from_id` explicitly range-checks in its `except IndexError` handler, which a negative
-  id never reaches, so the guard reads as complete and is not.
-- **Value:** a caller propagating a `-1` sentinel — the conventional "not found" from an index
-  lookup — gets a plausible timezone name back instead of an exception. All four are public API.
-- **Fix:** reject `< 0` explicitly, alongside the existing upper-bound check. Size: ~15 lines across
-  the four. **This is a behaviour change** (a call that returns today would raise), so it wants a
-  maintainer decision and a changelog bullet in the main list.
-- **Decided, 2026-08-20 — validate at the public edge, not on the internal path.** The three
-  options put were: guard in place everywhere; guard the four public methods and route the internal
-  callers through an unchecked private accessor; or document the behaviour and leave it. The second
-  was chosen. `zone_name_from_id` is on the query path — seven internal call sites, one per
-  successful `timezone_at` — and a bare `if zone_id < 0` measures ~10 ns, order 1 % of a
-  unique-shortcut query; about nine extra lines removes that cost entirely, and the internal callers
-  cannot produce a negative id in the first place. Recorded under *Recorded decisions* as well,
-  because it binds every future id-taking interface.
-- **What implementing it means:** reject `< 0` in `zone_id_of`, `zone_ids_of`, `zone_name_from_id`
-  and `zone_name_from_boundary_id`; add the unchecked private accessor the seven internal sites
-  call; a changelog bullet in the **main** list, since a call that returns today will raise.
-- **Still ahead of GH-499**, whose `on_invalid` policy wants `-1` as its sentinel — which is exactly
-  the value that round-trips to `Etc/GMT+12` until this lands.
-- **Status:** open — decision taken, implementation not started.
-- **Last touched:** 2026-08-20 — re-verified (two more public methods affected than recorded, guard
-  cost measured), then decided.
-
 ### GH-502 — first-class `zoneinfo` / UTC-offset helpers
 
 - **Tracks:** issue #502, which carries the API sketch and the sign-convention trap.
@@ -900,10 +874,41 @@ the denominators, and how to tell whether they still describe the tree.
   stops working from a bare checkout unless the matching data version resolves per commit; and this
   does **not** shrink the existing 357 MiB pack — only GH-522 does, and strictly after this is in
   force, or the next data update re-adds ~62 MB and the rewrite has to be repeated.
-- **Status:** open — decision taken, implementation not started. Unblocks GH-449 and GH-522.
-- **Last touched:** 2026-08-21 — decided. Migrated from the roadmap issue, where it was ranked 3 as "#446
-  decision 2". Ranked above GH-449 here because the list is walked top-down and GH-449 is
-  blocked by it.
+- **The decision left one half unanswered, found 2026-08-23 while checking eligibility, and it is
+  a blocker rather than a detail.** The bootstrap half works: a dev checkout fetches the published
+  `timezonefinder-data` wheel for the version it pins. The *release* half has no answer, because
+  the pipeline that produces that wheel is built on the binaries being committed.
+  `.github/workflows/check_data_updates.yml` runs `update_data.sh` and then `git add -A` /
+  `git commit`, so the regenerated binaries reach master as a reviewed, CI-tested pull request;
+  `release_data_update.yml` merges it and tags `data-v*`; `publish_data.yml` builds the wheel with
+  `uv build --package timezonefinder-data --wheel` **from the tagged tree**. Git-ignore `data/` and
+  that tree contains no binaries, so the tag would publish an empty wheel — and "bootstrap from the
+  published wheel" becomes circular, since the published wheel is exactly what the pipeline would
+  no longer know how to build. Nothing in the repository currently says where a data release's
+  bytes come from once they are not in git, and that is not a choice a pass can make: it decides
+  whether the published artifact is ever reviewed or CI-tested before it is published.
+- **Decision needed:** where does a data release get its binaries once `data/` is git-ignored?
+  **(a) The publish job regenerates them** — `publish_data.yml` runs `update_data.sh` for the
+  version its tag names and builds the wheel from the result. Smallest change to the update PR
+  (which becomes a version bump plus the report), but the release job becomes a long download-and-
+  convert run that depends on the upstream release still being fetchable, and the bytes that get
+  published are ones no CI run ever tested — today the update PR's matrix validates the exact
+  binaries that will ship. **(b) The update job builds and carries the wheel** —
+  `check_data_updates.yml` builds `timezonefinder-data` from its untracked converter output and
+  attaches it to the pull request (or a draft release keyed by the version); the tag then publishes
+  that artifact rather than rebuilding it. Needs an artifact to survive from the pull request to
+  the tag, which is the whole of the new machinery. **(c) Move the binaries to a second
+  repository** — keeps them committed and reviewable, at the cost of a repository split that
+  re-poses this same question one level up. **Recommendation: (b).** It is the only option that
+  preserves the property everything downstream leans on and that (a) explicitly gives up — the
+  bytes CI validated are the bytes published — and it keeps the bootstrap non-circular, since the
+  wheel is built by the job that generated the data rather than by a job that must regenerate it.
+- **Status:** needs a decision — the bootstrap half is decided, the release half is not. Unblocks
+  GH-449 and GH-522.
+- **Last touched:** 2026-08-23 — re-verified against the three data workflows, which showed the
+  2026-08-21 decision covers only the consuming side. Migrated originally from the roadmap issue,
+  where it was ranked 3 as "#446 decision 2". Ranked above GH-449 here because the list is walked
+  top-down and GH-449 is blocked by it.
 
 ### BENCH-1 — the pull request benchmark comparison cannot resolve the changes worth reviewing
 
@@ -1694,12 +1699,13 @@ premise moves; do not reverse a decision silently.
   the object can be cached before paying for a cache policy at all — caching integers rather than
   views is what removed its pinning half.
 - **An id-taking interface validates at the public edge, never on the internal path.** Settled
-  2026-08-20 for BUG-1, where four public methods index a list or array directly and so read a
-  negative id as a valid index from the end — `zone_name_from_id(-1)` answers `Etc/GMT+12` rather
-  than raising. Guarding in place was measured at ~10 ns, order 1 % of a unique-shortcut query, on a
-  method called once per successful `timezone_at`; guarding the public methods and routing the seven
-  internal callers through an unchecked private accessor costs about nine more lines and nothing per
-  query. Rejected: guarding in place everywhere (pays the check on a path that cannot produce a bad
+  2026-08-20 for the four public methods that take an id — `zone_id_of`, `zone_ids_of`,
+  `zone_name_from_id` and `zone_name_from_boundary_id` — which indexed a list or array directly and
+  so read a negative id as a valid index from the end: `zone_name_from_id(-1)` answered
+  `Etc/GMT+12` rather than raising. Guarding in place was measured at ~10 ns, order 1 % of a
+  unique-shortcut query, on a method called once per successful `timezone_at`; guarding the public
+  methods and routing the internal callers through unchecked private accessors costs about nine more
+  lines and nothing per query. **Implemented as decided**, 2026-08-23. Rejected: guarding in place everywhere (pays the check on a path that cannot produce a bad
   id), and documenting the behaviour instead (leaves a public method answering a bad question with a
   real timezone name). The generalisable half is the placement rule, and it is the same shape as the
   validation decision above: a check belongs where the untrusted value enters, not where the
@@ -1902,6 +1908,7 @@ be resolved by the pass that reads it, so it stays open for ever.
 | 9 (scripts/ entry point and typing) | 2026-08-14 | The five `scripts/` modules pass 8 named as unreached, read at their mypy error sites and around them; `Makefile`, `update_data.sh` and `docs/2_use_cases.rst` compared for how the converter is invoked; `tests/main_test.py`'s cleanup class and `tests/auxiliaries.py` re-read. `uv run mypy` over `scripts/` (15 errors, all cleared, directory now in the hook) and over `tests/` (14 errors) | `docs/` prose; `scripts/data_integrity.py`; `scripts/reporting.py` internals |
 | 10 (the data-package split, and `tests/` typing) | 2026-08-19 | The six modules the distribution split added or rewrote, none of which any pass had read: `packages/timezonefinder-data/timezonefinder_data/__init__.py`, `scripts/data_integrity.py`, `scripts/check_data_dependency.py`, `scripts/data_releases.py`, `timezonefinder/flatbuf/schemas/__init__.py` and `timezonefinder/zone_names.py` — plus `tests/test_integration.py` and `tests/test_script_invocations.py`. Every open entry re-verified against the current code; `uv run mypy` re-run over `tests/` (19 errors, the 8 real ones cleared and the directory now in the hook) | `docs/` prose; the larger new test modules read only at their headers; no repeat of the repo-wide `--select ALL` triage |
 | 11 (register unification) | 2026-08-20 | No source sweep: the roadmap issue's ranking, sequencing and recorded decisions were migrated into this file and the two pass skills merged into one. Every entry's anchor re-verified against the working tree, and every issue the file names checked for state - which found #498 (runtime dataset provenance) shipped in #523 and deleted it | everything else — this pass read the register and the skills, not the code |
+| 12 (public id validation) | 2026-08-23 | `timezonefinder/timezonefinder.py`'s id-taking methods and their internal callers; the three data workflows (`check_data_updates.yml`, `release_data_update.yml`, `publish_data.yml`) read end to end while checking DATA-BINARIES' eligibility, which is what found the unanswered release half; the top of the ranking re-verified against the current code, and the baseline anchor reconciled with `prototypes/query_stage_profile.py`'s `FINDINGS`, which had been re-taken without it | `docs/` prose; `scripts/`; no fresh repo-wide triage |
 
 Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8
 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with
