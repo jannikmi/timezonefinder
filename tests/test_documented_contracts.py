@@ -15,6 +15,7 @@ pins which exception type comes out at all.
 import importlib
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import timezonefinder
@@ -68,6 +69,43 @@ def test_zone_name_from_id_lets_a_non_integer_raise_type_error(tf: TimezoneFinde
     """Only IndexError is converted; a non-integer id still surfaces as TypeError."""
     with pytest.raises(TypeError):
         tf.zone_name_from_id("Europe/Berlin")  # type: ignore[arg-type]
+
+
+# Every public method that takes an id. A negative index is valid Python and counts from
+# the end, so each of these used to answer ``-1`` - the conventional "not found" sentinel
+# of an index lookup - with the last entry of the dataset instead of raising.
+NEGATIVE_ID_CALLS = {
+    "zone_id_of": lambda tf: tf.zone_id_of(-1),
+    "zone_ids_of": lambda tf: tf.zone_ids_of(np.array([-1])),
+    "zone_name_from_id": lambda tf: tf.zone_name_from_id(-1),
+    "zone_name_from_boundary_id": lambda tf: tf.zone_name_from_boundary_id(-1),
+}
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("method", sorted(NEGATIVE_ID_CALLS))
+def test_a_negative_id_is_rejected_rather_than_counted_from_the_end(
+    tf: TimezoneFinder, method: str
+):
+    """``:raises ValueError:`` covers a negative id, not only an out-of-range one."""
+    with pytest.raises(ValueError, match="non-negative"):
+        NEGATIVE_ID_CALLS[method](tf)
+
+
+@pytest.mark.unit
+def test_zone_ids_of_rejects_an_array_that_is_only_partly_negative(tf: TimezoneFinder):
+    """One bad id poisons the answer for the whole array, so one is enough to reject."""
+    with pytest.raises(ValueError, match="non-negative"):
+        tf.zone_ids_of(np.array([0, -1]))
+
+
+@pytest.mark.unit
+def test_the_guards_leave_valid_ids_answering(tf: TimezoneFinder):
+    """The rejected range stops at zero: the first id of each kind still resolves."""
+    assert tf.zone_name_from_id(0) == tf.timezone_names[0]
+    assert tf.zone_id_of(0) == int(tf.zone_ids[0])
+    assert tf.zone_ids_of(np.array([0]))[0] == tf.zone_ids[0]
+    assert tf.zone_name_from_boundary_id(0) == tf.timezone_names[tf.zone_id_of(0)]
 
 
 @pytest.mark.unit

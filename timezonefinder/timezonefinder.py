@@ -46,6 +46,19 @@ from timezonefinder.shortcut_index import (
 from timezonefinder.zone_names import read_zone_names
 
 
+def _negative_id_error(kind: str, value: object) -> ValueError:
+    """Build the error a negative id gets, for any of the public id-taking methods.
+
+    A negative index is valid Python and counts from the end, so an unguarded lookup
+    answers ``-1`` - the conventional "not found" sentinel of an index lookup - with the
+    last entry of the dataset rather than an error.
+    """
+    return ValueError(
+        f"{value} is not a valid {kind} id: ids are non-negative. "
+        "A negative index would silently select an entry counting from the end."
+    )
+
+
 class AbstractTimezoneFinder(ABC):
     """
     Abstract base class for TimezoneFinder instances.
@@ -197,19 +210,51 @@ class AbstractTimezoneFinder(ABC):
         """
         return utils.inside_polygon == utils_clang.pt_in_poly_clang
 
+    # Validation happens at the public edge only. Every internal caller below obtains its
+    # id from the shortcut index or from ``zone_ids``, neither of which can hold a negative
+    # value, and the unchecked accessors run once per successful query - so the guard the
+    # public methods need is not paid on the lookup path.
+
+    def _zone_id_of(self, boundary_id: IntegerLike) -> int:
+        """Look up a boundary polygon's zone id without checking its sign."""
+        try:
+            return int(self.zone_ids[boundary_id])
+        except (TypeError, IndexError) as e:
+            raise ValueError(
+                f"Cannot get zone ID for boundary {boundary_id}: "
+                f"ensure timezone data is properly loaded from {self.data_location}"
+            ) from e
+
+    def _zone_ids_of(self, boundary_ids: np.ndarray) -> np.ndarray:
+        """Look up several boundary polygons' zone ids without checking their signs."""
+        return self.zone_ids[boundary_ids]
+
+    def _zone_name_of(self, zone_id: int) -> str:
+        """Look up a zone name without checking the id's sign."""
+        try:
+            return self.timezone_names[zone_id]
+        except IndexError as e:
+            raise ValueError(
+                f"Zone ID {zone_id} is out of range. "
+                f"Valid range: 0-{len(self.timezone_names) - 1}. "
+                f"Loaded dataset has {self.nr_of_zones} timezones."
+            ) from e
+
     def zone_id_of(self, boundary_id: IntegerLike) -> int:
         """
         Get the timezone ID for a specific boundary polygon.
 
         :param boundary_id: The numeric identifier of the boundary polygon
         :return: The timezone ID (index into timezone_names)
-        :raises ValueError: If ``boundary_id`` does not select exactly one zone id - out of
-            range, not usable as an index, or selecting several. The underlying ``IndexError``
-            and ``TypeError`` are both re-raised as ``ValueError``, so that is the only type
-            callers have to handle.
+        :raises ValueError: If ``boundary_id`` does not select exactly one zone id - negative,
+            out of range, not usable as an index, or selecting several. The underlying
+            ``IndexError`` and ``TypeError`` are both re-raised as ``ValueError``, so that is
+            the only type callers have to handle.
         """
         try:
-            return int(self.zone_ids[boundary_id])
+            if boundary_id < 0:
+                raise _negative_id_error("boundary polygon", boundary_id)
+            return self._zone_id_of(boundary_id)
         except (TypeError, IndexError) as e:
             raise ValueError(
                 f"Cannot get zone ID for boundary {boundary_id}: "
@@ -222,8 +267,15 @@ class AbstractTimezoneFinder(ABC):
 
         :param boundary_ids: An array of boundary polygon IDs.
         :return: array of corresponding timezone IDs.
+        :raises ValueError: If any id is negative. Out-of-range ids raise ``IndexError``
+            from NumPy, as they do for any array indexing.
         """
-        return self.zone_ids[boundary_ids]
+        negative = np.asarray(boundary_ids) < 0
+        if negative.any():
+            raise _negative_id_error(
+                "boundary polygon", np.asarray(boundary_ids)[negative][0]
+            )
+        return self._zone_ids_of(boundary_ids)
 
     def zone_name_from_id(self, zone_id: int) -> str:
         """
@@ -231,8 +283,8 @@ class AbstractTimezoneFinder(ABC):
 
         :param zone_id: The numeric ID of the timezone (0-based index)
         :return: The IANA timezone name (e.g., 'Europe/Berlin')
-        :raises ValueError: If ``zone_id`` is out of range for the loaded dataset. The
-            underlying ``IndexError`` is re-raised as ``ValueError``.
+        :raises ValueError: If ``zone_id`` is negative or out of range for the loaded
+            dataset. The underlying ``IndexError`` is re-raised as ``ValueError``.
         :raises TypeError: If ``zone_id`` is not an integer.
 
         Example:
@@ -240,14 +292,9 @@ class AbstractTimezoneFinder(ABC):
             >>> tf.zone_name_from_id(0)
             'Africa/Abidjan'
         """
-        try:
-            return self.timezone_names[zone_id]
-        except IndexError as e:
-            raise ValueError(
-                f"Zone ID {zone_id} is out of range. "
-                f"Valid range: 0-{len(self.timezone_names) - 1}. "
-                f"Loaded dataset has {self.nr_of_zones} timezones."
-            ) from e
+        if zone_id < 0:
+            raise _negative_id_error("zone", zone_id)
+        return self._zone_name_of(zone_id)
 
     def zone_name_from_boundary_id(self, boundary_id: IntegerLike) -> str:
         """
@@ -255,9 +302,13 @@ class AbstractTimezoneFinder(ABC):
 
         :param boundary_id: The ID of the boundary polygon.
         :return: The name of the zone.
+        :raises ValueError: If ``boundary_id`` is negative or does not select exactly one
+            zone id, as for :meth:`zone_id_of`.
         """
+        # the id is validated by ``zone_id_of``; what it returns comes from ``zone_ids``
+        # and is never negative, so the second lookup needs no second guard
         zone_id = self.zone_id_of(boundary_id)
-        return self.zone_name_from_id(zone_id)
+        return self._zone_name_of(zone_id)
 
     def _iter_boundaries_in_shortcut(self, *, lng: float, lat: float) -> Iterable[int]:
         """
@@ -321,7 +372,7 @@ class AbstractTimezoneFinder(ABC):
         zone_id = self.shortcuts.entry_of(hex_id)
         if zone_id < 0:
             return None
-        return self.zone_name_from_id(zone_id)
+        return self._zone_name_of(zone_id)
 
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
@@ -383,15 +434,15 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
             # unique zone case: the index holds the answer
-            return self.zone_name_from_id(entry)
+            return self._zone_name_of(entry)
         if entry == ABSENT:
             return None
         # several zones - the last candidate belongs to the most common one
         poly_of_biggest_zone = self.shortcuts.candidates_of(entry)[-1]
         # a numpy integer scalar from array indexing, which mypy reads as ndarray. Safe:
         # element access yields a scalar compatible with IntegerLike
-        most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
-        return self.zone_name_from_id(most_common_id)
+        most_common_id = self._zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
+        return self._zone_name_of(most_common_id)
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -635,7 +686,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # one lookup answers most queries: a zone id is the answer itself
         entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
-            return self.zone_name_from_id(entry)
+            return self._zone_name_of(entry)
         if entry == ABSENT:
             # NOTE: hypothetical case, with ocean data every cell holds at least one boundary polygon
             return None
@@ -646,7 +697,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         possible_boundaries = self.shortcuts.candidates_of(entry)
 
         # create a list of all the timezone ids of all possible boundary polygons
-        zone_ids = self.zone_ids_of(possible_boundaries)
+        zone_ids = self._zone_ids_of(possible_boundaries)
 
         # where the loop may stop, precomputed at build time - a property of the candidate
         # list, so it is stored once per distinct list rather than recomputed per query.
@@ -667,13 +718,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = zone_ids[i]
-                return self.zone_name_from_id(int(zone_id))
+                return self._zone_name_of(int(zone_id))
 
         # since it is the last possible option,
         # the polygons of the last possible zone don't actually have to be checked
         # -> instantly return the last zone
         zone_id = zone_ids[-1]
-        return self.zone_name_from_id(int(zone_id))
+        return self._zone_name_of(int(zone_id))
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts
@@ -713,8 +764,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):
-                zone_id = self.zone_id_of(boundary_id)
-                return self.zone_name_from_id(zone_id)
+                zone_id = self._zone_id_of(boundary_id)
+                return self._zone_name_of(zone_id)
 
         # none of the boundary polygon candidates truly matched
         return None
