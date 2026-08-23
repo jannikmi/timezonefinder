@@ -121,7 +121,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-542 | Establish what coordinate precision is worth | data format | M | free |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
-| BUG-2 | The shortcut compiler never tests polygon edge crossings | correctness | M | free — measured |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
@@ -286,6 +285,28 @@ the denominators, and how to tell whether they still describe the tree.
   `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~43 % — **77 % in two calls before any
   lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
   the same place from opposite directions, and neither is a shortcut-side optimisation.
+- **A second machine class exists for the shortcut format change, and it is CI's.** The
+  benchmark workflow measured base and head in one job on an **AMD EPYC 7763** (Linux, the C
+  extension, no numba - the tracked configuration), which is the cross-check this section asks
+  for and the only figures here not taken on one laptop. Head `524ebbe` against the merge base:
+
+  | | base | head | |
+  |---|---:|---:|---|
+  | `timezone_at[unique_shortcut-in_memory]` | 4.305 ms | 3.832 ms | **-11.0 %** |
+  | `timezone_at[random-in_memory]` | 13.500 ms | 12.943 ms | -4.1 % |
+  | `timezone_at[ambiguous_shortcut-in_memory]` | 40.086 ms | 39.258 ms | -2.1 % |
+  | `TimezoneFinderL::init_heap` | 4.47 MiB | 175 KiB | **-96.2 %** |
+  | `TimezoneFinderL::init_rss` | 13.3 MiB | 244 KiB | **-98.2 %** |
+  | `TimezoneFinder[file_based]::init_heap` | 4.53 MiB | 246 KiB | **-94.7 %** |
+  | `TimezoneFinder[file_based]::init_rss` | 13.8 MiB | 860 KiB | **-93.9 %** |
+  | `TimezoneFinder[in_memory]::init_rss` | 74.9 MiB | 62.0 MiB | -17.3 % |
+
+  Two things to read from it. The **memory figures are `tracemalloc` heap and near-deterministic**,
+  so `-96 %` is signal and not jitter, unlike the query rows where a few percent is the runner's
+  own noise. And the `-11 %` on the unique stratum is the branch *whole*, not the format change:
+  that was measured neutral on its own, and the slot-arithmetic reduction accounts for ~5 % of it.
+  **Attribute a combined number to its parts before quoting it**, which is why the changelog says
+  the format change buys memory and load rather than speed.
 - **The 2x rule, for what none of the above fixes.** Act on a difference only if it survives any
   single stage turning out 2x cheaper or 2x more expensive elsewhere. It keeps the large calls
   (a 37 % workload share stays large at half the size) and refuses the ones that only exist on this
@@ -683,47 +704,6 @@ the denominators, and how to tell whether they still describe the tree.
 
 ## Public API and behaviour
 
-### BUG-2 — the shortcut compiler tests vertex inclusion, never edge crossings
-
-- **Location:** `scripts/hex_utils.py`, `Hex.lies_in_cell`.
-- **What it is.** A polygon counts as overlapping a cell if some hexagon vertex is inside
-  the polygon or some polygon vertex is inside the hexagon. Two shapes can overlap with
-  neither condition holding — a polygon *edge* crossing the cell — and that case is never
-  tested. The code says so, and names the precondition:
-
-  ```
-  # assumption: the polygons and cells have a similar size
-  # and are small enough to just check vertex inclusion
-  # valid simplification
-  ```
-
-- **Measured 2026-08-23** (`prototypes/shortcut_resolution_query_bench.py`). At `lng=100.3055,
-  lat=3.4804`, in the Strait of Malacca and nowhere near a pole, the point is genuinely
-  inside boundary polygon 1213 (`Etc/GMT-7`) — brute-forced against every polygon, and
-  confirmed by `certain_timezone_at`. The resolution 3 cell lists it as a candidate; the
-  resolution 4 cell does not, because the smaller hexagon contains no polygon vertex while
-  the polygon's edge still crosses it. The resolution 4 index therefore answers
-  `Asia/Kuala_Lumpur` where the truth is `Etc/GMT-7`.
-- **The precondition degrades exactly as the resolution rises**, which is what makes this
-  worth ranking rather than noting: cells shrink by 7x per level while the polygons do not,
-  so "similar size" is progressively less true. The packaged resolution 3 index satisfies it
-  well enough that an area-weighted sample of 3,000 points finds no error at all.
-- **It blocks any resolution change.** A comparison of two resolutions is a comparison of two
-  indices that answer differently, and the timing question cannot be reached until the
-  answers agree. That is why `prototypes/single_resolution_bench.py`'s case for resolution 4
-  — 60 % fewer point-in-polygon tests for +857 KiB — is *not* actionable as it stands.
-- **The fix is a segment-intersection test** between the hexagon's six edges and the
-  polygon's, run only when neither vertex test fires. That is the expensive branch, but it
-  runs at build time, where `scripts/data_integrity.py` already establishes far more costly
-  things. Budget the verification rather than the geometry: the natural check is the one this
-  prototype hand-rolled — brute-force the containing polygon for a sample of points and
-  assert it is among the candidates — which belongs in the test suite over the committed data.
-- **Do not confuse it with the completeness test that exists.** `test_shortcut_completeness`
-  walks every *polygon vertex* and checks it lands in the right shortcut. It is vertex-based,
-  so it passes on exactly the geometry this misses.
-- **Status:** open — free, and a precondition for any resolution change.
-- **Last touched:** 2026-08-23 — found while building the resolution 3 / 4 query comparison.
-
 ### BUG-3 — cells at the poles can omit the polygon that covers them
 
 - **Location:** `scripts/hex_utils.py`, the `surrounds_north_pole` / `surrounds_south_pole`
@@ -738,12 +718,19 @@ the denominators, and how to tell whether they still describe the tree.
   answers in 3,000 points**, which is why this is a narrow defect and not a headline. An
   earlier draft of this entry read the uniform figure as a 0.23 % general error rate; it is
   not, and the two sampling schemes must never be quoted interchangeably.
-- **Related but distinct from BUG-2.** That one is a missing edge test anywhere on the globe;
-  this is the polar cells, which `hex_utils` already treats specially because a hexagon
-  spanning a pole cannot be used as a polygon in an ordinary point-in-polygon test. A fix for
-  BUG-2 may or may not cover it, so verify rather than assume.
+- **This is what is left after the edge-crossing test landed, and the boundary is now
+  measured rather than assumed.** Adding a segment-intersection test to `Hex.lies_in_cell`
+  took the uniform-sampled gaps from 7 to 4, and **all four survivors sit between latitude
+  88.3 and 89.1**. They survive because that test is deliberately skipped for the *special*
+  cells — those spanning the antimeridian or a pole — whose stored coordinates are corrected
+  rather than planar, so a Euclidean segment test would not mean what it says on them.
+- **So the fix is not "add the edge test there too".** It needs the pole-spanning geometry
+  handled in a projection where segment intersection is meaningful, which is a different and
+  larger piece of work than the general case was. `hex_utils` already special-cases these
+  cells (`surrounds_north_pole`, `is_special`), which is where it would go.
 - **Status:** open — free.
-- **Last touched:** 2026-08-23 — found while checking BUG-2.
+- **Last touched:** 2026-08-23 — narrowed to the special cells once the general edge-crossing
+  test shipped and removed the rest.
 
 ### BUG-1 — a negative zone or boundary id silently returns the wrong zone
 
@@ -1509,14 +1496,16 @@ premise moves; do not reverse a decision silently.
     index at resolution 5. 7.8 MiB resident is more than the entire pre-2.x index the current
     format replaced, and would take `TimezoneFinderL` — whose whole footprint is this index —
     from ~176 KiB to ~7.9 MiB.
-  * **Resolution 4 is not refused; it is blocked by BUG-2.** Its original refusal (the index
+  * **Resolution 4 is not refused, and is no longer blocked.** Its original refusal (the index
     would exceed 10 % of the polygon data) died with the per-entry file format: candidate lists
     deduplicate, so 7x the cells give 2,995 distinct lists against 2,575 and the file is ~1 % of
-    the distribution while removing 60 % of the point-in-polygon tests. That case is live. What
-    stops it is that an index built at resolution 4 *answers differently*, and wrongly, on at
-    least one non-polar point — the vertex-only overlap test of BUG-2. Fix that first, then the
-    timing question becomes answerable by re-running
-    `prototypes/shortcut_resolution_query_bench.py`, whose correctness gate currently refuses.
+    the distribution while removing 60 % of the point-in-polygon tests. What stopped it was that
+    an index built at resolution 4 answered one non-polar point *wrongly*, because the overlap
+    test ignored polygon edges crossing a cell — the finer the resolution, the more that costs.
+    **That test now exists**, and the cell in question resolves correctly at resolution 4. The
+    remaining work is the timing question: re-run
+    `prototypes/shortcut_resolution_query_bench.py`, whose correctness gate should now pass, and
+    weigh 60 % fewer point-in-polygon tests against a sevenfold resident table.
   * **What was never measured, and must be before adopting resolution 4:** what a 7x larger
     table does to the one read every query makes. Repeated runs do not separate resolutions 3,
     4 and 5 on that above their own noise, so treat it as unmeasured rather than as small. It is

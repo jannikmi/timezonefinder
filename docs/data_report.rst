@@ -230,13 +230,13 @@ Shortcut Index Overview
    * - Total shortcut entries
      - 41,162
    * - Zone entries (direct lookup)
-     - 30,651
+     - 30,650
    * - Polygon entries (require testing)
-     - 10,511
+     - 10,512
    * - Empty entries
      - 0
    * - Total polygon references
-     - 23,373
+     - 23,383
    * -
      -
    * - H3 cells stored
@@ -288,18 +288,18 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 30651
+     - 30650
      - 74.46%
      - 74.46%
      - 25.54%
    * - 2
-     - 8789
-     - 21.35%
-     - 95.82%
-     - 4.18%
+     - 8786
+     - 21.34%
+     - 95.81%
+     - 4.19%
    * - 3
-     - 1407
-     - 3.42%
+     - 1411
+     - 3.43%
      - 99.23%
      - 0.77%
    * - 4
@@ -308,23 +308,23 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 99.8%
      - 0.2%
    * - 5
-     - 44
-     - 0.11%
+     - 43
+     - 0.1%
      - 99.9%
      - 0.1%
    * - 6
-     - 15
-     - 0.04%
-     - 99.94%
-     - 0.06%
+     - 14
+     - 0.03%
+     - 99.93%
+     - 0.07%
    * - 7
-     - 8
+     - 9
      - 0.02%
      - 99.96%
      - 0.04%
    * - 8
-     - 6
-     - 0.01%
+     - 7
+     - 0.02%
      - 99.97%
      - 0.03%
    * - 9
@@ -379,18 +379,18 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 30651
+     - 30650
      - 74.46%
      - 74.46%
      - 25.54%
    * - 2
-     - 9046
-     - 21.98%
-     - 96.44%
-     - 3.56%
+     - 9043
+     - 21.97%
+     - 96.43%
+     - 3.57%
    * - 3
-     - 1288
-     - 3.13%
+     - 1292
+     - 3.14%
      - 99.57%
      - 0.43%
    * - 4
@@ -399,16 +399,21 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 99.95%
      - 0.05%
    * - 5
-     - 16
+     - 15
      - 0.04%
      - 99.99%
      - 0.01%
    * - 6
-     - 3
+     - 2
+     - 0.0%
+     - 99.99%
      - 0.01%
+   * - 7
+     - 2
+     - 0.0%
      - 100.0%
      - 0.0%
-   * - 7
+   * - 8
      - 1
      - 0.0%
      - 100.0%

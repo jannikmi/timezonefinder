@@ -11,7 +11,11 @@ import numpy as np
 from scripts.configs import HexIdSet, PolyIdSet, ZoneIdSet
 from scripts.helper_classes import Boundaries
 from scripts.utils import to_numpy_polygon_repr
-from scripts.utils_numba import any_pt_in_poly, fully_contained_in_hole
+from scripts.utils_numba import (
+    any_edge_crossing,
+    any_pt_in_poly,
+    fully_contained_in_hole,
+)
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
 from timezonefinder.utils_numba import coord2int, int2coord
 
@@ -190,12 +194,19 @@ class Hex:
             # also test the inverse: if any point of the polygon lies inside the hex cell
             # ATTENTION: some hex cells cannot be used as polygons in regular point in polygon algorithm!
             overlap = any_pt_in_cell(self.data, self, poly_nr)
-
-        # ATTENTION: in general polygons can overlap without having included vertices
-        # usually the polygon edges would need to be checked for intersections
-        # assumption: the polygons and cells have a similar size
-        # and are small enough to just check vertex inclusion
-        # valid simplification
+        if not overlap and not self.is_special:
+            # Two rings can overlap with no vertex of either inside the other, when an edge
+            # passes clean through. Vertex inclusion alone therefore misses real coverage,
+            # and the cell is recorded as uncovered - a wrong timezone for every point in
+            # it, announced by nothing. This used to be left out as a simplification valid
+            # while "the polygons and cells have a similar size", which stops holding as
+            # the H3 resolution rises and cells shrink while the polygons do not.
+            #
+            # Skipped for the special cells - those spanning the antimeridian or a pole -
+            # whose stored coordinates are corrected rather than planar, so a Euclidean
+            # segment test would not mean what it says on them. They keep the old
+            # behaviour and are tracked separately in potential-improvements.md.
+            overlap = any_edge_crossing(hex_coords, poly_coords)
 
         # account for holes in polygon
         # only check if found overlapping

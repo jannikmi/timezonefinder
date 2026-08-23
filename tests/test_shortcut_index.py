@@ -26,7 +26,7 @@ from scripts.data_integrity import (
     all_cells_at_shortcut_res,
     validate_shortcut_index,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import (
     ABSENT,
     COMPACT_TABLE_SIZE,
@@ -51,10 +51,13 @@ from timezonefinder.shortcut_index import (
     write_shortcuts_binary,
 )
 
-# two cells in the same base cell, so the table is exercised at more than one digit
-CELL_A = 0x831F1DFFFFFFFFF
-CELL_B = 0x831F83FFFFFFFFF
-CELL_C = 0x831FB0FFFFFFFFF
+# Three distinct cells at whatever resolution is in force, derived rather than written as
+# literals: a hard-coded cell id is a resolution-3 id and stops addressing anything the
+# moment SHORTCUT_H3_RES moves.
+CELL_A, CELL_B, CELL_C = (
+    int(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+    for lat, lng in ((52.5, 13.4), (48.85, 2.35), (35.0, 139.0))
+)
 
 # zone id per boundary polygon, for the hand-built indices below
 ZONE_IDS = np.array([0, 0, 1, 1, 2], dtype=np.uint16)

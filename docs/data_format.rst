@@ -284,13 +284,13 @@ the constrained containers the memory-mapped mode exists for. The table also sto
 L2 cache, though repeated runs do not separate the resolutions on that above their own noise — treat
 it as unmeasured rather than as small.
 
-**None of that is what blocks it.** The shortcut compiler decides whether a polygon overlaps a cell
-by testing vertex inclusion only — no hexagon vertex inside the polygon, no polygon vertex inside the
-hexagon, no overlap — and never tests whether a polygon *edge* crosses the cell. The code states the
-precondition for that simplification: that polygons and cells have a similar size. Raising the
-resolution shrinks the cells sevenfold per level and makes it progressively less true, and a
-resolution 4 index built today already answers at least one non-polar point wrongly where resolution
-3 answers it correctly. So a resolution change waits on that test, not on the size trade.
+It used to be blocked by something else entirely. The shortcut compiler decided whether a polygon
+overlaps a cell by testing vertex inclusion alone — no hexagon vertex inside the polygon, no polygon
+vertex inside the hexagon, no overlap — which misses an edge passing clean through. That was a
+documented simplification, valid while polygons and cells have a similar size, and raising the
+resolution shrinks the cells sevenfold per level. The compiler now tests segment intersection as
+well, so the case that made a resolution 4 index answer wrongly resolves correctly, and what is left
+to settle is the timing.
 
 **Resolution 5 is built, measured and refused.** Its gains are real — 95.4 % of cells unique and
 667 candidates tested per 10,000 random queries, another 57 % off resolution 4 — but the table is

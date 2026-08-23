@@ -119,9 +119,15 @@ SLOT_INVARIANT: Final[int] = (
     | ((1 << (SLOT_DIGIT_BITS * (15 - SHORTCUT_H3_RES))) - 1)
 )
 
-# header: identifier, layout version, then the three int64 the reader needs to find the
-# arrays. Sized so that the int16 table starts 8-byte aligned.
-_HEADER_SIZE: Final[int] = 32
+# header: identifier, layout version, then the four int64 the reader needs to make sense of
+# the arrays. Sized so that the int16 table starts 8-byte aligned.
+#
+# The H3 resolution is one of them because nothing else in the file records it, and it
+# changes what every slot *means* without changing anything a reader would notice: a
+# resolution 3 file read by resolution 4 code indexes a table of the wrong size with the
+# wrong bits and answers with a different cell's timezone. The layout version does not
+# cover it - the layout is identical at every resolution.
+_HEADER_SIZE: Final[int] = 40
 
 
 def slot_of(hex_id: int) -> int:
@@ -276,9 +282,17 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
             "shortcut index file", layout_version, SHORTCUT_LAYOUT_VERSION, file_path
         )
 
-    nr_entries, offset_width, length_width = (
-        int(v) for v in np.frombuffer(buf, dtype=np.int64, count=3, offset=8)
+    resolution, nr_entries, offset_width, length_width = (
+        int(v) for v in np.frombuffer(buf, dtype=np.int64, count=4, offset=8)
     )
+    if resolution != SHORTCUT_H3_RES:
+        raise ValueError(
+            f"the shortcut index {file_path} is built for H3 resolution {resolution}, but "
+            f"this timezonefinder reads resolution {SHORTCUT_H3_RES}. Every slot in it "
+            f"means a different cell, so reading it would return a neighbour's timezone "
+            f"rather than an error. Regenerate this data directory with "
+            f"scripts/file_converter.py from the current checkout."
+        )
     pos = _HEADER_SIZE
     # `.copy()`, never `np.ascontiguousarray`: the latter hands back an already-contiguous
     # view unchanged, and a surviving view keeps the whole file buffer alive.
@@ -505,7 +519,12 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
         FILE_IDENTIFIER
         + np.array([SHORTCUT_LAYOUT_VERSION], dtype=np.uint32).tobytes()
         + np.array(
-            [index.nr_of_entries, offset_dtype.itemsize, length_dtype.itemsize],
+            [
+                SHORTCUT_H3_RES,
+                index.nr_of_entries,
+                offset_dtype.itemsize,
+                length_dtype.itemsize,
+            ],
             dtype=np.int64,
         ).tobytes()
     )

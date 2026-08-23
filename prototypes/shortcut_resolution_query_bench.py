@@ -42,8 +42,8 @@ Building the resolution 4 index takes ~40 s; the comparison itself is seconds.
 
 FINDINGS (2026-08-23, `bc2029a`, Apple arm64, Python 3.14.2, data 2026c)
 
-**The timing comparison never ran, because the correctness gate refused - and that is the
-answer.** Of 8,000 fixture points the two indices disagree on one, and inspection shows
+**The timing comparison never ran, because the correctness gate refused - and that was the
+answer.** Of 8,000 fixture points the two indices disagreed on one, and inspection showed
 resolution 4 to be the wrong one there:
 
     lng=100.3055 lat=3.4804          (the Strait of Malacca, not a polar case)
@@ -65,8 +65,11 @@ the overlap goes unseen. At resolution 3 the same cell is caught because the lar
 happens to contain a polygon vertex. **The simplification's stated precondition degrades as
 cells shrink, which is exactly what raising the resolution does.**
 
-So: a resolution change is blocked on ``lies_in_cell`` testing edge intersections, and any
-timing comparison before that would be ranking two indices that answer differently.
+**Resolved 2026-08-23: ``lies_in_cell`` now tests segment intersection**, and that cell
+resolves correctly at resolution 4. The gate should pass on a re-run, and the timing
+question this script was written for is finally the one standing in the way. Re-run it on
+both backends before ranking resolution 4 — the numbers above are from the state where it
+refused, not from a completed comparison.
 
 **A separate, pre-existing gap, found while checking the above and worth its own entry.**
 Brute-forcing every polygon for 3,000 points sampled *uniformly in latitude and longitude*
