@@ -122,11 +122,11 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
+| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | rejected |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
-| GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
-| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | needs a decision — the invariant list |
-| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — CLI shape decided |
+| GH-501 | Guardrails on the automated data update pipeline | release | M | partly decided — pinning and the report-only diff are free; one threshold still needs a decision |
+| GH-500 | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
+| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — is `update-data` wanted; brief recorded |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
@@ -429,37 +429,24 @@ the denominators, and how to tell whether they still describe the tree.
 ### PERF-4 — the mapped fetch re-acquires the mmap's buffer on every candidate
 
 - **Location:** `timezonefinder/flatbuf/io/polygons.py`, `read_polygon_array_at`.
-- **What is left after the offset table.** Addressing polygons by `(offset, length)` took the
-  mapped fetch from ~4.9 µs to ~830 ns, against ~60 ns for `in_memory=True`. The remaining 14× is
-  not I/O and not the vtable any more: `np.frombuffer(self.coord_buf, …)` re-acquires the `mmap`
-  object's buffer on every call. Slicing a **single whole-file `int32` view** instead measures
-  **415 ns against 788 ns** per fetch in isolation — roughly 370 ns per candidate, ~4 % of an
-  ambiguous query and ~3 % of a mixed workload.
-- **The trade this reintroduces, and why it was not simply done in the same pass.** That view is a
-  live export of the mapping held for the accessor's lifetime, which is exactly the pinning the
-  integer table was chosen to avoid — and it is not hypothetical: `mmap.close()` refusing while an
-  export is alive is the `BufferError` fixed in 8.3.0, and `FileCoordAccessor.cleanup` is written
-  around it. A whole-file view does not make pages resident, so the cost is to *cleanup semantics*
-  rather than to memory: the mapping would only be released when the accessor's own view is
-  dropped, which `cleanup()` already handles for the views it hands out.
-- **The ranking-relevant caveat:** ~370 ns sits above the 3–9 % noise floor as a share of an
-  ambiguous query but not far above it as a share of a workload, so this needs the 2× rule applied
-  before it is taken. Verify the saving inside `timezone_at` rather than in isolation first — the
-  microbenchmark above is a per-fetch figure and the query pays other things around it.
-- **Decision needed:** may `FileCoordAccessor` hold one whole-file `int32` view for its own
-  lifetime? **(a) Hold it** — every fetch becomes a slice, ~370 ns per candidate, and the mapping is
-  released when the accessor is dropped rather than when the last query ends. **(b) Leave the
-  per-fetch `np.frombuffer`** and close this entry, keeping the mapping unpinned and the 14× gap to
-  `in_memory=True` with it. **Recommended: (a), conditional on the saving surviving a measurement
-  inside `timezone_at` rather than in isolation.** What it turns on is that the pinning objection
-  was raised against caching the coordinate *arrays*, which grow without bound as queries are
-  answered and make pages resident; one whole-file view is a single bounded export that faults in
-  nothing, and `cleanup()` already implements exactly the deferred close it needs. If the in-query
-  measurement does not reproduce the per-fetch figure, (b) — a saving that only exists in a
-  microbenchmark is not one.
-- **Status:** needs a decision — measured; the question is whether an accessor-lifetime export is
-  acceptable now that `cleanup()` is built for exactly that case.
-- **Last touched:** 2026-08-21 — found by the re-measurement the offset table obliged.
+- **What it was.**
+  Addressing polygons by `(offset, length)` took the mapped fetch from ~4.9 µs to ~830 ns, against ~60 ns for `in_memory=True`.
+  What remains of that gap is not I/O and not the vtable: `np.frombuffer(self.coord_buf, …)` re-acquires the `mmap` object's buffer on every call.
+  Slicing a **single whole-file `int32` view** instead measures **415 ns against 788 ns** per fetch in isolation.
+- **Rejected 2026-08-23 by the maintainer, and kept rather than deleted** because the per-fetch figure above is genuinely large and the idea will otherwise be re-proposed on it.
+  That figure is not what a query pays.
+  Measured inside `timezone_at`, alternating the two implementations round by round within one process — the design BENCH-1 records as the only one that does not attribute warm-up to the change — over the committed fixtures, 2000 points per stratum:
+  **−2.0 % on the ambiguous stratum (12 of 15 rounds) and −0.8 % on a mixed workload (9 of 15, which is a coin flip)**.
+  The absolute per-candidate saving reproduces at ~230–320 ns; the *share* this entry previously claimed, "~3 % of a mixed workload", does not.
+  A ceiling near 1 % sits below the machine's own noise floor, so by the ranking rule above it would have to stand on correctness or simplicity instead.
+  It stands on neither: it changes no answer, and it splits the file-backed fetch into a slice here and `read_polygon_array_at` there.
+- **The pinning objection turned out to be the weaker half, and that is the part worth keeping.**
+  A whole-file view is a live export held for the accessor's lifetime, which is the pattern behind the `BufferError` fixed in 8.3.0.
+  But `cleanup()` calls `close_resource(coord_buf)` *before* dropping its own references, so deleting the accessor's own view first makes `mmap.close()` succeed exactly as it does today.
+  An accessor-lifetime export is therefore **not** in itself a reason to refuse a change here — the reason this one was refused is the measurement.
+  Anything that re-proposes a held view has to clear the noise floor rather than merely argue that the mapping stays unpinned.
+- **Status:** rejected — measured inside the query and found below the noise floor.
+- **Last touched:** 2026-08-23 — measured in-query, and rejected on that measurement.
 
 ### GH-364 — free-threaded Python, via a native candidate loop
 
@@ -927,11 +914,14 @@ the denominators, and how to tell whether they still describe the tree.
   have at least that much room, and nothing characterises it. Separately, `min` alone reported
   +0.5 % where a round-level sign count said 26 of 61 — the disagreement being the correct answer,
   "no effect", which a single estimator cannot express.
-- **Why it is ranked here:** the remaining performance items — GH-364 and PERF-4 among them — each
-  have to demonstrate an effect in the low single digits, and none of them can be reviewed with
-  this tooling. Each one currently needs a hand-rolled prototype harness; the shortcut structure
-  work needed two, both of which were deleted with the prototypes once it shipped, so the harness
-  is written again every time.
+- **Why it is ranked here:** the remaining performance items — GH-364 among them — each have to
+  demonstrate an effect in the low single digits, and none of them can be reviewed with this
+  tooling. Each one currently needs a hand-rolled prototype harness; the shortcut structure work
+  needed two, both of which were deleted with the prototypes once it shipped, so the harness is
+  written again every time. **PERF-4 is the worked example, 2026-08-23**: answering it took a
+  third hand-rolled alternating harness, and what that harness showed — a per-fetch saving that
+  vanished into noise as a workload share — is precisely what the committed comparison cannot
+  express. It was rejected on evidence this tooling could not have produced.
 - **Fixes, in increasing cost, and the first is most of the value:**
   1. **Report dispersion beside the `min`.** pytest-benchmark already records every round, so the
      JSON holds it and the comparison discards it. A reader could then see whether the two
@@ -951,37 +941,37 @@ the denominators, and how to tell whether they still describe the tree.
 
 ### GH-501 — guardrails on the automated data update pipeline
 
-- **Tracks:** issue #501, whose comments now carry the calibrated thresholds and the design finding
-  below.
-- **Why it is ranked here:** the weekly pipeline auto-merges and auto-tags a PyPI release from an
-  unpinned, unchecksummed, undiffed ~62 MB upstream drop. The release-notes half shipped in #519;
-  what remains is that nothing knows what the bytes actually changed.
-- **Thresholds are proposed and measured** against 2025c → 2026a → 2026b → 2026c rather than
-  guessed. Two calibrations worth keeping here because they are conclusions, not detail: the size
-  gate should be **asymmetric** (boundary data has grown monotonically across four releases, so a
-  decrease is the anomaly), and **zone changes must not block** — a rename is a removal plus an
-  addition and cannot be told apart from the data, so gating on it fires on a routine event.
-- **The design finding that changes (b):** the diff report **cannot** be built by comparing two
-  packaged datasets. The format changed three times in August 2026 and the current reader cannot
-  open the 2026c binaries, so a report that loads "the previous packaged data" breaks on exactly the
-  releases where review matters most. Commit a fixed sample of points with their answers instead —
-  text against text, survives every format change, and doubles as the data-update changelog entry.
-- **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad. That
-  lowers urgency and not value — the argument rests on the auto-merge, not on an incident.
-- **Decision needed:** what a tripped guardrail *does*. **(a) Block the auto-merge** on any gate,
-  labelling the PR and notifying through the `automation-failed` path that already exists. **(b)
-  Report only** — always post the diff, never block, so the guardrails are evidence rather than a
-  gate. **(c) Block on the two hard signals only** — a size *decrease* and a changed-answer rate
-  above the threshold — and report everything else. **Recommended: (c).** The calibration above
-  already rules out gating on zone changes, and the same reasoning generalises: a gate that fires on
-  a routine upstream event is disabled within two releases, and then (a) has bought nothing while
-  costing the automation. (b) is the safe answer and the weak one — it leaves an unattended pipeline
-  publishing whatever it downloaded. Least evidence behind the changed-answer threshold, since no
-  bad release exists to calibrate one against; the four-release calibration on the issue bounds the
-  *normal* range, which is the most that can be asked of it.
-- **Status:** needs a decision — the trip behaviour above, and the thresholds it applies to. Part
-  (a), pinning and checksumming the download, needs neither and can be taken alone.
-- **Last touched:** 2026-08-21 — thresholds calibrated and written to the issue.
+- **Tracks:** issue #501, whose comments carry the four-release calibration and the design finding below.
+- **Why it is ranked here:** the weekly pipeline auto-merges and auto-tags a PyPI release from an unpinned, unchecksummed, undiffed ~62 MB upstream drop.
+  The release-notes half shipped in #519; what remains is that nothing knows what the bytes actually changed.
+- **Signals are measured** against 2025c → 2026a → 2026b → 2026c rather than guessed, and one calibration survives as a conclusion:
+  **zone changes must not block**, because a rename is a removal plus an addition and cannot be told apart from the data, so gating on it fires on a routine event.
+  The observed moves are small — boundary payload +0.29 %, +0.65 %, +1.47 %; hole payload −0.07 %, +0.09 %, −0.31 %; polygon count +4, −3, +2.
+- **The design finding that shapes the diff report:** it **cannot** be built by comparing two packaged datasets.
+  The format changed three times in August 2026 and the current reader cannot open the 2026c binaries, so a report that loads "the previous packaged data" breaks on exactly the releases where review matters most.
+  Commit a fixed sample of points with their answers instead — text against text, survives every format change, and doubles as the data-update changelog entry.
+- **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad.
+  That lowers urgency and not value — the argument rests on the auto-merge, not on an incident.
+- **Decided 2026-08-23 by the maintainer — a tripped gate blocks the auto-merge.**
+  Every signal that is made a gate blocks; signals the calibration ruled report-only stay report-only, so this does not turn zone changes into a gate.
+  Refused: *report only*, which leaves an unattended pipeline publishing whatever it downloaded, and *block on the two hard signals only*, which was recommended here on the argument that a gate firing on routine churn gets disabled within two releases.
+  The maintainer took the stricter option, so that argument is answered by keeping the *set of gates* small rather than by softening what a gate does.
+- **The asymmetric size gate is overruled, and the reasoning it rested on was wrong.**
+  This entry previously recorded that the size gate "should be **asymmetric**" because boundary data has grown monotonically across four releases, making a decrease the anomaly.
+  Four releases of monotone growth do not make a decrease anomalous — they are consistent with ordinary refinement, and upstream may legitimately drop or simplify boundaries.
+  **The gate is symmetric, and small reductions pass.**
+  The band is a threshold on magnitude in either direction, not a floor of zero.
+- **What can be built now, and what still waits.**
+  Part (a) — pin the download by tag and verify a SHA-256 — needs no threshold and no judgement, and is worth taking on its own ahead of the rest.
+  The committed point sample and the diff report can be built **report-only**, which is also what produces the empirical data the remaining threshold needs.
+- **Decision needed:** what changed-answer rate blocks.
+  The maintainer will set it **from empirical data, after the point sample exists** — a rate cannot be calibrated today because no bad release exists to calibrate one against, and the sample that would measure a normal release has not been committed yet.
+  So the options are not a menu to choose between: the pass that builds the sample should report the observed rate across the releases it can reach and leave the constant unset, rather than guessing one.
+  The 0.5 % on the issue is a placeholder and must not be shipped as a gate.
+  **Do not mark this entry unblocked on the strength of the trip-behaviour decision above** — the maintainer asked to review this threshold before that happens.
+- **Status:** needs a decision — the changed-answer-rate threshold only.
+  The trip behaviour and the size gate are settled, and both part (a) and the report-only diff can be taken now.
+- **Last touched:** 2026-08-23 — trip behaviour decided, the asymmetric size gate overruled, the changed-answer threshold held for empirical review.
 
 ### GH-317 — reduce the release artifact count
 
@@ -1089,54 +1079,54 @@ the denominators, and how to tell whether they still describe the tree.
 ### GH-500 — validate a data directory's cross-file invariants
 
 - **Tracks:** issue #500, which carries the proposed invariant list and the design notes.
-- **Why it is ranked here:** the fast path's core invariant — shortcut candidates grouped by zone id
-  — is enforced only at generation time, and custom data directories are public API. The first slice
-  and the placement rule shipped in #509.
-- **Constrained by a recorded decision:** validation belongs to the build and the test suite, never
-  to `__init__`. Its opt-in CLI mode is the right shape precisely because of that — and being off
-  the init path is what lets the check afford to be exhaustive.
+- **Why it is ranked here:** custom data directories are public API, and a user who compiles one has no way to establish that it holds together.
+  The first slice and the placement rule shipped in #509.
+- **Constrained by a recorded decision:** validation belongs to the build and the test suite, never to `__init__`.
+  Its opt-in CLI mode is the right shape precisely because of that — and being off the init path is what lets the check afford to be exhaustive.
 - **CLI shape settled 2026-08-21 (subcommands)** — see GH-428. Neither entry waits on the other.
-- **Decision needed:** which invariants the first slice checks. **(a) The whole list in the issue
-  body**, geometry included — every bounding box actually containing its polygon. **(b) Only what
-  the fast path assumes**: shortcut candidates grouped by zone id, `zone_positions` monotonic and
-  terminated, every id in range — the assumptions behind `timezone_at`'s early break and its
-  untested last candidate. **Recommended: (b) as the slice, with (a) as the rule for what earns a
-  check later** — an invariant belongs here when the reader *relies* on it and nothing re-establishes
-  it, which is what makes a violation return a plausible wrong timezone instead of an error. The
-  issue says the same: the one that carries it is the candidate grouping. The geometry check in (a)
-  is the most likely of all of them to find something and also the most expensive; being off the
-  init path, it is affordable — as a second slice, so that a finding in the shipped data does not
-  block the invariant that motivated the feature.
-- **Status:** needs a decision — CLI shape settled, the invariant list still to agree.
-- **Last touched:** 2026-08-21 — unblocked by the CLI decision.
+- **Decided 2026-08-23 by the maintainer — `data_integrity.py` moves into `timezonefinder/`.**
+  Refused: *ship `scripts/` in the wheel*, which drags the converter, the GeoJSON parser and a `pydantic` extra to every user for the sake of one module; and *keep validation build-and-test-only*, which would drop `validate-data` from the CLI design and leave a user with a custom data directory exactly where they are now.
+  The move is nearly free: every import in `scripts/data_integrity.py` already resolves inside `timezonefinder` except one constant, `MIN_HOLE_DEDUP_RATIO`, and it adds no runtime dependency — h3 and numpy are already required.
+- **Reuse it in the builder rather than duplicating it — the maintainer's condition on the move, and the point of doing it at all.**
+  The converter must call the same functions the CLI does, so that what the build asserts and what a user can check are one implementation.
+  This is the existing rule in `CLAUDE.md` — assert in the generator *and* in the test suite, sharing one implementation — extended to a third caller, and the module is already written that way.
+- **Two implementation constraints that follow, so the move does not create a problem it was not asked to solve.**
+  Land it **private** (`timezonefinder._data_integrity` or equivalent): a public module cannot break between minor versions, and nothing yet knows what the right public surface for this is.
+  Leave `validate_hole_dedup_ratio` behind — it is explicitly a statement about the *packaged* dataset rather than an invariant of any data directory, and compiling custom data whose holes are not enclaves is supported.
+- **The invariant list is no longer a question; most of it shipped.**
+  `validate_shortcut_index` already checks every id in range — payload, table zone ids, entry indices — and re-derives the precomputed stop index for every entry against `get_last_change_idx`.
+  That last check *is* the early-break assumption: the query relies on "from `last_change` on, every candidate belongs to one zone", which is exactly what is verified.
+  What is left for the next slice is `zone_positions` monotonic and terminated, plus grouping asserted as grouping rather than only through its consequence.
+  Geometry — every bounding box actually containing its polygon — stays a **later** slice: it is the most likely of all of them to find something and the most expensive, and a finding in the shipped data should not block the invariants that motivated the feature.
+  The rule for what earns a check is unchanged: an invariant belongs here when the reader *relies* on it and nothing re-establishes it, which is what makes a violation return a plausible wrong timezone instead of an error.
+- **Status:** open — decision taken, implementation not started. Unblocks GH-513.
+- **Last touched:** 2026-08-23 — the recorded question was overtaken by what shipped in `validate_shortcut_index`; the live blocker turned out to be that `scripts/` is in neither the wheel nor the sdist, and that is what was decided.
 
 ### GH-428 — data parsing UX, and the CLI shape it shares with GH-500
 
-- **Tracks:** issue #428, user-driven from #363; the decision and its migration notes are on the
-  issue.
-- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for
-  `query`: `query`, `rows`, `validate-data`, `update-data`. Chosen over more flags on the flat
-  command and over a separate console script. It settles the shape for **both** this and GH-500.
-- **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin`
-  and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
+- **Tracks:** issue #428, user-driven from #363; the decision and its migration notes are on the issue.
+- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for `query`: `query`, `rows`, `validate-data`, and possibly a fourth, below.
+  Chosen over more flags on the flat command and over a separate console script.
+  It settles the shape for **both** this and GH-500.
+- **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin` and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
   Under subcommands argparse enforces that structurally.
-- **Still open, and worth answering before anything is designed:** whether `update-data` is wanted
-  at all — "generate the full dataset after pip installing" competes directly with "pip install the
-  dataset", which now exists.
-- **Decision needed:** is `update-data` wanted at all, and if so pointed at what? **(a) Keep it as
-  proposed** — the installed CLI downloads the upstream release and regenerates the dataset. **(b)
-  Drop it**, leaving `query`, `rows` and `validate-data`. **(c) Keep the capability, aimed at the
-  user's own GeoJSON rather than at upstream** — a `convert`/`parse` subcommand over an input the
-  user supplies. **Recommended: (c).** The original request was "generate the full dataset after pip
-  installing rather than cloning the repo", and `pip install timezonefinder-data` now answers that
-  outright, which is what the issue's own comment predicted would happen. What it does *not* answer
-  is the audience that survives: people compiling custom data, who have no supported entry point at
-  all, because `scripts/` is not in the wheel (`MANIFEST.in` ships `timezonefinder` only) and
-  `python -m scripts.file_converter` therefore only exists in a checkout. (a) also puts a ~62 MB
-  download and `update_data.sh` behind an installed console script, which is a maintenance surface
-  for a need that no longer exists.
-- **Status:** needs a decision — CLI shape decided, the `update-data` scope question still open.
-- **Last touched:** 2026-08-21 — CLI shape decided here for both entries.
+- **Decision needed:** is `update-data` wanted at all, and if so pointed at what?
+  **Put to the maintainer 2026-08-23 and deliberately left open** — the brief below is what the next round starts from, so it does not have to be re-derived.
+  **(a) Keep it as proposed** — the installed CLI downloads the upstream release and regenerates the dataset.
+  **(b) Drop it**, leaving `query`, `rows` and `validate-data`.
+  **(c) Keep the capability, aimed at the user's own GeoJSON rather than at upstream** — a `convert`/`parse` subcommand over an input the user supplies.
+  **Recommended: (b)**, which reverses the (c) this entry recommended on 2026-08-21, on two costs that recommendation did not price.
+  First, (c) means shipping the converter and a `pydantic` extra, and the GeoJSON parser it would expose is the code BIG-3 flags as needing restructuring with verification named as the expensive part — freezing a public interface around it is the wrong order.
+  Second, the reversibility is **asymmetric**: adding a subcommand later is additive and breaks nothing, while removing one is a public-API break, so (b) forecloses nothing and (c) can be taken the moment real demand appears.
+  (a) is dead either way — the original request was "generate the full dataset after pip installing rather than cloning the repo", and `pip install timezonefinder-data` answers that outright, which is what the issue's own comment predicted.
+  **What would change the answer:** evidence of users compiling custom data who are actually blocked.
+  Today they clone and run `python -m scripts.file_converter`, which works and is merely not installable, because `scripts/` is in neither the wheel (`[tool.setuptools] packages` lists `timezonefinder*` only) nor the sdist.
+  Nobody has measured that demand, and it is the only thing the recommendation turns on.
+- **Note the coupling, which only bites under (c):** a `convert` subcommand wants build-side code in the wheel, which is the same territory GH-500 settled by moving `data_integrity.py` into the package.
+  That move is small and adds no dependency; shipping the converter is neither.
+  Under (b) the two entries are independent.
+- **Status:** needs a decision — CLI shape decided, the `update-data` scope question still open with the brief above recorded against it.
+- **Last touched:** 2026-08-23 — asked and left open; the recommendation was reversed to (b) and the reasoning written down.
 
 ### GH-362 — reuse the `PolygonArray` binaries in file conversion
 
@@ -1601,6 +1591,12 @@ premise moves; do not reverse a decision silently.
   much as the first — off the init path a check can afford to be exhaustive, which is why #509's
   resolves every hole ring in the dataset. A check constrained to be cheap ends up shallow.
   Recorded in `CLAUDE.md` and `CONTRIBUTING.md`.
+  **Amended 2026-08-23:** the module moves out of `scripts/` and into the package (GH-500), because
+  `scripts/` ships in neither the wheel nor the sdist and an installed `validate-data` cannot reach
+  it. Nothing about the rule changes — still never on `__init__`, still one implementation — only
+  the number of callers, which becomes three: the converter, the test suite and the CLI. The pass
+  that moves it must update the `scripts/data_integrity.py` reference in `CLAUDE.md` and
+  `CONTRIBUTING.md` with it.
 - **Hole coverage does not imply hole removability.** Every hole is covered by other zones, and
   that is not enough to drop it: coverage says the right zone is among the shortcut candidates,
   ordering decides whether it is reached first. Measured in GH-513 — dropping holes changes
@@ -1723,6 +1719,34 @@ premise moves; do not reverse a decision silently.
   preventive, not corrective. That lowers their urgency but not their value: the argument never
   rested on a past incident, it rests on the pipeline auto-merging and auto-tagging with no human
   diff review.
+- **An accessor-lifetime export of the mmap is not in itself forbidden — but a change that wants one still has to clear the noise floor.**
+  Settled 2026-08-23 when PERF-4 was rejected. The `BufferError` fixed in 8.3.0 made "never hold a
+  live export for the accessor's lifetime" read like a standing rule. It is not one:
+  `FileCoordAccessor.cleanup` calls `close_resource(coord_buf)` *before* dropping its own
+  references, so an accessor that deletes its own view first closes the mapping exactly as today.
+  What killed PERF-4 was the measurement, not the pinning — so do not refuse a future held view on
+  resource-semantics grounds alone, and do not propose one on the strength of a per-fetch
+  microbenchmark either. **The generalisable half:** a per-fetch figure and a workload share are
+  different quantities, and PERF-4 is the case where they disagreed by 3x — ~370 ns per fetch in
+  isolation became ~1 % of a mixed workload, indistinguishable from noise at 9 of 15 rounds.
+  Measure inside the query, alternating within one process.
+- **A tripped data-update guardrail blocks the auto-merge, and the size gate is symmetric.**
+  Settled 2026-08-23 by the maintainer. Every signal made a gate blocks; signals the calibration
+  ruled report-only stay report-only, so this does not turn zone changes into a gate. Refused:
+  *report only*, which leaves an unattended pipeline publishing whatever it downloaded, and *block
+  on the two hard signals only*. **Also overruled, with its reasoning:** the four-release
+  calibration concluded the size gate should be asymmetric because boundary data has grown
+  monotonically, making a decrease the anomaly. Four releases of monotone growth do not establish
+  that — ordinary refinement produces the same pattern, and upstream may legitimately simplify
+  boundaries. Small reductions pass. **The mechanism costs nothing to build:** `release_data_update.yml`
+  merges only when `build` concludes `success`, and `alert_failure` already labels the pull request
+  and mentions the maintainer, so a guardrail is a job in `build.yml` — no new blocking machinery,
+  though it needs a branch condition so it does not run on every pull request.
+- **A threshold nobody can calibrate is left unset, not guessed.** Settled 2026-08-23 with the
+  above: the changed-answer-rate gate stays open until the committed point sample exists and has
+  produced observations. The 0.5 % on issue #501 is a placeholder and must not ship as a gate. The
+  report-only half is what generates the evidence, so building it is the way to unblock the
+  threshold rather than something that waits on it.
 - **A branch-name prefix is not an authorization check.** Settled in #519. The `workflow_run` jobs
   that merge and tag a data update select their work with
   `startsWith(head_branch, 'data-update-')`, and any fork can open a pull request from a branch
