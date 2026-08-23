@@ -39,11 +39,8 @@ from timezonefinder.configs import (
 
 from timezonefinder.shortcut_index import (
     ABSENT,
-    SLOT_BASE_CELL_MASK,
-    SLOT_BASE_CELL_SHIFT,
-    SLOT_DIGITS_MASK,
     SLOT_DIGITS_SHIFT,
-    SLOT_STRIDE,
+    SLOT_MASK,
     get_shortcut_file_path,
     read_shortcuts_binary,
     slot_of,
@@ -406,12 +403,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         # Inline fast-path to minimize helper overhead
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        entry = int(
-            self.shortcut_table[
-                ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE
-                + ((hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK)
-            ]
-        )
+        entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
         if entry >= 0:
             # unique zone case: the table holds the answer
             return self.zone_name_from_id(entry)
@@ -664,12 +656,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
         # one table read answers most queries: a zone id is the answer itself
-        entry = int(
-            self.shortcut_table[
-                ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE
-                + ((hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK)
-            ]
-        )
+        entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
         if entry >= 0:
             return self.zone_name_from_id(entry)
         if entry == ABSENT:

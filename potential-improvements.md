@@ -1437,6 +1437,65 @@ the denominators, and how to tell whether they still describe the tree.
 pass re-proposes whatever is not written down as already refused. Correct the reasoning when a
 premise moves; do not reverse a decision silently.
 
+- **Accelerating the slot arithmetic with numba or the C extension — measured 2026-08-23 and
+  refused; the algebra was the win instead.** The lookup's bit arithmetic looked like a
+  candidate for `njit`. It is not, and the measurement forecloses the whole family rather than
+  one attempt: **an empty `njit` call costs ~98 ns**, against ~152 ns for the entire stage it
+  would replace — arithmetic *and* table read — so dispatch alone eats two thirds of the
+  budget before any kernel runs. Measured, both variants came out slower than plain Python
+  (156 and 166 ns against 152). The C extension is worse on the same grounds: a cffi crossing
+  is the same order (`ffi.from_buffer` is ~650 ns on the polygon path), and it would add an
+  entry point to the wheel matrix for a stage of ~150 ns. This generalises — **no scalar
+  per-query stage in the single-digit-hundreds of nanoseconds can be worth a dispatch
+  boundary**, which is the same reason `validate_coordinates` is *slower* under numba than in
+  pure Python (355 against 312 ns).
+- **What did pay was noticing the arithmetic reduces.** H3 puts the base cell immediately
+  above the digits, so `base * stride + digits` is one contiguous bit field and the six-operation
+  expression collapses to `(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK`. An identity over any
+  64-bit value, not a property of the cells that exist. Arithmetic 91 -> 40 ns, whole stage
+  152 -> 101 ns, and on a paired whole-query A/B **-5.1 % on a unique-zone query with 43 of 61
+  rounds faster** - both estimators agreeing, which is the bar. Shipped.
+
+- **The H3 shortcut resolution stays at 3 — measured 2026-08-23, with 4 blocked and 5 refused.**
+  Built, not modelled: every resolution below was compiled from the 2026c boundaries and priced
+  in the shipped layout. The numbers are restated here rather than left in
+  `prototypes/single_resolution_bench.py`, because a prototype is deletable and this verdict has
+  to outlive it.
+
+  | res | cells | unique | file | resident | candidates tested /10k queries |
+  |---|---|---|---|---|---|
+  | 3 | 41,162 | 74.5 % | 103 KiB | 143 KiB | 3,877 |
+  | 4 | 288,122 | 89.1 % | 596 KiB | 1,000 KiB | 1,566 |
+  | 5 | 2,016,842 | 95.4 % | 4,029 KiB | 7,832 KiB | 667 |
+
+  * **Resolution 5 is refused on the exchange rate, not on its gains, which are real.** Memory
+    paid per candidate polygon removed is 0.019 KiB going 2→3, 0.371 KiB going 3→4 and
+    **7.600 KiB going 4→5** — each level about twenty times worse than the last. The table is
+    `122 * 8**res` and fixed by the resolution rather than by the data, so it is 99.7 % of the
+    index at resolution 5. 7.8 MiB resident is more than the entire pre-2.x index the current
+    format replaced, and would take `TimezoneFinderL` — whose whole footprint is this index —
+    from ~176 KiB to ~7.9 MiB.
+  * **Resolution 4 is not refused; it is blocked by BUG-2.** Its original refusal (the index
+    would exceed 10 % of the polygon data) died with the per-entry file format: candidate lists
+    deduplicate, so 7x the cells give 2,995 distinct lists against 2,575 and the file is ~1 % of
+    the distribution while removing 60 % of the point-in-polygon tests. That case is live. What
+    stops it is that an index built at resolution 4 *answers differently*, and wrongly, on at
+    least one non-polar point — the vertex-only overlap test of BUG-2. Fix that first, then the
+    timing question becomes answerable by re-running
+    `prototypes/shortcut_resolution_query_bench.py`, whose correctness gate currently refuses.
+  * **What was never measured, and must be before adopting resolution 4:** what a 7x larger
+    table does to the one read every query makes. Repeated runs do not separate resolutions 3,
+    4 and 5 on that above their own noise, so treat it as unmeasured rather than as small. It is
+    the one axis that could turn 60 % fewer point-in-polygon tests into no gain at all, since
+    75–89 % of queries are unique-zone and read nothing but the table.
+  * **Resolutions above 5 are not worth measuring** — the table grows eightfold per level, so
+    resolution 6 is ~63 MiB resident, the size of the polygon data it indexes.
+  * **A hierarchical index over several resolutions is refused** and its prototype deleted. The
+    maximum resolution dominates the size, so a multi-resolution index is *larger* than the
+    single-resolution one it contains; H3 cells do not nest cleanly, so a parent must be kept
+    even once its children exist; and consulting several resolutions per query costs more than
+    the refinement saves. No lookup benefit over a single-resolution index at the same maximum.
+
 - **The shortcut index's shape — settled 2026-08-23 when it shipped, with six alternatives refused.**
   It is a slot-addressed `int16` table plus deduplicated candidate lists; `docs/data_format.rst`
   describes the layout and `timezonefinder/shortcut_index.py` says why it is shaped that way. What

@@ -78,6 +78,18 @@ SLOT_DIGITS_SHIFT: Final[int] = SLOT_BASE_CELL_SHIFT - SLOT_DIGIT_BITS * SHORTCU
 SLOT_DIGITS_MASK: Final[int] = (1 << (SLOT_DIGIT_BITS * SHORTCUT_H3_RES)) - 1
 SLOT_STRIDE: Final[int] = SLOT_DIGITS_MASK + 1
 NUM_BASE_CELLS: Final[int] = 122
+
+# The slot is one contiguous bit field, which is why the lookup is a shift and a mask
+# rather than the two shifts, two masks, multiply and add it reads as. H3 puts the base
+# cell immediately above the digits, so
+#
+#     base * SLOT_STRIDE + digits  ==  (base << digit_bits) | digits
+#
+# and those bits are already adjacent in the cell id: the whole slot is the field from
+# SLOT_DIGITS_SHIFT upwards, seven bits of base cell on top of the digits. That is an
+# identity over any 64-bit value, not a property of the cells that exist, and it is worth
+# ~5 % of a unique-zone query. `test_the_slot_is_one_contiguous_bit_field` pins it.
+SLOT_MASK: Final[int] = (1 << (SLOT_DIGIT_BITS * SHORTCUT_H3_RES + 7)) - 1
 #: Slots in the table the lookup indexes. ``122 * 8**res``.
 SLOT_TABLE_SIZE: Final[int] = NUM_BASE_CELLS * SLOT_STRIDE
 
@@ -114,16 +126,12 @@ _HEADER_SIZE: Final[int] = 32
 
 def slot_of(hex_id: int) -> int:
     """Table index of one H3 cell id, by arithmetic alone - no memory touched."""
-    return ((hex_id >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE + (
-        (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK
-    )
+    return (hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK
 
 
 def slots_of(hex_ids: np.ndarray) -> np.ndarray:
     """Table indices of an array of H3 cell ids."""
-    return ((hex_ids >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK) * SLOT_STRIDE + (
-        (hex_ids >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK
-    )
+    return (hex_ids >> SLOT_DIGITS_SHIFT) & SLOT_MASK
 
 
 def compact_slots_of(hex_ids: np.ndarray) -> np.ndarray:

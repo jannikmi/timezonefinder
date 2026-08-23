@@ -36,6 +36,7 @@ from timezonefinder.shortcut_index import (
     SLOT_BASE_CELL_SHIFT,
     SLOT_DIGITS_MASK,
     SLOT_DIGITS_SHIFT,
+    SLOT_STRIDE,
     SLOT_TABLE_SIZE,
     ShortcutOverflowError,
     build_shortcut_index,
@@ -98,6 +99,30 @@ def test_nothing_outside_the_slot_bits_distinguishes_two_cells():
         | (SLOT_DIGITS_MASK << SLOT_DIGITS_SHIFT)
     )
     assert len(np.unique(cells & ~slot_bits)) == 1
+
+
+@pytest.mark.unit
+def test_the_slot_is_one_contiguous_bit_field():
+    """The lookup is a shift and a mask; this is what makes that the same arithmetic.
+
+    H3 puts the base cell immediately above the digits, so ``base * stride + digits`` is
+    the contiguous field at ``SLOT_DIGITS_SHIFT``. Asserted over arbitrary integers as
+    well as over real cells, because it is an identity rather than a property of the cells
+    that happen to exist - and because the tempting "fix" to the mask would still pass on
+    real cells alone.
+    """
+
+    def the_long_way(values):
+        return (
+            (values >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
+        ) * SLOT_STRIDE + ((values >> SLOT_DIGITS_SHIFT) & SLOT_DIGITS_MASK)
+
+    cells = all_cells_at_shortcut_res()
+    assert np.array_equal(slots_of(cells), the_long_way(cells))
+    arbitrary = np.random.default_rng(0).integers(
+        0, 2**62, size=200_000, dtype=np.int64
+    )
+    assert np.array_equal(slots_of(arbitrary), the_long_way(arbitrary))
 
 
 @pytest.mark.unit
