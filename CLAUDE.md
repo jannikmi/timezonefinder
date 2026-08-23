@@ -348,7 +348,7 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   once. State the magnitude that survives a data update ("single-digit MiB", "hundreds of
   thousands of queries/s") and link the generated page for the current number. Figures fixed by a
   constant rather than by the data are fine to state exactly — `~1 cm` resolution follows from
-  `COORD2INT_FACTOR`, `~41k` H3 cells from resolution 3
+  `COORD2INT_FACTOR`, `~288k` H3 cells from resolution 4
 - **A zone name in a snippet is example output, not a constant** — `tz = timezone_at(...)  #
   'Europe/Berlin'`. It is an answer from the packaged dataset, so a data update can change it, and a
   comment copied from a page written against a different dataset is wrong on arrival with nothing to

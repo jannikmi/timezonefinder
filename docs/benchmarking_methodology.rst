@@ -133,13 +133,14 @@ on demand; it is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
-ratio (~25 % ambiguous), so a change is weighted by how much real query load it actually helps.
+ratio (~11 % ambiguous), so a change is weighted by how much real query load it actually helps.
 
 ``unique_shortcut-in_memory`` and ``ambiguous_shortcut-in_memory`` are tracked alongside it as
 diagnostics, because the headline alone cannot attribute a change to a code path. On the tracked
 configuration an ambiguous lookup costs ~14x a unique one (~7x with Numba), so ambiguous work takes
-~83 % of the wall clock despite being ~25 % of the queries. A win confined to the unique path
-therefore moves the headline by only ~0.17x its true size - invisible against the noise floor. The
+~62 % of the wall clock despite being ~11 % of the queries. A win confined to the unique path
+therefore moves the headline by only ~0.38x its true size - enough dilution to sink a small win
+below the noise floor. The
 per-class benchmarks show it undiluted.
 
 
@@ -248,9 +249,9 @@ What a stage's share does and does not bound
 ``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
 asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
 
-The shortcut lookup is 88 ns: **8.7 % of a unique-zone query, 0.8 % of an ambiguous one, ~2.7 % of
-a mixed workload** once the strata are weighted (uniformly random points are ~25 % ambiguous and an
-ambiguous query costs ~10x a unique one). So making that lookup infinitely fast wins at most 2.7 %
+The shortcut lookup is 88 ns: **8.7 % of a unique-zone query, 0.8 % of an ambiguous one, ~4.4 % of
+a mixed workload** once the strata are weighted (uniformly random points are ~11 % ambiguous and an
+ambiguous query costs ~10x a unique one). So making that lookup infinitely fast wins at most 4.4 %
 of a realistic workload - inside the 3-9 % jitter of a single machine, i.e. not reliably
 measurable. Making it *slower* is not bounded that way: one plausible redesign of the same stage
 (``np.searchsorted`` over sorted keys) measured **+93 % of a unique query and +29 % of a mixed

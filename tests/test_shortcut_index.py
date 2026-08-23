@@ -325,6 +325,35 @@ def test_a_newer_layout_version_is_rejected_rather_than_read(tmp_path):
 
 
 @pytest.mark.unit
+def test_a_file_built_for_another_h3_resolution_is_rejected(tmp_path):
+    """The one marker the layout version cannot stand in for.
+
+    The layout is byte-for-byte identical at every resolution, so a file built at another
+    one parses perfectly and every slot in it addresses a different cell - the reader
+    would answer with a neighbour's timezone rather than fail. The resolution is recorded
+    in the header for that reason alone, which makes this the only thing that exercises
+    it: nothing else in the suite reads that field.
+    """
+    path = get_shortcut_file_path(tmp_path)
+    write_shortcuts_binary(build({CELL_A: 1}), path)
+    buffer = bytearray(path.read_bytes())
+    # the resolution is the first of the four int64 following the 4-byte identifier and
+    # the uint32 layout version
+    buffer[8:16] = np.array([SHORTCUT_H3_RES + 1], dtype=np.int64).tobytes()
+    path.write_bytes(bytes(buffer))
+
+    with pytest.raises(ValueError) as excinfo:
+        read_shortcuts_binary(path)
+
+    message = str(excinfo.value)
+    assert f"resolution {SHORTCUT_H3_RES + 1}" in message, "must name the file's own"
+    assert f"resolution {SHORTCUT_H3_RES}" in message, (
+        "must name what this version reads"
+    )
+    assert "file_converter.py" in message, "must name the way to regenerate"
+
+
+@pytest.mark.unit
 def test_the_packaged_file_carries_the_markers_its_own_writer_stamps():
     buffer = get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes()
     assert buffer[:4] == FILE_IDENTIFIER

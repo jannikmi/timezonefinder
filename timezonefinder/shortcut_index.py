@@ -161,7 +161,7 @@ def cell_of_slot(slot: int) -> int:
 def expand_compact(compact: np.ndarray, fill: int) -> np.ndarray:
     """Compact base-7 file table -> the base-8 table the lookup indexes.
 
-    A base-8 slot is exactly the C-order ravel of a ``(122, 8, 8, 8)`` array, so the
+    A base-8 slot is exactly the C-order ravel of a ``(122,) + (8,) * res`` array, so the
     base-7 block lands correctly when dropped into its corner. That slice assignment is
     an order of magnitude cheaper than scattering through a computed index array, and it
     is the whole of what loading the table costs.
@@ -250,8 +250,12 @@ class ShortcutIndex:
         Precomputed when the index is built, so a query reads it rather than scanning for
         it. ``get_last_change_idx`` is the definition, and ``scripts/data_integrity.py``
         holds the stored values to it.
+
+        Cast to ``int`` here, like :meth:`entry_of`: the column is a narrow unsigned dtype,
+        and the candidate loop compares this against a Python ``int`` once per candidate.
+        One cast per query is cheaper than a numpy scalar comparison per iteration.
         """
-        return self.last_change[-(entry + 2)]
+        return int(self.last_change[-(entry + 2)])
 
     # --- build and reporting ------------------------------------------------------
 

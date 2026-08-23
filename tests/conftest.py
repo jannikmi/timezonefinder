@@ -60,12 +60,6 @@ def zone_ids():
 
 
 @pytest.fixture(scope="session")
-def zone_id_dtype(zone_ids):
-    """Convenience fixture exposing the dtype of the zone_ids array."""
-    return zone_ids.dtype
-
-
-@pytest.fixture(scope="session")
 def shortcut_file_path():
     """Path to the packaged shortcut index binary."""
     return get_shortcut_file_path(DEFAULT_DATA_DIR)

@@ -259,15 +259,13 @@ clean:
 # flatbuf/__init__.py and generated/__init__.py - the first of which is the whole public
 # API. Generate into a scratch tree instead and copy back only the generated packages.
 FLATBUF_GEN_DIR := tmp/flatbuf_generated
-FLATBUF_PACKAGES := polygons shortcuts_uint8 shortcuts_uint16
+FLATBUF_PACKAGES := polygons
 
 flatbuf:
 	@echo "Compiling FlatBuffer schemas..."
 	@rm -rf $(FLATBUF_GEN_DIR)
 	@mkdir -p $(FLATBUF_GEN_DIR)
 	@flatc --python --gen-mutable -o $(FLATBUF_GEN_DIR) timezonefinder/flatbuf/schemas/polygons.fbs
-	@flatc --python --gen-mutable -o $(FLATBUF_GEN_DIR) timezonefinder/flatbuf/schemas/hybrid_shortcuts_uint8.fbs
-	@flatc --python --gen-mutable -o $(FLATBUF_GEN_DIR) timezonefinder/flatbuf/schemas/hybrid_shortcuts_uint16.fbs
 	@cp -R $(addprefix $(FLATBUF_GEN_DIR)/timezonefinder/flatbuf/generated/,$(FLATBUF_PACKAGES)) \
 		timezonefinder/flatbuf/generated/
 	@rm -rf $(FLATBUF_GEN_DIR)

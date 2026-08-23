@@ -327,9 +327,16 @@ The shortcuts are precompiled during the data build process. This preprocessing 
 Shortcut Index Layout
 ---------------------
 
-``shortcuts.bin`` holds four arrays after a 32-byte header. The header is the file
-identifier ``TZSC``, a ``uint32`` layout version, and three ``int64``: the number of
-distinct candidate lists, and the widths chosen for the two data-dependent columns.
+``shortcuts.bin`` holds four arrays after a 40-byte header. The header is the file
+identifier ``TZSC``, a ``uint32`` layout version, and four ``int64``: the H3 resolution
+the index was built for, the number of distinct candidate lists, and the widths chosen
+for the two data-dependent columns.
+
+The resolution is in the header because nothing else in the file records it, and it
+changes what every slot *means* without changing anything a reader would notice - the
+layout is identical at every resolution, so the layout version cannot cover it. A reader
+built for another resolution is refused rather than allowed to answer with a different
+cell's timezone.
 
 .. list-table::
    :header-rows: 1
@@ -357,15 +364,22 @@ distinct candidate lists, and the widths chosen for the two data-dependent colum
 
 **The cell id is the index.** H3 packs a cell index as a base cell in bits 45-51 followed
 by fifteen 3-bit digits. At a fixed resolution every other bit is constant, so those bits
-*are* the cell and
+*are* the cell and, with ``res`` the resolution the index was built for
+(``SHORTCUT_H3_RES``),
 
 .. code-block:: python
 
-    slot = ((cell >> 45) & 0x7F) * 512 + ((cell >> 36) & 0x1FF)
+    digit_bits = 3 * res
+    base = (cell >> 45) & 0x7F
+    digits = (cell >> (45 - digit_bits)) & (2**digit_bits - 1)
+    slot = base * 2**digit_bits + digits
 
-is a bijection onto a dense table rather than a hash. No keys are stored and no search
-runs at lookup time. That h3-py does not promise its index encoding as API is handled by
-checking rather than by storing: ``scripts/data_integrity.validate_shortcut_index``
+is a bijection onto a dense table rather than a hash. The base cell sits immediately above
+the digits, so the whole slot is one contiguous bit field and the lookup evaluates it as a
+single shift and mask - ``(cell >> (45 - digit_bits)) & (2 ** (digit_bits + 7) - 1)``. No
+keys are stored and no search runs at lookup time. That h3-py does not promise its index
+encoding as API is handled by checking rather than by storing:
+``scripts/data_integrity.validate_shortcut_index``
 confirms the arithmetic against the public ``get_base_cell_number`` and
 ``cell_to_child_pos`` on every cell that exists, so an encoding change fails where the
 data is built instead of silently returning a neighbour's timezone.
@@ -397,8 +411,8 @@ list to take a scan off every ambiguous query.
 **The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
 base-8 slots can never be addressed. Which ones follows from the resolution and never from
 the data, so the file stores the compact base-7 form and the reader expands it - a base-8
-slot is exactly the C-order ravel of a ``(122, 8, 8, 8)`` array, so the base-7 block lands
-correctly when sliced into its corner. The in-memory table keeps its padding: addressing
+slot is exactly the C-order ravel of a ``(122,) + (8,) * res`` array, so the base-7 block
+lands correctly when sliced into its corner. The in-memory table keeps its padding: addressing
 it base-7 per query costs more than the padding is worth.
 
 **The two data-dependent widths are chosen by fit, not by headroom.** An overflow surfaces

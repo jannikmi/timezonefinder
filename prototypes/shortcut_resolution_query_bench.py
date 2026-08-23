@@ -24,7 +24,7 @@ repository trusts for a difference this small (``docs/benchmarking_methodology.r
 The strata are the committed fixtures, classified against the **resolution 3** index - so
 "ambiguous" means ambiguous at resolution 3, which is exactly the set resolution 4 is
 supposed to improve. ``random`` is the workload-representative one; read it last and rank
-on it, remembering that uniformly random points are ~25 % ambiguous and an ambiguous query
+on it, remembering that uniformly random points are ~11 % ambiguous and an ambiguous query
 costs ~11x a unique one.
 
 Both backends have to be measured, since ``timezonefinder/utils.py`` binds the
@@ -83,8 +83,6 @@ them (``surrounds_north_pole``, ``is_special``), which is where a fix would go.
 
 Neither finding is caused by the shortcut index format; both predate it.
 """
-
-from __future__ import annotations
 
 import argparse
 import contextlib

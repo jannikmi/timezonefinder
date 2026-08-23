@@ -81,8 +81,8 @@ kernel), so another machine re-weights them against each other. Absolute
 page's. Two further corrections before comparing anything: read the clang /
 ``in_memory=False`` column, which is what a plain install in a constrained container
 runs and what CI tracks for that reason, and convert a stratum share into a workload
-share - uniformly random points are ~25% ambiguous and an ambiguous query costs ~11x
-a unique one, so ambiguous work is ~80% of a mixed wall clock. Both are in
+share - uniformly random points are ~11% ambiguous and an ambiguous query costs ~11x
+a unique one, so ambiguous work is ~57% of a mixed wall clock. Both are in
 docs/benchmarking_methodology.rst.
 
 All figures are nanoseconds per query. Ladder figures are the min over 15 passes of

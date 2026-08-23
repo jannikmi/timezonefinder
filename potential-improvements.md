@@ -267,9 +267,9 @@ the denominators, and how to tell whether they still describe the tree.
   the C extension against memory-mapped data, which is why `docs/benchmarking_methodology.rst`
   makes that the tracked configuration for CI too. Both are measured, so this costs nothing but the
   discipline of reading the right column.
-- **A share of a stratum is not a share of a workload.** Uniformly random points are ~25 % ambiguous
+- **A share of a stratum is not a share of a workload.** Uniformly random points are ~11 % ambiguous
   (that page again), and an ambiguous query costs ~11x a unique one on the mapped path, so ambiguous
-  work is ~80 % of a realistic mixed wall clock and unique work ~20 %. Multiply the stratum share
+  work is ~57 % of a realistic mixed wall clock and unique work ~43 %. Multiply the stratum share
   through before comparing two items that live on different strata — that multiplication is a
   property of the fixtures, not of the machine, so it survives the move.
 - **A stage's share bounds its upside and says nothing about its downside, so a small stage is a
@@ -457,7 +457,7 @@ the denominators, and how to tell whether they still describe the tree.
   advice rather than ceasing to be necessary.
 - **The open question that decides the item, and it is now answerable:** the coordinate offset
   table took ~5 µs out of the ~9.3 µs a candidate used to cost, so what remains — roughly 830 ns of
-  fetch plus ~650 ns of FFI plus the Python bbox/hole work, over 1.13 candidates on ~25 % of queries
+  fetch plus ~650 ns of FFI plus the Python bbox/hole work, over 1.13 candidates on ~11 % of queries
   — may sit **inside the 3–9 % noise floor**. If it does, this cannot be justified on speed, and the
   free-threading case is weak too, since per-thread instances already scale 4.84× without it. The
   profile behind those figures is current, so settling this needs no new measurement — only the
@@ -1155,9 +1155,7 @@ the denominators, and how to tell whether they still describe the tree.
   its argument at import time. Removing it collapses the problem:
 
   ```python
-  def write_data_report_from_binary(
-      data_path=..., zone_id_dtype=..., report_path=DATA_REPORT_FILE
-  ):
+  def write_data_report_from_binary(data_path=..., report_path=DATA_REPORT_FILE):
       data = load_binary_data(data_path)
       with redirect_output_to_file_contextmanager(report_path):  # opens "w"
           report_data_statistics(...)
@@ -1238,17 +1236,17 @@ the denominators, and how to tell whether they still describe the tree.
   (excluding `prototypes/`) and could be enabled on their own. `B905` is down to 9 sites: two in
   `scripts/timezone_data.py`'s validators and one in `tests/utils_test.py` where the lengths are
   checked on the line above, the rest genuinely paired by construction.
-  **One earlier conclusion here was wrong. It is corrected rather than deleted, because the site
-  still looks alarming and the next pass would otherwise re-raise it at full price.** The worry was
-  that `timezonefinder/flatbuf/io/hybrid_shortcuts.py`'s `zip(poly_id_hex_ids, poly_id_lengths)` —
-  the only `B905` site on the library's own load path — could truncate silently, dropping shortcut
-  entries while `_iter_boundaries_in_shortcut` reads a missing hex id as "no candidate polygons"
-  (`shortcut_mapping.get(hex_id)` is `None` → `return`), so those coordinates would answer `None`
-  rather than raise. The two lists cannot differ in length: they are local accumulators appended in
-  the same iteration of the same loop, a few lines above the `zip`, and no file — corrupt or
-  otherwise — is read between the two. `strict=True` there would assert what the control flow
-  already guarantees, so `B905` has no site on the load path and the family stands or falls on the
-  other eight.
+  **One earlier conclusion here was wrong. It is corrected rather than deleted, because the shape
+  recurs and the next pass would otherwise re-raise it at full price.** The worry was that the
+  FlatBuffers shortcut reader's `zip(poly_id_hex_ids, poly_id_lengths)` — then the only `B905` site
+  on the library's own load path — could truncate silently, dropping shortcut entries that the
+  lookup would read back as "no candidate polygons", so those coordinates would answer `None`
+  rather than raise. It could not: the two lists were local accumulators appended in the same
+  iteration of the same loop a few lines above the `zip`, with no file read between them, so
+  `strict=True` would have asserted what the control flow already guaranteed. That reader has since
+  been replaced by the slot-addressed shortcut index, which pairs nothing, so the site is gone
+  either way and the family stands or falls on the other eight. The lesson that survives it: a
+  `zip` over two accumulators built in one loop is not a truncation risk, whatever the load path.
 
 ### BIG-2 — `calculate_shortcut_index_stats` computes four unrelated things in one pass
 
