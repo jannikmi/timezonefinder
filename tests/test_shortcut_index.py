@@ -345,7 +345,7 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
     reverted to a live computation and the answers must not move.
     """
     from timezonefinder import utils
-    from timezonefinder.shortcut_index import ABSENT, SLOT_DIGITS_SHIFT, SLOT_MASK
+    from timezonefinder.shortcut_index import ABSENT
 
     class LiveStopIndex(type(tf)):
         __slots__ = ()
@@ -353,15 +353,12 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
         def timezone_at(self, *, lng, lat):
             lng, lat = utils.validate_coordinates(lng, lat)
             hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-            entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
+            entry = self.shortcuts.entry_of(hex_id)
             if entry >= 0:
                 return self.zone_name_from_id(entry)
             if entry == ABSENT:
                 return None
-            e = -(entry + 2)
-            cand = self.shortcut_polygons[
-                self.shortcut_starts[e] : self.shortcut_ends[e]
-            ]
+            cand = self.shortcuts.candidates_of(entry)
             zone_ids = self.zone_ids_of(cand)
             stop = get_last_change_idx(zone_ids)  # what the query no longer does
             x, y = utils.coord2int(lng), utils.coord2int(lat)
@@ -377,12 +374,7 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
         reached = sum(
             1
             for lng, lat in points
-            if int(
-                tf.shortcut_table[
-                    (h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES) >> SLOT_DIGITS_SHIFT)
-                    & SLOT_MASK
-                ]
-            )
+            if tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
             < ABSENT
         )
         assert reached > 100, (

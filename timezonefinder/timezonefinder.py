@@ -39,11 +39,9 @@ from timezonefinder.configs import (
 
 from timezonefinder.shortcut_index import (
     ABSENT,
-    SLOT_DIGITS_SHIFT,
-    SLOT_MASK,
+    ShortcutIndex,
     get_shortcut_file_path,
     read_shortcuts_binary,
-    slot_of,
 )
 from timezonefinder.zone_names import read_zone_names
 
@@ -68,7 +66,7 @@ class AbstractTimezoneFinder(ABC):
     Attributes:
         timezone_names: List of all available timezone names
         zone_ids: NumPy array mapping boundary polygons to timezone IDs
-        shortcut_table: H3 slot -> zone id, absent marker, or candidate list index
+        shortcuts: H3-indexed lookup of the timezones that can cover a point
         data_location: Path to the timezone data directory
     """
 
@@ -77,11 +75,7 @@ class AbstractTimezoneFinder(ABC):
     # guarantee, so `test_declared_slots_are_assigned` pins the list against instances.
     __slots__ = [
         "data_location",
-        "shortcut_table",
-        "shortcut_starts",
-        "shortcut_ends",
-        "shortcut_last_change",
-        "shortcut_polygons",
+        "shortcuts",
         "timezone_names",
         "zone_ids",
         "holes_dir",
@@ -91,14 +85,9 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
-    #: the shortcut index, unpacked into one attribute per array. Held flat rather than
-    #: behind the ``ShortcutIndex`` tuple it is read as: every query indexes the table,
-    #: and an attribute hop on that path is not worth the tidier grouping.
-    shortcut_table: np.ndarray
-    shortcut_starts: np.ndarray
-    shortcut_ends: np.ndarray
-    shortcut_last_change: np.ndarray
-    shortcut_polygons: np.ndarray
+    #: which timezones can possibly cover a point. This class asks it what a cell resolves
+    #: to and never how that is stored - see ``timezonefinder/shortcut_index.py``.
+    shortcuts: ShortcutIndex
 
     def __init__(
         self,
@@ -129,12 +118,9 @@ class AbstractTimezoneFinder(ABC):
 
         self.zone_ids = read_per_polygon_vector(get_zone_ids_path(self.data_location))
 
-        shortcuts = read_shortcuts_binary(get_shortcut_file_path(self.data_location))
-        self.shortcut_table = shortcuts.table
-        self.shortcut_starts = shortcuts.starts
-        self.shortcut_ends = shortcuts.ends
-        self.shortcut_last_change = shortcuts.last_change
-        self.shortcut_polygons = shortcuts.payload
+        self.shortcuts = read_shortcuts_binary(
+            get_shortcut_file_path(self.data_location)
+        )
 
     def _iter_boundary_ids_of_zone(self, zone_id: int) -> Iterable[int]:
         """
@@ -273,15 +259,6 @@ class AbstractTimezoneFinder(ABC):
         zone_id = self.zone_id_of(boundary_id)
         return self.zone_name_from_id(zone_id)
 
-    def _candidates_of(self, entry: int) -> np.ndarray:
-        """The candidate boundary polygon ids a shortcut table value below ``ABSENT`` names.
-
-        ``timezone_at`` inlines this: it needs the entry index for ``shortcut_last_change``
-        anyway, and it is the one caller on the critical path.
-        """
-        i = -(entry + 2)
-        return self.shortcut_polygons[self.shortcut_starts[i] : self.shortcut_ends[i]]
-
     def _iter_boundaries_in_shortcut(self, *, lng: float, lat: float) -> Iterable[int]:
         """
         Iterate over boundary polygon IDs in the shortcut corresponding to the given coordinates.
@@ -292,7 +269,7 @@ class AbstractTimezoneFinder(ABC):
         """
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        entry = int(self.shortcut_table[slot_of(hex_id)])
+        entry = self.shortcuts.entry_of(hex_id)
         if entry == ABSENT:
             return
         if entry >= 0:
@@ -300,7 +277,7 @@ class AbstractTimezoneFinder(ABC):
             # candidate. Most are quickly ruled out by the bounding box check.
             yield from self._iter_boundary_ids_of_zone(entry)
         else:
-            yield from self._candidates_of(entry)
+            yield from self.shortcuts.candidates_of(entry)
 
     @abstractmethod
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
@@ -341,7 +318,7 @@ class AbstractTimezoneFinder(ABC):
 
         # a zone id in the table *is* the precomputed uniqueness; anything else in it
         # means either no coverage or several zones, and neither is a unique answer
-        zone_id = int(self.shortcut_table[slot_of(hex_id)])
+        zone_id = self.shortcuts.entry_of(hex_id)
         if zone_id < 0:
             return None
         return self.zone_name_from_id(zone_id)
@@ -403,14 +380,14 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         # Inline fast-path to minimize helper overhead
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
+        entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
-            # unique zone case: the table holds the answer
+            # unique zone case: the index holds the answer
             return self.zone_name_from_id(entry)
         if entry == ABSENT:
             return None
         # several zones - the last candidate belongs to the most common one
-        poly_of_biggest_zone = self._candidates_of(entry)[-1]
+        poly_of_biggest_zone = self.shortcuts.candidates_of(entry)[-1]
         # a numpy integer scalar from array indexing, which mypy reads as ndarray. Safe:
         # element access yields a scalar compatible with IntegerLike
         most_common_id = self.zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
@@ -655,8 +632,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lng, lat = utils.validate_coordinates(lng, lat)
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        # one table read answers most queries: a zone id is the answer itself
-        entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
+        # one lookup answers most queries: a zone id is the answer itself
+        entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
             return self.zone_name_from_id(entry)
         if entry == ABSENT:
@@ -666,13 +643,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # several zones - the candidates have to be tested. NOTE: neither the empty nor
         # the single-candidate case can occur here; both are unambiguous and are stored
         # in the table itself.
-        # named apart from the loop counter below on purpose: both index something, and a
-        # stop index read for the wrong entry is a wrong timezone that nothing announces -
-        # the stored values would still be correct, so no build-time check could see it
-        entry_idx = -(entry + 2)
-        possible_boundaries = self.shortcut_polygons[
-            self.shortcut_starts[entry_idx] : self.shortcut_ends[entry_idx]
-        ]
+        possible_boundaries = self.shortcuts.candidates_of(entry)
 
         # create a list of all the timezone ids of all possible boundary polygons
         zone_ids = self.zone_ids_of(possible_boundaries)
@@ -680,7 +651,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # where the loop may stop, precomputed at build time - a property of the candidate
         # list, so it is stored once per distinct list rather than recomputed per query.
         # NOTE: the case last_zone_change_idx == 0 is covered by the unique zone shortcut
-        last_zone_change_idx = self.shortcut_last_change[entry_idx]
+        last_zone_change_idx = self.shortcuts.stop_index_of(entry)
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -721,7 +692,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lng, lat = utils.validate_coordinates(lng, lat)
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
-        entry = int(self.shortcut_table[slot_of(hex_id)])
+        entry = self.shortcuts.entry_of(hex_id)
         if entry == ABSENT:
             return None
 
@@ -738,7 +709,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # Most are quickly ruled out by the bounding box check.
             boundary_ids = self._iter_boundary_ids_of_zone(entry)
         else:
-            boundary_ids = self._candidates_of(entry)
+            boundary_ids = self.shortcuts.candidates_of(entry)
 
         for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):

@@ -41,7 +41,7 @@ time instead of silently returning a neighbour's timezone.
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Final, NamedTuple
+from typing import Final
 
 import numpy as np
 
@@ -186,34 +186,74 @@ def compact_of_expanded(table: np.ndarray) -> np.ndarray:
     return table.reshape(shape)[block].reshape(-1)
 
 
-class ShortcutIndex(NamedTuple):
-    """The loaded index: five arrays and the lookup contract between them.
+class ShortcutIndex:
+    """The loaded index, and the only thing that knows how a cell's answer is stored.
 
-    ``table`` is indexed by *slot* and holds the answers. ``bounds``/``last_change`` are
-    indexed by *distinct candidate list* - far fewer than there are cells, and a cell a
-    single zone covers reads neither.
+    Callers ask it three questions and never touch its arrays. What a cell resolves to is
+    a tri-state, and :meth:`entry_of` returns it as one integer so that the common case
+    costs one comparison rather than an allocation:
 
-    A lookup, in full::
+    ============================ ===========================================
+    ``entry >= 0``               the timezone id, and the whole answer
+    ``entry == ABSENT``          no timezone covers this cell
+    ``entry < ABSENT``           several zones; ask :meth:`candidates_of`
+    ============================ ===========================================
 
-        z = int(index.table[slot_of(hex_id)])
-        if z >= 0:  zone id, done
-        if z == ABSENT: not covered
-        i = -(z + 2); index.payload[index.starts[i]:index.ends[i]]
+    That tri-state is the lookup's own vocabulary - a cell is covered by one zone, by
+    none, or by several - so branching on it is domain logic. **How** it is encoded (the
+    slot arithmetic, the ``-(entry + 2)`` entry index, the CSR bounds) stops here, which
+    is what lets the storage change without touching ``timezonefinder.py``.
 
-    The performance-critical callers in ``timezonefinder.py`` hold these arrays directly
-    rather than reaching through this tuple, and inline the slot arithmetic.
+    The arrays stay public because the build-time checks in ``scripts/data_integrity.py``
+    and the format tests legitimately inspect them; the query path does not.
     """
 
-    #: ``int16`` per slot: ``>= 0`` zone id, ``ABSENT`` uncovered, ``< -1`` entry ``-(v+2)``
-    table: np.ndarray
-    #: start of each distinct candidate list in ``payload``
-    starts: np.ndarray
-    #: end of each distinct candidate list; a view of the same CSR array as ``starts``
-    ends: np.ndarray
-    #: per distinct list, the index past which no other zone can be matched
-    last_change: np.ndarray
-    #: every distinct candidate list, back to back
-    payload: np.ndarray
+    __slots__ = ("table", "starts", "ends", "last_change", "payload")
+
+    def __init__(
+        self,
+        table: np.ndarray,
+        starts: np.ndarray,
+        ends: np.ndarray,
+        last_change: np.ndarray,
+        payload: np.ndarray,
+    ) -> None:
+        #: ``int16`` per slot: ``>= 0`` zone id, ``ABSENT`` uncovered, else ``-(entry + 2)``
+        self.table = table
+        #: start of each distinct candidate list in ``payload``
+        self.starts = starts
+        #: end of each distinct candidate list; a view of the same CSR array as ``starts``
+        self.ends = ends
+        #: per distinct list, the index past which no other zone can be matched
+        self.last_change = last_change
+        #: every distinct candidate list, back to back
+        self.payload = payload
+
+    # --- the query contract -------------------------------------------------------
+
+    def entry_of(self, hex_id: int) -> int:
+        """What the cell resolves to, as the tri-state integer documented above.
+
+        The slot arithmetic is inlined rather than delegated to :func:`slot_of`: this runs
+        on every query, and a call here would cost more than the arithmetic it wraps.
+        """
+        return int(self.table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
+
+    def candidates_of(self, entry: int) -> np.ndarray:
+        """The boundary polygon ids to test, for an ``entry`` below ``ABSENT``."""
+        i = -(entry + 2)
+        return self.payload[self.starts[i] : self.ends[i]]
+
+    def stop_index_of(self, entry: int) -> int:
+        """Index into :meth:`candidates_of` past which no other zone can be matched.
+
+        Precomputed when the index is built, so a query reads it rather than scanning for
+        it. ``get_last_change_idx`` is the definition, and ``scripts/data_integrity.py``
+        holds the stored values to it.
+        """
+        return self.last_change[-(entry + 2)]
+
+    # --- build and reporting ------------------------------------------------------
 
     @property
     def nr_of_entries(self) -> int:
@@ -221,7 +261,12 @@ class ShortcutIndex(NamedTuple):
         return len(self.last_change)
 
     def polygons_of_entry(self, entry_idx: int) -> np.ndarray:
-        """The candidate boundary polygon ids of one distinct entry."""
+        """The candidate polygon ids of one distinct entry, by its own index.
+
+        Addressed by entry index rather than by the table's encoding of it, which is what
+        separates it from :meth:`candidates_of`: the build side iterates entries, the
+        query side follows a table value.
+        """
         return self.payload[self.starts[entry_idx] : self.ends[entry_idx]]
 
     def value_of(self, hex_id: int) -> int | np.ndarray | None:

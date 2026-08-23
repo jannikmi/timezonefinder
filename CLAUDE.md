@@ -73,6 +73,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Before adding any version-gated import, `__future__` feature, or compatibility shim, check
   `requires-python` and confirm the feature actually needs it on the minimum supported version
+- **Do not let an unmeasured micro-optimisation choose the structure.** The shortcut index was
+  first wired into `AbstractTimezoneFinder` as five flat array attributes with the slot
+  arithmetic and entry decoding inlined at each call site, justified by an attribute hop
+  "not worth the tidier grouping" — which was never measured. It costs nothing: routing the
+  same lookup through `ShortcutIndex.entry_of` / `candidates_of` / `stop_index_of` measured
+  inside the noise on all four strata, both estimators disagreeing. Encapsulate first, then
+  measure, and only then trade the design away — with the numbers in the commit. A method
+  call is not free, but at ~1 µs per query it is far below what this repository can resolve
 - **Removing the last caller of something is half the change: the other half is the callee.**
   Grep for remaining callers in the same commit, and act on what you find — no callers at all
   means delete it; callers only in tests means it is test scaffolding and should say so; callers

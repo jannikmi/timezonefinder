@@ -144,6 +144,16 @@ One point-in-polygon test, per call, by polygon size stratum:
     medium       3,039         786          66               650    1,598     1,582
     large       47,196         794          62               648   22,211    22,214
 
+AMENDMENT (2026-08-23, after the shortcut lookup moved behind ``ShortcutIndex``)
+
+    The lookup is now ``self.shortcuts.entry_of(hex_id)`` and two further method calls on
+    the ambiguous path, where it used to be an inlined expression over arrays held flat on
+    the finder. **The per-line hit counts above are stale for that reason** - the prologue
+    block is 4 hits per query rather than 10, since one call replaced several lines. The
+    *timings* are not: a paired, order-alternated whole-query A/B of the two shapes put
+    every stratum inside the noise, with the two estimators disagreeing on all four, so
+    the ns/query figures below stand. Re-run before quoting a hit count.
+
 CONCLUSIONS
 
 1. **A batch API would amortise real overhead, not noise.** A unique-zone query is
@@ -280,11 +290,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
     validate = utils.validate_coordinates
     latlng_to_cell = h3.latlng_to_cell
     res = SHORTCUT_H3_RES
-    table = tf.shortcut_table
-    starts = tf.shortcut_starts
-    ends = tf.shortcut_ends
-    last_change = tf.shortcut_last_change
-    payload = tf.shortcut_polygons
+    shortcuts = tf.shortcuts
     zone_name_from_id = tf.zone_name_from_id
     zone_ids_of = tf.zone_ids_of
     coord2int = utils.coord2int
@@ -319,7 +325,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             n += 1
         return n
 
@@ -328,7 +334,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
             n += 1
@@ -339,12 +345,11 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             n += 1
         return n
 
@@ -353,12 +358,11 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
             n += 1
         return n
@@ -368,14 +372,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
-            last = last_change[i]
+            last = shortcuts.stop_index_of(entry)
             n += 1
         return n
 
@@ -384,14 +387,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
-            last = last_change[i]
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             n += 1
@@ -402,14 +404,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
-            last = last_change[i]
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             for i, boundary_id in enumerate(candidates):
@@ -425,14 +426,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
-            last = last_change[i]
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             for i, boundary_id in enumerate(candidates):
@@ -451,14 +451,13 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
         for lng, lat in points:
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
-            entry = int(table[slot_of(hex_id)])
+            entry = shortcuts.entry_of(hex_id)
             if entry >= 0:
                 zone_name_from_id(entry)
                 continue
-            i = -(entry + 2)
-            candidates = payload[starts[i] : ends[i]]
+            candidates = shortcuts.candidates_of(entry)
             zone_ids = zone_ids_of(candidates)
-            last = last_change[i]
+            last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
             matched = False
@@ -659,17 +658,16 @@ BLOCK_MARKERS: tuple[tuple[str, str], ...] = (
     ("validate_coordinates", "prologue"),
     ("latlng_to_cell", "prologue"),
     ("entry = int(", "prologue"),
-    ("self.shortcut_table[", "prologue"),
+    ("shortcuts.entry_of", "prologue"),
     ("SLOT_BASE_CELL_SHIFT", "prologue"),
     ("SLOT_DIGITS_SHIFT", "prologue"),
     ("if entry >= 0", "prologue"),
     ("if entry == ABSENT", "prologue"),
     ("zone_name_from_id", "zone name"),
     ("i = -(entry + 2)", "bookkeeping"),
-    ("possible_boundaries = self.shortcut_polygons", "bookkeeping"),
-    ("self.shortcut_starts[i]", "bookkeeping"),
+    ("shortcuts.candidates_of", "bookkeeping"),
     ("zone_ids_of", "bookkeeping"),
-    ("self.shortcut_last_change[i]", "bookkeeping"),
+    ("shortcuts.stop_index_of", "bookkeeping"),
     ("coord2int", "bookkeeping"),
     ("for i, boundary_id", "bookkeeping"),
     ("i >= last_zone_change_idx", "bookkeeping"),

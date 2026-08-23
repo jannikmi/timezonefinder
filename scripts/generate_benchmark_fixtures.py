@@ -46,7 +46,7 @@ import numpy as np
 from h3.api import numpy_int as h3
 
 from scripts.configs import DEBUG, read_data_version
-from timezonefinder.shortcut_index import ABSENT, slot_of
+from timezonefinder.shortcut_index import ABSENT
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_DIR,
@@ -124,7 +124,7 @@ def generate_shortcut_points(
         lng, lat = get_rnd_query_pt_area_weighted(rng)
         attempts += 1
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-        entry = int(tf.shortcut_table[slot_of(hex_id)])
+        entry = tf.shortcuts.entry_of(hex_id)
         if entry == ABSENT:
             continue
         if entry >= 0:
