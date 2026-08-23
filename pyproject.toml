@@ -170,6 +170,20 @@ markers = [
     "benchmark_core: mark a benchmark as part of the small, CI-tracked core subset (see .github/workflows/benchmark.yml) - pick for signal, not coverage",
 ]
 
+[tool.rstcheck]
+# Read by the pre-commit hook and by a bare `rstcheck` run alike, so the two agree.
+# docs/ is Sphinx-built and rstcheck only recognises the directives Sphinx owns when sphinx
+# is installed, which the hook pulls in. Three directives still need naming here:
+#   autoclass/autofunction - autodoc is not part of that shim
+#   include - rstcheck resolves it against the working directory rather than against the
+#     including file, and abandons the whole file with an AttributeError when it misses.
+#     Both include targets (docs/badges.rst, CHANGELOG.rst) are linted directly, so skipping
+#     the directive covers the same content without the false negative.
+ignore_directives = ["autoclass", "autofunction", "include"]
+# INFO findings are Sphinx facts, not defects: hyperlink targets referenced from another page,
+# and headings that legitimately repeat across pages.
+report_level = "warning"
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = false
