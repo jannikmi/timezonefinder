@@ -36,6 +36,102 @@ def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
 
 
 @njit(boolean(CoordType, CoordType), cache=True)
+def any_edge_crossing(ring1: np.ndarray, ring2: np.ndarray) -> bool:
+    """True if an edge of closed ring ``ring1`` meets an edge of ``ring2``.
+
+    Two rings can overlap with no vertex of either inside the other - an edge passing
+    clean through - which is the case vertex inclusion alone cannot see. It is not
+    hypothetical: at H3 resolution 4 a cell in the Strait of Malacca lies inside an ocean
+    polygon whose boundary crosses it without either shape's vertices being enclosed, and
+    the cell was recorded as not covered.
+
+    **Touching counts as meeting.** An edge ending exactly on the other ring's edge, or
+    two edges sharing a point, is reported here rather than left to the vertex tests -
+    which answer it only by whichever way their ray casting happens to fall on a boundary
+    point. This is the safe direction for what the answer is used for: an extra candidate
+    polygon costs a bounding-box rejection, a missing one costs every point in the cell
+    its timezone. Two collinear edges on the same line are reported as meeting whether or
+    not they overlap, for the same reason.
+
+    A degenerate determinant therefore never suppresses a hit: the tests below skip a
+    pair only when one segment lies *strictly* to one side of the other's line. Written
+    as ``(d > 0) == ...``, with zero folded in with the negatives, the answer would depend
+    on the order the ring's vertices happen to be stored in - the same two rings meeting
+    for one winding and not for the reverse.
+
+    Coordinates are translated by ``ring1``'s first vertex before the orientation tests.
+    They are scaled by 10^7, so a raw difference reaches ~3.6e9 and the cross products
+    would overflow ``int64``; after translation everything that survives the bounding-box
+    rejection is within a cell's extent of the origin, which keeps the products small
+    enough to stay exact.
+    """
+    n1 = ring1.shape[1]
+    n2 = ring2.shape[1]
+    if n1 < 2 or n2 < 2:
+        return False
+
+    ox = np.int64(ring1[0, 0])
+    oy = np.int64(ring1[1, 0])
+
+    # ring1 is a hexagon: six edges, so its bounding box is worth computing once and
+    # testing every edge of the much longer ring2 against
+    xmin = np.int64(ring1[0, 0])
+    xmax = xmin
+    ymin = np.int64(ring1[1, 0])
+    ymax = ymin
+    for i in range(1, n1):
+        x = np.int64(ring1[0, i])
+        y = np.int64(ring1[1, i])
+        if x < xmin:
+            xmin = x
+        if x > xmax:
+            xmax = x
+        if y < ymin:
+            ymin = y
+        if y > ymax:
+            ymax = y
+
+    for j in range(n2):
+        k = j + 1 if j + 1 < n2 else 0
+        qx1 = np.int64(ring2[0, j])
+        qy1 = np.int64(ring2[1, j])
+        qx2 = np.int64(ring2[0, k])
+        qy2 = np.int64(ring2[1, k])
+        # reject the overwhelming majority of edges before any arithmetic that matters
+        if qx1 < xmin and qx2 < xmin:
+            continue
+        if qx1 > xmax and qx2 > xmax:
+            continue
+        if qy1 < ymin and qy2 < ymin:
+            continue
+        if qy1 > ymax and qy2 > ymax:
+            continue
+        qx1 -= ox
+        qy1 -= oy
+        qx2 -= ox
+        qy2 -= oy
+        rqx = qx2 - qx1
+        rqy = qy2 - qy1
+        for i in range(n1):
+            m = i + 1 if i + 1 < n1 else 0
+            px1 = np.int64(ring1[0, i]) - ox
+            py1 = np.int64(ring1[1, i]) - oy
+            px2 = np.int64(ring1[0, m]) - ox
+            py2 = np.int64(ring1[1, m]) - oy
+            d1 = rqx * (py1 - qy1) - rqy * (px1 - qx1)
+            d2 = rqx * (py2 - qy1) - rqy * (px2 - qx1)
+            if (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
+                continue
+            rpx = px2 - px1
+            rpy = py2 - py1
+            d3 = rpx * (qy1 - py1) - rpy * (qx1 - px1)
+            d4 = rpx * (qy2 - py1) - rpy * (qx2 - px1)
+            if not ((d3 > 0 and d4 > 0) or (d3 < 0 and d4 < 0)):
+                return True
+    return False
+
+
+@njit(boolean(CoordType, CoordType), cache=True)
 def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     for pt in poly.T:
         if not pt_in_poly_python(pt[0], pt[1], hole):

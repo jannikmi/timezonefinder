@@ -16,6 +16,7 @@ import mmap
 from pathlib import Path
 
 import numpy as np
+from h3.api import numpy_int as h3
 
 from scripts.configs import MIN_HOLE_DEDUP_RATIO
 from timezonefinder.flatbuf.schemas import (
@@ -30,9 +31,26 @@ from timezonefinder.flatbuf.io.polygons import (
     read_polygon_array_at,
     read_polygon_array_from_binary,
 )
-from timezonefinder.np_binary_helpers import get_poly_ref_path
+from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.np_binary_helpers import (
+    get_poly_ref_path,
+    get_zone_ids_path,
+    read_per_polygon_vector,
+)
 from timezonefinder.polygon_array import HoleArray, PolygonArray
+from timezonefinder.shortcut_index import (
+    ABSENT,
+    SLOT_BASE_CELL_MASK,
+    SLOT_BASE_CELL_SHIFT,
+    SLOT_TABLE_SIZE,
+    get_last_change_idx,
+    get_shortcut_file_path,
+    narrowest_dtype_for,
+    read_shortcuts_binary,
+    slots_of,
+)
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
+from timezonefinder.zone_names import read_zone_names
 
 
 class DataIntegrityError(ValueError):
@@ -255,3 +273,196 @@ def validate_coordinate_offset_table(data_dir: Path) -> None:
                             f"this file's layout, so lookups against it would return "
                             f"wrong coordinates silently."
                         )
+
+
+def all_cells_at_shortcut_res() -> np.ndarray:
+    """Every H3 cell id at ``SHORTCUT_H3_RES``, ascending, as ``int64``."""
+    cells: list[int] = []
+    for res0 in h3.get_res0_cells():
+        cells.extend(int(c) for c in h3.cell_to_children(res0, SHORTCUT_H3_RES))
+    return np.array(sorted(cells), dtype=np.int64)
+
+
+def validate_slot_layout_against_h3() -> None:
+    """Check the shortcut index's bit arithmetic against h3's *public* API, cell by cell.
+
+    This is what makes addressing entries by H3 bit position a checked invariant rather
+    than a trusted one, and it is the whole answer to "h3-py does not promise the index
+    encoding as API". It does not have to: ``get_base_cell_number`` and
+    ``cell_to_child_pos`` are public, and between them they determine a cell's position
+    exactly as the bits do. So the lookup can slice bits while this proves that slicing
+    agrees with the supported accessors over every cell that exists. If h3 ever changes
+    the layout, this fails where the data is produced instead of silently returning a
+    neighbour's timezone.
+
+    Cost is why it lives here: the public route is ~2.5x the whole shortcut lookup per
+    query, and nothing at all once per build.
+
+    :raises DataIntegrityError: if the bits and the public accessors disagree
+    """
+    cells = all_cells_at_shortcut_res()
+
+    # a dense reference index derived only from public API
+    base_offset: dict[int, int] = {}
+    run = 0
+    for cell in sorted(int(c) for c in h3.get_res0_cells()):
+        base_offset[int(h3.get_base_cell_number(cell))] = run
+        run += int(h3.cell_to_children_size(cell, SHORTCUT_H3_RES))
+
+    base_from_bits = (cells >> SLOT_BASE_CELL_SHIFT) & SLOT_BASE_CELL_MASK
+    public_index = np.empty(len(cells), dtype=np.int64)
+    for i, cell_id in enumerate(cells):
+        cell = int(cell_id)
+        base = int(h3.get_base_cell_number(cell))
+        if base != int(base_from_bits[i]):
+            raise DataIntegrityError(
+                f"h3's index encoding has moved: cell {cell:#x} reports base cell {base} "
+                f"through get_base_cell_number and {int(base_from_bits[i])} at bits "
+                f"{SLOT_BASE_CELL_SHIFT}-{SLOT_BASE_CELL_SHIFT + 6}. The shortcut index "
+                f"addresses entries by those bits, so every lookup in it is now wrong. "
+                f"Regenerate the data and bump SHORTCUT_LAYOUT_VERSION with "
+                f"DATA_FORMAT_VERSION."
+            )
+        public_index[i] = base_offset[base] + int(h3.cell_to_child_pos(cell, 0))
+
+    slots = slots_of(cells)
+    # The two must order the cells identically: same base cell first, then the same digit
+    # sequence. Equality of the indices themselves is not expected - the bit form is
+    # base-8 per digit and therefore sparser than the public form.
+    if not np.array_equal(np.argsort(slots), np.argsort(public_index)):
+        raise DataIntegrityError(
+            "the bit-derived shortcut slot orders cells differently from h3's public "
+            "get_base_cell_number / cell_to_child_pos. The index's entry order no longer "
+            "means what it did; regenerate the data and bump SHORTCUT_LAYOUT_VERSION "
+            "with DATA_FORMAT_VERSION."
+        )
+
+    if len(np.unique(slots)) != len(cells) or int(slots.max()) >= SLOT_TABLE_SIZE:
+        raise DataIntegrityError(
+            "the shortcut slot map is no longer a bijection over the cells at "
+            f"resolution {SHORTCUT_H3_RES}."
+        )
+
+
+def validate_shortcut_index(data_dir: Path) -> None:
+    """Check that the shortcut index in ``data_dir`` says what a lookup will read from it.
+
+    The lookup does no bounds checking and no dispatch beyond the sign of one ``int16``:
+    it slices bits into the table, and follows what it finds there straight into the
+    payload. Everything that makes that safe is established here - the widths chosen by
+    fit rather than by headroom, the reserved table values, the precomputed stop index,
+    and the padding that must read as "nothing here" - because none of it is
+    self-announcing at lookup time. A stop index one too small returns a plausible wrong
+    timezone; a zone id truncated into ``int16`` returns a different zone's name.
+
+    Exhaustive on purpose. It runs where the data is produced and in the test suite over
+    what is committed, never when a ``TimezoneFinder`` is built.
+
+    :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
+    :raises DataIntegrityError: if the index does not hold together
+    """
+    validate_slot_layout_against_h3()
+
+    path = get_shortcut_file_path(data_dir)
+    index = read_shortcuts_binary(path)
+    zone_ids = read_per_polygon_vector(get_zone_ids_path(data_dir))
+    nr_of_zones = len(read_zone_names(data_dir))
+    nr_of_boundaries = len(zone_ids)
+
+    starts = index.starts.astype(np.int64)
+    ends = index.ends.astype(np.int64)
+    lengths = ends - starts
+
+    if index.nr_of_entries and int(ends[-1]) != len(index.payload):
+        raise DataIntegrityError(
+            f"{path}: the last candidate list ends at {int(ends[-1])} but the payload "
+            f"holds {len(index.payload)} polygon ids."
+        )
+    # Also where an offset column too narrow for the payload is caught: the offsets are
+    # ascending, so one that wrapped leaves the entry before it with a hugely negative
+    # length, and one that wrapped on the *last* entry fails the check above. Reading the
+    # column back cannot show it directly - it comes off disk through the very width that
+    # truncated it, so every value in it fits that width by construction.
+    if np.any(lengths < 2):
+        offender = int(np.argmin(lengths))
+        raise DataIntegrityError(
+            f"{path}: candidate list {offender} holds {int(lengths[offender])} polygon "
+            "ids. Every stored list has at least two - a single candidate is unambiguous "
+            "and belongs in the table as a zone id - and that is what leaves a spare "
+            "table value to mean 'no cell here'. A negative length here means the offset "
+            "column is too narrow for the payload and wrapped; widen it, and bump "
+            "SHORTCUT_LAYOUT_VERSION and DATA_FORMAT_VERSION with it."
+        )
+    if len(index.payload) and int(index.payload.max()) >= nr_of_boundaries:
+        raise DataIntegrityError(
+            f"{path}: a candidate list names boundary polygon "
+            f"{int(index.payload.max())}, but {data_dir} holds {nr_of_boundaries}."
+        )
+
+    # The two data-dependent widths are still the narrowest that fit. This is the "by fit,
+    # not by headroom" property of the format asserted over what shipped, and the only
+    # form of it a reader can check: a *too narrow* width is caught by the length and
+    # payload-end checks above, since a wrapped value is indistinguishable from an
+    # intended one once it has been read back through the width that wrapped it. What is
+    # left to catch is the other direction - a converter that quietly started padding,
+    # which nothing else would ever notice.
+    for column, itemsize, what in (
+        (
+            np.append(starts, ends[-1:]),
+            index.starts.dtype.itemsize,
+            "the offset column",
+        ),
+        (index.last_change, index.last_change.dtype.itemsize, "the length column"),
+    ):
+        largest = int(np.max(column)) if len(column) else 0
+        expected = narrowest_dtype_for(largest, what=what)
+        if expected.itemsize != itemsize:
+            raise DataIntegrityError(
+                f"{path}: {what} is {itemsize * 8} bits wide, but the largest value in it "
+                f"is {largest:,}, which {expected.name} holds. The format records each "
+                f"width in the header so that it can be the narrowest that fits; a wider "
+                f"one costs size for nothing and means the writer and this check no "
+                f"longer agree on how the width is chosen."
+            )
+
+    table = index.table
+    zone_id_slots = table >= 0
+    if np.any(table[zone_id_slots] >= nr_of_zones):
+        raise DataIntegrityError(
+            f"{path}: the table answers with zone id "
+            f"{int(table[zone_id_slots].max())}, but {data_dir} names {nr_of_zones} "
+            "zones. Zone ids share the table with the candidate list indices, so a "
+            "value out of range here is a silently wrong answer rather than an error."
+        )
+    entry_slots = table < ABSENT
+    entry_indices = -(table[entry_slots].astype(np.int64) + 2)
+    if len(entry_indices) and int(entry_indices.max()) >= index.nr_of_entries:
+        raise DataIntegrityError(
+            f"{path}: the table points at candidate list {int(entry_indices.max())}, but "
+            f"only {index.nr_of_entries} are stored."
+        )
+
+    # the padding: base-8 slots no cell at this resolution can address must read as
+    # absent, or the invariant "a slot without an entry answers nothing" is unassertable
+    reachable = np.zeros(SLOT_TABLE_SIZE, dtype=bool)
+    reachable[slots_of(all_cells_at_shortcut_res())] = True
+    if np.any(table[~reachable] != ABSENT):
+        raise DataIntegrityError(
+            f"{path}: {int(np.count_nonzero(table[~reachable] != ABSENT))} table slots no "
+            "H3 cell can address hold something other than the absent marker. They are "
+            "unreachable, so this changes no answer - but it is what the reader fills "
+            "them with, so it disagreeing means the expansion is not doing what it says."
+        )
+
+    # the precomputed stop index, against the function the query used to call
+    for entry in range(index.nr_of_entries):
+        candidates = index.polygons_of_entry(entry).astype(np.int64)
+        expected = int(get_last_change_idx(zone_ids[candidates]))
+        if int(index.last_change[entry]) != expected:
+            raise DataIntegrityError(
+                f"{path}: candidate list {entry} records {int(index.last_change[entry])} "
+                f"as the index past which no other zone can be matched, but its polygons "
+                f"give {expected}. The query reads this rather than computing it, so a "
+                f"wrong value stops the point-in-polygon loop early and attributes the "
+                f"point to the wrong zone."
+            )

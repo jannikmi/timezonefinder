@@ -38,7 +38,7 @@ from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     UNKNOWN_DATA_VERSION,
 )
-from timezonefinder.flatbuf.io.hybrid_shortcuts import SHORTCUT_LAYOUT_VERSION
+from timezonefinder.shortcut_index import SHORTCUT_LAYOUT_VERSION
 from timezonefinder.flatbuf.io.polygons import POLYGON_LAYOUT_VERSION
 
 

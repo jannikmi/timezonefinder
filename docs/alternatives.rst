@@ -57,7 +57,7 @@ difference is in what they do with that dataset's geometry.
      - Limited only by the source dataset
      - Reduced near borders, in proportion to the simplification
    * - Spatial Index
-     - H3 hexagons at resolution 3 (~41k cells); :doc:`data_report` lists the index size
+     - H3 hexagons at resolution 4 (~288k cells); :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
    * - Startup Time
      - Requires initialization; measured per class and mode in :doc:`benchmark_results_initialization`

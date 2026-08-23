@@ -73,6 +73,30 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Before adding any version-gated import, `__future__` feature, or compatibility shim, check
   `requires-python` and confirm the feature actually needs it on the minimum supported version
+- **Do not let an unmeasured micro-optimisation choose the structure.** The shortcut index was
+  first wired into `AbstractTimezoneFinder` as five flat array attributes with the slot
+  arithmetic and entry decoding inlined at each call site, justified by an attribute hop
+  "not worth the tidier grouping" — which was never measured. It costs nothing: routing the
+  same lookup through `ShortcutIndex.entry_of` / `candidates_of` / `stop_index_of` measured
+  inside the noise on all four strata, both estimators disagreeing. Encapsulate first, then
+  measure, and only then trade the design away — with the numbers in the commit. A method
+  call is not free, but at ~1 µs per query it is far below what this repository can resolve
+- **Removing the last caller of something is half the change: the other half is the callee.**
+  Grep for remaining callers in the same commit, and act on what you find — no callers at all
+  means delete it; callers only in tests means it is test scaffolding and should say so; callers
+  only at build time means it must *leave the runtime modules*, because everything in
+  `timezonefinder/utils_numba.py` is compiled and bound at import in every user's process. That
+  is how `get_last_change_idx` outlived its query-path caller: precomputing it into the shortcut
+  index removed the call, and the `@njit` function stayed behind being compiled for nobody. A
+  helper that no longer runs per query is not merely tidy to move — it is cost every user pays
+- **A dispatch boundary costs more than any scalar per-query stage computes.** An empty `njit`
+  call is ~98 ns and a cffi crossing the same order, against stages of 100-200 ns — so reaching
+  for Numba or the C extension to speed one up is a measured dead end, not an untried idea, and
+  `njit` on a scalar helper is a net *loss* (`potential-improvements.md`, *Recorded decisions*,
+  has the numbers and the inventory of which helpers still pay it). Numba earns its place on
+  `inside_polygon`, over arrays of hundreds to tens of thousands of vertices, where the same
+  overhead amortises to nothing. Look for the algebra first: the H3 slot lookup lost two thirds
+  of its arithmetic to one observation about adjacent bit fields
 - Preserve the fast lookup path. `prototypes/query_stage_profile.py` attributes a `timezone_at`
   query to its stages, per backend and per coordinate-access mode, off the committed fixtures —
   read its `FINDINGS` block before arguing about where query time goes, and re-run it rather
@@ -106,6 +130,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
   check be *thorough* — the hole-reference check resolves every ring in the dataset, which no
   per-construction budget would allow. A defensive `if` at load time is the tempting version of
   this and the wrong one: it is slower, and being forced to stay cheap makes it shallower
+- **Pick the narrowest integer dtype that fits, guard it, and never reject a width for lack of
+  headroom alone.** A width chosen with 1.2x margin is fine; a width chosen *for* margin is
+  padding. The data is produced by a converter this repository owns, so an overflow surfaces at
+  build time rather than in a user's process — provided something checks, which is the bullet
+  above: assert it in the generator and in the test suite, sharing one implementation. The error
+  message is the deliverable, not the assertion: name the value that overflowed, the dtype's
+  ceiling, which width to move to, and the version bumps that follow. A guarded narrow type is
+  strictly better than an unguarded wide one — smaller, and loud instead of silently truncating
 - **Declare each path/filename constant once** in the module that owns the resource and import it
   elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
   drift when one is renamed
@@ -323,7 +355,7 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   once. State the magnitude that survives a data update ("single-digit MiB", "hundreds of
   thousands of queries/s") and link the generated page for the current number. Figures fixed by a
   constant rather than by the data are fine to state exactly — `~1 cm` resolution follows from
-  `COORD2INT_FACTOR`, `~41k` H3 cells from resolution 3
+  `COORD2INT_FACTOR`, `~288k` H3 cells from resolution 4
 - **A zone name in a snippet is example output, not a constant** — `tz = timezone_at(...)  #
   'Europe/Berlin'`. It is an answer from the packaged dataset, so a data update can change it, and a
   comment copied from a page written against a different dataset is wrong on arrival with nothing to

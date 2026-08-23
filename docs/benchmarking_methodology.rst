@@ -133,13 +133,14 @@ on demand; it is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
-ratio (~25 % ambiguous), so a change is weighted by how much real query load it actually helps.
+ratio (~11 % ambiguous), so a change is weighted by how much real query load it actually helps.
 
 ``unique_shortcut-in_memory`` and ``ambiguous_shortcut-in_memory`` are tracked alongside it as
 diagnostics, because the headline alone cannot attribute a change to a code path. On the tracked
 configuration an ambiguous lookup costs ~14x a unique one (~7x with Numba), so ambiguous work takes
-~83 % of the wall clock despite being ~25 % of the queries. A win confined to the unique path
-therefore moves the headline by only ~0.17x its true size - invisible against the noise floor. The
+~62 % of the wall clock despite being ~11 % of the queries. A win confined to the unique path
+therefore moves the headline by only ~0.38x its true size - enough dilution to sink a small win
+below the noise floor. The
 per-class benchmarks show it undiluted.
 
 
@@ -208,6 +209,60 @@ gate would fire on noise, and a gate everyone learns to ignore is worse than no 
 The trend chart is likewise **not** used to judge a pull request. It is cross-machine by
 construction, and the comment workflow deliberately does not compare against it - a constraint
 ``tests/test_benchmark_workflows.py`` enforces rather than leaves to convention.
+
+
+Comparing two implementations of one stage
+------------------------------------------
+
+The suites above compare one implementation across commits or machines. Deciding between two
+*candidate* implementations of a single stage - a data structure, an accessor, a dispatch - is a
+different measurement, and three designs for it have produced wrong answers in this repository.
+All three flattered the newer candidate.
+
+**Do not microbenchmark the stage in isolation.** Two candidates rarely divide the work at the same
+place, so a boundary drawn around "the lookup" charges one of them for something the other pays a
+moment later. Replacing the shortcut dict was measured this way and the dict came out ~100 ns
+ahead, which would have been ~10 % of a unique-zone query. It was an artefact: the shipped code
+answers ``dict.get`` with a ``match value: case int(zone_id)`` that the flat structure needs no
+equivalent of, and which costs 84 -> 188 ns. Measure the whole public call and let the boundary
+fall where it falls.
+
+**Alternate the order of a paired comparison.** Running A then B inside each round lets A warm
+everything the two share - coordinate validation, the H3 call, the zone-name lookup, the branch
+predictors - and hands B the benefit for free. The same shortcut comparison read as **13.3 %
+faster** in a fixed order and **0.3 %** once the order alternated round by round.
+
+**Report two estimators and believe them only when they agree.** The ratio of the two best rounds
+is the least noise-sensitive estimator; the count of rounds where the candidate won assumes nothing
+about the noise distribution. Where a difference is real they move together. Where they disagree -
+one saying +0.5 % and the other 26 of 61 rounds - there is no effect to find, and that disagreement
+is a more useful output than either number alone.
+
+**Sample the inputs at random.** Iterating a dict's keys in its own order walks its table front to
+back and hands it a cache-friendly access pattern no real query stream has. Worth 77 ns against
+108 ns on the same lookup - a third of the quantity being compared.
+
+
+What a stage's share does and does not bound
+--------------------------------------------
+
+``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
+asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
+
+The shortcut lookup is 117-145 ns: **13-15 % of a unique-zone query, ~1 % of an ambiguous one, and
+~7 % of the uniformly random stratum** - the last measured directly rather than derived, which is
+what makes it the one to rank on. So making that lookup infinitely fast wins at most ~7 % of a
+realistic workload, and the part of that inside the 3-9 % jitter of a single machine is not
+reliably measurable at all. Making it *slower* is not bounded that way: one plausible redesign of
+the same stage (``np.searchsorted`` over sorted keys) measured **+93 % of a unique query**, and
+since ~89 % of a random workload is answered on the unique path, a regression there is amplified
+into the mixed figure rather than diluted out of it.
+
+The rule that follows, for any stage the ladder puts in single digits: ask whether a change keeps
+it roughly free, never whether it makes it faster, and decide on a whole-query A/B rather than on
+the stage. Where a real win would have to come from is visible in the same ladder -
+``validate_coordinates`` at ~30 % and ``h3.latlng_to_cell`` at ~40 %, **70 % of a unique-zone query
+in two calls before any lookup logic runs.**
 
 
 Memory is measured the same way

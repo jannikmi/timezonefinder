@@ -7,6 +7,7 @@ import pytest
 
 from scripts.helper_classes import Boundaries
 from scripts.hex_utils import Hex, get_corrected_hex_boundaries
+from scripts.utils_numba import any_edge_crossing, any_pt_in_poly
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
 from timezonefinder.utils_numba import coord2int
 
@@ -138,3 +139,90 @@ def test_root_cell_keeps_only_the_polygons_its_bounds_overlap():
     assert cell.poly_candidates == {0, 1}
     # cached, and the cache holds the filtered set rather than the inherited one
     assert cell.poly_candidates == {0, 1}
+
+
+@pytest.mark.unit
+class TestAnyEdgeCrossing:
+    """The overlap case vertex inclusion cannot see: an edge passing clean through.
+
+    Left untested for a long time because it was left unimplemented, on the grounds that
+    polygons and cells have a similar size. That holds less and less as the H3 resolution
+    rises, and a cell in the Strait of Malacca was being recorded as uncovered by an ocean
+    polygon it sits inside.
+    """
+
+    SQUARE = np.array([[0, 100, 100, 0], [0, 0, 100, 100]], dtype=np.int32)
+
+    def test_a_bar_crossing_it_with_no_vertex_inside_either_ring(self):
+        """The case the vertex tests miss, and the reason this function exists."""
+        bar = np.array([[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int32)
+        assert not any_pt_in_poly(self.SQUARE, bar)
+        assert not any_pt_in_poly(bar, self.SQUARE)
+        assert any_edge_crossing(self.SQUARE, bar)
+
+    def test_a_disjoint_ring_does_not_cross(self):
+        far = np.array([[500, 600, 600, 500], [500, 500, 600, 600]], dtype=np.int32)
+        assert not any_edge_crossing(self.SQUARE, far)
+
+    def test_a_fully_contained_ring_does_not_cross(self):
+        """Containment is not crossing - the vertex tests own that case, not this one."""
+        inner = np.array([[10, 20, 20, 10], [10, 10, 20, 20]], dtype=np.int32)
+        assert not any_edge_crossing(self.SQUARE, inner)
+        assert not any_edge_crossing(inner, self.SQUARE)
+
+    def test_a_ring_touching_at_one_vertex_counts_as_meeting(self):
+        """Touching is reported, and the vertex tests cannot be relied on to do it.
+
+        A ring corner sitting exactly on the other ring's edge is a boundary point, which
+        ray casting answers whichever way it happens to fall. Reporting it here is the
+        safe direction: an extra candidate polygon costs a bounding-box rejection, a
+        missing one costs every point in the cell its timezone.
+        """
+        # touches SQUARE only at (0, 0); the square lies on one side of the line through it
+        touching = np.array([[-50, 50, -50], [50, -50, -150]], dtype=np.int32)
+        assert any_edge_crossing(self.SQUARE, touching)
+
+    def test_the_answer_does_not_depend_on_a_ring_s_winding(self):
+        """The determinant signs flip with the vertex order; the answer must not.
+
+        Boundary rings are not normalised to one winding, so an orientation-dependent test
+        would admit a polygon for a cell or not according to the order its vertices happen
+        to have been stored in. Folding a zero determinant in with the negatives - the
+        natural way to write this - does exactly that, and the touching case above is
+        where it shows.
+        """
+        for other in (
+            np.array([[-50, 50, -50], [50, -50, -150]], dtype=np.int32),  # touching
+            np.array(
+                [[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int32
+            ),  # crossing
+            np.array([[10, 20, 20, 10], [10, 10, 20, 20]], dtype=np.int32),  # contained
+        ):
+            reversed_ring = other[:, ::-1].copy()
+            assert any_edge_crossing(self.SQUARE, other) == any_edge_crossing(
+                self.SQUARE, reversed_ring
+            )
+            assert any_edge_crossing(other, self.SQUARE) == any_edge_crossing(
+                reversed_ring, self.SQUARE
+            )
+
+    def test_it_is_symmetric(self):
+        bar = np.array([[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int32)
+        assert any_edge_crossing(bar, self.SQUARE) == any_edge_crossing(
+            self.SQUARE, bar
+        )
+
+    def test_far_from_the_origin_the_products_stay_exact(self):
+        """Coordinates are scaled by 10^7, so an untranslated cross product overflows
+        int64. The ring is placed near the coordinate limit to exercise that."""
+        offset = 1_700_000_000
+        square = self.SQUARE + np.int32(offset)
+        bar = (
+            np.array([[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int64) + offset
+        )
+        assert any_edge_crossing(square, bar.astype(np.int32))
+
+    def test_a_degenerate_ring_is_not_a_crossing(self):
+        single = np.array([[5], [5]], dtype=np.int32)
+        assert not any_edge_crossing(self.SQUARE, single)
+        assert not any_edge_crossing(single, self.SQUARE)

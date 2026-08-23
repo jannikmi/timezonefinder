@@ -12,7 +12,7 @@ without a `timezonefinder` release, and so that a deployment can pin the dataset
 answers came from:
 
 ```
-pip install "timezonefinder-data==1.2026.3"
+pip install "timezonefinder-data==2.2026.3"
 ```
 
 The version reads `<format>.<year>.<letter>`: the trailing two parts name the
@@ -23,6 +23,7 @@ format change is refused by the resolver instead of at the first lookup.
 
 ## Releases
 
+- `2.2026.3` - timezone-boundary-builder [2026c](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026c), 2026-08-23
 - `1.2026.3` - timezone-boundary-builder [2026c](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/2026c), 2026-08-18
 
 ## License

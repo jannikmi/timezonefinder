@@ -68,7 +68,7 @@ same shape works just as well: pass it as ``bin_file_location`` (see :ref:`use c
 
 That distribution's **major version is the data format generation**
 (``timezonefinder.configs.DATA_FORMAT_VERSION``), and its remaining two components name the
-upstream release: ``1.2026.3`` is format 1 built from ``2026c``. ``timezonefinder`` requires
+upstream release: ``2.2026.3`` is format 2 built from ``2026c``. ``timezonefinder`` requires
 ``timezonefinder-data>=…,<N+1``, so a dataset update needs no code release while a format change is
 refused when resolving rather than when reading. Bumping either per-file ``layout_version`` below
 requires bumping ``DATA_FORMAT_VERSION`` too.
@@ -76,7 +76,7 @@ requires bumping ``DATA_FORMAT_VERSION`` too.
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
-2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.bin`` or ``hybrid_shortcuts_uint16.bin``) that stores either direct zone IDs or polygon lists depending on timezone complexity
+2. **Shortcut Index**: Spatial index over H3 hexagons (``shortcuts.bin``) holding, per cell, either the timezone that covers it or the polygons a lookup there has to test
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
@@ -123,12 +123,9 @@ Hole Data
 Spatial Indexing
 ----------------
 
-* ``hybrid_shortcuts_uint8.bin`` (or ``hybrid_shortcuts_uint16.bin``): FlatBuffer binary file containing the hybrid spatial index that maps H3 hexagon IDs to either:
-
-   - Direct zone IDs (when all polygons in a hexagon belong to the same timezone)
-   - Arrays of polygon IDs that intersect with each hexagon (when multiple timezones are present)
-
-   The file format is automatically selected based on the zone ID data type to optimize storage.
+* ``shortcuts.bin``: the spatial index, mapping every H3 cell at resolution 4 to either the
+  zone that covers it or the boundary polygons a lookup there has to test. Its layout is
+  described under `Shortcut Index Layout`_.
 
 Other Files
 -----------
@@ -220,18 +217,14 @@ risk profile.
 FlatBuffers Schema
 ==================
 
-The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
+The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for the polygon coordinate data.
 The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
-Every FlatBuffers file carries a file identifier and a ``layout_version`` field, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
-
-``coordinates.bin`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_).
-
-The hybrid shortcut files use a *different identifier per zone id width* - ``TZS1`` for ``hybrid_shortcuts_uint8.bin``, ``TZS2`` for ``hybrid_shortcuts_uint16.bin``. That distinction is the point: the two schemas differ only in the width of ``UniqueZone.zone_id`` (``ubyte`` vs ``ushort``), so either width parses cleanly under the other schema and hands back wrong zone ids. The width is therefore read from the identifier inside the buffer rather than from the file name, which a rename or a mispaired copy can make lie.
+``coordinates.bin`` and ``shortcuts.bin`` both carry a file identifier and a ``layout_version``, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones. ``coordinates.bin`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_). ``shortcuts.bin`` uses ``TZSC``.
 
 ``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
-Note that this check covers the FlatBuffers files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
+Note that this check covers those two files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 
 
 Spatial Indexing with H3 Hexagons
@@ -268,33 +261,175 @@ This hybrid approach provides several performance benefits:
 H3 Resolution Selection
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The library uses H3 resolution 3 with 41k hexagons for its spatial index. That is a measured
+The library uses H3 resolution 4, about 288k hexagons, for its spatial index. That is a measured
 choice, not an assumption: ``prototypes/single_resolution_bench.py`` builds a separate index at
-every resolution from 0 upwards and benchmarks each against a common set of globally random query
-points.
+every resolution from 0 upwards, prices each one in the layout described below, and benchmarks them
+against a common set of globally random query points.
 
-The finding is a size cliff. At resolution 3 the hybrid index costs a low single-digit percentage
-of the packaged polygon data (:doc:`data_report` lists the current sizes). When the study was run,
-resolution 4 would have accounted for **more than 10 %** of it, for lookup gains that do not
-justify the increase. Resolutions above 5 are excluded outright, since the index size explodes.
-Below resolution 3, cells cover too much area and too many of them turn out ambiguous, which pushes
+Every level multiplies the cells by seven and the table by eight, so the choice is a trade between
+how often a lookup needs geometry at all and how much memory the table costs. Measured on the
+packaged dataset:
+
+.. list-table::
+   :header-rows: 1
+
+   * - resolution
+     - cells
+     - answered by one table read
+     - index on disk
+     - index resident
+     - candidates tested per 10k random queries
+   * - 3
+     - 41,162
+     - 74.5 %
+     - 103 KiB
+     - 143 KiB
+     - 3,877
+   * - **4**
+     - **288,122**
+     - **89.1 %**
+     - **596 KiB**
+     - **1,000 KiB**
+     - **1,566**
+   * - 5
+     - 2,016,842
+     - 95.4 %
+     - 4,029 KiB
+     - 7,832 KiB
+     - 667
+
+Resolution 4 removes **60 % of the point-in-polygon tests** a uniformly random workload runs, which
+is worth ~40 % of such a query end to end, for ~0.9 MiB of resident table. It also *lowers* the
+resident set of the default memory-mapped mode, because far fewer candidate polygons are fetched and
+so far fewer coordinate pages are faulted in.
+
+Resolution 5 is refused, and the reason is the exchange rate rather than its gains, which are real.
+Memory paid per candidate polygon removed is 0.019 KiB going from resolution 2 to 3, 0.371 KiB from
+3 to 4, and **7.600 KiB from 4 to 5** — each level about twenty times worse than the last. The table
+is fixed by the resolution rather than by the data, so at resolution 5 it is 99.7 % of the index:
+7.8 MiB resident, more than the entire index format generation 1 used, and ``TimezoneFinderL`` —
+whose whole footprint is this index — would grow about forty-five fold. Resolutions above 5 are not
+worth measuring, since resolution 6's table alone is the size of the polygon data it indexes.
+
+Below resolution 3, cells cover too much area and too many of them come out ambiguous, which pushes
 work back onto the expensive point-in-polygon path.
 
-Resolution 3 is therefore the largest index that still costs a small fraction of the data it
-indexes.
+**A hierarchical index — several resolutions at once, refining only where cells are ambiguous — was
+prototyped and dropped.** The maximum resolution dominates the size, so a multi-resolution index
+comes out slightly *larger* than the single-resolution one it contains; H3 cells do not nest
+cleanly, so a parent has to be kept even once its children exist; and consulting several resolutions
+per query costs more than the refinement saves. It yielded no lookup benefit over a single-resolution
+index at the same maximum resolution, so the simpler structure won.
 
 The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
 
-Hybrid Shortcut Data Structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _shortcut-index-layout:
 
-The hybrid shortcut system combines two previous approaches into a single optimized data structure:
+Shortcut Index Layout
+---------------------
 
-* **Direct Zone Storage**: For hexagons where all intersecting polygons belong to the same timezone, the zone ID is stored directly as an integer. This eliminates the need for polygon testing in the majority of cases.
+``shortcuts.bin`` holds four arrays after a 40-byte header. The header is the file
+identifier ``TZSC``, a ``uint32`` layout version, and four ``int64``: the H3 resolution
+the index was built for, the number of distinct candidate lists, and the widths chosen
+for the two data-dependent columns.
 
-* **Polygon List Storage**: For hexagons that contain polygons from multiple timezones, an array of polygon IDs is stored. Only these polygons need to be tested during lookup.
+The resolution is in the header because nothing else in the file records it, and it
+changes what every slot *means* without changing anything a reader would notice - the
+layout is identical at every resolution, so the layout version cannot cover it. A reader
+built for another resolution is refused rather than allowed to answer with a different
+cell's timezone.
 
-This hybrid approach automatically chooses the most efficient storage method for each hexagon, providing optimal performance across different geographic regions. Areas with clear timezone boundaries benefit from immediate zone ID lookups, while complex border regions still use the efficient polygon list approach.
+.. list-table::
+   :header-rows: 1
+
+   * - array
+     - dtype
+     - indexed by
+     - holds
+   * - ``table``
+     - ``int16``
+     - compact slot
+     - the answer for that cell
+   * - ``bounds``
+     - narrowest that fits
+     - distinct candidate list
+     - CSR offsets into ``payload``, ``n+1`` of them
+   * - ``payload``
+     - ``uint16``
+     - -
+     - every distinct candidate list, back to back
+   * - ``last_change``
+     - narrowest that fits
+     - distinct candidate list
+     - where the candidate loop may stop
+
+**The cell id is the index.** H3 packs a cell index as a base cell in bits 45-51 followed
+by fifteen 3-bit digits. At a fixed resolution every other bit is constant, so those bits
+*are* the cell and, with ``res`` the resolution the index was built for
+(``SHORTCUT_H3_RES``),
+
+.. code-block:: python
+
+    digit_bits = 3 * res
+    base = (cell >> 45) & 0x7F
+    digits = (cell >> (45 - digit_bits)) & (2**digit_bits - 1)
+    slot = base * 2**digit_bits + digits
+
+is a bijection onto a dense table rather than a hash. The base cell sits immediately above
+the digits, so the whole slot is one contiguous bit field and the lookup evaluates it as a
+single shift and mask - ``(cell >> (45 - digit_bits)) & (2 ** (digit_bits + 7) - 1)``. No
+keys are stored and no search runs at lookup time. That h3-py does not promise its index
+encoding as API is handled by checking rather than by storing:
+``scripts/data_integrity.validate_shortcut_index``
+confirms the arithmetic against the public ``get_base_cell_number`` and
+``cell_to_child_pos`` on every cell that exists, so an encoding change fails where the
+data is built instead of silently returning a neighbour's timezone.
+
+**The table holds the answer.** One ``int16`` per slot:
+
+* ``>= 0`` - the zone id, and the whole answer. Roughly three quarters of the cells.
+* ``== -1`` - no cell here. Custom data can leave cells uncovered, so this is a real
+  state and not only padding.
+* ``< -1`` - several zones; candidate list ``-(value + 2)``.
+
+``-1`` is free for "absent" because a stored candidate list can never have length 1: a
+lone candidate is unambiguous and is therefore stored as a zone id instead.
+
+Because a cell the table answers reads nothing else, ``bounds`` and ``last_change`` are
+indexed by *distinct candidate list* rather than by cell or by slot - far fewer of them,
+and the cells that never read them cost nothing.
+
+**Each distinct candidate list is stored once.** Cells with identical lists carry *equal*
+offsets into the shared payload, not an index to a shared entry, so a repeated list costs
+a lookup exactly what a unique one costs. The distinct lists are packed back to back, so
+one CSR array of ``n+1`` bounds carries both starts and ends and no length column exists
+to disagree with it.
+
+**``last_change`` is ``get_last_change_idx`` precomputed.** It depends only on the
+candidate list, so it deduplicates with everything else and costs one byte per distinct
+list to take a scan off every ambiguous query.
+
+**The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
+base-8 slots can never be addressed. Which ones follows from the resolution and never from
+the data, so the file stores the compact base-7 form and the reader expands it - a base-8
+slot is exactly the C-order ravel of a ``(122,) + (8,) * res`` array, so the base-7 block
+lands correctly when sliced into its corner. The in-memory table keeps its padding: addressing
+it base-7 per query costs more than the padding is worth.
+
+**The two data-dependent widths are chosen by fit, not by headroom.** An overflow surfaces
+where the data is built rather than in a user's process - provided something checks, which
+is what ``scripts/data_integrity.py`` does, over what the converter just wrote and over
+what is committed, naming the value, the ceiling, the width to move to and the version
+bumps that follow.
+
+A lookup, in full::
+
+    slot = <the arithmetic above>            # no memory touched
+    z = table[slot]
+    if z >= 0:  return z                     # 1 read
+    if z == -1: return None                  # 1 read
+    i = -(z + 2)                             # several zones: the candidate list, plus
+    return payload[bounds[i]:bounds[i + 1]]  # last_change[i] for where to stop
 
 Why the index makes no polygon redundant
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

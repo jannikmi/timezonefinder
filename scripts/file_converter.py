@@ -63,6 +63,7 @@ from scripts.data_integrity import (
     validate_coordinate_offset_table,
     validate_hole_references,
     validate_shipped_schemas,
+    validate_shortcut_index,
 )
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
@@ -331,6 +332,9 @@ def parse_data(
     compile_data_files(data, output_path_obj, resolved_data_version)
 
     _ = compile_shortcuts(output_path_obj, data)
+    # what the shortcut index assumes, checked over what was just written - never when a
+    # finder is constructed (see scripts/data_integrity.py)
+    validate_shortcut_index(output_path_obj)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     print("Generating data report from binary files...")
@@ -340,7 +344,7 @@ def parse_data(
     # update_data.sh re-runs this generator via `make reports` afterwards, and
     # why a standalone `make parse` of a newer dataset leaves a report stamped
     # with the old version until DATA_VERSION is updated and it is re-run.
-    write_data_report_from_binary(output_path_obj, zone_id_dtype=resolved_zone_id_dtype)
+    write_data_report_from_binary(output_path_obj)
 
     # the pytest-benchmark reports (docs/benchmark_results_*.rst) are NOT
     # regenerated here: they need the committed benchmark fixtures pinned to
