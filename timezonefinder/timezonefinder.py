@@ -16,7 +16,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Self
+from typing import Final, Self
 
 import numpy as np
 from h3.api import numpy_int as h3
@@ -30,8 +30,12 @@ from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    NO_ZONE_ID,
     SHORTCUT_H3_RES,
     DATA_VERSION_FILENAME,
+    CoordArrayLike,
     CoordLists,
     CoordPairs,
     IntegerLike,
@@ -46,6 +50,19 @@ from timezonefinder.shortcut_index import (
 from timezonefinder.zone_names import read_zone_names
 
 
+#: What ``on_invalid`` accepts on the batch lookups. ``"raise"`` is the default because
+#: it is what the scalar methods do, and a batch call is not the place to quietly change
+#: the contract; ``"skip"`` exists because raising on element 999,999 and discarding the
+#: 999,998 answers already computed is hostile.
+ON_INVALID_POLICIES: Final[tuple[str, ...]] = ("raise", "skip")
+
+#: dtype of a batch answer. Signed, because :data:`~timezonefinder.configs.NO_ZONE_ID` is
+#: negative; 32-bit rather than 16-bit because the ambiguous fallback reads ids out of
+#: ``zone_ids``, whose stored dtype is unsigned 16-bit - ``int16`` could not hold its
+#: upper half, and a dtype that truncates silently is worse than four bytes per answer.
+ZONE_ID_RESULT_DTYPE: Final[np.dtype] = np.dtype(np.int32)
+
+
 def _negative_id_error(kind: str, value: object) -> ValueError:
     """Build the error a negative id gets, for any of the public id-taking methods.
 
@@ -57,6 +74,52 @@ def _negative_id_error(kind: str, value: object) -> ValueError:
         f"{value} is not a valid {kind} id: ids are non-negative. "
         "A negative index would silently select an entry counting from the end."
     )
+
+
+def _coordinate_arrays(
+    lngs: CoordArrayLike, lats: CoordArrayLike
+) -> tuple[np.ndarray, np.ndarray]:
+    """The two input axes as 1-D float64 arrays.
+
+    ``np.asarray`` is what makes the zero-copy path real: a C-contiguous float64 array
+    is passed straight through, and anything else is converted once for the whole batch
+    rather than per point.
+
+    :raises TypeError: if either axis holds something that is not convertible to float.
+    :raises ValueError: if either axis is not one-dimensional, or the two differ in length.
+    """
+    arrays = []
+    for name, values in (("lngs", lngs), ("lats", lats)):
+        try:
+            array = np.asarray(values, dtype=np.float64)
+        except (TypeError, ValueError) as e:
+            raise TypeError(
+                f"{name} must hold numbers convertible to float: {e}"
+            ) from e
+        if array.ndim != 1:
+            raise ValueError(
+                f"{name} must be one-dimensional, got shape {array.shape}. "
+                "Coordinates are passed one axis per argument, never as an (N, 2) array "
+                "whose column order would have to be guessed."
+            )
+        arrays.append(array)
+    lng_array, lat_array = arrays
+    if lng_array.shape != lat_array.shape:
+        raise ValueError(
+            "lngs and lats must hold the same number of coordinates, got "
+            f"{lng_array.shape[0]} and {lat_array.shape[0]}"
+        )
+    return lng_array, lat_array
+
+
+def _out_of_bounds(lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+    """Which coordinates no lookup can answer, as a boolean mask.
+
+    A bound comparison rejects NaN and infinity as a side effect - both compare ``False``
+    against everything - so this is the whole of what ``utils.validate_coordinates`` does
+    per point, in two vectorised passes instead of 2N calls.
+    """
+    return ~((np.abs(lngs) <= MAX_LNG_VAL) & (np.abs(lats) <= MAX_LAT_VAL))
 
 
 class AbstractTimezoneFinder(ABC):
@@ -340,6 +403,163 @@ class AbstractTimezoneFinder(ABC):
         """
         ...
 
+    @abstractmethod
+    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
+        """The zone id of a point whose H3 cell several timezones cover.
+
+        Reached only for ``entry < ABSENT``: a cell a single zone covers and a cell no
+        zone covers are both answered by the shortcut table itself. Both
+        :meth:`timezone_at` and :meth:`timezone_ids_at` funnel through here, so the
+        subclass's candidate handling exists exactly once.
+
+        :param entry: the shortcut table's value for the cell, below ``ABSENT``
+        :param lng: longitude of the point, already validated
+        :param lat: latitude of the point, already validated
+        :return: the id of the matching timezone
+        """
+        ...
+
+    def timezone_ids_at(
+        self,
+        *,
+        lngs: CoordArrayLike,
+        lats: CoordArrayLike,
+        on_invalid: str = "raise",
+    ) -> np.ndarray:
+        """Look up many coordinates at once, answering with timezone **ids**.
+
+        The batch counterpart of :meth:`timezone_at`, and the primary one: a caller doing
+        millions of lookups should not pay for millions of string lookups it maps straight
+        back to something else. :meth:`timezone_names_at` is the convenience on top.
+
+        What a batch amortises is the per-call overhead, not the geometry. Validation, the
+        integer scaling and the shortcut lookup run once over the whole batch as numpy
+        operations; ambiguous points still fall through to the point-in-polygon loop one
+        at a time, and ``h3``'s cell lookup has no vectorised form, so it stays a loop
+        too. Expect the win to be largest on points whose cell a single zone covers.
+
+        :param lngs: longitudes in degrees, as any 1-D array-like. A C-contiguous
+            ``float64`` numpy array is used without copying.
+        :param lats: latitudes in degrees, the same length as ``lngs``.
+        :param on_invalid: what to do with a coordinate outside the valid range (which
+            includes ``NaN`` and infinity). ``"raise"`` (the default) matches the scalar
+            methods; ``"skip"`` answers those points with
+            :data:`~timezonefinder.configs.NO_ZONE_ID` and the rest normally.
+        :return: one ``int32`` per input coordinate - a timezone id, or
+            :data:`~timezonefinder.configs.NO_ZONE_ID` (``-1``) where the scalar method
+            would answer ``None``: no zone covers the point, or it was skipped.
+        :raises TypeError: if either axis holds values that are not numbers.
+        :raises ValueError: if the two axes differ in length, either is not
+            one-dimensional, ``on_invalid`` is not a known policy, or - under
+            ``on_invalid="raise"`` - a coordinate is out of range.
+
+        .. note:: coordinates are passed one axis per argument on purpose. A single
+            ``(N, 2)`` array would have to be read positionally, and a swapped pair is
+            still a valid coordinate for most of the populated world - so the mistake
+            would return a real but wrong timezone instead of raising.
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> ids = tf.timezone_ids_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
+            >>> [tf.zone_name_from_id(int(i)) for i in ids]
+            ['Europe/Berlin', 'Europe/Paris']
+        """
+        if on_invalid not in ON_INVALID_POLICIES:
+            raise ValueError(
+                f"unknown on_invalid policy {on_invalid!r}. "
+                f"Choose one of: {', '.join(map(repr, ON_INVALID_POLICIES))}"
+            )
+        lng_array, lat_array = _coordinate_arrays(lngs, lats)
+        out_of_bounds = _out_of_bounds(lng_array, lat_array)
+        if not out_of_bounds.any():
+            return self._zone_ids_of_valid(lng_array, lat_array)
+
+        if on_invalid == "raise":
+            first = int(np.argmax(out_of_bounds))
+            raise ValueError(
+                f"invalid coordinate at index {first}: "
+                f"lng={lng_array[first]}, lat={lat_array[first]}. Longitude must be in "
+                f"range [-{MAX_LNG_VAL}, {MAX_LNG_VAL}] and latitude in range "
+                f'[-{MAX_LAT_VAL}, {MAX_LAT_VAL}], both finite. Pass on_invalid="skip" '
+                f"to answer the remaining coordinates and get {NO_ZONE_ID} for this one."
+            )
+
+        keep = ~out_of_bounds
+        zone_ids = np.full(lng_array.shape[0], NO_ZONE_ID, dtype=ZONE_ID_RESULT_DTYPE)
+        zone_ids[keep] = self._zone_ids_of_valid(lng_array[keep], lat_array[keep])
+        return zone_ids
+
+    def timezone_names_at(
+        self,
+        *,
+        lngs: CoordArrayLike,
+        lats: CoordArrayLike,
+        on_invalid: str = "raise",
+    ) -> list[str | None]:
+        """Look up many coordinates at once, answering with timezone **names**.
+
+        The convenience on top of :meth:`timezone_ids_at`, which documents the arguments,
+        the ``on_invalid`` policies and every error raised. Each answer is what
+        :meth:`timezone_at` would return for that point, ``None`` included.
+
+        Prefer the id form whenever the names are not the end product: this method adds
+        one list index and one Python object per coordinate, which is most of what a
+        batch lookup was meant to avoid.
+
+        :return: one timezone name per input coordinate, or ``None`` where no zone covers
+            the point or the coordinate was skipped.
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.timezone_names_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
+            ['Europe/Berlin', 'Europe/Paris']
+        """
+        zone_ids = self.timezone_ids_at(lngs=lngs, lats=lats, on_invalid=on_invalid)
+        timezone_names = self.timezone_names
+        return [
+            None if zone_id < 0 else timezone_names[zone_id]
+            for zone_id in zone_ids.tolist()
+        ]
+
+    def _zone_ids_of_valid(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+        """Zone ids for coordinates already known to be in range.
+
+        The prologue every point shares runs once over the whole batch: the slot
+        arithmetic and the table read are one numpy operation each rather than N. What
+        cannot join them is ``h3.latlng_to_cell`` - h3-py exposes no vectorised form, so
+        N points cost N scalar C calls, and that is nearly the whole cost of a batched
+        lookup once the cells resolve to a single zone.
+        """
+        nr_points = lngs.shape[0]
+        if nr_points == 0:
+            return np.empty(0, dtype=ZONE_ID_RESULT_DTYPE)
+
+        # bound once outside the loop: N attribute lookups are a measurable share of a
+        # stage that is otherwise a single C call per point
+        latlng_to_cell = h3.latlng_to_cell
+        resolution = SHORTCUT_H3_RES
+        hex_ids = np.fromiter(
+            (
+                latlng_to_cell(lat, lng, resolution)
+                for lat, lng in zip(lats.tolist(), lngs.tolist())
+            ),
+            dtype=np.uint64,
+            count=nr_points,
+        )
+        entries = self.shortcuts.entries_of(hex_ids)
+
+        # a non-negative entry is the answer itself. ABSENT and the candidate-list
+        # encodings are both "no answer yet"; the latter are then resolved per point,
+        # which is the only part of a batch that is not vectorised.
+        zone_ids = np.where(entries >= 0, entries, NO_ZONE_ID).astype(
+            ZONE_ID_RESULT_DTYPE
+        )
+        for i in np.flatnonzero(entries < ABSENT):
+            zone_ids[i] = self._zone_id_in_ambiguous_cell(
+                int(entries[i]), float(lngs[i]), float(lats[i])
+            )
+        return zone_ids
+
     def timezone_at_land(self, *, lng: float, lat: float) -> str | None:
         """computes in which land timezone a point is included in
 
@@ -437,12 +657,20 @@ class TimezoneFinderL(AbstractTimezoneFinder):
             return self._zone_name_of(entry)
         if entry == ABSENT:
             return None
+        return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
+
+    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
+        """The most common zone of the cell - this class tests no geometry.
+
+        The coordinates are therefore unused: which zone is *most* common in a cell is a
+        property of the cell, and answering without a point-in-polygon test is the whole
+        of what makes this class lightweight.
+        """
         # several zones - the last candidate belongs to the most common one
         poly_of_biggest_zone = self.shortcuts.candidates_of(entry)[-1]
         # a numpy integer scalar from array indexing, which mypy reads as ndarray. Safe:
         # element access yields a scalar compatible with IntegerLike
-        most_common_id = self._zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
-        return self._zone_name_of(most_common_id)
+        return self._zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -691,9 +919,19 @@ class TimezoneFinder(AbstractTimezoneFinder):
             # NOTE: hypothetical case, with ocean data every cell holds at least one boundary polygon
             return None
 
-        # several zones - the candidates have to be tested. NOTE: neither the empty nor
-        # the single-candidate case can occur here; both are unambiguous and are stored
-        # in the table itself.
+        # several zones - the candidates have to be tested. One call, shared with the
+        # batch path, so the loop below exists once.
+        return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
+
+    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
+        """Work the cell's candidate polygons until one contains the point.
+
+        The last remaining zone is returned without a test - see :meth:`timezone_at`,
+        whose note explains when that is and is not correct.
+
+        NOTE: neither the empty nor the single-candidate case can occur here; both are
+        unambiguous and are stored in the shortcut table itself.
+        """
         possible_boundaries = self.shortcuts.candidates_of(entry)
 
         # create a list of all the timezone ids of all possible boundary polygons
@@ -717,14 +955,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 break
 
             if self.inside_of_polygon(boundary_id, x, y):
-                zone_id = zone_ids[i]
-                return self._zone_name_of(int(zone_id))
+                return int(zone_ids[i])
 
         # since it is the last possible option,
         # the polygons of the last possible zone don't actually have to be checked
         # -> instantly return the last zone
-        zone_id = zone_ids[-1]
-        return self._zone_name_of(int(zone_id))
+        return int(zone_ids[-1])
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts

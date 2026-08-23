@@ -23,6 +23,7 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = timezone_at_land(lng=13.358, lat=52.5061)
     tz = unique_timezone_at(lng=13.358, lat=52.5061)
+    names = timezone_names_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
     geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
 
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
@@ -146,6 +147,62 @@ Using a TimezoneFinder instance:
 
     This function is optimized for speed: The last possible timezone in proximity is always returned (without checking if the point is really included).
 
+
+
+timezone_ids_at() and timezone_names_at()
+-----------------------------------------
+
+To look up many coordinates, pass them as two arrays - one per axis - instead of calling ``timezone_at()`` in a loop.
+The validation, the coordinate scaling and the shortcut lookup then run once over the whole batch rather than once per point:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+
+    lngs = [13.358, 2.3522]
+    lats = [52.5061, 48.8566]
+
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)  # numpy int32 array
+    names = tf.timezone_names_at(lngs=lngs, lats=lats)  # ['Europe/Berlin', 'Europe/Paris']
+
+``timezone_ids_at()`` is the primary form and ``timezone_names_at()`` the convenience on top of it.
+Prefer the ids whenever the names are not the end product: a caller doing millions of lookups should not pay for millions of string lookups it maps straight back to something else.
+Both are also available as :ref:`global functions <global_functions>`.
+
+Any 1-D array-like works for either axis - a list, a tuple, a numpy array, a pandas Series.
+A C-contiguous ``float64`` numpy array is used without copying.
+
+.. note::
+
+    Coordinates are passed one axis per argument, never as a single ``(N, 2)`` array.
+    Such an array would have to be read by column position, and a swapped pair is still a valid coordinate for most of the populated world - so the mistake would return a real but wrong timezone instead of raising.
+
+Where the scalar methods answer ``None``, a batch answers ``NO_ZONE_ID`` (``-1``) in the id array and ``None`` in the name list.
+An out-of-range coordinate - which includes ``NaN`` and infinity - raises by default, matching the scalar methods.
+Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than discarding the work already done for the coordinates that were fine:
+
+.. code-block:: python
+
+    from timezonefinder import NO_ZONE_ID, TimezoneFinder
+
+    tf = TimezoneFinder()
+    zone_ids = tf.timezone_ids_at(
+        lngs=[13.358, 999.0], lats=[52.5061, 0.0], on_invalid="skip"
+    )
+    # the second entry is NO_ZONE_ID; there is always one answer per input coordinate, in input order
+
+.. note::
+
+    What a batch amortises is the per-call overhead, not the geometry.
+    Points whose H3 cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time, and ``h3``'s cell lookup has no vectorised form.
+    ``examples/batch_processing.py`` demonstrates the whole API.
+
+.. note::
+
+    Only ``timezone_at()`` has a batch form so far.
+    ``timezone_at_land()`` and ``certain_timezone_at()`` do not.
 
 
 timezone_at_land()

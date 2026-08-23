@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Final, TypeAlias
 
 import numpy as np
+import numpy.typing as npt
 
 import timezonefinder_data
 
@@ -35,7 +36,9 @@ __all__ = [
     "UNKNOWN_DATA_VERSION",
     "DATA_FORMAT_VERSION",
     "DATA_FORMAT_LAYOUT_VERSIONS",
+    "NO_ZONE_ID",
     # Type aliases
+    "CoordArrayLike",
     "IntegerLike",
     "ShortcutMapping",
     "CoordPairs",
@@ -50,6 +53,18 @@ SHORTCUT_H3_RES: int = 4
 
 # Pattern for identifying ocean timezones (fixed-offset zones for international waters)
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
+
+# What an array of zone ids holds where the scalar methods answer ``None``: a cell no
+# timezone covers, or - under ``on_invalid="skip"`` - a coordinate that was rejected.
+# One sentinel for both is what lets a batch answer stay a single integer array; a
+# caller that needs to tell the two apart can re-derive the bounds check in one
+# vectorised comparison, which is cheaper than the second array it would otherwise cost
+# every caller that does not care.
+#
+# -1 rather than a large value because it is what an id lookup conventionally answers
+# with, and because the public id-taking methods now *reject* negative ids - so a
+# sentinel fed back in raises instead of silently selecting the last zone from the end.
+NO_ZONE_ID: Final[int] = -1
 
 # PATHS
 PACKAGE_DIR = Path(__file__).parent
@@ -139,6 +154,13 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 
 # Type alias for flexibility with integer types (pure int or numpy integer scalars)
 IntegerLike: TypeAlias = int | np.integer
+
+# What the batch lookup accepts per coordinate axis: anything ``np.asarray`` turns into
+# a 1-D float array - a list, a tuple, an ``array.array``, a numpy array, a pandas
+# Series. Deliberately not narrowed to ``np.ndarray``: an API that only served numpy
+# users would make every other caller convert before it can ask, which is the loop this
+# replaces.
+CoordArrayLike: TypeAlias = npt.ArrayLike
 
 # hexagon id to list of polygon ids
 ShortcutMapping: TypeAlias = dict[int, np.ndarray]
