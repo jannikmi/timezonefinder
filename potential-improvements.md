@@ -1415,22 +1415,6 @@ premise moves; do not reverse a decision silently.
     slots against 62,464 — is refused for the same reason, and reproducing it from bits needs
     per-digit arithmetic that pentagons, with 286 children rather than 343, do not obviously
     satisfy.
-- **One shortcut binary rather than a file per array, and raw rather than `.npy` — measured
-  2026-08-23 and refused.** The four arrays are one structure with cross-references (the table
-  indexes the bounds, the bounds index the payload), so the split buys separability nothing wants
-  and costs load time, which is the axis the whole format change was taken on. Loading the same
-  structure, on the packaged data: **one raw file 0.081 ms, four raw files 0.129 ms (+59 %), four
-  `.npy` files 0.241 ms (+197 %)**, at the same size to within 0.5 %. The `.npy` cost is the format
-  itself and not `np.load`'s dispatch — the low-level `np.lib.format.read_array` reads 0.236 ms, 4 %
-  of the gap. Two further reasons the *file* being self-describing does not pay for that:
-  **a `.npy` carries no file identifier and no layout version**, so the shortcut index would move
-  out of the guarded set and into the one `docs/data_format.rst` warns is still undetectable across
-  a format change — losing exactly the guard that makes a stale `bin_file_location` fail loudly
-  instead of returning wrong timezones; and four files can be individually stale or mismatched
-  where one cannot. The dtype self-description is what a `.npy` would genuinely add, and the
-  header's two width fields already carry it in 16 bytes. This does not generalise to the rest of
-  the data directory: `zone_ids.npy` and its neighbours are single independent vectors with no
-  cross-references and no per-query load budget, which is why they are `.npy` and this is not.
 - **Justify the shortcut structure on load, memory and file size — never as a speedup.** Measured
   full `timezone_at`, paired and order-alternated, 61 rounds x 2,000 points on four fixture strata:
   neutral to slightly ahead, and small enough to stay off any headline. It changes how a cell's

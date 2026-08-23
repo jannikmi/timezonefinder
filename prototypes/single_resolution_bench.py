@@ -18,14 +18,62 @@ data loss or corruption.
 
 Run with::
 
-    uv run python prototypes/single_resolution_bench.py
+    uv run python prototypes/single_resolution_bench.py [path/to/combined-with-oceans.json]
+
+Building an index at a resolution takes a while - resolution 4 alone is ~290,000 cells at
+~7 ms each, so budget the better part of an hour for the whole sweep.
 
 
-FINDINGS:
-for resolution 3 the hybrid index is about 1.6MB
-the resolution 4 index would be much larger and does the performance benefits do not justify the increased footprint of the releases (the index would account for more than 10% of the timezone polygon data)
+FINDINGS (2026-08-23, `828262c`, Apple arm64, Python 3.14.2, data 2026c)
+
+Sizes are the shipped layout (``timezonefinder/shortcut_index.py``), computed by
+``format_bytes`` and checked against the committed binary at resolution 3 before anything
+below is believed. Counts are exact and machine-independent; the two timing columns come
+from this script's own dict-based finder, not from the shipped table lookup, so read them
+as a ratio between resolutions and never as an absolute.
+
+    res    cells   unique   distinct   file KiB   memory KiB   PIP tests   mean ns
+                             lists                              /10k
+    1        842    10.3%        556        9.5          9.7      28,693    20,395
+    2      5,882    47.0%      1,579       26.7         30.2       9,904     7,027
+    3     41,162    74.5%      2,575      103.1        143.4       3,877     4,483
+    4    288,122    89.1%      2,995      595.9        999.7       1,566     3,538
+
+CONCLUSIONS
+
+1. **Resolution 4's refusal was made on a premise the format change removed.** It was
+   refused because the index would pass 10 % of the packaged polygon data, which was true
+   of a file holding one individually decoded entry per cell: seven times the cells meant
+   seven times the file. It is not true of the current layout. **The candidate lists
+   deduplicate, and that is the whole finding**: 7x the cells produce only 2,995 distinct
+   lists against 2,575 (+16 %) and 7,663 payload values against 7,073 (+8 %), because
+   subdividing an ambiguous cell mostly yields children that repeat a list already stored.
+   Almost the entire increase is the table, whose size is fixed by the resolution and not
+   by the data. 595.9 KiB is ~1 % of the 60.5 MB distribution.
+
+2. **What resolution 4 buys is the expensive stratum.** Unique-zone cells go 74.5 % ->
+   89.1 %, and a uniformly random workload of 10,000 queries runs **1,566 point-in-polygon
+   tests against 3,877 - 60 % fewer**. That is the count to rank on: point-in-polygon work
+   is the majority of an ambiguous query and ambiguous queries are the majority of a mixed
+   workload.
+
+3. **What it costs is memory, cache and build time - not file size.** The resident table
+   goes 143 KiB -> 1,000 KiB. That lands hardest on ``TimezoneFinderL``, whose whole
+   footprint is this index, and on the constrained containers the memory-mapped mode
+   exists for. It also takes the table past a typical L2 cache, and this script's own
+   *median* query rose (1,791 -> 1,916 ns) while its mean fell (4,483 -> 3,538): fewer
+   queries reach geometry, but the one table read every query makes got dearer. That
+   effect is unmeasured on the shipped lookup and would have to be before acting.
+   Compiling the index also goes from minutes to most of an hour, on every data update.
+
+4. **Below 3 is clearly worse and the curve is steep.** Resolution 2 leaves 53 % of cells
+   ambiguous and runs 2.6x the point-in-polygon tests of resolution 3; resolution 1 runs
+   7.4x. The gain from 3 to 4 (-60 % tests) is smaller than the loss from 3 to 2 (+155 %),
+   so resolution 3 sits past the knee rather than on it.
 """
 
+# load-bearing, not a compatibility shim: `benchmark_samples` annotates a class
+# defined below it
 from __future__ import annotations
 
 import random
@@ -46,6 +94,16 @@ from scripts.configs import DEFAULT_INPUT_PATH, DEBUG
 from scripts.shortcuts import optimise_shortcut_ordering
 from scripts.timezone_data import TimezoneData
 from timezonefinder import utils
+from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
+from timezonefinder.shortcut_index import (
+    COMPACT_DIGIT_BASE,
+    NUM_BASE_CELLS,
+    PAYLOAD_DTYPE,
+    TABLE_DTYPE,
+    get_shortcut_file_path,
+    narrowest_dtype_for,
+    read_shortcuts_binary,
+)
 from timezonefinder.timezonefinder import TimezoneFinder
 
 
@@ -85,13 +143,69 @@ class IndexStats:
     zone_entries: int
     polygon_entries: int
     polygon_id_count: int
+    #: distinct candidate lists, after deduplication - what the payload actually stores
+    distinct_lists: int
+    #: values in the deduplicated payload
+    payload_values: int
     size_bytes: int
+    memory_bytes: int
     possible_cells: int
     stored_cells: int
     missing_cells: int
 
 
-ENTRY_KEY_SIZE_BYTES = np.dtype(np.int64).itemsize
+#: header of a shortcut index file: identifier, layout version, three int64
+HEADER_BYTES = 32
+
+
+def format_bytes(
+    resolution: int, distinct_lists: int, payload_values: int, max_last_change: int
+) -> tuple[int, int]:
+    """(file bytes, resident bytes) the shipped format takes for such an index.
+
+    Exact arithmetic over ``timezonefinder/shortcut_index.py``'s layout rather than a
+    model of it, which is what lets a resolution be priced without building the binary:
+    the size is fully determined by the resolution and three counts. The file holds the
+    compact base-7 table and the reader pads it to base-8, which is the one place the two
+    figures differ by more than the header.
+
+    ``check_size_model_against_the_shipped_binary`` holds this to the committed file.
+    """
+    offset_width = narrowest_dtype_for(payload_values, what="payload offset").itemsize
+    length_width = narrowest_dtype_for(max_last_change, what="stop index").itemsize
+    bounds = (distinct_lists + 1) * offset_width
+    last_change = distinct_lists * length_width
+    payload = payload_values * PAYLOAD_DTYPE.itemsize
+    compact_table = (
+        NUM_BASE_CELLS * COMPACT_DIGIT_BASE**resolution * TABLE_DTYPE.itemsize
+    )
+    padded_table = NUM_BASE_CELLS * 8**resolution * TABLE_DTYPE.itemsize
+    rest = bounds + last_change + payload
+    return HEADER_BYTES + compact_table + rest, padded_table + rest
+
+
+def check_size_model_against_the_shipped_binary() -> None:
+    """Fail if ``format_bytes`` no longer describes the committed shortcut index.
+
+    The model is arithmetic over a layout it does not import the writer of, so it can
+    drift silently - and a resolution comparison priced by a stale model reads exactly
+    like one priced by a current one.
+    """
+    index = read_shortcuts_binary(get_shortcut_file_path(DEFAULT_DATA_DIR))
+    modelled, _ = format_bytes(
+        SHORTCUT_H3_RES,
+        index.nr_of_entries,
+        len(index.payload),
+        int(index.last_change.max()) if index.nr_of_entries else 0,
+    )
+    actual = get_shortcut_file_path(DEFAULT_DATA_DIR).stat().st_size
+    if modelled != actual:
+        raise AssertionError(
+            f"the size model gives {modelled:,} bytes for the packaged index at "
+            f"resolution {SHORTCUT_H3_RES}, which is {actual:,} bytes on disk. The "
+            f"format has changed under this script; update `format_bytes` before "
+            f"believing any figure below."
+        )
 
 
 def _warn_empty_shortcut_entry(hex_id: int, resolution: int | None = None) -> None:
@@ -166,22 +280,45 @@ def build_single_resolution_index(
     return index
 
 
-def compute_index_stats(index: dict[int, np.ndarray], resolution: int) -> IndexStats:
-    """Compute statistics for a single-resolution index."""
+def compute_index_stats(
+    index: dict[int, np.ndarray], resolution: int, poly_zone_ids: np.ndarray
+) -> IndexStats:
+    """Compute statistics for a single-resolution index, priced as the format stores it.
+
+    Deduplication is applied here rather than modelled: identical candidate lists are
+    stored once and the cells that repeat them carry equal offsets, so the payload a
+    resolution really costs is the number of *distinct* lists, not the number of
+    ambiguous cells. At resolution 3 that is 10,511 cells collapsing to 2,575 lists, and
+    the ratio is itself resolution-dependent - which is the point of measuring it here.
+    """
     zone_entries = 0
     polygon_entries = 0
     polygon_id_count = 0
-    size_bytes = 0
+    seen: dict[bytes, int] = {}
+    payload_values = 0
+    max_last_change = 0
 
     for payload in index.values():
         payload = np.asarray(payload)
         length = int(payload.size)
         if length <= 1:
             zone_entries += 1
-        else:
-            polygon_entries += 1
-            polygon_id_count += length
-        size_bytes += ENTRY_KEY_SIZE_BYTES + int(payload.nbytes)
+            continue
+        polygon_entries += 1
+        polygon_id_count += length
+        key = payload.astype(PAYLOAD_DTYPE).tobytes()
+        if key in seen:
+            continue
+        seen[key] = len(seen)
+        payload_values += length
+        max_last_change = max(
+            max_last_change,
+            int(utils.get_last_change_idx(poly_zone_ids[payload.astype(np.int64)])),
+        )
+
+    size_bytes, memory_bytes = format_bytes(
+        resolution, len(seen), payload_values, max_last_change
+    )
 
     possible_cells = h3_num_hexagons(resolution)
     stored_cells = len(index)
@@ -192,7 +329,10 @@ def compute_index_stats(index: dict[int, np.ndarray], resolution: int) -> IndexS
         zone_entries=zone_entries,
         polygon_entries=polygon_entries,
         polygon_id_count=polygon_id_count,
+        distinct_lists=len(seen),
+        payload_values=payload_values,
         size_bytes=size_bytes,
+        memory_bytes=memory_bytes,
         possible_cells=possible_cells,
         stored_cells=stored_cells,
         missing_cells=missing_cells,
@@ -307,12 +447,14 @@ def run_benchmark(tz_data: TimezoneData) -> None:
     )
     metrics_records: list[dict[str, Any]] = []
 
+    check_size_model_against_the_shipped_binary()
+
     for resolution in RESOLUTIONS:
         print(f"  - Building and benchmarking resolution {resolution}...")
 
         # Build single-resolution index
         index = build_single_resolution_index(tz_data, resolution)
-        stats = compute_index_stats(index, resolution)
+        stats = compute_index_stats(index, resolution, tz_data.poly_zone_ids)
 
         # Create timezone finder and benchmark it
         tf = SingleResolutionTimezoneFinder(index, resolution)
@@ -349,7 +491,10 @@ def run_benchmark(tz_data: TimezoneData) -> None:
             "max_ns": max_ns,
             "mean_throughput_kpts": throughput_kpts,
             "binary_size_bytes": stats.size_bytes,
-            "binary_size_mib": stats.size_bytes / (1024**2),
+            "binary_size_kib": stats.size_bytes / 1024,
+            "memory_kib": stats.memory_bytes / 1024,
+            "distinct_lists": stats.distinct_lists,
+            "payload_values": stats.payload_values,
             "unique_surface_fraction": unique_surface_fraction,
             "unique_entry_fraction": unique_entry_fraction,
             "coverage_ratio": coverage_ratio,
@@ -434,12 +579,14 @@ def test_index_stats_computation() -> None:
         2: np.asarray([1, 2], dtype=np.uint16),  # Polygon entry
         3: np.asarray([], dtype=np.uint16),  # Empty entry
     }
-    stats = compute_index_stats(index, 0)
+    stats = compute_index_stats(index, 0, np.arange(8, dtype=np.uint16))
 
     assert stats.entries == 3
     assert stats.zone_entries == 2  # Entries 1 and 3 (size <= 1)
     assert stats.polygon_entries == 1  # Entry 2
     assert stats.polygon_id_count == 2  # Two polygon IDs in entry 2
+    assert stats.distinct_lists == 1
+    assert stats.payload_values == 2
 
 
 def test_single_resolution_finder() -> None:
@@ -749,8 +896,10 @@ def run_tests(
 
 
 if __name__ == "__main__":
-    # Load timezone data once for all operations
-    data_path = Path(INPUT_JSON_PATH)
+    # Load timezone data once for all operations. The input is the upstream GeoJSON, not
+    # the packaged binaries: an index at a resolution other than the packaged one has to
+    # be built from the geometry, and the resolution is exactly what this script varies.
+    data_path = Path(sys.argv[1] if len(sys.argv) > 1 else INPUT_JSON_PATH)
     if not data_path.exists():
         print(f"Input JSON does not exist: {data_path}", file=sys.stderr)
         exit(1)

@@ -445,6 +445,30 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
     format, which is what lets them be chosen by fit rather than by headroom - guarded
     by :func:`check_fits` here and re-checked over the committed file by
     ``scripts/data_integrity.py``.
+
+    **One file, and a raw layout rather than four ``.npy`` arrays.** The obvious
+    alternative is one file per array, self-described by the ``.npy`` header the way
+    ``zone_ids.npy`` and its neighbours next to it are. Measured over the packaged data,
+    loading the identical structure: **one raw file 0.081 ms, four raw files 0.129 ms
+    (+59 %), four ``.npy`` files 0.241 ms (+197 %)**, at the same total size to within
+    0.5 % - and the ``.npy`` cost is the format itself rather than ``np.load``'s
+    dispatch, since the low-level ``np.lib.format.read_array`` reads 0.236 ms of that.
+    Load time is the axis this format exists for, so that settles it on its own; two
+    things make the self-description not worth buying back either:
+
+    * **a ``.npy`` carries no file identifier and no layout version.** Splitting into
+      them would move the shortcut index out of the guarded set and into the one
+      ``docs/data_format.rst`` records as still undetectable across a format change,
+      losing what makes a stale ``bin_file_location`` directory fail loudly instead of
+      answering with wrong timezones.
+    * these four arrays are **one structure with cross-references** - the table indexes
+      the bounds, the bounds index the payload - so four files can be individually stale
+      or mismatched where one cannot, and the separability buys nothing that reads them.
+
+    What a ``.npy`` would genuinely add is the dtype of each array, and the header's two
+    width fields already carry that in 16 bytes. None of this argues against ``.npy`` for
+    the rest of the data directory: those are single independent vectors with no
+    cross-references and no per-query load budget.
     """
     bounds = np.concatenate([index.starts, index.ends[-1:]]).astype(np.int64)
     if len(bounds) == 0:

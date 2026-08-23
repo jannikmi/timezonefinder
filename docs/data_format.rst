@@ -262,18 +262,35 @@ H3 Resolution Selection
 
 The library uses H3 resolution 3 with 41k hexagons for its spatial index. That is a measured
 choice, not an assumption: ``prototypes/single_resolution_bench.py`` builds a separate index at
-every resolution from 0 upwards and benchmarks each against a common set of globally random query
-points.
+every resolution from 0 upwards, prices each one in the layout described below, and benchmarks them
+against a common set of globally random query points.
 
-The finding is a size cliff. At resolution 3 the hybrid index costs a low single-digit percentage
-of the packaged polygon data (:doc:`data_report` lists the current sizes). When the study was run,
-resolution 4 would have accounted for **more than 10 %** of it, for lookup gains that do not
-justify the increase. Resolutions above 5 are excluded outright, since the index size explodes.
-Below resolution 3, cells cover too much area and too many of them turn out ambiguous, which pushes
-work back onto the expensive point-in-polygon path.
+Below resolution 3, cells cover too much area and too many of them come out ambiguous, which pushes
+work back onto the expensive point-in-polygon path. Resolutions above 5 are excluded outright, since
+the table below grows eightfold per level.
 
-Resolution 3 is therefore the largest index that still costs a small fraction of the data it
-indexes.
+**Resolution 4 is a live question rather than a closed one, and what changed is the reason.** It was
+refused on size, back when the index was a file of individually decoded per-cell entries and a
+sevenfold cell count meant a sevenfold file — more than 10 % of the packaged polygon data. In the
+layout described below it does not: the candidate lists deduplicate, so seven times the cells add
+only about a sixth more distinct lists, and almost the whole increase is the fixed-size table.
+Measured over the packaged dataset, resolution 4 is a ~0.6 MiB file against ~0.1 MiB, still around
+one percent of the distribution, and it removes about **60 % of the point-in-polygon tests** a
+uniformly random workload runs, with 89 % of cells resolving to a single zone against 75 %.
+
+What it costs instead is memory and cache. The resident table grows about sevenfold, which matters
+most to ``TimezoneFinderL``, whose entire footprint is this index, and to the constrained containers
+the memory-mapped mode exists for; and the table stops fitting a typical L2 cache, so the one read a
+unique-zone query makes gets dearer even as far fewer queries need geometry at all. Compiling the
+index also takes several times longer on every data update. Whether that trade is worth a second
+data format generation is not settled here.
+
+**A hierarchical index — several resolutions at once, refining only where cells are ambiguous — was
+prototyped and dropped.** The maximum resolution dominates the size, so a multi-resolution index
+comes out slightly *larger* than the single-resolution one it contains; H3 cells do not nest
+cleanly, so a parent has to be kept even once its children exist; and consulting several resolutions
+per query costs more than the refinement saves. It yielded no lookup benefit over a single-resolution
+index at the same maximum resolution, so the simpler structure won.
 
 The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
 
