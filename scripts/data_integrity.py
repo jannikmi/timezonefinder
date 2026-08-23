@@ -44,15 +44,12 @@ from timezonefinder.shortcut_index import (
     SLOT_BASE_CELL_SHIFT,
     SLOT_TABLE_SIZE,
     check_fits,
+    get_last_change_idx,
     get_shortcut_file_path,
     read_shortcuts_binary,
     slots_of,
 )
-from timezonefinder.utils import (
-    get_boundaries_dir,
-    get_holes_dir,
-    get_last_change_idx,
-)
+from timezonefinder.utils import get_boundaries_dir, get_holes_dir
 from timezonefinder.zone_names import read_zone_names
 
 

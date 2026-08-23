@@ -111,6 +111,7 @@ from tests.auxiliaries import (
 from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import (
+    get_last_change_idx,
     ABSENT,
     NUM_BASE_CELLS,
     PAYLOAD_DTYPE,
@@ -236,7 +237,7 @@ def build_index_at(data: TimezoneData, resolution: int) -> dict[str, np.ndarray]
     bounds = np.concatenate([np.zeros(1, dtype=np.int64), np.cumsum(lengths)])
     last_change = np.array(
         [
-            utils.get_last_change_idx(zone_ids[chunk.astype(np.int64)])
+            get_last_change_idx(zone_ids[chunk.astype(np.int64)])
             for chunk in entry_payloads
         ],
         dtype=np.int64,

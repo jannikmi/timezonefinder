@@ -361,6 +361,31 @@ def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -
         )
 
 
+def get_last_change_idx(zone_ids: np.ndarray) -> int:
+    """Index past which no zone other than the last one can still be matched.
+
+    A candidate list is ordered so that a zone's polygons are contiguous and the largest
+    zone comes last, so once the scan reaches the final run there is nothing left to rule
+    out and the answer is that zone whether or not its polygons are tested.
+
+    **Build-time only.** The query used to call this per lookup; it now reads the answer
+    out of the shortcut index, which stores one value per *distinct* candidate list. It
+    lives here beside the builder that writes those values rather than in
+    ``timezonefinder/utils_numba.py``, where it was compiled at import for a function no
+    query calls - and ``scripts/data_integrity.py`` re-checks the committed values against
+    this same implementation, so the two cannot drift.
+    """
+    nr_entries = zone_ids.shape[0]
+    if nr_entries <= 1:
+        return 0
+    last = zone_ids[-1]
+    for ptr in range(2, nr_entries + 1):
+        # from the back: the first element that differs ends the final run
+        if zone_ids[-ptr] != last:
+            return nr_entries - ptr + 1
+    return 0
+
+
 def build_shortcut_index(
     mapping: dict[int, int | list[int] | np.ndarray],
     poly_zone_ids: np.ndarray,
@@ -373,10 +398,6 @@ def build_shortcut_index(
         ``last_change``.
     :raises ShortcutOverflowError: if a value no longer fits the column that holds it.
     """
-    # imported here rather than at module scope: this is the build path, and `utils`
-    # binds a point-in-polygon backend at import that reading an index has no use for
-    from timezonefinder import utils
-
     keys = np.sort(np.fromiter(mapping.keys(), dtype=np.int64, count=len(mapping)))
     compact_slots = compact_slots_of(keys)
     table = np.full(COMPACT_TABLE_SIZE, ABSENT, dtype=TABLE_DTYPE)
@@ -446,7 +467,7 @@ def build_shortcut_index(
     bounds = np.concatenate([np.zeros(1, dtype=np.int64), np.cumsum(lengths)])
     last_change = np.array(
         [
-            utils.get_last_change_idx(poly_zone_ids[chunk.astype(np.int64)])
+            get_last_change_idx(poly_zone_ids[chunk.astype(np.int64)])
             for chunk in entry_payloads
         ],
         dtype=np.int64,

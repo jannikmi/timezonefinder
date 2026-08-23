@@ -128,6 +128,7 @@ from scripts.timezone_data import HexCache, TimezoneData
 from timezonefinder import utils
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import (
+    get_last_change_idx,
     COMPACT_DIGIT_BASE,
     NUM_BASE_CELLS,
     PAYLOAD_DTYPE,
@@ -356,7 +357,7 @@ def compute_index_stats(
         payload_values += length
         max_last_change = max(
             max_last_change,
-            int(utils.get_last_change_idx(poly_zone_ids[payload.astype(np.int64)])),
+            int(get_last_change_idx(poly_zone_ids[payload.astype(np.int64)])),
         )
 
     size_bytes, memory_bytes = format_bytes(
@@ -459,7 +460,7 @@ class SingleResolutionTimezoneFinder(TimezoneFinder):
     ) -> str | None:
         """Resolve ambiguous polygons by testing point-in-polygon."""
         zone_ids = self.zone_ids_of(polygon_ids)
-        last_change_idx = utils.get_last_change_idx(zone_ids)
+        last_change_idx = get_last_change_idx(zone_ids)
 
         if last_change_idx == 0:
             self.stats["unique_hits"] += 1

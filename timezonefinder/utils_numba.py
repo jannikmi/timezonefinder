@@ -136,28 +136,6 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     return inside
 
 
-@njit(cache=True)
-def get_last_change_idx(lst: np.ndarray) -> int:
-    """
-    :param lst: list of entries
-    :return: returns the index to the element for which all following elements are equal
-    """
-    nr_entries = lst.shape[0]
-    if nr_entries <= 1:
-        return 0
-    # at least 2 elements
-    last_elem = lst[-1]
-    for ptr in range(2, nr_entries + 1):
-        # Note: from the back
-        element = lst[-ptr]
-        if element != last_elem:
-            # return the last pointer value
-            # Attention: convert into positive "absolute" index first
-            return nr_entries - ptr + 1
-    # Note: all entries are the same -> ptr will be 0
-    return 0
-
-
 # @cc.export('int2coord', f8(i4))
 @njit(f8(i4), cache=True)
 def int2coord(i4: int) -> float:

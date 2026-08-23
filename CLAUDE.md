@@ -73,6 +73,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Before adding any version-gated import, `__future__` feature, or compatibility shim, check
   `requires-python` and confirm the feature actually needs it on the minimum supported version
+- **Removing the last caller of something is half the change: the other half is the callee.**
+  Grep for remaining callers in the same commit, and act on what you find — no callers at all
+  means delete it; callers only in tests means it is test scaffolding and should say so; callers
+  only at build time means it must *leave the runtime modules*, because everything in
+  `timezonefinder/utils_numba.py` is compiled and bound at import in every user's process. That
+  is how `get_last_change_idx` outlived its query-path caller: precomputing it into the shortcut
+  index removed the call, and the `@njit` function stayed behind being compiled for nobody. A
+  helper that no longer runs per query is not merely tidy to move — it is cost every user pays
 - **A dispatch boundary costs more than any scalar per-query stage computes.** An empty `njit`
   call is ~98 ns and a cffi crossing the same order, against stages of 100-200 ns — so reaching
   for Numba or the C extension to speed one up is a measured dead end, not an untried idea, and

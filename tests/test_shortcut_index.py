@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 from h3.api import numpy_int as h3
 
+from scripts.configs import ZONE_ID_DTYPE
 from scripts.data_integrity import (
     DataIntegrityError,
     all_cells_at_shortcut_res,
@@ -48,6 +49,7 @@ from timezonefinder.shortcut_index import (
     compact_of_expanded,
     compact_slots_of,
     expand_compact,
+    get_last_change_idx,
     get_shortcut_file_path,
     read_shortcuts_binary,
     slot_of,
@@ -361,7 +363,7 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
                 self.shortcut_starts[e] : self.shortcut_ends[e]
             ]
             zone_ids = self.zone_ids_of(cand)
-            stop = utils.get_last_change_idx(zone_ids)  # what the query no longer does
+            stop = get_last_change_idx(zone_ids)  # what the query no longer does
             x, y = utils.coord2int(lng), utils.coord2int(lat)
             for j, boundary_id in enumerate(cand):
                 if j >= stop:
@@ -396,3 +398,23 @@ def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(t
         f"{len(mismatches)} points answer differently when the stop index is computed "
         f"instead of read, e.g. {mismatches[:3]}"
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "entry_list, expected",
+    [
+        ([], 0),
+        ([1], 0),
+        ([2], 0),
+        ([1, 1], 0),
+        ([1, 2], 1),
+        ([1, 3], 1),
+        ([1, 3, 3], 1),
+        ([1, 3, 3, 0], 3),
+        ([1, 3, 3, 0, 0, 0, 0], 3),
+    ],
+)
+def test_get_last_change_idx(entry_list, expected):
+    array = np.array(entry_list, dtype=ZONE_ID_DTYPE)
+    assert get_last_change_idx(array) == expected
