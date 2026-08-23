@@ -373,11 +373,12 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
 def narrowest_dtype_for(max_value: int, *, what: str) -> np.dtype:
     """The narrowest unsigned width that holds ``max_value``. No headroom required.
 
-    Headroom is not the safeguard here - :func:`check_fits` is. The packaged data is
-    produced by a converter this repository owns, so an overflow surfaces where the data
-    is built rather than in a user's process, provided something checks and says what
-    happened. A guarded narrow width is strictly better than an unguarded wide one:
-    smaller, and loud instead of silently truncating.
+    Headroom is not the safeguard here - being handed the column's *maximum* is. Callers
+    pass ``values.max()``, so the width fits by construction and there is nothing left for
+    a follow-up guard to catch; what a narrow width still needs is a check that the file
+    it produced holds together, which ``scripts/data_integrity.validate_shortcut_index``
+    does over what is committed. A guarded narrow width is strictly better than an
+    unguarded wide one: smaller, and loud instead of silently truncating.
     """
     for dtype in (np.uint8, np.uint16, np.uint32):
         if np.iinfo(dtype).max >= max_value:
@@ -388,9 +389,10 @@ def narrowest_dtype_for(max_value: int, *, what: str) -> np.dtype:
 def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -> None:
     """Guard a narrow column, with the message that makes choosing it by fit safe.
 
-    Called by the builder over what it is about to write and by
-    ``scripts/data_integrity.py`` over what is committed - one implementation, so the two
-    cannot drift - and never when a finder is constructed.
+    For the columns whose width is *fixed* by the format rather than chosen by fit -
+    which is the slot table, and only it. The two data-dependent columns need no such
+    guard: their width is derived from the maximum they have to hold, so it fits by
+    construction. Called by the builder, never when a finder is constructed.
 
     The message is the deliverable, not the assertion: whoever hits this is regenerating
     the data years from now and needs to be told what overflowed, what the ceiling was and
@@ -534,9 +536,9 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
     """Write a built index to its binary file, in the narrowest columns that fit.
 
     The two data-dependent widths are recorded in the header rather than fixed by the
-    format, which is what lets them be chosen by fit rather than by headroom - guarded
-    by :func:`check_fits` here and re-checked over the committed file by
-    ``scripts/data_integrity.py``.
+    format, which is what lets them be chosen by fit rather than by headroom: each is the
+    narrowest that holds its column's maximum, and ``scripts/data_integrity.py`` asserts
+    over the committed file that it still is.
 
     **One file, and a raw layout rather than four ``.npy`` arrays.** The obvious
     alternative is one file per array, self-described by the ``.npy`` header the way
@@ -565,25 +567,15 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
     bounds = np.concatenate([index.starts, index.ends[-1:]]).astype(np.int64)
     if len(bounds) == 0:
         bounds = np.zeros(1, dtype=np.int64)
-    offset_dtype = narrowest_dtype_for(int(bounds[-1]), what="payload offset")
-    # sized from the *end* of the last entry, not from the starts: the largest end is the
-    # payload length itself, so a width that fits every start can still be one the last
-    # end wraps around
-    check_fits(
-        bounds,
-        offset_dtype,
-        what="a payload offset",
-        remedy="Widen the offset column to the next unsigned width.",
-    )
+    # Sized from the whole column, not from its last entry. For an index this module
+    # builds the last end *is* the maximum - the entries are packed back to back - but
+    # sizing from `max` holds for any index handed to this function and leaves no
+    # assumption behind for a later guard to re-check. A guard that cannot fail is not
+    # one, and one placed after `narrowest_dtype_for` never can.
+    offset_dtype = narrowest_dtype_for(int(bounds.max()), what="payload offset")
     length_dtype = narrowest_dtype_for(
         int(index.last_change.max()) if index.nr_of_entries else 0,
         what="a last-zone-change index",
-    )
-    check_fits(
-        index.last_change,
-        length_dtype,
-        what="a last-zone-change index",
-        remedy="Widen the length column to the next unsigned width.",
     )
     header = (
         FILE_IDENTIFIER

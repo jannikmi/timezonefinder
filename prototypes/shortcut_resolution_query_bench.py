@@ -21,9 +21,10 @@ repository trusts for a difference this small (``docs/benchmarking_methodology.r
 * **correctness first.** Every fixture point must resolve identically under both indices
   before anything is timed.
 
-The strata are the committed fixtures, classified against the **resolution 3** index - so
-"ambiguous" means ambiguous at resolution 3, which is exactly the set resolution 4 is
-supposed to improve. ``random`` is the workload-representative one; read it last and rank
+The strata are the committed fixtures, classified against whichever index the package
+ships - so when this ran, "ambiguous" meant ambiguous at resolution 3, which was exactly
+the set resolution 4 was supposed to improve. The fixtures have since been regenerated
+against resolution 4, which is half of why re-running this needs the inversion below. ``random`` is the workload-representative one; read it last and rank
 on it, remembering that uniformly random points are ~11 % ambiguous and an ambiguous query
 costs ~11x a unique one.
 
@@ -66,10 +67,17 @@ happens to contain a polygon vertex. **The simplification's stated precondition 
 cells shrink, which is exactly what raising the resolution does.**
 
 **Resolved 2026-08-23: ``lies_in_cell`` now tests segment intersection**, and that cell
-resolves correctly at resolution 4. The gate should pass on a re-run, and the timing
-question this script was written for is finally the one standing in the way. Re-run it on
-both backends before ranking resolution 4 — the numbers above are from the state where it
-refused, not from a completed comparison.
+resolves correctly at resolution 4. The gate passes, and **resolution 4 ships** - so the
+timing question this script was written for was settled elsewhere, on the two instruments
+that measure the packaged index rather than a swapped-in one: the timezone-finding
+benchmark report for whole queries and ``prototypes/query_stage_profile.py`` for the
+per-stage breakdown. The table above is kept because the defect it found is the finding,
+not because a comparison was completed here.
+
+**Re-running this needs it inverted first.** It swaps a resolution *4* index underneath a
+package whose own index is resolution 3, and both halves of that are now the wrong way
+round. What the script is still the right shape for is the next resolution question, and
+the correctness gate ahead of the timing is the part worth keeping either way.
 
 **A separate, pre-existing gap, found while checking the above and worth its own entry.**
 Brute-forcing every polygon for 3,000 points sampled *uniformly in latitude and longitude*

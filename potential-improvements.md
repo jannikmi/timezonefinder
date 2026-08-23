@@ -253,7 +253,8 @@ the denominators, and how to tell whether they still describe the tree.
   well a figure travels:
 
   1. **Counts, which are exact and machine-independent** — a line's hit count does not depend on
-     the hardware, only on the code. 1.13 candidate polygons per ambiguous query; one FFI crossing
+     the hardware, only on the code. 1.05 candidate polygons per ambiguous query, 0.11 per
+     uniformly random one; one FFI crossing
      and one buffer acquisition per candidate on the clang/mapped path; two numpy calls per
      ambiguous query. State what a change removes as a count first, and use time only to size it.
   2. **Shares within one query**, which travel but not uniformly: the stages are bound by different
@@ -273,22 +274,27 @@ the denominators, and how to tell whether they still describe the tree.
   through before comparing two items that live on different strata — that multiplication is a
   property of the fixtures, not of the machine, so it survives the move.
 - **A stage's share bounds its upside and says nothing about its downside, so a small stage is a
-  constraint rather than an opportunity.** The shortcut lookup is 183 ns — **20 % of a unique
-  query, 1.7 % of an ambiguous one, ~5 % of a mixed workload**. Making it infinitely fast wins at
-  most ~5 %. Making it slower is not bounded that way: the `searchsorted` layout refused for it
-  measured **+93 % of a unique query and +29 % of a mixed workload**. For
-  any stage the ladder puts in single digits — `zone_name_from_id` at 4.7 % is the other one — ask
+  constraint rather than an opportunity.** The shortcut lookup is 117-145 ns — **13-15 % of a
+  unique query, ~1 % of an ambiguous one, ~7 % of the uniformly random stratum**. Making it
+  infinitely fast wins at most ~7 %. Making it slower is not bounded that way: the `searchsorted`
+  layout refused for it measured **+93 % of a unique query**, and resolution 4 sharpened that
+  asymmetry rather than softening it — ~89 % of a random workload is now answered on the unique
+  path, so a unique-path regression is amplified where it used to be diluted. For
+  any stage the ladder puts in single digits — `zone_name_from_id` at 4-6 % is the other one — ask
   whether a change keeps it free, never whether it makes it faster, and settle it on a whole-query
   A/B rather than on a microbenchmark of the stage. `docs/benchmarking_methodology.rst` carries the
   three A/B designs that got this wrong before it was settled.
 - **Where a unique query's time actually is, and therefore where a real win has to come from:**
-  `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~43 % — **77 % in two calls before any
+  `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~49 % — **83 % in two calls before any
   lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
   the same place from opposite directions, and neither is a shortcut-side optimisation.
 - **A second machine class exists for the shortcut format change, and it is CI's.** The
   benchmark workflow measured base and head in one job on an **AMD EPYC 7763** (Linux, the C
   extension, no numba - the tracked configuration), which is the cross-check this section asks
-  for and the only figures here not taken on one laptop. Head `524ebbe` against the merge base:
+  for and the only figures here not taken on one laptop. Head `524ebbe` against the merge base -
+  which is the format change alone, before the H3 resolution moved to 4 and traded part of the
+  footprint win back for query speed, so read the memory rows as what the format bought rather than
+  as where the branch landed:
 
   | | base | head | |
   |---|---:|---:|---|

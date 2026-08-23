@@ -35,6 +35,8 @@ from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import (
     ABSENT,
     COMPACT_TABLE_SIZE,
+    TABLE_DTYPE,
+    _HEADER_SIZE,
     FILE_IDENTIFIER,
     SHORTCUT_LAYOUT_VERSION,
     SLOT_BASE_CELL_MASK,
@@ -269,21 +271,85 @@ def test_a_zone_id_the_table_cannot_hold_names_the_width_to_move_to():
     assert "DATA_FORMAT_VERSION" in message
 
 
+def _data_dir_with_shortcut_file(tmp_path: Path, buffer: bytes) -> Path:
+    """A minimal compiled data directory holding ``buffer`` as its shortcut index."""
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    for name in ("zone_ids.npy", "timezone_names.txt"):
+        (data_dir / name).write_bytes((DEFAULT_DATA_DIR / name).read_bytes())
+    get_shortcut_file_path(data_dir).write_bytes(buffer)
+    return data_dir
+
+
+@pytest.mark.unit
+def test_a_padded_offset_column_is_caught_over_the_committed_data(tmp_path):
+    """The widths are chosen by fit, and this is the only direction a reader can check.
+
+    A width that is too *narrow* wrapped what it wrote, and the wrapped value comes back
+    off disk fitting that width perfectly - so it is caught by the lengths it makes
+    negative, not by re-measuring the column. A width that is too *wide* leaves no trace
+    at all beyond the bytes it costs, which is what this is for.
+    """
+    source = get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes()
+    resolution, nr_entries, offset_width, length_width = (
+        int(v) for v in np.frombuffer(source, dtype=np.int64, count=4, offset=8)
+    )
+    bounds_at = _HEADER_SIZE + COMPACT_TABLE_SIZE * TABLE_DTYPE.itemsize
+    bounds = np.frombuffer(
+        source,
+        dtype=np.dtype(f"uint{offset_width * 8}"),
+        count=nr_entries + 1,
+        offset=bounds_at,
+    )
+    wider = offset_width * 2
+    padded = (
+        source[:8]
+        + np.array(
+            [resolution, nr_entries, wider, length_width], dtype=np.int64
+        ).tobytes()
+        + source[_HEADER_SIZE:bounds_at]
+        + bounds.astype(np.dtype(f"uint{wider * 8}")).tobytes()
+        + source[bounds_at + (nr_entries + 1) * offset_width :]
+    )
+
+    with pytest.raises(DataIntegrityError, match="bits wide"):
+        validate_shortcut_index(_data_dir_with_shortcut_file(tmp_path, padded))
+
+
+@pytest.mark.unit
+def test_an_offset_column_too_narrow_for_its_payload_is_caught(tmp_path):
+    """The other direction, and the reason re-measuring the column cannot find it.
+
+    An offset that overflowed its column wrapped to a small value, and reading it back
+    through that same width returns the wrapped value - in range, indistinguishable from
+    an intended one. What gives it away is the candidate list it truncates: the offsets
+    ascend, so a wrapped one leaves the entry before it with a negative length.
+    """
+    source = bytearray(get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes())
+    header = np.frombuffer(bytes(source), dtype=np.int64, count=4, offset=8)
+    offset_width = int(header[2])
+    bounds_at = _HEADER_SIZE + COMPACT_TABLE_SIZE * TABLE_DTYPE.itemsize
+    # wrap the second offset back to 0, as too narrow a column would have stored it
+    source[bounds_at + offset_width : bounds_at + 2 * offset_width] = bytes(
+        offset_width
+    )
+
+    with pytest.raises(DataIntegrityError, match="wrapped"):
+        validate_shortcut_index(_data_dir_with_shortcut_file(tmp_path, bytes(source)))
+
+
 @pytest.mark.unit
 def test_a_corrupted_stop_index_is_caught_over_the_committed_data(tmp_path):
     """A guard that cannot fail is not one. A stop index one too small ends the
     candidate loop early and attributes the point to the wrong zone - which nothing
     about the file announces."""
-    data_dir = tmp_path / "data"
-    data_dir.mkdir()
-    for name in ("zone_ids.npy", "timezone_names.txt"):
-        (data_dir / name).write_bytes((DEFAULT_DATA_DIR / name).read_bytes())
     corrupted = bytearray(get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes())
     corrupted[-1] = (corrupted[-1] + 1) % 256
-    get_shortcut_file_path(data_dir).write_bytes(bytes(corrupted))
 
     with pytest.raises(DataIntegrityError, match="no other zone can be matched"):
-        validate_shortcut_index(data_dir)
+        validate_shortcut_index(
+            _data_dir_with_shortcut_file(tmp_path, bytes(corrupted))
+        )
 
 
 # --- the layout markers ----------------------------------------------------------

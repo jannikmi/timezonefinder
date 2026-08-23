@@ -43,9 +43,9 @@ from timezonefinder.shortcut_index import (
     SLOT_BASE_CELL_MASK,
     SLOT_BASE_CELL_SHIFT,
     SLOT_TABLE_SIZE,
-    check_fits,
     get_last_change_idx,
     get_shortcut_file_path,
+    narrowest_dtype_for,
     read_shortcuts_binary,
     slots_of,
 )
@@ -378,13 +378,20 @@ def validate_shortcut_index(data_dir: Path) -> None:
             f"{path}: the last candidate list ends at {int(ends[-1])} but the payload "
             f"holds {len(index.payload)} polygon ids."
         )
+    # Also where an offset column too narrow for the payload is caught: the offsets are
+    # ascending, so one that wrapped leaves the entry before it with a hugely negative
+    # length, and one that wrapped on the *last* entry fails the check above. Reading the
+    # column back cannot show it directly - it comes off disk through the very width that
+    # truncated it, so every value in it fits that width by construction.
     if np.any(lengths < 2):
         offender = int(np.argmin(lengths))
         raise DataIntegrityError(
             f"{path}: candidate list {offender} holds {int(lengths[offender])} polygon "
             "ids. Every stored list has at least two - a single candidate is unambiguous "
             "and belongs in the table as a zone id - and that is what leaves a spare "
-            "table value to mean 'no cell here'."
+            "table value to mean 'no cell here'. A negative length here means the offset "
+            "column is too narrow for the payload and wrapped; widen it, and bump "
+            "SHORTCUT_LAYOUT_VERSION and DATA_FORMAT_VERSION with it."
         )
     if len(index.payload) and int(index.payload.max()) >= nr_of_boundaries:
         raise DataIntegrityError(
@@ -392,19 +399,31 @@ def validate_shortcut_index(data_dir: Path) -> None:
             f"{int(index.payload.max())}, but {data_dir} holds {nr_of_boundaries}."
         )
 
-    # the widths, re-checked over what is committed rather than over what was written
-    check_fits(
-        np.append(starts, ends[-1:]),
-        np.dtype(f"uint{index.starts.dtype.itemsize * 8}"),
-        what="a payload offset",
-        remedy="Widen the offset column to the next unsigned width.",
-    )
-    check_fits(
-        index.last_change,
-        np.dtype(f"uint{index.last_change.dtype.itemsize * 8}"),
-        what="a last-zone-change index",
-        remedy="Widen the length column to the next unsigned width.",
-    )
+    # The two data-dependent widths are still the narrowest that fit. This is the "by fit,
+    # not by headroom" property of the format asserted over what shipped, and the only
+    # form of it a reader can check: a *too narrow* width is caught by the length and
+    # payload-end checks above, since a wrapped value is indistinguishable from an
+    # intended one once it has been read back through the width that wrapped it. What is
+    # left to catch is the other direction - a converter that quietly started padding,
+    # which nothing else would ever notice.
+    for column, itemsize, what in (
+        (
+            np.append(starts, ends[-1:]),
+            index.starts.dtype.itemsize,
+            "the offset column",
+        ),
+        (index.last_change, index.last_change.dtype.itemsize, "the length column"),
+    ):
+        largest = int(np.max(column)) if len(column) else 0
+        expected = narrowest_dtype_for(largest, what=what)
+        if expected.itemsize != itemsize:
+            raise DataIntegrityError(
+                f"{path}: {what} is {itemsize * 8} bits wide, but the largest value in it "
+                f"is {largest:,}, which {expected.name} holds. The format records each "
+                f"width in the header so that it can be the narrowest that fits; a wider "
+                f"one costs size for nothing and means the writer and this check no "
+                f"longer agree on how the width is chosen."
+            )
 
     table = index.table
     zone_id_slots = table >= 0

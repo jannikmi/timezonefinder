@@ -249,13 +249,14 @@ What a stage's share does and does not bound
 ``prototypes/query_stage_profile.py`` attributes a query to its stages. Read those shares
 asymmetrically, because they bound an optimisation's upside and say nothing about its downside.
 
-The shortcut lookup is 88 ns: **8.7 % of a unique-zone query, 0.8 % of an ambiguous one, ~4.4 % of
-a mixed workload** once the strata are weighted (uniformly random points are ~11 % ambiguous and an
-ambiguous query costs ~10x a unique one). So making that lookup infinitely fast wins at most 4.4 %
-of a realistic workload - inside the 3-9 % jitter of a single machine, i.e. not reliably
-measurable. Making it *slower* is not bounded that way: one plausible redesign of the same stage
-(``np.searchsorted`` over sorted keys) measured **+93 % of a unique query and +29 % of a mixed
-workload**.
+The shortcut lookup is 117-145 ns: **13-15 % of a unique-zone query, ~1 % of an ambiguous one, and
+~7 % of the uniformly random stratum** - the last measured directly rather than derived, which is
+what makes it the one to rank on. So making that lookup infinitely fast wins at most ~7 % of a
+realistic workload, and the part of that inside the 3-9 % jitter of a single machine is not
+reliably measurable at all. Making it *slower* is not bounded that way: one plausible redesign of
+the same stage (``np.searchsorted`` over sorted keys) measured **+93 % of a unique query**, and
+since ~89 % of a random workload is answered on the unique path, a regression there is amplified
+into the mixed figure rather than diluted out of it.
 
 The rule that follows, for any stage the ladder puts in single digits: ask whether a change keeps
 it roughly free, never whether it makes it faster, and decide on a whole-query A/B rather than on

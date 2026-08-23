@@ -37,7 +37,7 @@ def any_pt_in_poly(coords1: np.ndarray, coords2: np.ndarray) -> bool:
 
 @njit(boolean(CoordType, CoordType), cache=True)
 def any_edge_crossing(ring1: np.ndarray, ring2: np.ndarray) -> bool:
-    """True if an edge of closed ring ``ring1`` properly crosses an edge of ``ring2``.
+    """True if an edge of closed ring ``ring1`` meets an edge of ``ring2``.
 
     Two rings can overlap with no vertex of either inside the other - an edge passing
     clean through - which is the case vertex inclusion alone cannot see. It is not
@@ -45,9 +45,19 @@ def any_edge_crossing(ring1: np.ndarray, ring2: np.ndarray) -> bool:
     polygon whose boundary crosses it without either shape's vertices being enclosed, and
     the cell was recorded as not covered.
 
-    Only *proper* crossings are reported. An edge that merely touches a vertex of the
-    other ring is a measure-zero case that the vertex tests already answer, and treating
-    it here would mean handling collinear overlap for no gain.
+    **Touching counts as meeting.** An edge ending exactly on the other ring's edge, or
+    two edges sharing a point, is reported here rather than left to the vertex tests -
+    which answer it only by whichever way their ray casting happens to fall on a boundary
+    point. This is the safe direction for what the answer is used for: an extra candidate
+    polygon costs a bounding-box rejection, a missing one costs every point in the cell
+    its timezone. Two collinear edges on the same line are reported as meeting whether or
+    not they overlap, for the same reason.
+
+    A degenerate determinant therefore never suppresses a hit: the tests below skip a
+    pair only when one segment lies *strictly* to one side of the other's line. Written
+    as ``(d > 0) == ...``, with zero folded in with the negatives, the answer would depend
+    on the order the ring's vertices happen to be stored in - the same two rings meeting
+    for one winding and not for the reverse.
 
     Coordinates are translated by ``ring1``'s first vertex before the orientation tests.
     They are scaled by 10^7, so a raw difference reaches ~3.6e9 and the cross products
@@ -110,13 +120,13 @@ def any_edge_crossing(ring1: np.ndarray, ring2: np.ndarray) -> bool:
             py2 = np.int64(ring1[1, m]) - oy
             d1 = rqx * (py1 - qy1) - rqy * (px1 - qx1)
             d2 = rqx * (py2 - qy1) - rqy * (px2 - qx1)
-            if (d1 > 0) == (d2 > 0):
+            if (d1 > 0 and d2 > 0) or (d1 < 0 and d2 < 0):
                 continue
             rpx = px2 - px1
             rpy = py2 - py1
             d3 = rpx * (qy1 - py1) - rpy * (qx1 - px1)
             d4 = rpx * (qy2 - py1) - rpy * (qx2 - px1)
-            if (d3 > 0) != (d4 > 0):
+            if not ((d3 > 0 and d4 > 0) or (d3 < 0 and d4 < 0)):
                 return True
     return False
 

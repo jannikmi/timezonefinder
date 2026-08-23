@@ -170,6 +170,42 @@ class TestAnyEdgeCrossing:
         assert not any_edge_crossing(self.SQUARE, inner)
         assert not any_edge_crossing(inner, self.SQUARE)
 
+    def test_a_ring_touching_at_one_vertex_counts_as_meeting(self):
+        """Touching is reported, and the vertex tests cannot be relied on to do it.
+
+        A ring corner sitting exactly on the other ring's edge is a boundary point, which
+        ray casting answers whichever way it happens to fall. Reporting it here is the
+        safe direction: an extra candidate polygon costs a bounding-box rejection, a
+        missing one costs every point in the cell its timezone.
+        """
+        # touches SQUARE only at (0, 0); the square lies on one side of the line through it
+        touching = np.array([[-50, 50, -50], [50, -50, -150]], dtype=np.int32)
+        assert any_edge_crossing(self.SQUARE, touching)
+
+    def test_the_answer_does_not_depend_on_a_ring_s_winding(self):
+        """The determinant signs flip with the vertex order; the answer must not.
+
+        Boundary rings are not normalised to one winding, so an orientation-dependent test
+        would admit a polygon for a cell or not according to the order its vertices happen
+        to have been stored in. Folding a zero determinant in with the negatives - the
+        natural way to write this - does exactly that, and the touching case above is
+        where it shows.
+        """
+        for other in (
+            np.array([[-50, 50, -50], [50, -50, -150]], dtype=np.int32),  # touching
+            np.array(
+                [[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int32
+            ),  # crossing
+            np.array([[10, 20, 20, 10], [10, 10, 20, 20]], dtype=np.int32),  # contained
+        ):
+            reversed_ring = other[:, ::-1].copy()
+            assert any_edge_crossing(self.SQUARE, other) == any_edge_crossing(
+                self.SQUARE, reversed_ring
+            )
+            assert any_edge_crossing(other, self.SQUARE) == any_edge_crossing(
+                reversed_ring, self.SQUARE
+            )
+
     def test_it_is_symmetric(self):
         bar = np.array([[-50, 150, 150, -50], [40, 40, 60, 60]], dtype=np.int32)
         assert any_edge_crossing(bar, self.SQUARE) == any_edge_crossing(
