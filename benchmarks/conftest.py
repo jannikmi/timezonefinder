@@ -7,7 +7,7 @@ Not collected by `make test` / `make testall` (see `testpaths` in
 import numpy as np
 import pytest
 
-from scripts.benchmark_utils import get_system_status
+from scripts.benchmark_utils import get_system_status, tzfpy_version
 from scripts.configs import DEBUG
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -53,11 +53,16 @@ def pytest_benchmark_update_machine_info(config, machine_info) -> None:
     rendering an older stored JSON against a checkout where BATCH_SIZE has
     since changed would silently derive Time/Query and Throughput from the
     wrong batch size, and the report would not say which fixture set and
-    boundary data the timings actually describe."""
+    boundary data the timings actually describe. The comparison suite adds a
+    fourth thing a stored JSON must carry: the version of the *other* package
+    it measured, which releases outside this repository entirely."""
     machine_info["timezonefinder"] = {
         **get_system_status(),
         **benchmark_fixture_provenance(),
         "batch_size": BATCH_SIZE,
+        # None unless the `compare` dependency group is installed - see
+        # `scripts.benchmark_utils.tzfpy_version` and benchmarks/test_comparison.py
+        "tzfpy_version": tzfpy_version(),
     }
 
 

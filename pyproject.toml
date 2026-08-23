@@ -94,6 +94,19 @@ numba = [
 pytz = [
     "pytz>=2022.7.1"
 ]
+# the alternative package docs/alternatives.rst weighs this one against,
+# measured head-to-head by benchmarks/test_comparison.py. Deliberately its own
+# group rather than part of `test`: the configuration CI tracks is
+# `uv sync --group test` (.github/workflows/benchmark.yml), and that has to stay
+# exactly what a plain `pip install timezonefinder` gives you. `make benchmarks`
+# and `tox -e benchmarks` ask for this group explicitly; everything else runs
+# without it, and the comparison benchmarks skip.
+# It is a Rust extension shipping abi3 wheels for CPython 3.10+ on the platforms
+# this project builds for; on one it does not cover, `make install` needs a Rust
+# toolchain or `--no-group compare`, and nothing but the comparison is lost.
+compare = [
+    "tzfpy>=1,<2",
+]
 # prototyping, performance analytics
 proto = [
     "line-profiler>=5.0.0",

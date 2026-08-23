@@ -76,6 +76,7 @@ References
    Point-in-Polygon Benchmarks <benchmark_results_polygon>
    Initialization Benchmarks <benchmark_results_initialization>
    Memory Benchmarks <benchmark_results_memory>
+   Comparison against tzfpy <benchmark_results_comparison>
 
 .. toctree::
    :maxdepth: 2

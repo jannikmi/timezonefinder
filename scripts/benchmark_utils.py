@@ -6,11 +6,12 @@ This module contains common functionality used by various benchmark scripts
 to generate RST reports and handle CLI interfaces.
 """
 
+import importlib.metadata
 import json
 import platform
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Literal, get_args
+from typing import Any, Callable, Final, Literal, get_args
 
 import numpy as np
 
@@ -53,6 +54,31 @@ COMPARABILITY_KEYS: tuple[str, ...] = (
     # reports, where it compares equal as None on both sides.
     "memory_workload_size",
 )
+
+
+# The alternative package this project is compared against
+# (benchmarks/test_comparison.py, docs/alternatives.rst). Named once here
+# because three consumers need it - the benchmark suite that imports it, the
+# conftest hook that stamps its version into every report, and the renderer
+# that prints that stamp - and a retyped distribution name in the third place
+# is the copy that goes stale.
+TZFPY_DISTRIBUTION: Final[str] = "tzfpy"
+
+
+def tzfpy_version() -> str | None:
+    """The installed version of :data:`TZFPY_DISTRIBUTION`, or ``None``.
+
+    Recorded into every benchmark JSON so the rendered comparison report can
+    name the build it measured. That package releases on its own schedule,
+    entirely outside this repository, so a figure on that page describes a
+    *version* rather than a package - and nothing else in the pipeline would
+    say which one. ``None`` when it is not installed, which is the normal case
+    for every run except ``make benchmarks``.
+    """
+    try:
+        return importlib.metadata.version(TZFPY_DISTRIBUTION)
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 def decimals_for_magnitude(value: float) -> int:
