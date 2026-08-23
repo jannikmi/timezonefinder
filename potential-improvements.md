@@ -121,6 +121,8 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-542 | Establish what coordinate precision is worth | data format | M | free |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
+| BUG-2 | The shortcut compiler never tests polygon edge crossings | correctness | M | free — measured |
+| BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
@@ -646,6 +648,68 @@ the denominators, and how to tell whether they still describe the tree.
 ---
 
 ## Public API and behaviour
+
+### BUG-2 — the shortcut compiler tests vertex inclusion, never edge crossings
+
+- **Location:** `scripts/hex_utils.py`, `Hex.lies_in_cell`.
+- **What it is.** A polygon counts as overlapping a cell if some hexagon vertex is inside
+  the polygon or some polygon vertex is inside the hexagon. Two shapes can overlap with
+  neither condition holding — a polygon *edge* crossing the cell — and that case is never
+  tested. The code says so, and names the precondition:
+
+  ```
+  # assumption: the polygons and cells have a similar size
+  # and are small enough to just check vertex inclusion
+  # valid simplification
+  ```
+
+- **Measured 2026-08-23** (`prototypes/shortcut_resolution_query_bench.py`). At `lng=100.3055,
+  lat=3.4804`, in the Strait of Malacca and nowhere near a pole, the point is genuinely
+  inside boundary polygon 1213 (`Etc/GMT-7`) — brute-forced against every polygon, and
+  confirmed by `certain_timezone_at`. The resolution 3 cell lists it as a candidate; the
+  resolution 4 cell does not, because the smaller hexagon contains no polygon vertex while
+  the polygon's edge still crosses it. The resolution 4 index therefore answers
+  `Asia/Kuala_Lumpur` where the truth is `Etc/GMT-7`.
+- **The precondition degrades exactly as the resolution rises**, which is what makes this
+  worth ranking rather than noting: cells shrink by 7x per level while the polygons do not,
+  so "similar size" is progressively less true. The packaged resolution 3 index satisfies it
+  well enough that an area-weighted sample of 3,000 points finds no error at all.
+- **It blocks any resolution change.** A comparison of two resolutions is a comparison of two
+  indices that answer differently, and the timing question cannot be reached until the
+  answers agree. That is why `prototypes/single_resolution_bench.py`'s case for resolution 4
+  — 60 % fewer point-in-polygon tests for +857 KiB — is *not* actionable as it stands.
+- **The fix is a segment-intersection test** between the hexagon's six edges and the
+  polygon's, run only when neither vertex test fires. That is the expensive branch, but it
+  runs at build time, where `scripts/data_integrity.py` already establishes far more costly
+  things. Budget the verification rather than the geometry: the natural check is the one this
+  prototype hand-rolled — brute-force the containing polygon for a sample of points and
+  assert it is among the candidates — which belongs in the test suite over the committed data.
+- **Do not confuse it with the completeness test that exists.** `test_shortcut_completeness`
+  walks every *polygon vertex* and checks it lands in the right shortcut. It is vertex-based,
+  so it passes on exactly the geometry this misses.
+- **Status:** open — free, and a precondition for any resolution change.
+- **Last touched:** 2026-08-23 — found while building the resolution 3 / 4 query comparison.
+
+### BUG-3 — cells at the poles can omit the polygon that covers them
+
+- **Location:** `scripts/hex_utils.py`, the `surrounds_north_pole` / `surrounds_south_pole`
+  and `is_special` handling.
+- **Measured 2026-08-23.** Brute-forcing every polygon for 3,000 points sampled *uniformly in
+  latitude and longitude* finds the containing polygon absent from the shortcut for **7
+  points at resolution 3** and 1 at resolution 4 — every one of them above latitude 88.
+  `timezone_at` returns a neighbouring ocean zone there and `certain_timezone_at` returns
+  `None`, which is the honest signal that no candidate contains the point.
+- **Quote the area-weighted rate, not that one.** Uniform latitude oversamples the poles
+  enormously. Sampled by area — a realistic workload — **both resolutions return 0 wrong
+  answers in 3,000 points**, which is why this is a narrow defect and not a headline. An
+  earlier draft of this entry read the uniform figure as a 0.23 % general error rate; it is
+  not, and the two sampling schemes must never be quoted interchangeably.
+- **Related but distinct from BUG-2.** That one is a missing edge test anywhere on the globe;
+  this is the polar cells, which `hex_utils` already treats specially because a hexagon
+  spanning a pole cannot be used as a polygon in an ordinary point-in-polygon test. A fix for
+  BUG-2 may or may not cover it, so verify rather than assume.
+- **Status:** open — free.
+- **Last touched:** 2026-08-23 — found while checking BUG-2.
 
 ### BUG-1 — a negative zone or boundary id silently returns the wrong zone
 

@@ -282,8 +282,15 @@ What it costs instead is memory. The resident table grows about sevenfold, from 
 ~1,000 KiB, which matters most to ``TimezoneFinderL``, whose entire footprint is this index, and to
 the constrained containers the memory-mapped mode exists for. The table also stops fitting a typical
 L2 cache, though repeated runs do not separate the resolutions on that above their own noise — treat
-it as unmeasured rather than as small. Whether the trade is worth a second data format generation is
-not settled here.
+it as unmeasured rather than as small.
+
+**None of that is what blocks it.** The shortcut compiler decides whether a polygon overlaps a cell
+by testing vertex inclusion only — no hexagon vertex inside the polygon, no polygon vertex inside the
+hexagon, no overlap — and never tests whether a polygon *edge* crosses the cell. The code states the
+precondition for that simplification: that polygons and cells have a similar size. Raising the
+resolution shrinks the cells sevenfold per level and makes it progressively less true, and a
+resolution 4 index built today already answers at least one non-polar point wrongly where resolution
+3 answers it correctly. So a resolution change waits on that test, not on the size trade.
 
 **Resolution 5 is built, measured and refused.** Its gains are real — 95.4 % of cells unique and
 667 candidates tested per 10,000 random queries, another 57 % off resolution 4 — but the table is
