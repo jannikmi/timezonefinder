@@ -46,7 +46,7 @@ __all__ = [
 # SHORTCUT SETTINGS
 # H3 resolution level for spatial indexing shortcuts
 # Determines the granularity of the H3 cell grid used for fast lookups
-SHORTCUT_H3_RES: int = 3
+SHORTCUT_H3_RES: int = 4
 
 # Pattern for identifying ocean timezones (fixed-offset zones for international waters)
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"

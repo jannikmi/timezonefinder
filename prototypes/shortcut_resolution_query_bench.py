@@ -120,8 +120,10 @@ from timezonefinder.shortcut_index import (
     check_fits,
 )
 
-#: the resolution under test, against the packaged `SHORTCUT_H3_RES`
-CANDIDATE_RES = 4
+#: the resolution to compare the packaged `SHORTCUT_H3_RES` against. Set it to whichever
+#: resolution is *not* the one that ships - the script builds that one and pairs it
+#: against the real finder.
+CANDIDATE_RES = 3
 
 QUERY_POINTS = 2_000
 QUERY_ROUNDS = 61
@@ -403,8 +405,10 @@ def main() -> None:
         f"\npaired query comparison, {args.rounds} rounds x {args.points:,} points, "
         "order alternated\n"
     )
+    shipped_label = f"res {SHORTCUT_H3_RES} ns"
+    candidate_label = f"res {CANDIDATE_RES} ns"
     print(
-        f"{'stratum':<12}{'res 3 ns':>10}{'res 4 ns':>10}{'on minima':>12}"
+        f"{'stratum':<12}{shipped_label:>10}{candidate_label:>10}{'on minima':>12}"
         f"{'median d':>11}{'10-90% of d':>22}{'rounds faster':>15}"
     )
     for label, fixture in STRATA:
@@ -422,9 +426,9 @@ def main() -> None:
             f"{f'{faster}/{len(deltas)}':>15}"
         )
     print(
-        "\nNegative means resolution 4 is faster. Read `on minima` and `rounds faster` "
-        "together:\nwhere a difference is real both move; where they disagree the answer "
-        "is no effect."
+        f"\nNegative means resolution {CANDIDATE_RES} is faster than the packaged "
+        f"resolution {SHORTCUT_H3_RES}.\nRead `on minima` and `rounds faster` together: "
+        "where a difference is real both move;\nwhere they disagree the answer is no effect."
     )
 
 

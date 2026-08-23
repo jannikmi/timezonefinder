@@ -8,7 +8,7 @@
   },
   "data_version": "2026c",
   "debug": false,
-  "fixture_version": 2,
+  "fixture_version": 3,
   "pip_strata": [
     "small",
     "medium",
@@ -20,5 +20,5 @@
   ],
   "point_sampler": "get_rnd_query_pt_area_weighted",
   "seed": 42,
-  "shortcut_h3_res": 3
+  "shortcut_h3_res": 4
 }

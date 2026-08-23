@@ -22,7 +22,7 @@ A single ``timezone_at()`` call runs this sequence:
    truncated to ``int32``. The polygon data is stored the same way, so the whole geometric path is
    integer arithmetic - no floating point, and no conversion per candidate polygon.
 2. **H3 shortcut.** The cell id's own bits index a precomputed table - one ``int16`` per H3 cell at
-   resolution 3 (~41k cells worldwide), with no keys stored and no search. If every polygon
+   resolution 4 (~288k cells worldwide), with no keys stored and no search. If every polygon
    intersecting that cell belongs to one timezone, the table holds the zone id and the answer is
    returned immediately, with no geometry touched at all. This is the majority case and it is why
    the package is fast despite carrying full-resolution polygons.
