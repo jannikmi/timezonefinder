@@ -6,6 +6,7 @@ import pytest
 
 from scripts.benchmark_utils import BenchmarkReporter, add_system_status_section
 from scripts.configs import (
+    COMPARISON_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
     MEMORY_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
@@ -27,6 +28,8 @@ from scripts.render_benchmark_reports import (
     humanize_benchmark_name,
     is_ci_tracked_configuration,
     percent_faster,
+    relative_speed_label,
+    render_comparison,
     render_initialization,
     render_memory,
     render_polygon,
@@ -477,6 +480,10 @@ _RENDERERS = {
         "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-file_based]",
     ),
     "memory": (render_memory, "memory::TimezoneFinder[file_based]::steady_heap"),
+    "comparison": (
+        render_comparison,
+        "benchmarks/test_comparison.py::test_lookup_tzfpy[random]",
+    ),
 }
 
 
@@ -488,6 +495,7 @@ def _fake_benchmark_json(fullname: str) -> dict:
                 "batch_size": 100,
                 "fixture_version": 2,
                 "data_version": "2026c",
+                "tzfpy_version": "1.2.3",
             }
         },
         "benchmarks": [
@@ -521,6 +529,7 @@ def test_every_renderer_stamps_the_provenance_into_the_written_report(
         POLYGON_REPORT_FILE,
         INITIALIZATION_REPORT_FILE,
         MEMORY_REPORT_FILE,
+        COMPARISON_REPORT_FILE,
     ],
     ids=lambda path: path.name,
 )
@@ -576,3 +585,51 @@ def test_add_fastest_slowest_bullet_reports_both_ends():
     # 0.001s vs 0.05s -> 50x -> 4900% faster (not the old, misleadingly-small
     # 98% that (slower-faster)/slower would give for a 50x speedup)
     assert "4900% faster" in text
+
+
+@pytest.mark.parametrize(
+    "subject, reference, expected",
+    [
+        # the direction is read off the numbers, never assumed: this table is
+        # the one place in the docs that scores somebody else's package
+        (2e-6, 4e-7, "5.00x slower"),
+        (4e-7, 2e-6, "5.00x faster"),
+        # under NEGLIGIBLE_DIFFERENCE_PCT, in both directions
+        (1.00e-6, 1.01e-6, "about the same"),
+        (1.01e-6, 1.00e-6, "about the same"),
+        (1e-6, 1e-6, "about the same"),
+    ],
+)
+def test_relative_speed_label(subject: float, reference: float, expected: str):
+    assert relative_speed_label(subject, reference) == expected
+
+
+def test_render_comparison_refuses_a_json_that_never_measured_the_other_package(
+    tmp_path,
+):
+    # the failure this guards is silent, not loud: without `tzfpy` installed the
+    # comparison benchmarks skip while every other suite still runs, so the JSON
+    # is complete enough to render a page that compares this package against
+    # nothing and says so nowhere
+    data = _fake_benchmark_json(
+        "benchmarks/test_comparison.py::test_lookup_timezonefinder[random]"
+    )
+    del data["machine_info"]["timezonefinder"]["tzfpy_version"]
+
+    with pytest.raises(ValueError, match="compare"):
+        render_comparison(data, tmp_path / "report.rst")
+
+
+def test_render_comparison_names_the_measured_version_of_the_other_package(tmp_path):
+    # that package releases outside this repository entirely, so a page of
+    # ratios against an unnamed build is a page of ratios with no denominator
+    output_path = tmp_path / "report.rst"
+
+    render_comparison(
+        _fake_benchmark_json(
+            "benchmarks/test_comparison.py::test_lookup_tzfpy[random]"
+        ),
+        output_path,
+    )
+
+    assert "1.2.3" in output_path.read_text(encoding="utf-8")

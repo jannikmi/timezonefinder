@@ -53,7 +53,18 @@ Most modules are self-describing; the non-obvious ones:
   `testpaths` — they are collected only when `benchmarks/` is passed explicitly. **Timing only**:
   memory is measured by `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across
   pytest-benchmark's calibration rounds distorts the timings. Its subprocess probe must never
-  import `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import
+  import `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import.
+  **`make benchmarks`/`make memory` measure in an `--isolated` environment**, not this checkout's
+  `.venv`: `make install` syncs `--all-groups`, so the dev environment always has numba and — via
+  the import-time dispatch above — every local measurement would silently describe the numba path
+  rather than the plain install the reports claim to. `BENCHMARK_ENV` in the `Makefile` owns that,
+  and the target asserts the path before recording anything
+- `benchmarks/test_comparison.py` measures against `tzfpy`, in the `compare` dependency group. Two
+  things it must keep doing: **collect without that package** (skip at setup, never a module-level
+  `importorskip`) or the node id set `tests/test_benchmark_names.py` pins becomes a property of the
+  environment; and **stay out of `benchmark_core`**, because a ratio against a package that releases
+  outside this repository would put "they shipped a release" on this project's trend chart with
+  nothing to distinguish it from a regression
 - `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
   `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers.
   `ubuntu-latest` pins the runner *image*, not the CPU: the pool spreads up to ~1.58x on unchanged

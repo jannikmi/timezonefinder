@@ -11,12 +11,35 @@ compares the resulting node ids against a hardcoded expected set, so a
 rename fails this test instead of quietly resetting a chart.
 """
 
+import os
 import subprocess
 import sys
 
 from tests.auxiliaries import PROJECT_ROOT
 
-EXPECTED_BENCHMARK_NAMES = {
+POINT_CLASSES = ("random", "on_land", "unique_shortcut", "ambiguous_shortcut")
+
+# the cross-package suite (benchmarks/test_comparison.py). Listed by
+# comprehension rather than by hand because it is the one suite whose ids are
+# a full product - three implementations over the same four point classes -
+# and spelling out twelve near-identical strings hides a typo instead of
+# catching one.
+EXPECTED_COMPARISON_NAMES = {
+    f"benchmarks/test_comparison.py::test_lookup_{implementation}[{point_class}]"
+    for implementation in ("timezonefinder", "timezonefinderl", "tzfpy")
+    for point_class in POINT_CLASSES
+} | {
+    f"benchmarks/test_comparison.py::test_first_answer[{case}]"
+    for case in (
+        "baseline",
+        "tzfpy",
+        "timezonefinder-file_based",
+        "timezonefinder-in_memory",
+        "timezonefinderl",
+    )
+}
+
+EXPECTED_BENCHMARK_NAMES = EXPECTED_COMPARISON_NAMES | {
     "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-in_memory]",
     "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-file_based]",
     "benchmarks/test_initialization.py::test_initialization[TimezoneFinderL-in_memory]",
@@ -52,7 +75,12 @@ EXPECTED_CORE_BENCHMARK_NAMES = {
 }
 
 
-def _collect_node_ids(*extra_args: str) -> set[str]:
+def _collect_node_ids(*extra_args: str, extra_syspath: str | None = None) -> set[str]:
+    env = dict(os.environ)
+    if extra_syspath is not None:
+        env["PYTHONPATH"] = os.pathsep.join(
+            [extra_syspath, *([env["PYTHONPATH"]] if "PYTHONPATH" in env else [])]
+        )
     result = subprocess.run(
         [
             sys.executable,
@@ -67,6 +95,7 @@ def _collect_node_ids(*extra_args: str) -> set[str]:
         capture_output=True,
         text=True,
         check=True,
+        env=env,
     )
     return {line.strip() for line in result.stdout.splitlines() if "::" in line}
 
@@ -89,4 +118,34 @@ def test_expected_core_benchmark_names():
         "EXPECTED_CORE_BENCHMARK_NAMES in this test. "
         f"missing: {EXPECTED_CORE_BENCHMARK_NAMES - collected}, "
         f"unexpected: {collected - EXPECTED_CORE_BENCHMARK_NAMES}"
+    )
+
+
+def test_comparison_benchmarks_collect_without_the_optional_package(tmp_path):
+    # `tzfpy` ships in the `compare` dependency group, which most environments
+    # do not install - including every tox env and the CI benchmark job. If
+    # benchmarks/test_comparison.py ever skipped at *collection* (a module-level
+    # `pytest.importorskip`) instead of at setup, the node id set above would
+    # silently become a property of the environment, and the pin two tests up
+    # would start passing or failing depending on which one ran it.
+    #
+    # A module on PYTHONPATH that raises on import blocks the real package
+    # wherever it is installed, so this asserts the invariant in both
+    # environments rather than only in the one that happens to lack it.
+    # `ModuleNotFoundError` specifically, because that is what absence raises:
+    # `pytest.importorskip` skips on it silently, while a bare `ImportError`
+    # earns a deprecation warning that pytest 9.1 turns into an error.
+    (tmp_path / "tzfpy.py").write_text(
+        "raise ModuleNotFoundError(\"No module named 'tzfpy'\")",
+        encoding="utf-8",
+    )
+
+    collected = _collect_node_ids(extra_syspath=str(tmp_path))
+
+    assert collected == EXPECTED_BENCHMARK_NAMES, (
+        "collecting benchmarks/ without `tzfpy` importable yielded a different set "
+        "of node ids - the comparison benchmarks must collect unconditionally and "
+        "skip at setup instead. "
+        f"missing: {EXPECTED_BENCHMARK_NAMES - collected}, "
+        f"unexpected: {collected - EXPECTED_BENCHMARK_NAMES}"
     )

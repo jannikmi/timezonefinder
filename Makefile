@@ -18,7 +18,8 @@
 #   testint    - execute integration tests only
 #   testall    - execute all tests including slow ones
 #   speedtest  - run just the tracked core pytest-benchmark subset (quick, no JSON output)
-#   benchmarks - run the full pytest-benchmark suite (benchmarks/), writing tmp/benchmark.json
+#   benchmarks - run the full pytest-benchmark suite (benchmarks/) on the plain-install
+#                configuration, writing tmp/benchmark.json
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
 #   memory     - measure the memory footprint of each finder configuration
@@ -117,19 +118,45 @@ MEMORY_REPETITIONS := 3
 speedtest:
 	uv run pytest benchmarks -m benchmark_core -v
 
+# The environment the committed reports are measured in: the plain install,
+# plus `tzfpy` for the cross-package comparison.
+#
+# --isolated, rather than this checkout's .venv, because `make install` syncs
+# --all-groups and that puts numba in it - and timezonefinder/utils.py binds the
+# point-in-polygon backend at *import* time, preferring numba whenever it is
+# importable. Measuring in the dev environment therefore silently publishes numba
+# numbers for a package whose plain install has no numba, and it is not only the
+# lookup timings that move: importing numba costs a few hundred milliseconds, an
+# order of magnitude more than everything benchmarks/test_comparison.py's
+# time-to-first-answer rows are meant to compare.
+#
+# --group compare installs the alternative that suite measures against. Its own
+# group so that the CI-tracked measurement below cannot pick it up.
+BENCHMARK_ENV := --isolated --group test --group compare
+
 # the full benchmark suite (all of benchmarks/), producing the JSON that
 # scripts/render_benchmark_reports.py turns into docs/benchmark_results_*.rst.
 # never combine with pytest-run-parallel's `--parallel-threads` (see CONTRIBUTING.md)
+#
+# The path is asserted rather than assumed, for the same reason the benchmark
+# workflow asserts it: a lockfile change that made numba importable here would
+# otherwise rewrite every committed figure with numbers from a different
+# implementation, and nothing in the diff would say so.
 benchmarks:
 	@mkdir -p tmp
-	uv run pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
+	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
+	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
 
 # the memory counterpart of `benchmarks`. Separate because pytest-benchmark
 # measures wall clock only, and running tracemalloc across its rounds would
-# distort the very timings above (see scripts/measure_memory.py)
+# distort the very timings above (see scripts/measure_memory.py).
+# Same $(BENCHMARK_ENV) as `benchmarks`, so the pages `reports` writes all
+# describe one configuration: importing numba costs resident memory too, and a
+# footprint page measured with it sits beside timing pages measured without it.
 memory:
 	@mkdir -p tmp
-	uv run python -m scripts.measure_memory --output=$(MEMORY_JSON) \
+	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
 reports: benchmarks memory
@@ -153,8 +180,12 @@ BENCHMARK_ESTIMATOR := min
 # and the tracked min is drawn from a decent sample. The core subset is a few
 # milliseconds per round, so this stays far below the CI time budget.
 BENCHMARK_MIN_ROUNDS := 50
-# the acceleration path CI tracks: what a plain `pip install timezonefinder`
-# gives you. Numbers from the numba path are not comparable (see CONTRIBUTING.md).
+# the acceleration path CI tracks and the committed reports are measured on:
+# what a plain `pip install timezonefinder` gives you. Numbers from the numba
+# path are not comparable (see CONTRIBUTING.md). $(BENCHMARK_ENV) above is what
+# holds `benchmarks`/`memory` to it; the -ci targets below inherit whichever
+# environment they are invoked in, because CI syncs its own and asserts this
+# same value before measuring anything.
 BENCHMARK_ACCELERATION_PATH := clang
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5

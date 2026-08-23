@@ -28,6 +28,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from scripts.benchmark_utils import (
+    DEFAULT_BENCHMARK_ESTIMATOR,
+    TZFPY_DISTRIBUTION,
     BenchmarkReporter,
     add_system_status_section,
     decimals_for_magnitude,
@@ -35,6 +37,7 @@ from scripts.benchmark_utils import (
     load_benchmark_json,
 )
 from scripts.configs import (
+    COMPARISON_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
     MEMORY_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
@@ -65,6 +68,10 @@ FUNCTION_LABELS = {
     "test_pt_in_poly_clang": "point-in-polygon (C/clang)",
     "test_pt_in_poly_python": "point-in-polygon (Python, Numba if available)",
     "test_initialization": "Initialization",
+    "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
+    "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
+    "test_lookup_tzfpy": "tzfpy.get_tz()",
+    "test_first_answer": "Time to first answer",
 }
 
 PARAM_LABELS = {
@@ -77,9 +84,20 @@ PARAM_LABELS = {
     "small": "small polygons",
     "medium": "medium polygons",
     "large": "large polygons",
+    "baseline": "bare interpreter (baseline)",
+    "tzfpy": "tzfpy",
+    "timezonefinder": "timezonefinder",
+    "timezonefinderl": "TimezoneFinderL",
 }
 
 _NODE_ID_PATTERN = re.compile(r"^(?P<func>[^\[]+)(\[(?P<params>.+)\])?$")
+
+# What a table cell says when the JSON carries no number for it. A cell can
+# legitimately have nothing behind it - RSS is unavailable on some platforms,
+# and a comparison column is empty when its benchmark was skipped - and one
+# spelling shared by every table is what keeps "not measured" from reading as
+# two different things on two pages.
+MEASUREMENT_UNAVAILABLE = "n/a"
 
 
 def split_benchmark_label(name: str) -> tuple[str, str]:
@@ -696,6 +714,287 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
     reporter.write_report()
 
 
+# --- cross-package comparison (benchmarks/test_comparison.py) ----------------
+#
+# The one report whose subject is not this package alone. Everything it needs
+# beyond the shared machinery above lives here, next to the renderer that uses
+# it, rather than in this module's general display vocabulary: a `tzfpy` node
+# id means nothing on any other page.
+
+# The columns of the head-to-head table. The order is "the other package,
+# then ours, then our own approximation of its trade", so the table reads as a
+# comparison rather than as a ranking - which render time could otherwise flip.
+COMPARISON_LOOKUP_FUNCTIONS = (
+    "test_lookup_tzfpy",
+    "test_lookup_timezonefinder",
+    "test_lookup_timezonefinderl",
+)
+
+# the column every ratio in that table is taken against
+COMPARISON_REFERENCE_FUNCTION = "test_lookup_tzfpy"
+
+# this package's own entry, the one the headline and the verdict column compare
+COMPARISON_SUBJECT_FUNCTION = "test_lookup_timezonefinder"
+
+# same order and same ids as `POINT_FIXTURES` in benchmarks/test_comparison.py
+COMPARISON_POINT_CLASSES = (
+    "random",
+    "on_land",
+    "unique_shortcut",
+    "ambiguous_shortcut",
+)
+
+# the point class the headline quotes: the only globally representative one,
+# for the reason docs/benchmarking_methodology.rst gives
+COMPARISON_HEADLINE_POINT_CLASS = "random"
+
+# the cold-start half of the suite, and the row every other row is read against
+FIRST_ANSWER_FUNCTION = "test_first_answer"
+FIRST_ANSWER_BASELINE_ID = "baseline"
+
+
+def get_tzfpy_version(system_info: dict[str, Any]) -> str:
+    """Which build of the comparison package produced these numbers.
+
+    An error rather than a quietly omitted line, for the same reason the
+    fixture provenance is one: that package releases entirely outside this
+    repository, so a report that does not name its version is a page of ratios
+    with an unknown denominator - and every number on it still looks fine.
+    """
+    version = system_info.get("tzfpy_version")
+    if version is None:
+        raise ValueError(
+            "benchmark JSON's machine_info['timezonefinder'] has no "
+            f"'{TZFPY_DISTRIBUTION}_version' - the comparison benchmarks were "
+            f"skipped because {TZFPY_DISTRIBUTION} is not installed. Install the "
+            "`compare` dependency group and re-measure (`make benchmarks`)."
+        )
+    return version
+
+
+def relative_speed_label(subject_seconds: float, reference_seconds: float) -> str:
+    """Describe ``subject`` against ``reference``, deciding which way round it
+    goes from the numbers rather than from an assumption about the two packages.
+
+    A gap under :data:`NEGLIGIBLE_DIFFERENCE_PCT` is reported as parity. This
+    table is the one place in these docs where declaring an arbitrary winner
+    would read as a claim about somebody else's package.
+    """
+    if subject_seconds <= reference_seconds:
+        ratio = speedup_ratio(reference_seconds, subject_seconds)
+        direction = "faster"
+    else:
+        ratio = speedup_ratio(subject_seconds, reference_seconds)
+        direction = "slower"
+    if (ratio - 1) * 100 < NEGLIGIBLE_DIFFERENCE_PCT:
+        return "about the same"
+    return f"{format_ratio(ratio)} {direction}"
+
+
+def render_comparison(data: dict[str, Any], output_path: Path) -> None:
+    reporter = BenchmarkReporter(
+        title="Comparison against tzfpy", output_path=output_path
+    )
+    system_info = get_system_info(data)
+    batch_size = get_batch_size(system_info)
+    tzfpy_version = get_tzfpy_version(system_info)
+    benches = benchmarks_from_file(data, "test_comparison")
+    by_name = {b["name"]: b for b in benches}
+
+    def per_query(function: str, point_class: str) -> float | None:
+        bench = by_name.get(f"{function}[{point_class}]")
+        return (
+            None
+            if bench is None
+            else bench["stats"][DEFAULT_BENCHMARK_ESTIMATOR] / batch_size
+        )
+
+    headline_reference = per_query(
+        COMPARISON_REFERENCE_FUNCTION, COMPARISON_HEADLINE_POINT_CLASS
+    )
+    headline_subject = per_query(
+        COMPARISON_SUBJECT_FUNCTION, COMPARISON_HEADLINE_POINT_CLASS
+    )
+    headlines = []
+    if headline_reference is not None and headline_subject is not None:
+        headlines.append(
+            f"**~{format_duration(headline_subject)} per lookup here against "
+            f"~{format_duration(headline_reference)} for tzfpy {tzfpy_version}** - "
+            f"{relative_speed_label(headline_subject, headline_reference)}, over "
+            "uniformly random query points answered by both packages in the same "
+            "process on the same machine. That gap is what full-resolution "
+            "boundary polygons cost; :doc:`alternatives` is where the trade is "
+            "argued rather than measured."
+        )
+    add_headline_section(reporter, system_info, headlines)
+
+    add_system_status_section(
+        reporter,
+        system_info,
+        {
+            "benchmark_source": "pytest-benchmark",
+            "batch_size": batch_size,
+            f"{TZFPY_DISTRIBUTION}_version": tzfpy_version,
+        },
+        provenance=get_fixture_provenance(system_info),
+    )
+    reporter.add_text(
+        "Both packages answer the **same committed query points** (see "
+        "benchmarks/conftest.py) in the same process, so the ratios below are a "
+        "measurement rather than two figures from two machines set side by side. "
+        "Each is called through its own API - ``timezone_at(lng=, lat=)`` and "
+        "``get_tz(lng, lat)`` - with no adapter frame on either side, which at "
+        "these per-query times would itself be worth tens of percent."
+    )
+    reporter.add_note(
+        "The two packages are not answering quite the same question. This one "
+        "stores the boundary polygons exactly as the source dataset provides "
+        "them; tzfpy simplifies them. ``TimezoneFinderL`` is measured alongside "
+        "as the closest thing in this package to the same bargain - it answers "
+        "from the shortcut index alone and does not read polygon data at all. A "
+        "speed ratio between different accuracy classes is a price, not a verdict."
+    )
+
+    reporter.add_section("Lookup Throughput", level=2)
+    reporter.add_text(
+        f"Per-query time, derived from one pass over {batch_size:,} points. The last "
+        "column states this package against tzfpy, computed from these measurements "
+        "at render time rather than asserted."
+    )
+    reporter.add_text(
+        f"Every figure in this section is the **{DEFAULT_BENCHMARK_ESTIMATOR}** over "
+        "the measured rounds, not the mean - the estimator this project tracks "
+        "everywhere, and the only fair one here. Both packages run the identical "
+        "batch every round, so a slow round is the machine rather than the library; "
+        "and because tzfpy's rounds are the shorter ones, that noise lands on its "
+        "mean hardest. Scoring a competitor on the estimator that flatters this "
+        "package would not be a measurement. The mean, median and spread of every "
+        "round are in the full statistics below."
+    )
+    headers = [
+        "Query points",
+        *(FUNCTION_LABELS[function] for function in COMPARISON_LOOKUP_FUNCTIONS),
+        f"vs {FUNCTION_LABELS[COMPARISON_REFERENCE_FUNCTION]}",
+    ]
+    rows = []
+    for point_class in COMPARISON_POINT_CLASSES:
+        measured = {
+            function: per_query(function, point_class)
+            for function in COMPARISON_LOOKUP_FUNCTIONS
+        }
+        reference = measured[COMPARISON_REFERENCE_FUNCTION]
+        subject = measured[COMPARISON_SUBJECT_FUNCTION]
+        rows.append(
+            [
+                PARAM_LABELS.get(point_class, point_class),
+                *(
+                    MEASUREMENT_UNAVAILABLE if value is None else format_duration(value)
+                    for value in measured.values()
+                ),
+                MEASUREMENT_UNAVAILABLE
+                if reference is None or subject is None
+                else relative_speed_label(subject, reference),
+            ]
+        )
+    reporter.add_table(headers, rows)
+
+    lookup_benches = [
+        b for b in benches if b["name"].startswith(COMPARISON_LOOKUP_FUNCTIONS)
+    ]
+    if lookup_benches:
+        reporter.add_section("Full Statistics", level=2)
+        add_benchmark_table(
+            reporter,
+            lookup_benches,
+            section_level=3,
+            extra_columns=(
+                (
+                    f"Time/Query ({DEFAULT_BENCHMARK_ESTIMATOR})",
+                    lambda b: format_duration(
+                        b["stats"][DEFAULT_BENCHMARK_ESTIMATOR] / batch_size
+                    ),
+                ),
+                (
+                    f"Throughput ({DEFAULT_BENCHMARK_ESTIMATOR})",
+                    lambda b: format_rate(
+                        batch_size / b["stats"][DEFAULT_BENCHMARK_ESTIMATOR]
+                    ),
+                ),
+            ),
+        )
+
+    first_answer = [b for b in benches if b["name"].startswith(FIRST_ANSWER_FUNCTION)]
+    if first_answer:
+        reporter.add_section("Time to First Answer", level=2)
+        reporter.add_text(
+            "Wall clock of a fresh ``python -c`` that imports one package and "
+            "answers exactly one lookup. This is the honest form of a "
+            "*startup time* row, because the two packages spend that time in "
+            "completely different places: this one imports NumPy and H3 and "
+            "builds its index when a finder is constructed, while tzfpy imports "
+            "in about a millisecond and deserialises its index inside the "
+            "**first query**. Timing construction alone would score the second "
+            "as free."
+        )
+        reporter.add_text(
+            "Every row includes interpreter startup, which the baseline row "
+            "measures on its own. Process launch has a floor and a long, noisy "
+            f"tail, so the bullets below are again the **{DEFAULT_BENCHMARK_ESTIMATOR}** "
+            "over the rounds; the mean of a row here can sit tens of percent above "
+            "its own median, and reading a ranking off it would be reading the "
+            "scheduler."
+        )
+        # built directly rather than through add_benchmark_table(): that groups
+        # by function label and emits a heading per group, which for a single
+        # function repeats the section title immediately below itself
+        reporter.add_table(
+            CONFIG_HEADERS,
+            [
+                stats_row(split_benchmark_label(bench["name"])[1] or "-", bench)
+                for bench in sorted(first_answer, key=lambda b: b["name"])
+            ],
+        )
+
+        baseline = by_name.get(f"{FIRST_ANSWER_FUNCTION}[{FIRST_ANSWER_BASELINE_ID}]")
+        if baseline is not None:
+            reporter.add_text("Net of that baseline:")
+            for bench in sorted(
+                first_answer, key=lambda b: b["stats"][DEFAULT_BENCHMARK_ESTIMATOR]
+            ):
+                if bench["name"].endswith(f"[{FIRST_ANSWER_BASELINE_ID}]"):
+                    continue
+                net = (
+                    bench["stats"][DEFAULT_BENCHMARK_ESTIMATOR]
+                    - baseline["stats"][DEFAULT_BENCHMARK_ESTIMATOR]
+                )
+                _, params_label = split_benchmark_label(bench["name"])
+                reporter.add_text(
+                    f"* **{params_label}**: {format_duration(net)} to a first answer"
+                )
+
+    reporter.add_section("What This Page Does Not Measure", level=2)
+    reporter.add_text(
+        "* **Accuracy.** The two packages disagree on a small fraction of points, "
+        "and a disagreement count on its own says nothing about which answer is "
+        "right - settling that needs ground truth, which neither package carries. "
+        ":doc:`alternatives` states the design difference instead of scoring it."
+    )
+    reporter.add_text(
+        "* **Memory footprint and distribution size.** "
+        ":doc:`benchmark_results_memory` measures this package only: the harness "
+        "behind it (``scripts/measure_memory.py``) constructs finders from this "
+        "repository and has no tzfpy configuration."
+    )
+    reporter.add_text(
+        "* **Any other machine.** One CPU, one Python build, one acceleration "
+        "path, all named above. The *ratio* survives a change of machine far "
+        "better than the absolute numbers do, but neither is a promise - see "
+        ":doc:`benchmarking_methodology`."
+    )
+
+    reporter.write_report()
+
+
 # Display labels and column order for the metrics `scripts/measure_memory.py`
 # emits. Kept here rather than imported from that module for the same reason
 # `batch_size` is read out of the JSON: a stored report must still render from
@@ -711,8 +1010,6 @@ MEMORY_NAME_PATTERN = re.compile(r"^memory::(?P<config>.+)::(?P<metric>[^:]+)$")
 
 # the one metric that is not per configuration - see scripts/measure_memory.py
 MEMORY_IMPORT_NAME = "memory::import::rss"
-
-MEMORY_UNAVAILABLE = "n/a"
 
 
 def memory_values_by_config(data: dict[str, Any]) -> dict[str, dict[str, float]]:
@@ -744,7 +1041,7 @@ def _memory_cell(values: dict[str, float], metric: str) -> str:
     nor ``getrusage``, so a cell can legitimately have no number behind it.
     """
     value = values.get(metric)
-    return MEMORY_UNAVAILABLE if value is None else format_bytes(value)
+    return MEASUREMENT_UNAVAILABLE if value is None else format_bytes(value)
 
 
 def render_memory(data: dict[str, Any], output_path: Path) -> None:
@@ -887,7 +1184,13 @@ def main() -> None:
     render_timezone_finding(data, PERFORMANCE_REPORT_FILE)
     render_polygon(data, POLYGON_REPORT_FILE)
     render_initialization(data, INITIALIZATION_REPORT_FILE)
-    written = [PERFORMANCE_REPORT_FILE, POLYGON_REPORT_FILE, INITIALIZATION_REPORT_FILE]
+    render_comparison(data, COMPARISON_REPORT_FILE)
+    written = [
+        PERFORMANCE_REPORT_FILE,
+        POLYGON_REPORT_FILE,
+        INITIALIZATION_REPORT_FILE,
+        COMPARISON_REPORT_FILE,
+    ]
     if args.memory_json is not None:
         render_memory(load_benchmark_json(args.memory_json), MEMORY_REPORT_FILE)
         written.append(MEMORY_REPORT_FILE)

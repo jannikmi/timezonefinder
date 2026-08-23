@@ -14,8 +14,9 @@ index, the integer coordinate representation and the optional acceleration backe
 full-resolution geometry affordable, not to shave the last microsecond off a lookup.
 
 `tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade, deliberately and well. It
-ships simplified polygons, which makes it smaller, faster to start and faster per query, at the cost
-of accuracy near the borders those polygons describe.
+ships simplified polygons, which makes it smaller and faster per query, at the cost of accuracy near
+the borders those polygons describe. The two are now measured against each other under one harness -
+same query points, same process, same machine - in :doc:`benchmark_results_comparison`.
 
 **If your query points are rarely near a timezone border - coarse geofencing, analytics
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
@@ -26,7 +27,7 @@ a border is a bug rather than a rounding error, that is what this package is for
 Alternative python packages
 ---------------------------
 
-- `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - less accurate, more lightweight, faster
+- `tzfpy <https://github.com/ringsaturn/tzfpy>`__ - less accurate, more lightweight, faster per lookup
 - `pytzwhere <https://pypi.python.org/pypi/tzwhere>`__ - not maintained
 
 
@@ -59,12 +60,12 @@ difference is in what they do with that dataset's geometry.
    * - Spatial Index
      - H3 hexagons at resolution 4 (~288k cells); :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
-   * - Startup Time
-     - Requires initialization; measured per class and mode in :doc:`benchmark_results_initialization`
-     - None (immediate)
+   * - Time to First Answer
+     - Imports NumPy and H3, then reads its index when a finder is constructed (:doc:`benchmark_results_initialization`)
+     - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
      - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - Faster per query, per a `third-party benchmark <https://github.com/ringsaturn/tz-benchmark>`__ on unstated hardware
+     - Faster per query, by a small single-digit factor on a representative query mix and by more than an order of magnitude on the points that cost this package the most (:doc:`benchmark_results_comparison`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
@@ -83,24 +84,39 @@ difference is in what they do with that dataset's geometry.
 
 .. note::
 
-   **The speed row is deliberately qualitative.** The two packages have never been benchmarked
-   under one harness, and the published figures come from different machines, different
-   acceleration paths and different query workloads. This project documents at length why two
-   measurements taken on different hardware cannot be compared - see
-   :doc:`benchmarking_methodology`, where an unchanged lookup path spread 134-158 % across CI
-   runners alone - and that caveat applies just as much here. Both packages are in the same order
-   of magnitude and ``tzfpy`` is the faster one; anything finer would need a measurement nobody has
-   made.
+   **The speed rows are measured, not estimated.** ``benchmarks/test_comparison.py`` runs both
+   packages over the same committed query points, in the same process, on the same machine, and
+   :doc:`benchmark_results_comparison` is generated from it. That harness exists because the
+   alternative - putting two published figures side by side - is exactly the comparison this
+   project refuses to make about itself: an unchanged lookup path spread 134-158 % across CI
+   runners alone (:doc:`benchmarking_methodology`), so two numbers from two machines say nothing
+   about two libraries.
 
-   The same applies in reverse to memory: ``tzfpy``'s footprint has not been measured here, so the
-   figures linked above describe this package only and are not a claim about the comparison.
+   What it shows: ``tzfpy`` is the faster one per lookup, and by a wider margin than "same order of
+   magnitude" would suggest - the gap is smallest where a coordinate's H3 cell already determines
+   the answer and widest where this package has to fall through to a full point-in-polygon test.
+   That is the shape you would predict from the design difference, and it is the price of the
+   accuracy this package is for.
+
+   What it also shows, and what this page previously got wrong: **neither package starts instantly.**
+   ``tzfpy`` imports in about a millisecond, but it deserialises its index lazily inside the first
+   query, and that costs about as much as this package spends importing NumPy and H3 and reading its
+   own index. Measured all the way to a first answer, the two land close enough together that
+   startup is not a reason to choose either - which is why the decision table below no longer
+   lists it.
+
+   Two things that harness deliberately does not settle: ``tzfpy``'s memory footprint, which is not
+   measured here at all, so the figures linked above describe this package only; and accuracy,
+   because counting the points on which the two disagree says nothing about which one is right.
 
 
 When to choose which package
 ----------------------------
 
 Only the criteria on which the two actually differ. On dataset coverage and access to the geometry
-they are equivalent, so neither is a reason to pick one.
+they are equivalent, so neither is a reason to pick one - and measuring them together removed
+startup from this list as well, since the two reach a first answer in about the same time
+(:doc:`benchmark_results_comparison`).
 
 .. list-table::
    :header-rows: 1
@@ -115,8 +131,6 @@ they are equivalent, so neither is a reason to pick one.
    * - Maintainability and ease of contribution
      - ``timezonefinder``
    * - Lookup throughput
-     - ``tzfpy``
-   * - Initialization time
      - ``tzfpy``
    * - Minimal distribution size
      - ``tzfpy``
