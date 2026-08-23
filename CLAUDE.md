@@ -274,11 +274,18 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 
 ## Documentation Files
 
-- **`README.rst` and `CHANGELOG.rst` must be valid *standalone* RST.** Both are linted by the
-  `rstcheck` pre-commit hook, unlike `docs/`, which it excludes — a Sphinx role (`:doc:`, `:ref:`)
-  works in the docs build but fails the hook here, and additionally breaks the PyPI page for
-  `README.rst`, which is the long description (`readme` in `pyproject.toml`). Link with an
-  absolute `https://timezonefinder.readthedocs.io/…` URL instead
+- **`README.rst` and `CHANGELOG.rst` must be valid *standalone* RST**, because `README.rst` is the
+  PyPI long description (`readme` in `pyproject.toml`) and a Sphinx role (`:doc:`, `:ref:`) renders
+  in the docs build but breaks that page. Link with an absolute
+  `https://timezonefinder.readthedocs.io/…` URL instead. **Nothing enforces this** — `rstcheck`
+  lints all three but does not resolve roles, so an unknown one passes at every report level; the
+  check that means anything is rendering the file (see the `readme_renderer` command below)
+- The `rstcheck` hook covers `docs/` too, with `sphinx` installed into its environment so the
+  directives Sphinx owns are recognised, and `[tool.rstcheck]` in `pyproject.toml` naming the three
+  it still cannot see (`autoclass`, `autofunction`, `include`). A bare `rstcheck` run reads the same
+  config, so it agrees with the hook. It catches structural RST — a directive running into the block
+  after it, a malformed table — which is worth knowing because `docs/` used to be excluded and the
+  exclusion was silently load-bearing: those defects reached `master` and only `make docs` complained
 - **Every target in `README.rst` must be absolute, and an `.. image::` source is a target too.**
   A repo-relative `docs/…` path is a real location on GitHub and no location at all on PyPI,
   which serves the long description without the repository — and `docs/` is excluded from the

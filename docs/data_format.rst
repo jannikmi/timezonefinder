@@ -146,6 +146,7 @@ Other Files
     extension and is used here only for schema definitions; the serialised buffers are
     ``.bin``, and each says what it is through the file identifier in its first bytes
     rather than through its name.
+
 * ``timezone_names.txt``: List of all timezone names
 * ``data_version.txt``: the timezone-boundary-builder release this data was compiled
   from, as ``TimezoneFinder.data_version`` reports it. Taken from the input's filename
@@ -294,6 +295,24 @@ The hybrid shortcut system combines two previous approaches into a single optimi
 * **Polygon List Storage**: For hexagons that contain polygons from multiple timezones, an array of polygon IDs is stored. Only these polygons need to be tested during lookup.
 
 This hybrid approach automatically chooses the most efficient storage method for each hexagon, providing optimal performance across different geographic regions. Areas with clear timezone boundaries benefit from immediate zone ID lookups, while complex border regions still use the efficient polygon list approach.
+
+Why the index makes no polygon redundant
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Roughly three quarters of the cells resolve to a single zone ID, and a query answered from one of those reads no geometry at all. That invites an optimisation: if some boundary polygon were *only* ever reached through such cells, its coordinates would sit in ``boundaries/coordinates.bin`` serving nothing, and could be dropped — accepting that :meth:`~timezonefinder.TimezoneFinder.get_geometry` could then only report its bounding box.
+
+**No such polygon exists.** Every boundary polygon appears in at least one ambiguous cell, and a large share of them appear in exactly one — which is what makes the idea look plausible in the first place.
+
+This is structural rather than a property of a particular release or resolution. The packaged data covers the globe, so any cell that a polygon's *rim* passes through also holds area outside that polygon; that area belongs to a different zone, unless a polygon of the same zone abuts it there — which dissolved multipolygons do not do. Cell size never enters the argument, so a finer index does not create such polygons either. It only makes the rim cells smaller.
+
+The nearest claim that *is* true concerns testing rather than candidacy: because ``timezone_at`` stops at the last zone change in the candidate list and returns the final zone untested, a polygon can be a candidate everywhere and still never be handed to the point-in-polygon kernel. In release ``2026c`` that describes 206 of the 1,322 boundary polygons, around a sixth of all vertices. Their coordinates are kept regardless, for reasons that are worth stating because the conclusion is easy to reach and wrong:
+
+* **Most of them are hole rings.** 175 of the 206 are the ring some hole is stored as a reference to (see `Holes as Boundary References`_), so their coordinates serve the *surrounding* polygon's hole test, which is very much performed.
+* **The remainder are the largest polygons in the dataset.** A zone that is the biggest in every cell listing it is, by construction, a mainland — the 31 survivors are around a sixth of all vertices, and include the main polygons of ``America/Toronto``, ``Europe/Berlin``, ``Europe/Moscow`` and ``Asia/Shanghai``. A bounding box is not a degraded outline of those: it averages well over twice the polygon's own area, so :meth:`~timezonefinder.TimezoneFinder.get_geometry` would answer a rectangle largely covering other countries, in the same return type and without an error. :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` degrades further still — it tests every candidate with no early break, so with the ring gone it would match nothing and return ``None`` across most of the zone.
+* **It would make an API's output depend on the index.** Which polygons qualify follows from which cells happened to come out unique and from how shortcut candidates happened to be sorted. The index is a candidate *filter*, free to be reordered, rebuilt or replaced; deriving ``get_geometry``'s output from its structure would turn a future resolution change into a silent change in what the geometry API returns.
+
+This is the boundary-polygon counterpart of `Holes without a twin`_, and it fails in the same way: covering the query path is not the same question as covering the public API.
+
 
 Design Rationales
 =================

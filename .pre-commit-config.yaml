@@ -33,12 +33,18 @@ repos:
         hooks:
             -   id: blacken-docs
 
-    # TODO also check docs/. make compatible with sphinx
     -   repo: https://github.com/myint/rstcheck
         rev: 'v6.2.5'
         hooks:
+            # Covers docs/ as well as README.rst and CHANGELOG.rst. Sphinx is installed into
+            # the hook environment so that rstcheck recognises the directives it owns
+            # (toctree, automodule, ...); without it every one of them reads as an unknown
+            # directive and docs/ has to be excluded, which is how a note running into the
+            # bullet list below it survived in docs/data_format.rst - rstcheck reports that
+            # one, only nothing was pointing it at the file. Configured in pyproject.toml
+            # under [tool.rstcheck], which a bare `rstcheck` run picks up as well.
             -   id: rstcheck
-                exclude: ^(docs/)
+                additional_dependencies: ["sphinx"]
 
     -   repo: https://github.com/abravalheri/validate-pyproject
         rev: v0.25
