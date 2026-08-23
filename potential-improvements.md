@@ -144,7 +144,8 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
 | PERF-1 | `is_ocean_timezone` runs a regex on the `timezone_at_land` path | performance | ~2 | free — decided |
-| PERF-2 | Two numpy calls over a handful of candidates cost 0.8 µs | performance | ~25 | free — ranked on simplicity, not on the timing |
+| PERF-2 | `zone_ids_of` is a numpy fancy-index over a handful of candidates | performance | ~25 | free — ranked on simplicity, not on the timing |
+| PERF-6 | Scalar `njit` helpers on the query path cost more to call than to compute | performance | ~20 | free — measured |
 | DUP-1 | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | BIG-2 | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | TOOL-1 | ruff runs close to its default rule set | tooling | M | free |
@@ -621,29 +622,62 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-20 — measured, then decided. The bounded-exposure argument stands and is
   joined by a positive result: in the pre-negated form the change is free outright.
 
-### PERF-2 — two numpy calls over a handful of candidates cost 0.8 µs per ambiguous query
+### PERF-2 — `zone_ids_of` is a numpy fancy-index over a handful of candidates
 
-- **Location:** `timezonefinder/timezonefinder.py` — `zone_ids_of`, and the `get_last_change_idx`
-  call directly below it in the candidate-narrowing block (bound in `utils.py`, implemented in
-  `utils_numba.py`).
-- **Measured:** `zone_ids_of` 617/578 ns and `get_last_change_idx` 149/283 ns (numba/clang) —
-  together ~6 % of an ambiguous query, which is *more than coordinate validation, the H3 cell
-  lookup and the shortcut lookup put together*, and ~9 % of an `in_memory=True` query. The
-  unique-shortcut path pays none of it.
-- **Why it is there:** both are numpy operations over a candidate list of a handful of elements,
-  where the per-call overhead dominates whatever is computed — `zone_ids_of` is a fancy-index,
-  `get_last_change_idx` a scan over the result.
-- **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no data-format
-  change, no behaviour change. Precomputing the index into the shortcut binaries instead is refused
-  under *Recorded decisions*.
+- **Location:** `timezonefinder/timezonefinder.py` — `zone_ids_of`, in the candidate-narrowing
+  block.
+- **Halved since it was written, and the reasoning has to move with it.** This entry used to
+  cover *two* numpy calls, the second being `get_last_change_idx` at 149/283 ns — and it recorded
+  that precomputing that index into the shortcut binaries was refused. **That refusal was
+  reversed and has shipped**: the stop index is now one `uint8` per distinct candidate list in
+  the shortcut index, read rather than computed, so this entry is down to `zone_ids_of` alone.
+  Anyone reading the old text would optimise a call that no longer runs.
+- **Measured (2026-08-23):** `zone_ids_of` 599/556 ns (numba/clang), ~5–6 % of an ambiguous query
+  and nothing at all on the unique-zone path, which never builds a candidate list.
+- **Why it is there:** a numpy fancy-index over a list of a handful of elements, where the
+  per-call overhead dominates whatever is computed. The candidate slice next to it (215/269 ns)
+  is the same shape of cost.
+- **Fix:** narrow the candidates in one pass without the numpy round-trip. ~25 lines, no
+  data-format change, no behaviour change.
 - **Ranked on simplicity, not on the timing.** ~6 % of an ambiguous query is ~5 % of a random
-  workload — the same order as the machine's own noise, so the benchmark suite cannot demonstrate it and it must not be sold as a
-  speed-up; what carries it is that a scalar loop over three elements is also the simpler code. Take
-  the before/after with `prototypes/query_stage_profile.py` on both backends anyway, and record it
-  here — it is the only place the number will exist.
+  workload — the same order as the machine's own noise, so the benchmark suite cannot demonstrate
+  it and it must not be sold as a speed-up; what carries it is that a scalar loop over three
+  elements is also the simpler code. Take the before/after with
+  `prototypes/query_stage_profile.py` on both backends anyway, and record it here — it is the only
+  place the number will exist.
 - **Status:** open.
-- **Last touched:** 2026-08-20 — from #497's finding 6, which reached no entry when the rest of that
-  profiling did.
+- **Last touched:** 2026-08-23 — halved when the stop index moved into the shortcut binary; see
+  *Recorded decisions* for the dispatch-boundary rule that governs the rest of this block.
+
+### PERF-6 — scalar `njit` helpers on the query path cost more to call than to compute
+
+- **Location:** `timezonefinder/utils_numba.py` — `is_valid_lat` / `is_valid_lng`, reached through
+  `utils.validate_coordinates` on **every** query, and `coord2int`, called twice on every
+  ambiguous one.
+- **Measured 2026-08-23**, per call, against writing the same expression inline:
+
+  | | `njit` call | inline Python | boundary |
+  |---|---|---|---|
+  | `is_valid_lat` | 87.8 ns | 40.6 ns | **+47 ns**, 2x per query |
+  | `coord2int` | 94.7 ns | 46.4 ns | **+48 ns**, 2x per ambiguous query |
+
+  So coordinate validation spends ~94 ns of a ~1,000 ns unique-zone query crossing a boundary to
+  perform two comparisons — **more than the whole slot-arithmetic reduction that shipped in the
+  same pass was worth**.
+- **Why these and not the kernel.** `pt_in_poly_python` is over an array of hundreds to tens of
+  thousands of vertices, so its dispatch is amortised to nothing and numba earns its place. These
+  three take scalars and do one operation. The rule is in *Recorded decisions*: no scalar
+  per-query stage in the single-digit hundreds of nanoseconds survives a dispatch boundary.
+- **What makes it awkward, and why it is not simply "inline them".** `njit` is a no-op decorator
+  when numba is absent (`_numba_replacements.py`), which is the tracked CI configuration and what
+  a plain `pip install` gives — so the penalty is paid by users who installed numba *for speed*,
+  and any fix has to leave the no-numba path no worse. Inlining the expressions at the call site
+  satisfies both, at the cost of the duplication DUP-1 is separately about.
+- **Sequencing:** overlaps DUP-1, which wants the same bounds literals imported rather than
+  duplicated, and reaches the opposite conclusion about touching this code. Settle them together
+  or the second will undo the first.
+- **Status:** open — free, needs a whole-query A/B rather than the microbenchmark above.
+- **Last touched:** 2026-08-23 — measured while refusing numba for the slot arithmetic.
 
 ---
 

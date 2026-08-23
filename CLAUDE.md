@@ -73,6 +73,14 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 - Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
 - Before adding any version-gated import, `__future__` feature, or compatibility shim, check
   `requires-python` and confirm the feature actually needs it on the minimum supported version
+- **A dispatch boundary costs more than any scalar per-query stage computes.** An empty `njit`
+  call is ~98 ns and a cffi crossing the same order, against stages of 100-200 ns — so reaching
+  for Numba or the C extension to speed one up is a measured dead end, not an untried idea, and
+  `njit` on a scalar helper is a net *loss* (`potential-improvements.md`, *Recorded decisions*,
+  has the numbers and the inventory of which helpers still pay it). Numba earns its place on
+  `inside_polygon`, over arrays of hundreds to tens of thousands of vertices, where the same
+  overhead amortises to nothing. Look for the algebra first: the H3 slot lookup lost two thirds
+  of its arithmetic to one observation about adjacent bit fields
 - Preserve the fast lookup path. `prototypes/query_stage_profile.py` attributes a `timezone_at`
   query to its stages, per backend and per coordinate-access mode, off the committed fixtures —
   read its `FINDINGS` block before arguing about where query time goes, and re-run it rather
