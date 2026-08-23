@@ -200,10 +200,10 @@ class TestNumpyViewOutlivesAccessor:
 def test_shortcut_arrays_do_not_pin_the_file_buffer(hybrid_shortcuts):
     """The opposite contract to ``TestNumpyViewOutlivesAccessor`` above.
 
-    Polygon coordinates are deliberately views onto the memory map. Shortcut poly id
-    arrays must *not* be views onto the shortcut file's ``bytes``: the reader used to
-    hand out ``np.frombuffer`` views, so ~47 KB of live poly ids pinned the whole
-    ~1.5 MB binary for the lifetime of every finder instance.
+    Polygon coordinates are deliberately views onto the memory map. A cell's candidate
+    polygon ids must *not* be views onto the shortcut file's ``bytes``: an earlier reader
+    handed those out, so a few tens of KB of live ids pinned the whole binary for the
+    lifetime of every finder instance.
     """
 
     def owner_of(arr: np.ndarray) -> object:
@@ -218,12 +218,15 @@ def test_shortcut_arrays_do_not_pin_the_file_buffer(hybrid_shortcuts):
     assert len(owners) == 1, f"expected one shared buffer, got {len(owners)}"
     (owner,) = owners.values()
     # what the owner *is* does not matter - its size does. The whole file would satisfy
-    # every other assertion here, and is what this used to hand out.
+    # every other assertion here, and is what this used to hand out. It is *smaller* than
+    # the slices referencing it because identical candidate lists are stored once, so
+    # several cells point into one range.
     retained = owner.nbytes if isinstance(owner, np.ndarray) else len(owner)
-    assert retained == sum(arr.nbytes for arr in arrays), (
+    assert retained <= sum(arr.nbytes for arr in arrays), (
         f"the {retained} B buffer behind the poly ids retains more than the "
         f"{sum(arr.nbytes for arr in arrays)} B referencing it"
     )
     assert not any(arr.flags["WRITEABLE"] for arr in arrays), (
-        "shared backing array must not be writeable through its slices"
+        "shared backing array must not be writeable through its slices - cells with "
+        "identical candidate lists share one range of it"
     )

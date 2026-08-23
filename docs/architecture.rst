@@ -21,15 +21,16 @@ A single ``timezone_at()`` call runs this sequence:
 1. **Validate and scale.** Longitude and latitude are validated, then multiplied by 10\ :sup:`7` and
    truncated to ``int32``. The polygon data is stored the same way, so the whole geometric path is
    integer arithmetic - no floating point, and no conversion per candidate polygon.
-2. **H3 shortcut.** The point's H3 cell at resolution 3 (~41k cells worldwide) indexes a precomputed
-   hybrid shortcut map. If every polygon intersecting that cell belongs to one timezone, the cell
-   stores the zone id directly and the answer is returned immediately, with no geometry touched at
-   all. This is the majority case and it is why the package is fast despite carrying full-resolution
-   polygons.
-3. **Candidate list.** Otherwise the cell stores the ids of the polygons that intersect it - a
+2. **H3 shortcut.** The cell id's own bits index a precomputed table - one ``int16`` per H3 cell at
+   resolution 3 (~41k cells worldwide), with no keys stored and no search. If every polygon
+   intersecting that cell belongs to one timezone, the table holds the zone id and the answer is
+   returned immediately, with no geometry touched at all. This is the majority case and it is why
+   the package is fast despite carrying full-resolution polygons.
+3. **Candidate list.** Otherwise the table names the list of polygons that intersect the cell - a
    handful, out of the thousand-odd the dataset contains. Their zone ids are fetched, and the scan
    stops at the last zone change: once no *other* zone can still be matched, the remaining polygons
-   need not be tested.
+   need not be tested. Where that is depends only on the candidate list, so it is precomputed and
+   stored beside it rather than derived per query.
 4. **Bounding-box rejection.** Each candidate's precomputed bbox is checked first, which rejects most
    of them for the cost of four integer comparisons.
 5. **Holes before the outer ring.** Holes are far smaller than the boundary they sit in, so testing
@@ -231,7 +232,7 @@ What the split needs to stay honest is a version that carries *two* facts. An up
 the frequent driver; a change to the binary format is the other, and that one breaks in both
 directions at once, since the writer lives in ``scripts/`` and the reader in
 ``timezonefinder/flatbuf/io/``. So the data version reads ``<format>.<year>.<letter>`` -
-``1.2026.3`` is format generation 1 built from release ``2026c`` - and ``timezonefinder`` requires
+``2.2026.3`` is format generation 2 built from release ``2026c`` - and ``timezonefinder`` requires
 ``timezonefinder-data>=…,<N+1``. No ceiling on the data axis, so an ordinary update still needs no
 code release; a hard one on the format axis, so old code paired with a new format is refused by the
 resolver rather than at the first lookup. The in-file identifier and ``layout_version`` markers stay

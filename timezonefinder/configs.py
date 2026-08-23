@@ -91,7 +91,7 @@ UNKNOWN_DATA_VERSION = "unknown"
 # into one field written into every binary would rewrite the 63 MB coordinate file to
 # record a shortcut-format change that did not touch its layout, and those binaries
 # are committed.
-DATA_FORMAT_VERSION: Final[int] = 1
+DATA_FORMAT_VERSION: Final[int] = 2
 
 # What this generation is made of: the per-file layout versions in force when
 # DATA_FORMAT_VERSION was last bumped. Restated rather than imported, because
@@ -102,7 +102,7 @@ DATA_FORMAT_VERSION: Final[int] = 1
 # tests/test_data_version.py asserts it; nothing else would notice.
 DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
     "POLYGON_LAYOUT_VERSION": 1,
-    "SHORTCUT_LAYOUT_VERSION": 1,
+    "SHORTCUT_LAYOUT_VERSION": 2,
 }
 
 

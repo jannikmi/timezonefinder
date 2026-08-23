@@ -2,6 +2,4 @@
 
 __all__ = [
     "polygons",
-    "shortcuts_uint8",
-    "shortcuts_uint16",
 ]

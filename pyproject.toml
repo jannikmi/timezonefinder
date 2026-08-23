@@ -36,7 +36,7 @@ dependencies = [
     # satisfying it while a format change becomes a resolver error instead of a
     # failure at the first lookup. tests/test_data_version.py holds the two numbers
     # to the constant.
-    "timezonefinder-data>=1.2026.3,<2",
+    "timezonefinder-data>=2.2026.3,<3",
 ]
 
 [project.urls]
@@ -138,8 +138,6 @@ packages = [
     "timezonefinder.flatbuf",
     "timezonefinder.flatbuf.generated",
     "timezonefinder.flatbuf.generated.polygons",
-    "timezonefinder.flatbuf.generated.shortcuts_uint8",
-    "timezonefinder.flatbuf.generated.shortcuts_uint16",
     "timezonefinder.flatbuf.io",
     "timezonefinder.flatbuf.schemas",
 ]

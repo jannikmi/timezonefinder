@@ -434,13 +434,13 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 60.49
-     - 97.34%
+     - 99.57%
    * - hole polygon data
      - 0.16
      - 0.26%
-   * - hybrid shortcut index
-     - 1.49
-     - 2.40%
+   * - shortcut index
+     - 0.10
+     - 0.17%
    * - Total
-     - 62.14
+     - 60.75
      - 100.00%

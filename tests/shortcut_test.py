@@ -21,28 +21,17 @@ def latlng_to_cell(lng: float, lat: float) -> int:
     return h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
 
 
-def test_single_shortcut_binary_exists(hybrid_shortcut_file_path):
-    """Test that only a single binary file for the shortcut index exists in the data folder."""
-    data_dir = DEFAULT_DATA_DIR
+def test_single_shortcut_binary_exists(shortcut_file_path):
+    """Exactly one shortcut binary ships, and it is the one the reader opens.
 
-    # Find all binaries that could be shortcut-related
-    shortcut_files = list(data_dir.glob("*shortcut*.bin"))
-
-    # We expect exactly one shortcut binary (hybrid_shortcuts_uint8.bin or hybrid_shortcuts_uint16.bin)
-    assert len(shortcut_files) == 1, (
-        f"Expected exactly 1 shortcut binary in {data_dir}, "
-        f"but found {len(shortcut_files)}: {[f.name for f in shortcut_files]}"
-    )
-
-    # Verify it's the correct hybrid shortcuts file
-    shortcut_file = shortcut_files[0]
-    assert shortcut_file.name.startswith("hybrid_shortcuts_"), (
-        f"Expected hybrid shortcuts file, but found {shortcut_file.name}"
-    )
-
-    # Verify it matches the expected file based on zone_id_dtype
-    assert shortcut_file == hybrid_shortcut_file_path, (
-        f"Found shortcut file {shortcut_file.name} doesn't match expected {hybrid_shortcut_file_path.name}"
+    A data directory left over from an older format keeps its binary under a different
+    name, and nothing about a stale second file announces itself - the finder simply
+    never reads it.
+    """
+    shortcut_files = list(DEFAULT_DATA_DIR.glob("*shortcut*.bin"))
+    assert shortcut_files == [shortcut_file_path], (
+        f"expected {shortcut_file_path.name} alone in {DEFAULT_DATA_DIR}, found "
+        f"{[f.name for f in shortcut_files]}"
     )
 
 

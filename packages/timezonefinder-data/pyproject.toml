@@ -5,7 +5,7 @@ name = "timezonefinder-data"
 # binary format generation, which is what lets `timezonefinder` bound the data it
 # can read (`timezonefinder-data>=...,<N+1`) without also capping the data axis.
 # Written by update_data.sh; tests/test_data_version.py holds it to the derivation.
-version = "1.2026.3"
+version = "2.2026.3"
 description = "the packaged timezone boundary data for the timezonefinder package"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="ODbL-1.0" with setuptools>=71

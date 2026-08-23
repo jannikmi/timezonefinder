@@ -122,8 +122,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-1 | A negative zone or boundary id returns the wrong zone | correctness | ~15 | free — decided |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| PERF-5 | The shortcut decode rebuilds 41,162 FlatBuffers tables in Python | performance | ~80 | free — measured |
-| GH-477 | Replace the shortcut dict with flat arrays | performance | M | free — measured and decided |
 | PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | needs a decision |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | needs decisions — thresholds proposed |
@@ -171,7 +169,6 @@ DATA-BINARIES ──┬─→ GH-449 (encode)   ←── GH-542 (what precision
    the binaries)
 
 BUG-1 (negative ids) ──→ GH-499 (batch API)   [BUG-1 makes -1 safe as the "skip" sentinel]
-GH-477 (flat arrays) ┄┄→ GH-499              [measured: an improvement to it, NOT a precondition]
 
 
 GH-542 (precision) ─→ GH-449          GH-543 (cffi bump) ─→ GH-364's abi3t option
@@ -237,22 +234,19 @@ the denominators, and how to tell whether they still describe the tree.
   landed; the previous anchor was `b0642ad`, and figures from the two runs are not comparable
   stage by stage.
 - **The denominators.** A unique-shortcut query is ~1.0 µs and contains no geometry at all; an
-  ambiguous one is ~10.7 µs on the default mapped mode and ~9.3 µs with `in_memory=True`. The two
-  backends differ by under 7 % on both. Every share below is a share of one of these, and the entry
+  ambiguous one is ~10.6 µs on the default mapped mode and ~9.9 µs with `in_memory=True`. The two
+  backends differ by under 9 % on both. Every share below is a share of one of these, and the entry
   says which — a share of an ambiguous query is not a share of a workload.
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat b331eee..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat 24c8d28..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
   ```
 
   Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an
   `__all__` list or a rename leaves them standing and is worth recording here so the next pass does
   not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the
-  shortcut readers or the packaged data does not. *Classified inert since the anchor:*
-  `fcd032c` changes how the coordinate offset table is derived at construction, not what a
-  query does with it, and `bcd78f5` is comment and test only — neither moves a figure here.
-  `prototypes/shortcut_layout_bench.py`'s own block is anchored separately, at `fcd032c`.
+  shortcut reader or the packaged data does not.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
@@ -277,16 +271,16 @@ the denominators, and how to tell whether they still describe the tree.
   through before comparing two items that live on different strata — that multiplication is a
   property of the fixtures, not of the machine, so it survives the move.
 - **A stage's share bounds its upside and says nothing about its downside, so a small stage is a
-  constraint rather than an opportunity.** The shortcut lookup is 88 ns — **8.7 % of a unique
-  query, 0.8 % of an ambiguous one, ~2.7 % of a mixed workload**. Making it infinitely fast wins at
-  most 2.7 %, inside this machine's own jitter. Making it slower is not bounded that way: GH-477's
-  `searchsorted` variant measured **+93 % of a unique query and +29 % of a mixed workload**. For
-  any stage the ladder puts in single digits — `zone_name_from_id` at 5.4 % is the other one — ask
+  constraint rather than an opportunity.** The shortcut lookup is 183 ns — **20 % of a unique
+  query, 1.7 % of an ambiguous one, ~5 % of a mixed workload**. Making it infinitely fast wins at
+  most ~5 %. Making it slower is not bounded that way: the `searchsorted` layout refused for it
+  measured **+93 % of a unique query and +29 % of a mixed workload**. For
+  any stage the ladder puts in single digits — `zone_name_from_id` at 4.7 % is the other one — ask
   whether a change keeps it free, never whether it makes it faster, and settle it on a whole-query
   A/B rather than on a microbenchmark of the stage. `docs/benchmarking_methodology.rst` carries the
   three A/B designs that got this wrong before it was settled.
 - **Where a unique query's time actually is, and therefore where a real win has to come from:**
-  `validate_coordinates` ~30 % and `h3.latlng_to_cell` ~40 % — **70 % in two calls before any
+  `validate_coordinates` ~34 % and `h3.latlng_to_cell` ~43 % — **77 % in two calls before any
   lookup logic runs.** Both are also GH-499's ceiling, so that entry and this arithmetic point at
   the same place from opposite directions, and neither is a shortcut-side optimisation.
 - **The 2x rule, for what none of the above fixes.** Act on a difference only if it survives any
@@ -320,12 +314,11 @@ the denominators, and how to tell whether they still describe the tree.
 - **Sequencing:** **BUG-1 lands first**, and it is the only hard blocker — the `"skip"` sentinel is
   `-1`, which is exactly the value that returns `Etc/GMT+12` today. Bound also by #504's recorded
   decision — keyword-only `lngs`/`lats`, never an `(N, 2)` array.
-- **GH-477 is an improvement to this item, not a precondition for it — measured**
-  (`prototypes/shortcut_layout_bench.py`; the figures are on issue #477). A batch resolver over
-  today's dict already gets most of the available win, and the vectorisation argument that made
-  GH-477 a blocker does not survive: it was argued from the sorted-key `np.searchsorted` layout,
-  which is rejected there, and only GH-477's direct-index variant vectorises into a win. **So this
-  can be built first.**
+- **The shortcut structure was never a precondition for this — measured before it shipped.** A
+  batch resolver over the old decoded dict already got most of the available win, and the
+  vectorisation argument that once made the flat structure a blocker was argued from a sorted-key
+  `np.searchsorted` layout that is refused (see *Recorded decisions*). The slot-addressed table
+  that did ship vectorises into a win, so it helps this item; it never gated it.
 - **The ceiling is h3, and nothing on the shortcut side moves it.** h3-py exposes no vectorised
   `latlng_to_cell`, so N points cost N scalar C calls, and that is nearly the whole cost of a
   batched unique-zone lookup once the layout question is settled. Two ranking consequences: do not
@@ -369,143 +362,6 @@ the denominators, and how to tell whether they still describe the tree.
   stalled.
 - **Status:** open. Blocks GH-449.
 - **Last touched:** 2026-08-21 — created.
-
-### GH-477 — replace the shortcut dict with flat arrays
-
-- **Tracks:** issue #477, which carries the memory breakdown and the query-side measurements.
-- **Why it is ranked here:** a memory item, plus the tail of a construction-time one — a few MiB
-  per instance, on a structure that is essentially the whole heap of `TimezoneFinderL`, multiplied
-  by the thread count because concurrent workloads are told to use one instance each.
-- **Measured on the query side 2026-08-21** — `prototypes/shortcut_layout_bench.py`, whole queries
-  rather than lookups in isolation, superseding the issue's microbenchmark and #497's estimate
-  alike. The **sorted-key / `np.searchsorted` layout is REJECTED** there: it loses the scalar path
-  and the batch path alike. Recorded rather than deleted, because "flat arrays vectorise" will
-  otherwise re-propose it.
-- **Prototyped on the file side 2026-08-22** — `prototypes/shortcut_file_format_bench.py`. **The
-  step that matters is dict → flat: 4.44 → 0.14 MiB, ~393 → 0.064 ms, 1,530 → 103 KiB — 32x
-  memory, 6,000x load, 15x file.** Among the flat candidates the spread is ~50 KiB and ~0.09 MiB,
-  under 2 % of the packaged data, so no flat variant is a mistake and that choice should not be
-  relitigated once made. The one to build is a flat file storing each *distinct* entry once, keyed
-  by stored cell ids, zone table derived at load: 457 KiB against 508 and 0.37 MiB against 0.46,
-  at identical load and lookup. Six alternatives lost and are recorded in that script's `REFUSED
-  OPTIONS` block, including two of its own wrong turns.
-- **Query speed: indistinguishable, and that is the answer to the obvious objection.** The
-  shortcut index exists to avoid point-in-polygon tests, so a structure that is smaller but
-  answers slower would not be an improvement. Measured full `timezone_at`, paired and
-  order-alternated, 61 rounds x 2,000 points on four fixture strata: **within ±2 % on minima
-  everywhere, every median per-round difference inside its own 10–90 % spread, and the sign
-  inconsistent across strata.** The proposal changes how a cell's candidate list is stored, never
-  which candidates come back, so it avoids exactly the same PIP tests. **Justify this item on load,
-  memory and file size or not at all — never as a speedup.** Two designs that suggested otherwise
-  were discarded: an isolated lookup omits the `match` the shipped code runs on the dict's answer
-  (84 → 188 ns, and the proposal needs no equivalent), and a fixed A-then-B order credited the
-  proposal with 13.3 % that was the first path warming shared code for the second.
-- **Only 6.9 % of the 41,162 entries are distinct**, because the ocean zones repeat one zone id
-  across thousands of cells. Sharing is free at lookup — duplicates carry *equal offsets*, so
-  nothing is dereferenced twice. It costs one column: without sharing the ranges are contiguous and
-  a CSR array of N+1 offsets encodes N ranges, whereas shared ranges need a start *and* a length
-  per entry. That is ~41 KiB against the ~91 KiB of payload it saves.
-- **Column widths are the narrowest that fit and are guarded, not chosen for headroom** — `uint8`
-  lengths (largest entry 59), `uint16` offsets. The packaged data is built by a converter this
-  repository owns, so an overflow surfaces at build time rather than in a user's process *provided
-  something checks and says what happened*; the check belongs in `scripts/data_integrity.py`, over
-  what the converter wrote and over what is committed, never on the init path. An earlier draft of
-  this entry demanded 4x headroom instead and wrongly credited deduplication with enabling a
-  `uint32` → `uint16` narrowing that the headroom rule alone had blocked.
-- **Rank it on ~21 ms and the file size, never on the ~394 ms**, and note that "buys no speed" in
-  this entry always meant a *query* — the only denominator *The measured baseline* carries.
-  Construction was never priced here until 2026-08-22, and most of it is not this item's to claim:
-  **PERF-5 takes it to ~21 ms with no format change and no release**, so what the format change
-  adds is ~21 ms → ~0.66 ms. The memory is the same win the in-memory layout already buys, not
-  additive with it. **The 3x smaller packaged binary is the one argument nothing else here has.**
-  Cost: `SHORTCUT_LAYOUT_VERSION`, therefore `DATA_FORMAT_VERSION`, therefore an ordered
-  two-distribution release.
-- **`last_zone_change_idx` is precomputed into the structure, decided 2026-08-23** — reversing a
-  refusal recorded twice before (issue #256, draft PR #348). It was refused on two grounds: it wins
-  ~1 % of a workload, and it costs a layout version bump and an ordered two-distribution release.
-  **This change spends that bump anyway**, so only the ~1 % remained — and in the split structure
-  that ~1 % is what pays for the extra indirection the split introduces, which is why the ambiguous
-  stratum comes out level rather than behind. It costs **2.5 KiB**: one `uint8` per *distinct*
-  entry, since it depends only on the polygon list and deduplicates with everything else. It ships
-  with this item or not at all; alone it is still not worth a release.
-- **Decided 2026-08-22: address entries by h3's bit layout, guarded.** 126 KiB against 457, a 10x
-  faster load and less than half the memory, at an unchanged query. The objection was
-  that the *format* would then encode an index encoding h3-py does not promise as API, and it does
-  not survive: storing the cell ids does not remove the dependency but pays ~260 KiB to store
-  something derivable — if h3's encoding moved, stored 64-bit ids would no longer denote the same
-  cells either — and the reader slices bits in **both** designs, because that is what makes the
-  lookup fast.
-- **What makes it safe is a guard, not the stored ids.** `get_base_cell_number` and
-  `cell_to_child_pos` are public h3 API and between them fix a cell's position exactly as the bits
-  do, at ~218 ns against ~87 — unaffordable per lookup, free once per build.
-  `verify_slot_layout_against_h3_api` confirms agreement on all 41,162 cells and fails naming the
-  cell, both answers and the version bumps required. **Without that guard `keys-dedup` is the safer
-  choice**, since an encoding change would otherwise return a neighbour's timezone silently; with
-  it the failure is loud and lands where the data is produced. It belongs in
-  `scripts/data_integrity.py` beside the width checks — same rule, same reason.
-- **A unique-zone cell reads nothing but the slot table, and the structure is built around that.**
-  30,651 of the 41,162 cells answer from one `int16`, so their offsets and payload entries are dead
-  weight. Once the table holds the *answer* rather than a sentinel, the offsets shrink from one per
-  slot to one per **distinct entry** — 2,575, against 10,511 ambiguous cells and 62,464 slots,
-  because duplicates already collapse to one entry and holding the offsets per cell would re-spend
-  the repetition the deduplication found — and the single zone ids leave the payload altogether.
-  Memory 0.37 → **0.15 MiB**. And nothing is derived at load any more, which
-  is load 0.66 → **0.066 ms**: every other candidate spends ~0.5 ms building a table this one
-  reads. The cost is one extra indirection on the ambiguous path, which is where the
-  point-in-polygon loop already dominates.
-- **The dead slots are dropped from the file and kept in memory, and that asymmetry is the point.**
-  The slot arithmetic is base-8 per digit while H3 digits only take 0–6, so 34 % of the 62,464
-  slots can never be addressed by a valid cell. Which are live follows from the *resolution*, never
-  from the data, so the file stores the compact base-7 form and the reader expands it by slice
-  assignment — base-8 slot is exactly the C-order ravel of a `(122, 8, 8, 8)` array, so a
-  `(122, 7, 7, 7)` block dropped in its corner lands correctly. **0.039 ms per array, 60 KiB off
-  the file (31 %).** Removing the same padding from *memory* means base-7 addressing at lookup
-  time: **+78 ns per query to save 121 KiB**, ~7 % of a unique query spent on a stage that is only
-  ~8.7 % of it. Refused on the asymmetry rule above.
-- **A denser index exists and is refused.** The public-API route gives exactly 41,162 slots against
-  the bit form's 62,464 — base-8 arithmetic over base-7 data — worth ~62 KiB of the 197. Realising
-  it at lookup time costs the 218 ns, and reproducing it from bits needs per-digit arithmetic that
-  pentagons, with 286 children rather than 343, do not obviously satisfy.
-- **Status:** open — sequenced behind PERF-5; the structure and its addressing are both settled,
-  so what remains is implementation plus the ordered two-distribution release.
-- **Last touched:** 2026-08-22 — the file structure prototyped and settled on one recommendation
-  with the losing options recorded in the prototype; column widths narrowed to what fits under a
-  build-time guard, which retracted a claim about what deduplication buys; the ranking moved off
-  the ~394 ms onto what PERF-5 leaves. Query detail cut to issue #477, taken 2026-08-21.
-
-### PERF-5 — the shortcut decode rebuilds 41,162 FlatBuffers tables in Python
-
-- **Location:** `timezonefinder/flatbuf/io/hybrid_shortcuts.py`,
-  `_read_hybrid_shortcuts_with_schema`.
-- **What it costs, and in which denominator.** ~400 ms of a ~405 ms `TimezoneFinder()`, and of a
-  ~396 ms `TimezoneFinderL()` whose construction is otherwise nothing at all. The denominator is a
-  **construction, not a query**, so *The measured baseline* prices none of this and no share here
-  may be compared with one there. It is paid per instance — which the one-instance-per-thread rule
-  this package gives concurrent callers multiplies by the thread count — and once per process by
-  every CLI call, script and serverless cold start.
-- **The count, which is the half that travels:** decoding 41,162 cells costs ~4.5 M Python-level
-  calls, ~91 % of them inside the `flatbuffers` runtime (`table.Get`, `encode.Get`,
-  `enforce_number`) rather than in this module. One table and one union member per cell, read field
-  by field.
-- **Measured 2026-08-22, and the fix is the one already proven next door.** A prototype that walks
-  the entries vector the way `derive_coord_offset_table` walks the polygons vector — whole-array
-  numpy arithmetic over all 41,162 entries at once, then one pass to build the dict — reproduces
-  the shipped mapping exactly, same key order and same values for every cell, at **21.0 ms against
-  399.7 ms**. Same file bytes: no schema change, hence no `SHORTCUT_LAYOUT_VERSION` bump, hence no
-  `DATA_FORMAT_VERSION` bump and no ordered two-distribution release. That is what separates it
-  from GH-477, which reaches a similar place by changing the format.
-- **The cost of the item is the safety obligation, not the walk.** A hand-rolled vtable walk
-  assumes what the generated accessors guarantee — that a table sits where its reference says, that
-  vtables are aligned, that an absent field means its default — and a violated assumption yields
-  plausible wrong zone ids silently, exactly as it would for coordinates. So it carries the same
-  answer: an exhaustive check in `scripts/data_integrity.py` comparing the walk against the
-  generated-accessor reader for every cell, run by the converter over what it wrote and by the test
-  suite over what ships, and never on the construction path. Budget that as most of the change.
-- **It blocks nothing and nothing blocks it.** It makes GH-477's construction-time argument smaller
-  rather than larger, the two do not conflict, and this one needs no decision from anyone.
-- **Status:** open — free.
-- **Last touched:** 2026-08-22 — found and measured while pricing the `flatbuffers` dependency; see
-  *Recorded decisions* for why the answer is this rather than dropping it.
 
 ### GH-301 — sort shortcut polygons by overlap area
 
@@ -975,11 +831,11 @@ the denominators, and how to tell whether they still describe the tree.
   have at least that much room, and nothing characterises it. Separately, `min` alone reported
   +0.5 % where a round-level sign count said 26 of 61 — the disagreement being the correct answer,
   "no effect", which a single estimator cannot express.
-- **Why it is ranked here:** three open performance items — GH-477, PERF-5, GH-364 — each have to
-  demonstrate an effect in the low single digits, and none of them can be reviewed with this
-  tooling. Every one of them currently needs a hand-rolled prototype harness, which is how both
-  `prototypes/shortcut_layout_bench.py` and `prototypes/shortcut_file_format_bench.py` came to
-  contain one.
+- **Why it is ranked here:** the remaining performance items — GH-364 and PERF-4 among them — each
+  have to demonstrate an effect in the low single digits, and none of them can be reviewed with
+  this tooling. Each one currently needs a hand-rolled prototype harness; the shortcut structure
+  work needed two, both of which were deleted with the prototypes once it shipped, so the harness
+  is written again every time.
 - **Fixes, in increasing cost, and the first is most of the value:**
   1. **Report dispersion beside the `min`.** pytest-benchmark already records every round, so the
      JSON holds it and the comparison discards it. A reader could then see whether the two
@@ -1517,6 +1373,72 @@ the denominators, and how to tell whether they still describe the tree.
 pass re-proposes whatever is not written down as already refused. Correct the reasoning when a
 premise moves; do not reverse a decision silently.
 
+- **The shortcut index's shape — settled 2026-08-23 when it shipped, with six alternatives refused.**
+  It is a slot-addressed `int16` table plus deduplicated candidate lists; `docs/data_format.rst`
+  describes the layout and `timezonefinder/shortcut_index.py` says why it is shaped that way. What
+  lost, so that none of it is re-proposed:
+
+  * **`np.searchsorted` over stored, sorted cell ids.** Refused on both paths it was proposed for:
+    it roughly doubles a unique-zone query, and vectorised over 10,000 points it is *still* slower
+    than a Python loop of dict lookups, because a binary search over 41,162 keys is
+    memory-latency-bound at about what one dict lookup costs. "Flat arrays vectorise" is what
+    re-proposes this; it does not follow.
+  * **Storing the cell ids at all**, to keep h3's index encoding out of the format. It does not
+    remove the dependency — if the encoding moved, stored 64-bit ids would no longer denote the
+    same cells either, and the reader slices bits in both designs because that is what makes the
+    lookup fast — and it pays ~260 KiB and a ~12 % slower load to store something derivable. What
+    makes the bit form safe is the build-time check against h3's public `get_base_cell_number` /
+    `cell_to_child_pos` over every cell, not the stored ids. **Without that check the stored-id
+    form is the safer one**, since an encoding change would otherwise return a neighbour's
+    timezone silently.
+  * **Enumerating the cell ids from h3's public API at load** instead of storing them: 4.5 ms
+    against 0.13 ms to read them, to save 329 KiB. Refused before the ids were dropped entirely.
+  * **Offsets per cell rather than per distinct candidate list.** Duplicates already collapse to
+    one list, so a per-cell column re-spends exactly the repetition the deduplication found — and
+    a cell a single zone covers reads no offset at all. Related: **deduplication via an entry-number
+    index** (slot → entry → range) costs an extra indirection on the ambiguous path to save ~100 KiB
+    and is unnecessary, since *equal offsets* achieve the same sharing with none. It looks like the
+    obvious way to implement sharing and is not.
+  * **Column widths chosen for headroom rather than for fit.** A 4x-headroom rule is what once put
+    `uint32` offsets in a draft and produced a false claim that deduplication paid for its own
+    addressing by narrowing them. The narrowest width that fits, plus a check whose message names
+    the value, the ceiling, the width to move to and the version bumps that follow, is strictly
+    better: smaller, and loud instead of silently truncating.
+  * **Dispatching on a candidate list's length at runtime** instead of on the table's sign: two
+    reads and a subtraction where the table needs one, measured at +230 ns against +73 ns on the
+    unique path. The length is the right column *in a file* and the wrong discriminator at runtime;
+    they are separate decisions.
+  * **Base-7 addressing at lookup time**, to drop the ~34 % of table slots no H3 cell can address.
+    +78 ns per query to save 121 KiB, on a stage that is only ~20 % of a unique query to begin
+    with. The *file* stores the compact base-7 form and the reader expands it by slice assignment
+    (0.039 ms); the asymmetry is deliberate. A denser index the public API would give — 41,162
+    slots against 62,464 — is refused for the same reason, and reproducing it from bits needs
+    per-digit arithmetic that pentagons, with 286 children rather than 343, do not obviously
+    satisfy.
+- **One shortcut binary rather than a file per array, and raw rather than `.npy` — measured
+  2026-08-23 and refused.** The four arrays are one structure with cross-references (the table
+  indexes the bounds, the bounds index the payload), so the split buys separability nothing wants
+  and costs load time, which is the axis the whole format change was taken on. Loading the same
+  structure, on the packaged data: **one raw file 0.081 ms, four raw files 0.129 ms (+59 %), four
+  `.npy` files 0.241 ms (+197 %)**, at the same size to within 0.5 %. The `.npy` cost is the format
+  itself and not `np.load`'s dispatch — the low-level `np.lib.format.read_array` reads 0.236 ms, 4 %
+  of the gap. Two further reasons the *file* being self-describing does not pay for that:
+  **a `.npy` carries no file identifier and no layout version**, so the shortcut index would move
+  out of the guarded set and into the one `docs/data_format.rst` warns is still undetectable across
+  a format change — losing exactly the guard that makes a stale `bin_file_location` fail loudly
+  instead of returning wrong timezones; and four files can be individually stale or mismatched
+  where one cannot. The dtype self-description is what a `.npy` would genuinely add, and the
+  header's two width fields already carry it in 16 bytes. This does not generalise to the rest of
+  the data directory: `zone_ids.npy` and its neighbours are single independent vectors with no
+  cross-references and no per-query load budget, which is why they are `.npy` and this is not.
+- **Justify the shortcut structure on load, memory and file size — never as a speedup.** Measured
+  full `timezone_at`, paired and order-alternated, 61 rounds x 2,000 points on four fixture strata:
+  neutral to slightly ahead, and small enough to stay off any headline. It changes how a cell's
+  candidate list is stored, never which candidates come back, so it avoids exactly the same
+  point-in-polygon tests. Two measurement designs that suggested otherwise were discarded: an
+  isolated lookup omits the `match value: case int(zone_id)` the old code ran on the dict's answer
+  (84 → 188 ns, and the table needs no equivalent), and a fixed A-then-B order credited the new
+  structure with 13.3 % that was the first path warming shared code for the second.
 - **Raster fast-path in front of the H3 index — dropped.** A ~2 MB lookup table answering
   unambiguous cells with one array index, falling through to H3 otherwise. Rejected: it buys query
   time with storage, and storage is the dimension this package can least afford to spend on.
@@ -1774,12 +1696,13 @@ premise moves; do not reverse a decision silently.
   at 149 ns on numba and 283 ns on clang of an ambiguous query and nothing on a unique one — ~1 %
   of a random workload, below the 3–9 % noise of the machine that would have to demonstrate it —
   and the cost was a shortcut-layout version bump, therefore `DATA_FORMAT_VERSION`, therefore an
-  ordered two-distribution release. **GH-477 now spends that bump for its own reasons, so the
-  second leg is gone**, and the maintainer has taken it: it ships with GH-477's structure as a
-  `uint8` per distinct entry, 2.5 KiB, where the ~1 % is what offsets the indirection that
-  structure's split introduces. Kept here rather than deleted because the *standalone* verdict is
-  unchanged — on its own it is still ~1 % for a release, and the 2025 reasoning was right. What
-  moved is that the price is now sunk, not that the win grew.
+  ordered two-distribution release. **The shortcut index format change spent that bump for its own
+  reasons, so the second leg went**, and the maintainer took it: it ships as one `uint8` per
+  *distinct* candidate list — 2.5 KiB, since it depends only on the list and deduplicates with it —
+  where the ~1 % is what offsets the extra indirection that structure introduces. Kept here rather
+  than deleted because the *standalone* verdict is unchanged: on its own it is still ~1 % for a
+  release, and the 2025 reasoning was right. What moved is that the price became sunk, not that the
+  win grew.
 - **Shrink the runtime dependency surface (numpy / h3 / cffi / flatbuffers) — considered and
   parked.** Each does one small thing, so the idea recurs. Reimplementing H3 indexing is a
   well-known source of subtle bugs and `h3` sits on the common path of every query; an open item
@@ -1791,8 +1714,10 @@ premise moves; do not reverse a decision silently.
   GH-536 — **nothing per query**, the lookup path reading coordinates with a bare `np.frombuffer`.
   Writing the same shortcut payload as flat vectors *inside* a FlatBuffers buffer reads in
   **0.050 ms against 0.039 ms** for a hand-rolled raw blob of the same bytes, so the container is
-  worth ~11 µs and 58 bytes. What is expensive is the **shape of the shortcut schema** — a vector
-  of 41,162 tables, ranked as PERF-5 — and that is a schema question in either format. Against ~0
+  worth ~11 µs and 58 bytes. What was expensive was the **shape of the old shortcut schema** — a
+  vector of 41,162 tables decoded one by one, ~400 ms of a construction — and that was a schema
+  question in either format, which is why replacing the schema fixed it and dropping the dependency
+  would not have. Against ~0
   gain, removing it costs the file identifiers and `layout_version` fields the load-time guards are
   built on, the `schemas/` copy that lets a compiled data directory be read back without the
   package that wrote it, the alignment guarantee the zero-copy views rest on, and the independent

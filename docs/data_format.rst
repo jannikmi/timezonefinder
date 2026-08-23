@@ -68,7 +68,7 @@ same shape works just as well: pass it as ``bin_file_location`` (see :ref:`use c
 
 That distribution's **major version is the data format generation**
 (``timezonefinder.configs.DATA_FORMAT_VERSION``), and its remaining two components name the
-upstream release: ``1.2026.3`` is format 1 built from ``2026c``. ``timezonefinder`` requires
+upstream release: ``2.2026.3`` is format 2 built from ``2026c``. ``timezonefinder`` requires
 ``timezonefinder-data>=…,<N+1``, so a dataset update needs no code release while a format change is
 refused when resolving rather than when reading. Bumping either per-file ``layout_version`` below
 requires bumping ``DATA_FORMAT_VERSION`` too.
@@ -76,7 +76,7 @@ requires bumping ``DATA_FORMAT_VERSION`` too.
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
 1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
-2. **Hybrid Shortcut Index**: Spatial index using H3 hexagons (``hybrid_shortcuts_uint8.bin`` or ``hybrid_shortcuts_uint16.bin``) that stores either direct zone IDs or polygon lists depending on timezone complexity
+2. **Shortcut Index**: Spatial index over H3 hexagons (``shortcuts.bin``) holding, per cell, either the timezone that covers it or the polygons a lookup there has to test
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
@@ -123,12 +123,9 @@ Hole Data
 Spatial Indexing
 ----------------
 
-* ``hybrid_shortcuts_uint8.bin`` (or ``hybrid_shortcuts_uint16.bin``): FlatBuffer binary file containing the hybrid spatial index that maps H3 hexagon IDs to either:
-
-   - Direct zone IDs (when all polygons in a hexagon belong to the same timezone)
-   - Arrays of polygon IDs that intersect with each hexagon (when multiple timezones are present)
-
-   The file format is automatically selected based on the zone ID data type to optimize storage.
+* ``shortcuts.bin``: the spatial index, mapping every H3 cell at resolution 3 to either the
+  zone that covers it or the boundary polygons a lookup there has to test. Its layout is
+  described under `Shortcut Index Layout`_.
 
 Other Files
 -----------
@@ -219,18 +216,14 @@ risk profile.
 FlatBuffers Schema
 ==================
 
-The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for efficient binary serialization of the polygon and shortcut data.
+The library uses the `Google FlatBuffers <https://pypi.org/project/flatbuffers/>`_ binary file format for the polygon coordinate data.
 The schemas are defined in the ``timezonefinder/flatbuf/schemas/*.fbs`` files.
 
-Every FlatBuffers file carries a file identifier and a ``layout_version`` field, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones.
-
-``coordinates.bin`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_).
-
-The hybrid shortcut files use a *different identifier per zone id width* - ``TZS1`` for ``hybrid_shortcuts_uint8.bin``, ``TZS2`` for ``hybrid_shortcuts_uint16.bin``. That distinction is the point: the two schemas differ only in the width of ``UniqueZone.zone_id`` (``ubyte`` vs ``ushort``), so either width parses cleanly under the other schema and hands back wrong zone ids. The width is therefore read from the identifier inside the buffer rather than from the file name, which a rename or a mispaired copy can make lie.
+``coordinates.bin`` and ``shortcuts.bin`` both carry a file identifier and a ``layout_version``, both checked when the file is opened; a mismatch raises a ``ValueError`` naming the offending file instead of silently returning wrong timezones. ``coordinates.bin`` uses the identifier ``TZFP``, and its ``layout_version`` records the coordinate encoding and, for a hole collection, whether it holds every ring or only the ones that are not references (see `Holes as Boundary References`_). ``shortcuts.bin`` uses ``TZSC``.
 
 ``layout_version`` tracks what the file *holds*, not the package version, and is bumped only when that actually changes. Data compiled by any release that writes a given layout is readable by any release that reads it, so a directory passed to ``bin_file_location`` does not need regenerating on an ordinary upgrade - only when the changelog reports a data format change, or when you want newer boundary data.
 
-Note that this check covers the FlatBuffers files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
+Note that this check covers those two files only. The NumPy arrays carry no such marker yet, so mixing those across a format change is still undetected.
 
 
 Spatial Indexing with H3 Hexagons
@@ -284,16 +277,99 @@ indexes.
 
 The shortcuts are precompiled during the data build process. This preprocessing step is computationally intensive but only needs to be performed once, allowing all subsequent timezone lookups to be extremely fast.
 
-Hybrid Shortcut Data Structure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _shortcut-index-layout:
 
-The hybrid shortcut system combines two previous approaches into a single optimized data structure:
+Shortcut Index Layout
+---------------------
 
-* **Direct Zone Storage**: For hexagons where all intersecting polygons belong to the same timezone, the zone ID is stored directly as an integer. This eliminates the need for polygon testing in the majority of cases.
+``shortcuts.bin`` holds four arrays after a 32-byte header. The header is the file
+identifier ``TZSC``, a ``uint32`` layout version, and three ``int64``: the number of
+distinct candidate lists, and the widths chosen for the two data-dependent columns.
 
-* **Polygon List Storage**: For hexagons that contain polygons from multiple timezones, an array of polygon IDs is stored. Only these polygons need to be tested during lookup.
+.. list-table::
+   :header-rows: 1
 
-This hybrid approach automatically chooses the most efficient storage method for each hexagon, providing optimal performance across different geographic regions. Areas with clear timezone boundaries benefit from immediate zone ID lookups, while complex border regions still use the efficient polygon list approach.
+   * - array
+     - dtype
+     - indexed by
+     - holds
+   * - ``table``
+     - ``int16``
+     - compact slot
+     - the answer for that cell
+   * - ``bounds``
+     - narrowest that fits
+     - distinct candidate list
+     - CSR offsets into ``payload``, ``n+1`` of them
+   * - ``payload``
+     - ``uint16``
+     - -
+     - every distinct candidate list, back to back
+   * - ``last_change``
+     - narrowest that fits
+     - distinct candidate list
+     - where the candidate loop may stop
+
+**The cell id is the index.** H3 packs a cell index as a base cell in bits 45-51 followed
+by fifteen 3-bit digits. At a fixed resolution every other bit is constant, so those bits
+*are* the cell and
+
+.. code-block:: python
+
+    slot = ((cell >> 45) & 0x7F) * 512 + ((cell >> 36) & 0x1FF)
+
+is a bijection onto a dense table rather than a hash. No keys are stored and no search
+runs at lookup time. That h3-py does not promise its index encoding as API is handled by
+checking rather than by storing: ``scripts/data_integrity.validate_shortcut_index``
+confirms the arithmetic against the public ``get_base_cell_number`` and
+``cell_to_child_pos`` on every cell that exists, so an encoding change fails where the
+data is built instead of silently returning a neighbour's timezone.
+
+**The table holds the answer.** One ``int16`` per slot:
+
+* ``>= 0`` - the zone id, and the whole answer. Roughly three quarters of the cells.
+* ``== -1`` - no cell here. Custom data can leave cells uncovered, so this is a real
+  state and not only padding.
+* ``< -1`` - several zones; candidate list ``-(value + 2)``.
+
+``-1`` is free for "absent" because a stored candidate list can never have length 1: a
+lone candidate is unambiguous and is therefore stored as a zone id instead.
+
+Because a cell the table answers reads nothing else, ``bounds`` and ``last_change`` are
+indexed by *distinct candidate list* rather than by cell or by slot - far fewer of them,
+and the cells that never read them cost nothing.
+
+**Each distinct candidate list is stored once.** Cells with identical lists carry *equal*
+offsets into the shared payload, not an index to a shared entry, so a repeated list costs
+a lookup exactly what a unique one costs. The distinct lists are packed back to back, so
+one CSR array of ``n+1`` bounds carries both starts and ends and no length column exists
+to disagree with it.
+
+**``last_change`` is ``get_last_change_idx`` precomputed.** It depends only on the
+candidate list, so it deduplicates with everything else and costs one byte per distinct
+list to take a scan off every ambiguous query.
+
+**The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
+base-8 slots can never be addressed. Which ones follows from the resolution and never from
+the data, so the file stores the compact base-7 form and the reader expands it - a base-8
+slot is exactly the C-order ravel of a ``(122, 8, 8, 8)`` array, so the base-7 block lands
+correctly when sliced into its corner. The in-memory table keeps its padding: addressing
+it base-7 per query costs more than the padding is worth.
+
+**The two data-dependent widths are chosen by fit, not by headroom.** An overflow surfaces
+where the data is built rather than in a user's process - provided something checks, which
+is what ``scripts/data_integrity.py`` does, over what the converter just wrote and over
+what is committed, naming the value, the ceiling, the width to move to and the version
+bumps that follow.
+
+A lookup, in full::
+
+    slot = <the arithmetic above>            # no memory touched
+    z = table[slot]
+    if z >= 0:  return z                     # 1 read
+    if z == -1: return None                  # 1 read
+    i = -(z + 2)                             # several zones: the candidate list, plus
+    return payload[bounds[i]:bounds[i + 1]]  # last_change[i] for where to stop
 
 Design Rationales
 =================

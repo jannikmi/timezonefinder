@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import BinaryIO, Final
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
-from timezonefinder.flatbuf.io.layout import incompatible_layout_error
+from timezonefinder.layout import incompatible_layout_error
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,

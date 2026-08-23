@@ -40,12 +40,13 @@ from pathlib import Path
 import numpy as np
 
 # NOTE: timezonefinder internally uses the int-keyed H3 API (see
-# timezonefinder.py: `from h3.api import numpy_int as h3`). shortcut_mapping
-# keys are ints, so the plain (string-keyed) `h3` package must not be used
-# here or every lookup below would silently miss.
+# timezonefinder.py: `from h3.api import numpy_int as h3`). The shortcut index is
+# addressed by slicing bits out of an int cell id, so the plain (string-keyed) `h3`
+# package must not be used here or every lookup below would silently miss.
 from h3.api import numpy_int as h3
 
 from scripts.configs import DEBUG, read_data_version
+from timezonefinder.shortcut_index import ABSENT, slot_of
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     BENCHMARK_FIXTURES_DIR,
@@ -123,16 +124,14 @@ def generate_shortcut_points(
         lng, lat = get_rnd_query_pt_area_weighted(rng)
         attempts += 1
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-        shortcut_value = tf.shortcut_mapping.get(hex_id)
-        match shortcut_value:
-            case None:
-                continue
-            case int():
-                if len(unique_points) < n_unique:
-                    unique_points.append((lng, lat))
-            case _:
-                if len(ambiguous_points) < n_ambiguous:
-                    ambiguous_points.append((lng, lat))
+        entry = int(tf.shortcut_table[slot_of(hex_id)])
+        if entry == ABSENT:
+            continue
+        if entry >= 0:
+            if len(unique_points) < n_unique:
+                unique_points.append((lng, lat))
+        elif len(ambiguous_points) < n_ambiguous:
+            ambiguous_points.append((lng, lat))
     print(
         f"  classified {n_unique + n_ambiguous:,} shortcut points in {attempts:,} attempts"
     )
