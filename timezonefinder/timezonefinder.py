@@ -666,9 +666,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # several zones - the candidates have to be tested. NOTE: neither the empty nor
         # the single-candidate case can occur here; both are unambiguous and are stored
         # in the table itself.
-        i = -(entry + 2)
+        # named apart from the loop counter below on purpose: both index something, and a
+        # stop index read for the wrong entry is a wrong timezone that nothing announces -
+        # the stored values would still be correct, so no build-time check could see it
+        entry_idx = -(entry + 2)
         possible_boundaries = self.shortcut_polygons[
-            self.shortcut_starts[i] : self.shortcut_ends[i]
+            self.shortcut_starts[entry_idx] : self.shortcut_ends[entry_idx]
         ]
 
         # create a list of all the timezone ids of all possible boundary polygons
@@ -677,7 +680,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # where the loop may stop, precomputed at build time - a property of the candidate
         # list, so it is stored once per distinct list rather than recomputed per query.
         # NOTE: the case last_zone_change_idx == 0 is covered by the unique zone shortcut
-        last_zone_change_idx = self.shortcut_last_change[i]
+        last_zone_change_idx = self.shortcut_last_change[entry_idx]
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match

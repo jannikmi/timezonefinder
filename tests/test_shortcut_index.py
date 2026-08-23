@@ -26,6 +26,10 @@ from scripts.data_integrity import (
     all_cells_at_shortcut_res,
     validate_shortcut_index,
 )
+from tests.auxiliaries import (
+    AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    load_benchmark_points,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import (
     ABSENT,
@@ -325,4 +329,70 @@ def test_the_packaged_file_carries_the_markers_its_own_writer_stamps():
     assert (
         int(np.frombuffer(buffer, dtype=np.uint32, count=1, offset=4)[0])
         == SHORTCUT_LAYOUT_VERSION
+    )
+
+
+@pytest.mark.unit
+def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(tf):
+    """``timezone_at`` reads ``last_change`` rather than calling ``get_last_change_idx``.
+
+    ``validate_shortcut_index`` checks the *stored* values are right. Nothing checked that
+    the query uses them, which is the other half: reading the wrong entry's stop index
+    ends the candidate loop early and attributes the point to the wrong zone, while the
+    file stays perfectly valid - so no build-time check can see it. Here the one line is
+    reverted to a live computation and the answers must not move.
+    """
+    from timezonefinder import utils
+    from timezonefinder.shortcut_index import ABSENT, SLOT_DIGITS_SHIFT, SLOT_MASK
+
+    class LiveStopIndex(type(tf)):
+        __slots__ = ()
+
+        def timezone_at(self, *, lng, lat):
+            lng, lat = utils.validate_coordinates(lng, lat)
+            hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+            entry = int(self.shortcut_table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
+            if entry >= 0:
+                return self.zone_name_from_id(entry)
+            if entry == ABSENT:
+                return None
+            e = -(entry + 2)
+            cand = self.shortcut_polygons[
+                self.shortcut_starts[e] : self.shortcut_ends[e]
+            ]
+            zone_ids = self.zone_ids_of(cand)
+            stop = utils.get_last_change_idx(zone_ids)  # what the query no longer does
+            x, y = utils.coord2int(lng), utils.coord2int(lat)
+            for j, boundary_id in enumerate(cand):
+                if j >= stop:
+                    break
+                if self.inside_of_polygon(boundary_id, x, y):
+                    return self.zone_name_from_id(int(zone_ids[j]))
+            return self.zone_name_from_id(int(zone_ids[-1]))
+
+    points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:2000]
+    with LiveStopIndex() as live:
+        reached = sum(
+            1
+            for lng, lat in points
+            if int(
+                tf.shortcut_table[
+                    (h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES) >> SLOT_DIGITS_SHIFT)
+                    & SLOT_MASK
+                ]
+            )
+            < ABSENT
+        )
+        assert reached > 100, (
+            f"only {reached} of {len(points)} points reach the candidate loop - the "
+            "assertion below would be close to vacuous"
+        )
+        mismatches = [
+            (lng, lat)
+            for lng, lat in points
+            if tf.timezone_at(lng=lng, lat=lat) != live.timezone_at(lng=lng, lat=lat)
+        ]
+    assert not mismatches, (
+        f"{len(mismatches)} points answer differently when the stop index is computed "
+        f"instead of read, e.g. {mismatches[:3]}"
     )
