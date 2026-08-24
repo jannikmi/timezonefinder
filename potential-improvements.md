@@ -136,7 +136,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
-| GH-501 | Guardrails on the automated data update pipeline | release | M | partly decided — pinning and the report-only diff are free; one threshold still needs a decision |
+| GH-501 | Guardrails on the automated data update pipeline | release | M | free — decided |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
 | GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — decided |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
@@ -905,6 +905,9 @@ the denominators, and how to tell whether they still describe the tree.
   It also keeps the bootstrap non-circular — the wheel is built by the job that generated the data, not by one that would have to regenerate it.
 - **Refused, with the reason each loses.**
   *The publish job regenerates* — self-contained and reproducible from the tag alone, which is the one real thing it has, but it publishes bytes no CI run ever saw and makes every release depend on the upstream asset still being fetchable.
+  **Refinement found 2026-08-24, recorded so the refusal is not read as stronger than it is:** the converter is byte-deterministic — a fresh conversion of 2026c's upstream GeoJSON reproduced the packaged binaries exactly — so regenerating would in practice yield the bytes CI validated.
+  What remains against it is narrower than "untested bytes": determinism was shown on one machine with one toolchain, and a release asset can be replaced upstream after the pull request was tested.
+  The decision stands, on the narrower ground.
   *A second repository for the binaries* — keeps them committed and reviewable, and re-poses this same question one level up; a data repository was already refused once on its own merits.
   *Leave the binaries committed* — this is the do-nothing option and it also drops GH-522.
   Upstream shipped 2 releases in 2024, 3 in 2025 and 4 in the first seven months of 2026; at ~61 MB a regeneration that is roughly 244 MB a year onto a 357 MiB pack, accelerating.
@@ -969,9 +972,11 @@ the denominators, and how to tell whether they still describe the tree.
 - **Signals are measured** against 2025c → 2026a → 2026b → 2026c rather than guessed, and one calibration survives as a conclusion:
   **zone changes must not block**, because a rename is a removal plus an addition and cannot be told apart from the data, so gating on it fires on a routine event.
   The observed moves are small — boundary payload +0.29 %, +0.65 %, +1.47 %; hole payload −0.07 %, +0.09 %, −0.31 %; polygon count +4, −3, +2.
-- **The design finding that shapes the diff report:** it **cannot** be built by comparing two packaged datasets.
-  The format changed three times in August 2026 and the current reader cannot open the 2026c binaries, so a report that loads "the previous packaged data" breaks on exactly the releases where review matters most.
+- **The design finding that shapes the diff report:** it **cannot** be built by comparing two *packaged* datasets.
+  The format changed three times in August 2026, so a report that loads "the previous packaged data" breaks on exactly the releases where review matters most — the binaries as committed at an earlier release are in a format the current reader cannot open.
   Commit a fixed sample of points with their answers instead — text against text, survives every format change, and doubles as the data-update changelog entry.
+  **What this does *not* mean, and the issue's table is wrong here:** the changed-answer rate is recorded there as "not computable retrospectively", and it is computable — by converting each release's upstream GeoJSON with the *current* code, so that one reader opens all of them.
+  That is how the calibration below was obtained, and it is the method to reuse rather than waiting for releases to accumulate.
 - **Preventive, not corrective:** no timezone-boundary-builder release has ever been bad.
   That lowers urgency and not value — the argument rests on the auto-merge, not on an incident.
 - **Decided 2026-08-23 by the maintainer — a tripped gate blocks the auto-merge.**
@@ -986,14 +991,31 @@ the denominators, and how to tell whether they still describe the tree.
 - **What can be built now, and what still waits.**
   Part (a) — pin the download by tag and verify a SHA-256 — needs no threshold and no judgement, and is worth taking on its own ahead of the rest.
   The committed point sample and the diff report can be built **report-only**, which is also what produces the empirical data the remaining threshold needs.
-- **Decision needed:** what changed-answer rate blocks.
-  The maintainer will set it **from empirical data, after the point sample exists** — a rate cannot be calibrated today because no bad release exists to calibrate one against, and the sample that would measure a normal release has not been committed yet.
-  So the options are not a menu to choose between: the pass that builds the sample should report the observed rate across the releases it can reach and leave the constant unset, rather than guessing one.
-  The 0.5 % on the issue is a placeholder and must not be shipped as a gate.
-  **Do not mark this entry unblocked on the strength of the trip-behaviour decision above** — the maintainer asked to review this threshold before that happens.
-- **Status:** needs a decision — the changed-answer-rate threshold only.
-  The trip behaviour and the size gate are settled, and both part (a) and the report-only diff can be taken now.
-- **Last touched:** 2026-08-23 — trip behaviour decided, the asymmetric size gate overruled, the changed-answer threshold held for empirical review.
+- **Decided 2026-08-24 by the maintainer — a 10,000-point on-land sample, blocking above a 5 % changed-answer rate.**
+  Measured, not guessed: each of 2025c, 2026a, 2026b and 2026c was converted from its upstream GeoJSON with the current code, and the same committed point sets were answered against all four.
+  The 2026c conversion came out **byte-identical to the packaged binaries**, which is what establishes that the older conversions are faithful too.
+
+  | transition | boundary payload | random (10k) | on-land (10k) | ambiguous (5k) | zones |
+  |---|---:|---:|---:|---:|---:|
+  | 2025c → 2026a | +0.29 % | 0.000 % | 0.000 % | 0.000 % | 444 → 444 |
+  | 2026a → 2026b | +0.65 % | 0.000 % | 0.000 % | 0.000 % | 444 → 444 |
+  | 2026b → 2026c | +1.47 % | 0.070 % | 0.380 % | 0.100 % | 444 → 444 |
+
+- **What the numbers establish, and it is not what the issue assumed.**
+  **Ordinary refinement changes no answers at all** — two transitions moved geometry measurably and flipped zero of 25,000 points, because added vertices do not move a border far enough to cross a sampled point.
+  The one non-zero transition is a *legitimate* change: 2026c gave Pacific/Easter land coverage where ocean zones had been.
+  So **the 0.5 % on the issue was 1.3x above a legitimate release** and would very nearly have fired on 2026c — the same "fires on a routine event, then gets clicked through" failure the zone-change calibration already refused.
+  5 % is 13x the largest legitimate change observed and far below what a truncated or mangled dataset would produce, which is what the gate is actually for.
+- **The on-land sample is the sensitive one, and the reason matters more than the ranking.**
+  On-land caught 0.380 % where area-weighted random caught 0.070 % and a border-biased sample only 0.100 %.
+  A displacement proxy — jitter each point and ask whether its answer flips — predicted the *opposite*, that border-biased sampling would be some 8x the most sensitive, and it was wrong because the real change mode is **regional coverage** (ocean becoming land) rather than uniform border jitter.
+  Area-weighted random is diluted by ocean points, whose `Etc/GMT±XX` answers this repository generates and which no upstream release can change.
+  Do not re-derive the sample design from a perturbation model; it mis-ranks the options.
+- **A property of the artifact worth keeping:** on a refinement-only release the committed answer file diffs by **zero lines**, and 2026c by 38.
+  That is a review artifact a human reads, which is most of the value here — the gate is the smaller half.
+- **Status:** open — all decisions taken, implementation not started.
+  Part (a), pinning and checksumming the download, is independent of the rest and can be taken alone.
+- **Last touched:** 2026-08-24 — the changed-answer threshold calibrated against four real releases and set; trip behaviour and the symmetric size gate settled the day before.
 
 ### GH-317 — reduce the release artifact count
 
@@ -1765,11 +1787,30 @@ premise moves; do not reverse a decision silently.
   merges only when `build` concludes `success`, and `alert_failure` already labels the pull request
   and mentions the maintainer, so a guardrail is a job in `build.yml` — no new blocking machinery,
   though it needs a branch condition so it does not run on every pull request.
-- **A threshold nobody can calibrate is left unset, not guessed.** Settled 2026-08-23 with the
-  above: the changed-answer-rate gate stays open until the committed point sample exists and has
-  produced observations. The 0.5 % on issue #501 is a placeholder and must not ship as a gate. The
-  report-only half is what generates the evidence, so building it is the way to unblock the
-  threshold rather than something that waits on it.
+- **A threshold nobody can calibrate is left unset, not guessed — but check first whether it is
+  really uncalibratable.** Recorded 2026-08-23 for the changed-answer-rate gate, on the premise
+  that it had to wait for a committed point sample to accumulate observations across future
+  releases. **Superseded 2026-08-24: the premise was wrong.** Every past release can be converted
+  from its upstream GeoJSON with the *current* code, which puts all of them in one reader's reach —
+  four releases and three transitions, measured in minutes. The 0.5 % placeholder turned out to sit
+  1.3x above a *legitimate* release and would have fired on it. The durable half: "no data exists
+  yet" is a claim to test, not a status to record, and the cost of testing it here was two
+  downloads and four one-minute conversions.
+- **Ordinary upstream refinement changes no answers.** Measured 2026-08-24 across 2025c → 2026a →
+  2026b → 2026c. Two of the three transitions moved boundary payload measurably (+0.29 %, +0.65 %)
+  and flipped **zero** of 25,000 sampled points; only 2026c changed anything (0.380 % on-land), and
+  that was Pacific/Easter gaining land coverage from ocean — upstream working correctly, not a
+  fault. Any gate on answer changes is therefore calibrating against *legitimate regional changes*,
+  not against refinement noise, and the two are orders of magnitude apart.
+- **Do not derive a sample design from a perturbation model — measure it against real releases.**
+  Settled 2026-08-24 while calibrating GH-501. Displacing each point by δ and asking whether its
+  answer flips looks like a sound proxy for a border moving δ, and it predicted a border-biased
+  sample would be ~8x the most sensitive of three designs. Against real release-to-release data it
+  came out the *least* sensitive (0.100 % against on-land's 0.380 %), because the real change mode
+  is regional coverage — ocean becoming land — rather than uniform border jitter. The proxy modelled
+  the wrong failure. Area-weighted random loses for a second, independent reason: most of its points
+  are ocean, and the `Etc/GMT±XX` answers there are generated by this repository, so no upstream
+  release can change them.
 - **A branch-name prefix is not an authorization check.** Settled in #519. The `workflow_run` jobs
   that merge and tag a data update select their work with
   `startsWith(head_branch, 'data-update-')`, and any fork can open a pull request from a branch
