@@ -300,6 +300,20 @@ the denominators, and how to tell whether they still describe the tree.
     estimators disagreeing in both, which is what neutral looks like. On the batch path, 240 rounds
     a side: **-3.8 % (clang) / -6.3 % (numba)** on the ambiguous stratum, both estimators agreeing.
     The ladder's per-query figures are unchanged by it.
+  - **2026-08-24, reading a batch's arrays once per stage rather than once per point.**
+    `int(entries[i])` and the two `float(...[i])` in the ambiguous resolvers are numpy
+    scalar extractions: **242 ns per point** for the three against **103 ns** for the same
+    values taken through `tolist()` up front. That is loop overhead, paid whether or not
+    the point's cell was already prepared. Measured over 2,000 ambiguous fixture points,
+    three paired rounds, `in_memory=False`, min / median ns per point:
+    `TimezoneFinderL` **878 -> 755 (-14.1 %) / 936 -> 809 (-13.5 %)** — it also stopped
+    using a dict, its answer being a pure function of the entry — and `TimezoneFinder`
+    **10,021 -> 9,937 (-0.8 %) / 10,599 -> 10,554 (-0.4 %)**, where ~10 µs of geometry per
+    point is what makes the same nanoseconds invisible. Both estimators agree in sign in
+    both classes. **The general rule, and the reason this is recorded rather than just
+    fixed:** a numpy scalar extraction inside a Python loop costs more than most of the
+    loop bodies in this repository, so hoist the whole column out of the loop wherever a
+    batch is walked point by point.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 

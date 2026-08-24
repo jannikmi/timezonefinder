@@ -64,6 +64,17 @@ same commit execute the same workload.
 
 FINDINGS (2026-08-23, `590e21b`, Apple arm64, Python 3.14.2, data 2026c, fixture set v3)
 
+**One block below has since been superseded and is not re-measured here.** The batch
+lookups made the candidate loop shared code, so an ambiguous ``timezone_at`` executes one
+more Python method call than this run did: read the ``candidate loop`` block and the
+``real`` row of the ``ambiguous`` and ``on_land`` columns as order 1% light. The
+correction is not applied in place because it is below this machine's own 3-9% jitter, so
+re-running would replace a self-consistent set of figures with a noisier one taken on a
+different day - what a change of that size is worth is a sentence, not a re-measurement.
+``potential-improvements.md`` (*The measured baseline*) carries it with the paired runs
+behind it and is the anchor to reconcile against; re-take this block wholesale when a
+change moves a stage by more than the jitter, as the resolution move below did.
+
 Re-measured wholesale after the H3 shortcut index moved from resolution 3 to 4. That
 changes how many queries reach the geometry at all *and* re-labels two of the strata -
 ``unique`` and ``ambiguous`` are a classification **by** this index, so they are not the
