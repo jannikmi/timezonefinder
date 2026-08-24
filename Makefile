@@ -27,6 +27,7 @@
 #   memory-ci  - the exact memory measurement the benchmark CI workflow records
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
 #   reports    - benchmarks + memory + render docs/benchmark_results_*.rst + the data report
+#   tzfpy-agreement - how often this package and tzfpy answer differently, and why
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -177,6 +178,16 @@ reports: benchmarks latency memory
 		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
 		--memory-json=$(MEMORY_JSON)
 	uv run python -m scripts.reporting
+
+# Correctness, not speed, so it is not part of `benchmarks` and writes no report
+# page: the rate depends on which `tzfpy` release is installed, and a committed
+# figure that moves when someone else ships is the same trap that keeps the
+# comparison benchmarks off the trend chart (benchmarks/test_comparison.py).
+# Run it, read it, and quote it with both versions attached.
+# --group compare rather than $(BENCHMARK_ENV): nothing here is timed, so the
+# acceleration path does not matter and this checkout's environment will do.
+tzfpy-agreement:
+	uv run --group compare python -m scripts.measure_tzfpy_agreement
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them

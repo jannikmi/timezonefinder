@@ -110,9 +110,29 @@ difference is in what they do with that dataset's geometry.
    startup is not a reason to choose either - which is why the decision table below no longer
    lists it.
 
-   Two things that harness deliberately does not settle: ``tzfpy``'s memory footprint, which is not
-   measured here at all, so the figures linked above describe this package only; and accuracy,
-   because counting the points on which the two disagree says nothing about which one is right.
+   What that harness deliberately does not settle is ``tzfpy``'s memory footprint, which is not
+   measured here at all, so the figures linked above describe this package only.
+
+.. note::
+
+   **What the simplification costs is measured too, separately.** A bare disagreement count would
+   settle nothing - it says the two differ, not which one is right - so
+   ``scripts/measure_tzfpy_agreement.py`` (``make tzfpy-agreement``) removes the two things that
+   made such a count meaningless. It refuses to report unless both packages carry the *same*
+   timezone-boundary-builder release, so a disagreement cannot be a border that moved between two
+   datasets; and it asks whether this package's answer is among the zones ``tzfpy`` holds over the
+   point, rather than whether the two name the same one, because the dataset ships genuinely
+   overlapping zones - ``Asia/Urumqi`` inside ``Asia/Shanghai`` is the large one - which each
+   package resolves by its own rule and which account for almost every raw difference. What is left
+   is attributable to the geometry, because the two are then compiling the same source polygons.
+
+   Measured on boundary release 2026c on both sides (``tzfpy`` 1.3.3, 2026-08-24): **no
+   disagreement at all in 25,000 uniformly sampled, on-land and single-candidate points**, and
+   **3 in 5,000 points drawn from H3 cells that hold more than one candidate zone** - every one of
+   them a coastline, where this package answers with the land zone and ``tzfpy`` with the ocean
+   zone around it. That last class is a proxy for "near a border" and a loose one, since a cell is
+   tens of kilometres across, so it bounds the near-border rate from below. Re-run it rather than
+   trusting the figures: they describe one release of a package that ships on its own schedule.
 
 
 When to choose which package
