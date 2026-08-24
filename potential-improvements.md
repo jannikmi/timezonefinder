@@ -1013,6 +1013,16 @@ the denominators, and how to tell whether they still describe the tree.
   Do not re-derive the sample design from a perturbation model; it mis-ranks the options.
 - **A property of the artifact worth keeping:** on a refinement-only release the committed answer file diffs by **zero lines**, and 2026c by 38.
   That is a review artifact a human reads, which is most of the value here — the gate is the smaller half.
+- **The guard never downloads an old release, and the sample must be frozen — not the benchmark fixtures.**
+  The comparison is against the *committed answers*, not against a previous dataset: the update pull request answers the same points with the data it just built, diffs against the file in git, and rewrites it.
+  Downloading past releases was one-off calibration for the threshold above and is not the ongoing mechanism.
+  **Do not reuse `tests/fixtures/benchmarks/on_land_points.npy` for it**, which is the obvious shortcut and is wrong twice over.
+  `generate_on_land_points` is a *rejection loop* against the currently installed data, so which points survive is itself data-dependent and the set shifts between releases — the diff would compare answers for different points.
+  It also consumes a variable number of draws from the shared `rng`, so a shift there moves the stream for every fixture generated after it, which is the invalidation its own module docstring warns about.
+  And `update_data.sh` regenerates every benchmark fixture in the same pull request as the data, by design, since they are pinned to `DATA_VERSION`; a guard baseline needs the opposite property.
+  `random_points.npy` *is* stable — drawn first, fixed count, no dependence on the finder — but it is the least sensitive sample of the three (0.070 % against on-land's 0.380 %), and that stability rests on it staying first in the shared-`rng` order.
+  **Freeze an on-land sample once, in its own fixture that `update_data.sh` does not touch**, reusing `generate_on_land_points` to build it rather than duplicating the sampler.
+  Being "on-land as of the release that generated it" is not a bias to fix — it is what a frozen baseline means.
 - **Status:** open — all decisions taken, implementation not started.
   Part (a), pinning and checksumming the download, is independent of the rest and can be taken alone.
 - **Last touched:** 2026-08-24 — the changed-answer threshold calibrated against four real releases and set; trip behaviour and the symmetric size gate settled the day before.
