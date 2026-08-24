@@ -278,17 +278,28 @@ the denominators, and how to tell whether they still describe the tree.
     four public methods and moves the internal callers onto private accessors with identical
     bodies, so the query path executes the same number of calls over the same statements. Nothing
     in the `zone name` block or the ladder above it changed.
-  - **2026-08-23, the batch lookups: not inert on the ambiguous stratum, and measured.** The
-    candidate loop moved into `_zone_id_in_ambiguous_cell`, which `timezone_at` now calls, so an
-    ambiguous query executes exactly one more Python method call. Paired and order-alternated over
-    244 rounds a side: **+0.51 % (clang), +0.79 % min / +1.03 % median (numba)**, both estimators
-    agreeing on the direction — so it is real rather than noise, at ~57 ns (clang) of an ~11.1 µs
-    query. Multiplied through the workload conversion below that is **~+0.3 %** of a mixed
-    wall clock. Kept deliberately: the alternative was a second copy of the stop-index and
-    untested-last-zone logic, which is the drift this file exists to prevent. The unique stratum,
-    which is ~89 % of a random workload, executes not one changed statement. Everything above the
-    ladder's `zone name` block stands; the ambiguous `candidate loop` block is ~0.5 % heavier than
-    the anchor says.
+  - **2026-08-23/24, the batch lookups: not inert on the ambiguous stratum, and measured.** The
+    candidate loop is now shared with the batch path, so an ambiguous `timezone_at` executes
+    **exactly one more Python method call** than the anchor. That count is the durable fact; the
+    time it costs is at the edge of what this machine resolves. A first paired run read
+    +0.51 % (clang) with both estimators agreeing; a three-way interleaved re-run a day later put
+    the same comparison at +2.12 % min / +0.70 % median, with the estimators straddling. **Read it
+    as order 1 % of an ambiguous query, ~0.6 % of a mixed wall clock, and do not quote a second
+    decimal.** Kept deliberately: the alternative was a second copy of the stop-index and
+    untested-last-zone logic, which is the drift this file exists to prevent, and
+    `test_batch_and_scalar_agree_over_every_committed_point` is what makes the remaining three-line
+    duplication safe. The unique stratum, ~89 % of a random workload, executes not one changed
+    statement. Everything above the ladder's `zone name` block stands; the ambiguous
+    `candidate loop` block is ~1 % heavier than the anchor says.
+  - **2026-08-24, per-cell preparation shared across a batch: inert for the scalar path, and a
+    real batch win.** Splitting a cell's preparation (`candidates_of`, `zone_ids_of`,
+    `stop_index_of` — 898 ns against 10,228 ns for a whole ambiguous point, so an **8.8 % ceiling**)
+    out of the loop that works it, and memoising it by shortcut entry inside a batch. Measured
+    paired against the commit before it, 244 rounds a side: scalar `timezone_at`
+    **-0.41 % min / -0.08 % median, 111/244 (clang)** and **+0.33 % / -0.89 %, 130/244 (numba)** —
+    estimators disagreeing in both, which is what neutral looks like. On the batch path, 240 rounds
+    a side: **-3.8 % (clang) / -6.3 % (numba)** on the ambiguous stratum, both estimators agreeing.
+    The ladder's per-query figures are unchanged by it.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
   well a figure travels:
 
