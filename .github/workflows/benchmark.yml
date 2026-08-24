@@ -14,15 +14,37 @@ name: benchmark
 #                     separate, privileged benchmark-comment.yml, which is
 #                     triggered by workflow_run and runs the *base* repo's
 #                     workflow definition. See CONTRIBUTING.md.
+#                     Gated by `paths`: the job is a double checkout + double
+#                     `uv sync` + double C-extension build + a 2-pass timing
+#                     sandwich, which is wasted on a push that cannot move the
+#                     tracked numbers (docs, CI config unrelated to this file,
+#                     changelog-only). Listed paths are everything that can:
+#                     the package itself, the data distribution, the benchmark
+#                     suite, the measurement/comparison scripts this job
+#                     shells out to, the build inputs (`setup.py`,
+#                     `pyproject.toml`, `uv.lock`), `Makefile` (owns the
+#                     `benchmarks-ci`/`memory-ci` targets), and this file.
 # - workflow_dispatch: repeat the identical measurement N times to characterise
 #                     the machine-to-machine spread of the runner pool, from
 #                     which the trend chart's alert threshold is derived
-#                     (never guessed).
+#                     (never guessed). Not path-filtered: an explicit dispatch
+#                     is already an opt-in, and it runs the noise job below,
+#                     not the pull_request comparison path.
 on:
   push:
     branches:
       - master
   pull_request:
+    paths:
+      - "timezonefinder/**"
+      - "packages/timezonefinder-data/**"
+      - "benchmarks/**"
+      - "scripts/**"
+      - "setup.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Makefile"
+      - ".github/workflows/benchmark.yml"
   workflow_dispatch:
     inputs:
       repetitions:
