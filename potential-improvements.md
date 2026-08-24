@@ -99,11 +99,18 @@ renumbers and nothing else moves. Entries that were *rejected*, ruled *out of sc
 stay: they encode a dead end, and re-discovering one costs a whole pass. So do *Recorded decisions*
 and *Deliberately checked and found sound*, which are never deleted.
 
-**Closing an entry moves its row to the tail**, below everything still actionable — the one case
-where a row moves without being deleted. Changing only the eligibility column leaves a dead item
-holding a live rank, and since the list is walked top-down that costs every later pass the reading
-it takes to discover the row is closed. The tail runs *rejected / withdrawn*, then *blocked*, then
-*conditional / parked*: the further down, the less any pass can do about it.
+**Closing an entry moves its row out of the ranking and into *Closed*** — the one case where a row
+moves without being deleted. Changing only the eligibility column leaves a dead item holding a live
+rank, and since the list is walked top-down that costs every later pass the reading it takes to
+discover there is nothing to take. The line is narrow: *rejected*, *withdrawn* and *out of scope*
+move, because no pass will ever take them as they stand. **Blocked is not closed** — a blocked item
+is live work waiting on a blocker, and it stays in the ranking below that blocker; so do *parked*
+and *conditional*, which can become live without the entry changing. Rejections accumulate forever
+where blockers resolve, which is the whole reason they are the ones that leave.
+
+Both tables sit under this heading on purpose: `tests/test_improvement_ledger.py` reads the section
+rather than a single table, so every entry still has exactly one row and the two halves still cannot
+drift.
 
 An entry left in after its work shipped is the failure this file cannot detect on its own: it reads
 exactly like an open one, and the next pass pays full price to rediscover that there is nothing to
@@ -142,7 +149,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
 | PYPI-1 | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | free — maintainer action |
-| GH-317 | Reduce the release artifact count | packaging | S | withdrawn |
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | BIG-3 | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
@@ -156,13 +162,24 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | TOOL-8 | Agent-facing prose is hard-wrapped, so every edit reflows the paragraph | tooling | S each | free — piecewise, never wholesale |
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | DEAD-6 | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
-| GH-301 | Sort shortcut polygons by overlap area | performance | M | rejected |
-| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | rejected |
 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
 | GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-500 |
 | GH-505 | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
 | GH-334 | Official mapping for the reduced set | data | S | parked upstream |
 | GH-318 | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
+
+### Closed
+
+Kept so the dead end is not re-proposed on its merits, and out of the ranking above because no pass
+will take them: there is no work to order. No `Size` column, for the same reason — it prices work,
+and there is none. The one line here is a handle; the reasoning is in the entry, because a row
+cannot refuse a re-proposal and only the argument can.
+
+| Id | What | Area | Why it is closed |
+|---|---|---|---|
+| GH-301 | Sort shortcut polygons by overlap area | performance | rejected — 2.90 % headroom, bounded by enumeration over the packaged index |
+| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | rejected — measured inside the query, below the noise floor |
+| GH-317 | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
 
 ---
 
