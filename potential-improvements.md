@@ -1174,7 +1174,7 @@ the denominators, and how to tell whether they still describe the tree.
 ### GH-428 — data parsing UX, and the CLI shape it shares with GH-500
 
 - **Tracks:** issue #428, user-driven from #363; the decision and its migration notes are on the issue.
-- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for `query`: `query`, `rows`, `validate-data`, and possibly a fourth, below.
+- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for `query`: `query`, `rows` and `validate-data`.
   Chosen over more flags on the flat command and over a separate console script.
   It settles the shape for **both** this and GH-500.
 - **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin` and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
