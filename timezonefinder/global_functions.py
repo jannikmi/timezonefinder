@@ -115,13 +115,13 @@ def timezone_ids_at(
     Equivalent to :meth:`TimezoneFinder.timezone_ids_at`, which documents the arguments,
     the ``on_invalid`` policies and every error raised.
 
-    :return: one ``int32`` timezone id per input coordinate, or ``NO_ZONE_ID`` (``-1``)
+    :return: one ``int16`` timezone id per input coordinate, or ``NO_ZONE_ID`` (``-1``)
         where the scalar lookup would answer ``None``
 
     Example:
         >>> ids = timezone_ids_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
         >>> ids.dtype
-        dtype('int32')
+        dtype('int16')
     """
     return _get_tf_instance().timezone_ids_at(
         lngs=lngs, lats=lats, on_invalid=on_invalid

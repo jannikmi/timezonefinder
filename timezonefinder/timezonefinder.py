@@ -41,6 +41,7 @@ from timezonefinder.configs import (
     IdArrayLike,
     IntegerLike,
     OnInvalid,
+    ZONE_ID_RESULT_DTYPE,
 )
 
 from timezonefinder.shortcut_index import (
@@ -80,12 +81,6 @@ ON_INVALID_POLICIES: Final[tuple[str, ...]] = get_args(OnInvalid)
 #: have to be exact on another machine: near it the two are within a few percent of each
 #: other by definition, which is what makes a single constant safe here.
 NAMES_GATHER_MIN_BATCH: Final[int] = 128
-
-#: dtype of a batch answer. Signed, because :data:`~timezonefinder.configs.NO_ZONE_ID` is
-#: negative; 32-bit rather than 16-bit because the ambiguous fallback reads ids out of
-#: ``zone_ids``, whose stored dtype is unsigned 16-bit - ``int16`` could not hold its
-#: upper half, and a dtype that truncates silently is worse than four bytes per answer.
-ZONE_ID_RESULT_DTYPE: Final[np.dtype] = np.dtype(np.int32)
 
 
 def _negative_id_error(kind: str, value: object) -> ValueError:
@@ -616,7 +611,7 @@ class AbstractTimezoneFinder(ABC):
             includes ``NaN`` and infinity). ``"raise"`` (the default) matches the scalar
             methods; ``"skip"`` answers those points with
             :data:`~timezonefinder.configs.NO_ZONE_ID` and the rest normally.
-        :return: one ``int32`` per input coordinate - a timezone id, or
+        :return: one ``int16`` per input coordinate - a timezone id, or
             :data:`~timezonefinder.configs.NO_ZONE_ID` (``-1``) where the scalar method
             would answer ``None``: no zone covers the point, or it was skipped.
         :raises TypeError: if either axis holds values that are not numbers.

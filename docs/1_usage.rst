@@ -164,7 +164,7 @@ The validation, the coordinate scaling and the shortcut lookup then run once ove
     lngs = [13.358, 2.3522]
     lats = [52.5061, 48.8566]
 
-    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)  # numpy int32 array
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)  # numpy int16 array
     names = tf.timezone_names_at(lngs=lngs, lats=lats)  # ['Europe/Berlin', 'Europe/Paris']
 
 ``timezone_ids_at()`` is the primary form and ``timezone_names_at()`` the convenience on top of it.

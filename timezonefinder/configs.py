@@ -37,6 +37,7 @@ __all__ = [
     "DATA_FORMAT_VERSION",
     "DATA_FORMAT_LAYOUT_VERSIONS",
     "NO_ZONE_ID",
+    "ZONE_ID_RESULT_DTYPE",
     # Type aliases
     "CoordArrayLike",
     "IdArrayLike",
@@ -67,6 +68,16 @@ OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
 # with, and because the public id-taking methods now *reject* negative ids - so a
 # sentinel fed back in raises instead of silently selecting the last zone from the end.
 NO_ZONE_ID: Final[int] = -1
+
+# dtype of a batch of zone ids. Signed, because NO_ZONE_ID is negative, and 16-bit
+# because that is the narrowest width the dataset fits: a zone id is an index into the
+# zone names, of which the packaged data has ~450 against this width's 32,767, and the
+# shortcut table already stores those same ids as int16. The bound is not left to hold
+# by luck - ``scripts.data_integrity.validate_shortcut_index`` refuses a data directory
+# whose zone count outgrows it, at build time and over the committed data, which is
+# where a width chosen by fit has to be checked. A wider dtype would double the answer
+# array for headroom no dataset can reach.
+ZONE_ID_RESULT_DTYPE: Final[np.dtype] = np.dtype(np.int16)
 
 # PATHS
 PACKAGE_DIR = Path(__file__).parent

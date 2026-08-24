@@ -31,7 +31,7 @@ from timezonefinder.flatbuf.io.polygons import (
     read_polygon_array_at,
     read_polygon_array_from_binary,
 )
-from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
 from timezonefinder.np_binary_helpers import (
     get_poly_ref_path,
     get_zone_ids_path,
@@ -424,6 +424,23 @@ def validate_shortcut_index(data_dir: Path) -> None:
                 f"one costs size for nothing and means the writer and this check no "
                 f"longer agree on how the width is chosen."
             )
+
+    # Both widths that carry a zone id are int16 and both are chosen by fit: the table
+    # stores one per unique cell, and a batch lookup answers with an array of them. A
+    # zone count past that ceiling would wrap in either, so it is refused here rather
+    # than truncated there - and here rather than at lookup time, because a finder must
+    # not re-derive what the build already settled.
+    zone_id_ceiling = int(np.iinfo(ZONE_ID_RESULT_DTYPE).max)
+    if nr_of_zones - 1 > zone_id_ceiling:
+        raise DataIntegrityError(
+            f"{data_dir} names {nr_of_zones:,} zones, so the largest zone id is "
+            f"{nr_of_zones - 1:,}, but the widest a zone id may be is "
+            f"{ZONE_ID_RESULT_DTYPE.name} and it holds at most {zone_id_ceiling:,}. "
+            "Widen ZONE_ID_RESULT_DTYPE (timezonefinder/configs.py) and TABLE_DTYPE "
+            "(timezonefinder/shortcut_index.py) to int32 together. TABLE_DTYPE changes "
+            "the binary layout, so bump SHORTCUT_LAYOUT_VERSION and DATA_FORMAT_VERSION "
+            "with it and publish the data distribution before the code that reads it."
+        )
 
     table = index.table
     zone_id_slots = table >= 0

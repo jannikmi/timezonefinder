@@ -31,7 +31,11 @@ from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     load_benchmark_points,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    SHORTCUT_H3_RES,
+    ZONE_ID_RESULT_DTYPE,
+)
 from timezonefinder.shortcut_index import (
     ABSENT,
     COMPACT_TABLE_SIZE,
@@ -336,6 +340,25 @@ def test_an_offset_column_too_narrow_for_its_payload_is_caught(tmp_path):
 
     with pytest.raises(DataIntegrityError, match="wrapped"):
         validate_shortcut_index(_data_dir_with_shortcut_file(tmp_path, bytes(source)))
+
+
+@pytest.mark.unit
+def test_a_zone_count_past_the_id_width_is_caught(tmp_path):
+    """Two widths carry a zone id - the shortcut table and a batch lookup's answer
+    array - and both are ``int16`` because that is what the dataset fits, not because
+    of headroom. Nothing at lookup time re-checks the fit, so a dataset that outgrew it
+    has to be refused where the data is produced; past the ceiling the id would wrap and
+    a query would answer with a different zone's name."""
+    data_dir = _data_dir_with_shortcut_file(
+        tmp_path, get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes()
+    )
+    too_many = int(np.iinfo(ZONE_ID_RESULT_DTYPE).max) + 2
+    (data_dir / "timezone_names.txt").write_text(
+        "\n".join(f"Zone/{i}" for i in range(too_many)), encoding="utf-8"
+    )
+
+    with pytest.raises(DataIntegrityError, match="the widest a zone id may be"):
+        validate_shortcut_index(data_dir)
 
 
 @pytest.mark.unit

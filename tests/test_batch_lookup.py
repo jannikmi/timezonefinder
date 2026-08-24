@@ -28,12 +28,9 @@ from timezonefinder import (
     timezone_ids_at,
     timezone_names_at,
 )
-from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
 from timezonefinder.shortcut_index import ABSENT, slot_of
-from timezonefinder.timezonefinder import (
-    NAMES_GATHER_MIN_BATCH,
-    ZONE_ID_RESULT_DTYPE,
-)
+from timezonefinder.timezonefinder import NAMES_GATHER_MIN_BATCH
 
 # enough points to reach every branch without turning a unit test into a sweep; the
 # exhaustive comparison over all four fixtures is the ``slow`` test at the bottom
@@ -97,8 +94,18 @@ def test_the_documented_test_locations_come_back_unchanged(finder):
 def test_the_answer_dtype_is_the_declared_one(finder):
     zone_ids = finder.timezone_ids_at(lngs=[13.358], lats=[52.5061])
     assert zone_ids.dtype == ZONE_ID_RESULT_DTYPE
-    # int16 would truncate the upper half of the stored uint16 zone ids
-    assert zone_ids.dtype.itemsize >= 4
+
+
+@pytest.mark.unit
+def test_the_answer_dtype_holds_every_id_and_the_sentinel(finder):
+    """The width is chosen by fit, so what has to hold is that it fits: signed for the
+    sentinel, and wide enough for the largest id this dataset can produce.
+    ``scripts.data_integrity.validate_shortcut_index`` refuses a data directory that
+    outgrows it, at build time and over the committed data, so this is the runtime half
+    of the same statement rather than a second guard on the query path."""
+    info = np.iinfo(ZONE_ID_RESULT_DTYPE)
+    assert info.min <= NO_ZONE_ID
+    assert finder.nr_of_zones - 1 <= info.max
 
 
 @pytest.mark.unit
