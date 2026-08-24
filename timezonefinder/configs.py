@@ -14,7 +14,7 @@ Coordinate System:
 
 import os
 from pathlib import Path
-from typing import Any, Final, TypeAlias
+from typing import Any, Final, Literal, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
@@ -40,6 +40,7 @@ __all__ = [
     # Type aliases
     "CoordArrayLike",
     "IdArrayLike",
+    "OnInvalid",
     "IntegerLike",
     "ShortcutMapping",
     "CoordPairs",
@@ -168,6 +169,13 @@ CoordArrayLike: TypeAlias = npt.ArrayLike
 # different things, and an annotation reading "coordinates" on an id argument would be
 # taken at its word.
 IdArrayLike: TypeAlias = npt.ArrayLike
+
+# What a batch lookup does with a coordinate no lookup can answer. A ``Literal`` rather
+# than ``str`` so that a mistyped policy is a type error at the call site instead of a
+# ``ValueError`` after the caller has shipped - mypy runs in this repository's
+# pre-commit hook, so the check costs nothing. The runtime tuple the error message
+# lists is derived from this alias rather than written out again.
+OnInvalid: TypeAlias = Literal["raise", "skip"]
 
 # hexagon id to list of polygon ids
 ShortcutMapping: TypeAlias = dict[int, np.ndarray]

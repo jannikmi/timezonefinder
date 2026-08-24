@@ -37,7 +37,7 @@ import threading
 import numpy as np
 
 from timezonefinder.timezonefinder import TimezoneFinder
-from timezonefinder.configs import CoordArrayLike, CoordPairs, CoordLists
+from timezonefinder.configs import CoordArrayLike, CoordPairs, CoordLists, OnInvalid
 
 __all__ = [
     "timezone_at",
@@ -107,7 +107,7 @@ def timezone_ids_at(
     *,
     lngs: CoordArrayLike,
     lats: CoordArrayLike,
-    on_invalid: str = "raise",
+    on_invalid: OnInvalid = "raise",
 ) -> np.ndarray:
     """
     Look up many coordinates at once using the global singleton, answering with ids.
@@ -132,7 +132,7 @@ def timezone_names_at(
     *,
     lngs: CoordArrayLike,
     lats: CoordArrayLike,
-    on_invalid: str = "raise",
+    on_invalid: OnInvalid = "raise",
 ) -> list[str | None]:
     """
     Look up many coordinates at once using the global singleton, answering with names.

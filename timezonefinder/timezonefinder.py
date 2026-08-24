@@ -16,7 +16,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Final, Self
+from typing import Final, Self, get_args
 
 import numpy as np
 from h3.api import numpy_int as h3
@@ -40,6 +40,7 @@ from timezonefinder.configs import (
     CoordPairs,
     IdArrayLike,
     IntegerLike,
+    OnInvalid,
 )
 
 from timezonefinder.shortcut_index import (
@@ -54,8 +55,11 @@ from timezonefinder.zone_names import read_zone_names
 #: What ``on_invalid`` accepts on the batch lookups. ``"raise"`` is the default because
 #: it is what the scalar methods do, and a batch call is not the place to quietly change
 #: the contract; ``"skip"`` exists because raising on element 999,999 and discarding the
-#: 999,998 answers already computed is hostile.
-ON_INVALID_POLICIES: Final[tuple[str, ...]] = ("raise", "skip")
+#: 999,998 answers already computed is hostile. Derived from
+#: :data:`~timezonefinder.configs.OnInvalid` rather than written out again, so the two
+#: cannot drift; that alias is also what lets a type checker reject a mistyped policy at
+#: the call site instead of leaving it to raise at runtime.
+ON_INVALID_POLICIES: Final[tuple[str, ...]] = get_args(OnInvalid)
 
 #: Batch size from which converting zone ids to names through a numpy gather beats a
 #: Python loop. Measured, not guessed - min ns per id over uniformly random fixture
@@ -591,7 +595,7 @@ class AbstractTimezoneFinder(ABC):
         *,
         lngs: CoordArrayLike,
         lats: CoordArrayLike,
-        on_invalid: str = "raise",
+        on_invalid: OnInvalid = "raise",
     ) -> np.ndarray:
         """Look up many coordinates at once, answering with timezone **ids**.
 
@@ -661,7 +665,7 @@ class AbstractTimezoneFinder(ABC):
         *,
         lngs: CoordArrayLike,
         lats: CoordArrayLike,
-        on_invalid: str = "raise",
+        on_invalid: OnInvalid = "raise",
     ) -> list[str | None]:
         """Look up many coordinates at once, answering with timezone **names**.
 
