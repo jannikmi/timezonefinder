@@ -111,8 +111,22 @@ def _coordinate_arrays(
     """
     arrays = []
     for name, values in (("lngs", lngs), ("lats", lats)):
+        raw = np.asarray(values)
+        # ``None`` is the one unconvertible value numpy does not refuse: an explicit
+        # float cast turns it into NaN, which every later stage then reads as an
+        # out-of-range coordinate - so under ``on_invalid="skip"`` a null in the
+        # caller's data would come back as NO_ZONE_ID, indistinguishable from a point
+        # no zone covers. Reject it here, as the scalar methods' ``float()`` does.
+        # Only an object array can hold one, which the float64 fast path never is.
+        if raw.dtype == object and any(v is None for v in raw.reshape(-1).tolist()):
+            raise TypeError(
+                f"{name} must hold numbers, but holds None. A missing coordinate has "
+                "to be dropped or replaced by the caller: read as a number it would "
+                f"become NaN and be answered with {NO_ZONE_ID}, which is also what a "
+                "point no timezone covers is answered with."
+            )
         try:
-            array = np.asarray(values, dtype=np.float64)
+            array = np.asarray(raw, dtype=np.float64)
         except (TypeError, ValueError) as e:
             raise TypeError(
                 f"{name} must hold numbers convertible to float: {e}"
@@ -447,6 +461,11 @@ class AbstractTimezoneFinder(ABC):
             ['Europe/Berlin', 'Europe/Paris']
         """
         ids = np.asarray(zone_ids)
+        # the shape is checked before the size, so that a wrongly shaped input is
+        # rejected on the empty run too - otherwise an (N, 2) array is accepted while it
+        # happens to be empty and only raises once real data arrives
+        if ids.ndim != 1:
+            raise ValueError(f"zone_ids must be one-dimensional, got shape {ids.shape}")
         if ids.size == 0:
             # an empty list arrives as float64, which is not an error to convert
             return []
@@ -455,8 +474,6 @@ class AbstractTimezoneFinder(ABC):
                 f"zone ids must be integers, got dtype {ids.dtype}. "
                 f"An id is an index into the {self.nr_of_zones} loaded timezone names."
             )
-        if ids.ndim != 1:
-            raise ValueError(f"zone_ids must be one-dimensional, got shape {ids.shape}")
         # one pass for both bounds: below the sentinel, or past the last zone. The upper
         # half is not redundant with numpy's own IndexError - the lookup array carries one
         # extra slot for the sentinel, so ``nr_of_zones`` itself would quietly read it.

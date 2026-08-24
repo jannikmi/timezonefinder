@@ -155,6 +155,30 @@ def test_non_numeric_input_raises_type_error(finder):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("on_invalid", ["raise", "skip"])
+def test_a_missing_coordinate_is_rejected_rather_than_read_as_nan(finder, on_invalid):
+    """``None`` is the one unconvertible value numpy turns into a number: an explicit
+    float cast makes it NaN. Read that far it becomes an out-of-range coordinate, so
+    under ``skip`` a null in the caller's data would come back as ``NO_ZONE_ID`` -
+    indistinguishable from a point no timezone covers, and answered rather than
+    reported. The scalar methods raise ``TypeError`` for it, and so must a batch."""
+    with pytest.raises(TypeError, match="holds None"):
+        finder.timezone_ids_at(
+            lngs=[13.358, None], lats=[52.5061, 48.8566], on_invalid=on_invalid
+        )
+
+
+@pytest.mark.unit
+def test_a_genuine_nan_is_still_a_coordinate_the_policy_governs(finder):
+    """The rejection above must not swallow a NaN the caller passed on purpose - a
+    float column with missing values is the ordinary case ``on_invalid`` exists for."""
+    zone_ids = finder.timezone_ids_at(
+        lngs=[13.358, float("nan")], lats=[52.5061, 0.0], on_invalid="skip"
+    )
+    assert zone_ids[1] == NO_ZONE_ID
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "lng, lat",
     [
@@ -343,6 +367,14 @@ def test_non_integer_ids_are_rejected(finder):
 def test_a_two_dimensional_id_array_is_rejected(finder):
     with pytest.raises(ValueError, match="one-dimensional"):
         finder.zone_names_from_ids(np.zeros((2, 2), dtype=np.int32))
+
+
+@pytest.mark.unit
+def test_an_empty_id_array_of_the_wrong_shape_is_rejected_too(finder):
+    """The shape is a property of the caller's pipeline, not of this batch: accepting
+    it while it happens to be empty defers the error to the first run with data in it."""
+    with pytest.raises(ValueError, match="one-dimensional"):
+        finder.zone_names_from_ids(np.zeros((0, 2), dtype=np.int32))
 
 
 @pytest.mark.unit
