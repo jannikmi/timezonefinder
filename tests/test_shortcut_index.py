@@ -453,6 +453,28 @@ def test_the_packaged_file_carries_the_markers_its_own_writer_stamps():
 
 
 @pytest.mark.unit
+def test_entries_of_answers_what_entry_of_answers_for_every_cell(tf):
+    """The batch sibling has to be the same lookup, not merely a lookup that agrees on
+    the fixtures. It reaches the table through ``slots_of`` rather than ``slot_of`` and
+    indexes with a ``uint64`` array rather than a scalar, so a divergence between the
+    two - a shift applied to the wrong width, an index dtype that truncated - would
+    surface only as a wrong timezone several layers away from its cause.
+
+    Every cell at this resolution, so the padding and the uncovered cells are in it too.
+    """
+    cells = all_cells_at_shortcut_res().astype(np.uint64)
+    batch = tf.shortcuts.entries_of(cells)
+
+    assert batch.dtype == tf.shortcuts.table.dtype
+    expected = np.fromiter(
+        (tf.shortcuts.entry_of(cell) for cell in cells.tolist()),
+        dtype=batch.dtype,
+        count=cells.shape[0],
+    )
+    assert np.array_equal(batch, expected)
+
+
+@pytest.mark.unit
 def test_the_query_reads_the_stored_stop_index_and_it_agrees_with_computing_it(tf):
     """``timezone_at`` reads ``last_change`` rather than calling ``get_last_change_idx``.
 

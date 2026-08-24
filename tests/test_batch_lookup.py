@@ -257,10 +257,6 @@ def test_a_cell_no_zone_covers_answers_the_same_as_the_scalar_lookup():
     point of the test is that both paths agree on what an uncovered cell means."""
     lng, lat = 13.358, 52.5061
     with TimezoneFinder(in_memory=True) as tf:
-        from h3.api import numpy_int as h3
-
-        from timezonefinder.configs import SHORTCUT_H3_RES
-
         slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
         assert tf.shortcuts.table[slot] != ABSENT, "the cell is covered to begin with"
         tf.shortcuts.table[slot] = ABSENT
