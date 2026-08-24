@@ -51,7 +51,9 @@ Anything a pass learns that a later pass needs lands there before the pass ends 
 **Reading it.** Entries are evidence, not gospel: the code has moved since they were written.
 
 - Re-verify an entry against the current code before spending time on it, and re-locate it by content, not by a recorded line number.
-- If it no longer describes reality: **already done** ⇒ delete it, row and all, and say so in the pull request; **wrong or a dead end** ⇒ keep it, marked `withdrawn` with one line of reason.
+- If it no longer describes reality: **already done** ⇒ delete it, row and all, and say so in the pull request; **wrong or a dead end** ⇒ keep it, marked `withdrawn` with one line of reason, and **move its ranking row into the `Closed` table**.
+  Same for anything you reject or rule out of scope. The entry stays because the argument against it is what stops the next pass re-proposing it; the *row* goes, because the ranking orders work and a closed item has none.
+  Leave `blocked`, `parked` and `conditional` rows in the ranking - they can become live without the entry changing. `tests/test_improvement_ledger.py` checks the placement both ways.
 - **Check every issue the register names before you rank** — a `GH-<n>` whose issue closed either shipped or was dropped, and both mean the entry is resolved:
   ```
   grep -o 'GH-[0-9]*' potential-improvements.md | sort -u | cut -d- -f2 |
@@ -229,6 +231,7 @@ In practice:
    A change with no test exercising the new seam is not finished.
 4. **Commit the code**, message naming the entry id.
 5. **Delete the entry and its ranking row** in a commit of their own — or, if the slice left a remainder, rewrite the entry to describe only what is left, keeping its id and row.
+   If the slice ended in a rejection rather than a shipped change, the entry stays and its row moves to `Closed` instead (§5).
 6. **Push** (§3), then go to the gate.
 
 ## 9. Gate before opening the pull request

@@ -13,6 +13,15 @@ from the file rather than marked, so no status may say it is done - and an agent
 reaching for ``shipped`` is exactly how a register turns back into a changelog
 nobody reads.
 
+A closed entry keeps its entry but loses its rank. The ranking orders work and a
+rejected, withdrawn or out-of-scope item has none, so its row moves into the
+``Closed`` table under the same heading rather than sitting in the list with a
+dead eligibility column - which a pass walking top-down pays to read before
+discovering there is nothing to take. Placement is checked because nothing else
+would notice: both tables live under ``## The ranking``, so the one-row-per-entry
+assertion above is satisfied either way, and the skills that maintain this file
+write the status and the row in separate steps.
+
 ``needs`` is the one status naming work no agent can do by reading harder: a
 person has to decide something. It is therefore paired with a ``Decision
 needed:`` bullet holding the question, and the pairing is checked in both
@@ -36,6 +45,12 @@ RANKING_ROW = re.compile(r"^\| *([A-Z][A-Z0-9-]+) *\|")
 ENTRY_STATUS = re.compile(r"^- \*\*Status:\*\* +(\S+)")
 DECISION_BULLET = "- **Decision needed:**"
 NEEDS_A_DECISION = "needs"
+CLOSED_HEADING = "### Closed"
+
+# statuses that mean no pass will ever take the entry as it stands, so its row
+# belongs in the ``Closed`` table. ``blocked``, ``parked`` and ``conditional``
+# are deliberately absent: they can become live without the entry changing.
+CLOSED_OPENINGS = frozenset({"rejected", "withdrawn", "out"})
 
 # the file documents this list; there is deliberately no status meaning "done"
 STATUS_OPENINGS = frozenset(
@@ -68,6 +83,20 @@ def ranking_section(text: str) -> str:
     assert below, f"{LEDGER_FILE} no longer has a {RANKING_HEADING!r} section"
     section, _, _ = below.partition("\n## ")
     return section
+
+
+def ranking_tables(text: str) -> tuple[str, str]:
+    """Return the live ranking table and the ``Closed`` table, in that order.
+
+    Both sit under ``## The ranking`` so that every entry still has exactly one
+    row wherever it is; this split is what tells the two halves apart.
+    """
+    live, separator, closed = ranking_section(text).partition(CLOSED_HEADING)
+    assert separator, (
+        f"{LEDGER_FILE} no longer has a {CLOSED_HEADING!r} table - closed entries "
+        "have nowhere to go but the ranking, which is what it exists to prevent"
+    )
+    return live, closed
 
 
 def ids_of(pattern: re.Pattern[str], text: str) -> list[str]:
@@ -160,3 +189,30 @@ def test_waiting_entries_say_what_they_are_waiting_for() -> None:
             f"A {NEEDS_A_DECISION!r} status must name the question it is waiting on, and a "
             "question must be findable from the status - neither half is any use alone"
         )
+
+
+@pytest.mark.unit
+def test_closed_entries_do_not_hold_a_rank(ledger_text: str) -> None:
+    """A status no pass can act on puts the row in ``Closed``, and vice versa."""
+    live_table, closed_table = ranking_tables(ledger_text)
+    live = set(ids_of(RANKING_ROW, live_table))
+    closed = set(ids_of(RANKING_ROW, closed_table))
+    for id_, body in entry_bodies(ledger_text).items():
+        statuses = ids_of(ENTRY_STATUS, body)
+        assert statuses, f"{id_} declares no status"
+        opening = statuses[0].rstrip(".,:").lower()
+        if opening in CLOSED_OPENINGS:
+            assert id_ in closed and id_ not in live, (
+                f"{id_} is {opening!r}, so no pass will take it as it stands, but its row is "
+                f"still in the ranking. Move it to the {CLOSED_HEADING!r} table: the ranking "
+                "orders work and this entry has none, and a pass walking it top-down pays to "
+                "read the row before finding that out. The entry itself stays - a rejection "
+                "is only useful while the argument against it is still there to be read"
+            )
+        else:
+            assert id_ in live and id_ not in closed, (
+                f"{id_} is {opening!r} - live work, or work waiting on something that can "
+                f"resolve - but its row sits under {CLOSED_HEADING!r}, where no pass walking "
+                "the ranking will reach it. Only rejected, withdrawn and out-of-scope entries "
+                f"belong there; {sorted(CLOSED_OPENINGS)} is the whole list"
+            )

@@ -147,6 +147,9 @@ For each answered question:
 
 - **Rewrite the entry.** Delete the `**Decision needed:**` bullet, replace it with what was decided and why, and open the `Status` line with `open` (the register documents the vocabulary; `needs` no longer applies).
 - **Update the entry's row in the ranking** so its eligibility column stops advertising a question that has been answered.
+  **If the answer was “no”, the row moves to the `Closed` table instead** - a rejected or withdrawn entry keeps its entry and loses its rank, since the ranking orders work and there is none left to order.
+  An eligibility column reading `rejected` in the live table is the failure this prevents: the item is dead and every later pass still reads its row before finding out.
+  `tests/test_improvement_ledger.py` checks the placement, so a miss fails the gate below rather than reaching `master`.
 - **Record the options that were refused, and why.** They are what stops the next pass re-proposing them on their merits, and they are never deleted.
 - **A decision with consequences beyond its own entry goes in *Recorded decisions*** as well, dated, with one line of rationale. That section is never deleted either.
 - **Say who decided it.** A decision recorded without an owner reads like one an agent made up, and the next pass cannot tell whether it may be revisited.
@@ -181,7 +184,7 @@ git worktree add ../tzf-decisions-<slug> -b decisions/<slug> origin/master
 Then, with output you have actually read:
 
 - [ ] `git fetch origin && git rebase origin/master` **first**. Another pass may have shipped an entry this round asked about — if so, that question is answered by the code and does not need the maintainer.
-- [ ] `uv run pytest tests/test_improvement_ledger.py` green: every entry still has exactly one ranking row, no status claims the work is done, and every `needs` status still pairs with a `**Decision needed:**` bullet.
+- [ ] `uv run pytest tests/test_improvement_ledger.py` green: every entry still has exactly one ranking row, closed entries hold none, no status claims the work is done, and every `needs` status still pairs with a `**Decision needed:**` bullet.
 - [ ] `make hook` clean, modulo pre-existing failures.
 - [ ] `git diff origin/master --stat` lists `potential-improvements.md`, `CHANGELOG.rst` if a bullet was needed, and **nothing else**.
 - [ ] Every answer given in this session appears in the diff. Grep each entry id and read what it now says.
