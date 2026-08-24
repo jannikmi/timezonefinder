@@ -210,10 +210,10 @@ independent: GH-362, GH-524, PERF-2, GH-543
   byte-identical costs nothing, which is what makes batching weaker than it looks for a change
   confined to one part of the data.
 - **DATA-BINARIES sequences before GH-449.** Once the binaries stop being committed,
-  regeneration no longer adds ~64 MB to this repository's history, which is what makes the rest of
+  regeneration no longer adds ~61 MiB to this repository's history, which is what makes the rest of
   the data work cheap.
 - **Do not start GH-522 before DATA-BINARIES is in force.** A history rewrite followed by one
-  more data update through the current pipeline re-adds ~62 MB immediately, and the rewrite — which
+  more data update through the current pipeline re-adds ~61 MiB immediately, and the rewrite — which
   detaches every existing clone and fork — would have to be repeated. The distribution split does
   **not** satisfy this on its own: the binaries are still committed, only at a new path.
 - **Publish the data distribution before the code release that requires it**, on every change that
@@ -860,7 +860,7 @@ the denominators, and how to tell whether they still describe the tree.
 - **What it is:** the data is already its own distribution (`timezonefinder-data`, released
   2026-08-19), but its binaries are still committed, at
   `packages/timezonefinder-data/timezonefinder_data/data/`. Until they stop being committed, every
-  regeneration still adds ~64 MB to this repository's history permanently, which is the constraint
+  regeneration still adds ~61 MiB to this repository's history permanently, which is the constraint
   that makes all the data-format work expensive.
 - **Value:** measured across the distribution split, a code release went from 220.05 MB to 1.02 MB
   for the same four files. This half is what dissolves the regeneration cost, and it unblocks GH-449
@@ -887,7 +887,7 @@ the denominators, and how to tell whether they still describe the tree.
 - **Accepted costs, restated so they are not re-litigated:** `git bisect` across a format change
   stops working from a bare checkout unless the matching data version resolves per commit; and this
   does **not** shrink the existing 357 MiB pack — only GH-522 does, and strictly after this is in
-  force, or the next data update re-adds ~62 MB and the rewrite has to be repeated.
+  force, or the next data update re-adds ~61 MiB and the rewrite has to be repeated.
 - **What the release half had to answer, found 2026-08-23 while checking eligibility and settled
   the day after.** The bootstrap half already worked: a dev checkout fetches the published
   `timezonefinder-data` wheel for the version it pins. The *release* half had no answer, because
@@ -920,7 +920,7 @@ the denominators, and how to tell whether they still describe the tree.
   The decision stands, on the narrower ground.
   *A second repository for the binaries* — keeps them committed and reviewable, and re-poses this same question one level up; a data repository was already refused once on its own merits.
   *Leave the binaries committed* — this is the do-nothing option and it also drops GH-522.
-  Upstream shipped 2 releases in 2024, 3 in 2025 and 4 in the first seven months of 2026; at ~61 MB a regeneration that is roughly 244 MB a year onto a 357 MiB pack, accelerating.
+  Upstream shipped 2 releases in 2024, 3 in 2025 and 4 in the first seven months of 2026; at ~61 MiB a regeneration that is ~244 MiB in those seven months alone — an annualised ~420 MiB onto a 357 MiB pack, and the cadence is still rising.
 - **Two mechanics the implementing pass must not rediscover the hard way.**
   A **published** GitHub Release cannot be the carrier: `build.yml` fires on `release: types: [published]`, and `publish_data.yml` deliberately creates no Release precisely so that trigger cannot fire for a data tag.
   A draft release never published would work and sits one click away from firing it, so the run artifact is the safer carrier.
@@ -1885,7 +1885,7 @@ premise moves; do not reverse a decision silently.
   separately. Publishing two PyPI projects from one repository is routine (a `uv` workspace, two
   Trusted Publishing entries, prefixed tags), so the question was only ever whether a second
   *repository* buys anything a second *distribution* does not. The argument that it did — every
-  regeneration adds ~64 MB to this repository's history permanently — **does not survive**:
+  regeneration adds ~61 MiB to this repository's history permanently — **does not survive**:
   deleting the data directory leaves every past blob in place, so the clone stays ~357 MiB either
   way. Only a history rewrite reclaims it (GH-522), and that is available to a single repository;
   what stops the *growth* is not committing the file again (DATA-BINARIES), likewise
