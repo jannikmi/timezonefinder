@@ -905,6 +905,12 @@ the denominators, and how to tell whether they still describe the tree.
   **Why, and it is the property everything downstream leans on:** `publish_data.yml` states in its own header that the data is not re-validated at publish time because "it was compiled and checked by build.yml on the pull request".
   The update PR's matrix validates the exact bytes that ship, and this is the only option that keeps that true.
   It also keeps the bootstrap non-circular — the wheel is built by the job that generated the data, not by one that would have to regenerate it.
+- **What that invariant costs on the pull-request side, which is the half easy to leave unbuilt.**
+  Today the bytes are in the update pull request's tree, so `build.yml` tests them by checking out.
+  Git-ignore `data/` and they are not, and the matrix has to be pointed at the same artifact the tag will publish — **not** at `make bootstrap`, which resolves the *published* wheel and would hand CI the previous release's data while the tag ships the new one.
+  So the hand-off is two consumers of one artifact, not one: `build.yml` on the update pull request installs the freshly built wheel, and the tag job publishes it.
+  Building it once in `check_data_updates.yml` is what makes those the same bytes; a matrix that rebuilds its own copy re-opens the gap this decision closed, since only a byte-comparison would then say the two agree.
+  `make bootstrap` stays the path for a *dev* checkout and for CI on every pull request that is not a data update — one path per question, not one path overall.
 - **Refused, with the reason each loses.**
   *The publish job regenerates* — self-contained and reproducible from the tag alone, which is the one real thing it has, but it publishes bytes no CI run ever saw and makes every release depend on the upstream asset still being fetchable.
   **Refinement found 2026-08-24, recorded so the refusal is not read as stronger than it is:** the converter is byte-deterministic — a fresh conversion of 2026c's upstream GeoJSON reproduced the packaged binaries exactly — so regenerating would in practice yield the bytes CI validated.
