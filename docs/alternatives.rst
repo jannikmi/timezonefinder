@@ -118,55 +118,84 @@ difference is in what they do with that dataset's geometry.
    **What the simplification costs is measured too, and it is not small where it matters.**
    Run both packages over a uniform sample of the globe and they never disagree - which is true and
    says nothing, because a uniformly drawn coordinate is hundreds of kilometres from the nearest
-   border. ``scripts/measure_tzfpy_agreement.py`` (``make tzfpy-agreement``) therefore samples the
-   **border itself**: a position drawn along this package's boundary polygons, weighted by length,
-   probed at a controlled distance to either side. Two corrections make the result attributable -
-   it refuses to report unless both packages carry the *same* timezone-boundary-builder release, so
-   a difference cannot be a border that moved between datasets, and it asks whether this package's
-   answer is among the zones ``tzfpy`` holds over the point rather than whether the two name the
-   same one, because the dataset ships genuinely overlapping zones (``Asia/Urumqi`` inside
-   ``Asia/Shanghai``) that each package resolves by its own rule.
+   border. So ``scripts/measure_tzfpy_agreement.py`` (``make tzfpy-agreement``) asks the question at
+   a *stated distance from a border* instead, over points drawn without bias in where on the globe
+   they land, and sweeps the distance.
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 2,000 border positions, 2026-08-24:
+.. image:: tzfpy_agreement_by_distance.svg
+   :alt: A different zone is returned for a third of points a metre from a timezone border, a fifth
+         at ten metres, and none at all from a hundred metres out.
+   :width: 100%
+
+.. note::
+
+   Two corrections make that curve attributable rather than merely suggestive. It refuses to report
+   unless both packages carry the **same timezone-boundary-builder release**, so a difference cannot
+   be a border that moved between datasets; and it asks whether this package's answer is among the
+   zones ``tzfpy`` holds over the point rather than whether the two name the same one, because the
+   dataset ships genuinely overlapping zones - ``Asia/Urumqi`` inside ``Asia/Shanghai`` - that each
+   package resolves by its own rule. Those overlaps are almost every difference away from a border
+   and none of the ones near it.
+
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 2,000 points per distance, 2026-08-24:
 
    .. list-table::
       :header-rows: 1
-      :widths: 30 35 35
+      :widths: 24 26 26 24
 
       * - Distance from a border
-        - Different zone returned
-        - Implied share of border moved
+        - Any border
+        - Border of a land zone
+        - Implied share of border moved further
       * - 1 m
-        - 33.4 %
-        - ~67 %
+        - 26.2 %
+        - 34.1 %
+        - ~68 %
+      * - 3 m
+        - 22.2 %
+        - 29.4 %
+        - ~59 %
       * - 10 m
-        - 23.3 %
-        - ~47 %
+        - 17.3 %
+        - 22.6 %
+        - ~45 %
+      * - 30 m
+        - 9.2 %
+        - 12.3 %
+        - ~25 %
       * - 100 m
-        - 0.70 %
-        - ~1.4 %
-      * - 1 km
-        - 0.18 %
-        - ~0.4 %
-      * - 10 km
-        - 0.03 %
-        - ~0.1 %
+        - 0.00 %
+        - 0.00 %
+        - ~0 %
+      * - 300 m
+        - 0.10 %
+        - 0.13 %
+        - ~0.3 %
+      * - 1 km and beyond
+        - 0.00 %
+        - 0.00 %
+        - ~0 %
 
-   **50 % is the ceiling of that first column, not 100 %.** Each position is probed on both sides
-   of this package's border; if the other package's border is merely displaced rather than missing,
-   both probes fall on the same side of *it* and exactly one of them disagrees. So a rate of *r*
-   implies roughly *r* / 50 % of the border length has moved by more than the probe distance, which
-   is the third column. The disagreements are ordinary international borders, not exotica -
-   ``Europe/Warsaw`` against ``Europe/Minsk``, ``Asia/Yakutsk`` against ``Asia/Irkutsk``, and at a
-   full kilometre out, ``Europe/Berlin`` against ``Europe/Vienna``.
+   **50 % is the ceiling, not 100 %.** A point *d* from the border gets a different answer only if
+   the other package's border has moved past it - further than *d*, **and** towards that particular
+   side. Nothing makes a simplification prefer one side, so a rate of *r* says roughly *2 r* of the
+   border length has moved by more than *d*, which is the last column. The middle column drops the
+   ocean zones, whose mutual borders are meridians that no simplification can move and which
+   therefore dilute the first; a coastline stays in both, since it is stored in the land polygon as
+   well as in the ocean polygon around it.
 
-   Read it as the price list for the trade this page describes. Within a few tens of metres of a
-   border the two packages disagree about half the time the border has moved at all; by a hundred
-   metres that is down to well under one percent, and by ten kilometres it is gone. Which of those
-   distances your queries land at is the whole question - and it is why the recommendation at the
-   top of this page turns on how near a border your points are, not on how accurate either package
-   is in the abstract. Re-run the measurement rather than trusting these figures: they describe one
-   release of a package that ships on its own schedule.
+   Read across, the answer is a **simplification tolerance of roughly a hundred metres**: two thirds
+   of the border has moved by more than a metre, a quarter by more than thirty, and essentially none
+   by more than a hundred. The residual 0.10 % at 300 m is small islands, where a simplified
+   coastline shrinks the island rather than shifting a line - ``Pacific/Tahiti`` and an islet off
+   ``Asia/Tokyo`` are the two cases in this sample.
+
+   The disagreements are ordinary international borders, not exotica: ``Europe/Dublin`` against
+   ``Europe/London``, ``Asia/Bishkek`` against ``Asia/Tashkent``, ``America/Denver`` against
+   ``America/Phoenix``. Which distance your queries land at is the whole question, and it is why the
+   recommendation at the top of this page turns on how near a border your points are rather than on
+   how accurate either package is in the abstract. Re-run the measurement rather than trusting these
+   figures: they describe one release of a package that ships on its own schedule.
 
 
 When to choose which package

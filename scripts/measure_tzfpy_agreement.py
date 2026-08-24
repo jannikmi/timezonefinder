@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""How far from a timezone border the two packages stop agreeing.
+"""How far from a timezone border this package and ``tzfpy`` stop agreeing.
 
 What this answers
 -----------------
@@ -13,31 +13,29 @@ the polygon encoding can be chosen: this package spends ~1.1 cm of coordinate
 resolution and there is no evidence anywhere about what that resolution buys.
 
 Ask it the obvious way - run both packages over a uniform sample of the globe
-and count - and the answer is zero disagreements, which is true and useless.
-A uniformly drawn coordinate is hundreds of kilometres from the nearest
-timezone border, so such a sample measures how much of the world is nowhere
-near a border, not how the two packages behave where the answer is actually
-contested. The committed point fixtures have the same problem in a milder form:
-even ``ambiguous_shortcut_points``, which is the closest thing to a near-border
-sample this repository has, only guarantees that a point's H3 cell holds more
-than one candidate zone - and a resolution 4 cell is tens of kilometres across.
+and count - and the answer is zero disagreements, which is true and useless. A
+uniformly drawn coordinate is hundreds of kilometres from the nearest timezone
+border, so such a sample measures how much of the world is nowhere near a
+border. The committed point fixtures have the same problem in a milder form:
+even ``ambiguous_shortcut_points``, the closest thing to a near-border sample
+this repository has, only guarantees that a point's H3 cell holds more than one
+candidate zone - and a resolution 4 cell is tens of kilometres across.
 
-So the primary measurement here does not sample points at all. It samples the
-**border itself** - a position drawn along the boundary polygons this package
-ships, weighted by length - and then probes at a controlled distance to either
-side of it. Sweeping that distance turns a single rate into a curve, and the
-curve is the answer: it says how far `tzfpy`'s boundary sits from this one.
+So the measurement is taken at a *stated distance from a border*, sweeping the
+distance, over points drawn without bias in where on the globe they land. How
+those points are produced - and the two ways an obvious implementation of it
+goes wrong - is :mod:`scripts.border_sampling`.
 
 Reading the curve
 -----------------
 
-**50 % is the ceiling, not 100 %.** Each site contributes two probes, one on
-each side of this package's border. If the other package's border is merely
-displaced rather than absent, both probes land on the same side of *it*, so
-exactly one of the two disagrees. A rate of `r` therefore says that roughly
-`r / 50 %` of the border length has moved by more than the probe distance.
+**50 % is the ceiling, not 100 %.** A point ``d`` from the border gets a
+different answer only if the other package's border has moved past it: further
+than ``d``, *and* towards this particular side. Nothing makes a simplification
+prefer one side, so a rate of ``r`` says that roughly ``2 r`` of the border
+length has moved by more than ``d``.
 
-The overlapping-zone rate in the last column is flat across distances by
+The overlapping-zone rate in the last column is near-flat across distances by
 construction - it is about zone naming, not geometry - and is a useful check
 that the sweep is working.
 
@@ -69,14 +67,15 @@ Usage::
 
 import argparse
 import json
-import math
 import sys
+from pathlib import Path
 from typing import Callable, Iterable, NamedTuple, Sequence
 
 import numpy as np
 
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION, tzfpy_version
-from scripts.configs import read_data_version
+from scripts.border_sampling import BorderGeometry, Candidate
+from scripts.configs import DOC_ROOT, read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -85,30 +84,28 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import COORD2INT_FACTOR
 from timezonefinder.utils import is_ocean_timezone
 
-# Metres per degree, at the equator for longitude and mean for latitude. A
-# spherical approximation is the right tool here: it converts a probe distance
-# into a coordinate offset over a span of metres, where the difference against
-# a proper geodesic is far below the simplification being measured.
-METRES_PER_DEGREE_LATITUDE = 110_574.0
-METRES_PER_DEGREE_LONGITUDE = 111_320.0
+# The distances swept, in metres. Chosen to bracket the answer rather than to
+# sample it evenly: both ends are there to show the curve reaching its ceiling
+# and its floor, and the decade that turned out to matter is in the middle.
+DEFAULT_DISTANCES_M: tuple[float, ...] = (
+    1.0,
+    3.0,
+    10.0,
+    30.0,
+    100.0,
+    300.0,
+    1_000.0,
+    10_000.0,
+)
 
-# The distances probed either side of a border, in metres. Chosen to bracket
-# the answer rather than to sample it evenly: the interesting decade turned out
-# to be 10 m to 100 m, and both ends are there to show the curve reaching its
-# ceiling and its floor.
-DEFAULT_DISTANCES_M: tuple[float, ...] = (1.0, 10.0, 100.0, 1_000.0, 10_000.0)
+# Accepted points per distance. At 33 % this is a standard error of ~1 point,
+# which is finer than anything read off the curve.
+DEFAULT_POINTS = 2_000
 
-# Border positions drawn per distance. Every distance probes the *same* sites,
-# so the columns of the report differ only in the offset and not in which piece
-# of border they describe - which is what makes the curve readable as one
-# measurement rather than five.
-DEFAULT_SITES = 2_000
-
-# Fixed so that two runs of this script are comparable; there is nothing to
-# tune here and a wandering sample would be mistaken for a `tzfpy` release.
+# Fixed so that two runs are comparable; there is nothing to tune here, and a
+# wandering sample would be mistaken for a `tzfpy` release.
 DEFAULT_SEED = 20260824
 
 # The committed point fixtures, in the order the secondary report prints them.
@@ -129,11 +126,16 @@ SUBSTANTIVE = "substantive"
 # How many substantive disagreements to keep per group. A bare count is
 # unattributable - three points out of five thousand could be a coastline, a
 # pole, or a bug in this script - so the report names some of them.
-MAX_EXAMPLES = 5
+MAX_EXAMPLES = 4
+
+# Where the rendered chart goes. Declared here because this module writes it;
+# docs/alternatives.rst is the only reader, and the Makefile passes `--chart`
+# with no argument rather than retyping the path.
+CHART_PATH = DOC_ROOT / "tzfpy_agreement_by_distance.svg"
 
 
 class AgreementCounts(NamedTuple):
-    """One group of probes, counted three ways, with a few cases named."""
+    """One group of points, counted three ways, with a few cases named."""
 
     total: int
     overlap_policy: int
@@ -149,18 +151,17 @@ class AgreementCounts(NamedTuple):
         return 100.0 * count / self.total if self.total else 0.0
 
 
-class BorderSite(NamedTuple):
-    """A position on a boundary edge, and the direction across it.
+class DistanceResult(NamedTuple):
+    """One column of the sweep."""
 
-    ``normal_east``/``normal_north`` are a unit vector in metres, perpendicular
-    to the edge, so a probe at distance ``d`` is the site offset by ``d`` times
-    this - converted back into degrees at the site's own latitude.
-    """
+    distance_m: float
+    drawn: int
+    all_borders: AgreementCounts
+    land_borders: AgreementCounts
 
-    lng: float
-    lat: float
-    normal_east: float
-    normal_north: float
+    @property
+    def acceptance_rate(self) -> float:
+        return 100.0 * self.all_borders.total / self.drawn if self.drawn else 0.0
 
 
 def classify(
@@ -208,101 +209,20 @@ def count_agreement(
     )
 
 
-def edge_vectors(
-    coordinates: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Per-edge start point, metric displacement and length for one ring.
+def borders_a_land_zone(candidate: Candidate, ocean_ring: np.ndarray) -> bool:
+    """Whether the border this point sits by belongs to a real timezone.
 
-    ``coordinates`` is the ``(2, n)`` int32 array the packaged data stores, and
-    the ring is closed, so edge ``i`` runs from vertex ``i`` to ``i + 1``
-    modulo ``n``. Lengths are metres under the spherical approximation above.
+    The ocean zones are lunes of longitude and the border between two of them
+    is a meridian - a definition, which no simplification can move and which
+    both packages therefore reproduce exactly. They are a large share of the
+    packaged boundary length, so a curve over every border is diluted by them.
+    Reported both ways rather than filtered, since "any border" is the honest
+    global answer and "a border of a land zone" is the one users are near.
 
-    Edges spanning more than 180 degrees of longitude are given zero length
-    rather than a length of half the planet: they are the seam of a ring that
-    wraps the antimeridian, not a piece of border anyone can stand next to.
+    A coastline qualifies: it is stored in the land polygon as well as in the
+    ocean polygon around it, so one of the rings at the point is a land one.
     """
-    lng = coordinates[0].astype(np.float64) / COORD2INT_FACTOR
-    lat = coordinates[1].astype(np.float64) / COORD2INT_FACTOR
-    next_lng = np.roll(lng, -1)
-    next_lat = np.roll(lat, -1)
-
-    delta_lng = next_lng - lng
-    mean_lat = np.radians((lat + next_lat) / 2.0)
-    east = delta_lng * np.cos(mean_lat) * METRES_PER_DEGREE_LONGITUDE
-    north = (next_lat - lat) * METRES_PER_DEGREE_LATITUDE
-    length = np.hypot(east, north)
-    length[np.abs(delta_lng) > 180.0] = 0.0
-    return lng, lat, east, north, length
-
-
-def land_boundary_ids(finder: TimezoneFinder, polygons) -> list[int]:
-    """Boundary polygons that belong to a real timezone rather than the sea.
-
-    The ocean zones are rectangles of longitude, and the border between two of
-    them is a meridian - a definition, which no simplification can move and
-    which both packages therefore reproduce exactly. They are 39 % of the
-    packaged boundary length, so leaving them in would dilute the measurement
-    with border that cannot disagree. Nothing is lost by dropping them:
-    coastlines remain, as the boundaries of the land polygons themselves.
-    """
-    return [
-        boundary_id
-        for boundary_id in range(len(polygons))
-        if not is_ocean_timezone(finder.zone_name_from_boundary_id(boundary_id))
-    ]
-
-
-def sample_border_sites(
-    finder: TimezoneFinder,
-    polygons,
-    count: int,
-    rng: np.random.Generator,
-) -> list[BorderSite]:
-    """Draw ``count`` positions along the packaged borders, weighted by length.
-
-    Length-weighted rather than vertex-weighted on purpose. Vertices cluster on
-    intricate coastlines, which is exactly where a simplification loses the
-    most, so drawing uniformly over vertices would report a rate for the worst
-    border rather than for the average one.
-    """
-    boundary_ids = land_boundary_ids(finder, polygons)
-    rings = {
-        boundary_id: edge_vectors(polygons.coords_of(boundary_id))
-        for boundary_id in boundary_ids
-    }
-    perimeters = np.array([rings[i][4].sum() for i in boundary_ids])
-    ring_weights = perimeters / perimeters.sum()
-
-    sites: list[BorderSite] = []
-    for boundary_id in rng.choice(boundary_ids, size=count, p=ring_weights):
-        lng, lat, east, north, length = rings[int(boundary_id)]
-        edge = int(rng.choice(len(length), p=length / length.sum()))
-        along = float(rng.random())
-        next_edge = (edge + 1) % len(length)
-        sites.append(
-            BorderSite(
-                lng=float(lng[edge] + along * (lng[next_edge] - lng[edge])),
-                lat=float(lat[edge] + along * (lat[next_edge] - lat[edge])),
-                # rotate the edge a quarter turn to get its normal
-                normal_east=float(-north[edge] / length[edge]),
-                normal_north=float(east[edge] / length[edge]),
-            )
-        )
-    return sites
-
-
-def probes_at(site: BorderSite, distance_m: float) -> list[tuple[float, float]]:
-    """The two probe points ``distance_m`` either side of ``site``."""
-    cos_lat = max(math.cos(math.radians(site.lat)), 1e-6)
-    east_degrees = site.normal_east / (METRES_PER_DEGREE_LONGITUDE * cos_lat)
-    north_degrees = site.normal_north / METRES_PER_DEGREE_LATITUDE
-    points = []
-    for sign in (1.0, -1.0):
-        lng = site.lng + sign * distance_m * east_degrees
-        lat = site.lat + sign * distance_m * north_degrees
-        if -180.0 <= lng <= 180.0 and -90.0 <= lat <= 90.0:
-            points.append((lng, lat))
-    return points
+    return any(not ocean_ring[ring_id] for ring_id in candidate.rings_at_distance)
 
 
 class Measurement(NamedTuple):
@@ -310,19 +230,22 @@ class Measurement(NamedTuple):
 
     data_version: str
     tzfpy_version: str | None
-    sites: int
-    by_distance: dict[float, AgreementCounts]
+    by_distance: tuple[DistanceResult, ...]
     by_point_class: dict[str, AgreementCounts]
 
     def as_json(self) -> dict:
         return {
             "data_version": self.data_version,
             "tzfpy_version": self.tzfpy_version,
-            "sites": self.sites,
-            "by_distance_m": {
-                str(distance): counts._asdict()
-                for distance, counts in self.by_distance.items()
-            },
+            "by_distance_m": [
+                {
+                    "distance_m": result.distance_m,
+                    "drawn": result.drawn,
+                    "all_borders": result.all_borders._asdict(),
+                    "land_borders": result.land_borders._asdict(),
+                }
+                for result in self.by_distance
+            ],
             "by_point_class": {
                 name: counts._asdict() for name, counts in self.by_point_class.items()
             },
@@ -345,7 +268,7 @@ def _require_matching_dataset(tzfpy) -> str:
 
 def measure(
     distances_m: Sequence[float] = DEFAULT_DISTANCES_M,
-    sites: int = DEFAULT_SITES,
+    points: int = DEFAULT_POINTS,
     seed: int = DEFAULT_SEED,
     include_point_classes: bool = True,
 ) -> Measurement:
@@ -355,22 +278,42 @@ def measure(
 
     data_version = _require_matching_dataset(tzfpy)
     rng = np.random.default_rng(seed)
+    geometry = BorderGeometry(boundaries)
 
     with TimezoneFinder(in_memory=True) as finder:
+        ocean_ring = np.array(
+            [
+                is_ocean_timezone(finder.zone_name_from_boundary_id(ring_id))
+                for ring_id in range(geometry.ring_count)
+            ]
+        )
 
         def ours(lng: float, lat: float) -> str | None:
             return finder.timezone_at(lng=lng, lat=lat)
 
-        border_sites = sample_border_sites(finder, boundaries, sites, rng)
-        by_distance = {
-            distance: count_agreement(
-                [point for site in border_sites for point in probes_at(site, distance)],
-                ours,
-                tzfpy.get_tz,
-                tzfpy.get_tzs,
+        by_distance = []
+        for distance in distances_m:
+            accepted, drawn = geometry.sample(rng, distance, points)
+            land = [c for c in accepted if borders_a_land_zone(c, ocean_ring)]
+            by_distance.append(
+                DistanceResult(
+                    distance_m=distance,
+                    drawn=drawn,
+                    all_borders=count_agreement(
+                        [(c.lng, c.lat) for c in accepted],
+                        ours,
+                        tzfpy.get_tz,
+                        tzfpy.get_tzs,
+                    ),
+                    land_borders=count_agreement(
+                        [(c.lng, c.lat) for c in land],
+                        ours,
+                        tzfpy.get_tz,
+                        tzfpy.get_tzs,
+                    ),
+                )
             )
-            for distance in distances_m
-        }
+
         by_point_class = (
             {
                 name: count_agreement(
@@ -385,8 +328,7 @@ def measure(
     return Measurement(
         data_version=data_version,
         tzfpy_version=tzfpy_version(),
-        sites=len(border_sites),
-        by_distance=by_distance,
+        by_distance=tuple(by_distance),
         by_point_class=by_point_class,
     )
 
@@ -399,32 +341,41 @@ def _example_lines(label: str, counts: AgreementCounts) -> list[str]:
     ]
 
 
+def format_distance(distance_m: float) -> str:
+    return f"{distance_m / 1000:g} km" if distance_m >= 1000.0 else f"{distance_m:g} m"
+
+
 def format_report(measurement: Measurement) -> str:
     lines = [
         f"boundary release {measurement.data_version} on both sides "
         f"({TZFPY_DISTRIBUTION} {measurement.tzfpy_version})",
         "",
-        f"disagreement by distance from a border, {measurement.sites} sites drawn "
-        "along the packaged boundaries",
-        "(50% is the ceiling: one probe of each pair is on the side both packages agree on)",
+        "a different zone returned, by distance from the nearest timezone border",
+        "(50% is the ceiling: the other border has to have moved past this point,",
+        " which needs it to move further than the distance AND towards this side)",
         "",
-        f"{'distance':>10}{'probes':>9}{'substantive':>20}{'overlap-policy':>19}",
+        f"{'distance':>10}{'points':>8}{'accepted':>10}"
+        f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}",
     ]
-    for distance, counts in measurement.by_distance.items():
+    for result in measurement.by_distance:
+        every = result.all_borders
+        land = result.land_borders
         lines.append(
-            f"{distance:>8.0f} m{counts.total:>9}"
-            f"{counts.substantive:>13} {counts.rate(counts.substantive):>5.2f}%"
-            f"{counts.overlap_policy:>12} {counts.rate(counts.overlap_policy):>5.2f}%"
+            f"{format_distance(result.distance_m):>10}{every.total:>8}"
+            f"{result.acceptance_rate:>9.0f}%"
+            f"{every.substantive:>8} {every.rate(every.substantive):>5.2f}%"
+            f"{land.substantive:>12} {land.rate(land.substantive):>5.2f}%"
+            f"{every.overlap_policy:>10} {every.rate(every.overlap_policy):>5.2f}%"
         )
-    for distance, counts in measurement.by_distance.items():
-        lines += _example_lines(f"{distance:.0f} m", counts)
+    for result in measurement.by_distance:
+        lines += _example_lines(format_distance(result.distance_m), result.all_borders)
 
     if measurement.by_point_class:
         lines += [
             "",
-            "for contrast, the committed query fixtures - which are workload-shaped,",
-            "not border-shaped, and say what a query stream sees rather than what the",
-            "geometry does",
+            "for contrast, the committed query fixtures - workload-shaped rather than",
+            "border-shaped, so they say what a query stream sees and nothing about the",
+            "geometry",
             "",
             f"{'point class':<26}{'n':>7}{'substantive':>18}{'overlap-policy':>18}",
         ]
@@ -434,9 +385,187 @@ def format_report(measurement: Measurement) -> str:
                 f"{counts.substantive:>11} {counts.rate(counts.substantive):>5.3f}%"
                 f"{counts.overlap_policy:>11} {counts.rate(counts.overlap_policy):>5.3f}%"
             )
-        for name, counts in measurement.by_point_class.items():
-            lines += _example_lines(name, counts)
     return "\n".join(lines)
+
+
+# --- the chart docs/alternatives.rst embeds ---------------------------------
+# Hand-written SVG rather than a plotting library: this is one line chart of
+# five points, and the alternative is a dependency heavy enough that nothing
+# else in this repository carries it. The output is text, so a regeneration
+# shows up in a diff as the numbers that moved.
+
+CHART_WIDTH = 780
+CHART_HEIGHT = 420
+CHART_MARGIN_LEFT = 76
+CHART_MARGIN_RIGHT = 30
+CHART_MARGIN_TOP = 96
+CHART_MARGIN_BOTTOM = 62
+CHART_Y_MAX = 50.0
+CHART_INK = "#28323a"
+CHART_MUTED = "#6b7a85"
+CHART_GRID = "#dde3e8"
+CHART_SERIES_ALL = "#1f6feb"
+CHART_SERIES_LAND = "#c2570f"
+
+
+class ChartSeries(NamedTuple):
+    label: str
+    colour: str
+    dashes: str
+    # where the value label goes relative to its marker, so the two series do
+    # not print over each other where the curves converge
+    label_offset: float
+    counts: Callable[[DistanceResult], AgreementCounts]
+
+
+CHART_SERIES = (
+    ChartSeries(
+        "any timezone border", CHART_SERIES_ALL, "", 20.0, lambda r: r.all_borders
+    ),
+    ChartSeries(
+        "border of a land zone",
+        CHART_SERIES_LAND,
+        "7 5",
+        -13.0,
+        lambda r: r.land_borders,
+    ),
+)
+
+
+def _chart_x(distance_m: float, low: float, high: float) -> float:
+    span = CHART_WIDTH - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT
+    position = (np.log10(distance_m) - low) / (high - low) if high > low else 0.5
+    return CHART_MARGIN_LEFT + span * float(position)
+
+
+def _chart_y(rate: float) -> float:
+    span = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM
+    return CHART_MARGIN_TOP + span * (1.0 - min(rate, CHART_Y_MAX) / CHART_Y_MAX)
+
+
+def render_chart(measurement: Measurement) -> str:
+    """The sweep as an SVG line chart, ready to be written next to the docs."""
+    distances = [result.distance_m for result in measurement.by_distance]
+    low, high = float(np.log10(min(distances))), float(np.log10(max(distances)))
+    right = CHART_WIDTH - CHART_MARGIN_RIGHT
+    baseline = _chart_y(0.0)
+    ceiling = _chart_y(CHART_Y_MAX)
+
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
+        f'{CHART_HEIGHT}" width="{CHART_WIDTH}" height="{CHART_HEIGHT}" '
+        f'font-family="Helvetica, Arial, sans-serif" role="img" '
+        f'aria-label="How often timezonefinder and tzfpy return a different zone, '
+        f'against distance from the nearest timezone border">',
+        f'<rect width="{CHART_WIDTH}" height="{CHART_HEIGHT}" fill="#ffffff"/>',
+        f'<text x="{CHART_MARGIN_LEFT}" y="32" font-size="17" font-weight="600" '
+        f'fill="{CHART_INK}">Where timezonefinder and tzfpy stop agreeing</text>',
+        f'<text x="{CHART_MARGIN_LEFT}" y="52" font-size="12.5" fill="{CHART_MUTED}">'
+        f"boundary release {measurement.data_version} on both sides, "
+        f"{TZFPY_DISTRIBUTION} {measurement.tzfpy_version}, "
+        f"{measurement.by_distance[0].all_borders.total} points per distance</text>",
+    ]
+
+    # legend, above the plot so it cannot collide with the axis titles
+    for index, series in enumerate(CHART_SERIES):
+        swatch = CHART_MARGIN_LEFT + index * 210
+        dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
+        parts.append(
+            f'<line x1="{swatch}" y1="{CHART_MARGIN_TOP - 24}" x2="{swatch + 26}" '
+            f'y2="{CHART_MARGIN_TOP - 24}" stroke="{series.colour}" '
+            f'stroke-width="2.4"{dash}/>'
+        )
+        parts.append(
+            f'<text x="{swatch + 34}" y="{CHART_MARGIN_TOP - 20}" font-size="12.5" '
+            f'fill="{CHART_INK}">{series.label}</text>'
+        )
+
+    for percent in (0, 10, 20, 30, 40):
+        y = _chart_y(float(percent))
+        parts.append(
+            f'<line x1="{CHART_MARGIN_LEFT}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" '
+            f'stroke="{CHART_GRID}" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<text x="{CHART_MARGIN_LEFT - 10}" y="{y + 4:.1f}" font-size="12" '
+            f'text-anchor="end" fill="{CHART_MUTED}">{percent}%</text>'
+        )
+
+    parts.append(
+        f'<line x1="{CHART_MARGIN_LEFT}" y1="{ceiling:.1f}" x2="{right}" '
+        f'y2="{ceiling:.1f}" stroke="{CHART_MUTED}" stroke-width="1.2" '
+        f'stroke-dasharray="3 4"/>'
+    )
+    parts.append(
+        f'<text x="{CHART_MARGIN_LEFT - 10}" y="{ceiling + 4:.1f}" font-size="12" '
+        f'text-anchor="end" fill="{CHART_MUTED}">50%</text>'
+    )
+    parts.append(
+        f'<text x="{right}" y="{ceiling + 16:.1f}" font-size="12" '
+        f'text-anchor="end" fill="{CHART_MUTED}">ceiling &#8212; the other border '
+        f"also has to move towards the point</text>"
+    )
+
+    for result in measurement.by_distance:
+        x = _chart_x(result.distance_m, low, high)
+        parts.append(
+            f'<line x1="{x:.1f}" y1="{baseline:.1f}" x2="{x:.1f}" '
+            f'y2="{baseline + 5:.1f}" stroke="{CHART_MUTED}" stroke-width="1"/>'
+        )
+        parts.append(
+            f'<text x="{x:.1f}" y="{baseline + 22:.1f}" font-size="12.5" '
+            f'text-anchor="middle" fill="{CHART_INK}">'
+            f"{format_distance(result.distance_m)}</text>"
+        )
+
+    for series in CHART_SERIES:
+        rates = [
+            series.counts(result).rate(series.counts(result).substantive)
+            for result in measurement.by_distance
+        ]
+        points = " ".join(
+            f"{_chart_x(result.distance_m, low, high):.1f},{_chart_y(rate):.1f}"
+            for result, rate in zip(measurement.by_distance, rates)
+        )
+        dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
+        parts.append(
+            f'<polyline points="{points}" fill="none" stroke="{series.colour}" '
+            f'stroke-width="2.4" stroke-linejoin="round"{dash}/>'
+        )
+        for index, (result, rate) in enumerate(zip(measurement.by_distance, rates)):
+            x = _chart_x(result.distance_m, low, high)
+            parts.append(
+                f'<circle cx="{x:.1f}" cy="{_chart_y(rate):.1f}" r="4" '
+                f'fill="{series.colour}"/>'
+            )
+            if rate >= 1.0:
+                # the end labels are anchored inwards, or half of the first one
+                # sits outside the plot and over the percentage axis
+                anchor = (
+                    "start"
+                    if index == 0
+                    else "end"
+                    if index == len(rates) - 1
+                    else "middle"
+                )
+                parts.append(
+                    f'<text x="{x:.1f}" y="{_chart_y(rate) + series.label_offset:.1f}" '
+                    f'font-size="12" text-anchor="{anchor}" fill="{series.colour}">'
+                    f"{rate:.1f}%</text>"
+                )
+
+    parts.append(
+        f'<text x="{(CHART_MARGIN_LEFT + right) / 2:.0f}" y="{baseline + 46:.1f}" '
+        f'font-size="12.5" text-anchor="middle" fill="{CHART_MUTED}">distance from '
+        f"the nearest timezone border (logarithmic)</text>"
+    )
+    parts.append(
+        f'<text x="20" y="{(CHART_MARGIN_TOP + baseline) / 2:.0f}" font-size="12.5" '
+        f'text-anchor="middle" fill="{CHART_MUTED}" transform="rotate(-90 20 '
+        f'{(CHART_MARGIN_TOP + baseline) / 2:.0f})">a different zone returned</text>'
+    )
+    parts.append("</svg>")
+    return "\n".join(parts) + "\n"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -447,19 +576,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         nargs="+",
         default=list(DEFAULT_DISTANCES_M),
         metavar="METRES",
-        help="distances either side of a border to probe",
+        help="distances from a border to sample at",
     )
     parser.add_argument(
-        "--sites",
+        "--points",
         type=int,
-        default=DEFAULT_SITES,
-        help="border positions drawn; every distance probes the same ones",
+        default=DEFAULT_POINTS,
+        help="accepted points per distance",
     )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument(
         "--no-point-classes",
         action="store_true",
         help="skip the committed query fixtures and report the sweep alone",
+    )
+    parser.add_argument(
+        "--chart",
+        nargs="?",
+        const=str(CHART_PATH),
+        metavar="PATH",
+        help=f"write the sweep as an SVG line chart (default: {CHART_PATH})",
     )
     parser.add_argument(
         "--json",
@@ -470,10 +606,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     measurement = measure(
         distances_m=args.distances,
-        sites=args.sites,
+        points=args.points,
         seed=args.seed,
         include_point_classes=not args.no_point_classes,
     )
+    if args.chart:
+        Path(args.chart).write_text(render_chart(measurement), encoding="utf-8")
+        print(f"wrote {args.chart}", file=sys.stderr)
     print(
         json.dumps(measurement.as_json(), indent=2)
         if args.json
