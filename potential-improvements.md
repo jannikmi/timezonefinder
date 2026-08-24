@@ -99,6 +99,12 @@ renumbers and nothing else moves. Entries that were *rejected*, ruled *out of sc
 stay: they encode a dead end, and re-discovering one costs a whole pass. So do *Recorded decisions*
 and *Deliberately checked and found sound*, which are never deleted.
 
+**Closing an entry moves its row to the tail**, below everything still actionable — the one case
+where a row moves without being deleted. Changing only the eligibility column leaves a dead item
+holding a live rank, and since the list is walked top-down that costs every later pass the reading
+it takes to discover the row is closed. The tail runs *rejected / withdrawn*, then *blocked*, then
+*conditional / parked*: the further down, the less any pass can do about it.
+
 An entry left in after its work shipped is the failure this file cannot detect on its own: it reads
 exactly like an open one, and the next pass pays full price to rediscover that there is nothing to
 do. Re-verify before ranking. **A `GH-<n>` entry whose issue has closed is the cheapest staleness
@@ -122,7 +128,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
-| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | rejected |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | partly decided — pinning and the report-only diff are free; one threshold still needs a decision |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
@@ -152,6 +157,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | DEAD-5 | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | DEAD-6 | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
 | GH-301 | Sort shortcut polygons by overlap area | performance | M | rejected |
+| PERF-4 | The mapped fetch re-acquires the mmap buffer per candidate | performance | ~20 | rejected |
 | GH-522 | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
 | GH-513 | Drop hole polygons entirely | data format | L | blocked by GH-500 |
 | GH-505 | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
