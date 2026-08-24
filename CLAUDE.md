@@ -219,8 +219,11 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 Every change needs a `CHANGELOG.rst` entry in the `X.X.X (unreleased)` section — user-facing ones in
 the main bullet list, dev tooling / refactors / CI / test infrastructure appended to the `Internal:`
 sub-list. This is easy to forget for changes that don't touch `timezonefinder/` at all (docs,
-`scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md` or
-`CONTRIBUTING.md` alone.
+`scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md`,
+`CONTRIBUTING.md` or `potential-improvements.md` alone — the first two are agent instructions and
+the third is a to-do list of work *not* done, so none of them describes anything a user can observe.
+The moment such a change also touches a skill, a test or anything under `timezonefinder/`, it is no
+longer "alone" and owes its bullet.
 
 The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
 state**, never the path taken to it:
