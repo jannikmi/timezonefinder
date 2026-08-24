@@ -50,7 +50,7 @@ from timezonefinder.shortcut_index import (
     get_shortcut_file_path,
     read_shortcuts_binary,
 )
-from timezonefinder.zone_names import read_zone_names
+from timezonefinder.zone_names import ZoneNames, read_zone_names
 
 
 #: What ``on_invalid`` accepts on the batch lookups. ``"raise"`` is the default because
@@ -61,26 +61,6 @@ from timezonefinder.zone_names import read_zone_names
 #: cannot drift; that alias is also what lets a type checker reject a mistyped policy at
 #: the call site instead of leaving it to raise at runtime.
 ON_INVALID_POLICIES: Final[tuple[str, ...]] = get_args(OnInvalid)
-
-#: Batch size from which converting zone ids to names through a numpy gather beats a
-#: Python loop. Measured, not guessed - min ns per id over uniformly random fixture
-#: points, with 10 % of the ids being the sentinel, on one machine:
-#:
-#: ======  ========  ======
-#: N       loop      gather
-#: ======  ========  ======
-#: 10      33.4      316.6
-#: 64      30.6      56.0
-#: **128** **31.2**  **31.9**
-#: 256     33.7      19.4
-#: 10,000  38.8      7.6
-#: ======  ========  ======
-#:
-#: numpy's per-call overhead is what dominates a short batch, so below the crossover the
-#: gather is up to 16x *worse* per id and above it up to 5x better. The threshold does not
-#: have to be exact on another machine: near it the two are within a few percent of each
-#: other by definition, which is what makes a single constant safe here.
-NAMES_GATHER_MIN_BATCH: Final[int] = 128
 
 
 def _negative_id_error(kind: str, value: object) -> ValueError:
@@ -186,19 +166,21 @@ class AbstractTimezoneFinder(ABC):
     __slots__ = [
         "data_location",
         "shortcuts",
-        "timezone_names",
+        "zone_names",
         "zone_ids",
         "holes_dir",
         "boundaries_dir",
         "boundaries",
         "holes",
-        "_zone_names_lookup",
     ]
 
     zone_ids: np.ndarray
     #: which timezones can possibly cover a point. This class asks it what a cell resolves
     #: to and never how that is stored - see ``timezonefinder/shortcut_index.py``.
     shortcuts: ShortcutIndex
+    #: the dataset's names, and every way a zone id becomes one. This class produces ids
+    #: and asks it to name them - see ``timezonefinder/zone_names.py``.
+    zone_names: ZoneNames
 
     def __init__(
         self,
@@ -225,19 +207,13 @@ class AbstractTimezoneFinder(ABC):
             bin_file_location = DEFAULT_DATA_DIR
         self.data_location: Path = Path(bin_file_location)
 
-        self.timezone_names = read_zone_names(self.data_location)
+        self.zone_names = ZoneNames(read_zone_names(self.data_location))
 
         self.zone_ids = read_per_polygon_vector(get_zone_ids_path(self.data_location))
 
         self.shortcuts = read_shortcuts_binary(
             get_shortcut_file_path(self.data_location)
         )
-
-        # built on first use rather than here, so that a finder which never converts a
-        # large batch of ids allocates nothing for it - construction heap and resident
-        # set are what `docs/benchmark_results_memory.rst` measures, and a lightweight
-        # finder's whole footprint is small enough that ~450 object pointers would show.
-        self._zone_names_lookup: np.ndarray | None = None
 
     def _iter_boundary_ids_of_zone(self, zone_id: int) -> Iterable[int]:
         """
@@ -289,13 +265,25 @@ class AbstractTimezoneFinder(ABC):
             ) from exc
 
     @property
+    def timezone_names(self) -> list[str]:
+        """
+        All timezone names of the loaded dataset, in zone id order.
+
+        A read-only view onto :attr:`zone_names`, which owns the list and everything
+        that turns an id back into one.
+
+        :rtype: list[str]
+        """
+        return self.zone_names.names
+
+    @property
     def nr_of_zones(self) -> int:
         """
         Get the number of timezones.
 
         :rtype: int
         """
-        return len(self.timezone_names)
+        return len(self.zone_names)
 
     @staticmethod
     def using_numba() -> bool:
@@ -317,7 +305,10 @@ class AbstractTimezoneFinder(ABC):
     # Validation happens at the public edge only. Every internal caller below obtains its
     # id from the shortcut index or from ``zone_ids``, neither of which can hold a negative
     # value, and the unchecked accessors run once per successful query - so the guard the
-    # public methods need is not paid on the lookup path.
+    # public methods need is not paid on the lookup path. Names are reached through
+    # ``self.zone_names`` directly rather than through a private wrapper here: a
+    # forwarding method would be a second call on the one accessor every successful
+    # query makes.
 
     def _zone_id_of(self, boundary_id: IntegerLike) -> int:
         """Look up a boundary polygon's zone id without checking its sign."""
@@ -332,17 +323,6 @@ class AbstractTimezoneFinder(ABC):
     def _zone_ids_of(self, boundary_ids: np.ndarray) -> np.ndarray:
         """Look up several boundary polygons' zone ids without checking their signs."""
         return self.zone_ids[boundary_ids]
-
-    def _zone_name_of(self, zone_id: int) -> str:
-        """Look up a zone name without checking the id's sign."""
-        try:
-            return self.timezone_names[zone_id]
-        except IndexError as e:
-            raise ValueError(
-                f"Zone ID {zone_id} is out of range. "
-                f"Valid range: 0-{len(self.timezone_names) - 1}. "
-                f"Loaded dataset has {self.nr_of_zones} timezones."
-            ) from e
 
     def zone_id_of(self, boundary_id: IntegerLike) -> int:
         """
@@ -398,40 +378,7 @@ class AbstractTimezoneFinder(ABC):
         """
         if zone_id < 0:
             raise _negative_id_error("zone", zone_id)
-        return self._zone_name_of(zone_id)
-
-    def _zone_names_lookup_array(self) -> np.ndarray:
-        """The names as an object array with ``None`` appended, built once per instance.
-
-        The trailing ``None`` is what makes the gather need no masking:
-        :data:`~timezonefinder.configs.NO_ZONE_ID` is ``-1``, so it indexes the last
-        element by Python's own negative-index rule. That is the same "counts from the
-        end" behaviour the public id-taking methods reject - deliberate here, because
-        here the end *is* the sentinel, and every other negative is rejected before the
-        gather runs.
-
-        Instances are per-thread by contract, and even a race would build an identical
-        array twice and assign the same content, so no lock is warranted.
-        """
-        lookup = self._zone_names_lookup
-        if lookup is None:
-            lookup = np.asarray([*self.timezone_names, None], dtype=object)
-            self._zone_names_lookup = lookup
-        return lookup
-
-    def _zone_names_of(self, zone_ids: np.ndarray) -> list[str | None]:
-        """Names for zone ids already known to be valid.
-
-        Two regimes, because neither wins everywhere - see
-        :data:`NAMES_GATHER_MIN_BATCH` for the measurement that sets the boundary.
-        """
-        if zone_ids.shape[0] < NAMES_GATHER_MIN_BATCH:
-            timezone_names = self.timezone_names
-            return [
-                None if zone_id < 0 else timezone_names[zone_id]
-                for zone_id in zone_ids.tolist()
-            ]
-        return self._zone_names_lookup_array()[zone_ids].tolist()
+        return self.zone_names.name_of(zone_id)
 
     def zone_names_from_ids(self, zone_ids: IdArrayLike) -> list[str | None]:
         """Convert many zone ids to timezone names in one call.
@@ -459,32 +406,7 @@ class AbstractTimezoneFinder(ABC):
             >>> tf.zone_names_from_ids(ids)
             ['Europe/Berlin', 'Europe/Paris']
         """
-        ids = np.asarray(zone_ids)
-        # the shape is checked before the size, so that a wrongly shaped input is
-        # rejected on the empty run too - otherwise an (N, 2) array is accepted while it
-        # happens to be empty and only raises once real data arrives
-        if ids.ndim != 1:
-            raise ValueError(f"zone_ids must be one-dimensional, got shape {ids.shape}")
-        if ids.size == 0:
-            # an empty list arrives as float64, which is not an error to convert
-            return []
-        if not np.issubdtype(ids.dtype, np.integer):
-            raise TypeError(
-                f"zone ids must be integers, got dtype {ids.dtype}. "
-                f"An id is an index into the {self.nr_of_zones} loaded timezone names."
-            )
-        # one pass for both bounds: below the sentinel, or past the last zone. The upper
-        # half is not redundant with numpy's own IndexError - the lookup array carries one
-        # extra slot for the sentinel, so ``nr_of_zones`` itself would quietly read it.
-        invalid = (ids < NO_ZONE_ID) | (ids >= self.nr_of_zones)
-        if invalid.any():
-            offender = int(ids[invalid][0])
-            raise ValueError(
-                f"{offender} is not a valid zone id. Valid range: "
-                f"0-{self.nr_of_zones - 1}, or {NO_ZONE_ID} for 'no zone'. "
-                f"Loaded dataset has {self.nr_of_zones} timezones."
-            )
-        return self._zone_names_of(ids)
+        return self.zone_names.names_from_ids(zone_ids)
 
     def zone_name_from_boundary_id(self, boundary_id: IntegerLike) -> str:
         """
@@ -498,7 +420,7 @@ class AbstractTimezoneFinder(ABC):
         # the id is validated by ``zone_id_of``; what it returns comes from ``zone_ids``
         # and is never negative, so the second lookup needs no second guard
         zone_id = self.zone_id_of(boundary_id)
-        return self._zone_name_of(zone_id)
+        return self.zone_names.name_of(zone_id)
 
     def _iter_boundaries_in_shortcut(self, *, lng: float, lat: float) -> Iterable[int]:
         """
@@ -684,7 +606,7 @@ class AbstractTimezoneFinder(ABC):
         # the unchecked converter: every id here came from the shortcut index or from
         # ``zone_ids``, so re-validating what this call itself just produced would pay a
         # pass over the batch to learn nothing - the same split as the id-taking methods
-        return self._zone_names_of(zone_ids)
+        return self.zone_names.names_of(zone_ids)
 
     def _zone_ids_of_valid(self, lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
         """Zone ids for coordinates already known to be in range.
@@ -756,7 +678,7 @@ class AbstractTimezoneFinder(ABC):
         zone_id = self.shortcuts.entry_of(hex_id)
         if zone_id < 0:
             return None
-        return self._zone_name_of(zone_id)
+        return self.zone_names.name_of(zone_id)
 
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
@@ -818,10 +740,10 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
             # unique zone case: the index holds the answer
-            return self._zone_name_of(entry)
+            return self.zone_names.name_of(entry)
         if entry == ABSENT:
             return None
-        return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
+        return self.zone_names.name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
 
     def _resolve_ambiguous_cells(
         self,
@@ -1114,14 +1036,14 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # one lookup answers most queries: a zone id is the answer itself
         entry = self.shortcuts.entry_of(hex_id)
         if entry >= 0:
-            return self._zone_name_of(entry)
+            return self.zone_names.name_of(entry)
         if entry == ABSENT:
             # NOTE: hypothetical case, with ocean data every cell holds at least one boundary polygon
             return None
 
         # several zones - the candidates have to be tested. One call, shared with the
         # batch path, so the loop below exists once.
-        return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
+        return self.zone_names.name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
 
     def _prepare_ambiguous_cell(self, entry: int) -> tuple[np.ndarray, np.ndarray, int]:
         """Everything a cell's candidate list costs before any point is tested.
@@ -1275,7 +1197,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         for boundary_id in boundary_ids:
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = self._zone_id_of(boundary_id)
-                return self._zone_name_of(zone_id)
+                return self.zone_names.name_of(zone_id)
 
         # none of the boundary polygon candidates truly matched
         return None

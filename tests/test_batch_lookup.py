@@ -30,7 +30,7 @@ from timezonefinder import (
 )
 from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
 from timezonefinder.shortcut_index import ABSENT, slot_of
-from timezonefinder.timezonefinder import NAMES_GATHER_MIN_BATCH
+from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 # enough points to reach every branch without turning a unit test into a sweep; the
 # exhaustive comparison over all four fixtures is the ``slow`` test at the bottom
@@ -493,13 +493,13 @@ def test_the_names_lookup_array_is_not_built_until_a_gather_needs_it():
     show in it. Building the array eagerly would move a committed measurement with
     nothing to signal it, so the laziness is pinned rather than left to a comment."""
     with TimezoneFinderL() as tf:
-        assert tf._zone_names_lookup is None
+        assert tf.zone_names._gather_lookup is None
 
         tf.zone_names_from_ids(np.zeros(NAMES_GATHER_MIN_BATCH - 1, dtype=np.int32))
-        assert tf._zone_names_lookup is None, "the loop regime allocates nothing"
+        assert tf.zone_names._gather_lookup is None, "the loop regime allocates nothing"
 
         tf.zone_names_from_ids(np.zeros(NAMES_GATHER_MIN_BATCH, dtype=np.int32))
-        assert tf._zone_names_lookup is not None
+        assert tf.zone_names._gather_lookup is not None
 
 
 # --- shared per-cell work -----------------------------------------------------
