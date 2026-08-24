@@ -105,8 +105,8 @@ rank, and since the list is walked top-down that costs every later pass the read
 discover there is nothing to take. The line is narrow: *rejected*, *withdrawn* and *out of scope*
 move, because no pass will ever take them as they stand. **Blocked is not closed** — a blocked item
 is live work waiting on a blocker, and it stays in the ranking below that blocker; so do *parked*
-and *conditional*, which can become live without the entry changing. Rejections accumulate forever
-where blockers resolve, which is the whole reason they are the ones that leave.
+and *conditional*, which can become live without the entry changing. Blockers resolve, whereas
+rejections accumulate forever — which is the whole reason rejections are the ones that leave.
 
 Both tables sit under this heading on purpose: `tests/test_improvement_ledger.py` reads the section
 rather than a single table, so every entry still has exactly one row and the two halves still cannot
