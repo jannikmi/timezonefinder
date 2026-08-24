@@ -1803,9 +1803,10 @@ premise moves; do not reverse a decision silently.
   PERF-4 was the measurement, not the pinning — so do not refuse a future held view on
   resource-semantics grounds alone, and do not propose one on the strength of a per-fetch
   microbenchmark either. **The generalisable half:** a per-fetch figure and a workload share are
-  different quantities, and PERF-4 is the case where they disagreed by 3x — ~370 ns per fetch in
-  isolation became ~1 % of a mixed workload, indistinguishable from noise at 9 of 15 rounds.
-  Measure inside the query, alternating within one process.
+  different quantities, and converting one into the other is where PERF-4 went wrong — ~370 ns per
+  fetch in isolation was written up as "~3 % of a mixed workload", and measured inside the query it
+  was ~0.8 %, indistinguishable from noise at 9 of 15 rounds. Nearly 4x apart, and only the second
+  number is the one the ranking rule takes. Measure inside the query, alternating within one process.
 - **A tripped data-update guardrail blocks the auto-merge, and the size gate is symmetric.**
   Settled 2026-08-23 by the maintainer. Every signal made a gate blocks; signals the calibration
   ruled report-only stay report-only, so this does not turn zone changes into a gate. Refused:
