@@ -1,10 +1,11 @@
-"""The interpretation `scripts/measure_tzfpy_agreement.py` puts on two answers.
+"""What `scripts/measure_tzfpy_agreement.py` does before it counts anything.
 
 The measurement itself needs `tzfpy`, which lives in the `compare` dependency
 group and is deliberately absent from the CI test environment. What is worth
-covering is not the counting but the two rules that make the counts mean
-anything - the overlapping-zone split and the matched-release guard - and
-neither needs the package installed.
+covering is not the counting but the parts that decide what the counts *mean*:
+the overlapping-zone split, the matched-release guard, and the geometry that
+places a probe a stated number of metres from a border. None of them needs the
+package installed.
 
 There is deliberately no test asserting a disagreement *rate*. That number is a
 property of whichever `tzfpy` release is installed, so such a test would fail
@@ -12,18 +13,36 @@ because someone else shipped - the same reason the comparison benchmarks stay
 off the trend chart (see `benchmarks/test_comparison.py`).
 """
 
+import numpy as np
 import pytest
 
 from scripts.measure_tzfpy_agreement import (
     AGREE,
+    METRES_PER_DEGREE_LATITUDE,
+    METRES_PER_DEGREE_LONGITUDE,
     OVERLAP_POLICY,
     SUBSTANTIVE,
     AgreementCounts,
+    BorderSite,
     _require_matching_dataset,
     classify,
     count_agreement,
+    edge_vectors,
+    probes_at,
 )
 from scripts.configs import read_data_version
+from timezonefinder.configs import COORD2INT_FACTOR
+
+
+def _ring(*vertices: tuple[float, float]) -> np.ndarray:
+    """The `(2, n)` int32 layout the packaged boundary files store."""
+    return np.array(
+        [
+            [round(lng * COORD2INT_FACTOR) for lng, _ in vertices],
+            [round(lat * COORD2INT_FACTOR) for _, lat in vertices],
+        ],
+        dtype=np.int32,
+    )
 
 
 class _FakeTzfpy:
@@ -119,3 +138,65 @@ def test_a_different_boundary_release_refuses_to_report() -> None:
     # simplified, and reporting it as one would be the whole error this guards
     with pytest.raises(SystemExit, match="no measurement to take"):
         _require_matching_dataset(_FakeTzfpy("1999a"))
+
+
+@pytest.mark.unit
+def test_an_edge_is_measured_in_metres_along_the_ring() -> None:
+    # a degree of longitude on the equator, as one edge of a closed ring
+    _, _, east, north, length = edge_vectors(_ring((0.0, 0.0), (1.0, 0.0)))
+    assert length[0] == pytest.approx(METRES_PER_DEGREE_LONGITUDE, rel=1e-6)
+    assert east[0] == pytest.approx(METRES_PER_DEGREE_LONGITUDE, rel=1e-6)
+    assert north[0] == pytest.approx(0.0, abs=1e-6)
+    # the ring closes, so the second edge is the return leg
+    assert length[1] == pytest.approx(METRES_PER_DEGREE_LONGITUDE, rel=1e-6)
+
+
+@pytest.mark.unit
+def test_a_degree_of_longitude_shortens_towards_the_pole() -> None:
+    _, _, _, _, equator = edge_vectors(_ring((0.0, 0.0), (1.0, 0.0)))
+    _, _, _, _, sixty = edge_vectors(_ring((0.0, 60.0), (1.0, 60.0)))
+    assert sixty[0] == pytest.approx(equator[0] * 0.5, rel=1e-3)
+
+
+@pytest.mark.unit
+def test_the_seam_of_a_ring_that_wraps_the_antimeridian_has_no_length() -> None:
+    # the jump from +179.9 to -179.9 is where the ring closes, not a piece of
+    # border half the planet long - weighting by it would put most of the
+    # sample on a line nobody can stand next to
+    _, _, _, _, length = edge_vectors(
+        _ring((179.9, 10.0), (-179.9, 10.0), (-179.9, 11.0), (179.9, 11.0))
+    )
+    assert length[0] == 0.0
+    assert length[2] == 0.0
+    assert length[1] > 0.0 and length[3] > 0.0
+
+
+@pytest.mark.unit
+def test_a_probe_lands_the_stated_distance_either_side_of_the_site() -> None:
+    site = BorderSite(lng=0.0, lat=0.0, normal_east=0.0, normal_north=1.0)
+    north, south = probes_at(site, 1000.0)
+    assert north[0] == pytest.approx(0.0)
+    assert north[1] == pytest.approx(1000.0 / METRES_PER_DEGREE_LATITUDE)
+    assert south[1] == pytest.approx(-north[1])
+
+
+@pytest.mark.unit
+def test_the_longitude_offset_grows_with_latitude() -> None:
+    # 100 m east is twice as many degrees at 60 degrees north as at the equator,
+    # and getting this wrong would silently mislabel every column of the sweep
+    at_equator = probes_at(
+        BorderSite(lng=0.0, lat=0.0, normal_east=1.0, normal_north=0.0), 100.0
+    )
+    at_sixty = probes_at(
+        BorderSite(lng=0.0, lat=60.0, normal_east=1.0, normal_north=0.0), 100.0
+    )
+    assert at_equator[0][0] == pytest.approx(100.0 / METRES_PER_DEGREE_LONGITUDE)
+    assert at_sixty[0][0] == pytest.approx(2 * at_equator[0][0], rel=1e-3)
+
+
+@pytest.mark.unit
+def test_a_probe_pushed_off_the_globe_is_dropped_rather_than_wrapped() -> None:
+    # a site on the last polygon before the pole, probed outwards: a latitude
+    # of 90.001 is not a coordinate, and `timezone_at` would reject it
+    site = BorderSite(lng=0.0, lat=89.9999, normal_east=0.0, normal_north=1.0)
+    assert len(probes_at(site, 1000.0)) == 1
