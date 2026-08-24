@@ -999,6 +999,10 @@ the denominators, and how to tell whether they still describe the tree.
   Four releases of monotone growth do not make a decrease anomalous — they are consistent with ordinary refinement, and upstream may legitimately drop or simplify boundaries.
   **The gate is symmetric, and small reductions pass.**
   The band is a threshold on magnitude in either direction, not a floor of zero.
+  **Its magnitude is not set, and overruling the asymmetry is what unset it** — the four-release calibration on the issue produced a one-sided number, and there is no symmetric replacement.
+  What the same four releases bound is the normal range: boundary payload moved +0.29 %, +0.65 %, +1.47 %, so any band at or below 1.47 % fires on an ordinary refinement, which is the failure the trip-behaviour decision above is most exposed to now that a tripped gate blocks.
+  Set it the way the changed-answer rate was set — from the release-to-release conversions, which are already the method this entry records — and until it is, **ship the size signal report-only**.
+  A blocking gate with a guessed band is the one shape this entry has refused twice.
 - **What can be built now, and what still waits.**
   Part (a) — pin the download by tag and verify a SHA-256 — needs no threshold and no judgement, and is worth taking on its own ahead of the rest.
   The committed point sample and the diff report can be built **report-only**, which is also what produces the empirical data the remaining threshold needs.
@@ -1810,7 +1814,11 @@ premise moves; do not reverse a decision silently.
   calibration concluded the size gate should be asymmetric because boundary data has grown
   monotonically, making a decrease the anomaly. Four releases of monotone growth do not establish
   that — ordinary refinement produces the same pattern, and upstream may legitimately simplify
-  boundaries. Small reductions pass. **The mechanism costs nothing to build:** `release_data_update.yml`
+  boundaries. Small reductions pass. **What overruling it cost:** the asymmetric band was the only
+  calibrated number, so the symmetric one has no magnitude yet — set it from the release-to-release
+  conversions that calibrated the answer rate, and keep the size signal report-only until it is,
+  since the same four releases show anything at or below 1.47 % firing on ordinary refinement.
+  **The mechanism costs nothing to build:** `release_data_update.yml`
   merges only when `build` concludes `success`, and `alert_failure` already labels the pull request
   and mentions the maintainer, so a guardrail is a job in `build.yml` — no new blocking machinery,
   though it needs a branch condition so it does not run on every pull request.
