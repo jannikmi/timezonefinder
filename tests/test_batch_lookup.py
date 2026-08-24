@@ -11,6 +11,7 @@ policies, and the sentinel that stands where the scalar method answers ``None``.
 
 import numpy as np
 import pytest
+from h3.api import numpy_int as h3
 
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -27,6 +28,7 @@ from timezonefinder import (
     timezone_ids_at,
     timezone_names_at,
 )
+from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import ABSENT, slot_of
 from timezonefinder.timezonefinder import (
     NAMES_GATHER_MIN_BATCH,
@@ -373,3 +375,69 @@ def test_the_names_lookup_array_is_not_built_until_a_gather_needs_it():
 
         tf.zone_names_from_ids(np.zeros(NAMES_GATHER_MIN_BATCH, dtype=np.int32))
         assert tf._zone_names_lookup is not None
+
+
+# --- shared per-cell work -----------------------------------------------------
+#
+# A batch prepares each distinct shortcut entry once and reuses it for every point that
+# landed in it, which is what makes a clustered batch cheap. The fixtures are spread over
+# the globe and barely exercise that, so these build the clustered case explicitly.
+
+
+def _clustered_points(lng, lat, count, spread=0.2, seed=0):
+    rng = np.random.default_rng(seed)
+    return (
+        (lng + rng.normal(0, spread, count)).tolist(),
+        (lat + rng.normal(0, spread, count)).tolist(),
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "lng, lat",
+    [(7.5886, 47.5596), (6.1432, 46.2044), (13.358, 52.5061)],
+    ids=["basel_tri_border", "geneva_border", "berlin_interior"],
+)
+def test_a_clustered_batch_answers_like_the_scalar_lookup(finder, lng, lat):
+    """Where the sharing is: points around a border city land in a handful of cells, so
+    almost every point reads a prepared cell rather than preparing one."""
+    lngs, lats = _clustered_points(lng, lat, 500)
+
+    expected = [
+        finder.timezone_at(lng=a, lat=b) for a, b in zip(lngs, lats, strict=True)
+    ]
+    assert finder.timezone_names_at(lngs=lngs, lats=lats) == expected
+
+
+@pytest.mark.unit
+def test_the_cluster_really_does_share_cells(finder):
+    """Guards the test above from going vacuous. If a data update moved the boundaries
+    so that these points no longer share entries, the test would still pass while
+    exercising none of the sharing it exists for."""
+    lngs, lats = _clustered_points(7.5886, 47.5596, 500)
+    cells = np.fromiter(
+        (
+            h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+            for lng, lat in zip(lngs, lats, strict=True)
+        ),
+        dtype=np.uint64,
+        count=len(lngs),
+    )
+    entries = finder.shortcuts.entries_of(cells)
+    ambiguous = entries[entries < ABSENT]
+
+    assert ambiguous.size > 100, "the cluster reaches no ambiguous cell at all"
+    assert len(np.unique(ambiguous)) < ambiguous.size / 10, (
+        "the cluster spreads over too many distinct entries to exercise the sharing"
+    )
+
+
+@pytest.mark.unit
+def test_repeating_one_coordinate_gives_one_answer(finder):
+    """The degenerate cluster: every point in one cell, so one preparation serves all."""
+    points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:1]
+    lng, lat = points[0]
+    expected = finder.timezone_at(lng=lng, lat=lat)
+
+    names = finder.timezone_names_at(lngs=[lng] * 200, lats=[lat] * 200)
+    assert names == [expected] * 200

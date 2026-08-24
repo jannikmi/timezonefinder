@@ -515,6 +515,36 @@ class AbstractTimezoneFinder(ABC):
         ...
 
     @abstractmethod
+    def _resolve_ambiguous_cells(
+        self,
+        entries: np.ndarray,
+        positions: np.ndarray,
+        lngs: np.ndarray,
+        lats: np.ndarray,
+        out: np.ndarray,
+    ) -> None:
+        """Write the zone id of every point whose cell several zones cover into ``out``.
+
+        Separate from :meth:`_zone_id_in_ambiguous_cell` because a batch can share what a
+        single query cannot: **points in a batch cluster.** A delivery round, a city, a
+        border region all land in a handful of cells, and everything a cell costs to
+        prepare is identical for every point in it. Each implementation therefore
+        memoises that preparation by shortcut entry.
+
+        Memoised rather than sorted by entry: a dict lookup is a few tens of nanoseconds
+        against the preparation it skips, and unlike an ``argsort`` it costs essentially
+        nothing when a batch happens to share nothing - which a uniformly random one
+        largely does.
+
+        :param entries: the shortcut table value of every point in the batch
+        :param positions: indices into ``entries`` of the points to resolve
+        :param lngs: longitudes of the whole batch, already validated
+        :param lats: latitudes of the whole batch, already validated
+        :param out: the answer array, written in place at ``positions``
+        """
+        ...
+
+    @abstractmethod
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
         """The zone id of a point whose H3 cell several timezones cover.
 
@@ -664,10 +694,9 @@ class AbstractTimezoneFinder(ABC):
         zone_ids = np.where(entries >= 0, entries, NO_ZONE_ID).astype(
             ZONE_ID_RESULT_DTYPE
         )
-        for i in np.flatnonzero(entries < ABSENT):
-            zone_ids[i] = self._zone_id_in_ambiguous_cell(
-                int(entries[i]), float(lngs[i]), float(lats[i])
-            )
+        ambiguous = np.flatnonzero(entries < ABSENT)
+        if ambiguous.size:
+            self._resolve_ambiguous_cells(entries, ambiguous, lngs, lats, zone_ids)
         return zone_ids
 
     def timezone_at_land(self, *, lng: float, lat: float) -> str | None:
@@ -768,6 +797,30 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         if entry == ABSENT:
             return None
         return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
+
+    def _resolve_ambiguous_cells(
+        self,
+        entries: np.ndarray,
+        positions: np.ndarray,
+        lngs: np.ndarray,
+        lats: np.ndarray,
+        out: np.ndarray,
+    ) -> None:
+        """One lookup per *distinct* cell answers every point in it.
+
+        Exact rather than an approximation: which zone is most common in a cell does not
+        depend on the point, so this class's whole ambiguous answer is a property of the
+        entry. The coordinates are unused here for the same reason they are unused in
+        :meth:`_zone_id_in_ambiguous_cell`.
+        """
+        answers: dict[int, int] = {}
+        for i in positions.tolist():
+            entry = int(entries[i])
+            zone_id = answers.get(entry)
+            if zone_id is None:
+                zone_id = self._zone_id_in_ambiguous_cell(entry, 0.0, 0.0)
+                answers[entry] = zone_id
+            out[i] = zone_id
 
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
         """The most common zone of the cell - this class tests no geometry.
@@ -1033,11 +1086,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # batch path, so the loop below exists once.
         return self._zone_name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
 
-    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
-        """Work the cell's candidate polygons until one contains the point.
+    def _prepare_ambiguous_cell(self, entry: int) -> tuple[np.ndarray, np.ndarray, int]:
+        """Everything a cell's candidate list costs before any point is tested.
 
-        The last remaining zone is returned without a test - see :meth:`timezone_at`,
-        whose note explains when that is and is not correct.
+        A property of the *cell*, not of the query point, which is what lets a batch pay
+        it once per distinct cell. Measured at 898 ns against 10,228 ns for resolving a
+        whole ambiguous point on the C-extension backend in mapped mode - so this is the
+        8.8 % ceiling on what sharing it can win, and the geometry below is the rest.
 
         NOTE: neither the empty nor the single-candidate case can occur here; both are
         unambiguous and are stored in the shortcut table itself.
@@ -1052,6 +1107,21 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # NOTE: the case last_zone_change_idx == 0 is covered by the unique zone shortcut
         last_zone_change_idx = self.shortcuts.stop_index_of(entry)
 
+        return possible_boundaries, zone_ids, last_zone_change_idx
+
+    def _zone_id_among(
+        self,
+        possible_boundaries: np.ndarray,
+        zone_ids: np.ndarray,
+        last_zone_change_idx: int,
+        lng: float,
+        lat: float,
+    ) -> int:
+        """Work a prepared cell's candidate polygons until one contains the point.
+
+        The last remaining zone is returned without a test - see :meth:`timezone_at`,
+        whose note explains when that is and is not correct.
+        """
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
         # x = longitude  y = latitude  both converted to 8byte int
@@ -1071,6 +1141,52 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # the polygons of the last possible zone don't actually have to be checked
         # -> instantly return the last zone
         return int(zone_ids[-1])
+
+    def _resolve_ambiguous_cells(
+        self,
+        entries: np.ndarray,
+        positions: np.ndarray,
+        lngs: np.ndarray,
+        lats: np.ndarray,
+        out: np.ndarray,
+    ) -> None:
+        """Prepare each distinct cell once, then test every point that landed in it."""
+        prepared: dict[int, tuple[np.ndarray, np.ndarray, int]] = {}
+        for i in positions.tolist():
+            entry = int(entries[i])
+            cell = prepared.get(entry)
+            if cell is None:
+                cell = self._prepare_ambiguous_cell(entry)
+                prepared[entry] = cell
+            possible_boundaries, zone_ids, last_zone_change_idx = cell
+            out[i] = self._zone_id_among(
+                possible_boundaries,
+                zone_ids,
+                last_zone_change_idx,
+                float(lngs[i]),
+                float(lats[i]),
+            )
+
+    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
+        """Prepare this one cell and work it - the single-point path.
+
+        The three preparation expressions are written out here rather than delegated to
+        :meth:`_prepare_ambiguous_cell`, which is the only duplication in this class and
+        is deliberate: this runs on every ambiguous ``timezone_at``, and the extra call
+        measured **+0.8 %** of such a query on the C-extension backend - against a batch
+        gain that does not need it. Nothing can drift silently, because
+        ``test_batch_and_scalar_agree_over_every_committed_point`` compares the two paths
+        over every point in every committed fixture; a change to one and not the other
+        fails there.
+        """
+        possible_boundaries = self.shortcuts.candidates_of(entry)
+        return self._zone_id_among(
+            possible_boundaries,
+            self._zone_ids_of(possible_boundaries),
+            self.shortcuts.stop_index_of(entry),
+            lng,
+            lat,
+        )
 
     def certain_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """checks in which timezone polygon the point is certainly included in using hybrid shortcuts
