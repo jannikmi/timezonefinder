@@ -120,79 +120,65 @@ difference is in what they do with that dataset's geometry.
    says nothing, because a uniformly drawn coordinate is hundreds of kilometres from the nearest
    border. So ``scripts/measure_tzfpy_agreement.py`` (``make tzfpy-agreement``) asks the question at
    a *stated distance from a border* instead, over points drawn without bias in where on the globe
-   they land, and sweeps the distance.
+   they land, and sweeps that distance from this package's own ~1.1 cm coordinate resolution
+   outwards.
 
 .. image:: tzfpy_agreement_by_distance.svg
-   :alt: A different zone is returned for a third of points a metre from a timezone border, a fifth
-         at ten metres, and none at all from a hundred metres out.
+   :alt: Of points a centimetre from a timezone border, about half get a different zone from the two
+         packages; a third do at a metre, a quarter at ten metres, and none at a hundred.
    :width: 100%
 
 .. note::
-
-   Two corrections make that curve attributable rather than merely suggestive. It refuses to report
-   unless both packages carry the **same timezone-boundary-builder release**, so a difference cannot
-   be a border that moved between datasets; and it asks whether this package's answer is among the
-   zones ``tzfpy`` holds over the point rather than whether the two name the same one, because the
-   dataset ships genuinely overlapping zones - ``Asia/Urumqi`` inside ``Asia/Shanghai`` - that each
-   package resolves by its own rule. Those overlaps are almost every difference away from a border
-   and none of the ones near it.
 
    Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 2,000 points per distance, 2026-08-24:
 
    .. list-table::
       :header-rows: 1
-      :widths: 24 26 26 24
+      :widths: 34 33 33
 
       * - Distance from a border
         - Any border
         - Border of a land zone
-        - Implied share of border moved further
+      * - 1 cm
+        - 37.8 %
+        - 47.8 %
+      * - 10 cm
+        - 32.0 %
+        - 42.9 %
       * - 1 m
-        - 26.2 %
-        - 34.1 %
-        - ~68 %
-      * - 3 m
-        - 22.2 %
-        - 29.4 %
-        - ~59 %
+        - 26.5 %
+        - 35.8 %
       * - 10 m
-        - 17.3 %
-        - 22.6 %
-        - ~45 %
-      * - 30 m
-        - 9.2 %
-        - 12.3 %
-        - ~25 %
+        - 18.8 %
+        - 24.6 %
       * - 100 m
-        - 0.00 %
-        - 0.00 %
-        - ~0 %
-      * - 300 m
-        - 0.10 %
-        - 0.13 %
-        - ~0.3 %
-      * - 1 km and beyond
-        - 0.00 %
-        - 0.00 %
-        - ~0 %
+        - 0.0 %
+        - 0.0 %
 
-   **50 % is the ceiling, not 100 %.** A point *d* from the border gets a different answer only if
-   the other package's border has moved past it - further than *d*, **and** towards that particular
-   side. Nothing makes a simplification prefer one side, so a rate of *r* says roughly *2 r* of the
-   border length has moved by more than *d*, which is the last column. The middle column drops the
-   ocean zones, whose mutual borders are meridians that no simplification can move and which
-   therefore dilute the first; a coastline stays in both, since it is stored in the land polygon as
-   well as in the ocean polygon around it.
+   The curve levels off just under half rather than at 100 % because the points sit on **both** sides
+   of this package's border, and only the side ``tzfpy``'s boundary has moved away from can disagree.
+   The second column drops the ocean zones, whose mutual borders are meridians that no simplification
+   can move and which therefore dilute the first; a coastline stays in both, since it is stored in the
+   land polygon as well as in the ocean polygon around it.
 
-   Read across, the answer is a **simplification tolerance of roughly a hundred metres**: two thirds
-   of the border has moved by more than a metre, a quarter by more than thirty, and essentially none
-   by more than a hundred. The residual 0.10 % at 300 m is small islands, where a simplified
-   coastline shrinks the island rather than shifting a line - ``Pacific/Tahiti`` and an islet off
-   ``Asia/Tokyo`` are the two cases in this sample.
+   ``tzfpy``'s maintainer puts the simplification's maximum displacement at roughly **111 m**, chosen
+   for a weather API where coordinates are rarely that sensitive near a border. The measurement agrees
+   with that bound from the outside: disagreement is gone by 100 m, which is why the sweep stops
+   there. What it adds is the shape below it - the boundary is not *within* a metre of this package's
+   either, so a query point within a few metres of a border is a coin flip between the two packages
+   rather than a rare edge case.
 
-   The disagreements are ordinary international borders, not exotica: ``Europe/Dublin`` against
-   ``Europe/London``, ``Asia/Bishkek`` against ``Asia/Tashkent``, ``America/Denver`` against
-   ``America/Phoenix``. Which distance your queries land at is the whole question, and it is why the
+   Two corrections make the numbers attributable rather than merely suggestive. The measurement
+   refuses to report unless both packages carry the **same timezone-boundary-builder release**, so a
+   difference cannot be a border that moved between datasets; and it asks whether this package's
+   answer is among the zones ``tzfpy`` holds over the point rather than whether the two name the same
+   one, because the dataset ships genuinely overlapping zones - ``Asia/Urumqi`` inside
+   ``Asia/Shanghai`` - that each package resolves by its own rule. Those overlaps are almost every
+   difference away from a border and next to none of the ones near it.
+
+   The disagreements are ordinary international borders, not exotica: ``Asia/Bishkek`` against
+   ``Asia/Tashkent``, ``Africa/Maputo`` against ``Africa/Blantyre``, ``Asia/Tehran`` against
+   ``Asia/Ashgabat``. Which distance your queries land at is the whole question, and it is why the
    recommendation at the top of this page turns on how near a border your points are rather than on
    how accurate either package is in the abstract. Re-run the measurement rather than trusting these
    figures: they describe one release of a package that ships on its own schedule.

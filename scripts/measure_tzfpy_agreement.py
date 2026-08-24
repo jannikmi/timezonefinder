@@ -29,11 +29,15 @@ goes wrong - is :mod:`scripts.border_sampling`.
 Reading the curve
 -----------------
 
-**50 % is the ceiling, not 100 %.** A point ``d`` from the border gets a
-different answer only if the other package's border has moved past it: further
-than ``d``, *and* towards this particular side. Nothing makes a simplification
-prefer one side, so a rate of ``r`` says that roughly ``2 r`` of the border
-length has moved by more than ``d``.
+The number is what it says: of points exactly this far from a border, the share
+that get a different zone from the two packages. It levels off just under half
+rather than at 100 %, because the points sit on both sides of this package's
+border and only the side the other package's boundary has moved away from can
+disagree.
+
+``tzfpy``'s maintainer gives that boundary's maximum displacement as roughly
+111 m, which is what the far end of the sweep is checking rather than
+discovering - and why nothing beyond 200 m is measured.
 
 The overlapping-zone rate in the last column is near-flat across distances by
 construction - it is about zone naming, not geometry - and is a useful check
@@ -86,19 +90,13 @@ from tests.auxiliaries import (
 from timezonefinder import TimezoneFinder
 from timezonefinder.utils import is_ocean_timezone
 
-# The distances swept, in metres. Chosen to bracket the answer rather than to
-# sample it evenly: both ends are there to show the curve reaching its ceiling
-# and its floor, and the decade that turned out to matter is in the middle.
-DEFAULT_DISTANCES_M: tuple[float, ...] = (
-    1.0,
-    3.0,
-    10.0,
-    30.0,
-    100.0,
-    300.0,
-    1_000.0,
-    10_000.0,
-)
+# The distances swept, in metres: one decade apart, starting at this package's
+# own coordinate resolution. ~1.1 cm is the quantization step of the stored
+# int32 coordinates, so a point nearer than that to a border is not a thing
+# this package can represent, and nothing above 200 m is shown because the
+# other package's simplification is bounded well below it - see the module
+# docstring.
+DEFAULT_DISTANCES_M: tuple[float, ...] = (0.01, 0.1, 1.0, 10.0, 100.0)
 
 # Accepted points per distance. At 33 % this is a standard error of ~1 point,
 # which is finer than anything read off the curve.
@@ -342,7 +340,16 @@ def _example_lines(label: str, counts: AgreementCounts) -> list[str]:
 
 
 def format_distance(distance_m: float) -> str:
-    return f"{distance_m / 1000:g} km" if distance_m >= 1000.0 else f"{distance_m:g} m"
+    """A distance as a reader would say it, not as a float.
+
+    The sweep starts at this package's own ~1.1 cm coordinate resolution, and
+    "0.01 m" on an axis is a number rather than a length.
+    """
+    if distance_m >= 1000.0:
+        return f"{distance_m / 1000:g} km"
+    if distance_m >= 1.0:
+        return f"{distance_m:g} m"
+    return f"{round(distance_m * 100, 6):g} cm"
 
 
 def format_report(measurement: Measurement) -> str:
@@ -351,8 +358,8 @@ def format_report(measurement: Measurement) -> str:
         f"({TZFPY_DISTRIBUTION} {measurement.tzfpy_version})",
         "",
         "a different zone returned, by distance from the nearest timezone border",
-        "(50% is the ceiling: the other border has to have moved past this point,",
-        " which needs it to move further than the distance AND towards this side)",
+        "(just under half is the most this can reach: the points sit on both sides",
+        " of our border and only one of them can be the side tzfpy moved away from)",
         "",
         f"{'distance':>10}{'points':>8}{'accepted':>10}"
         f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}",
@@ -449,7 +456,6 @@ def render_chart(measurement: Measurement) -> str:
     low, high = float(np.log10(min(distances))), float(np.log10(max(distances)))
     right = CHART_WIDTH - CHART_MARGIN_RIGHT
     baseline = _chart_y(0.0)
-    ceiling = _chart_y(CHART_Y_MAX)
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
@@ -480,7 +486,7 @@ def render_chart(measurement: Measurement) -> str:
             f'fill="{CHART_INK}">{series.label}</text>'
         )
 
-    for percent in (0, 10, 20, 30, 40):
+    for percent in (0, 10, 20, 30, 40, 50):
         y = _chart_y(float(percent))
         parts.append(
             f'<line x1="{CHART_MARGIN_LEFT}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" '
@@ -490,21 +496,6 @@ def render_chart(measurement: Measurement) -> str:
             f'<text x="{CHART_MARGIN_LEFT - 10}" y="{y + 4:.1f}" font-size="12" '
             f'text-anchor="end" fill="{CHART_MUTED}">{percent}%</text>'
         )
-
-    parts.append(
-        f'<line x1="{CHART_MARGIN_LEFT}" y1="{ceiling:.1f}" x2="{right}" '
-        f'y2="{ceiling:.1f}" stroke="{CHART_MUTED}" stroke-width="1.2" '
-        f'stroke-dasharray="3 4"/>'
-    )
-    parts.append(
-        f'<text x="{CHART_MARGIN_LEFT - 10}" y="{ceiling + 4:.1f}" font-size="12" '
-        f'text-anchor="end" fill="{CHART_MUTED}">50%</text>'
-    )
-    parts.append(
-        f'<text x="{right}" y="{ceiling + 16:.1f}" font-size="12" '
-        f'text-anchor="end" fill="{CHART_MUTED}">ceiling &#8212; the other border '
-        f"also has to move towards the point</text>"
-    )
 
     for result in measurement.by_distance:
         x = _chart_x(result.distance_m, low, high)
