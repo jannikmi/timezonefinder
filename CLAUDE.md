@@ -219,11 +219,16 @@ rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocea
 Every change needs a `CHANGELOG.rst` entry in the `X.X.X (unreleased)` section — user-facing ones in
 the main bullet list, dev tooling / refactors / CI / test infrastructure appended to the `Internal:`
 sub-list. This is easy to forget for changes that don't touch `timezonefinder/` at all (docs,
-`scripts/`, CI config, fixtures); those still need one. Exception: edits to `CLAUDE.md`,
-`CONTRIBUTING.md` or `potential-improvements.md` alone — the first two are agent instructions and
-the third is a to-do list of work *not* done, so none of them describes anything a user can observe.
-The moment such a change also touches a skill, a test or anything under `timezonefinder/`, it is no
-longer "alone" and owes its bullet.
+`scripts/`, CI config, fixtures); those still need one.
+
+**Exception: the agent-facing layer gets no entry at all, not even an `Internal:` one.** That is
+`CLAUDE.md`, `CONTRIBUTING.md`, `AGENTS.md` and the `.cursor` stub, everything under
+`.claude/skills/`, `potential-improvements.md`, and `tests/test_improvement_ledger.py`, whose only
+subject is the register's own structure. None of it ships, none of it changes behaviour, and the
+register is a list of work *not* done — so a bullet would tell a reader looking for what changed in
+the package about a process they cannot see. `Internal:` is still the user's changelog; it is for
+dev tooling that affects the package's development, not for the instructions agents read. A change
+that touches any of these *and* something else is not covered: describe the something else.
 
 The changelog is read by users, not by reviewers of the PR that produced it. Describe the **end
 state**, never the path taken to it:

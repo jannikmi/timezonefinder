@@ -33,7 +33,7 @@ Here the answer is written to a tracked file and pushed *before* anything is bui
 `CLAUDE.md` is auto-loaded; read `CONTRIBUTING.md` too, which is not.
 Both are authoritative and nothing here repeats them.
 
-- **Never implement, and never start.** No source file changes in this run — the register is the only file this skill edits, plus `CHANGELOG.rst` if the pull request needs a bullet.
+- **Never implement, and never start.** No source file changes in this run — the register is the only file this skill edits.
 - **Never treat silence, a shrug or "you decide" as an answer to a question that reached the bar in §4.**
   If it is genuinely the maintainer's and they did not make it, it stays open — record the brief (§7) and say so.
   A question they hand back is a different case: it did not belong to them, so decide it, say what you decided, and record why it was demoted.
@@ -186,12 +186,11 @@ Then, with output you have actually read:
 - [ ] `git fetch origin && git rebase origin/master` **first**. Another pass may have shipped an entry this round asked about — if so, that question is answered by the code and does not need the maintainer.
 - [ ] `uv run pytest tests/test_improvement_ledger.py` green: every entry still has exactly one ranking row, closed entries hold none, no status claims the work is done, and every `needs` status still pairs with a `**Decision needed:**` bullet.
 - [ ] `make hook` clean, modulo pre-existing failures.
-- [ ] `git diff origin/master --stat` lists `potential-improvements.md`, `CHANGELOG.rst` if a bullet was needed, and **nothing else**.
+- [ ] `git diff origin/master --stat` lists `potential-improvements.md` and **nothing else** — no `CHANGELOG.rst`, per the rule above.
 - [ ] Every answer given in this session appears in the diff. Grep each entry id and read what it now says.
 
 `make test` and `make testall` are not run here: no code changed, and the one test that covers this file is named above.
-A changelog bullet is needed only when the round settles something a user would notice — a decision about the public API, the packaged format or a release gate.
-Recording an internal design choice is register bookkeeping and needs none.
+**No changelog bullet, ever.** A round writes to the register and nothing else, and the register is a list of work *not* done — a decision to change the public API later is not a change a user can observe today. `CLAUDE.md` states the exception; do not reach for `Internal:` either, which is still the user's changelog.
 
 ```bash
 gh pr create --base master --title "<title>" --body "<body>"
