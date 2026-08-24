@@ -16,7 +16,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Final, Self, get_args
+from typing import Self
 
 import numpy as np
 from h3.api import numpy_int as h3
@@ -53,16 +53,6 @@ from timezonefinder.shortcut_index import (
 from timezonefinder.zone_names import ZoneNames, read_zone_names
 
 
-#: What ``on_invalid`` accepts on the batch lookups. ``"raise"`` is the default because
-#: it is what the scalar methods do, and a batch call is not the place to quietly change
-#: the contract; ``"skip"`` exists because raising on element 999,999 and discarding the
-#: 999,998 answers already computed is hostile. Derived from
-#: :data:`~timezonefinder.configs.OnInvalid` rather than written out again, so the two
-#: cannot drift; that alias is also what lets a type checker reject a mistyped policy at
-#: the call site instead of leaving it to raise at runtime.
-ON_INVALID_POLICIES: Final[tuple[str, ...]] = get_args(OnInvalid)
-
-
 def _negative_id_error(kind: str, value: object) -> ValueError:
     """Build the error a negative id gets, for any of the public id-taking methods.
 
@@ -74,66 +64,6 @@ def _negative_id_error(kind: str, value: object) -> ValueError:
         f"{value} is not a valid {kind} id: ids are non-negative. "
         "A negative index would silently select an entry counting from the end."
     )
-
-
-def _coordinate_arrays(
-    lngs: CoordArrayLike, lats: CoordArrayLike
-) -> tuple[np.ndarray, np.ndarray]:
-    """The two input axes as 1-D float64 arrays.
-
-    ``np.asarray`` is what makes the zero-copy path real: a C-contiguous float64 array
-    is passed straight through, and anything else is converted once for the whole batch
-    rather than per point.
-
-    :raises TypeError: if either axis holds something that is not convertible to float.
-    :raises ValueError: if either axis is not one-dimensional, or the two differ in length.
-    """
-    arrays = []
-    for name, values in (("lngs", lngs), ("lats", lats)):
-        raw = np.asarray(values)
-        # ``None`` is the one unconvertible value numpy does not refuse: an explicit
-        # float cast turns it into NaN, which every later stage then reads as an
-        # out-of-range coordinate - so under ``on_invalid="skip"`` a null in the
-        # caller's data would come back as NO_ZONE_ID, indistinguishable from a point
-        # no zone covers. Reject it here, as the scalar methods' ``float()`` does.
-        # Only an object array can hold one, which the float64 fast path never is.
-        if raw.dtype == object and any(v is None for v in raw.reshape(-1).tolist()):
-            raise TypeError(
-                f"{name} must hold numbers, but holds None. A missing coordinate has "
-                "to be dropped or replaced by the caller: read as a number it would "
-                f"become NaN and be answered with {NO_ZONE_ID}, which is also what a "
-                "point no timezone covers is answered with."
-            )
-        try:
-            array = np.asarray(raw, dtype=np.float64)
-        except (TypeError, ValueError) as e:
-            raise TypeError(
-                f"{name} must hold numbers convertible to float: {e}"
-            ) from e
-        if array.ndim != 1:
-            raise ValueError(
-                f"{name} must be one-dimensional, got shape {array.shape}. "
-                "Coordinates are passed one axis per argument, never as an (N, 2) array "
-                "whose column order would have to be guessed."
-            )
-        arrays.append(array)
-    lng_array, lat_array = arrays
-    if lng_array.shape != lat_array.shape:
-        raise ValueError(
-            "lngs and lats must hold the same number of coordinates, got "
-            f"{lng_array.shape[0]} and {lat_array.shape[0]}"
-        )
-    return lng_array, lat_array
-
-
-def _out_of_bounds(lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
-    """Which coordinates no lookup can answer, as a boolean mask.
-
-    A bound comparison rejects NaN and infinity as a side effect - both compare ``False``
-    against everything - so this is the whole of what ``utils.validate_coordinates`` does
-    per point, in two vectorised passes instead of 2N calls.
-    """
-    return ~((np.abs(lngs) <= MAX_LNG_VAL) & (np.abs(lats) <= MAX_LAT_VAL))
 
 
 class AbstractTimezoneFinder(ABC):
@@ -552,13 +482,13 @@ class AbstractTimezoneFinder(ABC):
             >>> [tf.zone_name_from_id(int(i)) for i in ids]
             ['Europe/Berlin', 'Europe/Paris']
         """
-        if on_invalid not in ON_INVALID_POLICIES:
+        if on_invalid not in utils.ON_INVALID_POLICIES:
             raise ValueError(
                 f"unknown on_invalid policy {on_invalid!r}. "
-                f"Choose one of: {', '.join(map(repr, ON_INVALID_POLICIES))}"
+                f"Choose one of: {', '.join(map(repr, utils.ON_INVALID_POLICIES))}"
             )
-        lng_array, lat_array = _coordinate_arrays(lngs, lats)
-        out_of_bounds = _out_of_bounds(lng_array, lat_array)
+        lng_array, lat_array = utils.coordinate_arrays(lngs, lats)
+        out_of_bounds = utils.out_of_bounds(lng_array, lat_array)
         if not out_of_bounds.any():
             return self._zone_ids_of_valid(lng_array, lat_array)
 

@@ -7,13 +7,18 @@ for timezone operations.
 from collections.abc import Callable
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Final, get_args
 
 import numpy as np
 
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    NO_ZONE_ID,
     OCEAN_TIMEZONE_PREFIX,
+    CoordArrayLike,
+    OnInvalid,
 )
 from timezonefinder import utils_numba, utils_clang
 
@@ -21,6 +26,9 @@ __all__ = [
     "validate_lat",
     "validate_lng",
     "validate_coordinates",
+    "coordinate_arrays",
+    "out_of_bounds",
+    "ON_INVALID_POLICIES",
     "close_resource",
     "is_ocean_timezone",
     "get_boundaries_dir",
@@ -121,6 +129,84 @@ def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
     validate_lng(lng)
     validate_lat(lat)
     return lng, lat
+
+
+# --- the same validation, one batch at a time -------------------------------------
+#
+# The scalar and array forms sit together because they are one contract at two arities,
+# and the one place they deliberately differ has to be visible from both: a ``None``
+# coordinate. ``float(None)`` raises above, while ``np.asarray(..., dtype=float64)``
+# turns it into NaN, so the array form rejects it explicitly rather than letting a
+# missing value become an out-of-range coordinate.
+
+#: What ``on_invalid`` accepts on the batch lookups. ``"raise"`` is the default because
+#: it is what the scalar methods do, and a batch call is not the place to quietly change
+#: the contract; ``"skip"`` exists because raising on element 999,999 and discarding the
+#: 999,998 answers already computed is hostile. Derived from
+#: :data:`~timezonefinder.configs.OnInvalid` rather than written out again, so the two
+#: cannot drift; that alias is also what lets a type checker reject a mistyped policy at
+#: the call site instead of leaving it to raise at runtime.
+ON_INVALID_POLICIES: Final[tuple[str, ...]] = get_args(OnInvalid)
+
+
+def coordinate_arrays(
+    lngs: CoordArrayLike, lats: CoordArrayLike
+) -> tuple[np.ndarray, np.ndarray]:
+    """The two input axes as 1-D float64 arrays.
+
+    ``np.asarray`` is what makes the zero-copy path real: a C-contiguous float64 array
+    is passed straight through, and anything else is converted once for the whole batch
+    rather than per point.
+
+    :raises TypeError: if either axis holds something that is not convertible to float.
+    :raises ValueError: if either axis is not one-dimensional, or the two differ in length.
+    """
+    arrays = []
+    for name, values in (("lngs", lngs), ("lats", lats)):
+        raw = np.asarray(values)
+        # ``None`` is the one unconvertible value numpy does not refuse: an explicit
+        # float cast turns it into NaN, which every later stage then reads as an
+        # out-of-range coordinate - so under ``on_invalid="skip"`` a null in the
+        # caller's data would come back as NO_ZONE_ID, indistinguishable from a point
+        # no zone covers. Reject it here, as the scalar methods' ``float()`` does.
+        # Only an object array can hold one, which the float64 fast path never is.
+        if raw.dtype == object and any(v is None for v in raw.reshape(-1).tolist()):
+            raise TypeError(
+                f"{name} must hold numbers, but holds None. A missing coordinate has "
+                "to be dropped or replaced by the caller: read as a number it would "
+                f"become NaN and be answered with {NO_ZONE_ID}, which is also what a "
+                "point no timezone covers is answered with."
+            )
+        try:
+            array = np.asarray(raw, dtype=np.float64)
+        except (TypeError, ValueError) as e:
+            raise TypeError(
+                f"{name} must hold numbers convertible to float: {e}"
+            ) from e
+        if array.ndim != 1:
+            raise ValueError(
+                f"{name} must be one-dimensional, got shape {array.shape}. "
+                "Coordinates are passed one axis per argument, never as an (N, 2) array "
+                "whose column order would have to be guessed."
+            )
+        arrays.append(array)
+    lng_array, lat_array = arrays
+    if lng_array.shape != lat_array.shape:
+        raise ValueError(
+            "lngs and lats must hold the same number of coordinates, got "
+            f"{lng_array.shape[0]} and {lat_array.shape[0]}"
+        )
+    return lng_array, lat_array
+
+
+def out_of_bounds(lngs: np.ndarray, lats: np.ndarray) -> np.ndarray:
+    """Which coordinates no lookup can answer, as a boolean mask.
+
+    A bound comparison rejects NaN and infinity as a side effect - both compare ``False``
+    against everything - so this is the whole of what ``utils.validate_coordinates`` does
+    per point, in two vectorised passes instead of 2N calls.
+    """
+    return ~((np.abs(lngs) <= MAX_LNG_VAL) & (np.abs(lats) <= MAX_LAT_VAL))
 
 
 def close_resource(obj: Any) -> None:
