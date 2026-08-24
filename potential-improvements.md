@@ -465,9 +465,11 @@ the denominators, and how to tell whether they still describe the tree.
   It stands on neither: it changes no answer, and it splits the file-backed fetch into a slice here and `read_polygon_array_at` there.
 - **The pinning objection turned out to be the weaker half, and that is the part worth keeping.**
   A whole-file view is a live export held for the accessor's lifetime, which is the pattern behind the `BufferError` fixed in 8.3.0.
-  But `cleanup()` calls `close_resource(coord_buf)` *before* dropping its own references, so deleting the accessor's own view first makes `mmap.close()` succeed exactly as it does today.
+  `cleanup()` closes before it drops: `close_resource(coord_buf)` runs first and the `delattr` loop over `coord_offsets`/`coord_lengths`/`coord_buf`/`coord_file` runs after it.
+  So a view held as an attribute is **still live when the close is attempted**, `mmap.close()` raises `BufferError`, and `close_resource` swallows it — the mapping would stay open until the accessor is collected, which is exactly the deterministic unmap 8.3.0 restored.
+  That is a fixable ordering, not a prohibition: a held view obliges `cleanup()` to delete it *before* the `close_resource(coord_buf)` call and to name it in that loop.
   An accessor-lifetime export is therefore **not** in itself a reason to refuse a change here — the reason this one was refused is the measurement.
-  Anything that re-proposes a held view has to clear the noise floor rather than merely argue that the mapping stays unpinned.
+  Anything that re-proposes a held view has to clear the noise floor *and* carry that `cleanup()` change; arguing that the mapping stays unpinned is not enough, and today's ordering does not give it for free.
 - **Status:** rejected — measured inside the query and found below the noise floor.
 - **Last touched:** 2026-08-23 — measured in-query, and rejected on that measurement.
 
@@ -1776,10 +1778,13 @@ premise moves; do not reverse a decision silently.
   diff review.
 - **An accessor-lifetime export of the mmap is not in itself forbidden — but a change that wants one still has to clear the noise floor.**
   Settled 2026-08-23 when PERF-4 was rejected. The `BufferError` fixed in 8.3.0 made "never hold a
-  live export for the accessor's lifetime" read like a standing rule. It is not one:
-  `FileCoordAccessor.cleanup` calls `close_resource(coord_buf)` *before* dropping its own
-  references, so an accessor that deletes its own view first closes the mapping exactly as today.
-  What killed PERF-4 was the measurement, not the pinning — so do not refuse a future held view on
+  live export for the accessor's lifetime" read like a standing rule. It is not one — but it is not
+  free either, and the ordering runs the wrong way for it: `FileCoordAccessor.cleanup` calls
+  `close_resource(coord_buf)` **before** the `delattr` loop that drops its own references, so a view
+  held as an attribute is still live at the close, `mmap.close()` raises `BufferError`, and
+  `close_resource` swallows it. A held view therefore obliges `cleanup()` to delete that view before
+  the close and to name it in the loop; with that, the mapping closes exactly as today. What killed
+  PERF-4 was the measurement, not the pinning — so do not refuse a future held view on
   resource-semantics grounds alone, and do not propose one on the strength of a per-fetch
   microbenchmark either. **The generalisable half:** a per-fetch figure and a workload share are
   different quantities, and PERF-4 is the case where they disagreed by 3x — ~370 ns per fetch in
