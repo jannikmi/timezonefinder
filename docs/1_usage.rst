@@ -171,6 +171,18 @@ The validation, the coordinate scaling and the shortcut lookup then run once ove
 Prefer the ids whenever the names are not the end product: a caller doing millions of lookups should not pay for millions of string lookups it maps straight back to something else.
 Both are also available as :ref:`global functions <global_functions>`.
 
+Ids can be named later, in one call, with ``zone_names_from_ids()`` - so a pipeline can join, filter or group on the ids and pay for the names once, over whatever survives:
+
+.. code-block:: python
+
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)
+    # ... join, filter, group by zone id ...
+    names = tf.zone_names_from_ids(zone_ids)  # ['Europe/Berlin', 'Europe/Paris']
+
+It is the batch counterpart of ``zone_name_from_id()`` and answers ``None`` for ``NO_ZONE_ID``, so a batch of ids round-trips to exactly what ``timezone_names_at()`` would have returned.
+Any other invalid id - a negative that is not the sentinel, or one past the last zone - raises ``ValueError`` rather than naming a zone counted from the end of the dataset.
+Above a batch of ~128 ids the conversion is a numpy gather rather than a Python loop, which is several times faster per id; below it the loop wins and is used instead.
+
 Any 1-D array-like works for either axis - a list, a tuple, a numpy array, a pandas Series.
 A C-contiguous ``float64`` numpy array is used without copying.
 

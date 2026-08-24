@@ -39,6 +39,7 @@ __all__ = [
     "NO_ZONE_ID",
     # Type aliases
     "CoordArrayLike",
+    "IdArrayLike",
     "IntegerLike",
     "ShortcutMapping",
     "CoordPairs",
@@ -161,6 +162,12 @@ IntegerLike: TypeAlias = int | np.integer
 # users would make every other caller convert before it can ask, which is the loop this
 # replaces.
 CoordArrayLike: TypeAlias = npt.ArrayLike
+
+# The same, for a batch of zone *ids* rather than coordinates. A separate name for the
+# same underlying type on purpose: the two are converted with different dtypes and reject
+# different things, and an annotation reading "coordinates" on an id argument would be
+# taken at its word.
+IdArrayLike: TypeAlias = npt.ArrayLike
 
 # hexagon id to list of polygon ids
 ShortcutMapping: TypeAlias = dict[int, np.ndarray]

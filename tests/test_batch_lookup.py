@@ -28,7 +28,10 @@ from timezonefinder import (
     timezone_names_at,
 )
 from timezonefinder.shortcut_index import ABSENT, slot_of
-from timezonefinder.timezonefinder import ZONE_ID_RESULT_DTYPE
+from timezonefinder.timezonefinder import (
+    NAMES_GATHER_MIN_BATCH,
+    ZONE_ID_RESULT_DTYPE,
+)
 
 # enough points to reach every branch without turning a unit test into a sweep; the
 # exhaustive comparison over all four fixtures is the ``slow`` test at the bottom
@@ -256,3 +259,117 @@ def test_batch_and_scalar_agree_over_every_committed_point(finder, fixture_name)
     lngs, lats = _axes(points)
     expected = [finder.timezone_at(lng=lng, lat=lat) for lng, lat in points]
     assert finder.timezone_names_at(lngs=lngs, lats=lats) == expected
+
+
+# --- zone_names_from_ids ------------------------------------------------------
+#
+# Two implementations behind one method - a Python loop below
+# ``NAMES_GATHER_MIN_BATCH`` and a numpy gather above it - so every behavioural test
+# here has to be reachable in both regimes, and the first test below is the one that
+# says they agree at all.
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "size",
+    [1, NAMES_GATHER_MIN_BATCH - 1, NAMES_GATHER_MIN_BATCH, NAMES_GATHER_MIN_BATCH + 1],
+    ids=["one", "below_threshold", "at_threshold", "above_threshold"],
+)
+def test_both_conversion_regimes_answer_identically(finder, size):
+    """The loop and the gather are one method's two halves; a difference between them
+    would show only at batch sizes nobody happens to test."""
+    zone_ids = np.arange(size, dtype=ZONE_ID_RESULT_DTYPE) % finder.nr_of_zones
+    expected = [finder.zone_name_from_id(int(zone_id)) for zone_id in zone_ids]
+    assert finder.zone_names_from_ids(zone_ids) == expected
+
+
+@pytest.mark.unit
+def test_every_zone_id_names_the_same_zone_as_the_scalar_method(finder):
+    zone_ids = np.arange(finder.nr_of_zones, dtype=ZONE_ID_RESULT_DTYPE)
+    assert finder.zone_names_from_ids(zone_ids) == list(finder.timezone_names)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("fixture_name", FIXTURES)
+def test_ids_round_trip_to_the_names_the_batch_lookup_would_have_given(
+    finder, fixture_name
+):
+    """The pairing the id form exists for: keep ids while joining or grouping, name them
+    at the end, and land on exactly what ``timezone_names_at`` returns."""
+    points = load_benchmark_points(fixture_name)[:SAMPLE_SIZE]
+    lngs, lats = _axes(points)
+
+    zone_ids = finder.timezone_ids_at(lngs=lngs, lats=lats)
+    assert finder.zone_names_from_ids(zone_ids) == finder.timezone_names_at(
+        lngs=lngs, lats=lats
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "size", [1, NAMES_GATHER_MIN_BATCH + 1], ids=["loop", "gather"]
+)
+def test_the_sentinel_names_nothing(finder, size):
+    zone_ids = np.full(size, NO_ZONE_ID, dtype=ZONE_ID_RESULT_DTYPE)
+    assert finder.zone_names_from_ids(zone_ids) == [None] * size
+
+
+@pytest.mark.unit
+def test_a_negative_that_is_not_the_sentinel_is_rejected(finder):
+    """``-1`` is the sentinel and names nothing; ``-2`` is a bug, and counting it from
+    the end of the dataset would answer it with a real timezone name."""
+    with pytest.raises(ValueError, match="not a valid zone id"):
+        finder.zone_names_from_ids([0, -2])
+
+
+@pytest.mark.unit
+def test_the_id_one_past_the_last_zone_is_rejected(finder):
+    """The lookup array carries one extra slot for the sentinel, so this id would read
+    it and answer ``None`` instead of raising - the one out-of-range value numpy's own
+    bounds check cannot catch here."""
+    with pytest.raises(ValueError, match="not a valid zone id"):
+        finder.zone_names_from_ids([finder.nr_of_zones])
+
+
+@pytest.mark.unit
+def test_non_integer_ids_are_rejected(finder):
+    with pytest.raises(TypeError, match="must be integers"):
+        finder.zone_names_from_ids([1.5])
+
+
+@pytest.mark.unit
+def test_a_two_dimensional_id_array_is_rejected(finder):
+    with pytest.raises(ValueError, match="one-dimensional"):
+        finder.zone_names_from_ids(np.zeros((2, 2), dtype=np.int32))
+
+
+@pytest.mark.unit
+def test_no_ids_name_nothing(finder):
+    assert finder.zone_names_from_ids([]) == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "container", [list, tuple, np.array], ids=["list", "tuple", "ndarray"]
+)
+def test_ids_are_accepted_from_any_array_like(finder, container):
+    assert finder.zone_names_from_ids(container([0, 1])) == [
+        finder.zone_name_from_id(0),
+        finder.zone_name_from_id(1),
+    ]
+
+
+@pytest.mark.unit
+def test_the_names_lookup_array_is_not_built_until_a_gather_needs_it():
+    """Construction cost is what ``docs/benchmark_results_memory.rst`` measures, and a
+    lightweight finder's whole footprint is small enough that ~450 object pointers would
+    show in it. Building the array eagerly would move a committed measurement with
+    nothing to signal it, so the laziness is pinned rather than left to a comment."""
+    with TimezoneFinderL() as tf:
+        assert tf._zone_names_lookup is None
+
+        tf.zone_names_from_ids(np.zeros(NAMES_GATHER_MIN_BATCH - 1, dtype=np.int32))
+        assert tf._zone_names_lookup is None, "the loop regime allocates nothing"
+
+        tf.zone_names_from_ids(np.zeros(NAMES_GATHER_MIN_BATCH, dtype=np.int32))
+        assert tf._zone_names_lookup is not None
