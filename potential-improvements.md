@@ -874,8 +874,10 @@ the denominators, and how to tell whether they still describe the tree.
   version a resolver outcome rather than a stated one) and over Git LFS (which reclaims none of the
   existing history and puts a bandwidth quota in front of every fork and CI run).
 - **What implementing it means:** `packages/timezonefinder-data/timezonefinder_data/data/` is
-  git-ignored; a `make bootstrap` populates it from the published wheel or the GitHub Release; CI
-  runs the same target, so dev and CI have one path rather than two. The converter is untouched —
+  git-ignored; a `make bootstrap` populates it from the published `timezonefinder-data` wheel, which
+  is the only artifact a data release produces — `publish_data.yml` deliberately creates no GitHub
+  Release, so there is no Release to fall back to (see *Two mechanics* below). CI runs the same
+  target, except on a data-update pull request, which consumes the artifact its own job built. The converter is untouched —
   it still writes to `scripts.configs.SOURCE_DATA_DIR`, which is that same directory. Two things to
   get right: the bootstrap has to be **idempotent and version-aware**, or a stale checkout silently
   tests yesterday's data against today's code; and every entry point that currently assumes the
