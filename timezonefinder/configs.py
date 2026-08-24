@@ -136,7 +136,10 @@ DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
 
 # COORDINATE SCALING AND PRECISION
 # Integer representation uses signed 4-byte (32-bit) integers
-# Allows storing coordinate values multiplied by 10^7 for microdegree precision
+# Coordinate values are stored multiplied by 10^7, so one unit is 10^-7 degrees -
+# a tenth of a microdegree, ~1.11 cm of longitude at the equator, which is the
+# worst case. `timezonefinder.utils.coordinate_resolution` derives that figure and
+# `tests/test_coordinate_precision.py` holds the documented claims to it.
 # i = signed 4byte integer
 NR_BYTES_I = 4
 # IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!

@@ -187,6 +187,14 @@ Any 1-D array-like works for either axis - a list, a tuple, an ``array.array``, 
 Anything ``numpy.asarray()`` turns into a 1-D numeric array is accepted, which is what makes the last of those work without this package knowing pandas exists.
 A C-contiguous ``float64`` numpy array is used without copying.
 
+.. warning::
+
+    **Hand over 64-bit floats.**
+    A ``float32`` array is accepted and converted, but it has already lost precision this package cannot recover: one step of ``float32`` at ±180° spans **~1.7 m**, against the **~1.11 cm** the packaged coordinates resolve.
+    A point closer to a border than that can be rounded onto the wrong side of it before the lookup begins - and accuracy at borders is what this library exists for.
+    ``float64`` resolves far finer than the stored data, so it costs nothing.
+    :doc:`data_format` has the full comparison, and ``timezonefinder.utils.coordinate_resolution()`` computes it for any dtype.
+
 Answers come back in the input's own order, one per coordinate, so a column of them can be assigned straight back:
 
 .. code-block:: python
