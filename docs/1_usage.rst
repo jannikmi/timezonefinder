@@ -183,8 +183,18 @@ It is the batch counterpart of ``zone_name_from_id()`` and answers ``None`` for 
 Any other invalid id - a negative that is not the sentinel, or one past the last zone - raises ``ValueError`` rather than naming a zone counted from the end of the dataset.
 Above a batch of ~128 ids the conversion is a numpy gather rather than a Python loop, which is several times faster per id; below it the loop wins and is used instead.
 
-Any 1-D array-like works for either axis - a list, a tuple, a numpy array, a pandas Series.
+Any 1-D array-like works for either axis - a list, a tuple, an ``array.array``, a numpy array, a pandas Series.
+Anything ``numpy.asarray()`` turns into a 1-D numeric array is accepted, which is what makes the last of those work without this package knowing pandas exists.
 A C-contiguous ``float64`` numpy array is used without copying.
+
+Answers come back in the input's own order, one per coordinate, so a column of them can be assigned straight back:
+
+.. code-block:: python
+
+    df["timezone"] = tf.timezone_names_at(lngs=df["longitude"], lats=df["latitude"])
+
+The index is not consulted - a ``Series`` is read positionally, like every other array-like - and assigning a plain list to a column aligns positionally too, so the two agree.
+For the id form, wrap it to keep the frame's index: ``pd.Series(tf.timezone_ids_at(...), index=df.index)``.
 
 .. note::
 
@@ -193,6 +203,8 @@ A C-contiguous ``float64`` numpy array is used without copying.
 
 Where the scalar methods answer ``None``, a batch answers ``NO_ZONE_ID`` (``-1``) in the id array and ``None`` in the name list.
 An out-of-range coordinate - which includes ``NaN`` and infinity - raises by default, matching the scalar methods.
+That is also how a missing value in a dataframe arrives: pandas stores both ``None`` and ``pd.NA`` as ``NaN``, so a null row is an out-of-range coordinate and ``on_invalid`` decides what happens to it.
+A ``None`` in a plain Python list is treated as a mistake instead and raises ``TypeError``, since a list has no missing-value convention to honour.
 Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than discarding the work already done for the coordinates that were fine:
 
 .. code-block:: python

@@ -170,9 +170,12 @@ IntegerLike: TypeAlias = int | np.integer
 
 # What the batch lookup accepts per coordinate axis: anything ``np.asarray`` turns into
 # a 1-D float array - a list, a tuple, an ``array.array``, a numpy array, a pandas
-# Series. Deliberately not narrowed to ``np.ndarray``: an API that only served numpy
-# users would make every other caller convert before it can ask, which is the loop this
-# replaces.
+# Series. Deliberately not narrowed, to ``np.ndarray`` or to a ``Sequence`` either: an
+# API that only served numpy users would make every other caller convert before it can
+# ask, which is the loop this replaces, and a ``Sequence`` bound would reject the pandas
+# Series that is the single most likely thing to be handed to a batch lookup. The
+# contract is ``__array__`` and the sequence protocol, which is why no library is named
+# in the code - `test_anything_exposing_array_is_accepted` pins it without importing one.
 CoordArrayLike: TypeAlias = npt.ArrayLike
 
 # The same, for a batch of zone *ids* rather than coordinates. A separate name for the

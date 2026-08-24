@@ -128,6 +128,42 @@ def test_any_array_like_is_accepted(finder, container):
     ]
 
 
+class _ArrayLike:
+    """The whole of what makes a pandas Series work here, and nothing else.
+
+    ``np.asarray`` honours ``__array__``, which is how a Series, a pyarrow-backed
+    column or an ``xarray.DataArray`` all arrive as coordinates without this package
+    knowing any of them exist.
+    """
+
+    def __init__(self, values):
+        self._values = np.asarray(values, dtype=np.float64)
+
+    def __array__(self, dtype=None, copy=None):
+        if dtype is None:
+            return self._values
+        return self._values.astype(dtype, copy=False)
+
+
+@pytest.mark.unit
+def test_anything_exposing_array_is_accepted(finder):
+    """The contract behind the documented "any 1-D array-like", pinned without the
+    library that motivated it.
+
+    ``test_a_pandas_series_is_accepted`` below is the real thing, and it skips wherever
+    pandas is not installed - which is every CI test environment, since pandas is in the
+    ``proto`` group. So this is the one that has to hold the promise: narrowing the input
+    handling to ``np.ndarray``, or acting on an annotation that admits only sequences,
+    breaks here rather than in an environment nobody runs.
+    """
+    lngs = _ArrayLike([13.358, 2.3522])
+    lats = _ArrayLike([52.5061, 48.8566])
+    assert finder.timezone_names_at(lngs=lngs, lats=lats) == [
+        finder.timezone_at(lng=13.358, lat=52.5061),
+        finder.timezone_at(lng=2.3522, lat=48.8566),
+    ]
+
+
 @pytest.mark.unit
 def test_the_caller_s_arrays_are_left_alone(finder):
     """The zero-copy path passes the caller's buffer straight through, so nothing may
@@ -137,6 +173,60 @@ def test_the_caller_s_arrays_are_left_alone(finder):
     finder.timezone_ids_at(lngs=lngs, lats=lats)
     assert lngs.tolist() == [13.358, 2.3522]
     assert lats.tolist() == [52.5061, 48.8566]
+
+
+@pytest.mark.unit
+def test_a_pandas_series_is_accepted(finder):
+    """The array-like the batch API was asked for by name.
+
+    Skips wherever pandas is absent, which is every CI test environment - pandas is in
+    the ``proto`` group, not ``test``. ``test_anything_exposing_array_is_accepted`` is
+    the version that always runs; this one is here because "accepts a pandas Series" is
+    a promise the docs make in those words, and a stub cannot catch a pandas-side
+    change to how a Series converts.
+    """
+    pd = pytest.importorskip("pandas")
+    frame = pd.DataFrame(
+        {"lng": [13.358, 2.3522], "lat": [52.5061, 48.8566]}, index=[7, 3]
+    )
+    expected = [
+        finder.timezone_at(lng=13.358, lat=52.5061),
+        finder.timezone_at(lng=2.3522, lat=48.8566),
+    ]
+
+    # a non-default index on purpose: the answer is positional, in the Series' own
+    # order, so assigning it straight back to a column is what a caller should do
+    assert finder.timezone_names_at(lngs=frame["lng"], lats=frame["lat"]) == expected
+    frame["tz"] = finder.timezone_names_at(lngs=frame["lng"], lats=frame["lat"])
+    assert frame["tz"].tolist() == expected
+
+    # an integer column converts, and so does pandas' nullable extension dtype
+    integer = pd.Series([13, 2])
+    assert len(finder.timezone_names_at(lngs=integer, lats=pd.Series([52, 48]))) == 2
+    nullable = pd.Series([13.358, 2.3522], dtype="Float64")
+    assert (
+        finder.timezone_names_at(lngs=nullable, lats=pd.Series([52.5061, 48.8566]))
+        == expected
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("missing", [None, "NA"], ids=["none", "pd_na"])
+def test_a_pandas_missing_value_is_a_coordinate_the_policy_governs(finder, missing):
+    """pandas normalises both ``None`` and ``pd.NA`` to ``NaN`` inside the Series, so a
+    missing value never reaches this package as the object a bare Python list would
+    hand it. It arrives as an out-of-range coordinate and ``on_invalid`` governs it -
+    which is the right answer for pandas, whose missing value *is* NaN, and the reason
+    ``None`` in a plain list is treated as the caller's mistake instead."""
+    pd = pytest.importorskip("pandas")
+    value = None if missing is None else pd.NA
+    lngs = pd.Series([13.358, value], dtype="Float64")
+    lats = pd.Series([52.5061, 0.0], dtype="Float64")
+
+    zone_ids = finder.timezone_ids_at(lngs=lngs, lats=lats, on_invalid="skip")
+    assert zone_ids[1] == NO_ZONE_ID
+    with pytest.raises(ValueError, match="invalid coordinate at index 1"):
+        finder.timezone_ids_at(lngs=lngs, lats=lats)
 
 
 @pytest.mark.unit
