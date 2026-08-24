@@ -162,7 +162,7 @@ Out of bounds for every pass — the repository docs describe some of these neut
 
 **A pass never asks one.**
 It records the question, leaves the item, and takes the next eligible one.
-`.claude/skills/maintainer-decisions/SKILL.md` is where the accumulated questions are put to the maintainer — briefed, in a batch, in a session they invoked and are present for.
+`.claude/skills/maintainer-decisions/SKILL.md` is where the accumulated questions are put to the maintainer — briefed, discussed and settled one at a time, in a session they invoked and are present for.
 
 Two things follow from a pass running unattended, and they are the whole reason the asking lives elsewhere.
 A question asked mid-run reaches nobody, so the item stalls and every item behind it waits with it.
