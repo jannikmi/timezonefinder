@@ -545,13 +545,22 @@ class AbstractTimezoneFinder(ABC):
         Separate from :meth:`_zone_id_in_ambiguous_cell` because a batch can share what a
         single query cannot: **points in a batch cluster.** A delivery round, a city, a
         border region all land in a handful of cells, and everything a cell costs to
-        prepare is identical for every point in it. Each implementation therefore
-        memoises that preparation by shortcut entry.
+        prepare is identical for every point in it. Each implementation therefore does
+        that preparation once per distinct shortcut entry, in whichever way suits how
+        much of its answer the entry decides:
 
-        Memoised rather than sorted by entry: a dict lookup is a few tens of nanoseconds
-        against the preparation it skips, and unlike an ``argsort`` it costs essentially
-        nothing when a batch happens to share nothing - which a uniformly random one
-        largely does.
+        * :class:`TimezoneFinder` still has to test the point against the geometry, so
+          only the preparation is shared - memoised in a dict rather than reached by
+          sorting the batch, because a dict lookup is a few tens of nanoseconds against
+          the preparation it skips and, unlike an ``argsort``, costs essentially nothing
+          when a batch happens to share nothing, which a uniformly random one largely
+          does.
+        * :class:`TimezoneFinderL` answers from the entry alone, so the whole resolution
+          is one gather over the distinct entries and the per-point work is a scatter.
+
+        Whatever the shape, read the batch's arrays once per stage and not once per
+        point: a numpy scalar extraction inside the loop costs more than the loop body
+        it feeds.
 
         :param entries: the shortcut table value of every point in the batch
         :param positions: indices into ``entries`` of the points to resolve
@@ -827,30 +836,42 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
         Exact rather than an approximation: which zone is most common in a cell does not
         depend on the point, so this class's whole ambiguous answer is a property of the
-        entry. The coordinates are unused here for the same reason they are unused in
-        :meth:`_zone_id_in_ambiguous_cell`.
+        entry - which is why the resolution goes through :meth:`_most_common_zone_of`
+        and never through the coordinate-taking :meth:`_zone_id_in_ambiguous_cell`.
+        Nothing here has to invent a point for a signature that would not use it.
+
+        ``np.unique`` rather than a dict: the answer being a pure function of the entry
+        makes the whole batch one gather over the distinct entries, so the per-point
+        work is a scatter numpy does rather than a lookup Python does.
         """
-        answers: dict[int, int] = {}
-        for i in positions.tolist():
-            entry = int(entries[i])
-            zone_id = answers.get(entry)
-            if zone_id is None:
-                zone_id = self._zone_id_in_ambiguous_cell(entry, 0.0, 0.0)
-                answers[entry] = zone_id
-            out[i] = zone_id
+        distinct, inverse = np.unique(entries[positions], return_inverse=True)
+        answers = np.fromiter(
+            (self._most_common_zone_of(entry) for entry in distinct.tolist()),
+            dtype=out.dtype,
+            count=distinct.shape[0],
+        )
+        out[positions] = answers[inverse]
 
-    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
-        """The most common zone of the cell - this class tests no geometry.
+    def _most_common_zone_of(self, entry: int) -> int:
+        """The zone covering most of a cell several zones cover - no geometry tested.
 
-        The coordinates are therefore unused: which zone is *most* common in a cell is a
-        property of the cell, and answering without a point-in-polygon test is the whole
-        of what makes this class lightweight.
+        A property of the cell alone, which is the whole of what makes this class
+        lightweight, and what lets a batch answer every point in a cell from one lookup.
         """
         # several zones - the last candidate belongs to the most common one
         poly_of_biggest_zone = self.shortcuts.candidates_of(entry)[-1]
         # a numpy integer scalar from array indexing, which mypy reads as ndarray. Safe:
         # element access yields a scalar compatible with IntegerLike
         return self._zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
+
+    def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
+        """The most common zone of the cell - the point is not consulted.
+
+        The coordinates the contract passes are unused here, which is why the batch path
+        calls :meth:`_most_common_zone_of` directly instead of handing this a point it
+        would have to invent.
+        """
+        return self._most_common_zone_of(entry)
 
 
 class TimezoneFinder(AbstractTimezoneFinder):
@@ -1167,10 +1188,21 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lats: np.ndarray,
         out: np.ndarray,
     ) -> None:
-        """Prepare each distinct cell once, then test every point that landed in it."""
+        """Prepare each distinct cell once, then test every point that landed in it.
+
+        The three arrays are read once for the whole batch rather than one element at a
+        time inside the loop: ``int(entries[i])`` and the two ``float(…[i])`` are numpy
+        scalar extractions, measured at 242 ns per point against 103 ns for the same
+        values taken through ``tolist()`` up front. That is the loop's own overhead, so
+        it is paid on every ambiguous point whether or not the cell was already prepared.
+        """
         prepared: dict[int, tuple[np.ndarray, np.ndarray, int]] = {}
-        for i in positions.tolist():
-            entry = int(entries[i])
+        for i, entry, lng, lat in zip(
+            positions.tolist(),
+            entries[positions].tolist(),
+            lngs[positions].tolist(),
+            lats[positions].tolist(),
+        ):
             cell = prepared.get(entry)
             if cell is None:
                 cell = self._prepare_ambiguous_cell(entry)
@@ -1180,8 +1212,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
                 possible_boundaries,
                 zone_ids,
                 last_zone_change_idx,
-                float(lngs[i]),
-                float(lats[i]),
+                lng,
+                lat,
             )
 
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
