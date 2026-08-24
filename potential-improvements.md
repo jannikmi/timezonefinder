@@ -888,9 +888,9 @@ the denominators, and how to tell whether they still describe the tree.
   stops working from a bare checkout unless the matching data version resolves per commit; and this
   does **not** shrink the existing 357 MiB pack — only GH-522 does, and strictly after this is in
   force, or the next data update re-adds ~62 MB and the rewrite has to be repeated.
-- **The decision left one half unanswered, found 2026-08-23 while checking eligibility, and it is
-  a blocker rather than a detail.** The bootstrap half works: a dev checkout fetches the published
-  `timezonefinder-data` wheel for the version it pins. The *release* half has no answer, because
+- **What the release half had to answer, found 2026-08-23 while checking eligibility and settled
+  the day after.** The bootstrap half already worked: a dev checkout fetches the published
+  `timezonefinder-data` wheel for the version it pins. The *release* half had no answer, because
   the pipeline that produces that wheel is built on the binaries being committed.
   `.github/workflows/check_data_updates.yml` runs `update_data.sh` and then `git add -A` /
   `git commit`, so the regenerated binaries reach master as a reviewed, CI-tested pull request;
@@ -927,8 +927,9 @@ the denominators, and how to tell whether they still describe the tree.
   And the recorded dead end *"reusing the master run's build artifacts on the tag run buys almost nothing"* **does not transfer to data**: it was measured on code wheels, where the copyable half (~1 min) was cheap next to the matrix (~10 min).
   Here the build *is* the expensive half — a ~62 MB download plus a full convert — so the arithmetic that refused it there argues for it here.
 - **Status:** open — both halves decided, implementation not started. Unblocks GH-449 and GH-522.
-- **Last touched:** 2026-08-23 — re-verified against the three data workflows, which showed the
-  2026-08-21 decision covers only the consuming side. Migrated originally from the roadmap issue,
+- **Last touched:** 2026-08-24 — release half decided, and the pull-request side of the artifact
+  hand-off written down with it. Re-verified against the three data workflows on 2026-08-23, which
+  is what showed the 2026-08-21 decision covers only the consuming side. Migrated originally from the roadmap issue,
   where it was ranked 3 as "#446 decision 2". Ranked above GH-449 here because the list is walked
   top-down and GH-449 is blocked by it.
 
