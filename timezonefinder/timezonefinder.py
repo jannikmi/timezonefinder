@@ -84,7 +84,8 @@ class AbstractTimezoneFinder(ABC):
         its own independent instance. Do not share a single instance across threads.
 
     Attributes:
-        timezone_names: List of all available timezone names
+        zone_names: the dataset's names, and every way a zone id becomes one
+        timezone_names: List of all available timezone names (a view onto ``zone_names``)
         zone_ids: NumPy array mapping boundary polygons to timezone IDs
         shortcuts: H3-indexed lookup of the timezones that can cover a point
         data_location: Path to the timezone data directory
