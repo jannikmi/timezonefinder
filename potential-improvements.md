@@ -130,7 +130,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | GH-499 | Batch / array lookup API | public API | L | free — decided |
-| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | needs a decision — where a data release gets its binaries |
+| DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
 | GH-542 | Establish what coordinate precision is worth | data format | M | free for the competitor half; the deciding figure needs a regeneration |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
@@ -138,7 +138,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | GH-501 | Guardrails on the automated data update pipeline | release | M | partly decided — pinning and the report-only diff are free; one threshold still needs a decision |
 | GH-500 | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
-| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | needs a decision — is `update-data` wanted; brief recorded |
+| GH-428 | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — decided |
 | BIG-1 | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | GH-364 | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | GH-502 | First-class `zoneinfo` / UTC-offset helpers | public API | S–M | free — decided |
@@ -897,24 +897,23 @@ the denominators, and how to tell whether they still describe the tree.
   no longer know how to build. Nothing in the repository currently says where a data release's
   bytes come from once they are not in git, and that is not a choice a pass can make: it decides
   whether the published artifact is ever reviewed or CI-tested before it is published.
-- **Decision needed:** where does a data release get its binaries once `data/` is git-ignored?
-  **(a) The publish job regenerates them** — `publish_data.yml` runs `update_data.sh` for the
-  version its tag names and builds the wheel from the result. Smallest change to the update PR
-  (which becomes a version bump plus the report), but the release job becomes a long download-and-
-  convert run that depends on the upstream release still being fetchable, and the bytes that get
-  published are ones no CI run ever tested — today the update PR's matrix validates the exact
-  binaries that will ship. **(b) The update job builds and carries the wheel** —
-  `check_data_updates.yml` builds `timezonefinder-data` from its untracked converter output and
-  attaches it to the pull request (or a draft release keyed by the version); the tag then publishes
-  that artifact rather than rebuilding it. Needs an artifact to survive from the pull request to
-  the tag, which is the whole of the new machinery. **(c) Move the binaries to a second
-  repository** — keeps them committed and reviewable, at the cost of a repository split that
-  re-poses this same question one level up. **Recommendation: (b).** It is the only option that
-  preserves the property everything downstream leans on and that (a) explicitly gives up — the
-  bytes CI validated are the bytes published — and it keeps the bootstrap non-circular, since the
-  wheel is built by the job that generated the data rather than by a job that must regenerate it.
-- **Status:** needs a decision — the bootstrap half is decided, the release half is not. Unblocks
-  GH-449 and GH-522.
+- **Decided 2026-08-24 by the maintainer — the update job builds the wheel and the tag publishes that artifact.**
+  `check_data_updates.yml` builds `timezonefinder-data` from its untracked converter output and attaches it to its run; the tag job retrieves it by run id rather than rebuilding.
+  The artifact hand-off from the pull request to the tag is the whole of the new machinery; retention is a non-issue, since the gap is minutes against a 90-day default.
+  **Why, and it is the property everything downstream leans on:** `publish_data.yml` states in its own header that the data is not re-validated at publish time because "it was compiled and checked by build.yml on the pull request".
+  The update PR's matrix validates the exact bytes that ship, and this is the only option that keeps that true.
+  It also keeps the bootstrap non-circular — the wheel is built by the job that generated the data, not by one that would have to regenerate it.
+- **Refused, with the reason each loses.**
+  *The publish job regenerates* — self-contained and reproducible from the tag alone, which is the one real thing it has, but it publishes bytes no CI run ever saw and makes every release depend on the upstream asset still being fetchable.
+  *A second repository for the binaries* — keeps them committed and reviewable, and re-poses this same question one level up; a data repository was already refused once on its own merits.
+  *Leave the binaries committed* — this is the do-nothing option and it also drops GH-522.
+  Upstream shipped 2 releases in 2024, 3 in 2025 and 4 in the first seven months of 2026; at ~61 MB a regeneration that is roughly 244 MB a year onto a 357 MiB pack, accelerating.
+- **Two mechanics the implementing pass must not rediscover the hard way.**
+  A **published** GitHub Release cannot be the carrier: `build.yml` fires on `release: types: [published]`, and `publish_data.yml` deliberately creates no Release precisely so that trigger cannot fire for a data tag.
+  A draft release never published would work and sits one click away from firing it, so the run artifact is the safer carrier.
+  And the recorded dead end *"reusing the master run's build artifacts on the tag run buys almost nothing"* **does not transfer to data**: it was measured on code wheels, where the copyable half (~1 min) was cheap next to the matrix (~10 min).
+  Here the build *is* the expensive half — a ~62 MB download plus a full convert — so the arithmetic that refused it there argues for it here.
+- **Status:** open — both halves decided, implementation not started. Unblocks GH-449 and GH-522.
 - **Last touched:** 2026-08-23 — re-verified against the three data workflows, which showed the
   2026-08-21 decision covers only the consuming side. Migrated originally from the roadmap issue,
   where it was ranked 3 as "#446 decision 2". Ranked above GH-449 here because the list is walked
@@ -1133,23 +1132,24 @@ the denominators, and how to tell whether they still describe the tree.
   It settles the shape for **both** this and GH-500.
 - **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin` and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
   Under subcommands argparse enforces that structurally.
-- **Decision needed:** is `update-data` wanted at all, and if so pointed at what?
-  **Put to the maintainer 2026-08-23 and deliberately left open** — the brief below is what the next round starts from, so it does not have to be re-derived.
-  **(a) Keep it as proposed** — the installed CLI downloads the upstream release and regenerates the dataset.
-  **(b) Drop it**, leaving `query`, `rows` and `validate-data`.
-  **(c) Keep the capability, aimed at the user's own GeoJSON rather than at upstream** — a `convert`/`parse` subcommand over an input the user supplies.
-  **Recommended: (b)**, which reverses the (c) this entry recommended on 2026-08-21, on two costs that recommendation did not price.
-  First, (c) means shipping the converter and a `pydantic` extra, and the GeoJSON parser it would expose is the code BIG-3 flags as needing restructuring with verification named as the expensive part — freezing a public interface around it is the wrong order.
-  Second, the reversibility is **asymmetric**: adding a subcommand later is additive and breaks nothing, while removing one is a public-API break, so (b) forecloses nothing and (c) can be taken the moment real demand appears.
-  (a) is dead either way — the original request was "generate the full dataset after pip installing rather than cloning the repo", and `pip install timezonefinder-data` answers that outright, which is what the issue's own comment predicted.
-  **What would change the answer:** evidence of users compiling custom data who are actually blocked.
-  Today they clone and run `python -m scripts.file_converter`, which works and is merely not installable, because `scripts/` is in neither the wheel (`[tool.setuptools] packages` lists `timezonefinder*` only) nor the sdist.
-  Nobody has measured that demand, and it is the only thing the recommendation turns on.
-- **Note the coupling, which only bites under (c):** a `convert` subcommand wants build-side code in the wheel, which is the same territory GH-500 settled by moving `data_integrity.py` into the package.
-  That move is small and adds no dependency; shipping the converter is neither.
-  Under (b) the two entries are independent.
-- **Status:** needs a decision — CLI shape decided, the `update-data` scope question still open with the brief above recorded against it.
-- **Last touched:** 2026-08-23 — asked and left open; the recommendation was reversed to (b) and the reasoning written down.
+- **Decided 2026-08-24 by the maintainer — `update-data` is dropped.**
+  The subcommands are `query`, `rows` and `validate-data`, with the bare positional form kept as an alias for `query`.
+- **What settled it was reading the request that produced this item, and it is not what the entry assumed.**
+  #428 inherited its brief from #363, and #363 was not asking to compile custom data at all — it was asking for the *full official dataset* instead of the reduced one:
+  *"The documented alternative to use our own complete datasets works, but adds a lot of friction. The scripts are clearly made for timezonefinder developers publishing new releases."*
+  That need is met outright.
+  The packaged data is the full set with oceans — `check_data_updates.yml` runs `update_data.sh --dataset=full --with-oceans` — and it installs as `timezonefinder-data`.
+- **Refused, with the reason each loses.**
+  *A `convert` subcommand over the user's own GeoJSON* — this entry recommended it twice, on an audience the record does not contain: "people compiling custom data with no supported entry point" appears nowhere in #363 or #428.
+  It also ships the converter and a `pydantic` extra, and freezes a public interface around the GeoJSON parser BIG-3 flags for restructuring, which is the wrong order.
+  *Keep it as proposed* — an installed CLI that downloads upstream and regenerates answers what `pip install timezonefinder-data` already answers.
+- **Adding it later costs nothing, which is what makes "no" the cheap answer here.**
+  A new subcommand is additive; removing a shipped one is a public-API break.
+  If demand for installable custom-data compilation ever appears, it can be taken then against evidence rather than against a supposition.
+- **One item from #428's body survives and needs no decision:** a documented make target for running the converter without the `scripts` `ImportError`.
+  That is a Makefile-and-docs fix inside a checkout, not a shipped entry point, and it is ordinary pass work.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-24 — `update-data` dropped, on the originating issue rather than on the cost asymmetry argued before it.
 
 ### GH-362 — reuse the `PolygonArray` binaries in file conversion
 
@@ -1832,6 +1832,28 @@ premise moves; do not reverse a decision silently.
   worth applying to the next proposal of this shape: **ask whether a proposed repository split is
   really a distribution split.** Packaging, release cadence and download size are properties of the
   distribution; only history and access control are properties of the repository.
+- **A data release publishes the bytes CI validated, never bytes rebuilt at tag time.**
+  Settled 2026-08-24 with DATA-BINARIES. `publish_data.yml` skips re-validating the data because
+  the update pull request's matrix already compiled and checked it, and that is a real invariant
+  rather than an optimisation: it is why an auto-merged, auto-tagged pipeline is defensible at all.
+  So once `data/` is git-ignored, the update job builds the wheel and the tag publishes *that
+  artifact*. Refused: having the publish job regenerate — reproducible from the tag alone, which is
+  its one merit, at the cost of publishing bytes nothing tested; and moving the binaries to a second
+  repository, which re-poses the question one level up. **Two mechanics that go with it:** a
+  *published* GitHub Release cannot carry the artifact, because `build.yml` fires on
+  `release: types: [published]` and `publish_data.yml` creates no Release precisely to keep that
+  trigger dead for data tags; and the dead end recorded below — *reusing the master run's artifacts
+  on the tag run buys almost nothing* — **does not transfer to data**. That was measured on code
+  wheels, where the copyable half was the cheap one; for data the build is a ~62 MB download plus a
+  full convert, so the same arithmetic argues the other way.
+- **Ask what the originating issue actually asked before designing for its audience.**
+  Settled 2026-08-24 when GH-428 dropped `update-data`. That entry recommended a `convert`
+  subcommand twice, for "people compiling custom data who have no supported entry point" — an
+  audience that appears in neither #428 nor the #363 it inherits from. #363 wanted the *full
+  official dataset* rather than the reduced one, which `timezonefinder-data` now ships. The
+  generalisable half: an item restated often enough starts being designed against the restatement,
+  and the cheapest correction is reading the first report. It cost one issue view here and reversed
+  a recommendation that had survived two rounds.
 - **A release has one trigger, and it is the tag.** Found while releasing 8.3.0 and shipped since.
   `build.yml`'s `release` job used to be gated on `master` pushes *and* tags, so a plain push to
   `master` created the GitHub Release and its tag on its own. Two consequences that looked
