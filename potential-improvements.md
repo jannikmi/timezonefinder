@@ -1657,12 +1657,15 @@ premise moves; do not reverse a decision silently.
   much as the first — off the init path a check can afford to be exhaustive, which is why #509's
   resolves every hole ring in the dataset. A check constrained to be cheap ends up shallow.
   Recorded in `CLAUDE.md` and `CONTRIBUTING.md`.
-  **Amended 2026-08-23:** the module moves out of `scripts/` and into the package (GH-500), because
+  **Amended 2026-08-23:** the checks move out of `scripts/` and into the package (GH-500), because
   `scripts/` ships in neither the wheel nor the sdist and an installed `validate-data` cannot reach
   it. Nothing about the rule changes — still never on `__init__`, still one implementation — only
-  the number of callers, which becomes three: the converter, the test suite and the CLI. The pass
-  that moves it must update the `scripts/data_integrity.py` reference in `CLAUDE.md` and
-  `CONTRIBUTING.md` with it.
+  the number of callers, which becomes three: the converter, the test suite and the CLI. **Not the
+  whole module:** `validate_hole_dedup_ratio` states something about the *packaged* dataset rather
+  than an invariant of any data directory, so it stays in `scripts/` and `scripts/data_integrity.py`
+  survives holding it (GH-500 has the reasoning). The pass that splits them must therefore *retarget*
+  the `scripts/data_integrity.py` reference in `CLAUDE.md` and `CONTRIBUTING.md` at the new home
+  rather than assume the old path is gone.
 - **Hole coverage does not imply hole removability.** Every hole is covered by other zones, and
   that is not enough to drop it: coverage says the right zone is among the shortcut candidates,
   ordering decides whether it is reached first. Measured in GH-513 — dropping holes changes
