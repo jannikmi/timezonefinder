@@ -127,7 +127,6 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | blocked until a `timezonefinder-data` 2.x is on PyPI |
 | GH-542 | Establish what coordinate precision is worth | data format | M | free — the source-precision half is settled, the rest needs a regeneration a pass may now do |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
-| BUG-3 | Three antimeridian cells at the north pole omit the polygon that covers them | correctness | M | free — measured, three named cells |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | BENCH-1 | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | BATCH-2 | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
@@ -143,6 +142,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | API-2 | Every submodule is reachable as a package attribute | public API | ~20 | decided — held for the next major |
 | API-1 | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | BIG-4 | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
+| BUG-5 | The exact poles lie on a polygon boundary, so `certain_timezone_at` is `None` there | correctness | ~5 | free |
 | PYPI-1 | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | free — maintainer action |
 | GH-524 | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | GH-362 | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
@@ -334,6 +334,17 @@ the denominators, and how to tell whether they still describe the tree.
     and 1 of 5,000 `ambiguous_shortcut` points now test one additional candidate, which is a bbox
     rejection on 0.03 % of two fixtures. The ladder, the denominators and every share above stand,
     and `docs/benchmark_results_*.rst` were deliberately **not** re-measured: re-running them would
+    replace every committed figure with a fresh machine's for a change nothing can resolve.
+    `docs/data_report.rst` was regenerated, since it counts the index rather than timing it.
+  - **2026-08-25, the antimeridian frame in the shortcut compiler: inert for timings.** Same shape as
+    the entry above and the same reasoning: it changes `scripts/`, so no statement on the query path
+    moved, and what it moves in the packaged `shortcuts.bin` is **3 of 288,122 cells**, none of which
+    changed between the unique and the ambiguous stratum — all three already held a candidate list.
+    Checked against the committed fixtures rather than assumed: **1 of 5,000 `ambiguous_shortcut`
+    points** falls in one of the three and now tests one additional candidate, which is a bounding-box
+    rejection on 0.02 % of one fixture; no `unique_shortcut`, `on_land` or `random` point falls in any
+    of them. The ladder, the denominators and every share above stand, and
+    `docs/benchmark_results_*.rst` were deliberately **not** re-measured — re-running them would
     replace every committed figure with a fresh machine's for a change nothing can resolve.
     `docs/data_report.rst` was regenerated, since it counts the index rather than timing it.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how
@@ -790,45 +801,6 @@ the denominators, and how to tell whether they still describe the tree.
 
 ## Public API and behaviour
 
-### BUG-3 — three antimeridian cells at the north pole omit the polygon that covers them
-
-- **Location:** `scripts/hex_utils.py`, `Hex.lies_in_cell` — the `not self.is_special` guard on
-  the `any_edge_crossing` call, and the `get_corrected_hex_boundaries` / `x_overflow` handling the
-  guard exists for.
-- **The instrument, which is cheap and exact and was not known when this entry was written.** The
-  packaged dataset covers the oceans, so every coordinate lies inside some polygon; and
-  `certain_timezone_at` tests only the polygons the index lists for the coordinate's cell. A `None`
-  answer therefore *proves* the index omitted the covering polygon — no brute force over every
-  polygon needed, ~8,000 coordinates a second. Sweeping the seven resolution-5 child centres of
-  every one of the 288,122 cells is 2.0 M coordinates in a few minutes and enumerates the defective
-  cells outright, which is how the remainder below is stated as cells rather than as a sampled rate.
-- **What is left, measured 2026-08-25 that way:** **8 coordinates in 3 cells**, all of them
-  north of latitude 88.5 and centred within three degrees of the antimeridian
-  (`594530573070893055`, `594531578093240319`, `594531621042913279`). The missing polygon is in
-  every case the ocean strip on the far side of the cut — `Etc/GMT+12` or `Etc/GMT-12`.
-- **The correction that matters, 2026-08-25: these are `x_overflow` cells, not pole cells.**
-  This entry, and the changelog bullet it came from, attributed the remainder to the cells
-  *spanning a pole*. Checked directly, `surrounds_north_pole` and `surrounds_south_pole` are both
-  false for all three, and the two cells that do contain a pole are complete. What they have in
-  common is a stored ring whose longitudes jump from one edge of the coordinate plane to the other,
-  which is what makes the planar tests meaningless on them — the pole is only why the cells there
-  span so much longitude. So the fix is an antimeridian one and does not need a projection: it needs
-  the cell's ring and the candidate polygon expressed on one branch cut before the existing
-  Euclidean tests are applied to them.
-- **Quote the area-weighted rate alongside any other.** Uniform latitude oversamples the poles
-  enormously, and an earlier draft of this entry read a uniform figure as a general error rate. By
-  area — a realistic workload — 3,000 points find no wrong answer at all, which is why this is a
-  narrow defect and not a headline.
-- **What the hole-side fix already took away, so it is not looked for again.** A fourth defective
-  cell sat in the Tuamotus at latitude −15.8, nowhere near a pole or the antimeridian: it lost its
-  ocean polygon because the *hole* test compared the cell's six corners alone. That half shipped
-  (`fully_contained_in_hole` now also refuses a hole whose boundary crosses the cell) and is not
-  part of this entry any more.
-- **Status:** open — free, and the instrument above makes verifying a fix a few minutes rather than
-  an afternoon.
-- **Last touched:** 2026-08-25 — re-verified with the coverage sweep, the remainder narrowed to
-  three named cells, and the pole attribution corrected to the antimeridian.
-
 ### GH-502 — first-class `zoneinfo` / UTC-offset helpers
 
 - **Tracks:** issue #502, which carries the API sketch and the sign-convention trap.
@@ -939,6 +911,37 @@ the denominators, and how to tell whether they still describe the tree.
 - **Last touched:** 2026-08-23 — split out when the batch lookups shipped, with the reason they
   stopped at `timezone_at`.
 
+
+### BUG-5 — the exact poles lie on a polygon boundary, so `certain_timezone_at` answers `None` there
+
+- **Location:** `timezonefinder/utils_numba.py`, `pt_in_poly_python`, reached from
+  `TimezoneFinder.certain_timezone_at`. Not the shortcut index: brute-forcing all 1,322 packaged
+  boundary polygons at latitude −90 finds **no** polygon reporting that it contains the point, so
+  there is nothing the index could have listed.
+- **What it is:** `Antarctica/McMurdo`'s ring has vertices *on* the south pole, and a point lying
+  exactly on a ring is answered whichever way the ray casting happens to fall. One ten-millionth of
+  a degree away — latitude −89.999999, the next representable coordinate — both methods answer
+  `Antarctica/McMurdo`. The north pole lies inside `Etc/GMT` rather than on its boundary and answers
+  normally, which is why only one of the two shows.
+- **What a caller sees:** `certain_timezone_at(lng=…, lat=-90)` is `None` at every longitude, while
+  `timezone_at` answers `Antarctica/McMurdo` — by elimination, without testing containment.
+- **Why it is ranked here and not higher:** it is two coordinates of the globe, one of which already
+  works. It is also not a polar defect but the general on-boundary case, which every border in the
+  dataset has: a point exactly on one has an unspecified answer, and there both sides are defensible.
+  The pole is only the coordinate at which landing exactly on a boundary is *certain* rather than a
+  measure-zero accident.
+- **What not to do, and it is the tempting fix:** do not make the ray-casting kernel count boundary
+  points as inside. It runs per candidate polygon on every ambiguous query, and changing what it
+  answers on a boundary moves answers along every border in the dataset to buy these two
+  coordinates.
+- **Fix:** state it instead — one sentence in the usage docs saying a coordinate lying exactly on a
+  zone boundary has an unspecified answer, with the poles as the case a caller can actually reach on
+  purpose. ~5 lines, no code.
+- **Status:** open.
+- **Last touched:** 2026-08-25 — found while sweeping the index's cell coverage, then brute-forced
+  against every polygon to establish that the index is not the cause.
+
+---
 
 ## Packaging, distribution and release
 
@@ -2140,7 +2143,8 @@ be resolved by the pass that reads it, so it stays open for ever.
 | 11 (register unification) | 2026-08-20 | No source sweep: the roadmap issue's ranking, sequencing and recorded decisions were migrated into this file and the two pass skills merged into one. Every entry's anchor re-verified against the working tree, and every issue the file names checked for state - which found #498 (runtime dataset provenance) shipped in #523 and deleted it | everything else — this pass read the register and the skills, not the code |
 | 12 (public id validation) | 2026-08-23 | `timezonefinder/timezonefinder.py`'s id-taking methods and their internal callers; the three data workflows (`check_data_updates.yml`, `release_data_update.yml`, `publish_data.yml`) read end to end while checking DATA-BINARIES' eligibility, which is what found the unanswered release half; the top of the ranking re-verified against the current code, and the baseline anchor reconciled with `prototypes/query_stage_profile.py`'s `FINDINGS`, which had been re-taken without it | `docs/` prose; `scripts/`; no fresh repo-wide triage |
 | 13 (batch lookup API) | 2026-08-23 | `timezonefinder/timezonefinder.py` read in full while implementing the batch path, plus `shortcut_index.py`'s query contract, `global_functions.py`, `configs.py` and `utils.py`; issue #499's four answered design questions and its prototype comment re-read against the shipped shortcut layout; every `GH-<n>` in this file checked for state, which found nothing newly closed | `docs/` prose beyond `1_usage.rst`/`4_api.rst`; `scripts/`; `benchmarks/` beyond reading the case list; no fresh repo-wide triage |
-| 14 (shortcut cell coverage) | 2026-08-25 | `scripts/hex_utils.py`'s `lies_in_cell` and `scripts/utils_numba.py`'s three overlap helpers read in full and replayed against the packaged binaries; the three data workflows re-read while checking DATA-BINARIES' eligibility, which is what found its unpublished-data-version precondition; every `GH-<n>` in this file checked for state, which found nothing newly closed. The new instrument is the whole of the discovery: sweeping seven interior points per cell over all 288,122 cells enumerates the index's coverage gaps outright, and it found one BUG-3 had never suspected — a Tuamotus cell losing its ocean polygon to the hole test — while correcting BUG-3's own remainder from pole cells to antimeridian ones | `docs/` prose; `scripts/` beyond the two modules named; no fresh repo-wide triage |
+| 14 (shortcut cell coverage) | 2026-08-25 | `scripts/hex_utils.py`'s `lies_in_cell` and `scripts/utils_numba.py`'s three overlap helpers read in full and replayed against the packaged binaries; the three data workflows re-read while checking DATA-BINARIES' eligibility, which is what found its unpublished-data-version precondition; every `GH-<n>` in this file checked for state, which found nothing newly closed. The new instrument is the whole of the discovery: sweeping seven interior points per cell over all 288,122 cells enumerates the index's coverage gaps outright, and it found a cell nobody had suspected — a Tuamotus cell losing its ocean polygon to the hole test — while correcting the known remainder from cells that enclose a pole to cells that straddle the antimeridian | `docs/` prose; `scripts/` beyond the two modules named; no fresh repo-wide triage |
+| 15 (the antimeridian frame) | 2026-08-25 | `scripts/hex_utils.py` read in full again, this time for what the corrected coordinates mean rather than for the overlap tests themselves; every packaged boundary polygon measured for how far it spans in longitude and in which frame, which is what turned the fix from "rotate and test" into "rotate and test only what the new cut leaves whole"; the committed benchmark fixtures checked cell by cell against the three cells the index change moved. **The exhaustive sweep is clean for the first time**: seven resolution-5 child centres in each of the 288,122 cells, 2,016,842 coordinates, 0 answered by a cell that does not list a polygon containing them (it was 8 before). The recipe is in `tests/shortcut_test.py`'s `test_the_index_lists_the_polygon_covering_each_sampled_coordinate`, which is the affordable sampled form of the same assertion | `docs/` prose; `timezonefinder/` itself, which this pass did not touch; no fresh repo-wide triage. `prototypes/shortcut_resolution_query_bench.py`'s header still describes this coverage gap as unfixed and points at `is_special` as where a fix would go — stale as of this pass, and left alone because `prototypes/` is out of scope for one |
 
 Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8
 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with

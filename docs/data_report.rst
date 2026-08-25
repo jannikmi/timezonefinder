@@ -236,7 +236,7 @@ Shortcut Index Overview
    * - Empty entries
      - 0
    * - Total polygon references
-     - 65,210
+     - 65,214
    * -
      -
    * - H3 cells stored
@@ -298,12 +298,12 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 99.3%
      - 0.7%
    * - 3
-     - 1840
+     - 1838
      - 0.64%
      - 99.94%
      - 0.06%
    * - 4
-     - 134
+     - 135
      - 0.05%
      - 99.98%
      - 0.02%
@@ -313,7 +313,7 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 99.99%
      - 0.01%
    * - 6
-     - 9
+     - 10
      - 0.0%
      - 99.99%
      - 0.01%
@@ -384,12 +384,12 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 99.39%
      - 0.61%
    * - 3
-     - 1659
+     - 1657
      - 0.58%
      - 99.97%
      - 0.03%
    * - 4
-     - 74
+     - 75
      - 0.03%
      - 99.99%
      - 0.01%
@@ -399,7 +399,7 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - 100.0%
      - 0.0%
    * - 6
-     - 2
+     - 3
      - 0.0%
      - 100.0%
      - 0.0%
