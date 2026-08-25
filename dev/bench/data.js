@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787625759580,
+  "lastUpdate": 1787627636834,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2610,6 +2610,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0001380506808795379",
             "extra": "mean: 43.706060999994634 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "516eeb8afd441a1c2847a010a71cb2da10de7666",
+          "message": "Merge pull request #552 from jannikmi/improve/499-batch-api\n\nAnswer many coordinates per call: timezone_ids_at / timezone_names_at",
+          "timestamp": "2026-08-25T05:13:02+02:00",
+          "tree_id": "313033ba43280a73ebbb20a06b0c05b0e13341ea",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/516eeb8afd441a1c2847a010a71cb2da10de7666"
+        },
+        "date": 1787627635579,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 122.94591191321206,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013464672873382655",
+            "extra": "mean: 8.133657999998434 msec\nrounds: 97 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 240.54779468188372,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041645931408079213",
+            "extra": "mean: 4.157177999999817 msec\nrounds: 120 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 23.50117827857491,
+            "unit": "iter/sec",
+            "range": "stddev: 0.005074711357519997",
+            "extra": "mean: 42.55105800000081 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
           }
         ]
       }
