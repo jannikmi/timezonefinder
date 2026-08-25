@@ -125,7 +125,7 @@ the entry sections below are grouped by the area they touch rather than sorted.
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | DATA-BINARIES | Stop committing the packaged data binaries | packaging | L | free — decided |
-| GH-542 | Establish what coordinate precision is worth | data format | M | free for the competitor half; the deciding figure needs a regeneration |
+| GH-542 | Establish what coordinate precision is worth | data format | M | free — the source-precision half is settled, the rest needs a regeneration a pass may now do |
 | GH-449 | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
 | BUG-3 | Cells at the poles can omit the polygon that covers them | correctness | S–M | free — measured |
 | DOC-3 | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
@@ -201,11 +201,19 @@ independent: GH-362, GH-524, PERF-2, GH-543
    GH-502 is independent too, but should ride the API major so the docs are rewritten once
 ```
 
-- **Any change that regenerates the packaged data needs the maintainer's explicit go-ahead** in the
-  session, and must not collide with the weekly data-update pipeline, which opens *and auto-merges*
-  its own pull requests. The cost is per *file*, not per run: a regeneration that leaves a file
-  byte-identical costs nothing, which is what makes batching weaker than it looks for a change
-  confined to one part of the data.
+- **Regenerating the packaged data is a normal thing for an item to do**, and no item is parked for
+  needing it. Two things it has to respect: it must not collide with the weekly data-update
+  pipeline, which opens *and auto-merges* its own pull requests, so rebase before the final gate;
+  and it must not be incidental — the diff should list only binaries the change had a reason to
+  move, since the cost is per *file* and a regeneration that leaves a file byte-identical costs
+  nothing.
+- **Format changes are cheaper in a row than spread out, so rank them together once one lands.**
+  A `DATA_FORMAT_VERSION` bump numbers a release, not a change: while one sits unreleased on
+  `master`, the next format change rides the same number and the ordered two-distribution release
+  is paid once for both. The ranking above prices each format item as if it paid that release
+  alone, which is right for the first one and wrong for every one after it — so when a bump is
+  pending, promote the other format items rather than reading their entries literally. GH-449 and
+  GH-542 are the pair this applies to first, with GH-513 behind them.
 - **DATA-BINARIES sequences before GH-449.** Once the binaries stop being committed,
   regeneration no longer adds ~61 MiB to this repository's history, which is what makes the rest of
   the data work cheap.
@@ -432,9 +440,9 @@ the denominators, and how to tell whether they still describe the tree.
   package and `tzfpy` over the same committed fixtures in one process, so the disagreement rate —
   uniform and, separately, near borders — is an addition to an existing harness rather than the
   prototype the issue proposed. The user half is not: the "0 of 200,000 changed at 1e-6" figure has
-  to be re-taken **with the shortcut index rebuilt from the quantized geometry**, and regenerating
-  packaged data is out of bounds for a pass. So a pass can establish where `tzfpy` sits on the
-  size/accuracy axis, and cannot produce the recommendation the entry exists for.
+  to be re-taken **with the shortcut index rebuilt from the quantized geometry** — which a pass may
+  now do, since regenerating the packaged data is no longer out of bounds. What it costs is a
+  regeneration and the review of the binaries it moves, not a permission.
 - **Half the question is now answered, and it needed no regeneration at all — the source carries
   six decimals, not seven.** Read off the committed binaries: across all 15,850,626 packaged
   coordinate values the last decimal digit is only ever `0` or `9`, never `1`-`8`. That is not a
@@ -454,7 +462,9 @@ the denominators, and how to tell whether they still describe the tree.
   arithmetic does not care about magnitudes. **Do not propose relaxing the scale factor as a
   standalone performance change** — it is only ever a term in the encoding decision.
 - **What still needs a regeneration** is the part below 10^-6, where real information starts to go:
-  that is where the user-facing accuracy question actually lives, and a pass still cannot answer it.
+  that is where the user-facing accuracy question actually lives. A pass may now do it — quantize
+  the geometry, rebuild the shortcut index from it, and re-take the changed-answer rate against the
+  committed fixtures. Worth pairing with GH-449 in one release, since both move the format.
 - **Status:** open. Blocks GH-449, but the encoding choice can now be priced on the figures above.
 - **Last touched:** 2026-08-24 — the source-precision half established from the committed data
   without a regeneration, with the delta+varint sizes at both scales; the remaining deciding
@@ -1742,12 +1752,23 @@ premise moves; do not reverse a decision silently.
   answers depend on hand-maintained political configuration, which is an accuracy and maintenance
   liability for a package whose selling point is that it does not simplify. Kept as a one-line
   record in `prototypes/README.md` as well.
-- **One layout marker per unreleased batch, not per change.** `POLYGON_LAYOUT_VERSION` was briefly
-  bumped to 2 in #509 so a released version would reject deduplicated hole data. It was reverted:
-  layout 1 arrived with the per-axis coordinate encoding in 5947b1b, which is not an ancestor of
-  8.2.5, so no version in the wild reads or writes it and there was nothing to protect against. The
-  bump would have rewritten the 63 MB boundary coordinate file for a single byte. Check whether the
-  layout being superseded has actually shipped before bumping.
+- **One version marker per unreleased batch, not per change — and therefore batch the changes.**
+  Settled first for `POLYGON_LAYOUT_VERSION`, which was briefly bumped to 2 in #509 so a released
+  version would reject deduplicated hole data. It was reverted: layout 1 arrived with the per-axis
+  coordinate encoding in 5947b1b, which is not an ancestor of 8.2.5, so no version in the wild reads
+  or writes it and there was nothing to protect against. The bump would have rewritten the 63 MB
+  boundary coordinate file for a single byte. Check whether the layout being superseded has actually
+  shipped before bumping.
+  **Generalised 2026-08-25 to `DATA_FORMAT_VERSION` and the data release itself**, which is the
+  expensive instance: the number identifies a release rather than a change, so while a bump sits
+  unreleased on `master` the next format change rides it for free and the ordered two-distribution
+  release is paid once for both. The consequence is a *sequencing* rule and not just an accounting
+  one — the ranking prices each format item as though it paid that release alone, which is true only
+  of the first, so once a bump is pending the remaining format items should be taken consecutively
+  and released together. This is the same shape as the API-major decision below and as the layout
+  marker above: **what a release costs is paid per release, so work that forces one is cheaper in a
+  batch than spread out.** Regenerating the packaged data needs no permission and parks no item; it
+  only must not be *incidental*, since it can rewrite ~64 MB.
 - **Ocean-ness is tested with `str.startswith`; the zone-id lookup table was refused.** Settled
   2026-08-20 for PERF-1. `OCEAN_TIMEZONE_PREFIX` is `r"Etc/GMT"`, which has no regex
   metacharacters, and `re.match` anchors at the start — so `startswith` is exactly equivalent and
