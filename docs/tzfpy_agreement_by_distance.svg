@@ -2,10 +2,12 @@
 <rect width="880" height="495" fill="#ffffff"/>
 <text x="84" y="32" font-size="17" font-weight="600" fill="#28323a">Where timezonefinder and tzfpy stop agreeing</text>
 <text x="84" y="52" font-size="12.5" fill="#6b7a85">boundary release 2026c on both sides, tzfpy 1.3.3, 20000 points per distance; both axes logarithmic</text>
-<line x1="466" y1="116" x2="492" y2="116" stroke="#1f6feb" stroke-width="2.4"/>
-<text x="500" y="120" font-size="12.5" fill="#28323a">any timezone border</text>
-<line x1="651" y1="116" x2="677" y2="116" stroke="#c2570f" stroke-width="2.4" stroke-dasharray="7 5"/>
-<text x="685" y="120" font-size="12.5" fill="#28323a">border of a land zone</text>
+<line x1="175" y1="116" x2="201" y2="116" stroke="#1f6feb" stroke-width="2.4"/>
+<text x="209" y="120" font-size="12.5" fill="#28323a">any timezone border</text>
+<line x1="360" y1="116" x2="386" y2="116" stroke="#c2570f" stroke-width="2.4" stroke-dasharray="7 5"/>
+<text x="394" y="120" font-size="12.5" fill="#28323a">border of a land zone</text>
+<circle cx="572" cy="116" r="4.5" fill="#ffffff" stroke="#6b7a85" stroke-width="1.8"/>
+<text x="593" y="120" font-size="12.5" fill="#28323a">hollow: none found, so at most this</text>
 <line x1="84" y1="433.0" x2="824" y2="433.0" stroke="#dde3e8" stroke-width="1"/>
 <text x="74" y="437.0" font-size="12" text-anchor="end" fill="#6b7a85">0.01%</text>
 <line x1="84" y1="378.0" x2="824" y2="378.0" stroke="#dde3e8" stroke-width="1"/>
@@ -44,42 +46,44 @@
 <text x="779.4" y="455.0" font-size="11.5" text-anchor="middle" fill="#28323a">500 m</text>
 <line x1="824.0" y1="433.0" x2="824.0" y2="438.0" stroke="#6b7a85" stroke-width="1"/>
 <text x="824.0" y="455.0" font-size="11.5" text-anchor="middle" fill="#28323a">1 km</text>
-<polyline points="84.0,152.0 187.4,155.3 232.0,156.6 335.4,163.4 380.0,165.7 483.4,171.4 528.0,178.3 631.4,225.9 676.0,337.2 779.4,409.3 824.0,385.6" fill="none" stroke="#1f6feb" stroke-width="2.4" stroke-linejoin="round"/>
-<circle cx="84.0" cy="152.0" r="4" fill="#1f6feb"/>
-<text x="84.0" y="172.0" font-size="12" text-anchor="start" fill="#1f6feb">37.3%</text>
-<circle cx="187.4" cy="155.3" r="4" fill="#1f6feb"/>
-<circle cx="232.0" cy="156.6" r="4" fill="#1f6feb"/>
-<text x="232.0" y="176.6" font-size="12" text-anchor="middle" fill="#1f6feb">32.6%</text>
-<circle cx="335.4" cy="163.4" r="4" fill="#1f6feb"/>
-<circle cx="380.0" cy="165.7" r="4" fill="#1f6feb"/>
-<text x="380.0" y="185.7" font-size="12" text-anchor="middle" fill="#1f6feb">25%</text>
-<circle cx="483.4" cy="171.4" r="4" fill="#1f6feb"/>
-<circle cx="528.0" cy="178.3" r="4" fill="#1f6feb"/>
-<text x="528.0" y="198.3" font-size="12" text-anchor="middle" fill="#1f6feb">17.3%</text>
-<circle cx="631.4" cy="225.9" r="4" fill="#1f6feb"/>
-<circle cx="676.0" cy="337.2" r="4" fill="#1f6feb"/>
-<text x="676.0" y="357.2" font-size="12" text-anchor="middle" fill="#1f6feb">0.165%</text>
-<circle cx="779.4" cy="409.3" r="4" fill="#1f6feb"/>
-<circle cx="824.0" cy="385.6" r="4" fill="#1f6feb"/>
-<text x="824.0" y="405.6" font-size="12" text-anchor="end" fill="#1f6feb">0.04%</text>
-<polyline points="84.0,144.1 187.4,145.5 232.0,146.9 335.4,153.9 380.0,156.0 483.4,161.6 528.0,168.8 631.4,216.4 676.0,332.0 779.4,423.4 824.0,399.6" fill="none" stroke="#c2570f" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polyline points="84.0,151.8 187.4,155.0 232.0,156.4 335.4,163.2 380.0,165.4 483.4,171.2 528.0,177.8 631.4,225.5 676.0,348.1 779.4,419.1 824.0,419.1" fill="none" stroke="#1f6feb" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="84.0" cy="151.8" r="4" fill="#1f6feb"/>
+<text x="84.0" y="171.8" font-size="12" text-anchor="start" fill="#1f6feb">37.5%</text>
+<circle cx="187.4" cy="155.0" r="4" fill="#1f6feb"/>
+<circle cx="232.0" cy="156.4" r="4" fill="#1f6feb"/>
+<text x="232.0" y="176.4" font-size="12" text-anchor="middle" fill="#1f6feb">32.9%</text>
+<circle cx="335.4" cy="163.2" r="4" fill="#1f6feb"/>
+<circle cx="380.0" cy="165.4" r="4" fill="#1f6feb"/>
+<text x="380.0" y="185.4" font-size="12" text-anchor="middle" fill="#1f6feb">25.2%</text>
+<circle cx="483.4" cy="171.2" r="4" fill="#1f6feb"/>
+<circle cx="528.0" cy="177.8" r="4" fill="#1f6feb"/>
+<text x="528.0" y="197.8" font-size="12" text-anchor="middle" fill="#1f6feb">17.6%</text>
+<circle cx="631.4" cy="225.5" r="4" fill="#1f6feb"/>
+<circle cx="676.0" cy="348.1" r="4" fill="#1f6feb"/>
+<text x="676.0" y="368.1" font-size="12" text-anchor="middle" fill="#1f6feb">0.12%</text>
+<circle cx="779.4" cy="419.1" r="4.5" fill="#ffffff" stroke="#1f6feb" stroke-width="1.8"/>
+<text x="779.4" y="403.1" font-size="12" text-anchor="middle" fill="#1f6feb">&lt;0.015%</text>
+<circle cx="824.0" cy="419.1" r="4.5" fill="#ffffff" stroke="#1f6feb" stroke-width="1.8"/>
+<text x="824.0" y="403.1" font-size="12" text-anchor="end" fill="#1f6feb">&lt;0.015%</text>
+<polyline points="84.0,144.1 187.4,145.5 232.0,146.8 335.4,153.9 380.0,155.9 483.4,161.6 528.0,168.5 631.4,216.0 676.0,340.1 779.4,409.7 824.0,409.7" fill="none" stroke="#c2570f" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
 <circle cx="84.0" cy="144.1" r="4" fill="#c2570f"/>
 <text x="84.0" y="128.1" font-size="12" text-anchor="start" fill="#c2570f">47%</text>
 <circle cx="187.4" cy="145.5" r="4" fill="#c2570f"/>
-<circle cx="232.0" cy="146.9" r="4" fill="#c2570f"/>
-<text x="232.0" y="130.9" font-size="12" text-anchor="middle" fill="#c2570f">43.4%</text>
+<circle cx="232.0" cy="146.8" r="4" fill="#c2570f"/>
+<text x="232.0" y="130.8" font-size="12" text-anchor="middle" fill="#c2570f">43.4%</text>
 <circle cx="335.4" cy="153.9" r="4" fill="#c2570f"/>
-<circle cx="380.0" cy="156.0" r="4" fill="#c2570f"/>
-<text x="380.0" y="140.0" font-size="12" text-anchor="middle" fill="#c2570f">33.2%</text>
+<circle cx="380.0" cy="155.9" r="4" fill="#c2570f"/>
+<text x="380.0" y="139.9" font-size="12" text-anchor="middle" fill="#c2570f">33.3%</text>
 <circle cx="483.4" cy="161.6" r="4" fill="#c2570f"/>
-<circle cx="528.0" cy="168.8" r="4" fill="#c2570f"/>
-<text x="528.0" y="152.8" font-size="12" text-anchor="middle" fill="#c2570f">22.8%</text>
-<circle cx="631.4" cy="216.4" r="4" fill="#c2570f"/>
-<circle cx="676.0" cy="332.0" r="4" fill="#c2570f"/>
-<text x="676.0" y="316.0" font-size="12" text-anchor="middle" fill="#c2570f">0.192%</text>
-<circle cx="779.4" cy="423.4" r="4" fill="#c2570f"/>
-<circle cx="824.0" cy="399.6" r="4" fill="#c2570f"/>
-<text x="824.0" y="383.6" font-size="12" text-anchor="end" fill="#c2570f">0.0266%</text>
+<circle cx="528.0" cy="168.5" r="4" fill="#c2570f"/>
+<text x="528.0" y="152.5" font-size="12" text-anchor="middle" fill="#c2570f">23%</text>
+<circle cx="631.4" cy="216.0" r="4" fill="#c2570f"/>
+<circle cx="676.0" cy="340.1" r="4" fill="#c2570f"/>
+<text x="676.0" y="324.1" font-size="12" text-anchor="middle" fill="#c2570f">0.152%</text>
+<circle cx="779.4" cy="409.7" r="4.5" fill="#ffffff" stroke="#c2570f" stroke-width="1.8"/>
+<text x="779.4" y="393.7" font-size="12" text-anchor="middle" fill="#c2570f">&lt;0.0198%</text>
+<circle cx="824.0" cy="409.7" r="4.5" fill="#ffffff" stroke="#c2570f" stroke-width="1.8"/>
+<text x="824.0" y="393.7" font-size="12" text-anchor="end" fill="#c2570f">&lt;0.0198%</text>
 <text x="454" y="479.0" font-size="12.5" text-anchor="middle" fill="#6b7a85">distance from the nearest timezone border</text>
 <text x="20" y="288" font-size="12.5" text-anchor="middle" fill="#6b7a85" transform="rotate(-90 20 288)">a different zone returned</text>
 </svg>

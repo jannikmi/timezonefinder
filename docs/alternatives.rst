@@ -129,73 +129,72 @@ difference is in what they do with that dataset's geometry.
          with roughly one point in three thousand still differing a kilometre from any border.
    :width: 100%
 
-.. warning::
-
-   **The disagreement does not stop at the simplification tolerance.** ``tzfpy``'s maintainer puts
-   the boundary displacement at a maximum of roughly **111 m**, chosen for a weather API where
-   coordinates are rarely that sensitive near a border. A displacement bound describes how far a
-   boundary that survives simplification is allowed to move - it says nothing about features the
-   simplification *removes or merges*. Measured, **0.17 % of points 100 m from a border and 0.04 %
-   of points a full kilometre from any border still get a different timezone**, which is around one
-   query in three thousand at a distance where a reader of the 111 m figure would expect none.
-
-   The far cases are whole features in the wrong place rather than a border nudged sideways: small
-   islands in the Paraná river are answered as Paraguay rather than Argentina; ``Indian/Mahe`` and
-   ``Pacific/Tahiti`` become open ocean a kilometre inside the territory this dataset assigns to
-   them. If your points are near *any* border, the tolerance figure is the right thing to reason
-   about; if a wrong answer is a bug rather than a rounding error, the tail is.
-
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-25:
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-25.
+   The last column is disagreements this package does **not** attribute to ``tzfpy`` - see
+   *Reading the last column* below.
 
    .. list-table::
       :header-rows: 1
-      :widths: 34 33 33
+      :widths: 25 25 25 25
 
       * - Distance from a border
         - Any border
         - Border of a land zone
+        - Not attributed
       * - 1 cm
-        - 37.3 %
+        - 37.5 %
         - 47.0 %
+        - 17
       * - 5 cm
-        - 33.9 %
-        - 45.1 %
+        - 34.2 %
+        - 45.2 %
+        - 5
       * - 10 cm
-        - 32.6 %
+        - 32.9 %
         - 43.4 %
+        - 1
       * - 50 cm
-        - 26.8 %
+        - 26.9 %
         - 35.3 %
+        - 8
       * - 1 m
-        - 25.0 %
-        - 33.2 %
+        - 25.2 %
+        - 33.3 %
+        - 7
       * - 5 m
-        - 21.2 %
+        - 21.3 %
         - 28.2 %
+        - 4
       * - 10 m
-        - 17.3 %
-        - 22.8 %
+        - 17.6 %
+        - 23.0 %
+        - 4
       * - 50 m
         - 4.3 %
         - 5.7 %
+        - 9
       * - 100 m
-        - 0.17 %
-        - 0.19 %
+        - 0.12 %
+        - 0.15 %
+        - 7
       * - 500 m
-        - 0.02 %
-        - 0.01 %
+        - 0 of 20,000
+        - 0 of 15,000
+        - 3
       * - 1 km
-        - 0.04 %
-        - 0.03 %
+        - 0 of 20,000
+        - 0 of 15,000
+        - 7
 
-   **The knee is between 10 m and 100 m**, which is where the stated tolerance puts it: a fifth of
-   points still differ at ten metres, one in twenty at fifty, and one in five hundred at a hundred.
-   Below that the curve flattens rather than climbing to 100 %, because the points sit on **both**
-   sides of this package's border and only the side ``tzfpy``'s boundary has moved away from can
-   disagree. Past the knee it does not reach zero at all - the last two rows are single-figure
-   counts, so their order is noise, but their being non-zero is not.
+   **The knee is between 10 m and 100 m, and past it the curve stops.** A fifth of points still
+   differ at ten metres, one in twenty at fifty, one in eight hundred at a hundred - and beyond a
+   hundred metres, across 40,000 sampled points, **not one disagreement is attributable to**
+   ``tzfpy``. That is the ~111 m maximum displacement its maintainer states for the simplification,
+   holding exactly as stated. Below the knee the curve flattens rather than climbing to 100 %,
+   because the points sit on **both** sides of this package's border and only the side ``tzfpy``'s
+   boundary has moved away from can disagree.
 
    The second column drops the ocean zones, whose mutual borders are meridians that no simplification
    can move and which therefore dilute the first; a coastline stays in both, since it is stored in the
@@ -209,13 +208,89 @@ difference is in what they do with that dataset's geometry.
    ``Asia/Shanghai`` - that each package resolves by its own rule. Those overlaps are almost every
    difference away from a border and next to none of the ones near it.
 
-   The near-border disagreements are ordinary international borders, not exotica: ``Asia/Bishkek``
-   against ``Asia/Tashkent``, ``Asia/Tehran`` against ``Asia/Ashgabat``, ``Africa/Kinshasa`` against
-   ``Africa/Luanda``. Which distance your queries land at is the whole question, and it is why the
-   recommendation at the top of this page turns on how near a border your points are rather than on
-   how accurate either package is in the abstract. Re-run the measurement rather than trusting these
-   figures: they describe one release of a package that ships on its own schedule.
+Reading the last column
+~~~~~~~~~~~~~~~~~~~~~~~
 
+**Not every difference is the other package's error, and this one is ours.** Where
+``timezone_at`` answers but :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` returns
+``None``, no polygon actually contains the point and the answer is a fallback to a neighbouring
+zone. Above roughly latitude 88 the shortcut index can omit the polygon covering a cell, which is a
+known defect of *this* package. Those points are counted in the last column and kept out of the
+rates, because charging them to ``tzfpy`` would put this package's bug on its competitor's tab.
+
+It matters more than the counts suggest: every disagreement beyond 100 m turned out to be one of
+these. Reported naively, the curve appeared to carry a tail out to a kilometre and to contradict the
+stated tolerance. It does not.
+
+
+Every disagreement 100 m or more from a border
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Listed in full rather than sampled, so the figures above can be checked rather than taken on trust.
+Each coordinate was re-queried against both packages afterwards and its distance to the nearest
+border re-measured; the ``border`` column is that measurement, not the distance the point was drawn
+at. Boundary release 2026c on both sides, ``tzfpy`` 1.3.3.
+
+**Attributable to** ``tzfpy`` — all 24 of them, and all at 100 m. Beyond that there are none::
+
+     border    latitude    longitude   timezonefinder        tzfpy
+      100 m    63.50486    106.56825   Asia/Krasnoyarsk      Asia/Irkutsk
+      100 m    10.96478    115.95923   Asia/Manila           Etc/GMT-8
+      100 m    11.34167    -63.99829   America/Caracas       Etc/GMT+4
+      100 m    32.94443    133.72220   Etc/GMT-9             Asia/Tokyo
+      100 m    69.05734   -165.71935   America/Nome          Etc/GMT+11
+      100 m     9.82826    112.88880   Asia/Shanghai         Etc/GMT-8
+      100 m    16.06440    -82.33148   America/Tegucigalpa   (no zone at all)
+      100 m     3.67614    -59.71563   America/Guyana        America/Boa_Vista
+      100 m   -10.98399    179.53451   Pacific/Funafuti      Etc/GMT-12
+      100 m     7.30759    -60.60160   America/Guyana        America/Caracas
+      100 m    10.29734    113.87220   Asia/Ho_Chi_Minh      Etc/GMT-8
+      100 m    58.08210     -8.48906   Europe/London         Etc/GMT+1
+      100 m   -38.11690    -73.94919   America/Santiago      Etc/GMT+5
+      100 m    44.58485     35.08544   Europe/Simferopol     Etc/GMT-2
+      100 m   -16.57720   -144.73338   Pacific/Tahiti        Etc/GMT+10
+      100 m    39.07428    124.77606   Asia/Pyongyang        Etc/GMT-8
+      100 m   -22.98745    151.97899   Australia/Brisbane    Etc/GMT-10
+      100 m    11.76343     51.48246   Africa/Mogadishu      Etc/GMT-3
+      100 m     8.01813    -58.83736   Etc/GMT+4             America/Guyana
+      100 m   -15.56637   -142.00834   Pacific/Tahiti        Etc/GMT+9
+      100 m    13.54474     13.13853   Africa/Niamey         Africa/Lagos
+      100 m    44.47805    -62.74375   America/Halifax       Etc/GMT+4
+      100 m    28.20837   -112.48333   America/Hermosillo    Etc/GMT+7
+      100 m     1.73097    -69.62412   America/Manaus        America/Bogota
+
+The last-but-one line is not a wrong zone but *no* zone: ``tzfpy`` returns an empty result there.
+
+**This package's own errors**, excluded from the rates above. ``timezone_at`` returns a zone that
+does not contain the point, which the third column shows by testing every packaged polygon
+directly — ``tzfpy`` is right in all 17::
+
+
+     border    latitude    longitude   timezonefinder   tzfpy, and the zone that really contains the point
+    1,000 m   -17.29886   -149.65299   Pacific/Tahiti   Etc/GMT+10
+    1,000 m    -5.98475     53.23709   Indian/Mahe      Etc/GMT-4
+    1,000 m    89.58436   -173.73833   Etc/GMT+11       Etc/GMT+12
+    1,000 m    89.18571    179.36790   Etc/GMT+11       Etc/GMT-12
+    1,000 m    88.68884    172.89258   Etc/GMT+11       Etc/GMT-12
+    1,000 m   -15.76280   -144.86845   Pacific/Tahiti   Etc/GMT+10
+    1,000 m   -15.80550   -144.85886   Pacific/Tahiti   Etc/GMT+10
+      500 m   -15.67909   -144.92581   Pacific/Tahiti   Etc/GMT+10
+      500 m    88.55701    179.82164   Etc/GMT+11       Etc/GMT-12
+      500 m   -15.75797   -144.86424   Pacific/Tahiti   Etc/GMT+10
+      100 m   -15.69113   -145.81519   Pacific/Tahiti   Etc/GMT+10
+      100 m   -15.86907   -144.84989   Pacific/Tahiti   Etc/GMT+10
+      100 m    12.19729    -81.61190   America/Bogota   Etc/GMT+5
+      100 m    89.06007    172.55476   Etc/GMT+11       Etc/GMT-12
+      100 m    89.57708   -179.87830   Etc/GMT+11       Etc/GMT+12
+      100 m   -29.24157     27.53919   Africa/Maseru    Africa/Johannesburg
+      100 m   -15.85663   -144.82531   Pacific/Tahiti   Etc/GMT+10
+
+They are not a polar curiosity: the list runs from 89°N to 15°S, and ``Africa/Maseru`` against
+``Africa/Johannesburg`` is a land enclave rather than an island. **Every disagreement beyond 100 m
+is one of these**, which is why the rates above stop at 100 m rather than trailing off — the tail
+that appeared to contradict ``tzfpy``'s stated tolerance was this package's, not theirs. Tracked as
+BUG-4 in ``potential-improvements.md``; these coordinates are also the check that a fix works, since
+each should become an agreement.
 
 When to choose which package
 ----------------------------

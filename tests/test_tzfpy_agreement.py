@@ -275,6 +275,30 @@ def test_a_saved_run_round_trips_so_the_chart_can_be_redrawn() -> None:
 
 
 @pytest.mark.unit
+def test_a_saved_run_keeps_what_this_package_got_wrong() -> None:
+    # these are the cases the comparison page publishes as its own defect
+    # report; a round trip that dropped them would quietly unpublish them
+    counts = AgreementCounts(
+        total=20_000,
+        overlap_policy=3,
+        substantive=1,
+        ours_wrong=2,
+        examples=((1.0, 2.0, "A", ("B",)),),
+        ours_wrong_examples=(
+            (172.89258, 88.68884, "Etc/GMT+11", ("Etc/GMT-12",)),
+            (-149.65299, -17.29886, "Pacific/Tahiti", ("Etc/GMT+10",)),
+        ),
+    )
+    measurement = Measurement(
+        "2026c",
+        "1.3.3",
+        (DistanceResult(1000.0, 50_000, counts, counts),),
+        {},
+    )
+    assert Measurement.from_json(measurement.as_json()) == measurement
+
+
+@pytest.mark.unit
 def test_a_saved_run_keeps_the_examples_it_named() -> None:
     counts = AgreementCounts(
         total=10,
@@ -335,3 +359,42 @@ def test_the_hollow_marker_is_explained_only_when_one_is_drawn() -> None:
 
     without_bound = render_chart(_measurement((1.0, 26, 34), (1000.0, 1, 1)))
     assert "hollow" not in without_bound
+
+
+@pytest.mark.unit
+def test_a_disagreement_this_package_cannot_claim_is_counted_apart() -> None:
+    """Where `certain_timezone_at` finds nothing, the other package is not wrong.
+
+    Above ~88 degrees the shortcut index can omit the polygon covering a cell,
+    so `timezone_at` answers with a neighbouring ocean zone and
+    `certain_timezone_at` says None. Six of the far-from-border disagreements
+    published on the comparison page turned out to be exactly that, and
+    counting them as the other package's error would have put this package's
+    own defect on its competitor's tab.
+    """
+    counts = count_agreement(
+        [(172.9, 88.7), (13.4, 52.5)],
+        lambda lng, lat: "Etc/GMT+11",
+        lambda lng, lat: "Etc/GMT-12",
+        lambda lng, lat: ["Etc/GMT-12"],
+        # only the second point is one this package can stand behind
+        lambda lng, lat: lat < 80.0,
+    )
+    assert counts.ours_wrong == 1
+    assert counts.substantive == 1
+    # and the uncertain one is not published as a case against the other package
+    assert counts.examples == ((13.4, 52.5, "Etc/GMT+11", ("Etc/GMT-12",)),)
+
+
+@pytest.mark.unit
+def test_without_a_certainty_probe_nothing_is_set_aside() -> None:
+    # the fixture comparison and any caller that does not pass one keep the
+    # older, simpler meaning rather than silently reclassifying
+    counts = count_agreement(
+        [(172.9, 88.7)],
+        lambda lng, lat: "Etc/GMT+11",
+        lambda lng, lat: "Etc/GMT-12",
+        lambda lng, lat: ["Etc/GMT-12"],
+    )
+    assert counts.ours_wrong == 0
+    assert counts.substantive == 1

@@ -146,10 +146,22 @@ AGREE = "agree"
 OVERLAP_POLICY = "overlap_policy"
 SUBSTANTIVE = "substantive"
 
+
 # How many substantive disagreements to keep per group. A bare count is
-# unattributable - three points out of five thousand could be a coastline, a
-# pole, or a bug in this script - so the report names some of them.
-MAX_EXAMPLES = 4
+# unattributable - three points out of twenty thousand could be a coastline, a
+# pole, or a bug in this script - so the report names them.
+#
+# High enough that the sparse groups are captured *exhaustively*: past the
+# simplification tolerance there are only tens of disagreements in twenty
+# thousand points, and those are the ones a reader has any hope of checking by
+# hand. `docs/alternatives.rst` publishes that list, so it has to be the whole
+# list rather than a sample of it.
+MAX_EXAMPLES = 60
+
+# Below this the report prints every example it kept rather than a sample. Above
+# it the list is far from complete and printing sixty coordinates would bury the
+# rates they are meant to attribute.
+EXHAUSTIVE_EXAMPLE_LIMIT = 20
 
 # Where the rendered chart goes. Declared here because this module writes it;
 # docs/alternatives.rst is the only reader, and the Makefile passes `--chart`
@@ -163,12 +175,33 @@ MEASUREMENT_PATH = PROJECT_ROOT / "tmp" / "tzfpy_agreement.json"
 
 
 class AgreementCounts(NamedTuple):
-    """One group of points, counted three ways, with a few cases named."""
+    """One group of points, counted four ways, with the cases named."""
 
     total: int
     overlap_policy: int
     substantive: int
+    # Disagreements that are *this* package's error rather than the other's.
+    #
+    # `timezone_at` answers by elimination from the shortcut index's candidate
+    # list, so it can return a zone without ever testing that the zone contains
+    # the point. `certain_timezone_at` does test, and `None` from it proves no
+    # candidate contains the point at all - which, since the packaged data tiles
+    # the globe with ocean zones, means the covering polygon is missing from the
+    # candidate list and the zone returned is simply wrong. Brute-forcing the
+    # packaged polygons at three such points confirmed it: the containing zone
+    # was the one `tzfpy` gave, every time.
+    #
+    # Counted apart because charging them to the other package would put this
+    # package's defect on its competitor's tab - and would do so precisely where
+    # the competitor is most accurate, since that is where its own noise stops
+    # drowning ours.
+    ours_wrong: int = 0
     examples: tuple[tuple[float, float, str | None, tuple[str, ...]], ...] = ()
+    # published too, since they are a defect report against this package and a
+    # ready-made check that a fix works
+    ours_wrong_examples: tuple[
+        tuple[float, float, str | None, tuple[str, ...]], ...
+    ] = ()
 
     @property
     def first_answer_disagreements(self) -> int:
@@ -230,9 +263,17 @@ def count_agreement(
     ours: Callable[[float, float], str | None],
     theirs_first: Callable[[float, float], str | None],
     theirs_all: Callable[[float, float], Sequence[str]],
+    ours_is_certain: Callable[[float, float], bool] | None = None,
 ) -> AgreementCounts:
-    total = overlap = substantive = 0
+    """Count a group of points, splitting off what this package cannot claim.
+
+    ``ours_is_certain`` is consulted only where the two packages already
+    disagree, so it costs a second lookup on a minority of points and none at
+    all on the ones that agree.
+    """
+    total = overlap = substantive = ours_wrong = 0
     examples: list[tuple[float, float, str | None, tuple[str, ...]]] = []
+    unclaimed: list[tuple[float, float, str | None, tuple[str, ...]]] = []
     for lng, lat in points:
         total += 1
         our_answer = ours(lng, lat)
@@ -241,6 +282,11 @@ def count_agreement(
         if verdict == OVERLAP_POLICY:
             overlap += 1
         elif verdict == SUBSTANTIVE:
+            if ours_is_certain is not None and not ours_is_certain(lng, lat):
+                ours_wrong += 1
+                if len(unclaimed) < MAX_EXAMPLES:
+                    unclaimed.append((lng, lat, our_answer, their_zones))
+                continue
             substantive += 1
             if len(examples) < MAX_EXAMPLES:
                 examples.append((lng, lat, our_answer, their_zones))
@@ -248,7 +294,9 @@ def count_agreement(
         total=total,
         overlap_policy=overlap,
         substantive=substantive,
+        ours_wrong=ours_wrong,
         examples=tuple(examples),
+        ours_wrong_examples=tuple(unclaimed),
     )
 
 
@@ -322,15 +370,20 @@ class Measurement(NamedTuple):
         )
 
 
+def _cases(
+    payload: list,
+) -> tuple[tuple[float, float, str | None, tuple[str, ...]], ...]:
+    return tuple((lng, lat, ours, tuple(theirs)) for lng, lat, ours, theirs in payload)
+
+
 def _counts_from_json(payload: dict) -> AgreementCounts:
     return AgreementCounts(
         total=payload["total"],
         overlap_policy=payload["overlap_policy"],
         substantive=payload["substantive"],
-        examples=tuple(
-            (lng, lat, ours, tuple(theirs))
-            for lng, lat, ours, theirs in payload["examples"]
-        ),
+        ours_wrong=payload["ours_wrong"],
+        examples=_cases(payload["examples"]),
+        ours_wrong_examples=_cases(payload["ours_wrong_examples"]),
     )
 
 
@@ -373,8 +426,20 @@ def measure(
         def ours(lng: float, lat: float) -> str | None:
             return finder.timezone_at(lng=lng, lat=lat)
 
+        def ours_is_certain(lng: float, lat: float) -> bool:
+            return finder.certain_timezone_at(lng=lng, lat=lat) is not None
+
         by_distance = []
-        for distance in distances_m:
+        for index, distance in enumerate(distances_m, start=1):
+            # a full sweep is half an hour of silence otherwise, and the far
+            # distances are the slow ones - a reader with no progress cannot
+            # tell a long run from a wedged one
+            print(
+                f"[{index}/{len(distances_m)}] sampling {points:,} points "
+                f"{format_distance(distance)} from a border...",
+                file=sys.stderr,
+                flush=True,
+            )
             accepted, drawn = geometry.sample(rng, distance, points)
             land = [c for c in accepted if borders_a_land_zone(c, ocean_ring)]
             by_distance.append(
@@ -386,12 +451,14 @@ def measure(
                         ours,
                         tzfpy.get_tz,
                         tzfpy.get_tzs,
+                        ours_is_certain,
                     ),
                     land_borders=count_agreement(
                         [(c.lng, c.lat) for c in land],
                         ours,
                         tzfpy.get_tz,
                         tzfpy.get_tzs,
+                        ours_is_certain,
                     ),
                 )
             )
@@ -399,7 +466,11 @@ def measure(
         by_point_class = (
             {
                 name: count_agreement(
-                    load_benchmark_points(name), ours, tzfpy.get_tz, tzfpy.get_tzs
+                    load_benchmark_points(name),
+                    ours,
+                    tzfpy.get_tz,
+                    tzfpy.get_tzs,
+                    ours_is_certain,
                 )
                 for name in POINT_CLASSES
             }
@@ -416,11 +487,27 @@ def measure(
 
 
 def _example_lines(label: str, counts: AgreementCounts) -> list[str]:
-    return [
+    """Named disagreements, exhaustively where the group is small enough.
+
+    A group whose every case is listed says so, because that is the difference
+    between "here are some" and "here are all of them, go and check".
+    """
+    complete = len(counts.examples) == counts.substantive
+    shown = (
+        counts.examples
+        if complete and counts.substantive <= EXHAUSTIVE_EXAMPLE_LIMIT
+        else counts.examples[:3]
+    )
+    lines = [
         f"  {label}: ({lng:.5f}, {lat:.5f}) -> {ours!r}, "
         f"{TZFPY_DISTRIBUTION} holds {list(theirs)}"
-        for lng, lat, ours, theirs in counts.examples
+        for lng, lat, ours, theirs in shown
     ]
+    if lines and len(shown) < counts.substantive:
+        lines.append(f"  {label}: ... and {counts.substantive - len(shown)} more")
+    elif lines:
+        lines[-1] += "   [complete]"
+    return lines
 
 
 def format_distance(distance_m: float) -> str:
@@ -446,7 +533,8 @@ def format_report(measurement: Measurement) -> str:
         " of our border and only one of them can be the side tzfpy moved away from)",
         "",
         f"{'distance':>10}{'points':>8}{'accepted':>10}"
-        f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}",
+        f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}"
+        f"{'ours wrong':>16}",
     ]
     for result in measurement.by_distance:
         every = result.all_borders
@@ -457,9 +545,27 @@ def format_report(measurement: Measurement) -> str:
             f"{every.substantive:>8} {every.rate(every.substantive):>5.2f}%"
             f"{land.substantive:>12} {land.rate(land.substantive):>5.2f}%"
             f"{every.overlap_policy:>10} {every.rate(every.overlap_policy):>5.2f}%"
+            f"{every.ours_wrong:>9} {every.rate(every.ours_wrong):>5.2f}%"
         )
     for result in measurement.by_distance:
         lines += _example_lines(format_distance(result.distance_m), result.all_borders)
+    unclaimed = [
+        line
+        for result in measurement.by_distance
+        for line in _example_lines(
+            f"{format_distance(result.distance_m)} (ours)",
+            result.all_borders._replace(
+                substantive=result.all_borders.ours_wrong,
+                examples=result.all_borders.ours_wrong_examples,
+            ),
+        )
+    ]
+    if unclaimed:
+        lines += [
+            "",
+            "disagreements this package gets wrong, excluded above:",
+            *unclaimed,
+        ]
 
     if measurement.by_point_class:
         lines += [

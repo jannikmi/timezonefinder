@@ -249,3 +249,173 @@ def test_a_border_two_rings_describe_is_not_counted_twice() -> None:
     rng = np.random.default_rng(2)
     _, drawn = geometry.sample(rng, 100.0, 400)
     assert 1.6 < drawn / 400 < 2.6
+
+
+# --- the prune must never hide a ring that is genuinely in range -------------
+#
+# `distances_to_rings` answers "every ring that could be within `search_m`" by
+# testing the point against each ring's bounding box grown by that radius. That
+# is a superset of the right answer by construction: the nearest point of a ring
+# lies in the ring's own box, so a point within `search_m` of the ring is within
+# `search_m` of the box, and a box grown by `search_m` contains its whole
+# `search_m` neighbourhood. Moving away from a border moves the point out of the
+# box, and the pad grows with the radius by exactly the amount that compensates.
+#
+# The argument only holds while the pad is never understated, which is what
+# these check. Both cases below were real defects.
+
+
+def _one_ring_geometry(coords: np.ndarray) -> BorderGeometry:
+    class _Polygons:
+        def __init__(self) -> None:
+            self.xmin = np.array([coords[0].min()], dtype=np.int32)
+            self.xmax = np.array([coords[0].max()], dtype=np.int32)
+            self.ymin = np.array([coords[1].min()], dtype=np.int32)
+            self.ymax = np.array([coords[1].max()], dtype=np.int32)
+
+        def __len__(self) -> int:
+            return 1
+
+        def coords_of(self, index: int) -> np.ndarray:
+            return coords
+
+    return BorderGeometry(_Polygons())
+
+
+@pytest.mark.unit
+def test_a_ring_just_across_the_antimeridian_is_still_measured() -> None:
+    # the box test compares longitudes, and +179.9999 against -179.9999 is
+    # 360 degrees apart in arithmetic and 20 metres apart on the globe. The
+    # distance function has always wrapped; the filter feeding it did not, so
+    # this ring was pruned before anything measured it
+    geometry = _one_ring_geometry(
+        _ring(
+            (179.9990, 10.0), (179.9999, 10.0), (179.9999, 10.001), (179.9990, 10.001)
+        )
+    )
+    measured = dict(geometry.distances_to_rings(-179.9999, 10.0005, 1000.0))
+    assert measured, "the ring across the seam was pruned"
+    assert measured[0] < 50.0
+
+    # ... and the consequence that matters: a point 20 m from a border must not
+    # be accepted as a sample of what a kilometre from a border looks like
+    assert geometry.verify(-179.9999, 10.0005, 1000.0) is None
+
+
+@pytest.mark.unit
+def test_the_longitude_pad_holds_at_the_highest_latitude_in_reach() -> None:
+    """A pad taken at the point's own latitude is too small near a pole.
+
+    A degree of longitude shortens towards the pole, so metres-to-degrees taken
+    at the point understates what a ring slightly nearer the pole needs. It only
+    bites where the cosine changes sharply over the latitude band in reach,
+    which is the last fraction of a degree - the ring below is ~5.3 km away and
+    150 degrees of longitude from the probe, and a pad taken at the probe's own
+    latitude reaches only 103 of them.
+    """
+    geometry = _one_ring_geometry(
+        _ring((149.99, 89.99), (150.01, 89.99), (150.01, 89.995), (149.99, 89.995))
+    )
+    # what is asserted is that the ring survives the prune, not what its
+    # distance comes out as: 150 degrees of longitude is far outside the local
+    # equirectangular frame the measurement is valid in, and the prune's job is
+    # to hand the measurement everything that could be in range, not to be
+    # right about things that are not
+    assert dict(geometry.distances_to_rings(0.0, 89.95, 10_000.0)), (
+        "the pad was computed as if the point's own latitude were the worst "
+        "case, and pruned a ring nearer the pole than that"
+    )
+
+
+@pytest.mark.slow
+def test_the_prune_agrees_with_brute_force_over_the_packaged_borders() -> None:
+    """No ring in range is ever pruned, checked against every ring there is.
+
+    The superset argument above is a proof, and this is the thing that would
+    catch a hole in it: for each probe, every ring in the dataset is measured
+    and any that came out inside the search radius must have survived the box
+    test. Points are drawn along the antimeridian and up to the poles as well
+    as at random, because that is where the pad arithmetic is delicate.
+    """
+    from tests.auxiliaries import boundaries
+
+    geometry = BorderGeometry(boundaries)
+    rng = np.random.default_rng(11)
+    probes = [
+        (
+            float(rng.uniform(-180.0, 180.0)),
+            float(np.degrees(np.arcsin(rng.uniform(-1, 1)))),
+        )
+        for _ in range(12)
+    ]
+    probes += [
+        (179.9999, 10.0),
+        (-179.9999, 10.0),
+        (179.99, -16.5),
+        (-179.99, -16.5),
+        (0.0, 89.99),
+        (100.0, -89.99),
+        (180.0, 65.0),
+        (-180.0, 65.0),
+    ]
+
+    for search_m in (100.0, 10_000.0):
+        for lng, lat in probes:
+            cos_lat = max(math.cos(math.radians(lat)), 1e-9)
+            kept = dict(geometry.distances_to_rings(lng, lat, search_m))
+            in_range = {
+                ring_id
+                for ring_id in range(geometry.ring_count)
+                if geometry._distance_to_ring(ring_id, lng, lat, cos_lat) <= search_m
+            }
+            missed = in_range - set(kept)
+            assert not missed, (
+                f"({lng}, {lat}) within {search_m} m: the box test pruned rings "
+                f"{sorted(missed)}, which brute force finds in range"
+            )
+
+
+@pytest.mark.slow
+def test_a_wider_search_never_changes_the_verdict() -> None:
+    """Why the search radius is the target distance and not a multiple of it.
+
+    The search is centred on the *probe*, not on the border site it was offset
+    from, so anything nearer than the target distance is inside a radius of the
+    target distance by definition. Widening can only add rings that are further
+    away than the question is about. The intuition that it should be twice the
+    distance - out to the point, then around it - anchors the query at the
+    border site instead, and is answered here rather than argued: at ten times
+    the radius, well past twice, neither the nearest ring nor the set of rings
+    at the target distance moves.
+    """
+    from tests.auxiliaries import boundaries
+
+    geometry = BorderGeometry(boundaries)
+    rng = np.random.default_rng(5)
+    for distance_m in (1.0, 100.0, 1_000.0):
+        tight = distance_m * (1 + DISTANCE_TOLERANCE)
+        for _ in range(40):
+            lng, lat = geometry.draw(rng, distance_m)
+            if not (-180.0 <= lng <= 180.0 and -90.0 <= lat <= 90.0):
+                continue
+            near = dict(geometry.distances_to_rings(lng, lat, tight))
+            wide = dict(geometry.distances_to_rings(lng, lat, 10 * distance_m))
+
+            widest = min(wide.values(), default=float("inf"))
+            if widest <= tight:
+                assert min(near.values()) == pytest.approx(widest), (
+                    f"({lng}, {lat}): the nearest ring within {tight:.3f} m "
+                    "disagrees with the nearest found by a ten times wider search"
+                )
+
+            def at_target(found: dict[int, float]) -> set[int]:
+                return {
+                    ring_id
+                    for ring_id, measured in found.items()
+                    if abs(measured - distance_m) <= DISTANCE_TOLERANCE * distance_m
+                }
+
+            assert at_target(near) == at_target(wide), (
+                f"({lng}, {lat}): a wider search changes which rings sit at "
+                f"{distance_m} m, so the multiplicity correction would differ"
+            )

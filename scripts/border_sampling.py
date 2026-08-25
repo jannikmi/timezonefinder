@@ -247,15 +247,46 @@ class BorderGeometry:
     ) -> Iterator[tuple[int, float]]:
         """Distance in metres to every ring that could be within ``search_m``.
 
-        Bounding boxes do the pruning: a ring whose box, grown by the search
-        radius, misses the point cannot have a vertex or an edge inside it.
+        Bounding boxes do the pruning, over **every** ring in the dataset - the
+        H3 shortcut index is deliberately not consulted here. It answers "which
+        polygons might *contain* this point", which is a different question: a
+        border a few metres away can belong to a polygon that overlaps a
+        neighbouring cell and not this one, and at a cell edge the nearest
+        border is routinely in the neighbour. Anything built on the index would
+        have to widen it by a ring of cells and would still be arguing about
+        the right width. A box test over 1,322 rings is one vectorised
+        comparison and needs no such argument.
+
+        The prune is a superset by construction, and two things are needed to
+        keep it one:
+
+        - the longitude gap is measured **the short way round**, or a ring 20 m
+          away across the antimeridian is pruned as if it were 360 degrees away.
+          The distance function below wraps; before this the filter feeding it
+          did not, so that ring was never measured at all
+        - the longitude pad is computed at the **highest latitude in reach**,
+          not at the point's own. A degree of longitude shortens towards the
+          pole, so a pad derived from the point's latitude is too small for a
+          ring slightly nearer the pole, and would prune a ring that is inside
+          the radius
         """
-        cos_lat = max(math.cos(math.radians(lat)), MIN_COS_LATITUDE)
         pad_lat = search_m / METRES_PER_DEGREE_LATITUDE
-        pad_lng = search_m / (METRES_PER_DEGREE_LONGITUDE * cos_lat)
+        # the worst case within reach: a degree of longitude is shortest at the
+        # highest |latitude| a ring within `search_m` could occupy
+        worst_lat = min(abs(lat) + pad_lat, 90.0)
+        cos_lat = max(math.cos(math.radians(lat)), MIN_COS_LATITUDE)
+        pad_cos = max(math.cos(math.radians(worst_lat)), MIN_COS_LATITUDE)
+        pad_lng = min(search_m / (METRES_PER_DEGREE_LONGITUDE * pad_cos), 180.0)
+
+        # zero when the point's longitude is inside the box, otherwise the
+        # shorter of the two ways round to the nearer edge of it
+        inside = (self.lng_min <= lng) & (lng <= self.lng_max)
+        to_min = np.abs((lng - self.lng_min + 180.0) % 360.0 - 180.0)
+        to_max = np.abs((lng - self.lng_max + 180.0) % 360.0 - 180.0)
+        lng_gap = np.where(inside, 0.0, np.minimum(to_min, to_max))
+
         in_range = np.nonzero(
-            (self.lng_min - pad_lng <= lng)
-            & (lng <= self.lng_max + pad_lng)
+            (lng_gap <= pad_lng)
             & (self.lat_min - pad_lat <= lat)
             & (lat <= self.lat_max + pad_lat)
         )[0]
