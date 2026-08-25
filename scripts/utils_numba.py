@@ -133,10 +133,29 @@ def any_edge_crossing(ring1: np.ndarray, ring2: np.ndarray) -> bool:
 
 @njit(boolean(CoordType, CoordType), cache=True)
 def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
+    """True if closed ring ``poly`` lies entirely inside closed ring ``hole``.
+
+    Every vertex being inside is necessary and not sufficient: the hole's boundary can
+    still cut through ``poly`` between two of its vertices, leaving part of it outside.
+    A cell like that is *not* covered by the hole, and reporting that it is drops the
+    polygon from the cell's candidates - the same vertex-only fallacy ``any_edge_crossing``
+    fixes on the outer ring, on the side that decides what the hole takes away again.
+
+    With no crossing, all-vertices-inside settles it: ``poly`` cannot straddle the hole's
+    boundary without meeting it, and a hole small enough to sit strictly inside ``poly``
+    leaves ``poly``'s own vertices outside it, which the loop below has already refused.
+
+    Touching therefore counts as *not* fully contained, since ``any_edge_crossing``
+    reports it - the safe direction here as there: an extra candidate polygon costs a
+    bounding-box rejection, and one wrongly taken away costs every point in the cell its
+    timezone.
+    """
     for pt in poly.T:
         if not pt_in_poly_python(pt[0], pt[1], hole):
             return False
-    return True
+    # reached only when the cell sits inside the hole's vertex-wise extent, which is rare
+    # enough that the edge scan below barely shows in the time a data compilation takes
+    return not any_edge_crossing(poly, hole)
 
 
 @njit(boolean(FloatCoordType1D), cache=True)

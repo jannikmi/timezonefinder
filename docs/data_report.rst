@@ -230,13 +230,13 @@ Shortcut Index Overview
    * - Total shortcut entries
      - 288,122
    * - Zone entries (direct lookup)
-     - 256,745
+     - 256,728
    * - Polygon entries (require testing)
-     - 31,377
+     - 31,394
    * - Empty entries
      - 0
    * - Total polygon references
-     - 65,172
+     - 65,210
    * -
      -
    * - H3 cells stored
@@ -260,9 +260,9 @@ Shortcut Index Overview
    * -
      -
    * - Zone storage (KB)
-     - 2256.5
+     - 2256.4
    * - Polygon storage (KB)
-     - 372.4
+     - 372.6
    * - Total estimated storage (KB)
      - 2629.0
    * - Storage compression ratio
@@ -288,27 +288,27 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - none (unique zone)
-     - 256745
-     - 89.11%
-     - 89.11%
-     - 10.89%
+     - 256728
+     - 89.1%
+     - 89.1%
+     - 10.9%
    * - 2
-     - 29358
+     - 29372
      - 10.19%
      - 99.3%
      - 0.7%
    * - 3
-     - 1837
+     - 1840
      - 0.64%
      - 99.94%
      - 0.06%
    * - 4
-     - 135
+     - 134
      - 0.05%
      - 99.98%
      - 0.02%
    * - 5
-     - 23
+     - 24
      - 0.01%
      - 99.99%
      - 0.01%
@@ -374,18 +374,18 @@ No cell needs exactly one test: a single candidate is unambiguous, so it is stor
      - Accumulated
      - Remaining
    * - 1
-     - 256745
-     - 89.11%
-     - 89.11%
-     - 10.89%
+     - 256728
+     - 89.1%
+     - 89.1%
+     - 10.9%
    * - 2
-     - 29631
-     - 10.28%
+     - 29645
+     - 10.29%
      - 99.39%
      - 0.61%
    * - 3
-     - 1656
-     - 0.57%
+     - 1659
+     - 0.58%
      - 99.97%
      - 0.03%
    * - 4

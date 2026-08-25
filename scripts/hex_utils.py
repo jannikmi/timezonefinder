@@ -212,7 +212,8 @@ class Hex:
         # only check if found overlapping
         if overlap:
             for hole in self.data.holes_in_poly(poly_nr):
-                # check all hex point within hole
+                # the whole cell inside the hole, not merely its corners - a hole
+                # boundary running through the cell leaves part of it covered
                 if fully_contained_in_hole(hex_coords, hole):
                     return False
         return overlap

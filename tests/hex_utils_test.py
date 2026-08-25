@@ -1,15 +1,23 @@
 """tests for the hex cell boundary correction used when compiling shortcuts"""
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 
 from scripts.helper_classes import Boundaries
 from scripts.hex_utils import Hex, get_corrected_hex_boundaries
-from scripts.utils_numba import any_edge_crossing, any_pt_in_poly
+from scripts.utils_numba import (
+    any_edge_crossing,
+    any_pt_in_poly,
+    fully_contained_in_hole,
+)
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
-from timezonefinder.utils_numba import coord2int
+from timezonefinder.utils_numba import coord2int, pt_in_poly_python
+
+if TYPE_CHECKING:
+    from scripts.timezone_data import TimezoneData
 
 MAX_LAT_INT = coord2int(MAX_LAT_VAL)
 MAX_LNG_INT = coord2int(MAX_LNG_VAL)
@@ -226,3 +234,90 @@ class TestAnyEdgeCrossing:
         single = np.array([[5], [5]], dtype=np.int32)
         assert not any_edge_crossing(self.SQUARE, single)
         assert not any_edge_crossing(single, self.SQUARE)
+
+
+@pytest.mark.unit
+class TestFullyContainedInHole:
+    """A hole only takes a cell away from its polygon when it covers the whole cell.
+
+    The mirror of ``TestAnyEdgeCrossing`` on the other side of the overlap test: there,
+    vertex inclusion missed coverage the polygon's outer ring provides; here it invented
+    coverage a hole takes away. A cell whose corners all sit in a hole can still stick out
+    of it between two of them, and the polygon does cover that part - dropping it leaves
+    every point in the protruding part with a neighbouring zone's answer.
+    """
+
+    CELL = np.array([[0, 100, 100, 0], [0, 0, 100, 100]], dtype=np.int32)
+
+    #: a ring enclosing ``CELL``'s four corners with a slot cut into it from above,
+    #: reaching down between them so that the middle of the cell is outside the ring
+    NOTCHED = np.array(
+        [
+            [-200, 200, 200, 60, 60, 40, 40, -200],
+            [-200, -200, 200, 200, 50, 50, 200, 200],
+        ],
+        dtype=np.int32,
+    )
+
+    PLAIN = np.array([[-200, 200, 200, -200], [-200, -200, 200, 200]], dtype=np.int32)
+
+    def test_a_cell_inside_the_hole_is_contained(self):
+        assert fully_contained_in_hole(self.CELL, self.PLAIN)
+
+    def test_a_hole_boundary_running_through_the_cell_is_not_containment(self):
+        """The defect: every corner inside the hole, and a tenth of the cell outside it."""
+        assert all(pt_in_poly_python(x, y, self.NOTCHED) for x, y in self.CELL.T)
+        assert not fully_contained_in_hole(self.CELL, self.NOTCHED)
+
+    def test_a_cell_with_a_corner_outside_is_not_contained(self):
+        straddling = np.array([[50, 300, 300, 50], [50, 50, 300, 300]], dtype=np.int32)
+        assert not fully_contained_in_hole(self.CELL, straddling)
+
+    def test_a_hole_sitting_inside_the_cell_does_not_contain_it(self):
+        """Not merely wrong but backwards, and the vertex loop is what refuses it."""
+        tiny = np.array([[40, 60, 60, 40], [40, 40, 60, 60]], dtype=np.int32)
+        assert not fully_contained_in_hole(self.CELL, tiny)
+
+    def test_a_disjoint_hole_does_not_contain_it(self):
+        far = np.array([[500, 600, 600, 500], [500, 500, 600, 600]], dtype=np.int32)
+        assert not fully_contained_in_hole(self.CELL, far)
+
+
+def _cell_with(polygon: np.ndarray, hole: np.ndarray) -> Hex:
+    """A cell whose single candidate polygon encloses it, with one hole to weigh."""
+    data = SimpleNamespace(
+        polygons=[polygon],
+        holes_in_poly=lambda poly_nr: iter([hole]),
+    )
+    return Hex(
+        id=0,
+        res=4,
+        coords=TestFullyContainedInHole.CELL,
+        bounds=Boundaries(xmax=100.0, xmin=0.0, ymax=100.0, ymin=0.0),
+        x_overflow=False,
+        surr_n_pole=False,
+        surr_s_pole=False,
+        # a stand-in for the converter's own data object: ``lies_in_cell`` reads only
+        # ``polygons`` and ``holes_in_poly``, and the real one means parsing the GeoJSON
+        data=cast("TimezoneData", data),
+    )
+
+
+ENCLOSING_POLYGON = np.array(
+    [[-500, 500, 500, -500], [-500, -500, 500, 500]], dtype=np.int32
+)
+
+
+@pytest.mark.unit
+def test_a_hole_clipping_the_cell_leaves_the_polygon_in_it():
+    """The part of the cell outside the hole is covered, so the polygon belongs there."""
+    cell = _cell_with(ENCLOSING_POLYGON, TestFullyContainedInHole.NOTCHED)
+
+    assert cell.lies_in_cell(0)
+
+
+@pytest.mark.unit
+def test_a_hole_covering_the_whole_cell_takes_the_polygon_away():
+    cell = _cell_with(ENCLOSING_POLYGON, TestFullyContainedInHole.PLAIN)
+
+    assert not cell.lies_in_cell(0)

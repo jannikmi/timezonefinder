@@ -239,3 +239,71 @@ def test_shortcut_sorting(tf, hybrid_shortcuts):
                 )
 
     assert not invalid_sortings, f"Shortcut sorting errors: {invalid_sortings[:5]}"
+
+
+# Coordinates whose H3 cell has all six corners inside a hole of the polygon that covers
+# the coordinate itself - an ocean zone's cut-out around an island, or one country's
+# enclave inside another. Compiling the index by corner alone dropped that polygon from
+# the cell, and every coordinate in the part of the cell outside the hole was answered
+# with the zone that happens to be left.
+HOLE_CLIPPED_CELL_COORDS = [
+    # in South Africa, in a cell whose corners are all inside Lesotho
+    (27.52307, -29.24473),
+    # Tuamotus: ocean around an atoll, in a cell whose corners are all on the Tahiti side
+    (-145.65772, -15.78144),
+    # near Adak, and near San Andrés
+    (178.89059, 51.84103),
+    (-81.57602, 12.19784),
+]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("lng,lat", HOLE_CLIPPED_CELL_COORDS)
+def test_a_hole_clipping_a_cell_leaves_the_covering_polygon_in_it(tf, lng, lat):
+    """``timezone_at`` must answer what the polygons actually say, at these coordinates.
+
+    The two methods differ only in what they do when no candidate contains the point:
+    ``certain_timezone_at`` says so, ``timezone_at`` answers with the last zone in the
+    cell without testing it. So they disagree exactly when the index has left out the
+    polygon that covers the point, which is what these coordinates used to demonstrate.
+
+    Pinned as an invariant rather than as expected zone names, since the names are the
+    packaged dataset's answer and a data update is free to move a border.
+    """
+    certain = tf.certain_timezone_at(lng=lng, lat=lat)
+
+    assert certain is not None
+    assert tf.timezone_at(lng=lng, lat=lat) == certain
+
+
+@pytest.mark.slow
+def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
+    """Sweep cell interiors, which the vertex-driven tests above never visit.
+
+    ``test_shortcut_completeness`` walks the polygon vertices, so it sees a cell only
+    where a boundary passes through it. A cell can still lose a polygon that covers its
+    interior, and this is what notices.
+
+    Latitudes beyond 88 degrees are left out: the cells there span the antimeridian, so
+    the ring the compiler stores for them jumps from one edge of the coordinate plane to
+    the other and the planar overlap tests do not mean what they say. Three such cells
+    are known to be incomplete, which is a separate defect in how those cells are
+    represented rather than in the overlap tests this sweeps.
+    """
+    n = 100_000
+    rng = np.random.default_rng(20260825)
+    # area weighted, so the sample is a workload rather than a pole-heavy one
+    lats = np.degrees(np.arcsin(rng.uniform(-1.0, 1.0, n)))
+    lngs = rng.uniform(-180.0, 180.0, n)
+
+    uncovered = [
+        (float(lng), float(lat))
+        for lng, lat in zip(lngs, lats)
+        if abs(lat) < 88.0
+        and tf.certain_timezone_at(lng=float(lng), lat=float(lat)) is None
+    ]
+
+    assert not uncovered, (
+        "the shortcut index does not list the polygon covering "
+        f"{len(uncovered)} of {n} sampled coordinates, e.g. {uncovered[:5]}"
+    )
