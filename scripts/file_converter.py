@@ -7,7 +7,8 @@ the used data format is described in the documentation under docs/data_format.rs
 
 IMPORTANT: all coordinates (floats) of the timezone polygons are being converted to int32 (multiplied by 10^7).
 This makes computations faster and it takes lot less space,
-    without loosing too much accuracy (min accuracy (=at the equator) is still 1cm !)
+    without loosing too much accuracy: one unit is 10^-7 degrees, so the worst case -
+    a degree of longitude at the equator, where it is longest - is ~1.11 cm.
 
 
 [SHORTCUTS:] hybrid spatial index: coordinate to potential polygon id candidates or direct zone IDs

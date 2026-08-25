@@ -31,7 +31,11 @@ from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     load_benchmark_points,
 )
-from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    SHORTCUT_H3_RES,
+    ZONE_ID_RESULT_DTYPE,
+)
 from timezonefinder.shortcut_index import (
     ABSENT,
     COMPACT_TABLE_SIZE,
@@ -339,6 +343,25 @@ def test_an_offset_column_too_narrow_for_its_payload_is_caught(tmp_path):
 
 
 @pytest.mark.unit
+def test_a_zone_count_past_the_id_width_is_caught(tmp_path):
+    """Two widths carry a zone id - the shortcut table and a batch lookup's answer
+    array - and both are ``int16`` because that is what the dataset fits, not because
+    of headroom. Nothing at lookup time re-checks the fit, so a dataset that outgrew it
+    has to be refused where the data is produced; past the ceiling the id would wrap and
+    a query would answer with a different zone's name."""
+    data_dir = _data_dir_with_shortcut_file(
+        tmp_path, get_shortcut_file_path(DEFAULT_DATA_DIR).read_bytes()
+    )
+    too_many = int(np.iinfo(ZONE_ID_RESULT_DTYPE).max) + 2
+    (data_dir / "timezone_names.txt").write_text(
+        "\n".join(f"Zone/{i}" for i in range(too_many)), encoding="utf-8"
+    )
+
+    with pytest.raises(DataIntegrityError, match="the widest a zone id may be"):
+        validate_shortcut_index(data_dir)
+
+
+@pytest.mark.unit
 def test_a_corrupted_stop_index_is_caught_over_the_committed_data(tmp_path):
     """A guard that cannot fail is not one. A stop index one too small ends the
     candidate loop early and attributes the point to the wrong zone - which nothing
@@ -427,6 +450,28 @@ def test_the_packaged_file_carries_the_markers_its_own_writer_stamps():
         int(np.frombuffer(buffer, dtype=np.uint32, count=1, offset=4)[0])
         == SHORTCUT_LAYOUT_VERSION
     )
+
+
+@pytest.mark.unit
+def test_entries_of_answers_what_entry_of_answers_for_every_cell(tf):
+    """The batch sibling has to be the same lookup, not merely a lookup that agrees on
+    the fixtures. It reaches the table through ``slots_of`` rather than ``slot_of`` and
+    indexes with a ``uint64`` array rather than a scalar, so a divergence between the
+    two - a shift applied to the wrong width, an index dtype that truncated - would
+    surface only as a wrong timezone several layers away from its cause.
+
+    Every cell at this resolution, so the padding and the uncovered cells are in it too.
+    """
+    cells = all_cells_at_shortcut_res().astype(np.uint64)
+    batch = tf.shortcuts.entries_of(cells)
+
+    assert batch.dtype == tf.shortcuts.table.dtype
+    expected = np.fromiter(
+        (tf.shortcuts.entry_of(cell) for cell in cells.tolist()),
+        dtype=batch.dtype,
+        count=cells.shape[0],
+    )
+    assert np.array_equal(batch, expected)
 
 
 @pytest.mark.unit

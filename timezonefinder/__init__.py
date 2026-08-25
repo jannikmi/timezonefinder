@@ -6,11 +6,16 @@ from timezonefinder.timezonefinder import (
 # Import module-level functions
 from timezonefinder.global_functions import (
     timezone_at,
+    timezone_ids_at,
+    timezone_names_at,
     timezone_at_land,
     unique_timezone_at,
     certain_timezone_at,
     get_geometry,
 )
+
+# the sentinel a batch answer holds where a scalar lookup would answer ``None``
+from timezonefinder.configs import NO_ZONE_ID
 
 # The installed package version. ``importlib.metadata`` reads it from the
 # installed distribution's metadata (the wheel ships it via pyproject.toml's
@@ -31,7 +36,10 @@ except PackageNotFoundError:  # pragma: no cover - source checkout without insta
 __all__ = (
     "TimezoneFinder",
     "TimezoneFinderL",
+    "NO_ZONE_ID",
     "timezone_at",
+    "timezone_ids_at",
+    "timezone_names_at",
     "timezone_at_land",
     "unique_timezone_at",
     "certain_timezone_at",

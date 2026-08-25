@@ -77,9 +77,14 @@ The timezone boundary data is installed automatically as the separate ``timezone
 
     tf = TimezoneFinder(in_memory=True)  # reuse
 
-    query_points = [(13.358, 52.5061), ...]
-    for lng, lat in query_points:
-        tz = tf.timezone_at(lng=lng, lat=lat)  # 'Europe/Berlin'
+    tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+
+    # Many coordinates at once, one array per axis - ids for a caller that maps them
+    # itself, names for one that does not:
+    lngs = [13.358, 2.3522]
+    lats = [52.5061, 48.8566]
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)
+    names = tf.timezone_names_at(lngs=lngs, lats=lats)  # ['Europe/Berlin', 'Europe/Paris']
 
 
 **Note:** This library uses the full original timezone dataset with all >440 timezone names, providing full localization capabilities and historical timezone accuracy. For applications that prefer a smaller memory footprint, the reduced "timezones-now" dataset is available via the ``update_data.sh`` script (cf. `Documentation <https://timezonefinder.readthedocs.io/en/latest/data_format.html#alternative-dataset-options>`__).

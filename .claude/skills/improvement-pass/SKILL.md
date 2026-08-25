@@ -34,8 +34,8 @@ Both are authoritative and nothing here repeats them.
 
 - **Never merge, never enable auto-merge, never push to `master`, never tag.** Open the pull request and stop.
 - **Never put a question to the maintainer.** A pass runs unattended and ends without them, so a question asked mid-run reaches nobody and stalls the item behind it; §6 says what to do with one instead.
-- **Never regenerate the packaged data** — it rewrites ~64 MB, and a weekly workflow already opens *and auto-merges* data-update pull requests.
-  §5 rules it out for every pass, with no in-session exception: an item that cannot be built without it is waiting on a decision, not on your judgement.
+- **Regenerating the packaged data is allowed** when the item needs it — do not park an item for that reason alone. Say in the pull request which binaries changed and why, and check that `git status --short packages/timezonefinder-data/timezonefinder_data/data` lists only files the change should have moved.
+  Two things to hold: it rewrites up to ~64 MB, so never regenerate incidentally; and the weekly data-update workflow opens *and auto-merges* its own pull requests, so rebase before the final gate and expect to redo it if that pipeline lands meanwhile.
 - **The changelog entry is mandatory**, shaped as `CLAUDE.md` says; amend the item's existing bullet rather than appending a second.
 - **The lookup fast path is not traded for elegance.** If the item touches it, `CONTRIBUTING.md`'s benchmarking section applies in full — before/after on one machine, the noise spread alongside, the acceleration backend named.
   Not clearly neutral or better ⇒ revert and record the measurement.
@@ -152,8 +152,8 @@ What may be improved is deliberately not enumerated: an enumeration reads as exh
 
 Out of bounds for every pass — the repository docs describe some of these neutrally because they cannot know your boundary, so treat them as prohibitions here:
 
-- Regenerating timezone data, benchmark fixtures or FlatBuffers bindings; editing the packaged data or the generated bindings.
-- Dependency, lockfile, Python-version or release-version changes.
+- Editing the packaged data or the generated bindings *by hand*. Regenerating them through their generators is in scope, and so is the `DATA_FORMAT_VERSION` bump that follows — see §7 on why an unreleased bump costs nothing extra.
+- Dependency, lockfile or Python-version changes, and the `timezonefinder` release version. The *data* distribution's version is not a release version in this sense: it tracks the format and the upstream dataset, and a format change is obliged to move it.
 - Whole-file reformatting or "modernisation" for style alone — churn a reviewer cannot tie to a defect.
 - `prototypes/` — **except** the `FINDINGS` block of `prototypes/query_stage_profile.py`, which the pass that invalidates it updates (§9).
 - A behaviour change with no recorded decision behind it (§6), and an item whose design is already decided being implemented as anything other than **exactly what its decisions say**.
@@ -217,6 +217,7 @@ In practice:
 - **Additive before subtractive**: add the new path, keep the old one working and tested, remove it in a later slice.
 - **Decompose first, implement second** (outcome 3), recording the slices as ranked entries.
 - **A genuinely atomic migration is prototyped, not sliced** — a binary format change cannot half-land, so the deliverable is a prototype and its measurements under `prototypes/`, with the numbers in the entry.
+- **An unreleased `DATA_FORMAT_VERSION` bump is free to reuse, so format changes want to be consecutive.** The version numbers a *release*, not a change: while a bump is sitting unreleased on `master`, the next format change that lands rides the same number at no extra cost, and the two-distribution ordered release is paid once for both. So the moment one format change lands, every other format change is temporarily cheaper than the ranking says — take them one after another and let them go out together, rather than spacing them across releases and paying the ordered release each time. State in the pull request whether a bump is already pending, so a reviewer can see which release the change is joining.
 - **One story per slice, and no line count.** A slice is the right size when it carries one story, passes the sentence test, and can be reviewed in one sitting — never because it came in under a threshold.
   A number decides nothing a reviewer cares about, and invites both padding up to it and cutting an item mid-thought to stay beneath it.
   If an item outgrows what you can finish and verify, cut it back and put the remainder in the register as a new ranked entry.
@@ -246,7 +247,8 @@ All of these, with output you have actually read:
 - [ ] If anything under `timezonefinder/` or the packaged data moved: the register's freshness check run, and **either** the profiler re-run on both backends with `FINDINGS`, the baseline anchor and every share it moved updated here, **or** one line in the register classifying the change as inert for timings.
       A stale share does not announce itself — the next pass ranks on it.
 - [ ] The slice passes §7's changelog sentence test, and `CHANGELOG.rst` carries its entry.
-- [ ] `git status --short packages/timezonefinder-data/timezonefinder_data/data` **empty**, unless data regeneration was the agreed subject of this pass.
+- [ ] `git status --short packages/timezonefinder-data/timezonefinder_data/data` lists **only** binaries this item had to move — empty if it regenerated nothing. A file the change had no reason to touch means the generator was run wider than intended.
+- [ ] If a per-file layout version moved: `DATA_FORMAT_VERSION` moved with it, and the pull request says whether an unreleased bump is already pending, so the two stack into one rather than reading as two.
 - [ ] `git diff origin/master --stat` shows only files you intended to touch, with `potential-improvements.md` among them.
 - [ ] The register is committed: findings recorded, decisions recorded, coverage noted, and the shipped entry **deleted with its ranking row** — grep its id in the diff and confirm nothing survives.
 

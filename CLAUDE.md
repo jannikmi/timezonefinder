@@ -430,6 +430,18 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
   `tests/test_data_version.py` asserts the pairing, because nothing else would notice. A format
   change is therefore a **two-distribution, ordered release: publish the data first**, then the code
   requiring it, or `timezonefinder` is briefly uninstallable
+- **An unreleased version bump is free to reuse, so format changes belong back to back.** The number
+  identifies a *release*, not a change: while a `DATA_FORMAT_VERSION` bump sits unreleased on
+  `master`, the next format change to land rides the same number and the ordered two-distribution
+  release is paid once for both. The ranking consequence is the non-obvious half — the moment one
+  format change lands, every other one is temporarily cheaper than its entry says, so take them
+  consecutively and let them go out together instead of spacing them across releases and paying the
+  ordered release each time. Say in the pull request whether a bump is already pending, so a
+  reviewer can see which release the change is joining. Regenerating the packaged data is a normal
+  thing for a change to do and needs no special permission; what it must not be is *incidental*,
+  since it can rewrite ~64 MB — check that
+  `git status --short packages/timezonefinder-data/timezonefinder_data/data` lists only binaries the
+  change had a reason to move
 - **Generators write to `scripts.configs.SOURCE_DATA_DIR`, never `DEFAULT_DATA_DIR`.** The latter
   now resolves to wherever `timezonefinder_data` is *installed*, which under a non-editable install
   is inside `site-packages` — and since `make parse` passes no paths, a converter defaulting to it

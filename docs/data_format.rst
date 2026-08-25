@@ -92,6 +92,57 @@ All coordinates (longitude and latitude) from the timezone polygons are converte
 * Requires significantly less storage space
 * Maintains high accuracy (minimum accuracy at the equator is still ~1 cm)
 
+What that scale factor buys, and why it is enough
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One unit is 10\ :sup:`-7` degrees - a *tenth* of a microdegree, not a microdegree.
+At the equator, where a degree of longitude is longest and the ground error of a fixed angular step is therefore worst, that is **~1.11 cm**.
+The error is a whole step rather than half of one because the conversion truncates toward zero rather than rounding; a rounding conversion would halve it.
+
+The two properties that make this a ceiling rather than a defect:
+
+* **The spacing is even.** A fixed-point integer resolves the same amount at the antimeridian as at Greenwich, which a float does not.
+* **It is finer than the source data, by exactly a factor of ten.** timezone-boundary-builder publishes coordinates with **six** decimal places - 10\ :sup:`-6` degrees, ~11.1 cm at the equator - so the seventh decimal this encoding provides carries no information from upstream. That is measurable rather than assumed: across all 15,850,626 packaged coordinate values the last decimal digit is only ever ``0`` or ``9`` and never ``1``-``8``, and the ``9``\ s are the conversion truncating toward zero (``133580000`` stored as ``133579999``) rather than a seventh digit that means anything.
+
+The width is set by the *range*, not by the precision. Covering ±180° at 10\ :sup:`-7` needs 3.6 × 10\ :sup:`9` distinct values, which is 32 bits - but so does 10\ :sup:`-6`, at 3.6 × 10\ :sup:`8`. No precision a boundary dataset could plausibly want brings the global range inside ``int16``, whose 65,536 values over 360° would be 610 m apart. Dropping the redundant decimal would therefore not save a single byte of the current fixed-width layout, and would not make a query faster: the ray-casting kernel does ``int32`` arithmetic whose cost does not depend on the magnitudes involved.
+
+Where it *would* pay is a variable-width encoding, which is why the two are considered together rather than separately. Storing per-polygon deltas as varints, measured over the packaged boundaries: 60.5 MiB fixed-width today, 33.7 MiB at 10\ :sup:`-7`, and **27.7 MiB at 10\ :sup:`-6`** - so the decimal that carries no information costs ~18 % of the encoded size once the encoding is able to charge for it.
+
+For scale in the other direction, consecutive vertices of the packaged polygons are a median 47.6 m apart, and only 0.02 % of edges are shorter than the source's own 11.1 cm step. Coordinate precision and vertex density are separate axes, and neither is the binding constraint on accuracy at a border.
+
+The figures are derived, not quoted: :func:`timezonefinder.utils.coordinate_resolution` returns the representable step of a dtype and :func:`timezonefinder.utils.degrees_to_metres` converts it to ground distance, and ``tests/test_coordinate_precision.py`` holds every claim on this page to what they compute.
+
+.. list-table:: Representable step at ±180° longitude, and what it is on the ground
+   :header-rows: 1
+   :widths: 22 26 26 26
+
+   * - Storage
+     - Step (degrees)
+     - At the equator
+     - Against the packaged data
+   * - ``int32`` × 10\ :sup:`7` *(packaged)*
+     - 1.0e-07 (everywhere)
+     - 1.11 cm
+     - —
+   * - ``float64``
+     - 2.8e-14
+     - 3.2 nm
+     - ~3,500,000× finer
+   * - ``float32``
+     - 1.5e-05
+     - 1.70 m
+     - ~153× coarser
+   * - ``float16``
+     - 1.25e-01
+     - 13.9 km
+     - unusable
+
+``float64`` is therefore the narrowest IEEE float that preserves what the packaged data holds, which is why it is what the lookup converts its input to.
+``float32`` fails twice over: its step at the antimeridian is 153 times the stored resolution, and 180 × 10\ :sup:`7` exceeds its exact-integer range (2\ :sup:`24`), so the scaling itself would lose bits.
+``float64`` represents that product exactly, well inside 2\ :sup:`53`.
+
+The consequence for a caller is under :ref:`the batch lookups <usage>`: coordinates handed over as ``float32`` can be rounded across a border before the lookup ever runs.
+
 Each polygon's integer coordinates are stored one axis at a time inside a single ``int32`` vector: all x (longitude) values followed by all y (latitude) values (``[x0...xN-1, y0...yN-1]``). The raycasting point in polygon algorithm scans a single axis per iteration, so contiguous per-axis blocks keep every loaded cache line fully used and let both acceleration backends read an axis without copying it first.
 
 Data Files

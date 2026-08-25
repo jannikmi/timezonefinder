@@ -23,6 +23,7 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = timezone_at_land(lng=13.358, lat=52.5061)
     tz = unique_timezone_at(lng=13.358, lat=52.5061)
+    names = timezone_names_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
     geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
 
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
@@ -146,6 +147,94 @@ Using a TimezoneFinder instance:
 
     This function is optimized for speed: The last possible timezone in proximity is always returned (without checking if the point is really included).
 
+
+
+timezone_ids_at() and timezone_names_at()
+-----------------------------------------
+
+To look up many coordinates, pass them as two arrays - one per axis - instead of calling ``timezone_at()`` in a loop.
+The validation, the coordinate scaling and the shortcut lookup then run once over the whole batch rather than once per point:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+
+    lngs = [13.358, 2.3522]
+    lats = [52.5061, 48.8566]
+
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)  # numpy int16 array
+    names = tf.timezone_names_at(lngs=lngs, lats=lats)  # ['Europe/Berlin', 'Europe/Paris']
+
+``timezone_ids_at()`` is the primary form and ``timezone_names_at()`` the convenience on top of it.
+Prefer the ids whenever the names are not the end product: a caller doing millions of lookups should not pay for millions of string lookups it maps straight back to something else.
+Both are also available as :ref:`global functions <global_functions>`.
+
+Ids can be named later, in one call, with ``zone_names_from_ids()`` - so a pipeline can join, filter or group on the ids and pay for the names once, over whatever survives:
+
+.. code-block:: python
+
+    zone_ids = tf.timezone_ids_at(lngs=lngs, lats=lats)
+    # ... join, filter, group by zone id ...
+    names = tf.zone_names_from_ids(zone_ids)  # ['Europe/Berlin', 'Europe/Paris']
+
+It is the batch counterpart of ``zone_name_from_id()`` and answers ``None`` for ``NO_ZONE_ID``, so a batch of ids round-trips to exactly what ``timezone_names_at()`` would have returned.
+Any other invalid id - a negative that is not the sentinel, or one past the last zone - raises ``ValueError`` rather than naming a zone counted from the end of the dataset.
+Above a batch of ~128 ids the conversion is a numpy gather rather than a Python loop, which is several times faster per id; below it the loop wins and is used instead.
+
+Any 1-D array-like works for either axis - a list, a tuple, an ``array.array``, a numpy array, a pandas Series.
+Anything ``numpy.asarray()`` turns into a 1-D numeric array is accepted, which is what makes the last of those work without this package knowing pandas exists.
+A C-contiguous ``float64`` numpy array is used without copying.
+
+.. warning::
+
+    **Hand over 64-bit floats.**
+    A ``float32`` array is accepted and converted, but it has already lost precision this package cannot recover: one step of ``float32`` at ±180° spans **~1.7 m**, against the **~1.11 cm** the packaged coordinates resolve.
+    A point closer to a border than that can be rounded onto the wrong side of it before the lookup begins - and accuracy at borders is what this library exists for.
+    ``float64`` resolves far finer than the stored data, so it costs nothing.
+    :doc:`data_format` has the full comparison, and ``timezonefinder.utils.coordinate_resolution()`` computes it for any dtype.
+
+Answers come back in the input's own order, one per coordinate, so a column of them can be assigned straight back:
+
+.. code-block:: python
+
+    df["timezone"] = tf.timezone_names_at(lngs=df["longitude"], lats=df["latitude"])
+
+The index is not consulted - a ``Series`` is read positionally, like every other array-like - and assigning a plain list to a column aligns positionally too, so the two agree.
+For the id form, wrap it to keep the frame's index: ``pd.Series(tf.timezone_ids_at(...), index=df.index)``.
+
+.. note::
+
+    Coordinates are passed one axis per argument, never as a single ``(N, 2)`` array.
+    Such an array would have to be read by column position, and a swapped pair is still a valid coordinate for most of the populated world - so the mistake would return a real but wrong timezone instead of raising.
+
+Where the scalar methods answer ``None``, a batch answers ``NO_ZONE_ID`` (``-1``) in the id array and ``None`` in the name list.
+An out-of-range coordinate - which includes ``NaN`` and infinity - raises by default, matching the scalar methods.
+That is also how a missing value in a dataframe arrives: pandas stores both ``None`` and ``pd.NA`` as ``NaN``, so a null row is an out-of-range coordinate and ``on_invalid`` decides what happens to it.
+A ``None`` in a plain Python list is treated as a mistake instead and raises ``TypeError``, since a list has no missing-value convention to honour.
+Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than discarding the work already done for the coordinates that were fine:
+
+.. code-block:: python
+
+    from timezonefinder import NO_ZONE_ID, TimezoneFinder
+
+    tf = TimezoneFinder()
+    zone_ids = tf.timezone_ids_at(
+        lngs=[13.358, 999.0], lats=[52.5061, 0.0], on_invalid="skip"
+    )
+    # the second entry is NO_ZONE_ID; there is always one answer per input coordinate, in input order
+
+.. note::
+
+    What a batch amortises is the per-call overhead, not the geometry.
+    Points whose H3 cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time, and ``h3``'s cell lookup has no vectorised form.
+    ``examples/batch_processing.py`` demonstrates the whole API.
+
+.. note::
+
+    Only ``timezone_at()`` has a batch form so far.
+    ``timezone_at_land()`` and ``certain_timezone_at()`` do not.
 
 
 timezone_at_land()

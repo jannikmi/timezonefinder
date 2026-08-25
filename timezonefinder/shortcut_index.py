@@ -239,6 +239,16 @@ class ShortcutIndex:
         """
         return int(self.table[(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK])
 
+    def entries_of(self, hex_ids: np.ndarray) -> np.ndarray:
+        """What each of many cells resolves to, as the same tri-state integers.
+
+        The batch sibling of :meth:`entry_of`, and it lives here for the same reason
+        that one does: the slot arithmetic and the table are this class's business, so
+        a caller that indexed ``table`` itself would pin the layout from outside. Two
+        numpy calls for the whole batch, whatever its size.
+        """
+        return self.table[slots_of(hex_ids)]
+
     def candidates_of(self, entry: int) -> np.ndarray:
         """The boundary polygon ids to test, for an ``entry`` below ``ABSENT``."""
         i = -(entry + 2)

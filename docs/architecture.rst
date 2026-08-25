@@ -65,6 +65,11 @@ Most modules are self-describing. The ones that carry the design:
     Polygon math and the acceleration backends. ``utils.py`` binds the point-in-polygon
     implementation **at import time** (see below).
 
+``zone_names.py``
+    The timezone names file, and turning a zone id back into a name. A zone id is an index into
+    that list and nothing more, so naming one is a lookup rather than part of finding a timezone -
+    which is why it is not in ``timezonefinder.py``.
+
 ``polygon_array.py``
     Bounding boxes and point-in-polygon over the packaged polygon data, for boundaries and holes
     alike.

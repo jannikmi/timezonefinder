@@ -14,9 +14,10 @@ Coordinate System:
 
 import os
 from pathlib import Path
-from typing import Any, Final, TypeAlias
+from typing import Any, Final, Literal, TypeAlias
 
 import numpy as np
+import numpy.typing as npt
 
 import timezonefinder_data
 
@@ -35,7 +36,12 @@ __all__ = [
     "UNKNOWN_DATA_VERSION",
     "DATA_FORMAT_VERSION",
     "DATA_FORMAT_LAYOUT_VERSIONS",
+    "NO_ZONE_ID",
+    "ZONE_ID_RESULT_DTYPE",
     # Type aliases
+    "CoordArrayLike",
+    "IdArrayLike",
+    "OnInvalid",
     "IntegerLike",
     "ShortcutMapping",
     "CoordPairs",
@@ -50,6 +56,28 @@ SHORTCUT_H3_RES: int = 4
 
 # Pattern for identifying ocean timezones (fixed-offset zones for international waters)
 OCEAN_TIMEZONE_PREFIX = r"Etc/GMT"
+
+# What an array of zone ids holds where the scalar methods answer ``None``: a cell no
+# timezone covers, or - under ``on_invalid="skip"`` - a coordinate that was rejected.
+# One sentinel for both is what lets a batch answer stay a single integer array; a
+# caller that needs to tell the two apart can re-derive the bounds check in one
+# vectorised comparison, which is cheaper than the second array it would otherwise cost
+# every caller that does not care.
+#
+# -1 rather than a large value because it is what an id lookup conventionally answers
+# with, and because the public id-taking methods now *reject* negative ids - so a
+# sentinel fed back in raises instead of silently selecting the last zone from the end.
+NO_ZONE_ID: Final[int] = -1
+
+# dtype of a batch of zone ids. Signed, because NO_ZONE_ID is negative, and 16-bit
+# because that is the narrowest width the dataset fits: a zone id is an index into the
+# zone names, of which the packaged data has ~450 against this width's 32,767, and the
+# shortcut table already stores those same ids as int16. The bound is not left to hold
+# by luck - ``scripts.data_integrity.validate_shortcut_index`` refuses a data directory
+# whose zone count outgrows it, at build time and over the committed data, which is
+# where a width chosen by fit has to be checked. A wider dtype would double the answer
+# array for headroom no dataset can reach.
+ZONE_ID_RESULT_DTYPE: Final[np.dtype] = np.dtype(np.int16)
 
 # PATHS
 PACKAGE_DIR = Path(__file__).parent
@@ -108,7 +136,10 @@ DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
 
 # COORDINATE SCALING AND PRECISION
 # Integer representation uses signed 4-byte (32-bit) integers
-# Allows storing coordinate values multiplied by 10^7 for microdegree precision
+# Coordinate values are stored multiplied by 10^7, so one unit is 10^-7 degrees -
+# a tenth of a microdegree, ~1.11 cm of longitude at the equator, which is the
+# worst case. `timezonefinder.utils.coordinate_resolution` derives that figure and
+# `tests/test_coordinate_precision.py` holds the documented claims to it.
 # i = signed 4byte integer
 NR_BYTES_I = 4
 # IMPORTANT: all values between -180 and 180 degree must fit into the domain of i4!
@@ -139,6 +170,29 @@ assert MAX_INT_VAL < MAX_ALLOWED_COORD_VAL
 
 # Type alias for flexibility with integer types (pure int or numpy integer scalars)
 IntegerLike: TypeAlias = int | np.integer
+
+# What the batch lookup accepts per coordinate axis: anything ``np.asarray`` turns into
+# a 1-D float array - a list, a tuple, an ``array.array``, a numpy array, a pandas
+# Series. Deliberately not narrowed, to ``np.ndarray`` or to a ``Sequence`` either: an
+# API that only served numpy users would make every other caller convert before it can
+# ask, which is the loop this replaces, and a ``Sequence`` bound would reject the pandas
+# Series that is the single most likely thing to be handed to a batch lookup. The
+# contract is ``__array__`` and the sequence protocol, which is why no library is named
+# in the code - `test_anything_exposing_array_is_accepted` pins it without importing one.
+CoordArrayLike: TypeAlias = npt.ArrayLike
+
+# The same, for a batch of zone *ids* rather than coordinates. A separate name for the
+# same underlying type on purpose: the two are converted with different dtypes and reject
+# different things, and an annotation reading "coordinates" on an id argument would be
+# taken at its word.
+IdArrayLike: TypeAlias = npt.ArrayLike
+
+# What a batch lookup does with a coordinate no lookup can answer. A ``Literal`` rather
+# than ``str`` so that a mistyped policy is a type error at the call site instead of a
+# ``ValueError`` after the caller has shipped - mypy runs in this repository's
+# pre-commit hook, so the check costs nothing. The runtime tuple the error message
+# lists is derived from this alias rather than written out again.
+OnInvalid: TypeAlias = Literal["raise", "skip"]
 
 # hexagon id to list of polygon ids
 ShortcutMapping: TypeAlias = dict[int, np.ndarray]
