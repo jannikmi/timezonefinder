@@ -25,6 +25,7 @@ from scripts.configs import DOC_ROOT, read_data_version
 from scripts.measure_tzfpy_agreement import (
     AGREE,
     CHART_PATH,
+    MEASUREMENT_PATH,
     OVERLAP_POLICY,
     SUBSTANTIVE,
     AgreementCounts,
@@ -398,3 +399,44 @@ def test_without_a_certainty_probe_nothing_is_set_aside() -> None:
     )
     assert counts.ours_wrong == 0
     assert counts.substantive == 1
+
+
+@pytest.mark.unit
+def test_the_measurement_is_committed_in_a_form_a_program_can_read() -> None:
+    """The figures on the page have to be checkable without a forty-minute run.
+
+    The chart and the prose quote rates and coordinates; this is the same run in
+    a machine-readable form, so a reader can verify one, and a later pass has a
+    regression set for a lookup defect without re-measuring anything.
+    """
+    assert MEASUREMENT_PATH.parent == DOC_ROOT
+    assert MEASUREMENT_PATH.is_file(), (
+        f"{MEASUREMENT_PATH} is missing - run `make tzfpy-agreement`"
+    )
+    restored = Measurement.from_json(
+        json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
+    )
+    assert restored.by_distance, "the committed run records no distances"
+    assert restored.data_version and restored.tzfpy_version
+
+
+@pytest.mark.unit
+def test_the_committed_chart_is_the_committed_run_drawn() -> None:
+    # the two artifacts are written by one command and would otherwise drift
+    # silently - a chart from one sweep beside the numbers of another
+    restored = Measurement.from_json(
+        json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
+    )
+    assert render_chart(restored) == CHART_PATH.read_text(encoding="utf-8"), (
+        "the committed chart is not what the committed run renders to - "
+        "re-run `make tzfpy-agreement`, or redraw with --from-json"
+    )
+
+
+@pytest.mark.unit
+def test_the_committed_run_is_already_formatted_as_the_hook_wants_it() -> None:
+    # generated files must come out pre-commit-clean, or a regeneration shows a
+    # diff of reordered keys that nobody asked for (CLAUDE.md, Generated Files)
+    raw = MEASUREMENT_PATH.read_text(encoding="utf-8")
+    payload = json.loads(raw)
+    assert raw == json.dumps(payload, indent=2, sort_keys=True) + "\n"

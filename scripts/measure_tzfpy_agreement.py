@@ -83,7 +83,8 @@ import numpy as np
 
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION, tzfpy_version
 from scripts.border_sampling import BorderGeometry, Candidate
-from scripts.configs import DOC_ROOT, PROJECT_ROOT, read_data_version
+from scripts.utils import write_json
+from scripts.configs import DOC_ROOT, read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -168,10 +169,16 @@ EXHAUSTIVE_EXAMPLE_LIMIT = 20
 # with no argument rather than retyping the path.
 CHART_PATH = DOC_ROOT / "tzfpy_agreement_by_distance.svg"
 
-# Where a run is kept so the chart can be redrawn without re-measuring, the
-# same arrangement `make benchmarks` has with tmp/benchmark.json. Untracked:
-# the chart is the committed artifact, this is the input that produced it.
-MEASUREMENT_PATH = PROJECT_ROOT / "tmp" / "tzfpy_agreement.json"
+# The run itself, committed next to the chart it draws.
+#
+# Committed rather than left in `tmp/` for two reasons. The chart and the prose
+# quote figures that are otherwise unverifiable without a forty-minute re-run,
+# and every disagreement the sweep found is recorded here by coordinate - a
+# reader who wants to check one, or a later pass wanting a regression set for a
+# lookup defect, needs the numbers in a form a program can read rather than a
+# table in a document. It is also what makes the chart reproducible from a
+# tracked input: `--from-json` redraws it in seconds.
+MEASUREMENT_PATH = DOC_ROOT / "tzfpy_agreement.json"
 
 
 class AgreementCounts(NamedTuple):
@@ -258,6 +265,28 @@ def classify(
     return SUBSTANTIVE
 
 
+def trim_examples(counts: AgreementCounts) -> AgreementCounts:
+    """Keep every named case where the list is complete, three otherwise.
+
+    A group with thousands of disagreements yields an arbitrary sixty of them,
+    which is neither evidence nor a sample anyone can use - and it is what would
+    dominate the committed run, churning wildly between sweeps for no gain. A
+    group small enough to have been captured whole is the opposite: that list is
+    the finding, and it is what a later pass needs to check a fix against.
+    """
+
+    def keep(
+        cases: tuple[tuple[float, float, str | None, tuple[str, ...]], ...],
+        total: int,
+    ) -> tuple[tuple[float, float, str | None, tuple[str, ...]], ...]:
+        return cases if len(cases) == total else cases[:3]
+
+    return counts._replace(
+        examples=keep(counts.examples, counts.substantive),
+        ours_wrong_examples=keep(counts.ours_wrong_examples, counts.ours_wrong),
+    )
+
+
 def count_agreement(
     points: Iterable[tuple[float, float]],
     ours: Callable[[float, float], str | None],
@@ -290,13 +319,15 @@ def count_agreement(
             substantive += 1
             if len(examples) < MAX_EXAMPLES:
                 examples.append((lng, lat, our_answer, their_zones))
-    return AgreementCounts(
-        total=total,
-        overlap_policy=overlap,
-        substantive=substantive,
-        ours_wrong=ours_wrong,
-        examples=tuple(examples),
-        ours_wrong_examples=tuple(unclaimed),
+    return trim_examples(
+        AgreementCounts(
+            total=total,
+            overlap_policy=overlap,
+            substantive=substantive,
+            ours_wrong=ours_wrong,
+            examples=tuple(examples),
+            ours_wrong_examples=tuple(unclaimed),
+        )
     )
 
 
@@ -950,10 +981,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument(
         "--from-json",
+        nargs="?",
+        const=str(MEASUREMENT_PATH),
         metavar="PATH",
         help=(
-            "re-report and re-draw a saved run instead of measuring again; "
-            "every other option except --chart and --json is then ignored"
+            "re-report and re-draw a saved run instead of measuring again "
+            f"(default: {MEASUREMENT_PATH}); every other option except "
+            "--chart and --json is then ignored"
         ),
     )
     args = parser.parse_args(argv)
@@ -971,10 +1005,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.json_out:
         destination = Path(args.json_out)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(
-            json.dumps(measurement.as_json(), indent=2), encoding="utf-8"
-        )
-        print(f"wrote {destination}", file=sys.stderr)
+        # through the shared writer, which emits what `pretty-format-json`
+        # would impose - a generated file has to come out already clean
+        write_json(measurement.as_json(), destination)
     if args.chart:
         Path(args.chart).write_text(render_chart(measurement), encoding="utf-8")
         print(f"wrote {args.chart}", file=sys.stderr)

@@ -1,0 +1,1455 @@
+{
+  "by_distance_m": [
+    {
+      "all_borders": {
+        "examples": [
+          [
+            -73.00979054990945,
+            19.200114174136584,
+            "America/Port-au-Prince",
+            [
+              "Etc/GMT+5"
+            ]
+          ],
+          [
+            71.09909366967544,
+            39.97603501432236,
+            "Asia/Bishkek",
+            [
+              "Asia/Tashkent"
+            ]
+          ],
+          [
+            143.8095874305504,
+            -39.3650021270051,
+            "Australia/Hobart",
+            [
+              "Etc/GMT-10"
+            ]
+          ]
+        ],
+        "ours_wrong": 16,
+        "ours_wrong_examples": [
+          [
+            -48.181721854575116,
+            -74.42688156689692,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            157.3777826435452,
+            -6.754592018260312,
+            "Etc/GMT-11",
+            [
+              "Pacific/Guadalcanal"
+            ]
+          ],
+          [
+            172.50000419132044,
+            88.77190538955449,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            -37.767115816577665,
+            -74.87969052500291,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -39.904903467599574,
+            -74.7867432358423,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            67.80550724851246,
+            -66.27653452319353,
+            "Etc/GMT-5",
+            [
+              "Antarctica/Mawson"
+            ]
+          ],
+          [
+            97.4788838194568,
+            5.451638570153148,
+            "Etc/GMT-6",
+            [
+              "Asia/Jakarta"
+            ]
+          ],
+          [
+            67.23003747329852,
+            -66.17422876540881,
+            "Etc/GMT-5",
+            [
+              "Antarctica/Mawson"
+            ]
+          ],
+          [
+            67.40125406207896,
+            -66.20466726705547,
+            "Etc/GMT-5",
+            [
+              "Antarctica/Mawson"
+            ]
+          ],
+          [
+            -37.22792776462991,
+            -74.90313348377963,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -47.10914759104225,
+            -74.4735150102039,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -38.69808941352212,
+            -74.83921324064997,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -38.98061754904776,
+            -74.82692940703086,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            66.31797522516908,
+            -66.0120843858744,
+            "Etc/GMT-4",
+            [
+              "Antarctica/Mawson"
+            ]
+          ],
+          [
+            -51.31961871608985,
+            -74.2904510238102,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            111.86479157152904,
+            3.2151627590870495,
+            "Asia/Kuching",
+            [
+              "Etc/GMT-7"
+            ]
+          ]
+        ],
+        "overlap_policy": 54,
+        "substantive": 7507,
+        "total": 20000
+      },
+      "distance_m": 0.01,
+      "drawn": 37955,
+      "land_borders": {
+        "examples": [
+          [
+            -73.00979054990945,
+            19.200114174136584,
+            "America/Port-au-Prince",
+            [
+              "Etc/GMT+5"
+            ]
+          ],
+          [
+            71.09909366967544,
+            39.97603501432236,
+            "Asia/Bishkek",
+            [
+              "Asia/Tashkent"
+            ]
+          ],
+          [
+            143.8095874305504,
+            -39.3650021270051,
+            "Australia/Hobart",
+            [
+              "Etc/GMT-10"
+            ]
+          ]
+        ],
+        "ours_wrong": 6,
+        "ours_wrong_examples": [
+          [
+            -48.181721854575116,
+            -74.42688156689692,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -37.767115816577665,
+            -74.87969052500291,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            -39.904903467599574,
+            -74.7867432358423,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            67.80550724851246,
+            -66.27653452319353,
+            "Etc/GMT-5",
+            [
+              "Antarctica/Mawson"
+            ]
+          ],
+          [
+            -37.22792776462991,
+            -74.90313348377963,
+            "Etc/GMT+3",
+            [
+              "America/Argentina/Ushuaia"
+            ]
+          ],
+          [
+            66.31797522516908,
+            -66.0120843858744,
+            "Etc/GMT-4",
+            [
+              "Antarctica/Mawson"
+            ]
+          ]
+        ],
+        "overlap_policy": 51,
+        "substantive": 7152,
+        "total": 15223
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            61.1328946599821,
+            44.24768894436911,
+            "Asia/Qyzylorda",
+            [
+              "Asia/Samarkand"
+            ]
+          ],
+          [
+            -77.9504341943574,
+            19.752889087498122,
+            "Etc/GMT+5",
+            [
+              "America/Havana"
+            ]
+          ],
+          [
+            -65.60611533575623,
+            -29.676119134775366,
+            "America/Argentina/Catamarca",
+            [
+              "America/Argentina/La_Rioja"
+            ]
+          ]
+        ],
+        "ours_wrong": 4,
+        "ours_wrong_examples": [
+          [
+            -172.50004223951805,
+            89.39073157800144,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            -172.50012197335903,
+            89.78901312653919,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            -172.5001115522868,
+            89.76930290016404,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            172.5001179495195,
+            89.78181529000389,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 66,
+        "substantive": 6830,
+        "total": 20000
+      },
+      "distance_m": 0.05,
+      "drawn": 38350,
+      "land_borders": {
+        "examples": [
+          [
+            61.1328946599821,
+            44.24768894436911,
+            "Asia/Qyzylorda",
+            [
+              "Asia/Samarkand"
+            ]
+          ],
+          [
+            -77.9504341943574,
+            19.752889087498122,
+            "Etc/GMT+5",
+            [
+              "America/Havana"
+            ]
+          ],
+          [
+            -65.60611533575623,
+            -29.676119134775366,
+            "America/Argentina/Catamarca",
+            [
+              "America/Argentina/La_Rioja"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 63,
+        "substantive": 6799,
+        "total": 15050
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            70.0035033483691,
+            55.209305855843155,
+            "Asia/Yekaterinburg",
+            [
+              "Asia/Almaty"
+            ]
+          ],
+          [
+            29.21442439441392,
+            -29.65492661335383,
+            "Africa/Maseru",
+            [
+              "Africa/Johannesburg"
+            ]
+          ],
+          [
+            72.84185550029109,
+            39.35557879715012,
+            "Asia/Dushanbe",
+            [
+              "Asia/Bishkek"
+            ]
+          ]
+        ],
+        "ours_wrong": 1,
+        "ours_wrong_examples": [
+          [
+            172.50013476934825,
+            89.61808956696753,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 68,
+        "substantive": 6570,
+        "total": 20000
+      },
+      "distance_m": 0.1,
+      "drawn": 38121,
+      "land_borders": {
+        "examples": [
+          [
+            70.0035033483691,
+            55.209305855843155,
+            "Asia/Yekaterinburg",
+            [
+              "Asia/Almaty"
+            ]
+          ],
+          [
+            29.21442439441392,
+            -29.65492661335383,
+            "Africa/Maseru",
+            [
+              "Africa/Johannesburg"
+            ]
+          ],
+          [
+            72.84185550029109,
+            39.35557879715012,
+            "Asia/Dushanbe",
+            [
+              "Asia/Bishkek"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 65,
+        "substantive": 6540,
+        "total": 15065
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            89.3528424943645,
+            57.72887838504821,
+            "Asia/Tomsk",
+            [
+              "Asia/Krasnoyarsk"
+            ]
+          ],
+          [
+            74.29534468659473,
+            36.91272968044689,
+            "Asia/Kabul",
+            [
+              "Asia/Karachi"
+            ]
+          ],
+          [
+            -103.8003505276109,
+            47.78316731569317,
+            "America/Chicago",
+            [
+              "America/Denver"
+            ]
+          ]
+        ],
+        "ours_wrong": 4,
+        "ours_wrong_examples": [
+          [
+            172.50129167281165,
+            89.80076400819443,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            179.99981894050686,
+            88.57851365438101,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            179.9991096642973,
+            89.71095364828682,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            179.99978560069832,
+            88.79959486381553,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 87,
+        "substantive": 5377,
+        "total": 20000
+      },
+      "distance_m": 0.5,
+      "drawn": 38150,
+      "land_borders": {
+        "examples": [
+          [
+            89.3528424943645,
+            57.72887838504821,
+            "Asia/Tomsk",
+            [
+              "Asia/Krasnoyarsk"
+            ]
+          ],
+          [
+            74.29534468659473,
+            36.91272968044689,
+            "Asia/Kabul",
+            [
+              "Asia/Karachi"
+            ]
+          ],
+          [
+            -103.8003505276109,
+            47.78316731569317,
+            "America/Chicago",
+            [
+              "America/Denver"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 86,
+        "substantive": 5373,
+        "total": 15241
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            131.35695591048332,
+            44.98331439340663,
+            "Asia/Vladivostok",
+            [
+              "Asia/Shanghai"
+            ]
+          ],
+          [
+            131.9012109056,
+            -32.21425327447305,
+            "Australia/Adelaide",
+            [
+              "Etc/GMT-9"
+            ]
+          ],
+          [
+            -46.38645009723545,
+            -12.249973813419746,
+            "America/Araguaina",
+            [
+              "America/Bahia"
+            ]
+          ]
+        ],
+        "ours_wrong": 2,
+        "ours_wrong_examples": [
+          [
+            -172.50226690446436,
+            89.77295217098123,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            -172.50154898251728,
+            89.6677191191315,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ]
+        ],
+        "overlap_policy": 93,
+        "substantive": 5038,
+        "total": 20000
+      },
+      "distance_m": 1.0,
+      "drawn": 38196,
+      "land_borders": {
+        "examples": [
+          [
+            131.35695591048332,
+            44.98331439340663,
+            "Asia/Vladivostok",
+            [
+              "Asia/Shanghai"
+            ]
+          ],
+          [
+            131.9012109056,
+            -32.21425327447305,
+            "Australia/Adelaide",
+            [
+              "Etc/GMT-9"
+            ]
+          ],
+          [
+            -46.38645009723545,
+            -12.249973813419746,
+            "America/Araguaina",
+            [
+              "America/Bahia"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 93,
+        "substantive": 5034,
+        "total": 15132
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            24.930816963030797,
+            31.458445422608094,
+            "Africa/Cairo",
+            [
+              "Africa/Tripoli"
+            ]
+          ],
+          [
+            -59.39653078942611,
+            1.5402314495953269,
+            "America/Boa_Vista",
+            [
+              "America/Guyana"
+            ]
+          ],
+          [
+            132.50135630922222,
+            3.6091571691185633,
+            "Etc/GMT-9",
+            [
+              "Pacific/Palau"
+            ]
+          ]
+        ],
+        "ours_wrong": 3,
+        "ours_wrong_examples": [
+          [
+            -179.9956844637083,
+            89.40366196909861,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            179.997949513422,
+            88.74484533374627,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            172.5047726893812,
+            89.46078411272634,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 77,
+        "substantive": 4250,
+        "total": 20000
+      },
+      "distance_m": 5.0,
+      "drawn": 38049,
+      "land_borders": {
+        "examples": [
+          [
+            24.930816963030797,
+            31.458445422608094,
+            "Africa/Cairo",
+            [
+              "Africa/Tripoli"
+            ]
+          ],
+          [
+            -59.39653078942611,
+            1.5402314495953269,
+            "America/Boa_Vista",
+            [
+              "America/Guyana"
+            ]
+          ],
+          [
+            132.50135630922222,
+            3.6091571691185633,
+            "Etc/GMT-9",
+            [
+              "Pacific/Palau"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 77,
+        "substantive": 4249,
+        "total": 15087
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            153.41179882741756,
+            -24.514718623098336,
+            "Australia/Brisbane",
+            [
+              "Etc/GMT-10"
+            ]
+          ],
+          [
+            97.04005004451473,
+            -12.363677964506413,
+            "Indian/Cocos",
+            [
+              "Etc/GMT-6"
+            ]
+          ],
+          [
+            -60.6780331568602,
+            9.505386610413964,
+            "America/Caracas",
+            [
+              "Etc/GMT+4"
+            ]
+          ]
+        ],
+        "ours_wrong": 1,
+        "ours_wrong_examples": [
+          [
+            172.50413827767028,
+            88.75616171446389,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 77,
+        "substantive": 3511,
+        "total": 20000
+      },
+      "distance_m": 10.0,
+      "drawn": 38022,
+      "land_borders": {
+        "examples": [
+          [
+            153.41179882741756,
+            -24.514718623098336,
+            "Australia/Brisbane",
+            [
+              "Etc/GMT-10"
+            ]
+          ],
+          [
+            97.04005004451473,
+            -12.363677964506413,
+            "Indian/Cocos",
+            [
+              "Etc/GMT-6"
+            ]
+          ],
+          [
+            -60.6780331568602,
+            9.505386610413964,
+            "America/Caracas",
+            [
+              "Etc/GMT+4"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 77,
+        "substantive": 3508,
+        "total": 15251
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            72.011929828671,
+            40.34996654702173,
+            "Asia/Tashkent",
+            [
+              "Asia/Bishkek"
+            ]
+          ],
+          [
+            -175.35041808022072,
+            52.37938253713197,
+            "America/Adak",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            104.63751600160523,
+            10.529267306287702,
+            "Asia/Ho_Chi_Minh",
+            [
+              "Asia/Phnom_Penh"
+            ]
+          ]
+        ],
+        "ours_wrong": 5,
+        "ours_wrong_examples": [
+          [
+            172.53088662988625,
+            89.16677129497617,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            -172.54193845569327,
+            89.38635767397083,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            172.5188735598224,
+            88.63633837396188,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            179.9126119121255,
+            89.70551097474895,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            179.93095676543865,
+            89.6272639717258,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 99,
+        "substantive": 868,
+        "total": 20000
+      },
+      "distance_m": 50.0,
+      "drawn": 39126,
+      "land_borders": {
+        "examples": [
+          [
+            72.011929828671,
+            40.34996654702173,
+            "Asia/Tashkent",
+            [
+              "Asia/Bishkek"
+            ]
+          ],
+          [
+            -175.35041808022072,
+            52.37938253713197,
+            "America/Adak",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            104.63751600160523,
+            10.529267306287702,
+            "Asia/Ho_Chi_Minh",
+            [
+              "Asia/Phnom_Penh"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 99,
+        "substantive": 867,
+        "total": 15142
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [
+          [
+            115.95922889650882,
+            10.964780154107851,
+            "Asia/Manila",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            -69.6241207694964,
+            1.7309650231760758,
+            "America/Manaus",
+            [
+              "America/Bogota"
+            ]
+          ],
+          [
+            -142.00834055902513,
+            -15.566367988095571,
+            "Pacific/Tahiti",
+            [
+              "Etc/GMT+9"
+            ]
+          ],
+          [
+            -59.71563361815474,
+            3.6761374903754467,
+            "America/Guyana",
+            [
+              "America/Boa_Vista"
+            ]
+          ],
+          [
+            151.97898974652716,
+            -22.98744633585646,
+            "Australia/Brisbane",
+            [
+              "Etc/GMT-10"
+            ]
+          ],
+          [
+            179.53450734142302,
+            -10.983985629552246,
+            "Pacific/Funafuti",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            -58.8373593645984,
+            8.018132606920451,
+            "Etc/GMT+4",
+            [
+              "America/Guyana"
+            ]
+          ],
+          [
+            -73.94919398070259,
+            -38.11690437173296,
+            "America/Santiago",
+            [
+              "Etc/GMT+5"
+            ]
+          ],
+          [
+            -63.99828701885773,
+            11.341670662094362,
+            "America/Caracas",
+            [
+              "Etc/GMT+4"
+            ]
+          ],
+          [
+            -112.48332543891345,
+            28.208370440978378,
+            "America/Hermosillo",
+            [
+              "Etc/GMT+7"
+            ]
+          ],
+          [
+            -62.743748365925626,
+            44.47804806264658,
+            "America/Halifax",
+            [
+              "Etc/GMT+4"
+            ]
+          ],
+          [
+            -82.33147514909749,
+            16.06440249270038,
+            "America/Tegucigalpa",
+            []
+          ],
+          [
+            -165.7193523330813,
+            69.05734108858003,
+            "America/Nome",
+            [
+              "Etc/GMT+11"
+            ]
+          ],
+          [
+            51.4824625450283,
+            11.76343368008923,
+            "Africa/Mogadishu",
+            [
+              "Etc/GMT-3"
+            ]
+          ],
+          [
+            124.77606427051276,
+            39.07428445523683,
+            "Asia/Pyongyang",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            -60.60160432516476,
+            7.307588710352289,
+            "America/Guyana",
+            [
+              "America/Caracas"
+            ]
+          ],
+          [
+            13.138528071344787,
+            13.544744847890438,
+            "Africa/Niamey",
+            [
+              "Africa/Lagos"
+            ]
+          ],
+          [
+            -8.489056636513984,
+            58.08209562826704,
+            "Europe/London",
+            [
+              "Etc/GMT+1"
+            ]
+          ],
+          [
+            113.8722020217765,
+            10.297344438023526,
+            "Asia/Ho_Chi_Minh",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            112.88880318557246,
+            9.82826212927407,
+            "Asia/Shanghai",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            133.72220241092438,
+            32.94443056271657,
+            "Etc/GMT-9",
+            [
+              "Asia/Tokyo"
+            ]
+          ],
+          [
+            106.56824906355163,
+            63.50485789325693,
+            "Asia/Krasnoyarsk",
+            [
+              "Asia/Irkutsk"
+            ]
+          ],
+          [
+            35.0854353889547,
+            44.584849991185905,
+            "Europe/Simferopol",
+            [
+              "Etc/GMT-2"
+            ]
+          ],
+          [
+            -144.7333817909518,
+            -16.577199971847804,
+            "Pacific/Tahiti",
+            [
+              "Etc/GMT+10"
+            ]
+          ]
+        ],
+        "ours_wrong": 2,
+        "ours_wrong_examples": [
+          [
+            -179.87829876172984,
+            89.57707984626536,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            172.55476134155884,
+            89.06007146298337,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 88,
+        "substantive": 24,
+        "total": 20000
+      },
+      "distance_m": 100.0,
+      "drawn": 39817,
+      "land_borders": {
+        "examples": [
+          [
+            115.95922889650882,
+            10.964780154107851,
+            "Asia/Manila",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            -69.6241207694964,
+            1.7309650231760758,
+            "America/Manaus",
+            [
+              "America/Bogota"
+            ]
+          ],
+          [
+            -142.00834055902513,
+            -15.566367988095571,
+            "Pacific/Tahiti",
+            [
+              "Etc/GMT+9"
+            ]
+          ],
+          [
+            -59.71563361815474,
+            3.6761374903754467,
+            "America/Guyana",
+            [
+              "America/Boa_Vista"
+            ]
+          ],
+          [
+            151.97898974652716,
+            -22.98744633585646,
+            "Australia/Brisbane",
+            [
+              "Etc/GMT-10"
+            ]
+          ],
+          [
+            179.53450734142302,
+            -10.983985629552246,
+            "Pacific/Funafuti",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            -58.8373593645984,
+            8.018132606920451,
+            "Etc/GMT+4",
+            [
+              "America/Guyana"
+            ]
+          ],
+          [
+            -73.94919398070259,
+            -38.11690437173296,
+            "America/Santiago",
+            [
+              "Etc/GMT+5"
+            ]
+          ],
+          [
+            -63.99828701885773,
+            11.341670662094362,
+            "America/Caracas",
+            [
+              "Etc/GMT+4"
+            ]
+          ],
+          [
+            -112.48332543891345,
+            28.208370440978378,
+            "America/Hermosillo",
+            [
+              "Etc/GMT+7"
+            ]
+          ],
+          [
+            -62.743748365925626,
+            44.47804806264658,
+            "America/Halifax",
+            [
+              "Etc/GMT+4"
+            ]
+          ],
+          [
+            -82.33147514909749,
+            16.06440249270038,
+            "America/Tegucigalpa",
+            []
+          ],
+          [
+            -165.7193523330813,
+            69.05734108858003,
+            "America/Nome",
+            [
+              "Etc/GMT+11"
+            ]
+          ],
+          [
+            51.4824625450283,
+            11.76343368008923,
+            "Africa/Mogadishu",
+            [
+              "Etc/GMT-3"
+            ]
+          ],
+          [
+            124.77606427051276,
+            39.07428445523683,
+            "Asia/Pyongyang",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            -60.60160432516476,
+            7.307588710352289,
+            "America/Guyana",
+            [
+              "America/Caracas"
+            ]
+          ],
+          [
+            13.138528071344787,
+            13.544744847890438,
+            "Africa/Niamey",
+            [
+              "Africa/Lagos"
+            ]
+          ],
+          [
+            -8.489056636513984,
+            58.08209562826704,
+            "Europe/London",
+            [
+              "Etc/GMT+1"
+            ]
+          ],
+          [
+            113.8722020217765,
+            10.297344438023526,
+            "Asia/Ho_Chi_Minh",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            112.88880318557246,
+            9.82826212927407,
+            "Asia/Shanghai",
+            [
+              "Etc/GMT-8"
+            ]
+          ],
+          [
+            133.72220241092438,
+            32.94443056271657,
+            "Etc/GMT-9",
+            [
+              "Asia/Tokyo"
+            ]
+          ],
+          [
+            106.56824906355163,
+            63.50485789325693,
+            "Asia/Krasnoyarsk",
+            [
+              "Asia/Irkutsk"
+            ]
+          ],
+          [
+            35.0854353889547,
+            44.584849991185905,
+            "Europe/Simferopol",
+            [
+              "Etc/GMT-2"
+            ]
+          ]
+        ],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 88,
+        "substantive": 23,
+        "total": 15175
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [],
+        "ours_wrong": 1,
+        "ours_wrong_examples": [
+          [
+            179.82163755004117,
+            88.55701465172861,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 101,
+        "substantive": 0,
+        "total": 20000
+      },
+      "distance_m": 500.0,
+      "drawn": 47022,
+      "land_borders": {
+        "examples": [],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 101,
+        "substantive": 0,
+        "total": 15169
+      }
+    },
+    {
+      "all_borders": {
+        "examples": [],
+        "ours_wrong": 3,
+        "ours_wrong_examples": [
+          [
+            179.3679015274501,
+            89.18570960150517,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ],
+          [
+            -173.73833223195604,
+            89.58436121490338,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT+12"
+            ]
+          ],
+          [
+            172.89258311517136,
+            88.6888399027788,
+            "Etc/GMT+11",
+            [
+              "Etc/GMT-12"
+            ]
+          ]
+        ],
+        "overlap_policy": 89,
+        "substantive": 0,
+        "total": 20000
+      },
+      "distance_m": 1000.0,
+      "drawn": 56136,
+      "land_borders": {
+        "examples": [],
+        "ours_wrong": 0,
+        "ours_wrong_examples": [],
+        "overlap_policy": 89,
+        "substantive": 0,
+        "total": 15151
+      }
+    }
+  ],
+  "by_point_class": {
+    "ambiguous_shortcut_points": {
+      "examples": [
+        [
+          -67.31187734150237,
+          18.631075521461554,
+          "America/Puerto_Rico",
+          [
+            "Etc/GMT+4"
+          ]
+        ],
+        [
+          35.279212631256456,
+          42.22909846298492,
+          "Europe/Istanbul",
+          [
+            "Etc/GMT-2"
+          ]
+        ],
+        [
+          175.49824006934824,
+          -35.837867352431665,
+          "Pacific/Auckland",
+          [
+            "Etc/GMT-12"
+          ]
+        ]
+      ],
+      "ours_wrong": 0,
+      "ours_wrong_examples": [],
+      "overlap_policy": 160,
+      "substantive": 3,
+      "total": 5000
+    },
+    "on_land_points": {
+      "examples": [],
+      "ours_wrong": 0,
+      "ours_wrong_examples": [],
+      "overlap_policy": 97,
+      "substantive": 0,
+      "total": 10000
+    },
+    "random_points": {
+      "examples": [],
+      "ours_wrong": 0,
+      "ours_wrong_examples": [],
+      "overlap_policy": 28,
+      "substantive": 0,
+      "total": 10000
+    },
+    "unique_shortcut_points": {
+      "examples": [],
+      "ours_wrong": 0,
+      "ours_wrong_examples": [],
+      "overlap_policy": 0,
+      "substantive": 0,
+      "total": 5000
+    }
+  },
+  "data_version": "2026c",
+  "tzfpy_version": "1.3.3"
+}
