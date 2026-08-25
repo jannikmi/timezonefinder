@@ -276,6 +276,32 @@ def test_a_hole_clipping_a_cell_leaves_the_covering_polygon_in_it(tf, lng, lat):
     assert tf.timezone_at(lng=lng, lat=lat) == certain
 
 
+# Coordinates in the three cells north of latitude 88.5 whose stored ring jumps the
+# +-180 degree cut. Judged as a planar ring it is not a hexagon at all but a
+# self-intersecting shape spanning most of the globe, so the overlap tests answered about
+# that shape and the ocean strip on the far side of the cut was left out of all three.
+ANTIMERIDIAN_CELL_COORDS = [
+    (-179.42048, 89.60654),
+    (-175.13121, 89.44923),
+    (177.58690, 88.76167),
+    (179.61929, 88.60653),
+    (174.97945, 88.91468),
+    (172.97725, 88.64155),
+    (178.31014, 89.18498),
+    (174.21060, 89.33760),
+]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("lng,lat", ANTIMERIDIAN_CELL_COORDS)
+def test_a_cell_crossing_the_antimeridian_keeps_the_polygon_covering_it(tf, lng, lat):
+    """Same invariant as above, on the other way a cell used to lose its polygon."""
+    certain = tf.certain_timezone_at(lng=lng, lat=lat)
+
+    assert certain is not None
+    assert tf.timezone_at(lng=lng, lat=lat) == certain
+
+
 @pytest.mark.slow
 def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
     """Sweep cell interiors, which the vertex-driven tests above never visit.
@@ -284,11 +310,15 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
     where a boundary passes through it. A cell can still lose a polygon that covers its
     interior, and this is what notices.
 
-    Latitudes beyond 88 degrees are left out: the cells there span the antimeridian, so
-    the ring the compiler stores for them jumps from one edge of the coordinate plane to
-    the other and the planar overlap tests do not mean what they say. Three such cells
-    are known to be incomplete, which is a separate defect in how those cells are
-    represented rather than in the overlap tests this sweeps.
+    Sampled by area rather than uniformly in latitude, so it is a workload and not a
+    pole-heavy one - which also means it visits the cells at the antimeridian and the
+    poles far too rarely to stand in for an exhaustive check. The exhaustive form is
+    this same assertion over the seven resolution-5 child centres of every cell
+    (``h3.cell_to_children(cell, SHORTCUT_H3_RES + 1)`` over ``all_res_candidates``),
+    which enumerates the defective cells outright instead of sampling for them - that
+    is what ``ANTIMERIDIAN_CELL_COORDS`` and ``HOLE_CLIPPED_CELL_COORDS`` were found
+    with. At ~2 million lookups it costs ~8 minutes against this test's ~15 seconds,
+    so run it by hand after changing the shortcut compiler rather than on every gate.
     """
     n = 100_000
     rng = np.random.default_rng(20260825)
@@ -299,8 +329,7 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
     uncovered = [
         (float(lng), float(lat))
         for lng, lat in zip(lngs, lats)
-        if abs(lat) < 88.0
-        and tf.certain_timezone_at(lng=float(lng), lat=float(lat)) is None
+        if tf.certain_timezone_at(lng=float(lng), lat=float(lat)) is None
     ]
 
     assert not uncovered, (

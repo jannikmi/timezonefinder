@@ -7,7 +7,12 @@ import numpy as np
 import pytest
 
 from scripts.helper_classes import Boundaries
-from scripts.hex_utils import Hex, get_corrected_hex_boundaries
+from scripts.hex_utils import (
+    Hex,
+    get_corrected_hex_boundaries,
+    is_torn_by_cut,
+    rotate_half_turn,
+)
 from scripts.utils_numba import (
     any_edge_crossing,
     any_pt_in_poly,
@@ -321,3 +326,128 @@ def test_a_hole_covering_the_whole_cell_takes_the_polygon_away():
     cell = _cell_with(ENCLOSING_POLYGON, TestFullyContainedInHole.PLAIN)
 
     assert not cell.lies_in_cell(0)
+
+
+class TestTheAntimeridianFrame:
+    """The cells whose stored ring is torn by the coordinate plane's cut.
+
+    Their longitudes jump from one edge of the plane to the other, so as a planar ring
+    they are a self-intersecting shape spanning most of the globe rather than a hexagon,
+    and every Euclidean test applied to them answers about that shape. Three cells north
+    of latitude 88.5 lost the ocean polygon covering them that way.
+    """
+
+    #: a cell straddling +-180 deg, stored as the compiler stores one: three vertices
+    #: east of the antimeridian and three west of it, so ``max - min`` spans the globe
+    CELL = np.array(
+        [
+            [coord2int(v) for v in (170.0, 166.0, 172.0, -177.0, -171.0, -175.0)],
+            [coord2int(v) for v in (89.0, 88.7, 88.5, 88.5, 88.7, 89.0)],
+        ],
+        dtype=np.int32,
+    )
+
+    #: the shape of an ocean zone at the antimeridian: a meridian strip reaching the pole,
+    #: whose two long edges pass clean through ``CELL`` with no vertex inside it
+    STRIP = np.array(
+        [
+            [coord2int(v) for v in (172.5, 172.5, 180.0, 180.0)],
+            [coord2int(v) for v in (70.0, 90.0, 90.0, 70.0)],
+        ],
+        dtype=np.int32,
+    )
+
+    #: the same shape at the prime meridian, which no cell at the antimeridian can reach
+    PRIME_MERIDIAN_STRIP = np.array(
+        [
+            [coord2int(v) for v in (-7.5, -7.5, 7.5, 7.5)],
+            [coord2int(v) for v in (70.0, 90.0, 90.0, 70.0)],
+        ],
+        dtype=np.int32,
+    )
+
+    @staticmethod
+    def _cell(polygon: np.ndarray, holes: list[np.ndarray] | None = None) -> Hex:
+        data = SimpleNamespace(
+            polygons=[polygon],
+            holes_in_poly=lambda poly_nr: iter(holes or []),
+            # no vertex of the polygon lies in this cell, which is the case that
+            # leaves the whole answer to the Euclidean tests
+            polygon_vertex_hexes=lambda poly_nr, res: set(),
+        )
+        return Hex(
+            id=0,
+            res=4,
+            coords=TestTheAntimeridianFrame.CELL,
+            bounds=Boundaries(
+                xmax=MAX_LNG_INT,
+                xmin=-MAX_LNG_INT,
+                ymax=coord2int(89.0),
+                ymin=coord2int(88.5),
+            ),
+            x_overflow=True,
+            surr_n_pole=False,
+            surr_s_pole=False,
+            data=cast("TimezoneData", data),
+        )
+
+    @pytest.mark.unit
+    def test_the_rotation_does_not_leave_the_coordinate_plane(self):
+        """Longitudes are scaled by 10^7 and stored as int32, with no room to spare."""
+        extremes = np.array(
+            [[-MAX_LNG_INT, -1, 0, MAX_LNG_INT], [0, 0, 0, 0]], dtype=np.int32
+        )
+
+        rotated = rotate_half_turn(extremes)
+
+        assert rotated.dtype == np.int32
+        assert np.all(np.abs(rotated[0]) <= MAX_LNG_INT)
+        # every longitude moves half a turn, whichever way it had to go to stay in range
+        assert list(rotated[0]) == [0, MAX_LNG_INT - 1, -MAX_LNG_INT, 0]
+
+    @pytest.mark.unit
+    def test_it_makes_the_torn_ring_whole_and_tears_the_whole_one(self):
+        """The trade the frame makes, and the reason a polygon has to be checked too."""
+        assert is_torn_by_cut(self.CELL)
+        assert not is_torn_by_cut(rotate_half_turn(self.CELL))
+
+        assert not is_torn_by_cut(self.PRIME_MERIDIAN_STRIP)
+        assert is_torn_by_cut(rotate_half_turn(self.PRIME_MERIDIAN_STRIP))
+
+    @pytest.mark.unit
+    def test_the_vertex_tests_alone_do_not_see_the_strip(self):
+        """Why this defect survived the edge-crossing test being added.
+
+        Neither ring has a vertex inside the other, so only a segment test can find the
+        overlap - and it was skipped for every cell whose coordinates are corrected.
+        """
+        assert not any_pt_in_poly(self.CELL, self.STRIP)
+        assert not any_pt_in_poly(self.STRIP, self.CELL)
+
+    @pytest.mark.unit
+    def test_a_strip_crossing_the_cell_at_the_antimeridian_lies_in_it(self):
+        """The defect: three cells at the north pole lost the ocean zone covering them."""
+        assert self._cell(self.STRIP).lies_in_cell(0)
+
+    @pytest.mark.unit
+    def test_a_strip_at_the_prime_meridian_does_not(self):
+        """The rotated frame tears whatever sits on lng 0, and a torn ring admits anything.
+
+        Without this guard the frame put a zone half the globe away into 582 of the 597
+        cells that cross the antimeridian - ``Etc/GMT`` and its neighbours, whose stored
+        rings straddle the prime meridian.
+        """
+        assert not self._cell(self.PRIME_MERIDIAN_STRIP).lies_in_cell(0)
+
+    @pytest.mark.unit
+    def test_a_hole_covering_the_whole_cell_takes_the_polygon_away(self):
+        """Holes are read in whichever frame the cell is judged in, or they miss it."""
+        covering_hole = np.array(
+            [
+                [coord2int(v) for v in (150.0, 150.0, -150.0, -150.0)],
+                [coord2int(v) for v in (85.0, 90.0, 90.0, 85.0)],
+            ],
+            dtype=np.int32,
+        )
+
+        assert not self._cell(self.STRIP, [covering_hole]).lies_in_cell(0)
