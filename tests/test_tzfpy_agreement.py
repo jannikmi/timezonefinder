@@ -32,12 +32,15 @@ from scripts.measure_tzfpy_agreement import (
     DistanceResult,
     Measurement,
     _require_matching_dataset,
+    axis_bound,
+    axis_ticks,
     borders_a_land_zone,
     chart_point,
     classify,
     count_agreement,
     escape_svg_text,
     format_distance,
+    is_decade,
     render_chart,
 )
 
@@ -281,3 +284,54 @@ def test_a_saved_run_keeps_the_examples_it_named() -> None:
     )
     measurement = Measurement("2026c", "1.3.3", (), {"random_points": counts})
     assert Measurement.from_json(measurement.as_json()) == measurement
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("value", "upwards", "expected"),
+    [
+        (47.0, True, 50.0),
+        (50.0, True, 50.0),
+        (5.1, True, 10.0),
+        (0.0265, False, 0.01),
+        (0.05, False, 0.05),
+        (12.0, False, 10.0),
+    ],
+)
+def test_the_axis_ends_on_a_round_number_just_outside_the_data(
+    value: float, upwards: bool, expected: float
+) -> None:
+    # the axis is tied to what was measured rather than to a fixed decade: a
+    # 100 % ceiling over a 47 % maximum spends a third of the plot on nothing
+    # and invites the curve to be read against a number no run produced
+    assert axis_bound(value, upwards=upwards) == pytest.approx(expected)
+
+
+@pytest.mark.unit
+def test_the_gridlines_step_through_ones_and_fives() -> None:
+    assert axis_ticks(0.01, 50.0) == pytest.approx(
+        [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 50.0]
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("distance_m", "expected"),
+    [(0.01, True), (0.05, False), (1.0, True), (5.0, False), (1000.0, True)],
+)
+def test_only_the_decade_distances_carry_a_printed_value(
+    distance_m: float, expected: bool
+) -> None:
+    # eleven distances times two series is twenty-two labels over the curve;
+    # the page prints the full table, so the chart names the decades only
+    assert is_decade(distance_m) is expected
+
+
+@pytest.mark.unit
+def test_the_hollow_marker_is_explained_only_when_one_is_drawn() -> None:
+    # a key for a symbol that is not on the chart is a puzzle, not a key
+    with_bound = render_chart(_measurement((1.0, 26, 34), (1000.0, 0, 0)))
+    assert "hollow" in with_bound
+
+    without_bound = render_chart(_measurement((1.0, 26, 34), (1000.0, 1, 1)))
+    assert "hollow" not in without_bound

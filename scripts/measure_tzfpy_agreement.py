@@ -35,9 +35,13 @@ rather than at 100 %, because the points sit on both sides of this package's
 border and only the side the other package's boundary has moved away from can
 disagree.
 
-``tzfpy``'s maintainer gives that boundary's maximum displacement as roughly
-111 m, which is what the far end of the sweep is checking rather than
-discovering - and why nothing beyond 200 m is measured.
+``tzfpy``'s maintainer gives that boundary's maximum *displacement* as roughly
+111 m. The far end of the sweep is not there to confirm it but to show what it
+does not cover: a displacement bound governs how far a boundary that survives
+simplification may move, and says nothing about features the simplification
+removes or merges outright. Those keep the curve above zero a full kilometre
+from any border, which is the reason for both the sample size and the log axis
+below.
 
 The overlapping-zone rate in the last column is near-flat across distances by
 construction - it is about zone naming, not geometry - and is a useful check
@@ -100,14 +104,27 @@ from timezonefinder.utils import is_ocean_timezone
 # displacement bound says nothing about features a simplification removes or
 # merges outright - which is why a kilometre out, well past that bound, the two
 # packages still disagree about roughly one point in three thousand.
-DEFAULT_DISTANCES_M: tuple[float, ...] = (0.01, 0.1, 1.0, 10.0, 100.0, 1_000.0)
+DEFAULT_DISTANCES_M: tuple[float, ...] = (
+    0.01,
+    0.05,
+    0.1,
+    0.5,
+    1.0,
+    5.0,
+    10.0,
+    50.0,
+    100.0,
+    500.0,
+    1_000.0,
+)
 
 # Accepted points per distance. Large because of the tail above, not for
 # precision at the near end: the rate at 100 m is ~0.16 % and at 1 km ~0.03 %,
 # so a run of 2,000 finds nothing at either and reports a zero - which reads as
 # "beyond here the two agree" and is the one conclusion this sweep exists to
 # refuse. At this size the far end is a couple of dozen observations rather than
-# an absence, and a full sweep takes around twenty minutes.
+# an absence. A full sweep costs around half an hour, which is why the run is
+# saved and the chart can be redrawn from it without measuring again.
 DEFAULT_POINTS = 20_000
 
 # Fixed so that two runs are comparable; there is nothing to tune here, and a
@@ -468,11 +485,11 @@ def format_report(measurement: Measurement) -> str:
 # else in this repository carries it. The output is text, so a regeneration
 # shows up in a diff as the numbers that moved.
 
-CHART_WIDTH = 800
-CHART_HEIGHT = 440
+CHART_WIDTH = 880
+CHART_HEIGHT = 495
 CHART_MARGIN_LEFT = 84
 CHART_MARGIN_RIGHT = 56
-CHART_MARGIN_TOP = 100
+CHART_MARGIN_TOP = 142
 CHART_MARGIN_BOTTOM = 62
 # The y axis is logarithmic, because the interesting part of this measurement
 # spans four orders of magnitude: about half of the points a centimetre from a
@@ -480,8 +497,19 @@ CHART_MARGIN_BOTTOM = 62
 # kilometre away. On a linear axis the second number is the axis itself, which
 # is exactly the reading to avoid - "no disagreements out here" is the thing
 # that is not true.
-CHART_Y_TOP_PERCENT = 100.0
-CHART_Y_FLOOR_PERCENT = 0.001
+# The y axis is logarithmic, because the interesting part of this measurement
+# spans four orders of magnitude: about half of the points a centimetre from a
+# border get a different zone, and a few hundredths of a percent still do a
+# kilometre away. On a linear axis the second number is the axis itself, which
+# is exactly the reading to avoid - "no disagreements out here" is the thing
+# that is not true.
+#
+# Its ends are the nearest 1-or-5 step outside the data rather than a fixed
+# decade, so the top of the axis is a value the measurement reaches. A 100 %
+# ceiling above a 47 % maximum spends a third of the plot on empty space and
+# invites the reader to scale the curve against a number nothing produced.
+CHART_AXIS_STEPS = (1.0, 5.0)
+CHART_Y_MIN_FLOOR_PERCENT = 0.001
 CHART_INK = "#28323a"
 CHART_MUTED = "#6b7a85"
 CHART_GRID = "#dde3e8"
@@ -554,15 +582,65 @@ def _chart_x(distance_m: float, low: float, high: float) -> float:
     return CHART_MARGIN_LEFT + span * float(position)
 
 
-def _chart_y(percent: float, floor_percent: float) -> float:
+def axis_bound(value: float, upwards: bool) -> float:
+    """The nearest 1-or-5 step at or beyond ``value``.
+
+    ``axis_bound(47, upwards=True)`` is 50 and ``axis_bound(0.0265, False)`` is
+    0.01, so both ends of the axis are round numbers the reader can hold onto
+    without being further from the data than one step.
+    """
+    exponent = int(np.floor(np.log10(value)))
+    candidates = [
+        step * 10.0**power
+        for power in (exponent - 1, exponent, exponent + 1)
+        for step in CHART_AXIS_STEPS
+    ]
+    if upwards:
+        return min(c for c in candidates if c >= value * (1 - 1e-12))
+    return max(c for c in candidates if c <= value * (1 + 1e-12))
+
+
+def axis_ticks(floor_percent: float, top_percent: float) -> list[float]:
+    """Every 1-or-5 step from the floor to the top, inclusive."""
+    ticks = [floor_percent]
+    while ticks[-1] < top_percent * (1 - 1e-12):
+        ticks.append(axis_bound(ticks[-1] * 1.0000001, upwards=True))
+    return ticks
+
+
+def _chart_y(percent: float, floor_percent: float, top_percent: float) -> float:
     span = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM
-    low, high = np.log10(floor_percent), np.log10(CHART_Y_TOP_PERCENT)
-    position = (np.log10(max(percent, floor_percent)) - low) / (high - low)
+    low, high = np.log10(floor_percent), np.log10(top_percent)
+    position = (np.log10(min(max(percent, floor_percent), top_percent)) - low) / (
+        high - low
+    )
     return CHART_MARGIN_TOP + span * (1.0 - float(position))
+
+
+# Legend metrics. The text width is estimated rather than measured - there is
+# no font metric available here - which is fine because the only thing it has
+# to get right is that the row ends at the right margin.
+LEGEND_SWATCH = 34
+LEGEND_GAP = 26
+LEGEND_CHAR_WIDTH = 6.6
+
+
+def _legend_entry_width(label: str) -> float:
+    return LEGEND_SWATCH + LEGEND_CHAR_WIDTH * len(label)
 
 
 def _percent_axis_label(percent: float) -> str:
     return f"{percent:.3g}%"
+
+
+def is_decade(distance_m: float) -> bool:
+    """Whether a swept distance is a power of ten - 1 cm, 1 m, 100 m.
+
+    ``bool`` rather than whatever numpy hands back: this is a plain predicate
+    and a ``np.bool_`` leaking out of it fails an ``is True`` on the far side.
+    """
+    exponent = np.log10(distance_m)
+    return bool(abs(exponent - round(float(exponent))) < 1e-9)
 
 
 def render_chart(measurement: Measurement) -> str:
@@ -577,11 +655,19 @@ def render_chart(measurement: Measurement) -> str:
         ]
         for series in CHART_SERIES
     }
-    smallest = min(point.percent for points in plotted.values() for point in points)
+    values = [point.percent for points in plotted.values() for point in points]
     floor_percent = max(
-        CHART_Y_FLOOR_PERCENT, 10.0 ** float(np.floor(np.log10(smallest)))
+        CHART_Y_MIN_FLOOR_PERCENT, axis_bound(min(values), upwards=False)
     )
-    baseline = _chart_y(floor_percent, floor_percent)
+    top_percent = axis_bound(max(values), upwards=True)
+    any_upper_bound = any(
+        point.is_upper_bound for points in plotted.values() for point in points
+    )
+
+    def y_of(percent: float) -> float:
+        return _chart_y(percent, floor_percent, top_percent)
+
+    baseline = y_of(floor_percent)
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
@@ -600,32 +686,39 @@ def render_chart(measurement: Measurement) -> str:
         f"both axes logarithmic</text>",
     ]
 
-    # legend, above the plot so it cannot collide with the axis titles
-    for index, series in enumerate(CHART_SERIES):
-        swatch = CHART_MARGIN_LEFT + index * 210
-        dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
+    # Legend above the plot and pushed to the right. Above, so it cannot
+    # collide with the axis titles; right, because the leftmost data label is
+    # anchored at the left margin and the axis now tops out just over the
+    # largest value, which puts that label exactly where a left-aligned legend
+    # would be.
+    entries = [(series.label, series.colour, series.dashes) for series in CHART_SERIES]
+    if any_upper_bound:
+        # only explained when one is actually on the chart - a legend entry for
+        # a marker that is not there is a puzzle rather than a key
+        entries.append(("hollow: none found, so at most this", CHART_MUTED, "hollow"))
+    widths = [_legend_entry_width(label) for label, _, _ in entries]
+    cursor = right - sum(widths) - LEGEND_GAP * (len(entries) - 1)
+    legend_y = CHART_MARGIN_TOP - 26
+    for (label, colour, dashes), width in zip(entries, widths):
+        if dashes == "hollow":
+            parts.append(
+                f'<circle cx="{cursor + 13:.0f}" cy="{legend_y}" r="4.5" '
+                f'fill="#ffffff" stroke="{colour}" stroke-width="1.8"/>'
+            )
+        else:
+            dash = f' stroke-dasharray="{dashes}"' if dashes else ""
+            parts.append(
+                f'<line x1="{cursor:.0f}" y1="{legend_y}" x2="{cursor + 26:.0f}" '
+                f'y2="{legend_y}" stroke="{colour}" stroke-width="2.4"{dash}/>'
+            )
         parts.append(
-            f'<line x1="{swatch}" y1="{CHART_MARGIN_TOP - 24}" x2="{swatch + 26}" '
-            f'y2="{CHART_MARGIN_TOP - 24}" stroke="{series.colour}" '
-            f'stroke-width="2.4"{dash}/>'
+            f'<text x="{cursor + LEGEND_SWATCH:.0f}" y="{legend_y + 4}" '
+            f'font-size="12.5" fill="{CHART_INK}">{escape_svg_text(label)}</text>'
         )
-        parts.append(
-            f'<text x="{swatch + 34}" y="{CHART_MARGIN_TOP - 20}" font-size="12.5" '
-            f'fill="{CHART_INK}">{escape_svg_text(series.label)}</text>'
-        )
-    hollow = CHART_MARGIN_LEFT + 2 * 210
-    parts.append(
-        f'<circle cx="{hollow + 13}" cy="{CHART_MARGIN_TOP - 24}" r="4.5" '
-        f'fill="#ffffff" stroke="{CHART_MUTED}" stroke-width="1.8"/>'
-    )
-    parts.append(
-        f'<text x="{hollow + 34}" y="{CHART_MARGIN_TOP - 20}" font-size="12.5" '
-        f'fill="{CHART_MUTED}">none seen: 95% upper bound</text>'
-    )
+        cursor += width + LEGEND_GAP
 
-    decade = floor_percent
-    while decade <= CHART_Y_TOP_PERCENT * 1.000001:
-        y = _chart_y(decade, floor_percent)
+    for tick in axis_ticks(floor_percent, top_percent):
+        y = y_of(tick)
         parts.append(
             f'<line x1="{CHART_MARGIN_LEFT}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" '
             f'stroke="{CHART_GRID}" stroke-width="1"/>'
@@ -633,9 +726,8 @@ def render_chart(measurement: Measurement) -> str:
         parts.append(
             f'<text x="{CHART_MARGIN_LEFT - 10}" y="{y + 4:.1f}" font-size="12" '
             f'text-anchor="end" fill="{CHART_MUTED}">'
-            f"{_percent_axis_label(decade)}</text>"
+            f"{_percent_axis_label(tick)}</text>"
         )
-        decade *= 10.0
 
     for result in measurement.by_distance:
         x = _chart_x(result.distance_m, low, high)
@@ -644,7 +736,7 @@ def render_chart(measurement: Measurement) -> str:
             f'y2="{baseline + 5:.1f}" stroke="{CHART_MUTED}" stroke-width="1"/>'
         )
         parts.append(
-            f'<text x="{x:.1f}" y="{baseline + 22:.1f}" font-size="12.5" '
+            f'<text x="{x:.1f}" y="{baseline + 22:.1f}" font-size="11.5" '
             f'text-anchor="middle" fill="{CHART_INK}">'
             f"{format_distance(result.distance_m)}</text>"
         )
@@ -652,8 +744,7 @@ def render_chart(measurement: Measurement) -> str:
     for series in CHART_SERIES:
         points = plotted[series.label]
         polyline = " ".join(
-            f"{_chart_x(result.distance_m, low, high):.1f},"
-            f"{_chart_y(point.percent, floor_percent):.1f}"
+            f"{_chart_x(result.distance_m, low, high):.1f},{y_of(point.percent):.1f}"
             for result, point in zip(measurement.by_distance, points)
         )
         dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
@@ -663,7 +754,7 @@ def render_chart(measurement: Measurement) -> str:
         )
         for index, (result, point) in enumerate(zip(measurement.by_distance, points)):
             x = _chart_x(result.distance_m, low, high)
-            y = _chart_y(point.percent, floor_percent)
+            y = y_of(point.percent)
             if point.is_upper_bound:
                 parts.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#ffffff" '
@@ -673,6 +764,10 @@ def render_chart(measurement: Measurement) -> str:
                 parts.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{series.colour}"/>'
                 )
+            # only the decade positions carry a number. Every point would be 22
+            # labels over 11 markers, and the page prints the whole table anyway
+            if not is_decade(result.distance_m) and not point.is_upper_bound:
+                continue
             # the end labels are anchored inwards, or half of the first one
             # sits outside the plot and over the percentage axis
             anchor = (
@@ -685,7 +780,7 @@ def render_chart(measurement: Measurement) -> str:
             # a label below a point near the floor would land under the axis
             offset = series.label_offset
             if offset > 0 and y + offset > baseline - 4:
-                offset = -13.0
+                offset = -16.0
             parts.append(
                 f'<text x="{x:.1f}" y="{y + offset:.1f}" font-size="12" '
                 f'text-anchor="{anchor}" fill="{series.colour}">'

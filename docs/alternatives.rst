@@ -135,19 +135,19 @@ difference is in what they do with that dataset's geometry.
    the boundary displacement at a maximum of roughly **111 m**, chosen for a weather API where
    coordinates are rarely that sensitive near a border. A displacement bound describes how far a
    boundary that survives simplification is allowed to move - it says nothing about features the
-   simplification *removes or merges*. Measured, **0.16 % of points 100 m from a border and 0.03 %
+   simplification *removes or merges*. Measured, **0.17 % of points 100 m from a border and 0.04 %
    of points a full kilometre from any border still get a different timezone**, which is around one
    query in three thousand at a distance where a reader of the 111 m figure would expect none.
 
-   The far cases are whole features in the wrong place rather than a border nudged sideways: the
-   small islands in the Paraná river are answered as Paraguay rather than Argentina;
-   ``Indian/Mahe`` and ``Pacific/Tahiti`` become open ocean a kilometre inside the territory this
-   dataset assigns to them. If your points are near *any* border, the tolerance figure is the right
-   thing to reason about; if a wrong answer is a bug rather than a rounding error, the tail is.
+   The far cases are whole features in the wrong place rather than a border nudged sideways: small
+   islands in the Paraná river are answered as Paraguay rather than Argentina; ``Indian/Mahe`` and
+   ``Pacific/Tahiti`` become open ocean a kilometre inside the territory this dataset assigns to
+   them. If your points are near *any* border, the tolerance figure is the right thing to reason
+   about; if a wrong answer is a bug rather than a rounding error, the tail is.
 
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-24:
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-25:
 
    .. list-table::
       :header-rows: 1
@@ -159,28 +159,44 @@ difference is in what they do with that dataset's geometry.
       * - 1 cm
         - 37.3 %
         - 47.0 %
+      * - 5 cm
+        - 33.9 %
+        - 45.1 %
       * - 10 cm
-        - 32.8 %
-        - 43.6 %
+        - 32.6 %
+        - 43.4 %
+      * - 50 cm
+        - 26.8 %
+        - 35.3 %
       * - 1 m
-        - 25.4 %
-        - 33.6 %
+        - 25.0 %
+        - 33.2 %
+      * - 5 m
+        - 21.2 %
+        - 28.2 %
       * - 10 m
-        - 17.5 %
-        - 23.2 %
+        - 17.3 %
+        - 22.8 %
+      * - 50 m
+        - 4.3 %
+        - 5.7 %
       * - 100 m
-        - 0.16 %
-        - 0.20 %
+        - 0.17 %
+        - 0.19 %
+      * - 500 m
+        - 0.02 %
+        - 0.01 %
       * - 1 km
-        - 0.030 %
-        - 0.027 %
+        - 0.04 %
+        - 0.03 %
 
-   Both axes of the chart are logarithmic, and a group with no disagreement in it would be drawn at
-   its 95 % upper bound rather than at zero - at this sample size none of them is empty, which is
-   itself the point.
+   **The knee is between 10 m and 100 m**, which is where the stated tolerance puts it: a fifth of
+   points still differ at ten metres, one in twenty at fifty, and one in five hundred at a hundred.
+   Below that the curve flattens rather than climbing to 100 %, because the points sit on **both**
+   sides of this package's border and only the side ``tzfpy``'s boundary has moved away from can
+   disagree. Past the knee it does not reach zero at all - the last two rows are single-figure
+   counts, so their order is noise, but their being non-zero is not.
 
-   The curve levels off just under half rather than at 100 % because the points sit on **both** sides
-   of this package's border, and only the side ``tzfpy``'s boundary has moved away from can disagree.
    The second column drops the ocean zones, whose mutual borders are meridians that no simplification
    can move and which therefore dilute the first; a coastline stays in both, since it is stored in the
    land polygon as well as in the ocean polygon around it.
@@ -194,11 +210,11 @@ difference is in what they do with that dataset's geometry.
    difference away from a border and next to none of the ones near it.
 
    The near-border disagreements are ordinary international borders, not exotica: ``Asia/Bishkek``
-   against ``Asia/Tashkent``, ``Africa/Addis_Ababa`` against ``Africa/Djibouti``, ``Africa/Kinshasa``
-   against ``Africa/Luanda``. Which distance your queries land at is the whole question, and it is why
-   the recommendation at the top of this page turns on how near a border your points are rather than
-   on how accurate either package is in the abstract. Re-run the measurement rather than trusting
-   these figures: they describe one release of a package that ships on its own schedule.
+   against ``Asia/Tashkent``, ``Asia/Tehran`` against ``Asia/Ashgabat``, ``Africa/Kinshasa`` against
+   ``Africa/Luanda``. Which distance your queries land at is the whole question, and it is why the
+   recommendation at the top of this page turns on how near a border your points are rather than on
+   how accurate either package is in the abstract. Re-run the measurement rather than trusting these
+   figures: they describe one release of a package that ships on its own schedule.
 
 
 When to choose which package
