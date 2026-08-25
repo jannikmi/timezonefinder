@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787557386278,
+  "lastUpdate": 1787625756968,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2565,6 +2565,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002065574177770951",
             "extra": "mean: 41.90355599996565 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f2eabbba557b51e206d137ee0a2a040f5f5e6752",
+          "message": "Merge pull request #556 from jannikmi/claude/maintainer-decision-skill-ux-7de26b\n\nSettle each maintainer decision in conversation, not in one form",
+          "timestamp": "2026-08-25T04:41:43+02:00",
+          "tree_id": "650b8b8c5f10246be85592e4d8550cfbdea84033",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f2eabbba557b51e206d137ee0a2a040f5f5e6752"
+        },
+        "date": 1787625755596,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 118.62869030123066,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000048113961881423346",
+            "extra": "mean: 8.429664000004777 msec\nrounds: 93 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 223.15914348824376,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003043489924597324",
+            "extra": "mean: 4.481107000003703 msec\nrounds: 199 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 22.880121821093024,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001380506808795379",
+            "extra": "mean: 43.706060999994634 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
