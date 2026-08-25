@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787646454342,
+  "lastUpdate": 1787665284914,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2700,6 +2700,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00037370368621781344",
             "extra": "mean: 42.892942000008816 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "681a64b5a46c5b49ee8ce3efaf3ffe64ce4fb090",
+          "message": "Merge pull request #558 from jannikmi/improve/bug-3-antimeridian-cells\n\nJudge a cell at the antimeridian in a frame that does not tear it",
+          "timestamp": "2026-08-25T15:40:25+02:00",
+          "tree_id": "f5d099a0ead473040b055d4e4c5005d64306bc55",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/681a64b5a46c5b49ee8ce3efaf3ffe64ce4fb090"
+        },
+        "date": 1787665283481,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 220.80689906743362,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010032936874713178",
+            "extra": "mean: 4.52884399999931 msec\nrounds: 157 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 417.7751634335701,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00033414018364103974",
+            "extra": "mean: 2.393632000000423 msec\nrounds: 348 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 43.706629911138556,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000545175765272945",
+            "extra": "mean: 22.879824000000326 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
           }
         ]
       }
