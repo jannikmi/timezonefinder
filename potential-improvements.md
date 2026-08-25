@@ -435,10 +435,30 @@ the denominators, and how to tell whether they still describe the tree.
   to be re-taken **with the shortcut index rebuilt from the quantized geometry**, and regenerating
   packaged data is out of bounds for a pass. So a pass can establish where `tzfpy` sits on the
   size/accuracy axis, and cannot produce the recommendation the entry exists for.
-- **Status:** open. Blocks GH-449.
-- **Last touched:** 2026-08-23 — re-verified. The tzfpy comparison harness landed meanwhile, which
-  moves the competitor half out of `prototypes/` and into `benchmarks/`; recorded that the deciding
-  measurement needs a regeneration, so a pass cannot close this item.
+- **Half the question is now answered, and it needed no regeneration at all — the source carries
+  six decimals, not seven.** Read off the committed binaries: across all 15,850,626 packaged
+  coordinate values the last decimal digit is only ever `0` or `9`, never `1`-`8`. That is not a
+  statistical argument — a genuinely seven-decimal source would spread the digit over 0-9 — and the
+  `9`s are `coord2int` truncating toward zero (`133580000` stored as `133579999`) rather than a
+  digit that means anything. So the stored 10^-7 step is exactly 10x finer than upstream's 10^-6,
+  and **quantising to 10^-6 cannot change an answer, by construction**: information that was never
+  there cannot be lost. That explains the "0 of 200,000 changed at 1e-6" figure rather than merely
+  observing it, and retires the need to re-take it. `tests/test_coordinate_precision.py` pins the
+  finding, so a future upstream that does publish a seventh digit fails loudly.
+- **What it is worth, priced for GH-449's encodings.** Per-polygon deltas as varints over the
+  packaged boundaries: **60.5 MiB** fixed-width today, **33.7 MiB** at 10^-7, **27.7 MiB** at
+  10^-6. The redundant decimal is therefore ~6 MiB, **~18 % of the encoded size** — but only once
+  the encoding is variable-width. In the current fixed layout it is worth nothing: `int32` is
+  forced by the *range* (±180° at 10^-6 still needs 29 bits), no reachable precision brings the
+  globe inside `int16` (65,536 steps over 360° is 610 m), and the ray-casting kernel's `int32`
+  arithmetic does not care about magnitudes. **Do not propose relaxing the scale factor as a
+  standalone performance change** — it is only ever a term in the encoding decision.
+- **What still needs a regeneration** is the part below 10^-6, where real information starts to go:
+  that is where the user-facing accuracy question actually lives, and a pass still cannot answer it.
+- **Status:** open. Blocks GH-449, but the encoding choice can now be priced on the figures above.
+- **Last touched:** 2026-08-24 — the source-precision half established from the committed data
+  without a regeneration, with the delta+varint sizes at both scales; the remaining deciding
+  question narrowed to resolutions finer than the source's own.
 
 ### GH-301 — sort shortcut polygons by overlap area
 

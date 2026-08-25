@@ -195,6 +195,54 @@ def test_the_dtype_comparison_table_in_the_docs_still_holds(dtype, step_deg, gro
     assert utils.degrees_to_metres(step) == pytest.approx(ground_m, rel=0.02)
 
 
+# --- what the source data actually carries ----------------------------------------
+
+
+@pytest.mark.unit
+def test_the_packaged_coordinates_carry_only_six_decimal_places():
+    """``docs/data_format.rst`` says the stored encoding is ten times finer than the
+    source, and that the seventh decimal carries nothing. This is what makes that a
+    measurement rather than an assumption - and what will fail, correctly, if upstream
+    ever publishes a seventh digit, because the page would then be wrong.
+
+    The signal is not statistical: a genuinely seven-decimal source would spread the
+    last digit over 0-9, and instead it is only ever ``0`` or ``9``. Those nines are
+    ``coord2int`` truncating toward zero, e.g. ``133580000`` stored as ``133579999``.
+    """
+    with TimezoneFinder(in_memory=True) as tf:
+        sampled = np.concatenate(
+            [tf.coords_of(i).ravel() for i in range(0, tf.nr_of_polygons, 11)]
+        ).astype(np.int64)
+
+    last_digit = np.abs(sampled) % 10
+    assert sampled.size > 100_000, "sample too small to be conclusive"
+    assert set(np.unique(last_digit).tolist()) == {0, 9}, (
+        "the source now carries a meaningful seventh decimal, so the stored encoding is "
+        "no longer ten times finer than it - docs/data_format.rst says it is"
+    )
+    # overwhelmingly multiples of ten; the rest is truncation, not precision
+    assert np.mean(last_digit == 0) > 0.9
+
+
+@pytest.mark.unit
+def test_no_achievable_precision_brings_the_range_inside_int16():
+    """Why relaxing precision cannot narrow the stored dtype, and therefore cannot make
+    a fixed-width layout smaller or a query faster: the width is set by the range.
+
+    Even at a metre of resolution the globe needs more than 16 bits, so ``int16`` is not
+    reachable by giving up precision - only by giving up the global frame, which is what
+    a per-polygon delta encoding does.
+    """
+    span_degrees = 2 * MAX_LNG_VAL
+    for metres in (0.0111, 0.111, 1.0):
+        step_degrees = metres / utils.degrees_to_metres(1.0)
+        assert span_degrees / step_degrees > np.iinfo(np.int16).max
+
+    # int16 over the whole globe would put its steps this far apart
+    int16_step = span_degrees / (2**16)
+    assert utils.degrees_to_metres(int16_step) > 500
+
+
 # --- what the input dtype costs a caller ------------------------------------------
 
 
