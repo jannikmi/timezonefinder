@@ -187,7 +187,7 @@ reports: benchmarks latency memory
 # --group compare rather than $(BENCHMARK_ENV): nothing here is timed, so the
 # acceleration path does not matter and this checkout's environment will do.
 tzfpy-agreement:
-	uv run --group compare python -m scripts.measure_tzfpy_agreement --chart
+	uv run --group compare python -m scripts.measure_tzfpy_agreement --chart --json-out
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them

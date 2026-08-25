@@ -79,7 +79,7 @@ import numpy as np
 
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION, tzfpy_version
 from scripts.border_sampling import BorderGeometry, Candidate
-from scripts.configs import DOC_ROOT, read_data_version
+from scripts.configs import DOC_ROOT, PROJECT_ROOT, read_data_version
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,
@@ -92,15 +92,23 @@ from timezonefinder.utils import is_ocean_timezone
 
 # The distances swept, in metres: one decade apart, starting at this package's
 # own coordinate resolution. ~1.1 cm is the quantization step of the stored
-# int32 coordinates, so a point nearer than that to a border is not a thing
-# this package can represent, and nothing above 200 m is shown because the
-# other package's simplification is bounded well below it - see the module
-# docstring.
-DEFAULT_DISTANCES_M: tuple[float, ...] = (0.01, 0.1, 1.0, 10.0, 100.0)
+# int32 coordinates, so a point nearer than that to a border is not something
+# this package can represent.
+#
+# The far end is not there to show the curve reaching zero. It does not reach
+# zero: `tzfpy`'s maintainer states a maximum *displacement* of ~111 m, and a
+# displacement bound says nothing about features a simplification removes or
+# merges outright - which is why a kilometre out, well past that bound, the two
+# packages still disagree about roughly one point in three thousand.
+DEFAULT_DISTANCES_M: tuple[float, ...] = (0.01, 0.1, 1.0, 10.0, 100.0, 1_000.0)
 
-# Accepted points per distance. At 33 % this is a standard error of ~1 point,
-# which is finer than anything read off the curve.
-DEFAULT_POINTS = 2_000
+# Accepted points per distance. Large because of the tail above, not for
+# precision at the near end: the rate at 100 m is ~0.16 % and at 1 km ~0.03 %,
+# so a run of 2,000 finds nothing at either and reports a zero - which reads as
+# "beyond here the two agree" and is the one conclusion this sweep exists to
+# refuse. At this size the far end is a couple of dozen observations rather than
+# an absence, and a full sweep takes around twenty minutes.
+DEFAULT_POINTS = 20_000
 
 # Fixed so that two runs are comparable; there is nothing to tune here, and a
 # wandering sample would be mistaken for a `tzfpy` release.
@@ -131,6 +139,11 @@ MAX_EXAMPLES = 4
 # with no argument rather than retyping the path.
 CHART_PATH = DOC_ROOT / "tzfpy_agreement_by_distance.svg"
 
+# Where a run is kept so the chart can be redrawn without re-measuring, the
+# same arrangement `make benchmarks` has with tmp/benchmark.json. Untracked:
+# the chart is the committed artifact, this is the input that produced it.
+MEASUREMENT_PATH = PROJECT_ROOT / "tmp" / "tzfpy_agreement.json"
+
 
 class AgreementCounts(NamedTuple):
     """One group of points, counted three ways, with a few cases named."""
@@ -147,6 +160,21 @@ class AgreementCounts(NamedTuple):
 
     def rate(self, count: int) -> float:
         return 100.0 * count / self.total if self.total else 0.0
+
+    @property
+    def substantive_rate(self) -> float:
+        return self.rate(self.substantive)
+
+    @property
+    def upper_bound_rate(self) -> float:
+        """What "none observed" is worth as a number, by the rule of three.
+
+        Seeing nothing in ``n`` tries does not mean the rate is zero, it means
+        it is below roughly ``3 / n`` with 95 % confidence. Reporting the zero
+        instead is what would let a reader conclude that beyond some distance
+        the two packages simply agree - and they do not.
+        """
+        return 300.0 / self.total if self.total else 0.0
 
 
 class DistanceResult(NamedTuple):
@@ -248,6 +276,45 @@ class Measurement(NamedTuple):
                 name: counts._asdict() for name, counts in self.by_point_class.items()
             },
         }
+
+    @classmethod
+    def from_json(cls, payload: dict) -> "Measurement":
+        """Rebuild a run from what :meth:`as_json` wrote.
+
+        Measuring and rendering are decoupled here for the same reason they are
+        for the benchmark reports (``CONTRIBUTING.md``): a full sweep takes
+        around twenty minutes, and changing how the chart *looks* should not
+        cost that - nor should it arrive buried in a fresh set of numbers.
+        """
+        return cls(
+            data_version=payload["data_version"],
+            tzfpy_version=payload["tzfpy_version"],
+            by_distance=tuple(
+                DistanceResult(
+                    distance_m=result["distance_m"],
+                    drawn=result["drawn"],
+                    all_borders=_counts_from_json(result["all_borders"]),
+                    land_borders=_counts_from_json(result["land_borders"]),
+                )
+                for result in payload["by_distance_m"]
+            ),
+            by_point_class={
+                name: _counts_from_json(counts)
+                for name, counts in payload["by_point_class"].items()
+            },
+        )
+
+
+def _counts_from_json(payload: dict) -> AgreementCounts:
+    return AgreementCounts(
+        total=payload["total"],
+        overlap_policy=payload["overlap_policy"],
+        substantive=payload["substantive"],
+        examples=tuple(
+            (lng, lat, ours, tuple(theirs))
+            for lng, lat, ours, theirs in payload["examples"]
+        ),
+    )
 
 
 def _require_matching_dataset(tzfpy) -> str:
@@ -401,13 +468,20 @@ def format_report(measurement: Measurement) -> str:
 # else in this repository carries it. The output is text, so a regeneration
 # shows up in a diff as the numbers that moved.
 
-CHART_WIDTH = 780
-CHART_HEIGHT = 420
-CHART_MARGIN_LEFT = 76
-CHART_MARGIN_RIGHT = 30
-CHART_MARGIN_TOP = 96
+CHART_WIDTH = 800
+CHART_HEIGHT = 440
+CHART_MARGIN_LEFT = 84
+CHART_MARGIN_RIGHT = 56
+CHART_MARGIN_TOP = 100
 CHART_MARGIN_BOTTOM = 62
-CHART_Y_MAX = 50.0
+# The y axis is logarithmic, because the interesting part of this measurement
+# spans four orders of magnitude: about half of the points a centimetre from a
+# border get a different zone, and a few hundredths of a percent still do a
+# kilometre away. On a linear axis the second number is the axis itself, which
+# is exactly the reading to avoid - "no disagreements out here" is the thing
+# that is not true.
+CHART_Y_TOP_PERCENT = 100.0
+CHART_Y_FLOOR_PERCENT = 0.001
 CHART_INK = "#28323a"
 CHART_MUTED = "#6b7a85"
 CHART_GRID = "#dde3e8"
@@ -433,10 +507,45 @@ CHART_SERIES = (
         "border of a land zone",
         CHART_SERIES_LAND,
         "7 5",
-        -13.0,
+        -16.0,
         lambda r: r.land_borders,
     ),
 )
+
+
+def escape_svg_text(text: str) -> str:
+    """Text destined for an SVG text node.
+
+    The upper-bound labels start with "<", which an XML parser reads as the
+    start of an element - so the chart renders as a parse error rather than as
+    a chart, in a file nothing else validates.
+    """
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+class ChartPoint(NamedTuple):
+    """One plotted value, and whether anything was actually observed."""
+
+    percent: float
+    is_upper_bound: bool
+
+    @property
+    def label(self) -> str:
+        return (
+            f"<{self.percent:.3g}%" if self.is_upper_bound else f"{self.percent:.3g}%"
+        )
+
+
+def chart_point(counts: AgreementCounts) -> ChartPoint:
+    """What to plot for one group - never a zero, which a log axis cannot show.
+
+    A group with no disagreement in it is plotted at its 95 % upper bound and
+    drawn hollow. That is the honest reading and it is also the one this chart
+    exists to give: the curve does not reach zero anywhere it was measured.
+    """
+    if counts.substantive:
+        return ChartPoint(counts.substantive_rate, is_upper_bound=False)
+    return ChartPoint(counts.upper_bound_rate, is_upper_bound=True)
 
 
 def _chart_x(distance_m: float, low: float, high: float) -> float:
@@ -445,9 +554,15 @@ def _chart_x(distance_m: float, low: float, high: float) -> float:
     return CHART_MARGIN_LEFT + span * float(position)
 
 
-def _chart_y(rate: float) -> float:
+def _chart_y(percent: float, floor_percent: float) -> float:
     span = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM
-    return CHART_MARGIN_TOP + span * (1.0 - min(rate, CHART_Y_MAX) / CHART_Y_MAX)
+    low, high = np.log10(floor_percent), np.log10(CHART_Y_TOP_PERCENT)
+    position = (np.log10(max(percent, floor_percent)) - low) / (high - low)
+    return CHART_MARGIN_TOP + span * (1.0 - float(position))
+
+
+def _percent_axis_label(percent: float) -> str:
+    return f"{percent:.3g}%"
 
 
 def render_chart(measurement: Measurement) -> str:
@@ -455,7 +570,18 @@ def render_chart(measurement: Measurement) -> str:
     distances = [result.distance_m for result in measurement.by_distance]
     low, high = float(np.log10(min(distances))), float(np.log10(max(distances)))
     right = CHART_WIDTH - CHART_MARGIN_RIGHT
-    baseline = _chart_y(0.0)
+
+    plotted = {
+        series.label: [
+            chart_point(series.counts(result)) for result in measurement.by_distance
+        ]
+        for series in CHART_SERIES
+    }
+    smallest = min(point.percent for points in plotted.values() for point in points)
+    floor_percent = max(
+        CHART_Y_FLOOR_PERCENT, 10.0 ** float(np.floor(np.log10(smallest)))
+    )
+    baseline = _chart_y(floor_percent, floor_percent)
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
@@ -467,9 +593,11 @@ def render_chart(measurement: Measurement) -> str:
         f'<text x="{CHART_MARGIN_LEFT}" y="32" font-size="17" font-weight="600" '
         f'fill="{CHART_INK}">Where timezonefinder and tzfpy stop agreeing</text>',
         f'<text x="{CHART_MARGIN_LEFT}" y="52" font-size="12.5" fill="{CHART_MUTED}">'
-        f"boundary release {measurement.data_version} on both sides, "
-        f"{TZFPY_DISTRIBUTION} {measurement.tzfpy_version}, "
-        f"{measurement.by_distance[0].all_borders.total} points per distance</text>",
+        f"boundary release {escape_svg_text(measurement.data_version)} on both "
+        f"sides, {TZFPY_DISTRIBUTION} "
+        f"{escape_svg_text(str(measurement.tzfpy_version))}, "
+        f"{measurement.by_distance[0].all_borders.total} points per distance; "
+        f"both axes logarithmic</text>",
     ]
 
     # legend, above the plot so it cannot collide with the axis titles
@@ -483,19 +611,31 @@ def render_chart(measurement: Measurement) -> str:
         )
         parts.append(
             f'<text x="{swatch + 34}" y="{CHART_MARGIN_TOP - 20}" font-size="12.5" '
-            f'fill="{CHART_INK}">{series.label}</text>'
+            f'fill="{CHART_INK}">{escape_svg_text(series.label)}</text>'
         )
+    hollow = CHART_MARGIN_LEFT + 2 * 210
+    parts.append(
+        f'<circle cx="{hollow + 13}" cy="{CHART_MARGIN_TOP - 24}" r="4.5" '
+        f'fill="#ffffff" stroke="{CHART_MUTED}" stroke-width="1.8"/>'
+    )
+    parts.append(
+        f'<text x="{hollow + 34}" y="{CHART_MARGIN_TOP - 20}" font-size="12.5" '
+        f'fill="{CHART_MUTED}">none seen: 95% upper bound</text>'
+    )
 
-    for percent in (0, 10, 20, 30, 40, 50):
-        y = _chart_y(float(percent))
+    decade = floor_percent
+    while decade <= CHART_Y_TOP_PERCENT * 1.000001:
+        y = _chart_y(decade, floor_percent)
         parts.append(
             f'<line x1="{CHART_MARGIN_LEFT}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" '
             f'stroke="{CHART_GRID}" stroke-width="1"/>'
         )
         parts.append(
             f'<text x="{CHART_MARGIN_LEFT - 10}" y="{y + 4:.1f}" font-size="12" '
-            f'text-anchor="end" fill="{CHART_MUTED}">{percent}%</text>'
+            f'text-anchor="end" fill="{CHART_MUTED}">'
+            f"{_percent_axis_label(decade)}</text>"
         )
+        decade *= 10.0
 
     for result in measurement.by_distance:
         x = _chart_x(result.distance_m, low, high)
@@ -510,45 +650,52 @@ def render_chart(measurement: Measurement) -> str:
         )
 
     for series in CHART_SERIES:
-        rates = [
-            series.counts(result).rate(series.counts(result).substantive)
-            for result in measurement.by_distance
-        ]
-        points = " ".join(
-            f"{_chart_x(result.distance_m, low, high):.1f},{_chart_y(rate):.1f}"
-            for result, rate in zip(measurement.by_distance, rates)
+        points = plotted[series.label]
+        polyline = " ".join(
+            f"{_chart_x(result.distance_m, low, high):.1f},"
+            f"{_chart_y(point.percent, floor_percent):.1f}"
+            for result, point in zip(measurement.by_distance, points)
         )
         dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
         parts.append(
-            f'<polyline points="{points}" fill="none" stroke="{series.colour}" '
+            f'<polyline points="{polyline}" fill="none" stroke="{series.colour}" '
             f'stroke-width="2.4" stroke-linejoin="round"{dash}/>'
         )
-        for index, (result, rate) in enumerate(zip(measurement.by_distance, rates)):
+        for index, (result, point) in enumerate(zip(measurement.by_distance, points)):
             x = _chart_x(result.distance_m, low, high)
-            parts.append(
-                f'<circle cx="{x:.1f}" cy="{_chart_y(rate):.1f}" r="4" '
-                f'fill="{series.colour}"/>'
-            )
-            if rate >= 1.0:
-                # the end labels are anchored inwards, or half of the first one
-                # sits outside the plot and over the percentage axis
-                anchor = (
-                    "start"
-                    if index == 0
-                    else "end"
-                    if index == len(rates) - 1
-                    else "middle"
-                )
+            y = _chart_y(point.percent, floor_percent)
+            if point.is_upper_bound:
                 parts.append(
-                    f'<text x="{x:.1f}" y="{_chart_y(rate) + series.label_offset:.1f}" '
-                    f'font-size="12" text-anchor="{anchor}" fill="{series.colour}">'
-                    f"{rate:.1f}%</text>"
+                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#ffffff" '
+                    f'stroke="{series.colour}" stroke-width="1.8"/>'
                 )
+            else:
+                parts.append(
+                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{series.colour}"/>'
+                )
+            # the end labels are anchored inwards, or half of the first one
+            # sits outside the plot and over the percentage axis
+            anchor = (
+                "start"
+                if index == 0
+                else "end"
+                if index == len(points) - 1
+                else "middle"
+            )
+            # a label below a point near the floor would land under the axis
+            offset = series.label_offset
+            if offset > 0 and y + offset > baseline - 4:
+                offset = -13.0
+            parts.append(
+                f'<text x="{x:.1f}" y="{y + offset:.1f}" font-size="12" '
+                f'text-anchor="{anchor}" fill="{series.colour}">'
+                f"{escape_svg_text(point.label)}</text>"
+            )
 
     parts.append(
         f'<text x="{(CHART_MARGIN_LEFT + right) / 2:.0f}" y="{baseline + 46:.1f}" '
         f'font-size="12.5" text-anchor="middle" fill="{CHART_MUTED}">distance from '
-        f"the nearest timezone border (logarithmic)</text>"
+        f"the nearest timezone border</text>"
     )
     parts.append(
         f'<text x="20" y="{(CHART_MARGIN_TOP + baseline) / 2:.0f}" font-size="12.5" '
@@ -593,14 +740,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="emit the counts as JSON instead of a table",
     )
+    parser.add_argument(
+        "--json-out",
+        nargs="?",
+        const=str(MEASUREMENT_PATH),
+        metavar="PATH",
+        help=f"save the run so --from-json can redraw it (default: {MEASUREMENT_PATH})",
+    )
+    parser.add_argument(
+        "--from-json",
+        metavar="PATH",
+        help=(
+            "re-report and re-draw a saved run instead of measuring again; "
+            "every other option except --chart and --json is then ignored"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    measurement = measure(
-        distances_m=args.distances,
-        points=args.points,
-        seed=args.seed,
-        include_point_classes=not args.no_point_classes,
+    measurement = (
+        Measurement.from_json(json.loads(Path(args.from_json).read_text("utf-8")))
+        if args.from_json
+        else measure(
+            distances_m=args.distances,
+            points=args.points,
+            seed=args.seed,
+            include_point_classes=not args.no_point_classes,
+        )
     )
+    if args.json_out:
+        destination = Path(args.json_out)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(
+            json.dumps(measurement.as_json(), indent=2), encoding="utf-8"
+        )
+        print(f"wrote {destination}", file=sys.stderr)
     if args.chart:
         Path(args.chart).write_text(render_chart(measurement), encoding="utf-8")
         print(f"wrote {args.chart}", file=sys.stderr)

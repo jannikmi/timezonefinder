@@ -14,6 +14,9 @@ because someone else shipped - the same reason the comparison benchmarks stay
 off the trend chart (see `benchmarks/test_comparison.py`).
 """
 
+import json
+import xml.etree.ElementTree as ElementTree
+
 import numpy as np
 import pytest
 
@@ -25,12 +28,15 @@ from scripts.measure_tzfpy_agreement import (
     OVERLAP_POLICY,
     SUBSTANTIVE,
     AgreementCounts,
+    ChartPoint,
     DistanceResult,
     Measurement,
     _require_matching_dataset,
     borders_a_land_zone,
+    chart_point,
     classify,
     count_agreement,
+    escape_svg_text,
     format_distance,
     render_chart,
 )
@@ -183,14 +189,52 @@ def test_a_distance_reads_as_metres_or_kilometres(
 
 
 @pytest.mark.unit
+def test_nothing_observed_is_an_upper_bound_and_never_a_zero() -> None:
+    # the whole reason the chart is on a log axis. A group with no disagreement
+    # in it has not shown that the two packages agree out there, only that the
+    # rate is under about 3/n - and plotting the zero is what would let a reader
+    # conclude the curve reaches the axis
+    assert AgreementCounts(total=20_000, overlap_policy=0, substantive=0).rate(0) == 0.0
+    assert chart_point(
+        AgreementCounts(total=20_000, overlap_policy=0, substantive=0)
+    ) == ChartPoint(percent=0.015, is_upper_bound=True)
+    assert chart_point(
+        AgreementCounts(total=20_000, overlap_policy=0, substantive=3)
+    ) == ChartPoint(percent=0.015, is_upper_bound=False)
+
+
+@pytest.mark.unit
+def test_an_upper_bound_says_so_in_its_label() -> None:
+    assert ChartPoint(0.015, is_upper_bound=True).label == "<0.015%"
+    assert ChartPoint(26.2, is_upper_bound=False).label == "26.2%"
+
+
+@pytest.mark.unit
 def test_the_chart_states_every_measured_rate() -> None:
     svg = render_chart(_measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0)))
     assert svg.startswith("<svg ") and svg.rstrip().endswith("</svg>")
-    for label in ("26.0%", "34.0%", "17.0%", "22.0%", "1 m", "10 m", "1 km"):
+    for label in ("26%", "34%", "17%", "22%", "1 m", "10 m", "1 km"):
         assert label in svg, f"the chart does not state {label}"
-    # a rate rounding to zero gets a marker but no label, which would otherwise
-    # be three "0.0%" strings stacked on the axis
-    assert "0.0%" not in svg
+    # the zero group is plotted as a bound, and the "<" has to survive as
+    # markup or the whole file is a parse error rather than a chart
+    assert "&lt;3%" in svg
+
+
+@pytest.mark.unit
+def test_the_chart_is_valid_xml() -> None:
+    # nothing else validates this file: rstcheck accepts an `image::` whose
+    # target does not parse, and the docs build copies it without reading it
+    svg = render_chart(_measurement((1.0, 26, 34), (10.0, 0, 0)))
+    ElementTree.fromstring(svg)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("<0.015%", "&lt;0.015%"), ("a & b", "a &amp; b"), ("26.2%", "26.2%")],
+)
+def test_svg_text_is_escaped(text: str, expected: str) -> None:
+    assert escape_svg_text(text) == expected
 
 
 @pytest.mark.unit
@@ -214,3 +258,26 @@ def test_the_committed_chart_is_where_the_docs_page_looks_for_it() -> None:
     assert CHART_PATH.name in (DOC_ROOT / "alternatives.rst").read_text(
         encoding="utf-8"
     )
+
+
+@pytest.mark.unit
+def test_a_saved_run_round_trips_so_the_chart_can_be_redrawn() -> None:
+    # a full sweep takes about twenty minutes, so changing how the chart looks
+    # must not require taking one - the same decoupling the benchmark reports
+    # have. If this drifts, the redraw silently describes a different run
+    measurement = _measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0))
+    restored = Measurement.from_json(json.loads(json.dumps(measurement.as_json())))
+    assert restored == measurement
+    assert render_chart(restored) == render_chart(measurement)
+
+
+@pytest.mark.unit
+def test_a_saved_run_keeps_the_examples_it_named() -> None:
+    counts = AgreementCounts(
+        total=10,
+        overlap_policy=1,
+        substantive=1,
+        examples=((1.5, 2.5, "Europe/Dublin", ("Europe/London",)),),
+    )
+    measurement = Measurement("2026c", "1.3.3", (), {"random_points": counts})
+    assert Measurement.from_json(measurement.as_json()) == measurement

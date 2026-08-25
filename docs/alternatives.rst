@@ -125,12 +125,29 @@ difference is in what they do with that dataset's geometry.
 
 .. image:: tzfpy_agreement_by_distance.svg
    :alt: Of points a centimetre from a timezone border, about half get a different zone from the two
-         packages; a third do at a metre, a quarter at ten metres, and none at a hundred.
+         packages, a third do at a metre, a quarter at ten metres - and the curve never reaches zero,
+         with roughly one point in three thousand still differing a kilometre from any border.
    :width: 100%
+
+.. warning::
+
+   **The disagreement does not stop at the simplification tolerance.** ``tzfpy``'s maintainer puts
+   the boundary displacement at a maximum of roughly **111 m**, chosen for a weather API where
+   coordinates are rarely that sensitive near a border. A displacement bound describes how far a
+   boundary that survives simplification is allowed to move - it says nothing about features the
+   simplification *removes or merges*. Measured, **0.16 % of points 100 m from a border and 0.03 %
+   of points a full kilometre from any border still get a different timezone**, which is around one
+   query in three thousand at a distance where a reader of the 111 m figure would expect none.
+
+   The far cases are whole features in the wrong place rather than a border nudged sideways: the
+   small islands in the Paraná river are answered as Paraguay rather than Argentina;
+   ``Indian/Mahe`` and ``Pacific/Tahiti`` become open ocean a kilometre inside the territory this
+   dataset assigns to them. If your points are near *any* border, the tolerance figure is the right
+   thing to reason about; if a wrong answer is a bug rather than a rounding error, the tail is.
 
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 2,000 points per distance, 2026-08-24:
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-24:
 
    .. list-table::
       :header-rows: 1
@@ -140,33 +157,33 @@ difference is in what they do with that dataset's geometry.
         - Any border
         - Border of a land zone
       * - 1 cm
-        - 37.8 %
-        - 47.8 %
+        - 37.3 %
+        - 47.0 %
       * - 10 cm
-        - 32.0 %
-        - 42.9 %
+        - 32.8 %
+        - 43.6 %
       * - 1 m
-        - 26.5 %
-        - 35.8 %
+        - 25.4 %
+        - 33.6 %
       * - 10 m
-        - 18.8 %
-        - 24.6 %
+        - 17.5 %
+        - 23.2 %
       * - 100 m
-        - 0.0 %
-        - 0.0 %
+        - 0.16 %
+        - 0.20 %
+      * - 1 km
+        - 0.030 %
+        - 0.027 %
+
+   Both axes of the chart are logarithmic, and a group with no disagreement in it would be drawn at
+   its 95 % upper bound rather than at zero - at this sample size none of them is empty, which is
+   itself the point.
 
    The curve levels off just under half rather than at 100 % because the points sit on **both** sides
    of this package's border, and only the side ``tzfpy``'s boundary has moved away from can disagree.
    The second column drops the ocean zones, whose mutual borders are meridians that no simplification
    can move and which therefore dilute the first; a coastline stays in both, since it is stored in the
    land polygon as well as in the ocean polygon around it.
-
-   ``tzfpy``'s maintainer puts the simplification's maximum displacement at roughly **111 m**, chosen
-   for a weather API where coordinates are rarely that sensitive near a border. The measurement agrees
-   with that bound from the outside: disagreement is gone by 100 m, which is why the sweep stops
-   there. What it adds is the shape below it - the boundary is not *within* a metre of this package's
-   either, so a query point within a few metres of a border is a coin flip between the two packages
-   rather than a rare edge case.
 
    Two corrections make the numbers attributable rather than merely suggestive. The measurement
    refuses to report unless both packages carry the **same timezone-boundary-builder release**, so a
@@ -176,12 +193,12 @@ difference is in what they do with that dataset's geometry.
    ``Asia/Shanghai`` - that each package resolves by its own rule. Those overlaps are almost every
    difference away from a border and next to none of the ones near it.
 
-   The disagreements are ordinary international borders, not exotica: ``Asia/Bishkek`` against
-   ``Asia/Tashkent``, ``Africa/Maputo`` against ``Africa/Blantyre``, ``Asia/Tehran`` against
-   ``Asia/Ashgabat``. Which distance your queries land at is the whole question, and it is why the
-   recommendation at the top of this page turns on how near a border your points are rather than on
-   how accurate either package is in the abstract. Re-run the measurement rather than trusting these
-   figures: they describe one release of a package that ships on its own schedule.
+   The near-border disagreements are ordinary international borders, not exotica: ``Asia/Bishkek``
+   against ``Asia/Tashkent``, ``Africa/Addis_Ababa`` against ``Africa/Djibouti``, ``Africa/Kinshasa``
+   against ``Africa/Luanda``. Which distance your queries land at is the whole question, and it is why
+   the recommendation at the top of this page turns on how near a border your points are rather than
+   on how accurate either package is in the abstract. Re-run the measurement rather than trusting
+   these figures: they describe one release of a package that ships on its own schedule.
 
 
 When to choose which package

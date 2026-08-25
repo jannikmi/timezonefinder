@@ -1,53 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" width="780" height="420" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="How often timezonefinder and tzfpy return a different zone, against distance from the nearest timezone border">
-<rect width="780" height="420" fill="#ffffff"/>
-<text x="76" y="32" font-size="17" font-weight="600" fill="#28323a">Where timezonefinder and tzfpy stop agreeing</text>
-<text x="76" y="52" font-size="12.5" fill="#6b7a85">boundary release 2026c on both sides, tzfpy 1.3.3, 2000 points per distance</text>
-<line x1="76" y1="72" x2="102" y2="72" stroke="#1f6feb" stroke-width="2.4"/>
-<text x="110" y="76" font-size="12.5" fill="#28323a">any timezone border</text>
-<line x1="286" y1="72" x2="312" y2="72" stroke="#c2570f" stroke-width="2.4" stroke-dasharray="7 5"/>
-<text x="320" y="76" font-size="12.5" fill="#28323a">border of a land zone</text>
-<line x1="76" y1="358.0" x2="750" y2="358.0" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="362.0" font-size="12" text-anchor="end" fill="#6b7a85">0%</text>
-<line x1="76" y1="305.6" x2="750" y2="305.6" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="309.6" font-size="12" text-anchor="end" fill="#6b7a85">10%</text>
-<line x1="76" y1="253.2" x2="750" y2="253.2" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="257.2" font-size="12" text-anchor="end" fill="#6b7a85">20%</text>
-<line x1="76" y1="200.8" x2="750" y2="200.8" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="204.8" font-size="12" text-anchor="end" fill="#6b7a85">30%</text>
-<line x1="76" y1="148.4" x2="750" y2="148.4" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="152.4" font-size="12" text-anchor="end" fill="#6b7a85">40%</text>
-<line x1="76" y1="96.0" x2="750" y2="96.0" stroke="#dde3e8" stroke-width="1"/>
-<text x="66" y="100.0" font-size="12" text-anchor="end" fill="#6b7a85">50%</text>
-<line x1="76.0" y1="358.0" x2="76.0" y2="363.0" stroke="#6b7a85" stroke-width="1"/>
-<text x="76.0" y="380.0" font-size="12.5" text-anchor="middle" fill="#28323a">1 cm</text>
-<line x1="244.5" y1="358.0" x2="244.5" y2="363.0" stroke="#6b7a85" stroke-width="1"/>
-<text x="244.5" y="380.0" font-size="12.5" text-anchor="middle" fill="#28323a">10 cm</text>
-<line x1="413.0" y1="358.0" x2="413.0" y2="363.0" stroke="#6b7a85" stroke-width="1"/>
-<text x="413.0" y="380.0" font-size="12.5" text-anchor="middle" fill="#28323a">1 m</text>
-<line x1="581.5" y1="358.0" x2="581.5" y2="363.0" stroke="#6b7a85" stroke-width="1"/>
-<text x="581.5" y="380.0" font-size="12.5" text-anchor="middle" fill="#28323a">10 m</text>
-<line x1="750.0" y1="358.0" x2="750.0" y2="363.0" stroke="#6b7a85" stroke-width="1"/>
-<text x="750.0" y="380.0" font-size="12.5" text-anchor="middle" fill="#28323a">100 m</text>
-<polyline points="76.0,160.2 244.5,190.1 413.0,219.1 581.5,259.5 750.0,358.0" fill="none" stroke="#1f6feb" stroke-width="2.4" stroke-linejoin="round"/>
-<circle cx="76.0" cy="160.2" r="4" fill="#1f6feb"/>
-<text x="76.0" y="180.2" font-size="12" text-anchor="start" fill="#1f6feb">37.8%</text>
-<circle cx="244.5" cy="190.1" r="4" fill="#1f6feb"/>
-<text x="244.5" y="210.1" font-size="12" text-anchor="middle" fill="#1f6feb">32.0%</text>
-<circle cx="413.0" cy="219.1" r="4" fill="#1f6feb"/>
-<text x="413.0" y="239.1" font-size="12" text-anchor="middle" fill="#1f6feb">26.5%</text>
-<circle cx="581.5" cy="259.5" r="4" fill="#1f6feb"/>
-<text x="581.5" y="279.5" font-size="12" text-anchor="middle" fill="#1f6feb">18.8%</text>
-<circle cx="750.0" cy="358.0" r="4" fill="#1f6feb"/>
-<polyline points="76.0,107.3 244.5,133.1 413.0,170.6 581.5,229.2 750.0,358.0" fill="none" stroke="#c2570f" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
-<circle cx="76.0" cy="107.3" r="4" fill="#c2570f"/>
-<text x="76.0" y="94.3" font-size="12" text-anchor="start" fill="#c2570f">47.8%</text>
-<circle cx="244.5" cy="133.1" r="4" fill="#c2570f"/>
-<text x="244.5" y="120.1" font-size="12" text-anchor="middle" fill="#c2570f">42.9%</text>
-<circle cx="413.0" cy="170.6" r="4" fill="#c2570f"/>
-<text x="413.0" y="157.6" font-size="12" text-anchor="middle" fill="#c2570f">35.8%</text>
-<circle cx="581.5" cy="229.2" r="4" fill="#c2570f"/>
-<text x="581.5" y="216.2" font-size="12" text-anchor="middle" fill="#c2570f">24.6%</text>
-<circle cx="750.0" cy="358.0" r="4" fill="#c2570f"/>
-<text x="413" y="404.0" font-size="12.5" text-anchor="middle" fill="#6b7a85">distance from the nearest timezone border (logarithmic)</text>
-<text x="20" y="227" font-size="12.5" text-anchor="middle" fill="#6b7a85" transform="rotate(-90 20 227)">a different zone returned</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="How often timezonefinder and tzfpy return a different zone, against distance from the nearest timezone border">
+<rect width="800" height="440" fill="#ffffff"/>
+<text x="84" y="32" font-size="17" font-weight="600" fill="#28323a">Where timezonefinder and tzfpy stop agreeing</text>
+<text x="84" y="52" font-size="12.5" fill="#6b7a85">boundary release 2026c on both sides, tzfpy 1.3.3, 20000 points per distance; both axes logarithmic</text>
+<line x1="84" y1="76" x2="110" y2="76" stroke="#1f6feb" stroke-width="2.4"/>
+<text x="118" y="80" font-size="12.5" fill="#28323a">any timezone border</text>
+<line x1="294" y1="76" x2="320" y2="76" stroke="#c2570f" stroke-width="2.4" stroke-dasharray="7 5"/>
+<text x="328" y="80" font-size="12.5" fill="#28323a">border of a land zone</text>
+<circle cx="517" cy="76" r="4.5" fill="#ffffff" stroke="#6b7a85" stroke-width="1.8"/>
+<text x="538" y="80" font-size="12.5" fill="#6b7a85">none seen: 95% upper bound</text>
+<line x1="84" y1="378.0" x2="744" y2="378.0" stroke="#dde3e8" stroke-width="1"/>
+<text x="74" y="382.0" font-size="12" text-anchor="end" fill="#6b7a85">0.01%</text>
+<line x1="84" y1="308.5" x2="744" y2="308.5" stroke="#dde3e8" stroke-width="1"/>
+<text x="74" y="312.5" font-size="12" text-anchor="end" fill="#6b7a85">0.1%</text>
+<line x1="84" y1="239.0" x2="744" y2="239.0" stroke="#dde3e8" stroke-width="1"/>
+<text x="74" y="243.0" font-size="12" text-anchor="end" fill="#6b7a85">1%</text>
+<line x1="84" y1="169.5" x2="744" y2="169.5" stroke="#dde3e8" stroke-width="1"/>
+<text x="74" y="173.5" font-size="12" text-anchor="end" fill="#6b7a85">10%</text>
+<line x1="84" y1="100.0" x2="744" y2="100.0" stroke="#dde3e8" stroke-width="1"/>
+<text x="74" y="104.0" font-size="12" text-anchor="end" fill="#6b7a85">100%</text>
+<line x1="84.0" y1="378.0" x2="84.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="84.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">1 cm</text>
+<line x1="216.0" y1="378.0" x2="216.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="216.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">10 cm</text>
+<line x1="348.0" y1="378.0" x2="348.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="348.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">1 m</text>
+<line x1="480.0" y1="378.0" x2="480.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="480.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">10 m</text>
+<line x1="612.0" y1="378.0" x2="612.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="612.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">100 m</text>
+<line x1="744.0" y1="378.0" x2="744.0" y2="383.0" stroke="#6b7a85" stroke-width="1"/>
+<text x="744.0" y="400.0" font-size="12.5" text-anchor="middle" fill="#28323a">1 km</text>
+<polyline points="84.0,129.7 216.0,133.6 348.0,141.4 480.0,152.6 612.0,294.3 744.0,344.8" fill="none" stroke="#1f6feb" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="84.0" cy="129.7" r="4" fill="#1f6feb"/>
+<text x="84.0" y="149.7" font-size="12" text-anchor="start" fill="#1f6feb">37.3%</text>
+<circle cx="216.0" cy="133.6" r="4" fill="#1f6feb"/>
+<text x="216.0" y="153.6" font-size="12" text-anchor="middle" fill="#1f6feb">32.8%</text>
+<circle cx="348.0" cy="141.4" r="4" fill="#1f6feb"/>
+<text x="348.0" y="161.4" font-size="12" text-anchor="middle" fill="#1f6feb">25.4%</text>
+<circle cx="480.0" cy="152.6" r="4" fill="#1f6feb"/>
+<text x="480.0" y="172.6" font-size="12" text-anchor="middle" fill="#1f6feb">17.5%</text>
+<circle cx="612.0" cy="294.3" r="4" fill="#1f6feb"/>
+<text x="612.0" y="314.3" font-size="12" text-anchor="middle" fill="#1f6feb">0.16%</text>
+<circle cx="744.0" cy="344.8" r="4" fill="#1f6feb"/>
+<text x="744.0" y="364.8" font-size="12" text-anchor="end" fill="#1f6feb">0.03%</text>
+<polyline points="84.0,122.8 216.0,125.0 348.0,133.0 480.0,144.1 612.0,287.7 744.0,348.6" fill="none" stroke="#c2570f" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<circle cx="84.0" cy="122.8" r="4" fill="#c2570f"/>
+<text x="84.0" y="106.8" font-size="12" text-anchor="start" fill="#c2570f">47%</text>
+<circle cx="216.0" cy="125.0" r="4" fill="#c2570f"/>
+<text x="216.0" y="109.0" font-size="12" text-anchor="middle" fill="#c2570f">43.6%</text>
+<circle cx="348.0" cy="133.0" r="4" fill="#c2570f"/>
+<text x="348.0" y="117.0" font-size="12" text-anchor="middle" fill="#c2570f">33.6%</text>
+<circle cx="480.0" cy="144.1" r="4" fill="#c2570f"/>
+<text x="480.0" y="128.1" font-size="12" text-anchor="middle" fill="#c2570f">23.2%</text>
+<circle cx="612.0" cy="287.7" r="4" fill="#c2570f"/>
+<text x="612.0" y="271.7" font-size="12" text-anchor="middle" fill="#c2570f">0.199%</text>
+<circle cx="744.0" cy="348.6" r="4" fill="#c2570f"/>
+<text x="744.0" y="332.6" font-size="12" text-anchor="end" fill="#c2570f">0.0265%</text>
+<text x="414" y="424.0" font-size="12.5" text-anchor="middle" fill="#6b7a85">distance from the nearest timezone border</text>
+<text x="20" y="239" font-size="12.5" text-anchor="middle" fill="#6b7a85" transform="rotate(-90 20 239)">a different zone returned</text>
 </svg>
