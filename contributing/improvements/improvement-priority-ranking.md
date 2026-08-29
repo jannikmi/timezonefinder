@@ -2,9 +2,9 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked until a `timezonefinder-data` 2.x is on PyPI |
-| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — the source-precision half is settled, the rest needs a regeneration a pass may now do |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
+| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — gates the held 2.x release and everything queued behind it |
+| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | L | blocked by GH-542 only — rides the held format-2 window, ahead of DATA-BINARIES |
+| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — the 2.x release is held until GH-449 lands or is rejected |
 | [DOC-3](items/documentation/doc-3-the-zoneinfo-snippets-never-say-that-windows-needs-tzdata.md) | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-the-pull-request-benchmark-comparison-cannot-resolve-the-changes-worth-reviewing.md) | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
@@ -20,7 +20,6 @@
 | [API-2](items/public-api-and-behavior/api-2-every-submodule-is-reachable-as-a-package-attribute-so-the-public-api-is-wider-than-all-says.md) | Every submodule is reachable as a package attribute | public API | ~20 | decided — held for the next major |
 | [API-1](items/public-api-and-behavior/api-1-abstracttimezonefinder-init-takes-an-in-memory-it-never-uses.md) | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | [BIG-4](items/data-pipeline-and-developer-tooling/big-4-load-binary-data-s-hole-branch-silently-yields-empty-lists-when-a-file-is-missing.md) | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
-| [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | free — maintainer action |
 | [GH-524](items/packaging-distribution-and-release/gh-524-move-timezonefinder-under-packages-for-a-symmetric-workspace-layout.md) | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | [GH-362](items/data-pipeline-and-developer-tooling/gh-362-reuse-the-polygonarray-binaries-in-file-conversion.md) | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
 | [BIG-3](items/data-pipeline-and-developer-tooling/big-3-the-geojson-parser-threads-nine-accumulator-lists-through-three-call-levels.md) | The GeoJSON parser threads nine accumulator lists through three call levels | internal | ~120 | verification is the expensive part |
@@ -36,6 +35,7 @@
 | [DEAD-6](items/data-pipeline-and-developer-tooling/dead-6-iter-boundaries-in-shortcut-has-no-caller-outside-the-test-suite.md) | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
 | [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
 | [GH-513](items/lookup-geometry-and-data-format/gh-513-drop-hole-polygons-entirely.md) | Drop hole polygons entirely | data format | L | blocked by GH-500 |
+| [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | conditional — only if PyPI storage is exhausted |
 | [GH-505](items/lookup-geometry-and-data-format/gh-505-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
 | [GH-334](items/packaging-distribution-and-release/gh-334-official-mapping-for-the-reduced-timezone-set.md) | Official mapping for the reduced set | data | S | parked upstream |
 | [GH-318](items/adjacent-projects/gh-318-improve-the-timezonefinder-gui.md) | Improve the timezonefinder GUI | adjacent | M | parked — different repository |
