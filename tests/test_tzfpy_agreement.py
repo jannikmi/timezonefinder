@@ -20,6 +20,9 @@ import xml.etree.ElementTree as ElementTree
 import numpy as np
 import pytest
 
+from timezonefinder import TimezoneFinder
+from timezonefinder.utils import coord2int
+
 from scripts.border_sampling import Candidate
 from scripts.configs import DOC_ROOT, read_data_version
 from scripts.measure_tzfpy_agreement import (
@@ -244,7 +247,8 @@ def test_svg_text_is_escaped(text: str, expected: str) -> None:
 @pytest.mark.unit
 def test_the_chart_is_deterministic_and_pre_commit_clean() -> None:
     # generated files in this repository must come out already formatted, or a
-    # regeneration produces a diff nobody asked for - see CLAUDE.md
+    # regeneration produces a diff nobody asked for - see the generated-file
+    # rules routed from CONTRIBUTING.md
     measurement = _measurement((1.0, 26, 34), (10.0, 17, 22))
     svg = render_chart(measurement)
     assert svg == render_chart(measurement)
@@ -276,16 +280,16 @@ def test_a_saved_run_round_trips_so_the_chart_can_be_redrawn() -> None:
 
 
 @pytest.mark.unit
-def test_a_saved_run_keeps_what_this_package_got_wrong() -> None:
-    # these are the cases the comparison page publishes as its own defect
-    # report; a round trip that dropped them would quietly unpublish them
+def test_a_saved_run_keeps_what_the_measurement_cannot_attribute() -> None:
+    # these are the cases the comparison page publishes for independent
+    # checking; a round trip that dropped them would quietly unpublish them
     counts = AgreementCounts(
         total=20_000,
         overlap_policy=3,
         substantive=1,
-        ours_wrong=2,
+        not_attributed=2,
         examples=((1.0, 2.0, "A", ("B",)),),
-        ours_wrong_examples=(
+        not_attributed_examples=(
             (172.89258, 88.68884, "Etc/GMT+11", ("Etc/GMT-12",)),
             (-149.65299, -17.29886, "Pacific/Tahiti", ("Etc/GMT+10",)),
         ),
@@ -364,14 +368,11 @@ def test_the_hollow_marker_is_explained_only_when_one_is_drawn() -> None:
 
 @pytest.mark.unit
 def test_a_disagreement_this_package_cannot_claim_is_counted_apart() -> None:
-    """Where `certain_timezone_at` finds nothing, the other package is not wrong.
+    """A failed containment probe makes the disagreement unattributable.
 
-    Above ~88 degrees the shortcut index can omit the polygon covering a cell,
-    so `timezone_at` answers with a neighbouring ocean zone and
-    `certain_timezone_at` says None. Six of the far-from-border disagreements
-    published on the comparison page turned out to be exactly that, and
-    counting them as the other package's error would have put this package's
-    own defect on its competitor's tab.
+    It does not say *why* containment failed. A missing shortcut candidate and
+    an exact quantized boundary both produce ``None``; only an exhaustive scan
+    can distinguish them. Either way, the other package is not charged.
     """
     counts = count_agreement(
         [(172.9, 88.7), (13.4, 52.5)],
@@ -381,7 +382,7 @@ def test_a_disagreement_this_package_cannot_claim_is_counted_apart() -> None:
         # only the second point is one this package can stand behind
         lambda lng, lat: lat < 80.0,
     )
-    assert counts.ours_wrong == 1
+    assert counts.not_attributed == 1
     assert counts.substantive == 1
     # and the uncertain one is not published as a case against the other package
     assert counts.examples == ((13.4, 52.5, "Etc/GMT+11", ("Etc/GMT-12",)),)
@@ -397,7 +398,7 @@ def test_without_a_certainty_probe_nothing_is_set_aside() -> None:
         lambda lng, lat: "Etc/GMT-12",
         lambda lng, lat: ["Etc/GMT-12"],
     )
-    assert counts.ours_wrong == 0
+    assert counts.not_attributed == 0
     assert counts.substantive == 1
 
 
@@ -421,6 +422,44 @@ def test_the_measurement_is_committed_in_a_form_a_program_can_read() -> None:
 
 
 @pytest.mark.unit
+def test_committed_unattributed_cases_are_boundary_ambiguity_not_index_errors() -> None:
+    """Every withheld case has complete candidates but no containing polygon.
+
+    ``certain_timezone_at() is None`` alone used to be labelled a shortcut
+    omission. At one-centimetre offsets the coordinate grid can instead put the
+    point exactly on a stored boundary, where even an exhaustive scan finds no
+    containing polygon. This is the distinction the last column now promises.
+    """
+    measurement = Measurement.from_json(
+        json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
+    )
+    cases = [
+        case
+        for result in measurement.by_distance
+        for case in result.all_borders.not_attributed_examples
+    ]
+    assert cases
+    assert all(
+        result.distance_m == 0.01 or result.all_borders.not_attributed == 0
+        for result in measurement.by_distance
+    )
+
+    with TimezoneFinder(in_memory=True) as finder:
+        for lng, lat, _ours, theirs in cases:
+            assert finder.certain_timezone_at(lng=lng, lat=lat) is None
+            x, y = coord2int(lng), coord2int(lat)
+            assert not any(
+                finder.inside_of_polygon(boundary_id, x, y)
+                for boundary_id in range(finder.nr_of_polygons)
+            )
+            candidate_zones = {
+                finder.zone_name_from_boundary_id(boundary_id)
+                for boundary_id in finder._iter_boundaries_in_shortcut(lng=lng, lat=lat)
+            }
+            assert set(theirs) <= candidate_zones
+
+
+@pytest.mark.unit
 def test_the_committed_chart_is_the_committed_run_drawn() -> None:
     # the two artifacts are written by one command and would otherwise drift
     # silently - a chart from one sweep beside the numbers of another
@@ -436,7 +475,7 @@ def test_the_committed_chart_is_the_committed_run_drawn() -> None:
 @pytest.mark.unit
 def test_the_committed_run_is_already_formatted_as_the_hook_wants_it() -> None:
     # generated files must come out pre-commit-clean, or a regeneration shows a
-    # diff of reordered keys that nobody asked for (CLAUDE.md, Generated Files)
+    # diff of reordered keys that nobody asked for (the generated-file rules)
     raw = MEASUREMENT_PATH.read_text(encoding="utf-8")
     payload = json.loads(raw)
     assert raw == json.dumps(payload, indent=2, sort_keys=True) + "\n"

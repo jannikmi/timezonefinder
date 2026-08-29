@@ -125,13 +125,13 @@ difference is in what they do with that dataset's geometry.
 
 .. image:: tzfpy_agreement_by_distance.svg
    :alt: Of points a centimetre from a timezone border, about half get a different zone from the two
-         packages, a third do at a metre, a quarter at ten metres - and the curve never reaches zero,
-         with roughly one point in three thousand still differing a kilometre from any border.
+         packages, a third do at a metre and a quarter at ten metres, falling to no observed
+         disagreement beyond a hundred metres.
    :width: 100%
 
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-25.
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 points per distance, 2026-08-29.
    The last column is disagreements this package does **not** attribute to ``tzfpy`` - see
    *Reading the last column* below.
 
@@ -146,47 +146,47 @@ difference is in what they do with that dataset's geometry.
       * - 1 cm
         - 37.5 %
         - 47.0 %
-        - 16
+        - 15
       * - 5 cm
         - 34.2 %
         - 45.2 %
-        - 4
+        - 0
       * - 10 cm
         - 32.9 %
         - 43.4 %
-        - 1
+        - 0
       * - 50 cm
         - 26.9 %
         - 35.3 %
-        - 4
+        - 0
       * - 1 m
         - 25.2 %
         - 33.3 %
-        - 2
+        - 0
       * - 5 m
         - 21.3 %
         - 28.2 %
-        - 3
+        - 0
       * - 10 m
         - 17.6 %
         - 23.0 %
-        - 1
+        - 0
       * - 50 m
         - 4.3 %
         - 5.7 %
-        - 5
+        - 0
       * - 100 m
         - 0.12 %
         - 0.15 %
-        - 2
+        - 0
       * - 500 m
         - 0 of 20,000
         - 0 of 15,000
-        - 1
+        - 0
       * - 1 km
         - 0 of 20,000
         - 0 of 15,000
-        - 3
+        - 0
 
    **The knee is between 10 m and 100 m, and past it the curve stops.** A fifth of points still
    differ at ten metres, one in twenty at fifty, one in eight hundred at a hundred - and beyond a
@@ -211,16 +211,20 @@ difference is in what they do with that dataset's geometry.
 Reading the last column
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Not every difference is the other package's error, and this one is ours.** Where
-``timezone_at`` answers but :meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` returns
-``None``, no polygon actually contains the point and the answer is a fallback to a neighbouring
-zone. Above roughly latitude 88 the shortcut index can omit the polygon covering a cell, which is a
-known defect of *this* package. Those points are counted in the last column and kept out of the
-rates, because charging them to ``tzfpy`` would put this package's bug on its competitor's tab.
+**Not every difference belongs to the other package.** Where ``timezone_at`` answers but
+:meth:`~timezonefinder.TimezoneFinder.certain_timezone_at` returns ``None``, this package cannot
+stand behind the answer without another check. That result proves no *candidate* contains the
+quantized point; it does not prove why. A missing shortcut candidate can cause it, but so can a
+coordinate landing exactly on a stored polygon boundary, where an exhaustive scan finds no
+containing packaged polygon either.
 
-It matters more than the counts suggest: every disagreement beyond 100 m turned out to be one of
-these. Reported naively, the curve appeared to carry a tail out to a kilometre and to contradict the
-stated tolerance. It does not.
+The current run leaves 15 such cases, all at 1 cm - just below this package's roughly 1.1 cm
+coordinate grid. Exhaustive point-in-polygon checks over all 1,322 packaged polygons find no
+containing polygon at any of them, while the shortcut already lists the neighbouring zones. They
+are therefore boundary-grid ambiguity, not timezonefinder errors and not evidence against
+``tzfpy``. The earlier run also exposed real missing-candidate defects; after the shortcut index
+was corrected, every one of those coordinates became an agreement and no unattributed case remains
+beyond 1 cm.
 
 
 Every disagreement 100 m or more from a border
@@ -262,25 +266,6 @@ at. Boundary release 2026c on both sides, ``tzfpy`` 1.3.3.
 
 The ``America/Tegucigalpa`` line is not a wrong zone but *no* zone: ``tzfpy`` returns an empty
 result there.
-
-**This package's own errors**, excluded from the rates above — six, all of them the three
-antimeridian cells at the north pole that ``potential-improvements.md`` tracks as BUG-3.
-``timezone_at`` returns a zone that does not contain the point, which the bracketed column shows by
-testing every packaged polygon directly; ``tzfpy`` is right in all six::
-
-
-     border    latitude    longitude   timezonefinder   tzfpy   (and the zone that really contains the point)
-    1,000 m    89.58436   -173.73833   Etc/GMT+11   Etc/GMT+12   (Etc/GMT+12)
-    1,000 m    89.18571    179.36790   Etc/GMT+11   Etc/GMT-12   (Etc/GMT-12)
-    1,000 m    88.68884    172.89258   Etc/GMT+11   Etc/GMT-12   (Etc/GMT-12)
-      500 m    88.55701    179.82164   Etc/GMT+11   Etc/GMT-12   (Etc/GMT-12)
-      100 m    89.06007    172.55476   Etc/GMT+11   Etc/GMT-12   (Etc/GMT-12)
-      100 m    89.57708   -179.87830   Etc/GMT+11   Etc/GMT+12   (Etc/GMT+12)
-
-These are the check that a fix works: each should become an agreement. Eleven further cases,
-spanning the Tuamotus, the Seychelles, San Andrés and the Lesotho border, were on this list until a
-shortcut-index fix removed them - which is why the list is regenerated with the measurement rather
-than written by hand.
 
 When to choose which package
 ----------------------------

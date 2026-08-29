@@ -100,11 +100,10 @@ from timezonefinder.utils import is_ocean_timezone
 # int32 coordinates, so a point nearer than that to a border is not something
 # this package can represent.
 #
-# The far end is not there to show the curve reaching zero. It does not reach
-# zero: `tzfpy`'s maintainer states a maximum *displacement* of ~111 m, and a
-# displacement bound says nothing about features a simplification removes or
-# merges outright - which is why a kilometre out, well past that bound, the two
-# packages still disagree about roughly one point in three thousand.
+# The far end tests the stated limit rather than assuming it. `tzfpy`'s
+# maintainer gives a maximum *displacement* of ~111 m; the sweep found no
+# attributable disagreement beyond 100 m, so the empty groups are reported as
+# upper bounds rather than as proof that the true rate is zero.
 DEFAULT_DISTANCES_M: tuple[float, ...] = (
     0.01,
     0.05,
@@ -119,13 +118,11 @@ DEFAULT_DISTANCES_M: tuple[float, ...] = (
     1_000.0,
 )
 
-# Accepted points per distance. Large because of the tail above, not for
-# precision at the near end: the rate at 100 m is ~0.16 % and at 1 km ~0.03 %,
-# so a run of 2,000 finds nothing at either and reports a zero - which reads as
-# "beyond here the two agree" and is the one conclusion this sweep exists to
-# refuse. At this size the far end is a couple of dozen observations rather than
-# an absence. A full sweep costs around half an hour, which is why the run is
-# saved and the chart can be redrawn from it without measuring again.
+# Accepted points per distance. Large enough to resolve the 100 m rate, not for
+# precision at the near end: a run of 2,000 found nothing there and made the
+# knee appear one decade earlier than it is. A full sweep costs around half an
+# hour, which is why the run is saved and the chart can be redrawn from it
+# without measuring again.
 DEFAULT_POINTS = 20_000
 
 # Fixed so that two runs are comparable; there is nothing to tune here, and a
@@ -187,26 +184,22 @@ class AgreementCounts(NamedTuple):
     total: int
     overlap_policy: int
     substantive: int
-    # Disagreements that are *this* package's error rather than the other's.
+    # Disagreements the comparison cannot attribute to the other package.
     #
     # `timezone_at` answers by elimination from the shortcut index's candidate
-    # list, so it can return a zone without ever testing that the zone contains
-    # the point. `certain_timezone_at` does test, and `None` from it proves no
-    # candidate contains the point at all - which, since the packaged data tiles
-    # the globe with ocean zones, means the covering polygon is missing from the
-    # candidate list and the zone returned is simply wrong. Brute-forcing the
-    # packaged polygons at three such points confirmed it: the containing zone
-    # was the one `tzfpy` gave, every time.
+    # list, so it can return a zone without testing that the zone contains the
+    # point. `certain_timezone_at` does test, but `None` establishes only that no
+    # candidate contains the *quantized* point. At an exact stored boundary an
+    # exhaustive scan can find no containing polygon either; calling that an
+    # index omission was the attribution bug this field must not repeat.
     #
-    # Counted apart because charging them to the other package would put this
-    # package's defect on its competitor's tab - and would do so precisely where
-    # the competitor is most accurate, since that is where its own noise stops
-    # drowning ours.
-    ours_wrong: int = 0
+    # Counted apart because a comparison may charge only answers this package
+    # can stand behind to the other implementation.
+    not_attributed: int = 0
     examples: tuple[tuple[float, float, str | None, tuple[str, ...]], ...] = ()
-    # published too, since they are a defect report against this package and a
-    # ready-made check that a fix works
-    ours_wrong_examples: tuple[
+    # Published too, so a reader can distinguish boundary ambiguity from an
+    # actual missing candidate by checking the packaged polygons exhaustively.
+    not_attributed_examples: tuple[
         tuple[float, float, str | None, tuple[str, ...]], ...
     ] = ()
 
@@ -283,7 +276,9 @@ def trim_examples(counts: AgreementCounts) -> AgreementCounts:
 
     return counts._replace(
         examples=keep(counts.examples, counts.substantive),
-        ours_wrong_examples=keep(counts.ours_wrong_examples, counts.ours_wrong),
+        not_attributed_examples=keep(
+            counts.not_attributed_examples, counts.not_attributed
+        ),
     )
 
 
@@ -292,15 +287,15 @@ def count_agreement(
     ours: Callable[[float, float], str | None],
     theirs_first: Callable[[float, float], str | None],
     theirs_all: Callable[[float, float], Sequence[str]],
-    ours_is_certain: Callable[[float, float], bool] | None = None,
+    ours_is_attributable: Callable[[float, float], bool] | None = None,
 ) -> AgreementCounts:
     """Count a group of points, splitting off what this package cannot claim.
 
-    ``ours_is_certain`` is consulted only where the two packages already
+    ``ours_is_attributable`` is consulted only where the two packages already
     disagree, so it costs a second lookup on a minority of points and none at
     all on the ones that agree.
     """
-    total = overlap = substantive = ours_wrong = 0
+    total = overlap = substantive = not_attributed = 0
     examples: list[tuple[float, float, str | None, tuple[str, ...]]] = []
     unclaimed: list[tuple[float, float, str | None, tuple[str, ...]]] = []
     for lng, lat in points:
@@ -311,8 +306,8 @@ def count_agreement(
         if verdict == OVERLAP_POLICY:
             overlap += 1
         elif verdict == SUBSTANTIVE:
-            if ours_is_certain is not None and not ours_is_certain(lng, lat):
-                ours_wrong += 1
+            if ours_is_attributable is not None and not ours_is_attributable(lng, lat):
+                not_attributed += 1
                 if len(unclaimed) < MAX_EXAMPLES:
                     unclaimed.append((lng, lat, our_answer, their_zones))
                 continue
@@ -324,9 +319,9 @@ def count_agreement(
             total=total,
             overlap_policy=overlap,
             substantive=substantive,
-            ours_wrong=ours_wrong,
+            not_attributed=not_attributed,
             examples=tuple(examples),
-            ours_wrong_examples=tuple(unclaimed),
+            not_attributed_examples=tuple(unclaimed),
         )
     )
 
@@ -412,9 +407,9 @@ def _counts_from_json(payload: dict) -> AgreementCounts:
         total=payload["total"],
         overlap_policy=payload["overlap_policy"],
         substantive=payload["substantive"],
-        ours_wrong=payload["ours_wrong"],
+        not_attributed=payload["not_attributed"],
         examples=_cases(payload["examples"]),
-        ours_wrong_examples=_cases(payload["ours_wrong_examples"]),
+        not_attributed_examples=_cases(payload["not_attributed_examples"]),
     )
 
 
@@ -457,7 +452,7 @@ def measure(
         def ours(lng: float, lat: float) -> str | None:
             return finder.timezone_at(lng=lng, lat=lat)
 
-        def ours_is_certain(lng: float, lat: float) -> bool:
+        def ours_is_attributable(lng: float, lat: float) -> bool:
             return finder.certain_timezone_at(lng=lng, lat=lat) is not None
 
         by_distance = []
@@ -482,14 +477,14 @@ def measure(
                         ours,
                         tzfpy.get_tz,
                         tzfpy.get_tzs,
-                        ours_is_certain,
+                        ours_is_attributable,
                     ),
                     land_borders=count_agreement(
                         [(c.lng, c.lat) for c in land],
                         ours,
                         tzfpy.get_tz,
                         tzfpy.get_tzs,
-                        ours_is_certain,
+                        ours_is_attributable,
                     ),
                 )
             )
@@ -501,7 +496,7 @@ def measure(
                     ours,
                     tzfpy.get_tz,
                     tzfpy.get_tzs,
-                    ours_is_certain,
+                    ours_is_attributable,
                 )
                 for name in POINT_CLASSES
             }
@@ -565,7 +560,7 @@ def format_report(measurement: Measurement) -> str:
         "",
         f"{'distance':>10}{'points':>8}{'accepted':>10}"
         f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}"
-        f"{'ours wrong':>16}",
+        f"{'not attributed':>16}",
     ]
     for result in measurement.by_distance:
         every = result.all_borders
@@ -576,7 +571,8 @@ def format_report(measurement: Measurement) -> str:
             f"{every.substantive:>8} {every.rate(every.substantive):>5.2f}%"
             f"{land.substantive:>12} {land.rate(land.substantive):>5.2f}%"
             f"{every.overlap_policy:>10} {every.rate(every.overlap_policy):>5.2f}%"
-            f"{every.ours_wrong:>9} {every.rate(every.ours_wrong):>5.2f}%"
+            f"{every.not_attributed:>9} "
+            f"{every.rate(every.not_attributed):>5.2f}%"
         )
     for result in measurement.by_distance:
         lines += _example_lines(format_distance(result.distance_m), result.all_borders)
@@ -586,15 +582,15 @@ def format_report(measurement: Measurement) -> str:
         for line in _example_lines(
             f"{format_distance(result.distance_m)} (ours)",
             result.all_borders._replace(
-                substantive=result.all_borders.ours_wrong,
-                examples=result.all_borders.ours_wrong_examples,
+                substantive=result.all_borders.not_attributed,
+                examples=result.all_borders.not_attributed_examples,
             ),
         )
     ]
     if unclaimed:
         lines += [
             "",
-            "disagreements this package gets wrong, excluded above:",
+            "disagreements not attributable to the other package, excluded above:",
             *unclaimed,
         ]
 
@@ -706,7 +702,7 @@ def chart_point(counts: AgreementCounts) -> ChartPoint:
 
     A group with no disagreement in it is plotted at its 95 % upper bound and
     drawn hollow. That is the honest reading and it is also the one this chart
-    exists to give: the curve does not reach zero anywhere it was measured.
+    exists to give: zero observations bound a rate; they do not prove one.
     """
     if counts.substantive:
         return ChartPoint(counts.substantive_rate, is_upper_bound=False)

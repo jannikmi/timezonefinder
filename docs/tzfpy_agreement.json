@@ -28,8 +28,8 @@
             ]
           ]
         ],
-        "ours_wrong": 16,
-        "ours_wrong_examples": [
+        "not_attributed": 15,
+        "not_attributed_examples": [
           [
             -48.181721854575116,
             -74.42688156689692,
@@ -44,14 +44,6 @@
             "Etc/GMT-11",
             [
               "Pacific/Guadalcanal"
-            ]
-          ],
-          [
-            172.50000419132044,
-            88.77190538955449,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
             ]
           ],
           [
@@ -192,8 +184,8 @@
             ]
           ]
         ],
-        "ours_wrong": 6,
-        "ours_wrong_examples": [
+        "not_attributed": 6,
+        "not_attributed_examples": [
           [
             -48.181721854575116,
             -74.42688156689692,
@@ -276,41 +268,8 @@
             ]
           ]
         ],
-        "ours_wrong": 4,
-        "ours_wrong_examples": [
-          [
-            -172.50004223951805,
-            89.39073157800144,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            -172.50012197335903,
-            89.78901312653919,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            -172.5001115522868,
-            89.76930290016404,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            172.5001179495195,
-            89.78181529000389,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 66,
         "substantive": 6830,
         "total": 20000
@@ -344,8 +303,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 63,
         "substantive": 6799,
         "total": 15050
@@ -379,17 +338,8 @@
             ]
           ]
         ],
-        "ours_wrong": 1,
-        "ours_wrong_examples": [
-          [
-            172.50013476934825,
-            89.61808956696753,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 68,
         "substantive": 6570,
         "total": 20000
@@ -423,8 +373,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 65,
         "substantive": 6540,
         "total": 15065
@@ -458,41 +408,8 @@
             ]
           ]
         ],
-        "ours_wrong": 4,
-        "ours_wrong_examples": [
-          [
-            172.50129167281165,
-            89.80076400819443,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            179.99981894050686,
-            88.57851365438101,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            179.9991096642973,
-            89.71095364828682,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            179.99978560069832,
-            88.79959486381553,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 87,
         "substantive": 5377,
         "total": 20000
@@ -526,8 +443,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 86,
         "substantive": 5373,
         "total": 15241
@@ -561,25 +478,8 @@
             ]
           ]
         ],
-        "ours_wrong": 2,
-        "ours_wrong_examples": [
-          [
-            -172.50226690446436,
-            89.77295217098123,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            -172.50154898251728,
-            89.6677191191315,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 93,
         "substantive": 5038,
         "total": 20000
@@ -613,8 +513,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 93,
         "substantive": 5034,
         "total": 15132
@@ -648,33 +548,8 @@
             ]
           ]
         ],
-        "ours_wrong": 3,
-        "ours_wrong_examples": [
-          [
-            -179.9956844637083,
-            89.40366196909861,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            179.997949513422,
-            88.74484533374627,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            172.5047726893812,
-            89.46078411272634,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 77,
         "substantive": 4250,
         "total": 20000
@@ -708,8 +583,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 77,
         "substantive": 4249,
         "total": 15087
@@ -743,17 +618,8 @@
             ]
           ]
         ],
-        "ours_wrong": 1,
-        "ours_wrong_examples": [
-          [
-            172.50413827767028,
-            88.75616171446389,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 77,
         "substantive": 3511,
         "total": 20000
@@ -787,8 +653,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 77,
         "substantive": 3508,
         "total": 15251
@@ -822,49 +688,8 @@
             ]
           ]
         ],
-        "ours_wrong": 5,
-        "ours_wrong_examples": [
-          [
-            172.53088662988625,
-            89.16677129497617,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            -172.54193845569327,
-            89.38635767397083,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            172.5188735598224,
-            88.63633837396188,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            179.9126119121255,
-            89.70551097474895,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            179.93095676543865,
-            89.6272639717258,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 99,
         "substantive": 868,
         "total": 20000
@@ -898,8 +723,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 99,
         "substantive": 867,
         "total": 15142
@@ -1099,25 +924,8 @@
             ]
           ]
         ],
-        "ours_wrong": 2,
-        "ours_wrong_examples": [
-          [
-            -179.87829876172984,
-            89.57707984626536,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            172.55476134155884,
-            89.06007146298337,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 88,
         "substantive": 24,
         "total": 20000
@@ -1309,8 +1117,8 @@
             ]
           ]
         ],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 88,
         "substantive": 23,
         "total": 15175
@@ -1319,17 +1127,8 @@
     {
       "all_borders": {
         "examples": [],
-        "ours_wrong": 1,
-        "ours_wrong_examples": [
-          [
-            179.82163755004117,
-            88.55701465172861,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 101,
         "substantive": 0,
         "total": 20000
@@ -1338,8 +1137,8 @@
       "drawn": 47022,
       "land_borders": {
         "examples": [],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 101,
         "substantive": 0,
         "total": 15169
@@ -1348,33 +1147,8 @@
     {
       "all_borders": {
         "examples": [],
-        "ours_wrong": 3,
-        "ours_wrong_examples": [
-          [
-            179.3679015274501,
-            89.18570960150517,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ],
-          [
-            -173.73833223195604,
-            89.58436121490338,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT+12"
-            ]
-          ],
-          [
-            172.89258311517136,
-            88.6888399027788,
-            "Etc/GMT+11",
-            [
-              "Etc/GMT-12"
-            ]
-          ]
-        ],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 89,
         "substantive": 0,
         "total": 20000
@@ -1383,8 +1157,8 @@
       "drawn": 56136,
       "land_borders": {
         "examples": [],
-        "ours_wrong": 0,
-        "ours_wrong_examples": [],
+        "not_attributed": 0,
+        "not_attributed_examples": [],
         "overlap_policy": 89,
         "substantive": 0,
         "total": 15151
@@ -1419,32 +1193,32 @@
           ]
         ]
       ],
-      "ours_wrong": 0,
-      "ours_wrong_examples": [],
+      "not_attributed": 0,
+      "not_attributed_examples": [],
       "overlap_policy": 160,
       "substantive": 3,
       "total": 5000
     },
     "on_land_points": {
       "examples": [],
-      "ours_wrong": 0,
-      "ours_wrong_examples": [],
+      "not_attributed": 0,
+      "not_attributed_examples": [],
       "overlap_policy": 97,
       "substantive": 0,
       "total": 10000
     },
     "random_points": {
       "examples": [],
-      "ours_wrong": 0,
-      "ours_wrong_examples": [],
+      "not_attributed": 0,
+      "not_attributed_examples": [],
       "overlap_policy": 28,
       "substantive": 0,
       "total": 10000
     },
     "unique_shortcut_points": {
       "examples": [],
-      "ours_wrong": 0,
-      "ours_wrong_examples": [],
+      "not_attributed": 0,
+      "not_attributed_examples": [],
       "overlap_policy": 0,
       "substantive": 0,
       "total": 5000
