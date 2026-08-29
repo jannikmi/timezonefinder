@@ -71,7 +71,7 @@ more Python method call than this run did: read the ``candidate loop`` block and
 correction is not applied in place because it is below this machine's own 3-9% jitter, so
 re-running would replace a self-consistent set of figures with a noisier one taken on a
 different day - what a change of that size is worth is a sentence, not a re-measurement.
-``potential-improvements.md`` (*The measured baseline*) carries it with the paired runs
+``contributing/improvements/query-performance-measurement-baseline.md`` carries it with the paired runs
 behind it and is the anchor to reconcile against; re-take this block wholesale when a
 change moves a stage by more than the jitter, as the resolution move below did.
 
@@ -224,7 +224,8 @@ CONCLUSIONS
    order-alternated - but that view is a live export held for the accessor's lifetime,
    which is the mapping-pinning trade the offset table was chosen to avoid and which
    ``BufferError`` on ``cleanup()`` made real once already. Recorded in
-   ``potential-improvements.md`` rather than taken here.
+   ``contributing/improvements/items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md``
+   rather than taken here.
 
 """
 

@@ -1,6 +1,3 @@
-# Agent Instructions
+# Coding-agent entrypoint
 
-The canonical coding-agent instructions for this repository live in
-[`CLAUDE.md`](CLAUDE.md) — read that file first. This stub exists only so tools that
-auto-discover an `AGENTS.md` file find their way there; it carries no separate guidance
-of its own. Do not add content here — update `CLAUDE.md` instead.
+The canonical contributor instructions are in [`CONTRIBUTING.md`](CONTRIBUTING.md). Read its core contract and only the route matching the current task. This file is a provider-discovery adapter; do not add project knowledge here.

@@ -65,7 +65,8 @@ test=[
     # statistically sound benchmark measurement (calibration, warmup, outlier
     # detection); see benchmarks/. Never combine with pytest-run-parallel's
     # `--parallel-threads` in the same run - concurrent execution makes
-    # timings meaningless (see CONTRIBUTING.md)
+    # timings meaningless (see
+    # contributing/development/benchmarking-and-performance-validation.md)
     "pytest-benchmark>=5,<6",
     # parsing the CI workflow definitions in tests/test_benchmark_workflows.py
     "PyYAML>=6",

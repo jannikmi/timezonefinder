@@ -202,8 +202,9 @@ How it ships
 
 Packaging is where the "correct but slower, never broken" contract above is actually kept, so it is
 part of the design rather than an afterthought. The operational side - how to cut a release - is in
-`CONTRIBUTING.md <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`__ and the
-``Makefile``; this section is the *why*.
+the `code-release workflow
+<https://github.com/jannikmi/timezonefinder/blob/master/contributing/workflows/prepare-and-publish-code-release.md>`__
+and the ``Makefile``; this section is the *why*.
 
 **One wheel per target, not one per Python version.** The C extension is built once against the
 stable ABI (``py_limited_api``, ``cp311``), so a single wheel serves every later interpreter instead

@@ -1,0 +1,9 @@
+# Testing and benchmarking checks
+
+Do not re-raise these findings without new evidence.
+
+- **Benchmark structure:** `scripts/describe_benchmark_machine.py` was read in full and found sound. `benchmarks/test_initialization.py`, `test_inside_polygon.py`, and `test_timezone_finding.py` are thin by design: parameter tables plus a `_run_over` loop. The helper shared by two suites stays local because importing it from `conftest.py` would put a function call between the benchmark and the code it times. `render_benchmark_reports.py`'s four similarly shaped `render_*` functions remain explicit because their differences are exactly the report-specific parts and extracting them would create a framework rather than remove meaningful duplication. The later `test_comparison.py` is not covered by this finding.
+
+- **Explicit benchmark identities and no-raise checks:** `scripts/measure_memory.py` was read in full and found sound. `benchmarks/test_inside_polygon.py` deliberately repeats `PIP_STRATA` names as explicit `pytest.param` ids because the [benchmarking rules](../../development/benchmarking-and-performance-validation.md) forbid deriving identities that anchor chart history. `tests/main_test.py::test_edge_shortcut_validity` intentionally asserts only that the base class does not raise; `test_edge_shortcut_result` covers values for the class with polygon data.
+
+- **Benchmark tooling and package guards:** `tests/test_benchmark_ci_tooling.py` and `tests/test_render_benchmark_reports.py` were read in full and found sound; each assertion names its purpose. `tests/auxiliaries.py::matches_pattern` intentionally uses `fnmatch` semantics where `*` crosses `/` and matching is case-sensitive on POSIX. The `.git/*` entry in `UNWANTED_DIST_PATTERNS` matches nothing in a working tree by design and remains exempted rather than removed.

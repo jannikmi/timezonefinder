@@ -1,6 +1,6 @@
 """Guard the memory footprint against a regression that changes its order of magnitude.
 
-`CLAUDE.md` requires this package to stay usable in containers with
+`contributing/core-contributor-contract.md` requires this package to stay usable in containers with
 constrained memory, and specifically that `in_memory=False` remains a viable
 low-memory option. The trend chart tracks how the footprint *drifts*; these
 ceilings catch the change that would make it meaningless in the first place -

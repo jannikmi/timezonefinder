@@ -1,0 +1,35 @@
+# Benchmarking and performance validation
+
+- Preserve the fast path. Profile hot code with the `benchmarks/` pytest-benchmark suites (`make speedtest` for a quick core-subset check, `make benchmarks` for the full suite) when touching polygon math or shortcut lookups.
+- Memory is measured too, by `make memory` - see *Benchmarking* below. If a change makes the library hold data it previously mapped or streamed, that shows up there and nowhere else.
+- Validate generated artifacts where they are generated, not where they are read. The correctness of a compiled data directory is established once, by the build; re-checking it when a `TimezoneFinder` is constructed spends every user's startup time re-answering a question that already has an answer, and multiplies across the per-thread instances concurrent workloads are told to use. The check belongs in two places instead - the converter, over the files it just wrote, and the test suite, over the files the repository ships - sharing one implementation (`scripts/data_integrity.py`) so that the two cannot drift into asserting different things. The payoff is not only speed: a check that no longer has to fit in an initialisation budget can afford to be exhaustive, which is why the hole-reference check resolves every ring in the dataset and compares it against an independently derived bounding box.
+- Use vectorised/NumPy-aware operations and avoid quadratic fallbacks on large datasets. When performance optimisations add complexity, include comments that summarise the micro-optimisation.
+- Respect coordinate scaling constants and FlatBuffers layouts; keep performance-sensitive structures (H3 mappings, bbox filters) cache-friendly. When changing a FlatBuffers schema, delete any previously generated `.bin` binary artifacts so they are regenerated consistently.
+
+### Benchmarking (`benchmarks/`, pytest-benchmark)
+
+**The reasoning behind these measurements - why the CI numbers are noisy, why a pull request is compared against its own merge base, where every threshold comes from - is documented once, in [Benchmarking Methodology](https://timezonefinder.readthedocs.io/en/latest/benchmarking_methodology.html). Read it before interpreting any number below.** What follows is operational only.
+
+**Running benchmarks locally**
+
+| Command | What it does |
+|---|---|
+| `make speedtest` | quick sanity check: the tracked core subset only, no JSON output |
+| `make benchmarks` | the full suite, writing `tmp/benchmark.json` (the input for the docs) |
+| `make benchmarks-ci` | the *exact* measurement CI records: core subset, `--benchmark-min-rounds=50`, tracked estimator applied |
+| `make benchmark-noise` | repeats `benchmarks-ci` five times on unchanged code and prints the observed spread plus a threshold derived from it |
+| `make memory` | the memory counterpart of `make benchmarks`, writing `tmp/memory.json` |
+| `make memory-ci` / `make memory-noise` | the CI memory measurement, and its run-to-run spread |
+
+- Benchmark files are collected only when `benchmarks/` is passed, never by `make test` or `make testall`. `test_comparison.py` needs the `compare` group (`tzfpy`) but must still collect without it; module-level `importorskip` would make pinned node IDs environment-dependent, which `tests/test_benchmark_names.py` rejects.
+- Never use `--parallel-threads` with benchmarks. Compare local results only with local and CI only with CI. Supply explicit benchmark IDs; `tests/test_benchmark_names.py` and `tests/test_memory_metric_names.py` pin them because changing an ID resets chart history.
+- Changing `BATCH_SIZE`, sampling, `N_*`, or RNG consumption invalidates fixtures: bump `FIXTURE_VERSION`, then regenerate. `BATCH_SIZE` is capped by 5,000 points per fixture and 3,333 per stratum. `tests/test_memory_footprint.py` catches order-of-magnitude changes; confirm proportional data growth before raising a ceiling.
+- Render stored JSON with `uv run python -m scripts.render_benchmark_reports --benchmark-json=tmp/benchmark.json --memory-json=tmp/memory.json`. `make reports` re-measures everything, so use it after data updates, not rendering-only work. Report before/after and coefficient of variation from several local runs for a plausible performance change.
+
+### Benchmark CI
+
+For a PR, `measure` writes the comparison summary and `benchmark-comment` keeps one replacement comment naming the measured head commit; it reports base, head, signed change, and `base / head`. On `master`, results go to the [trend chart](https://jannikmi.github.io/timezonefinder/dev/bench/) under `gh-pages/dev/bench`; never edit that path. Workflow copies of `REPORT_FILENAME` and artifact names are guarded by `tests/test_benchmark_workflows.py`.
+
+Before judging a comparison, verify CPU and fixture set. `REGRESSION_THRESHOLD_PCT` is 110%; smaller changes are noise and comparisons are reporting-only (`--fail-on-regression` is unused). Reproduce only local-to-local with `make benchmarks-ci` on base and head, then `uv run python -m scripts.compare_benchmark_runs --base base.json --head head.json`.
+
+Trend alerts remain non-blocking: check CPU, rerun, and treat a non-reproducing alert as noise. Recalibrate `ALERT_THRESHOLD` with `workflow_dispatch` repetitions whenever the runner pool or core set changes.

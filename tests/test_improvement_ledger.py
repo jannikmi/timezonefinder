@@ -1,58 +1,24 @@
-"""Assert the improvement register's ranking and its entries stay in step.
-
-``potential-improvements.md`` states its order in one place - the ranking table -
-and its detail in another, the entry sections below it. That split is what keeps
-the entries groupable by area while the ranking stays a single walkable list, and
-it is also how the two drift: an entry added without a row is invisible to the
-pass that walks the ranking, and a row left behind by a shipped entry sends that
-pass looking for something that is no longer there. Neither shows up in a diff
-review, because both halves read as correct on their own.
-
-The status vocabulary is checked for the same reason. Work that landed is deleted
-from the file rather than marked, so no status may say it is done - and an agent
-reaching for ``shipped`` is exactly how a register turns back into a changelog
-nobody reads.
-
-A closed entry keeps its entry but loses its rank. The ranking orders work and a
-rejected, withdrawn or out-of-scope item has none, so its row moves into the
-``Closed`` table under the same heading rather than sitting in the list with a
-dead eligibility column - which a pass walking top-down pays to read before
-discovering there is nothing to take. Placement is checked because nothing else
-would notice: both tables live under ``## The ranking``, so the one-row-per-entry
-assertion above is satisfied either way, and the skills that maintain this file
-write the status and the row in separate steps.
-
-``needs`` is the one status naming work no agent can do by reading harder: a
-person has to decide something. It is therefore paired with a ``Decision
-needed:`` bullet holding the question, and the pairing is checked in both
-directions. A ``needs`` status without the bullet says an entry is waiting
-without saying what for, which is unactionable by the pass that records it and by
-the maintainer who would answer it; the bullet without the status is a question
-that no search over statuses will ever surface.
-"""
+"""Keep the linked improvement ranking and one-file-per-item memory in sync."""
 
 import re
+from pathlib import Path
 
 import pytest
 
 from tests.auxiliaries import PROJECT_ROOT
 
-LEDGER_FILE = PROJECT_ROOT / "potential-improvements.md"
+IMPROVEMENTS_DIR = PROJECT_ROOT / "contributing" / "improvements"
+RANKING_FILE = IMPROVEMENTS_DIR / "improvement-priority-ranking.md"
+ITEMS_DIR = IMPROVEMENTS_DIR / "items"
 
-RANKING_HEADING = "## The ranking"
-ENTRY_HEADING = re.compile(r"^### ([A-Z0-9-]+) [-\u2014]")
-RANKING_ROW = re.compile(r"^\| *([A-Z][A-Z0-9-]+) *\|")
+ITEM_HEADING = re.compile(r"^# ([A-Z0-9-]+) [—-] (.+)$")
+ITEM_FILENAME = re.compile(r"^(data-binaries|[a-z]+-[0-9]+)-(.+)\.md$")
+RANKING_ROW = re.compile(r"^\| \[([A-Z][A-Z0-9-]+)\]\((items/[^)]+\.md)\) \|")
 ENTRY_STATUS = re.compile(r"^- \*\*Status:\*\* +(\S+)")
 DECISION_BULLET = "- **Decision needed:**"
 NEEDS_A_DECISION = "needs"
 CLOSED_HEADING = "### Closed"
-
-# statuses that mean no pass will ever take the entry as it stands, so its row
-# belongs in the ``Closed`` table. ``blocked``, ``parked`` and ``conditional``
-# are deliberately absent: they can become live without the entry changing.
 CLOSED_OPENINGS = frozenset({"rejected", "withdrawn", "out"})
-
-# the file documents this list; there is deliberately no status meaning "done"
 STATUS_OPENINGS = frozenset(
     {
         "open",
@@ -68,151 +34,104 @@ STATUS_OPENINGS = frozenset(
 
 
 @pytest.fixture(scope="module")
-def ledger_text() -> str:
-    assert LEDGER_FILE.is_file(), f"{LEDGER_FILE} is the register every pass reads"
-    return LEDGER_FILE.read_text(encoding="utf-8")
+def ranking_text() -> str:
+    return RANKING_FILE.read_text(encoding="utf-8")
 
 
-def ranking_section(text: str) -> str:
-    """Return the ranking table alone.
+@pytest.fixture(scope="module")
+def item_files() -> list[Path]:
+    files = sorted(ITEMS_DIR.rglob("*.md"))
+    assert files, f"no improvement items found under {ITEMS_DIR}"
+    return files
 
-    The file holds other tables - the coverage log, and tables inside entries -
-    so a repository-wide row match would read their first column as an entry id.
-    """
-    _, _, below = text.partition(RANKING_HEADING)
-    assert below, f"{LEDGER_FILE} no longer has a {RANKING_HEADING!r} section"
-    section, _, _ = below.partition("\n## ")
-    return section
+
+def heading_of(path: Path) -> tuple[str, str]:
+    first = path.read_text(encoding="utf-8").splitlines()[0]
+    match = ITEM_HEADING.fullmatch(first)
+    assert match, f"{path} must start with '# <ID> — <descriptive title>'"
+    return match.group(1), match.group(2)
+
+
+def status_of(path: Path) -> str:
+    statuses = [
+        match.group(1)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (match := ENTRY_STATUS.match(line))
+    ]
+    assert len(statuses) == 1, f"{path} must declare exactly one Status bullet"
+    return statuses[0].rstrip(".,:").lower()
 
 
 def ranking_tables(text: str) -> tuple[str, str]:
-    """Return the live ranking table and the ``Closed`` table, in that order.
-
-    Both sit under ``## The ranking`` so that every entry still has exactly one
-    row wherever it is; this split is what tells the two halves apart.
-    """
-    live, separator, closed = ranking_section(text).partition(CLOSED_HEADING)
-    assert separator, (
-        f"{LEDGER_FILE} no longer has a {CLOSED_HEADING!r} table - closed entries "
-        "have nowhere to go but the ranking, which is what it exists to prevent"
-    )
+    live, separator, closed = text.partition(CLOSED_HEADING)
+    assert separator, f"{RANKING_FILE} must contain a {CLOSED_HEADING!r} table"
     return live, closed
 
 
-def ids_of(pattern: re.Pattern[str], text: str) -> list[str]:
-    return [
-        match.group(1) for line in text.splitlines() if (match := pattern.match(line))
-    ]
-
-
-@pytest.mark.unit
-def test_ranking_and_entries_are_not_empty(ledger_text: str) -> None:
-    # guards the comparisons below: two empty sets match each other
-    assert ids_of(RANKING_ROW, ranking_section(ledger_text)), (
-        "the ranking table has no rows"
-    )
-    assert ids_of(ENTRY_HEADING, ledger_text), "the register has no entries"
-
-
-@pytest.mark.unit
-def test_every_id_is_declared_once(ledger_text: str) -> None:
-    for name, ids in (
-        ("ranking", ids_of(RANKING_ROW, ranking_section(ledger_text))),
-        ("entries", ids_of(ENTRY_HEADING, ledger_text)),
-    ):
-        duplicates = {id_ for id_ in ids if ids.count(id_) > 1}
-        assert not duplicates, f"the {name} declare {sorted(duplicates)} more than once"
-
-
-@pytest.mark.unit
-def test_ranking_and_entries_name_the_same_items(ledger_text: str) -> None:
-    ranked = set(ids_of(RANKING_ROW, ranking_section(ledger_text)))
-    described = set(ids_of(ENTRY_HEADING, ledger_text))
-    assert described - ranked == set(), (
-        f"{sorted(described - ranked)} have an entry but no row in the ranking, so a pass "
-        "walking the ranking never reaches them"
-    )
-    assert ranked - described == set(), (
-        f"{sorted(ranked - described)} are ranked but have no entry - a shipped entry must "
-        "take its row with it"
-    )
-
-
-@pytest.mark.unit
-def test_no_status_claims_the_work_is_done(ledger_text: str) -> None:
-    """A shipped entry is deleted, so no status may report one as finished."""
-    statuses = ids_of(ENTRY_STATUS, ledger_text)
-    assert statuses, "no entry declares a status"
-    unknown = {
-        word for word in statuses if word.rstrip(".,:").lower() not in STATUS_OPENINGS
-    }
-    assert not unknown, (
-        f"{sorted(unknown)} open a status line, but the register documents "
-        f"{sorted(STATUS_OPENINGS)} - and none of them means done, because work that landed "
-        "is deleted from the file rather than marked"
-    )
-
-
-def entry_bodies(text: str) -> dict[str, str]:
-    """Return each entry id mapped to the lines below its heading.
-
-    Scoped to entries on purpose: the file's own prose describes the convention
-    below, and a whole-file search would read that description as an entry.
-    """
-    bodies: dict[str, list[str]] = {}
-    current: list[str] | None = None
+def ranked(text: str) -> dict[str, str]:
+    rows: dict[str, str] = {}
     for line in text.splitlines():
-        if line.startswith("## "):
-            current = None
-        if match := ENTRY_HEADING.match(line):
-            current = bodies.setdefault(match.group(1), [])
-        elif current is not None:
-            current.append(line)
-    return {id_: "\n".join(lines) for id_, lines in bodies.items()}
+        if match := RANKING_ROW.match(line):
+            id_, target = match.groups()
+            assert id_ not in rows, f"{id_} occurs more than once in {RANKING_FILE}"
+            rows[id_] = target
+    return rows
 
 
 @pytest.mark.unit
-def test_waiting_entries_say_what_they_are_waiting_for() -> None:
-    """``Status: needs ...`` and a ``Decision needed:`` bullet imply each other."""
-    bodies = entry_bodies(LEDGER_FILE.read_text(encoding="utf-8"))
-    assert bodies, "the register has no entries"
-    for id_, body in bodies.items():
-        statuses = ids_of(ENTRY_STATUS, body)
-        waiting = statuses[:1] == [NEEDS_A_DECISION]
-        briefed = body.count(DECISION_BULLET)
-        assert briefed <= 1, (
-            f"{id_} carries {briefed} {DECISION_BULLET!r} bullets - one entry asks one "
-            "question, so that the answer has somewhere unambiguous to be written back"
-        )
-        assert waiting == bool(briefed), (
-            f"{id_} declares {statuses[:1]} and has {briefed} {DECISION_BULLET!r} bullets. "
-            f"A {NEEDS_A_DECISION!r} status must name the question it is waiting on, and a "
-            "question must be findable from the status - neither half is any use alone"
+def test_item_filenames_are_stable_and_descriptive(item_files: list[Path]) -> None:
+    for path in item_files:
+        match = ITEM_FILENAME.fullmatch(path.name)
+        assert match, f"{path.name} must be '<lowercase-id>-<descriptive-slug>.md'"
+        id_, title = heading_of(path)
+        assert match.group(1).upper() == id_
+        assert len(match.group(2)) >= 3
+        assert path.parent != ITEMS_DIR, (
+            f"{path} must live in a stable subject directory"
         )
 
 
 @pytest.mark.unit
-def test_closed_entries_do_not_hold_a_rank(ledger_text: str) -> None:
-    """A status no pass can act on puts the row in ``Closed``, and vice versa."""
-    live_table, closed_table = ranking_tables(ledger_text)
-    live = set(ids_of(RANKING_ROW, live_table))
-    closed = set(ids_of(RANKING_ROW, closed_table))
-    for id_, body in entry_bodies(ledger_text).items():
-        statuses = ids_of(ENTRY_STATUS, body)
-        assert statuses, f"{id_} declares no status"
-        opening = statuses[0].rstrip(".,:").lower()
-        if opening in CLOSED_OPENINGS:
-            assert id_ in closed and id_ not in live, (
-                f"{id_} is {opening!r}, so no pass will take it as it stands, but its row is "
-                f"still in the ranking. Move it to the {CLOSED_HEADING!r} table: the ranking "
-                "orders work and this entry has none, and a pass walking it top-down pays to "
-                "read the row before finding that out. The entry itself stays - a rejection "
-                "is only useful while the argument against it is still there to be read"
-            )
+def test_ranking_and_items_name_the_same_ids(
+    ranking_text: str, item_files: list[Path]
+) -> None:
+    rows = ranked(ranking_text)
+    items = {heading_of(path)[0]: path for path in item_files}
+    assert rows, "the ranking must not be empty"
+    assert rows.keys() == items.keys()
+    for id_, target in rows.items():
+        assert (IMPROVEMENTS_DIR / target).resolve() == items[id_].resolve()
+
+
+@pytest.mark.unit
+def test_ranking_links_resolve_once(ranking_text: str) -> None:
+    targets = list(ranked(ranking_text).values())
+    assert len(targets) == len(set(targets))
+    for target in targets:
+        assert (IMPROVEMENTS_DIR / target).is_file(), target
+
+
+@pytest.mark.unit
+def test_status_vocabulary_and_closed_placement(
+    ranking_text: str, item_files: list[Path]
+) -> None:
+    live_table, closed_table = ranking_tables(ranking_text)
+    live = set(ranked(live_table))
+    closed = set(ranked(closed_table))
+    for path in item_files:
+        id_, _ = heading_of(path)
+        status = status_of(path)
+        assert status in STATUS_OPENINGS, f"{path}: unknown status {status!r}"
+        if status in CLOSED_OPENINGS:
+            assert id_ in closed and id_ not in live
         else:
-            assert id_ in live and id_ not in closed, (
-                f"{id_} is {opening!r} - live work, or work waiting on something that can "
-                f"resolve - but its row sits under {CLOSED_HEADING!r}, where no pass walking "
-                "the ranking will reach it. Only rejected, withdrawn and out-of-scope entries "
-                f"belong there; {sorted(CLOSED_OPENINGS)} is the whole list"
-            )
+            assert id_ in live and id_ not in closed
+
+
+@pytest.mark.unit
+def test_waiting_items_say_what_they_need(item_files: list[Path]) -> None:
+    for path in item_files:
+        text = path.read_text(encoding="utf-8")
+        count = text.count(DECISION_BULLET)
+        assert count <= 1, f"{path} carries {count} decision-needed bullets"
+        assert (status_of(path) == NEEDS_A_DECISION) == bool(count)
