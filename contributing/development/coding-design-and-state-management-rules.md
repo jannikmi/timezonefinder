@@ -9,22 +9,6 @@
 - **Declare each path/filename constant once** in the module that owns the resource and import it elsewhere; never re-derive a path or retype a filename string in a second file — the two copies drift when one is renamed
 - **Never point at something outside the repository for a reason.** Two shapes, one failure mode: an issue or PR number in code (`# Since #446`, `(issue #446)`) — comments, docstrings, workflow headers, config comments — and a path under `plans/`, which is **gitignored and temporary**, so the reference is already dangling for everyone but its author. Either way the *reason* stops being where the code is: a tracker gets retitled, re-scoped and closed independently, and a plan file is deleted when the work lands. Write the reasoning itself; if it is too long for a comment, it belongs in `docs/`, and a rejected option belongs wherever it can actually refuse the next proposal. `CHANGELOG.rst` is the exception — there an issue number is the release's provenance, and `Thanks to … PR #123` is required (see *Changelog*)
 
-### Production-Ready Implementation
+Write complete, readable, small solutions with clear side effects. Prefer standard-library idioms and dependency injection; protect mutable caches and document concurrency. Preserve public APIs; deprecations need documentation and tests for both paths.
 
-- Write complete solutions—no placeholders, commented-out experiments, or TODOs without filed issues.
-- Prefer pure functions or clearly delimited side effects. Use dependency injection instead of module-level state when possible.
-- Treat concurrency as a first-class concern. Avoid introducing shared global state; guard mutable caches and document thread expectations.
-
-### Pythonic, Functional Design
-
-- Strive for expressive, readable code that leverages Python's standard library and idioms (`with` statements, comprehensions, `enum.Enum`, context managers).
-- Bias towards small, composable functions with explicit inputs/outputs. When mutability is required, minimise scope and communicate intent.
-- Maintain backwards-compatible APIs. Deprecations require documentation updates and tests that cover both old and new paths.
-
-### Strong Typing & Contracts
-
-- Add or refine type hints for new code. Use `typing.Protocol`, `TypedDict`, and `Literal` to capture constraints.
-- Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
-- Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
-- all types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
-- the same applies to path/filename constants anywhere in the repo, not just `timezonefinder/`: define a directory or filename once, in the module that owns the resource, and import it elsewhere instead of retyping the literal (see `tests/auxiliaries.py`'s `BENCHMARK_FIXTURES_DIR` and fixture-name constants, reused by `scripts/generate_benchmark_fixtures.py` and `benchmarks/conftest.py`)
+Add precise type hints (`Protocol`, `TypedDict`, and `Literal` where useful), avoid unjustified `Any`, and keep mypy clean. Validate external inputs early and update `docs/data_format.rst` for binary-schema changes. Types belong in `timezonefinder/configs.py`; resource constants belong once in their owning module (for example `tests/auxiliaries.py` fixture constants), then are imported rather than retyped.

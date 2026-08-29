@@ -13,12 +13,4 @@
   - `test_benchmark_fixtures.py::test_generator_*` — after touching `scripts/generate_benchmark_fixtures.py`
   - Otherwise (docs, CI config, tooling, reporting code) skip them: wall-clock time, no signal
 
-### Testing & Coverage
-
-- **Global test runs**: Use make commands (`make test`, `make testint`, `make testall`) for running full test suites
-- **Isolated unit tests**: When only specific tests are affected, run them directly via `uv run pytest tests/path/to/test_file.py::test_name` or `uv run pytest -k "test_pattern"`
-- Add targeted unit tests under `tests/` for every behavioural change. Use fixtures in `tests/auxiliaries.py` to cover edge coordinates and polygon holes.
-- Run `make test` for fast feedback (excludes integration and slow tests).
-- Run integration tests via `make testint` when packaging, build metadata, or binary assets change
-- Run all tests including slow test cases via `make testall` when verifying dataset integrity or core algorithmic changes (shortcuts, geometry).
-- Maintain deterministic tests—mock filesystem/network access, and avoid relying on system timezone settings. If you alter CLI behaviour, update `tests/test_integration.py` accordingly.
+Use `uv run pytest tests/path/to/test_file.py::test_name` or `-k` for isolated tests. Mock filesystem and network boundaries, avoid system-timezone dependence, and update `tests/test_integration.py` for CLI changes.
