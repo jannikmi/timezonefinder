@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787665287697,
+  "lastUpdate": 1787993948375,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2745,6 +2745,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000545175765272945",
             "extra": "mean: 22.879824000000326 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1797a0d23e20ca8366d12f3647838a4c7e9122cc",
+          "message": "Refactor contributor memory into a modular Markdown tree (#559)\n\n* Refactor contributor memory into modular tree\n\n* Use semantic line breaks in contributor memory\n\n* Clarify overlapping contributor routes\n\n* Compact improvement passes into coverage map\n\n* Compress routine contributor guidance\n\n* Add contributor-memory anti-bloat rules",
+          "timestamp": "2026-08-29T10:58:11+02:00",
+          "tree_id": "2c3b59ed670b6e4df92ebc118f8611d656b3cfae",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1797a0d23e20ca8366d12f3647838a4c7e9122cc"
+        },
+        "date": 1787993946996,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 189.5610259501057,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002248012680712486",
+            "extra": "mean: 5.275345999990577 msec\nrounds: 110 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 376.5536604024833,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004456923496070867",
+            "extra": "mean: 2.655664000002389 msec\nrounds: 334 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 36.711288258568175,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011426019762499498",
+            "extra": "mean: 27.23957800000676 msec\nrounds: 50 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
           }
         ]
       }
