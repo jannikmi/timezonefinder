@@ -21,3 +21,9 @@ The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read
 Record a repository fact only when it is durable beyond the current change, non-obvious enough to have caused a failed check or wrong assumption, and has a concrete failure mode. Put it in the narrowest existing module, or at the code/configuration decision site when that is sufficient. Never copy a rule merely to make it more visible: route to its canonical owner instead.
 
 Amend existing memory instead of appending corrective history. Delete or correct stale rules as part of the change that invalidates them. A confidently wrong instruction costs more than a missing one. Do not restate what the code, git history, Makefile, or public documentation already makes clear.
+
+## Preventing memory bloat
+
+Add memory only for a durable, non-obvious fact with a concrete failure mode. State the rule and consequence, not the incident narrative; keep measurements, options, and refusals only when they change a future decision. Link the authoritative code, test, schema, or public documentation instead of copying it.
+
+Update the narrowest existing module before creating one. A new module needs a descriptive subject filename, a direct route from `CONTRIBUTING.md`, and a bounded subject; split a module before it exceeds its word budget. In the same change, remove superseded wording and consolidate duplicates. Historical sequence belongs in Git, not contributor memory.
