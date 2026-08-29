@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788044994147,
+  "lastUpdate": 1788044996611,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6446,6 +6446,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cbf0edc8cf56aaa7503513ab19962138c22c608",
+          "message": "Record three maintainer decisions: PyPI retention, the held format-2 window, and defect precedence (#561)\n\n* Record the decision on PYPI-1: leave the releases, delete only if full\n\nDeleting published releases is a last resort taken when the project's\nstorage is actually exhausted, never routine hygiene. Recorded as a\ngeneral rule about published artifacts rather than as a reading of this\nproject's growth curve, so re-pricing the headroom cannot revive it.\n\nAlso corrects the item's own framing: the cut line is not \"pre-8.x\",\nsince 8.0.0-8.2.5 bundle the data too and 8.2.x are the largest\nper-file releases in the project.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Hold the format-2 window open for GH-449, reversing its sequencing\n\nDATA_FORMAT_VERSION 2 is unreleased, so what format 2 means is still\neditable. Landing GH-449 before the 2.x data release lets the polygon\nencoding ride that number; landing it after costs a format 3 and a\nsecond ordered two-distribution release.\n\nThe old ordering put DATA-BINARIES first, to make regeneration cheap in\nhistory. That guaranteed the extra release instead, since DATA-BINARIES\ncannot start until the publication that shuts the window - and its\n~61 MiB is recoverable by GH-522 where a release is not. GH-449 now\nsequences ahead of it.\n\nAccepted cost: master requires timezonefinder-data>=2.2026.3, so the\nhold defers the whole pending code release. Recorded with an exit\ncondition - the hold ends when GH-449 lands or is rejected.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Rank confirmed defects above every improvement\n\nA precedence rather than a weighting: a confirmed correctness defect\ngoes to the top the moment it is confirmed, and a pass takes it before\nany improvement. Expected value orders what sits below the defects.\n\nA narrow defect prices low on any honest expected-value reading - few\nusers reach it, the fix is small, nothing waits on it - so the old\nordering quietly sorted real wrong answers underneath refactors that\nscored better. Bounded on two sides: a suspected defect is a\nmeasurement, not a defect, and a blocked one still sits below its\nblocker.\n\nNo rows moved: the register currently holds no open defect.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Fit this round's decisions to the contributor-memory conventions\n\nThree constraints of the new tree that the entries broke: bullets are\none line each, so the held-window decision's continuations become\nnested items; canonical files cap at 2000 words, which the defect rule\nexceeded and which left the distribution decisions module - already at\n1993 - with no room for PYPI-1's generalisation.\n\nThat rule now lives in the PYPI-1 item instead. The item is conditional\nand therefore never deleted, so the reasoning still has a permanent\nhome.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Address the review: scope the defect rule, fix two contradictions\n\nThe defect-precedence rule did not say what counts as a defect, and\nsixteen items use a **Defect:** bullet for whatever they are about -\ndocs omissions and dead code included. It now turns on a wrong or\nsilently-empty answer on a path real usage reaches, with BIG-4 as the\nworked example of what that excludes: its own entry establishes no\nin-repo path reaches the branch.\n\nDATA-BINARIES still asserted the old ordering in its Last touched\nbullet, directly against the reversal recorded above it.\n\nPYPI-1 offered two triggers - an upload refused, or a warning that the\nlimit is near. Only the first survives; a warning is advance notice\nthat the question is coming, not authority to delete.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Replace the register's fragile commit SHAs, and tell GH-522 about them\n\nGH-522 runs git filter-repo, which its own entry says rewrites every\ncommit SHA. Its cost list named issues, changelogs and external\nreferences but not this register, which carried four bare SHAs - three\nof them direct commits to master with no PR number to fall back on.\n\nTwo carried nothing the fact does not, so they now state the fact. The\nbatching decision's ancestry claim moves to #457, which survives a\nrewrite where a SHA does not.\n\nThe measurement baseline's 590e21b stays, because it is an operand\nrather than a citation: a pass diffs against it to decide whether the\ntimings still describe the tree. It is now marked as such, and\nre-anchoring it is recorded in GH-522's own checklist.\n\nDates stay everywhere. 39 of 40 \"Last touched\" bullets disagree with\ngit because #559 moved every file, and git log --follow returns nothing\nacross that split - so the hand-written date is the only surviving\nper-item staleness signal, not a duplicate of one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-30T01:09:02+02:00",
+          "tree_id": "bc75d67b33376565ced78392938de6856a5fa690",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8cbf0edc8cf56aaa7503513ab19962138c22c608"
+        },
+        "date": 1788044995826,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0078039169311523,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0079822540283203,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.0761375427246094,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.084909439086914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.08663463592529,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.09532451629639,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.4625 GHz"
           }
         ]
       }
