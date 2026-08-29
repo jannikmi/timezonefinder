@@ -2,9 +2,9 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked until a `timezonefinder-data` 2.x is on PyPI |
-| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — the source-precision half is settled, the rest needs a regeneration a pass may now do |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | L | blocked by GH-542 + DATA-BINARIES |
+| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — gates the held 2.x release and everything queued behind it |
+| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | L | blocked by GH-542 only — rides the held format-2 window, ahead of DATA-BINARIES |
+| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — the 2.x release is held until GH-449 lands or is rejected |
 | [DOC-3](items/documentation/doc-3-the-zoneinfo-snippets-never-say-that-windows-needs-tzdata.md) | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-the-pull-request-benchmark-comparison-cannot-resolve-the-changes-worth-reviewing.md) | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
