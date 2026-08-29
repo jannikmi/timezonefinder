@@ -14,7 +14,7 @@ Add targeted tests for behavioral changes. Select integration, slow, acceleratio
 
 Every change needs an entry in the current unreleased changelog, with user-visible changes in the main list and development-only changes under `Internal:`. Changes confined to contributor memory, provider adapters, and their structural tests are the exception and receive no changelog entry. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
 
-The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read only the modules whose trigger matches the task.
+The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read the modules from every applicable route, because one change may match multiple triggers; ignore unrelated routes.
 
 ## Maintaining contributor memory
 

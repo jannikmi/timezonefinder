@@ -1,6 +1,6 @@
 # Contributing to timezonefinder
 
-This is the entrypoint for human and automated contributors. Read the [core contributor contract](contributing/core-contributor-contract.md), then read only the row matching the work. Follow conditional links only when their condition applies; do not preload the whole `contributing/` tree.
+This is the entrypoint for human and automated contributors. Read the [core contributor contract](contributing/core-contributor-contract.md), then read every row whose trigger matches the work; a change may match multiple rows. Follow conditional links only when their condition applies, and do not preload unrelated rows or the whole `contributing/` tree.
 
 | Task trigger | Required files | Conditional files |
 |---|---|---|
