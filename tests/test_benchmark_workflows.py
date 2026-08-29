@@ -211,7 +211,7 @@ def test_the_comparison_is_posted_to_the_pull_request_conversation(
     """The comparison must be a pull request comment, not a commit comment.
 
     It was a commit comment on the head commit first, on the assumption -
-    written into the workflow and CONTRIBUTING.md - that those surface in the
+    written into the workflow and the former monolithic contributor guide - that they surface in the
     pull request's conversation timeline. They do not: GitHub renders issue
     comments, reviews and review comments there, while a commit comment only
     ever appears on the commit's own page, and a force push orphans it

@@ -1,0 +1,82 @@
+# Query performance and shortcut index decisions
+
+Do not re-propose these settled or refused options without new evidence.
+
+- **Accelerating the slot arithmetic with numba or the C extension — measured 2026-08-23 and
+  refused; the algebra was the win instead.** The lookup's bit arithmetic looked like a
+  candidate for `njit`. It is not, and the measurement forecloses the whole family rather than
+  one attempt: **an empty `njit` call costs ~98 ns**, against ~152 ns for the entire stage it
+  would replace — arithmetic *and* table read — so dispatch alone eats two thirds of the
+  budget before any kernel runs. Measured, both variants came out slower than plain Python
+  (156 and 166 ns against 152). The C extension is worse on the same grounds: a cffi crossing
+  is the same order (`ffi.from_buffer` is ~650 ns on the polygon path), and it would add an
+  entry point to the wheel matrix for a stage of ~150 ns. This generalises — **no scalar
+  per-query stage in the single-digit-hundreds of nanoseconds can be worth a dispatch
+  boundary**, which is the same reason `validate_coordinates` is *slower* under numba than in
+  pure Python (355 against 312 ns).
+
+- **What did pay was noticing the arithmetic reduces.** H3 puts the base cell immediately
+  above the digits, so `base * stride + digits` is one contiguous bit field and the six-operation
+  expression collapses to `(hex_id >> SLOT_DIGITS_SHIFT) & SLOT_MASK`. An identity over any
+  64-bit value, not a property of the cells that exist. Arithmetic 91 -> 40 ns, whole stage
+  152 -> 101 ns, and on a paired whole-query A/B **-5.1 % on a unique-zone query with 43 of 61
+  rounds faster** - both estimators agreeing, which is the bar. Shipped.
+
+
+- **Justify the shortcut structure on load, memory and file size — never as a speedup.** Measured
+  full `timezone_at`, paired and order-alternated, 61 rounds x 2,000 points on four fixture strata:
+  neutral to slightly ahead, and small enough to stay off any headline. It changes how a cell's
+  candidate list is stored, never which candidates come back, so it avoids exactly the same
+  point-in-polygon tests. Two measurement designs that suggested otherwise were discarded: an
+  isolated lookup omits the `match value: case int(zone_id)` the old code ran on the dict's answer
+  (84 → 188 ns, and the table needs no equivalent), and a fixed A-then-B order credited the new
+  structure with 13.3 % that was the first path warming shared code for the second.
+
+- **Raster fast-path in front of the H3 index — dropped.** A ~2 MB lookup table answering
+  unambiguous cells with one array index, falling through to H3 otherwise. Rejected: it buys query
+  time with storage, and storage is the dimension this package can least afford to spend on.
+
+- **Ocean-ness is tested with `str.startswith`; the zone-id lookup table was refused.** Settled
+  2026-08-20 for PERF-1. `OCEAN_TIMEZONE_PREFIX` is `r"Etc/GMT"`, which has no regex
+  metacharacters, and `re.match` anchors at the start — so `startswith` is exactly equivalent and
+  captures the whole measured saving (~250 ns per `timezone_at_land`, ~6 % of a mixed workload,
+  inside the noise floor) in one line. The rejected alternative is worth keeping because it reads as
+  the more principled fix: a boolean array indexed by zone id, precomputed at load, which would also
+  decouple the behaviour from zone *naming* so that an upstream rename of the `Etc/GMT` family
+  could not silently change which results count as ocean. It was refused on cost, not on merit —
+  `timezone_at_land` receives a name and `is_ocean_timezone` takes one, so an id-indexed table means
+  restructuring both plus a per-instance array — and the one-liner does not foreclose it. Re-propose
+  it only against an actual upstream rename.
+
+- **An accessor-lifetime export of the mmap is not in itself forbidden — but a change that wants one still has to clear the noise floor.** Settled 2026-08-23 when PERF-4 was rejected.
+  The `BufferError` fixed in 8.3.0 made "never hold a live export for the accessor's lifetime" read like a standing rule.
+  It is not one — but it is not free either, and the ordering runs the wrong way for it: `FileCoordAccessor.cleanup` calls `close_resource(coord_buf)` **before** the `delattr` loop that drops its own references, so a view held as an attribute is still live at the close, `mmap.close()` raises `BufferError`, and `close_resource` swallows it.
+  A held view therefore obliges `cleanup()` to delete that view before the close and to name it in the loop; with that, the mapping closes exactly as today.
+  What killed PERF-4 was the measurement, not the pinning — so do not refuse a future held view on resource-semantics grounds alone, and do not propose one on the strength of a per-fetch microbenchmark either.
+  **The generalisable half:** a per-fetch figure and a workload share are different quantities, and converting one into the other is where PERF-4 went wrong — ~370 ns per fetch in isolation was written up as "~3 % of a mixed workload", and measured inside the query it was ~0.8 %, indistinguishable from noise at 9 of 15 rounds.
+  Nearly 4x apart, and only the second number is the one the ranking rule takes.
+  Measure inside the query, alternating within one process.
+
+- **The two point-in-polygon kernels are the same speed; numba's edge is the FFI crossing it does
+  not make.** Measured in #497 on identical inputs: 239 vs 252 ns on a 114-vertex polygon, 22.18 vs
+  22.27 µs on a 47k-vertex one — within 5 % across three size strata. What separates the two
+  backends on an ambiguous query is the ~500 ns per candidate the clang path spends in
+  `ffi.from_buffer`; on the *unique-zone* path numba is the slower of the two, because
+  `validate_coordinates` calls two njit'd scalar functions whose dispatch costs more than the
+  pure-Python comparison they replace (270 vs 218 ns). Recorded because "numba is the fast path" is
+  the natural reading of the tox matrix and of `utils.py` preferring it, and it is not what the
+  numbers say. Any future argument that reaches for a faster kernel has to say which kernel.
+
+- **Precomputing `last_zone_change_idx` into the shortcut binaries — refused twice, and reversed
+  2026-08-23.** Proposed as issue #256, closed in 2025 because throughput is dominated by
+  point-in-polygon work, and as draft PR #348. The refusal rested on two legs: #497 sizes the win
+  at 149 ns on numba and 283 ns on clang of an ambiguous query and nothing on a unique one — ~1 %
+  of a random workload, below the 3–9 % noise of the machine that would have to demonstrate it —
+  and the cost was a shortcut-layout version bump, therefore `DATA_FORMAT_VERSION`, therefore an
+  ordered two-distribution release. **The shortcut index format change spent that bump for its own
+  reasons, so the second leg went**, and the maintainer took it: it ships as one `uint8` per
+  *distinct* candidate list — 2.5 KiB, since it depends only on the list and deduplicates with it —
+  where the ~1 % is what offsets the extra indirection that structure introduces. Kept here rather
+  than deleted because the *standalone* verdict is unchanged: on its own it is still ~1 % for a
+  release, and the 2025 reasoning was right. What moved is that the price became sunk, not that the
+  win grew.

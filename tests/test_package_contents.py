@@ -82,6 +82,7 @@ UNWANTED_CODE_DIST_PATTERNS = {
     ".git/*",
     ".vscode/",
     ".cursor/",
+    ".agents/",
     "examples/",
     "docs/",
     "scripts/",
@@ -99,7 +100,7 @@ UNWANTED_CODE_DIST_PATTERNS = {
     # the agent instruction files MANIFEST.in excludes by name
     "AGENTS.md",
     "CLAUDE.md",
-    "potential-improvements.md",
+    "contributing/",
     "Makefile",
     "update_data.sh",
     "readthedocs.yml",
@@ -273,8 +274,8 @@ def load_gitignore_patterns() -> set[str]:
     exclusion, and kept verbatim it becomes a pattern beginning with ``!`` that
     matches no path at all - a parametrised case that can never fail. Dropping it
     leaves the enclosing exclusion in force, which is the right answer here: what
-    git re-includes for version control (``.claude/skills/``) is still excluded from
-    the distribution by ``MANIFEST.in``.
+    git re-includes for version control (``.claude/skills/`` and
+    ``.agents/skills/``) is still excluded from the distribution by ``MANIFEST.in``.
 
     Returns:
         A set of patterns loaded from the .gitignore file.

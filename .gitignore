@@ -16,6 +16,9 @@ plans/
 # rather than `.claude/` for the negation below to have any effect
 .claude/*
 !.claude/skills/
+# local Codex/agent state stays ignored; the shared workflow adapters are tracked.
+.agents/*
+!.agents/skills/
 .devcontainer/
 
 .mypy_cache/

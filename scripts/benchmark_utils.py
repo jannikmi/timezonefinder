@@ -167,7 +167,7 @@ DURATION_METRIC = MetricSpec(
     noise_note=(
         "Same-runner comparison removes the machine-to-machine term but not "
         "the runner's own jitter, so a change of a few percent is still noise. "
-        "See CONTRIBUTING.md."
+        "See contributing/development/benchmarking-and-performance-validation.md."
     ),
 )
 
@@ -189,7 +189,7 @@ MEMORY_METRIC = MetricSpec(
         "so a change there is signal rather than jitter. `*_rss` reflects the "
         "resident set, which also counts memory-mapped pages the kernel may "
         "reclaim under pressure - read it as an order of magnitude, not an "
-        "exact figure. See CONTRIBUTING.md."
+        "exact figure. See contributing/development/benchmarking-and-performance-validation.md."
     ),
 )
 

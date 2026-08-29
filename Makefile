@@ -136,7 +136,8 @@ BENCHMARK_ENV := --isolated --group test --group compare
 
 # the full benchmark suite (all of benchmarks/), producing the JSON that
 # scripts/render_benchmark_reports.py turns into docs/benchmark_results_*.rst.
-# never combine with pytest-run-parallel's `--parallel-threads` (see CONTRIBUTING.md)
+# never combine with pytest-run-parallel's `--parallel-threads` (see
+# contributing/development/benchmarking-and-performance-validation.md)
 #
 # The path is asserted rather than assumed, for the same reason the benchmark
 # workflow asserts it: a lockfile change that made numba importable here would
@@ -182,7 +183,9 @@ BENCHMARK_ESTIMATOR := min
 BENCHMARK_MIN_ROUNDS := 50
 # the acceleration path CI tracks and the committed reports are measured on:
 # what a plain `pip install timezonefinder` gives you. Numbers from the numba
-# path are not comparable (see CONTRIBUTING.md). $(BENCHMARK_ENV) above is what
+# path are not comparable (see
+# contributing/development/benchmarking-and-performance-validation.md).
+# $(BENCHMARK_ENV) above is what
 # holds `benchmarks`/`memory` to it; the -ci targets below inherit whichever
 # environment they are invoked in, because CI syncs its own and asserts this
 # same value before measuring anything.

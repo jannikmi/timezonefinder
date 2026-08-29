@@ -13,9 +13,9 @@ The short version: these numbers are noisy for reasons that have nothing to do w
 code, the measurement design exists to work around that, and every threshold is derived from
 measured noise rather than picked.
 
-This page is the *why*. The operational side - which ``make`` target to run, what to check when a
-report looks wrong - lives in `CONTRIBUTING.md
-<https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`__.
+This page is the *why*. The operational side - which ``make`` target to run and what to check
+when a report looks wrong - lives in `Benchmarking and performance validation
+<https://github.com/jannikmi/timezonefinder/blob/master/contributing/development/benchmarking-and-performance-validation.md>`__.
 
 
 The Workload

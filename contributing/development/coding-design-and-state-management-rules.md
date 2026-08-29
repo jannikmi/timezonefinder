@@ -1,0 +1,73 @@
+# Coding design and state-management rules
+
+- Define types centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
+- **Do not let an unmeasured micro-optimisation choose the structure.** The shortcut index was
+  first wired into `AbstractTimezoneFinder` as five flat array attributes with the slot
+  arithmetic and entry decoding inlined at each call site, justified by an attribute hop
+  "not worth the tidier grouping" — which was never measured. It costs nothing: routing the
+  same lookup through `ShortcutIndex.entry_of` / `candidates_of` / `stop_index_of` measured
+  inside the noise on all four strata, both estimators disagreeing. Encapsulate first, then
+  measure, and only then trade the design away — with the numbers in the commit. A method
+  call is not free, but at ~1 µs per query it is far below what this repository can resolve
+- **Removing the last caller of something is half the change: the other half is the callee.**
+  Grep for remaining callers in the same commit, and act on what you find — no callers at all
+  means delete it; callers only in tests means it is test scaffolding and should say so; callers
+  only at build time means it must *leave the runtime modules*, because everything in
+  `timezonefinder/utils_numba.py` is compiled and bound at import in every user's process. That
+  is how `get_last_change_idx` outlived its query-path caller: precomputing it into the shortcut
+  index removed the call, and the `@njit` function stayed behind being compiled for nobody. A
+  helper that no longer runs per query is not merely tidy to move — it is cost every user pays
+- **A dispatch boundary costs more than any scalar per-query stage computes.** An empty `njit`
+  call is ~98 ns and a cffi crossing the same order, against stages of 100-200 ns — so reaching
+  for Numba or the C extension to speed one up is a measured dead end, not an untried idea, and
+  `njit` on a scalar helper is a net *loss*; the
+  [query-path decisions](../improvements/decisions/query-performance-and-shortcut-index-decisions.md)
+  have the numbers and the inventory of which helpers still pay it. Numba earns its place on
+  `inside_polygon`, over arrays of hundreds to tens of thousands of vertices, where the same
+  overhead amortises to nothing. Look for the algebra first: the H3 slot lookup lost two thirds
+  of its arithmetic to one observation about adjacent bit fields
+- Preserve the fast lookup path. `prototypes/query_stage_profile.py` attributes a `timezone_at`
+  query to its stages, per backend and per coordinate-access mode, off the committed fixtures —
+  read its `FINDINGS` block before arguing about where query time goes, and re-run it rather
+  than reasoning from a microbenchmark. **Those numbers are pinned to the commit they were taken
+  at and go stale silently**: a change under `timezonefinder/` or to the packaged data can move
+  every share quoted from them, so re-measuring belongs to the pull request that moves the
+  critical path, not to a later one. They are also **one machine's**: rank on the counts a change
+  removes (machine-independent) and on the `clang` / mapped column that a plain install actually
+  runs, not on absolute nanoseconds. The
+  [measurement baseline](../improvements/query-performance-measurement-baseline.md) holds
+  the anchor, the denominators, the workload conversion and a one-command freshness check
+- Prefer dependency injection over module-level state; global helper functions are NOT thread-safe,
+  concurrent workloads should use per-thread `TimezoneFinder(in_memory=True)` instances
+- **Declare each path/filename constant once** in the module that owns the resource and import it
+  elsewhere; never re-derive a path or retype a filename string in a second file — the two copies
+  drift when one is renamed
+- **Never point at something outside the repository for a reason.** Two shapes, one failure mode:
+  an issue or PR number in code (`# Since #446`, `(issue #446)`) — comments, docstrings, workflow
+  headers, config comments — and a path under `plans/`, which is **gitignored and temporary**, so
+  the reference is already dangling for everyone but its author. Either way the *reason* stops
+  being where the code is: a tracker gets retitled, re-scoped and closed independently, and a plan
+  file is deleted when the work lands. Write the reasoning itself; if it is too long for a comment,
+  it belongs in `docs/`, and a rejected option belongs wherever it can actually refuse the next
+  proposal. `CHANGELOG.rst` is the exception — there an issue number is the release's provenance,
+  and `Thanks to … PR #123` is required (see *Changelog*)
+
+### Production-Ready Implementation
+
+- Write complete solutions—no placeholders, commented-out experiments, or TODOs without filed issues.
+- Prefer pure functions or clearly delimited side effects. Use dependency injection instead of module-level state when possible.
+- Treat concurrency as a first-class concern. Avoid introducing shared global state; guard mutable caches and document thread expectations.
+
+### Pythonic, Functional Design
+
+- Strive for expressive, readable code that leverages Python's standard library and idioms (`with` statements, comprehensions, `enum.Enum`, context managers).
+- Bias towards small, composable functions with explicit inputs/outputs. When mutability is required, minimise scope and communicate intent.
+- Maintain backwards-compatible APIs. Deprecations require documentation updates and tests that cover both old and new paths.
+
+### Strong Typing & Contracts
+
+- Add or refine type hints for new code. Use `typing.Protocol`, `TypedDict`, and `Literal` to capture constraints.
+- Keep annotations consistent with runtime behaviour—no `Any` unless justified. Ensure `mypy` (configured in `pyproject.toml`) passes locally.
+- Validate external inputs early and raise precise exceptions. Update `docs/data_format.rst` if binary schemas change.
+- all types should be defined centrally in `timezonefinder/configs.py` to avoid duplication and circular imports
+- the same applies to path/filename constants anywhere in the repo, not just `timezonefinder/`: define a directory or filename once, in the module that owns the resource, and import it elsewhere instead of retyping the literal (see `tests/auxiliaries.py`'s `BENCHMARK_FIXTURES_DIR` and fixture-name constants, reused by `scripts/generate_benchmark_fixtures.py` and `benchmarks/conftest.py`)

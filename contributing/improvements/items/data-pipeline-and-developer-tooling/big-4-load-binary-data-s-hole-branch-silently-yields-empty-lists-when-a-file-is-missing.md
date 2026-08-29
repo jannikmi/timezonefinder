@@ -1,0 +1,33 @@
+# BIG-4 — `load_binary_data`'s hole branch silently yields empty lists when a file is missing
+
+- **Location:** `scripts/reporting.py`, `load_binary_data`.
+- **Defect:** the `if hole_registry_path.exists() and hole_coord_path.exists():` branch has no
+  `else`, so a data directory missing either file reports zero holes rather than saying so. Every
+  hole figure in `docs/data_report.rst` then reads as a legitimate zero.
+- **Fix:** raise, or state the absence in the report. Size: ~8 lines.
+- **The check this entry asked for has been made: raising is not a behaviour change.**
+  `scripts/file_converter.py` writes both files on every run unconditionally —
+  `create_and_write_hole_registry` and
+  `write_polygon_collection_flatbuffer(hole_polygon_file, data.inline_holes)` — even for a dataset
+  with no holes at all, so no in-repo path can produce a directory that reaches the branch. It is
+  reachable only for a hand-assembled or half-copied directory, which is precisely the case a
+  legitimate-looking zero is worst for. The entry stays here rather than moving under *Behaviour and
+  public API*.
+- **Value:** low-moderate, and narrower than when this entry was first written. It originally also
+  covered the function being 37 statements with a function-local import mid-body; PR #509 rewrote
+  the loads through `PolygonArray`/`HoleArray`, taking it to 24 statements with no local import, so
+  only the silent-empty branch is left.
+- **Decided, 2026-08-20 — raise.** The alternative put was to state the absence in the report, which
+  was refused because it makes one report describe two different things: a reader cannot tell a
+  hole-less dataset from an incomplete directory without checking which sentence the generator
+  chose. Raising means every hole figure in `docs/data_report.rst` is either real or the file is not
+  written at all. No *Recorded decisions* line: once this ships the reasoning lives in the exception
+  message, which is where a reader meets it.
+- **What implementing it means:** replace the bare `if hole_registry_path.exists() and
+  hole_coord_path.exists():` with a check that raises naming **which** of the two files is missing —
+  the useful half of the diagnosis, since the two fail for different reasons. `make testparse` and
+  the packaged data both keep working unchanged, so the existing suite covers the happy path and the
+  new test is over a directory with a file removed. Changelog bullet in the **Internal** list.
+- **Status:** open — decision taken, implementation not started.
+- **Last touched:** 2026-08-20 — the behaviour-change question answered against the converter, then
+  decided.

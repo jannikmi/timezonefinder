@@ -1,0 +1,68 @@
+# Query-path change-classification log
+
+This log classifies changes since the anchor in the
+[query performance measurement baseline](query-performance-measurement-baseline.md), so later
+passes do not have to re-derive whether the recorded denominators still apply.
+
+- **2026-08-23, the negative-id guard on the public id-taking methods: inert.** It adds a check to
+  four public methods and moves the internal callers onto private accessors with identical
+  bodies, so the query path executes the same number of calls over the same statements. Nothing
+  in the `zone name` block or the ladder above it changed.
+- **2026-08-23/24, the batch lookups: not inert on the ambiguous stratum, and measured.** The
+  candidate loop is now shared with the batch path, so an ambiguous `timezone_at` executes
+  **exactly one more Python method call** than the anchor. That count is the durable fact; the
+  time it costs is at the edge of what this machine resolves. A first paired run read
+  +0.51 % (clang) with both estimators agreeing; a three-way interleaved re-run a day later put
+  the same comparison at +2.12 % min / +0.70 % median, with the estimators straddling. **Read it
+  as order 1 % of an ambiguous query, ~0.6 % of a mixed wall clock, and do not quote a second
+  decimal.** Kept deliberately: the alternative was a second copy of the stop-index and
+  untested-last-zone logic, which is the drift this file exists to prevent, and
+  `test_batch_and_scalar_agree_over_every_committed_point` is what makes the remaining three-line
+  duplication safe. The unique stratum, ~89 % of a random workload, executes not one changed
+  statement. Everything above the ladder's `zone name` block stands; the ambiguous
+  `candidate loop` block is ~1 % heavier than the anchor says.
+- **2026-08-24, per-cell preparation shared across a batch: inert for the scalar path, and a
+  real batch win.** Splitting a cell's preparation (`candidates_of`, `zone_ids_of`,
+  `stop_index_of` — 898 ns against 10,228 ns for a whole ambiguous point, so an **8.8 % ceiling**)
+  out of the loop that works it, and memoising it by shortcut entry inside a batch. Measured
+  paired against the commit before it, 244 rounds a side: scalar `timezone_at`
+  **-0.41 % min / -0.08 % median, 111/244 (clang)** and **+0.33 % / -0.89 %, 130/244 (numba)** —
+  estimators disagreeing in both, which is what neutral looks like. On the batch path, 240 rounds
+  a side: **-3.8 % (clang) / -6.3 % (numba)** on the ambiguous stratum, both estimators agreeing.
+  The ladder's per-query figures are unchanged by it.
+- **2026-08-24, reading a batch's arrays once per stage rather than once per point.**
+  `int(entries[i])` and the two `float(...[i])` in the ambiguous resolvers are numpy
+  scalar extractions: **242 ns per point** for the three against **103 ns** for the same
+  values taken through `tolist()` up front. That is loop overhead, paid whether or not
+  the point's cell was already prepared. Measured over 2,000 ambiguous fixture points,
+  three paired rounds, `in_memory=False`, min / median ns per point:
+  `TimezoneFinderL` **878 -> 755 (-14.1 %) / 936 -> 809 (-13.5 %)** — it also stopped
+  using a dict, its answer being a pure function of the entry — and `TimezoneFinder`
+  **10,021 -> 9,937 (-0.8 %) / 10,599 -> 10,554 (-0.4 %)**, where ~10 µs of geometry per
+  point is what makes the same nanoseconds invisible. Both estimators agree in sign in
+  both classes. **The general rule, and the reason this is recorded rather than just
+  fixed:** a numpy scalar extraction inside a Python loop costs more than most of the
+  loop bodies in this repository, so hoist the whole column out of the loop wherever a
+  batch is walked point by point.
+- **2026-08-25, the hole-side overlap fix in the shortcut compiler: inert for timings.** It
+  changes `scripts/`, not `timezonefinder/`, so not one statement on the query path moved; what
+  it moves is the packaged `shortcuts.bin`, for **21 of 288,122 cells** — 17 of which stopped
+  resolving to a single zone. The committed benchmark fixtures were checked against those cells
+  rather than assumed clear: **no `unique_shortcut` or `random` point falls in one**, so no fixture
+  point changed stratum and the fixtures did not need regenerating; 7 of 10,000 `on_land` points
+  and 1 of 5,000 `ambiguous_shortcut` points now test one additional candidate, which is a bbox
+  rejection on 0.03 % of two fixtures. The ladder, the denominators and every share above stand,
+  and `docs/benchmark_results_*.rst` were deliberately **not** re-measured: re-running them would
+  replace every committed figure with a fresh machine's for a change nothing can resolve.
+  `docs/data_report.rst` was regenerated, since it counts the index rather than timing it.
+- **2026-08-25, the antimeridian frame in the shortcut compiler: inert for timings.** Same shape as
+  the entry above and the same reasoning: it changes `scripts/`, so no statement on the query path
+  moved, and what it moves in the packaged `shortcuts.bin` is **3 of 288,122 cells**, none of which
+  changed between the unique and the ambiguous stratum — all three already held a candidate list.
+  Checked against the committed fixtures rather than assumed: **1 of 5,000 `ambiguous_shortcut`
+  points** falls in one of the three and now tests one additional candidate, which is a bounding-box
+  rejection on 0.02 % of one fixture; no `unique_shortcut`, `on_land` or `random` point falls in any
+  of them. The ladder, the denominators and every share above stand, and
+  `docs/benchmark_results_*.rst` were deliberately **not** re-measured — re-running them would
+  replace every committed figure with a fresh machine's for a change nothing can resolve.
+  `docs/data_report.rst` was regenerated, since it counts the index rather than timing it.

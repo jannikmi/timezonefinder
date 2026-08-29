@@ -1,0 +1,162 @@
+# Improvement register rules
+
+The contributor-memory graph of what is worth doing next to `timezonefinder`, kept in the open:
+one [ranking](improvement-priority-ranking.md) across every finding, linked item files,
+[sequencing rules](improvement-sequencing-and-preconditions.md), and topic decision files retaining
+the options considered and refused.
+
+**Anything that improves the package belongs here**, whatever its area and however large: a
+correctness defect, a slow path, an awkward API, a docs page that lies, a release step that can
+fail silently, a test that cannot fail, duplication that will drift, a data encoding that wastes
+half its bytes. There is one list because there is one reviewer's attention to spend, and sorting
+candidates into kinds first is how the cheap ones get taken because they are cheap. Entries are
+grouped below by the part of the repository they touch, purely so the file can be scanned — the
+grouping decides nothing.
+
+**The division of labour with an issue, where an entry has one.** This file holds what a *pass*
+needs in order to choose: where the item ranks and why, what blocks it, the decision taken and the
+options refused. The issue holds the item's **detail** — the measurements, the design tables, the
+implementation notes, the reproduction. An entry names its issue and says what is on it, rather than
+restating it, because two copies of a measurement drift and only one of them is ever re-read. **An
+entry with no issue is the complete record**, and most are: the detail stays here, because there is
+nowhere else for it. What never moves to an issue in either case is the *ranking*, the *sequencing*
+and the *recorded decisions* — those are the file's point, and the next section says why.
+
+**Why here and not on the tracker.** The ranking, the sequencing and the recorded decisions used to
+live in a roadmap issue. Reasoning that sits outside the repository goes stale silently: nothing
+references it, no check reads it, and a reviewer never sees it in a diff. In this file an entry is
+reviewed in the pull request that changes it, and every change to the ranking arrives as a diff.
+Issues remain the place a single item is worked out and where outside contributors comment — which
+is exactly why an item's detail belongs there and its *rank* does not. A stale measurement on an
+issue is one wrong number; a stale ranking outside the repository silently misdirects every pass
+that reads it.
+
+## How to read it
+
+**The ranking below is the file's point.** Listing everything that could be improved is easy and
+worth little; what costs something is deciding which findings earn a reviewer's attention, and
+writing down why the rest do not. Entries are ranked by expected value — *defects that will cause a
+real bug later > work that unblocks other work > duplication that will drift > readability* — with
+size breaking ties only.
+
+**A performance item is ranked on a measured share, never on an intuition about what looks
+slow.** Benefit is the fraction of a query the change removes *at best* — its ceiling, read off
+[The measured baseline](query-performance-measurement-baseline.md) — and cost is size, plus the decisions it needs, plus whether it
+forces a data-format change (which is a two-distribution ordered release, the expensive
+category). A ceiling below the machine's own run-to-run noise, 3–9 %, cannot be demonstrated by
+the benchmark suite even when the change is real: such an item has to stand on correctness or
+simplicity instead, and is ranked on that. Unmeasured is not a third case — it means the item is
+a measurement, and the measurement is one profiler run.
+
+State the ceiling as a **workload** share, not a stratum share, and prefer the count a change
+removes to the time it removes: the counts are machine-independent and the shares are not. The
+[measured baseline](query-performance-measurement-baseline.md) carries the conversion and the rest of what one machine's numbers can and
+cannot be asked.
+
+An item sits **below its own blocker**, because the list is walked top-down.
+
+A pass takes the highest-ranked item that is *eligible*: unclaimed, preconditions met, its
+maintainer-owned decisions already recorded or obtainable, and small enough to review. That is what
+lets a cheap item proceed while a large one waits on a decision.
+
+**Entry conventions.** An id is a stable handle and nothing more — `GH-<n>` means the item is also
+tracked by issue `<n>`, the other prefixes are mnemonics, and neither says how a pass should treat
+the entry. Locations are given by file plus a code anchor (a function or symbol name), never a line
+number, so they survive reformatting. `Size` is a rough count of changed lines.
+
+`Status` opens with one of `open`, `needs …`, `blocked …`, `conditional …`, `parked …`,
+`rejected …`, `out of scope …` or `withdrawn …`, and `tests/test_improvement_ledger.py` rejects
+anything else. **There is deliberately no status meaning "done"** — everything written down here is
+unfinished or declined, and work that landed is *deleted* rather than marked. Do not re-litigate a
+closed entry and do not re-add it under a new id.
+
+**`needs …` means a person has to decide something**, and it is the one status that names a piece of
+work nobody can do by reading harder. Such an entry carries exactly one `**Decision needed:**`
+bullet holding the question, the options with their trade-offs and a recommendation — and its row in
+the ranking says so too, so the queue is visible from the table. `tests/test_improvement_ledger.py`
+asserts the pairing in both directions: a `needs` status without the bullet is an entry that says it
+is waiting without saying what for, and the bullet without the status is a question no pass looking
+at statuses will find. Answering one turns it back into `open` and the bullet into the decision and
+its rationale, with the refused options kept.
+
+**The ranking has no numbers**, because the row order is the ranking. A number column would have to
+be re-flowed on every insertion and deletion — churn on the one operation this file exists to make
+cheap, and a conflict between any two passes that both ship something.
+
+**How it is maintained.** Two provider-neutral workflows, split by whether the maintainer is at the
+keyboard. [Run one improvement pass](../workflows/run-one-improvement-pass.md) asks nothing:
+it runs unattended, so a choice that is genuinely the maintainer's is written down as a
+`**Decision needed:**` question and the item is left for later rather than stalling the pass and
+everything ranked below it. [Record maintainer decisions](../workflows/record-maintainer-decisions.md) is the other half — it
+collects those questions, re-verifies each against the current code, briefs them, puts them to the
+maintainer and records the answers here. The file is committed so that all of it reaches the next
+pass through `master`: every pass reads it before touching a source file, re-verifies the entries it
+is considering against the current code, and writes back what it found.
+
+**It is a to-do list, not a history.** Work that landed is *deleted* — the item file and its ranking
+row, in the same pull request that ships it — because the code is the evidence it is done, the
+changelog says what changed, and `git log -- contributing/improvements` still has the text. Nothing
+renumbers and nothing else moves. Entries that were *rejected*, ruled *out of scope* or *withdrawn*
+stay: they encode a dead end, and re-discovering one costs a whole pass. The decision memory is
+split into [query and shortcut](decisions/query-performance-and-shortcut-index-decisions.md),
+[geometry and format](decisions/geometry-data-format-and-validation-decisions.md),
+[public API and loading](decisions/public-api-compatibility-and-runtime-loading-decisions.md),
+[distribution and release](decisions/data-distribution-packaging-and-release-decisions.md), and
+[benchmarking and dependencies](decisions/benchmarking-tooling-and-dependency-decisions.md).
+Checked findings are retained for [runtime and data](checked-and-found-sound/runtime-geometry-and-data-checks.md),
+[tests and benchmarks](checked-and-found-sound/testing-and-benchmarking-checks.md), and
+[tooling and packaging](checked-and-found-sound/developer-tooling-and-packaging-checks.md).
+
+Deleting the item file and ranking row is not enough: grep the ID across
+`contributing/improvements/`. Rewrite blocker, sequencing, measurement, and decision references to
+describe the lasting fact rather than leaving a dangling item handle. Recorded decisions remain and
+therefore get rewritten rather than deleted.
+
+**Closing an entry moves its row out of the ranking and into *Closed*** — the one case where a row moves without being deleted.
+Changing only the eligibility column leaves a dead item holding a live rank, and since the list is walked top-down that costs every later pass the reading it takes to discover there is nothing to take.
+The line is narrow: *rejected*, *withdrawn* and *out of scope* move, because no pass will ever take them as they stand.
+**Blocked is not closed** — a blocked item is live work waiting on a blocker, and it stays in the ranking below that blocker; so do *parked* and *conditional*, which can become live without the entry changing.
+Blockers resolve, whereas rejections accumulate forever — which is the whole reason rejections are the ones that leave.
+
+Both tables sit under this heading on purpose: `tests/test_improvement_ledger.py` reads the section rather than a single table, so every entry still has exactly one row and the two halves still cannot drift.
+
+An entry left in after its work shipped is the failure this file cannot detect on its own: it reads
+exactly like an open one, and the next pass pays full price to rediscover that there is nothing to
+do. Re-verify before ranking. **A `GH-<n>` entry whose issue has closed is the cheapest staleness
+signal there is** — either the work landed or the item was dropped, and both mean the entry is
+resolved rather than open. `gh issue view <n> --json state` over the ids costs seconds, and it is
+what caught the one entry this file arrived with that had shipped the day before.
+
+Every entry has exactly one row in the ranking and every row has exactly one entry;
+`tests/test_improvement_ledger.py` fails otherwise. The table is the only statement of order, so
+the entry sections below are grouped by the area they touch rather than sorted.
+
+---
+
+## Recorded decision retention
+
+**Kept, never deleted** — including the rejected options, which is most of their value. The next
+pass re-proposes whatever is not written down as already refused. Correct the reasoning when a
+premise moves; do not reverse a decision silently.
+
+# Scope notes
+
+`prototypes/` is excluded throughout — it carries its own crop of ruff findings (`RUF012` mutable
+class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave
+in exploratory code.
+
+`packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/`
+are generated and are never edited directly; findings there belong against the generator or the
+schema instead.
+
+The `timezonefinder-data` distribution is deliberately thin — one `DATA_DIR` constant and a version
+in `packages/timezonefinder-data/timezonefinder_data/__init__.py`, plus the payload. Pass 10 read
+it and found nothing; there is no code there to carry debt, and the
+[data-distribution decisions](decisions/data-distribution-packaging-and-release-decisions.md) refuse
+moving the binary-format reader into it.
+
+An entry belongs here if it names something a pass could act on and later re-verify — code that
+exists, a file that is built, a decision that can be taken. A finding with no such anchor can never
+be resolved by the pass that reads it, so it stays open for ever.
+
+---

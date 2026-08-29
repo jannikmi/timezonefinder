@@ -13,7 +13,8 @@ name: benchmark
 #                     fork PRs. The comparison comment is posted by the
 #                     separate, privileged benchmark-comment.yml, which is
 #                     triggered by workflow_run and runs the *base* repo's
-#                     workflow definition. See CONTRIBUTING.md.
+#                     workflow definition. See
+#                     contributing/development/benchmarking-and-performance-validation.md.
 #                     Gated by `paths`: the job is a double checkout + double
 #                     `uv sync` + double C-extension build + a 2-pass timing
 #                     sandwich, which is wasted on a push that cannot move the
@@ -88,7 +89,8 @@ env:
   # 110% was derived from a 5-run study that happened to draw similar
   # hardware, and would fire on unchanged code about as often as not.
   #
-  # Re-derive with a workflow_dispatch noise run (see CONTRIBUTING.md)
+  # Re-derive with a workflow_dispatch noise run (see
+  # contributing/development/benchmarking-and-performance-validation.md)
   # whenever the runner pool or the core set changes. `fail-on-alert` stays
   # false: master must never be blocked on which machine it drew.
   ALERT_THRESHOLD: "180%"
@@ -191,7 +193,7 @@ jobs:
       # NOTE: the `numba` group is deliberately NOT installed. The tracked
       # configuration is the no-numba / clang C extension one, which is what a
       # plain `pip install timezonefinder` gives you and what the constrained
-      # container audience in CLAUDE.md actually runs.
+      # container audience in contributing/core-contributor-contract.md actually runs.
       - name: Install dependencies (without numba)
         run: uv sync --group test
 

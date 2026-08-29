@@ -179,7 +179,7 @@ jobs:
           body=$(cat <<EOF
           A new timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) is available. The currently packaged data version is \`$CURRENT\`.
 
-          The automated update job failed to prepare an update PR, so the data needs to be regenerated manually with \`update_data.sh\` (see the release process notes in \`CLAUDE.md\`).
+          The automated update job failed to prepare an update PR, so the data needs to be regenerated manually with \`update_data.sh\` (see \`contributing/development/data-pipeline-format-versioning-and-release-order.md\`).
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF
