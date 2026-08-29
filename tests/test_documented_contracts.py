@@ -175,6 +175,16 @@ def test_usage_docs_example_returns_the_annotated_zone(
     assert lookup(**USAGE_DOCS_EXAMPLE_COORDS) == USAGE_DOCS_EXAMPLE_ZONE
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize("lng", [-180.0, -120.0, 0.0, 120.0, 180.0])
+def test_certain_timezone_at_has_no_match_at_the_exact_south_pole(
+    tf: TimezoneFinder, lng: float
+):
+    """The usage docs name the pole as a reachable exact-boundary ambiguity."""
+    assert tf.certain_timezone_at(lng=lng, lat=-90.0) is None
+    assert tf.timezone_at(lng=lng, lat=-90.0) == "Antarctica/McMurdo"
+
+
 def _packages_declaring_a_surface() -> list[str]:
     """Every importable package under ``timezonefinder`` that declares an ``__all__``."""
     root = Path(timezonefinder.__file__).parent

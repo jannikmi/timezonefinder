@@ -325,9 +325,13 @@ Using a TimezoneFinder instance:
 
 .. note::
 
-    Due to the "point-in-polygon-test" algorithm being used, the state of a point on the edge of a (timezone) polygon is undefined.
-    For those kind of points the return values is hence uncertain and might be ``None``.
-    This applies for example for all points with lng=+-180.0, because the timezone polygons in the data set are being cropped at the 180 longitude border.
+    A coordinate exactly on the edge of a timezone polygon has no guaranteed
+    answer. The point-in-polygon test may assign either neighbouring zone or no
+    polygon, so ``certain_timezone_at()`` may return ``None`` even though the
+    packaged data otherwise covers the globe. The exact South Pole
+    (``lat=-90.0``, at any longitude) is a reproducible example because polygon
+    vertices meet there. The same ambiguity applies at ``lng=+-180.0``, where
+    the dataset is cropped at the antimeridian.
 
 
 
