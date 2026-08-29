@@ -20,7 +20,6 @@
 | [API-2](items/public-api-and-behavior/api-2-every-submodule-is-reachable-as-a-package-attribute-so-the-public-api-is-wider-than-all-says.md) | Every submodule is reachable as a package attribute | public API | ~20 | decided — held for the next major |
 | [API-1](items/public-api-and-behavior/api-1-abstracttimezonefinder-init-takes-an-in-memory-it-never-uses.md) | `AbstractTimezoneFinder.__init__` takes an `in_memory` it never uses | public API | ~10 | decided — held for the next major |
 | [BIG-4](items/data-pipeline-and-developer-tooling/big-4-load-binary-data-s-hole-branch-silently-yields-empty-lists-when-a-file-is-missing.md) | `load_binary_data`'s hole branch silently yields empty lists | diagnostics | ~8 | free — decided |
-| [BUG-5](items/public-api-and-behavior/bug-5-the-exact-poles-lie-on-a-polygon-boundary.md) | The exact poles lie on a polygon boundary, so `certain_timezone_at` is `None` there | correctness | ~5 | free |
 | [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | free — maintainer action |
 | [GH-524](items/packaging-distribution-and-release/gh-524-move-timezonefinder-under-packages-for-a-symmetric-workspace-layout.md) | Move `timezonefinder` under `packages/` | repo layout | M | free |
 | [GH-362](items/data-pipeline-and-developer-tooling/gh-362-reuse-the-polygonarray-binaries-in-file-conversion.md) | Reuse the `PolygonArray` binaries in file conversion | internal | M | free |
