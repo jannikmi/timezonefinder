@@ -54,7 +54,7 @@ Every entry has exactly one row in the ranking and every row has exactly one ent
 
 `packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited directly; findings there belong against the generator or the schema instead.
 
-The `timezonefinder-data` distribution is deliberately thin — one `DATA_DIR` constant and a version in `packages/timezonefinder-data/timezonefinder_data/__init__.py`, plus the payload. Pass 10 read it and found nothing; there is no code there to carry debt, and the [data-distribution decisions](decisions/data-distribution-packaging-and-release-decisions.md) refuse moving the binary-format reader into it.
+The `timezonefinder-data` distribution is deliberately thin — one `DATA_DIR` constant and a version in `packages/timezonefinder-data/timezonefinder_data/__init__.py`, plus the payload. The package has been reviewed and contains no code that can carry meaningful debt; the [data-distribution decisions](decisions/data-distribution-packaging-and-release-decisions.md) refuse moving the binary-format reader into it.
 
 An entry belongs here if it names something a pass could act on and later re-verify — code that exists, a file that is built, a decision that can be taken. A finding with no such anchor can never be resolved by the pass that reads it, so it stays open for ever.
 

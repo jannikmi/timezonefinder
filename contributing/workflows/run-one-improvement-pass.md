@@ -15,7 +15,7 @@ Read the [register rules](../improvements/improvement-register-rules.md), the [p
 
 Fetch `origin`, list open pull requests and remote branches, and inspect any branch mentioning an item or issue before claiming it. Check every `GH-*` item under `contributing/improvements/items/` against the issue state. An item already implemented is deleted with its ranking row; a wrong, rejected, withdrawn, or out-of-scope item keeps its evidence but its row moves to `Closed`. Blocked, parked, and conditional work remains live.
 
-Treat entries as evidence, not gospel. Re-find locations by symbol rather than line, correct stale reasoning, and record newly swept areas in the [coverage log](../improvements/improvement-discovery-coverage-log.md). Do not re-propose anything in the linked decision or checked-and-sound memory without new evidence.
+Treat entries as evidence, not gospel. Re-find locations by symbol rather than line, correct stale reasoning, and update the affected subject in the [coverage map](../improvements/improvement-discovery-coverage-map.md) instead of appending a dated pass. Do not re-propose anything in the linked decision or checked-and-sound memory without new evidence.
 
 Rank expected value first: likely defects, then unblockers, drift-prone duplication, then readability; size only breaks ties. A performance item is ranked on measured removable workload share, never intuition. Use the [measurement baseline](../improvements/query-performance-measurement-baseline.md); an unmeasured hypothesis becomes a measurement item.
 
