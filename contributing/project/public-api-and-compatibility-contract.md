@@ -1,9 +1,7 @@
 # Public API and compatibility contract
 
-- Before adding any version-gated import, `__future__` feature, or compatibility shim, check
-  `requires-python` and confirm the feature actually needs it on the minimum supported version.
-- Keep `__all__` in `__init__.py` files: they define the declared public surface. No test asserts
-  their contents directly; emptying the top-level one only fails incidentally during collection.
+- Before adding any version-gated import, `__future__` feature, or compatibility shim, check `requires-python` and confirm the feature actually needs it on the minimum supported version.
+- Keep `__all__` in `__init__.py` files: they define the declared public surface. No test asserts their contents directly; emptying the top-level one only fails incidentally during collection.
 
 - External: Avoid breaking changes to public APIs unless absolutely necessary. If a change is required, provide a clear migration path and update all relevant documentation. A major version bump is warranted for breaking changes.
 - Internal: When modifying internal assets like code, data formats or binary assets the changes must NOT be backward compatible. The code is packaged and versioned together and must only work with the exact version of the data files it was built with.

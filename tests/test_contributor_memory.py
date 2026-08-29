@@ -23,6 +23,8 @@ ADAPTER_ROOTS = (
 LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 GENERIC_FILENAMES = {"README.md", "notes.md", "decisions.md"}
 CANONICAL_LIMIT = 2_000
+FENCE = re.compile(r"^\s*(```|~~~)")
+LIST_ITEM = re.compile(r"^\s*(?:[-+*]|\d+\.)\s+")
 
 
 def words(path: Path) -> int:
@@ -49,11 +51,64 @@ def local_targets(path: Path) -> set[Path]:
     return targets
 
 
+def arbitrary_prose_linebreaks(path: Path) -> list[int]:
+    violations: list[int] = []
+    previous_prose_can_continue = False
+    in_fence = False
+    in_frontmatter = False
+
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        if line_number == 1 and line == "---":
+            in_frontmatter = True
+            continue
+        if in_frontmatter:
+            if line == "---":
+                in_frontmatter = False
+            continue
+        if FENCE.match(line):
+            in_fence = not in_fence
+            previous_prose_can_continue = False
+            continue
+        if in_fence:
+            continue
+
+        stripped = line.lstrip()
+        if not stripped:
+            previous_prose_can_continue = False
+            continue
+        if LIST_ITEM.match(line):
+            previous_prose_can_continue = True
+            continue
+        if stripped.startswith(
+            ("#", "|", ">", "<!--", "<details", "</details", "<summary", "</summary")
+        ) or stripped in {
+            "---",
+            "***",
+            "___",
+        }:
+            previous_prose_can_continue = False
+            continue
+        if previous_prose_can_continue:
+            violations.append(line_number)
+        previous_prose_can_continue = True
+
+    return violations
+
+
 @pytest.mark.unit
 def test_local_markdown_links_resolve() -> None:
     for path in checked_files():
         for target in local_targets(path):
             assert target.is_file(), f"{path}: broken local link to {target}"
+
+
+@pytest.mark.unit
+def test_contributor_memory_uses_semantic_linebreaks() -> None:
+    for path in checked_files():
+        violations = arbitrary_prose_linebreaks(path)
+        assert not violations, f"{path}: arbitrary prose wraps at lines {violations}"
 
 
 @pytest.mark.unit

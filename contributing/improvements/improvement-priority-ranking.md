@@ -43,9 +43,7 @@
 
 ### Closed
 
-Kept so the dead end is not re-proposed on its merits, and out of the ranking above because no pass will take them: there is no work to order.
-No `Size` column, for the same reason — it prices work, and there is none.
-The one line here is a handle; the reasoning is in the entry, because a row cannot refuse a re-proposal and only the argument can.
+Kept so the dead end is not re-proposed on its merits, and out of the ranking above because no pass will take them: there is no work to order. No `Size` column, for the same reason — it prices work, and there is none. The one line here is a handle; the reasoning is in the entry, because a row cannot refuse a re-proposal and only the argument can.
 
 | Id | What | Area | Why it is closed |
 |---|---|---|---|

@@ -1,9 +1,6 @@
 # Contributing to timezonefinder
 
-This is the entrypoint for human and automated contributors. Read the
-[core contributor contract](contributing/core-contributor-contract.md), then read only the row
-matching the work. Follow conditional links only when their condition applies; do not preload the
-whole `contributing/` tree.
+This is the entrypoint for human and automated contributors. Read the [core contributor contract](contributing/core-contributor-contract.md), then read only the row matching the work. Follow conditional links only when their condition applies; do not preload the whole `contributing/` tree.
 
 | Task trigger | Required files | Conditional files |
 |---|---|---|
@@ -17,7 +14,4 @@ whole `contributing/` tree.
 | Resolve maintainer decisions | [Maintainer-decision workflow](contributing/workflows/record-maintainer-decisions.md), [priority ranking](contributing/improvements/improvement-priority-ranking.md) | Open only items whose status starts with `needs` |
 | Prepare or publish a code release | [Code-release workflow](contributing/workflows/prepare-and-publish-code-release.md), [changelog policy](contributing/development/changelog-and-release-note-policy.md) | [Data release ordering](contributing/development/data-pipeline-format-versioning-and-release-order.md) for format changes |
 
-The [improvement-register rules](contributing/improvements/improvement-register-rules.md) explain
-how the ranking, item files, sequencing, decisions, measurements, and discovery records fit
-together. Filenames and direct links are the index: if a file is not relevant to the current task,
-do not read it.
+The [improvement-register rules](contributing/improvements/improvement-register-rules.md) explain how the ranking, item files, sequencing, decisions, measurements, and discovery records fit together. Filenames and direct links are the index: if a file is not relevant to the current task, do not read it.

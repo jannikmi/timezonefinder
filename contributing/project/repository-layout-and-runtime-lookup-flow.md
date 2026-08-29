@@ -1,53 +1,19 @@
 # Repository layout and runtime lookup flow
 
-**Two distributions, one uv workspace**: `timezonefinder` at the root, and
-`packages/timezonefinder-data/` holding the boundary binaries plus `DATA_LICENSE`. The data package
-is deliberately dumb — one `DATA_DIR` constant and a version.
+**Two distributions, one uv workspace**: `timezonefinder` at the root, and `packages/timezonefinder-data/` holding the boundary binaries plus `DATA_LICENSE`. The data package is deliberately dumb — one `DATA_DIR` constant and a version.
 
-**Moving the binary-format reader into it was considered and rejected**; don't re-propose it. It is
-neutral on size (the reader is pure Python, and the C extension forcing the platform-wheel matrix
-is in the lookup layer either way), it makes a reader bug cost a ~63 MB upload, and it trades a
-cheap in-file format guard for an unguarded cross-distribution Python API on a package whose
-version numbers upstream *data* releases. Data version, reader-API version and format version are
-three axes and there is one number. It also inverts the converter, which imports `flatbuf/io` to
-*write*.
+**Moving the binary-format reader into it was considered and rejected**; don't re-propose it. It is neutral on size (the reader is pure Python, and the C extension forcing the platform-wheel matrix is in the lookup layer either way), it makes a reader bug cost a ~63 MB upload, and it trades a cheap in-file format guard for an unguarded cross-distribution Python API on a package whose version numbers upstream *data* releases. Data version, reader-API version and format version are three axes and there is one number. It also inverts the converter, which imports `flatbuf/io` to *write*.
 
 
 Most modules are self-describing; the non-obvious ones:
 
-- `timezonefinder/configs.py`: central type definitions and runtime constants (coordinate scaling,
-  FlatBuffers layout, `DATA_FORMAT_VERSION`). `DEFAULT_DATA_DIR` sources from
-  `timezonefinder_data.DATA_DIR`, so the data's *location* differs between a `uv sync` checkout
-  (editable, source tree) and an installed wheel — anything asserting it will disagree across the two
-- `timezonefinder/utils.py` / `utils_numba.py` / `utils_clang.py`: polygon math, pure-Python plus
-  the two acceleration backends. `utils.py` picks the implementation **at import time**, so the
-  backends are entirely separate code paths whose timings are not comparable
-- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via
-  `testpaths` — they are collected only when `benchmarks/` is passed explicitly. **Timing only**:
-  memory is measured by `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across
-  pytest-benchmark's calibration rounds distorts the timings. Its subprocess probe must never
-  import `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import.
-  **`make benchmarks`/`make memory` measure in an `--isolated` environment**, not this checkout's
-  `.venv`: `make install` syncs `--all-groups`, so the dev environment always has numba and — via
-  the import-time dispatch above — every local measurement would silently describe the numba path
-  rather than the plain install the reports claim to. `BENCHMARK_ENV` in the `Makefile` owns that,
-  and the target asserts the path before recording anything
-- `benchmarks/test_comparison.py` measures against `tzfpy`, in the `compare` dependency group. Two
-  things it must keep doing: **collect without that package** (skip at setup, never a module-level
-  `importorskip`) or the node id set `tests/test_benchmark_names.py` pins becomes a property of the
-  environment; and **stay out of `benchmark_core`**, because a ratio against a package that releases
-  outside this repository would put "they shipped a release" on this project's trend chart with
-  nothing to distinguish it from a regression
-- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` /
-  `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers.
-  `ubuntu-latest` pins the runner *image*, not the CPU: the pool spreads up to ~1.58x on unchanged
-  code, so any two CI runs are incomparable unless they name the same CPU.
-  `docs/benchmarking_methodology.rst` holds the methodology these scripts implement;
-  [Benchmarking operations](../development/benchmarking-and-performance-validation.md) link to it
+- `timezonefinder/configs.py`: central type definitions and runtime constants (coordinate scaling, FlatBuffers layout, `DATA_FORMAT_VERSION`). `DEFAULT_DATA_DIR` sources from `timezonefinder_data.DATA_DIR`, so the data's *location* differs between a `uv sync` checkout (editable, source tree) and an installed wheel — anything asserting it will disagree across the two
+- `timezonefinder/utils.py` / `utils_numba.py` / `utils_clang.py`: polygon math, pure-Python plus the two acceleration backends. `utils.py` picks the implementation **at import time**, so the backends are entirely separate code paths whose timings are not comparable
+- `benchmarks/`: `pytest-benchmark` suites, excluded from `make test`/`make testall` via `testpaths` — they are collected only when `benchmarks/` is passed explicitly. **Timing only**: memory is measured by `scripts/measure_memory.py` (`make memory`), because `tracemalloc` across pytest-benchmark's calibration rounds distorts the timings. Its subprocess probe must never import `tests/auxiliaries.py`, which allocates a 64 MB `PolygonArray` at import. **`make benchmarks`/`make memory` measure in an `--isolated` environment**, not this checkout's `.venv`: `make install` syncs `--all-groups`, so the dev environment always has numba and — via the import-time dispatch above — every local measurement would silently describe the numba path rather than the plain install the reports claim to. `BENCHMARK_ENV` in the `Makefile` owns that, and the target asserts the path before recording anything
+- `benchmarks/test_comparison.py` measures against `tzfpy`, in the `compare` dependency group. Two things it must keep doing: **collect without that package** (skip at setup, never a module-level `importorskip`) or the node id set `tests/test_benchmark_names.py` pins becomes a property of the environment; and **stay out of `benchmark_core`**, because a ratio against a package that releases outside this repository would put "they shipped a release" on this project's trend chart with nothing to distinguish it from a regression
+- `scripts/normalize_benchmark_json.py` / `benchmark_noise.py` / `assert_acceleration_path.py` / `compare_benchmark_runs.py` / `describe_benchmark_machine.py`: benchmark CI helpers. `ubuntu-latest` pins the runner *image*, not the CPU: the pool spreads up to ~1.58x on unchanged code, so any two CI runs are incomparable unless they name the same CPU. `docs/benchmarking_methodology.rst` holds the methodology these scripts implement; [Benchmarking operations](../development/benchmarking-and-performance-validation.md) link to it
 - `docs/data_format.rst`: authoritative reference for binary layouts and coordinate scaling
 
 ## Runtime Lookup Flow
 
-Coordinates → scaled int32 (×10^7) → H3 shortcut map yields candidate polygons → bounding-box
-rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocean zones
-(`Etc/GMT±XX`) guarantee a match for any coordinate unless `timezone_at_land` is used.
+Coordinates → scaled int32 (×10^7) → H3 shortcut map yields candidate polygons → bounding-box rejection → point-in-polygon (holes first, then outer ring, ray casting). Ocean zones (`Etc/GMT±XX`) guarantee a match for any coordinate unless `timezone_at_land` is used.

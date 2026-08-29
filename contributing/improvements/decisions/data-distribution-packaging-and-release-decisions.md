@@ -2,137 +2,26 @@
 
 Do not re-propose these settled or refused options without new evidence.
 
-- **Data-directory validation belongs to the build and the test suite, never to `__init__`.**
-  Settled while reviewing #509, which first put the hole checks in `HoleArray.__init__` and then
-  moved them out. Whether a data directory is coherent is established once, by the build;
-  re-deriving it in every user's process spends startup time — multiplied by the per-thread
-  instances concurrent workloads are told to use — to re-answer a settled question. The checks live
-  in `scripts/data_integrity.py` and run in two places: the converter, over what it just wrote, and
-  the test suite, over what the repository ships, sharing one implementation so they cannot drift.
-  **This constrains GH-500**: its `--validate-data` CLI mode is the right shape precisely because
-  it is explicit and opt-in; validating on construction is ruled out. The second reason matters as
-  much as the first — off the init path a check can afford to be exhaustive, which is why #509's
-  resolves every hole ring in the dataset. A check constrained to be cheap ends up shallow.
-  Recorded in the [generated-artifact rules](../../development/generated-file-regeneration-rules.md).
-  **Amended 2026-08-23:** the checks move out of `scripts/` and into the package (GH-500), because `scripts/` ships in neither the wheel nor the sdist and an installed `validate-data` cannot reach it.
-  Nothing about the rule changes — still never on `__init__`, still one implementation — only the number of callers, which becomes three: the converter, the test suite and the CLI.
-  **Not the whole module:** `validate_hole_dedup_ratio` states something about the *packaged* dataset rather than an invariant of any data directory, so it stays in `scripts/` and `scripts/data_integrity.py` survives holding it (GH-500 has the reasoning).
-  The pass that splits them must therefore retarget the `scripts/data_integrity.py` reference in
-  the generated-artifact rules at the new home rather than assume the old path is gone.
+- **Data-directory validation belongs to the build and the test suite, never to `__init__`.** Settled while reviewing #509, which first put the hole checks in `HoleArray.__init__` and then moved them out. Whether a data directory is coherent is established once, by the build; re-deriving it in every user's process spends startup time — multiplied by the per-thread instances concurrent workloads are told to use — to re-answer a settled question. The checks live in `scripts/data_integrity.py` and run in two places: the converter, over what it just wrote, and the test suite, over what the repository ships, sharing one implementation so they cannot drift. **This constrains GH-500**: its `--validate-data` CLI mode is the right shape precisely because it is explicit and opt-in; validating on construction is ruled out. The second reason matters as much as the first — off the init path a check can afford to be exhaustive, which is why #509's resolves every hole ring in the dataset. A check constrained to be cheap ends up shallow. Recorded in the [generated-artifact rules](../../development/generated-file-regeneration-rules.md). **Amended 2026-08-23:** the checks move out of `scripts/` and into the package (GH-500), because `scripts/` ships in neither the wheel nor the sdist and an installed `validate-data` cannot reach it. Nothing about the rule changes — still never on `__init__`, still one implementation — only the number of callers, which becomes three: the converter, the test suite and the CLI. **Not the whole module:** `validate_hole_dedup_ratio` states something about the *packaged* dataset rather than an invariant of any data directory, so it stays in `scripts/` and `scripts/data_integrity.py` survives holding it (GH-500 has the reasoning). The pass that splits them must therefore retarget the `scripts/data_integrity.py` reference in the generated-artifact rules at the new home rather than assume the old path is gone.
 
-- **A reduced-zone mapping comes from upstream or not at all.** Settled 2026-08-20 while deleting
-  `REDUCED_TIMEZONE_MAPPING` (DEAD-5), a hand-derived 18-pair fragment of the 444 → 92
-  `timezones-now` mapping, left behind when #381 reverted to the full dataset. It is recorded here
-  rather than left in that entry, because the entry disappears with the deletion and the question
-  comes back the moment anyone picks up GH-332: **do not re-derive a mapping by hand.** GH-334
-  exists to obtain the official one and is blocked upstream on
-  evansiroky/timezone-boundary-builder#195; until that lands, a hand-maintained mapping is the same
-  liability the zone-precedence engine was rejected for — timezone answers depending on a table
-  somebody curated, in a package whose selling point is that it does not simplify. `git log -S` has
-  the deleted table if a future reader wants to see what was there.
+- **A reduced-zone mapping comes from upstream or not at all.** Settled 2026-08-20 while deleting `REDUCED_TIMEZONE_MAPPING` (DEAD-5), a hand-derived 18-pair fragment of the 444 → 92 `timezones-now` mapping, left behind when #381 reverted to the full dataset. It is recorded here rather than left in that entry, because the entry disappears with the deletion and the question comes back the moment anyone picks up GH-332: **do not re-derive a mapping by hand.** GH-334 exists to obtain the official one and is blocked upstream on evansiroky/timezone-boundary-builder#195; until that lands, a hand-maintained mapping is the same liability the zone-precedence engine was rejected for — timezone answers depending on a table somebody curated, in a package whose selling point is that it does not simplify. `git log -S` has the deleted table if a future reader wants to see what was there.
 
-- **Has a timezone-boundary-builder release ever been bad? No.** So GH-501's guardrails are
-  preventive, not corrective. That lowers their urgency but not their value: the argument never
-  rested on a past incident, it rests on the pipeline auto-merging and auto-tagging with no human
-  diff review.
+- **Has a timezone-boundary-builder release ever been bad? No.** So GH-501's guardrails are preventive, not corrective. That lowers their urgency but not their value: the argument never rested on a past incident, it rests on the pipeline auto-merging and auto-tagging with no human diff review.
 
-- **A tripped data-update guardrail blocks the auto-merge, and the size gate is symmetric.** Settled 2026-08-23 by the maintainer.
-  Every signal made a gate blocks; signals the calibration ruled report-only stay report-only, so this does not turn zone changes into a gate.
-  Refused: *report only*, which leaves an unattended pipeline publishing whatever it downloaded, and *block on the two hard signals only*.
-  **Also overruled, with its reasoning:** the four-release calibration concluded the size gate should be asymmetric because boundary data has grown monotonically, making a decrease the anomaly.
-  Four releases of monotone growth do not establish that — ordinary refinement produces the same pattern, and upstream may legitimately simplify boundaries.
-  Small reductions pass.
-  **What overruling it cost:** the asymmetric band was the only calibrated number, so the symmetric one has no magnitude yet — set it from the release-to-release conversions that calibrated the answer rate, and keep the size signal report-only until it is, since the same four releases show anything at or below 1.47 % firing on ordinary refinement.
-  **The mechanism costs nothing to build:** `release_data_update.yml` merges only when `build` concludes `success`, and `alert_failure` already labels the pull request and mentions the maintainer, so a guardrail is a job in `build.yml` — no new blocking machinery, though it needs a branch condition so it does not run on every pull request.
+- **A tripped data-update guardrail blocks the auto-merge, and the size gate is symmetric.** Settled 2026-08-23 by the maintainer. Every signal made a gate blocks; signals the calibration ruled report-only stay report-only, so this does not turn zone changes into a gate. Refused: *report only*, which leaves an unattended pipeline publishing whatever it downloaded, and *block on the two hard signals only*. **Also overruled, with its reasoning:** the four-release calibration concluded the size gate should be asymmetric because boundary data has grown monotonically, making a decrease the anomaly. Four releases of monotone growth do not establish that — ordinary refinement produces the same pattern, and upstream may legitimately simplify boundaries. Small reductions pass. **What overruling it cost:** the asymmetric band was the only calibrated number, so the symmetric one has no magnitude yet — set it from the release-to-release conversions that calibrated the answer rate, and keep the size signal report-only until it is, since the same four releases show anything at or below 1.47 % firing on ordinary refinement. **The mechanism costs nothing to build:** `release_data_update.yml` merges only when `build` concludes `success`, and `alert_failure` already labels the pull request and mentions the maintainer, so a guardrail is a job in `build.yml` — no new blocking machinery, though it needs a branch condition so it does not run on every pull request.
 
-- **A branch-name prefix is not an authorization check.** Settled in #519. The `workflow_run` jobs
-  that merge and tag a data update select their work with
-  `startsWith(head_branch, 'data-update-')`, and any fork can open a pull request from a branch
-  with that prefix — the condition says which runs are *interesting*, never which are *trusted*.
-  What gates the merge is the head repository's owner, checked in one shared composite action
-  (`.github/actions/resolve-update-pr`) that every acting step resolves its pull request number
-  through, so no step can grow a second copy that omits it. The same reading applies to any future
-  workflow keyed on a branch, tag or path pattern.
+- **A branch-name prefix is not an authorization check.** Settled in #519. The `workflow_run` jobs that merge and tag a data update select their work with `startsWith(head_branch, 'data-update-')`, and any fork can open a pull request from a branch with that prefix — the condition says which runs are *interesting*, never which are *trusted*. What gates the merge is the head repository's owner, checked in one shared composite action (`.github/actions/resolve-update-pr`) that every acting step resolves its pull request number through, so no step can grow a second copy that omits it. The same reading applies to any future workflow keyed on a branch, tag or path pattern.
 
-- **The data distribution ships no reader — rejected.** Considered while planning the distribution
-  split: move the binary-format layer (`flatbuf/generated/*`, `flatbuf/io/*`, `coord_accessors.py`,
-  `np_binary_helpers.py`, `zone_names.py`, ~1,800 of ~4,250 LOC) into `timezonefinder-data`. The
-  seam is real — exactly one edge crosses back — so feasibility was never the objection. It is
-  **neutral on the only axis the split is about**: the reader is ~50 KB of pure Python and the C
-  extension forcing the platform-wheel matrix stays in the lookup layer either way. It would make a
-  reader bug cost a 63 MB upload; it relocates the compatibility problem rather than removing it,
-  trading a cheap in-file format guard for an unguarded cross-distribution Python API on a package
-  versioned by upstream data tags; it forces the upper bound on the *data* axis that the whole
-  design refuses, since `timezonefinder 9.0` could not be trusted against a reader shipped in
-  `timezonefinder-data 2029.1`; and it inverts the converter, which imports `flatbuf/io` to *write*.
-  What it would genuinely have bought — the shortcut files carrying no identifier — was worth fixing
-  directly, and #458 did. Not to be re-proposed without an argument that addresses the
-  three-orthogonal-axes problem (data version, format version, reader-API version; one version
-  number). Also recorded in the
-  [repository-layout memory](../../project/repository-layout-and-runtime-lookup-flow.md).
+- **The data distribution ships no reader — rejected.** Considered while planning the distribution split: move the binary-format layer (`flatbuf/generated/*`, `flatbuf/io/*`, `coord_accessors.py`, `np_binary_helpers.py`, `zone_names.py`, ~1,800 of ~4,250 LOC) into `timezonefinder-data`. The seam is real — exactly one edge crosses back — so feasibility was never the objection. It is **neutral on the only axis the split is about**: the reader is ~50 KB of pure Python and the C extension forcing the platform-wheel matrix stays in the lookup layer either way. It would make a reader bug cost a 63 MB upload; it relocates the compatibility problem rather than removing it, trading a cheap in-file format guard for an unguarded cross-distribution Python API on a package versioned by upstream data tags; it forces the upper bound on the *data* axis that the whole design refuses, since `timezonefinder 9.0` could not be trusted against a reader shipped in `timezonefinder-data 2029.1`; and it inverts the converter, which imports `flatbuf/io` to *write*. What it would genuinely have bought — the shortcut files carrying no identifier — was worth fixing directly, and #458 did. Not to be re-proposed without an argument that addresses the three-orthogonal-axes problem (data version, format version, reader-API version; one version number). Also recorded in the [repository-layout memory](../../project/repository-layout-and-runtime-lookup-flow.md).
 
-- **The data version carries the format generation, not just the upstream release.** Recorded
-  because the first draft got it wrong in a way that reads as reasonable: "floor only, no upper
-  bound" on `timezonefinder-data`. That silently floats a pinned `timezonefinder` across a format
-  break — the install resolves, the first lookup raises. The version is
-  `<DATA_FORMAT_VERSION>.<year>.<letter>` with the letter in **bijective base-26** (`z`=26, `aa`=27,
-  since upstream tags are `[a-z]+` and a lookup table would collide), and the root bounds it
-  `>=…,<N+1`. The two mechanisms that look redundant are not: the version string governs
-  *resolution* and is the only thing pip can read; the in-file identifier and `layout_version` govern
-  *loading* and are the only thing protecting a hand-built `bin_file_location` — which has no
-  distribution metadata at all — and the only thing that catches a *mixed* directory. Consequence:
-  a format change is an **ordered two-distribution release, data first**.
+- **The data version carries the format generation, not just the upstream release.** Recorded because the first draft got it wrong in a way that reads as reasonable: "floor only, no upper bound" on `timezonefinder-data`. That silently floats a pinned `timezonefinder` across a format break — the install resolves, the first lookup raises. The version is `<DATA_FORMAT_VERSION>.<year>.<letter>` with the letter in **bijective base-26** (`z`=26, `aa`=27, since upstream tags are `[a-z]+` and a lookup table would collide), and the root bounds it `>=…,<N+1`. The two mechanisms that look redundant are not: the version string governs *resolution* and is the only thing pip can read; the in-file identifier and `layout_version` govern *loading* and are the only thing protecting a hand-built `bin_file_location` — which has no distribution metadata at all — and the only thing that catches a *mixed* directory. Consequence: a format change is an **ordered two-distribution release, data first**.
 
-- **The release-ordering check reads the built wheel and asks the index, and it sits ahead of the
-  GitHub Release.** Shipped in #529. Reading the bound from `pyproject.toml` instead was rejected:
-  the wheel is the artefact a resolver reads, and the only one whose metadata is what users get.
-  The placement is equally deliberate — ahead of the **GitHub Release**, not next to the PyPI
-  upload, because that Release is the first of the two steps that cannot be taken back, and the
-  upload job depends on the one carrying the check, so one placement covers both. *Open, not
-  settled:* whether the same property should additionally fall out of resolution, by having tox
-  install `timezonefinder-data` from PyPI rather than from the workspace. That would trade a
-  targeted release-time check for a side effect of every CI run, and it collides with the
-  data-update pull request, whose whole purpose is to validate binaries that are by definition not
-  published yet.
+- **The release-ordering check reads the built wheel and asks the index, and it sits ahead of the GitHub Release.** Shipped in #529. Reading the bound from `pyproject.toml` instead was rejected: the wheel is the artefact a resolver reads, and the only one whose metadata is what users get. The placement is equally deliberate — ahead of the **GitHub Release**, not next to the PyPI upload, because that Release is the first of the two steps that cannot be taken back, and the upload job depends on the one carrying the check, so one placement covers both. *Open, not settled:* whether the same property should additionally fall out of resolution, by having tox install `timezonefinder-data` from PyPI rather than from the workspace. That would trade a targeted release-time check for a side effect of every CI run, and it collides with the data-update pull request, whose whole purpose is to validate binaries that are by definition not published yet.
 
 - **One repository, two distributions — the data does not get its own repository.** Settled in
   #446, which was opened proposing an org holding `timezonefinder` and `timezonefinder-data`
-  separately. Publishing two PyPI projects from one repository is routine (a `uv` workspace, two
-  Trusted Publishing entries, prefixed tags), so the question was only ever whether a second
-  *repository* buys anything a second *distribution* does not. The argument that it did — every
-  regeneration adds ~61 MiB to this repository's history permanently — **does not survive**:
-  deleting the data directory leaves every past blob in place, so the clone stays ~357 MiB either
-  way. Only a history rewrite reclaims it (GH-522), and that is available to a single repository;
-  what stops the *growth* is not committing the file again (DATA-BINARIES), likewise
-  topology-independent. Against a second repository stand the writer/reader format sync the
-  [data-pipeline rules](../../development/data-pipeline-format-versioning-and-release-order.md)
-  already flag for `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT`, the deliberately shared
-  `scripts/data_integrity.py`, doubled CI and release tooling for a solo maintainer, and a harder
-  format-change bootstrap: across two repositories every format change needs a pre-release data
-  wheel published from one before the other's pull request can go green. The generalisable part,
-  worth applying to the next proposal of this shape: **ask whether a proposed repository split is
-  really a distribution split.** Packaging, release cadence and download size are properties of the
-  distribution; only history and access control are properties of the repository.
+separately. Publishing two PyPI projects from one repository is routine (a `uv` workspace, two Trusted Publishing entries, prefixed tags), so the question was only ever whether a second *repository* buys anything a second *distribution* does not. The argument that it did — every regeneration adds ~61 MiB to this repository's history permanently — **does not survive**: deleting the data directory leaves every past blob in place, so the clone stays ~357 MiB either way. Only a history rewrite reclaims it (GH-522), and that is available to a single repository; what stops the *growth* is not committing the file again (DATA-BINARIES), likewise topology-independent. Against a second repository stand the writer/reader format sync the [data-pipeline rules](../../development/data-pipeline-format-versioning-and-release-order.md) already flag for `COORD2INT_FACTOR` / `DECIMAL_PLACES_SHIFT`, the deliberately shared `scripts/data_integrity.py`, doubled CI and release tooling for a solo maintainer, and a harder format-change bootstrap: across two repositories every format change needs a pre-release data wheel published from one before the other's pull request can go green. The generalisable part, worth applying to the next proposal of this shape: **ask whether a proposed repository split is really a distribution split.** Packaging, release cadence and download size are properties of the distribution; only history and access control are properties of the repository.
 
-- **A data release publishes the bytes CI validated, never bytes rebuilt at tag time.** Settled 2026-08-24 with DATA-BINARIES.
-  `publish_data.yml` skips re-validating the data because the update pull request's matrix already compiled and checked it, and that is a real invariant rather than an optimisation: it is why an auto-merged, auto-tagged pipeline is defensible at all.
-  So once `data/` is git-ignored, the update job builds the wheel and the tag publishes *that artifact*.
-  Refused: having the publish job regenerate — reproducible from the tag alone, which is its one merit, at the cost of publishing bytes nothing tested; and moving the binaries to a second repository, which re-poses the question one level up.
-  **Two mechanics that go with it:** a *published* GitHub Release cannot carry the artifact, because `build.yml` fires on `release: types: [published]` and `publish_data.yml` creates no Release precisely to keep that trigger dead for data tags; and the dead end recorded below — *reusing the master run's artifacts on the tag run buys almost nothing* — **does not transfer to data**.
-  That was measured on code wheels, where the copyable half was the cheap one; for data the build is a ~62 MB download plus a full convert, so the same arithmetic argues the other way.
+- **A data release publishes the bytes CI validated, never bytes rebuilt at tag time.** Settled 2026-08-24 with DATA-BINARIES. `publish_data.yml` skips re-validating the data because the update pull request's matrix already compiled and checked it, and that is a real invariant rather than an optimisation: it is why an auto-merged, auto-tagged pipeline is defensible at all. So once `data/` is git-ignored, the update job builds the wheel and the tag publishes *that artifact*. Refused: having the publish job regenerate — reproducible from the tag alone, which is its one merit, at the cost of publishing bytes nothing tested; and moving the binaries to a second repository, which re-poses the question one level up. **Two mechanics that go with it:** a *published* GitHub Release cannot carry the artifact, because `build.yml` fires on `release: types: [published]` and `publish_data.yml` creates no Release precisely to keep that trigger dead for data tags; and the dead end recorded below — *reusing the master run's artifacts on the tag run buys almost nothing* — **does not transfer to data**. That was measured on code wheels, where the copyable half was the cheap one; for data the build is a ~62 MB download plus a full convert, so the same arithmetic argues the other way.
 
-- **A release has one trigger, and it is the tag.** Found while releasing 8.3.0 and shipped since.
-  `build.yml`'s `release` job used to be gated on `master` pushes *and* tags, so a plain push to
-  `master` created the GitHub Release and its tag on its own. Two consequences that looked
-  unrelated and were not: the ~10-minute tox matrix ran twice on the identical SHA, and a manually
-  pushed tag raced the master run, where losing is silent (`git push` reports "Everything
-  up-to-date", fires no webhook, and the release proceeds from a run the pusher is not watching).
-  Two dead ends worth not re-walking. *Reusing the master run's build artifacts on the tag run*
-  buys almost nothing — the wheels take ~1 minute and the matrix is ~10, so the expensive half is
-  the part that cannot be copied. *Auto-releasing on merge* removes the last human checkpoint
-  before an irreversible upload, which is the one gate the
-  [code-release workflow](../../workflows/prepare-and-publish-code-release.md) deliberately keeps.
-  Skipping the matrix on tags also needs care in two places: a **skipped** `needs:` job
-  skips its dependents unless the dependent's `if:` uses `!cancelled()`, and an ancestry check
-  proves a commit is *on* master, not that a green run exists for that SHA — so the skip has to be
-  paid for with an explicit assertion that one does.
+- **A release has one trigger, and it is the tag.** Found while releasing 8.3.0 and shipped since. `build.yml`'s `release` job used to be gated on `master` pushes *and* tags, so a plain push to `master` created the GitHub Release and its tag on its own. Two consequences that looked unrelated and were not: the ~10-minute tox matrix ran twice on the identical SHA, and a manually pushed tag raced the master run, where losing is silent (`git push` reports "Everything up-to-date", fires no webhook, and the release proceeds from a run the pusher is not watching). Two dead ends worth not re-walking. *Reusing the master run's build artifacts on the tag run* buys almost nothing — the wheels take ~1 minute and the matrix is ~10, so the expensive half is the part that cannot be copied. *Auto-releasing on merge* removes the last human checkpoint before an irreversible upload, which is the one gate the [code-release workflow](../../workflows/prepare-and-publish-code-release.md) deliberately keeps. Skipping the matrix on tags also needs care in two places: a **skipped** `needs:` job skips its dependents unless the dependent's `if:` uses `!cancelled()`, and an ancestry check proves a commit is *on* master, not that a green run exists for that SHA — so the skip has to be paid for with an explicit assertion that one does.

@@ -3,5 +3,4 @@ description: Route repository work through the canonical contributor memory
 alwaysApply: true
 ---
 
-Read [`CONTRIBUTING.md`](../../CONTRIBUTING.md), its core contract, and only the route matching the
-current task. Canonical project knowledge does not live in this provider adapter.
+Read [`CONTRIBUTING.md`](../../CONTRIBUTING.md), its core contract, and only the route matching the current task. Canonical project knowledge does not live in this provider adapter.

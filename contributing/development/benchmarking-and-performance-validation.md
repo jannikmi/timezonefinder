@@ -47,7 +47,7 @@
    uv run python -m scripts.compare_benchmark_runs --base base.json --head head.json
    ```
 
-   Local-to-local only, as above.
+Local-to-local only, as above.
 
 **When a trend chart alert fires**
 

@@ -1,26 +1,14 @@
 # GH-428 — data parsing UX, and the CLI shape it shares with GH-500
 
 - **Tracks:** issue #428, user-driven from #363; the decision and its migration notes are on the issue.
-- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for `query`: `query`, `rows` and `validate-data`.
-  Chosen over more flags on the flat command and over a separate console script.
-  It settles the shape for **both** this and GH-500.
-- **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin` and are refused by hand in `_parse_arguments` because argparse cannot express the dependency.
-  Under subcommands argparse enforces that structurally.
-- **Decided 2026-08-24 by the maintainer — `update-data` is dropped.**
-  The subcommands are `query`, `rows` and `validate-data`, with the bare positional form kept as an alias for `query`.
+- **Decided, 2026-08-21 — subcommands**, with the bare positional form kept as an alias for `query`: `query`, `rows` and `validate-data`. Chosen over more flags on the flat command and over a separate console script. It settles the shape for **both** this and GH-500.
+- **What forced it:** `--stdin` landed as six options, four of which mean nothing outside `--stdin` and are refused by hand in `_parse_arguments` because argparse cannot express the dependency. Under subcommands argparse enforces that structurally.
+- **Decided 2026-08-24 by the maintainer — `update-data` is dropped.** The subcommands are `query`, `rows` and `validate-data`, with the bare positional form kept as an alias for `query`.
 - **What settled it was reading the request that produced this item, and it is not what the entry assumed.**
   #428 inherited its brief from #363, and #363 was not asking to compile custom data at all — it was asking for the *full official dataset* instead of the reduced one:
-  *"The documented alternative to use our own complete datasets works, but adds a lot of friction. The scripts are clearly made for timezonefinder developers publishing new releases."*
-  That need is met outright.
-  The packaged data is the full set with oceans — `check_data_updates.yml` runs `update_data.sh --dataset=full --with-oceans` — and it installs as `timezonefinder-data`.
-- **Refused, with the reason each loses.**
-  *A `convert` subcommand over the user's own GeoJSON* — this entry recommended it twice, on an audience the record does not contain: "people compiling custom data with no supported entry point" appears nowhere in #363 or #428.
-  It also ships the converter and a `pydantic` extra, and freezes a public interface around the GeoJSON parser BIG-3 flags for restructuring, which is the wrong order.
-  *Keep it as proposed* — an installed CLI that downloads upstream and regenerates answers what `pip install timezonefinder-data` already answers.
-- **Adding it later costs nothing, which is what makes "no" the cheap answer here.**
-  A new subcommand is additive; removing a shipped one is a public-API break.
-  If demand for installable custom-data compilation ever appears, it can be taken then against evidence rather than against a supposition.
-- **One item from #428's body survives and needs no decision:** a documented make target for running the converter without the `scripts` `ImportError`.
-  That is a Makefile-and-docs fix inside a checkout, not a shipped entry point, and it is ordinary pass work.
+*"The documented alternative to use our own complete datasets works, but adds a lot of friction. The scripts are clearly made for timezonefinder developers publishing new releases."* That need is met outright. The packaged data is the full set with oceans — `check_data_updates.yml` runs `update_data.sh --dataset=full --with-oceans` — and it installs as `timezonefinder-data`.
+- **Refused, with the reason each loses.** *A `convert` subcommand over the user's own GeoJSON* — this entry recommended it twice, on an audience the record does not contain: "people compiling custom data with no supported entry point" appears nowhere in #363 or #428. It also ships the converter and a `pydantic` extra, and freezes a public interface around the GeoJSON parser BIG-3 flags for restructuring, which is the wrong order. *Keep it as proposed* — an installed CLI that downloads upstream and regenerates answers what `pip install timezonefinder-data` already answers.
+- **Adding it later costs nothing, which is what makes "no" the cheap answer here.** A new subcommand is additive; removing a shipped one is a public-API break. If demand for installable custom-data compilation ever appears, it can be taken then against evidence rather than against a supposition.
+- **One item from #428's body survives and needs no decision:** a documented make target for running the converter without the `scripts` `ImportError`. That is a Makefile-and-docs fix inside a checkout, not a shipped entry point, and it is ordinary pass work.
 - **Status:** open — decision taken, implementation not started.
 - **Last touched:** 2026-08-24 — `update-data` dropped, on the originating issue rather than on the cost asymmetry argued before it.

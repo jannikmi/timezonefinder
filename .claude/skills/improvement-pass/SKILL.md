@@ -5,5 +5,4 @@ description: "Selects and delivers the highest-ranked eligible timezonefinder im
 
 # Improvement pass
 
-Read [CONTRIBUTING.md](../../../CONTRIBUTING.md), then follow the canonical
-[improvement-pass workflow](../../../contributing/workflows/run-one-improvement-pass.md).
+Read [CONTRIBUTING.md](../../../CONTRIBUTING.md), then follow the canonical [improvement-pass workflow](../../../contributing/workflows/run-one-improvement-pass.md).

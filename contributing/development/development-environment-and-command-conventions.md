@@ -1,11 +1,8 @@
 # Development environment and command conventions
 
 - Use `uv` for all dependency management; run every Python command via `uv run`
-- Run `make hook` after code changes; failures must be fixed before committing. Also run it after
-  regenerating anything, *before* reading the diff — see *Generated Files*
-- The `Makefile` header comment documents every target. Where the *choice* between targets is the
-  non-obvious part, it is covered by the
-  [testing strategy](testing-strategy-and-change-scope.md)
+- Run `make hook` after code changes; failures must be fixed before committing. Also run it after regenerating anything, *before* reading the diff — see *Generated Files*
+- The `Makefile` header comment documents every target. Where the *choice* between targets is the non-obvious part, it is covered by the [testing strategy](testing-strategy-and-change-scope.md)
 - Don't prefix suggested commands with a redundant `cd` into the project root
 
 ## Development Workflow

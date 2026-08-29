@@ -18,26 +18,12 @@
 | 14 (shortcut cell coverage) | 2026-08-25 | `scripts/hex_utils.py`'s `lies_in_cell` and `scripts/utils_numba.py`'s three overlap helpers read in full and replayed against the packaged binaries; the three data workflows re-read while checking DATA-BINARIES' eligibility, which is what found its unpublished-data-version precondition; every `GH-<n>` in this file checked for state, which found nothing newly closed. The new instrument is the whole of the discovery: sweeping seven interior points per cell over all 288,122 cells enumerates the index's coverage gaps outright, and it found a cell nobody had suspected — a Tuamotus cell losing its ocean polygon to the hole test — while correcting the known remainder from cells that enclose a pole to cells that straddle the antimeridian | `docs/` prose; `scripts/` beyond the two modules named; no fresh repo-wide triage |
 | 15 (the antimeridian frame) | 2026-08-25 | `scripts/hex_utils.py` read in full again, this time for what the corrected coordinates mean rather than for the overlap tests themselves; every packaged boundary polygon measured for how far it spans in longitude and in which frame, which is what turned the fix from "rotate and test" into "rotate and test only what the new cut leaves whole"; the committed benchmark fixtures checked cell by cell against the three cells the index change moved. **The exhaustive sweep is clean for the first time**: seven resolution-5 child centres in each of the 288,122 cells, 2,016,842 coordinates, 0 answered by a cell that does not list a polygon containing them (it was 8 before). The recipe is in `tests/shortcut_test.py`'s `test_the_index_lists_the_polygon_covering_each_sampled_coordinate`, which is the affordable sampled form of the same assertion | `docs/` prose; `timezonefinder/` itself, which this pass did not touch; no fresh repo-wide triage. `prototypes/shortcut_resolution_query_bench.py`'s header still describes this coverage gap as unfixed and points at `is_special` as where a fix would go — stale as of this pass, and left alone because `prototypes/` is out of scope for one |
 
-Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8
-`scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with
-**no coverage in any pass** is `docs/` prose. The cheapest real starting point is therefore the
-ranking above rather than fresh discovery — with two things worth knowing.
+Every module under `tests/` has been read at least once, pass 7 covered `.github/workflows/`, pass 8 `scripts/reporting.py` and pass 10 everything the data-distribution split added. The only area with **no coverage in any pass** is `docs/` prose. The cheapest real starting point is therefore the ranking above rather than fresh discovery — with two things worth knowing.
 
-Running mypy by hand over a directory the pre-commit hook excludes surfaced defects no pass had
-seen, twice: 15 in `scripts/` and 8 real ones in `tests/`. **Both directories are now in the hook**,
-so that particular seam is closed and the technique has nothing left to find here — `prototypes/`,
-`docs/` and `benchmarks/` are what the exclude still names, and the first of those is out of scope
-by choice.
+Running mypy by hand over a directory the pre-commit hook excludes surfaced defects no pass had seen, twice: 15 in `scripts/` and 8 real ones in `tests/`. **Both directories are now in the hook**, so that particular seam is closed and the technique has nothing left to find here — `prototypes/`, `docs/` and `benchmarks/` are what the exclude still names, and the first of those is out of scope by choice.
 
-And an open entry's *premise* goes stale faster than its location. Pass 10 re-verified all of them
-after six merged pull requests and found one conclusion resting on something untrue (TOOL-1's B905
-site) and one half-shipped by unrelated work (DEAD-5's annotation). Re-verify before ranking, not
-after picking.
+And an open entry's *premise* goes stale faster than its location. Pass 10 re-verified all of them after six merged pull requests and found one conclusion resting on something untrue (TOOL-1's B905 site) and one half-shipped by unrelated work (DEAD-5's annotation). Re-verify before ranking, not after picking.
 
-The `--select ALL` triage is worth repeating, but its output needs filtering: 180 findings, of which
-the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run via
-`-m`), `S311` (the fixture samplers are not cryptographic), `S603`/`S607` (subprocess calls in tests
-and build scripts with fixed argument lists), `RUF022`/`RUF023` (`__all__` ordering — the current
-order groups by meaning, which is more useful than alphabetical) and the `TD`/`FIX` family.
+The `--select ALL` triage is worth repeating, but its output needs filtering: 180 findings, of which the ones already judged not worth acting on are `EXE001`/`EXE002` (shebangs on modules run via `-m`), `S311` (the fixture samplers are not cryptographic), `S603`/`S607` (subprocess calls in tests and build scripts with fixed argument lists), `RUF022`/`RUF023` (`__all__` ordering — the current order groups by meaning, which is more useful than alphabetical) and the `TD`/`FIX` family.
 
 ---

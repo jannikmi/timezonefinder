@@ -1,18 +1,14 @@
 # Project purpose, runtime constraints, and non-goals
 
-`timezonefinder` provides offline timezone lookups by WGS84 coordinates, prioritising accuracy at
-timezone borders (no geometry simplification) over raw speed.
+`timezonefinder` provides offline timezone lookups by WGS84 coordinates, prioritising accuracy at timezone borders (no geometry simplification) over raw speed.
 
 Constraints that shape design decisions:
 
-- Primary users are latency-sensitive services doing high-volume, possibly concurrent lookups
-  (plus one-off CLI/script use)
-- Must run in **containerised deployments with constrained CPU/memory** — don't assume abundant
-  RAM or many cores; the `in_memory=False` (memory-mapped) path must stay a viable low-memory option
+- Primary users are latency-sensitive services doing high-volume, possibly concurrent lookups (plus one-off CLI/script use)
+- Must run in **containerised deployments with constrained CPU/memory** — don't assume abundant RAM or many cores; the `in_memory=False` (memory-mapped) path must stay a viable low-memory option
 - Must degrade gracefully without Numba/C-extension — the pure-Python path stays correct, just slower
 
-Non-goals: sub-centimeter precision (the ~1.1 cm coordinate scaling is a deliberate ceiling, not a
-bug), and general-purpose geometry — spatial code exists only in service of timezone lookup.
+Non-goals: sub-centimeter precision (the ~1.1 cm coordinate scaling is a deliberate ceiling, not a bug), and general-purpose geometry — spatial code exists only in service of timezone lookup.
 
 ## Mission & Expectations
 

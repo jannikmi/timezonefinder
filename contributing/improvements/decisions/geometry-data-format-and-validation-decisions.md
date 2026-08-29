@@ -2,10 +2,7 @@
 
 Do not re-propose these settled or refused options without new evidence.
 
-- **The H3 shortcut resolution moved from 3 to 4 — measured 2026-08-23, with 5 refused.** Built,
-  not modelled: every resolution below was compiled from the 2026c boundaries and priced in the
-  shipped layout. Restated here rather than left in `prototypes/single_resolution_bench.py`,
-  because a prototype is deletable and this verdict has to outlive it.
+- **The H3 shortcut resolution moved from 3 to 4 — measured 2026-08-23, with 5 refused.** Built, not modelled: every resolution below was compiled from the 2026c boundaries and priced in the shipped layout. Restated here rather than left in `prototypes/single_resolution_bench.py`, because a prototype is deletable and this verdict has to outlive it.
 
   | res | cells | unique | file | resident | candidates tested /10k queries |
   |---|---|---|---|---|---|
@@ -13,121 +10,34 @@ Do not re-propose these settled or refused options without new evidence.
   | **4** | **288,122** | **89.1 %** | **596 KiB** | **1,000 KiB** | **1,566** |
   | 5 | 2,016,842 | 95.4 % | 4,029 KiB | 7,832 KiB | 667 |
 
-  * **What resolution 4 bought, paired and order-alternated against a resolution 3 index in one
-    process:** random −41.6 %, on_land −37.8 %, both 0 of 61 rounds where resolution 3 won. The
-    committed report page moved from ~3.40 µs to ~2.02 µs per random lookup. The unique stratum is
-    unchanged (−1.1 % on minima, 40 of 61 rounds — the estimators disagree, so: no effect), which
-    is the expected shape: a unique-cell query does the same work at either resolution, and what
-    changes is *how many* queries are unique.
-  * **What it cost:** `TimezoneFinderL`'s heap 176 KiB → 1.01 MiB, the default finder's 1.13 →
-    1.96 MiB, construction 7.98 → 8.28 ms. **The mapped mode's resident set went down**, 32.4 →
-    26.1 MiB, because far fewer candidate polygons are fetched and so far fewer coordinate pages
-    are faulted in — a second-order effect worth remembering when pricing a future level.
-  * **The `ambiguous` benchmark stratum is not comparable across this change**, and neither is
-    `unique`. Both are a *classification by the shortcut index*, so changing its resolution
-    re-labels the points: the easy members of the old ambiguous set became unique, leaving a harder
-    residue. `FIXTURE_VERSION` was bumped for exactly this. Compare `random` and `on_land`, which
-    are sampled independently of the index.
-  * **Resolution 5 is refused on the exchange rate, not on its gains, which are real.** Memory
-    paid per candidate polygon removed is 0.019 KiB going 2→3, 0.371 KiB going 3→4 and
-    **7.600 KiB going 4→5** — each level about twenty times worse than the last. The table is
-    `122 * 8**res`, fixed by the resolution rather than by the data, so it is 99.7 % of the index
-    at resolution 5. 7.8 MiB resident is more than the entire index format generation 1 used, and
-    would take `TimezoneFinderL` from ~176 KiB to ~7.9 MiB.
-  * **Resolutions above 5 are not worth measuring** — the table grows eightfold per level, so
-    resolution 6 is ~63 MiB resident, the size of the polygon data it indexes.
-  * **A hierarchical index over several resolutions is refused** and its prototype deleted. The
-    maximum resolution dominates the size, so a multi-resolution index is *larger* than the
-    single-resolution one it contains; H3 cells do not nest cleanly, so a parent must be kept even
-    once its children exist; and consulting several resolutions per query costs more than the
-    refinement saves.
-  * **A resolution change is only safe because the file now stamps its own.** The binary layout is
-    identical at every resolution, so `layout_version` cannot distinguish them and a stale data
-    directory would silently index the wrong cells. The reader rejects a mismatch by name.
-  * **It was also only safe after the edge-crossing test.** A resolution 4 index built before that
-    answered a point in the Strait of Malacca wrongly, because the overlap test ignored polygon
-    edges crossing a cell — a defect that grows as cells shrink. Any future level must re-check
-    that class before being adopted, not merely re-time.
+  * **What resolution 4 bought, paired and order-alternated against a resolution 3 index in one process:** random −41.6 %, on_land −37.8 %, both 0 of 61 rounds where resolution 3 won. The committed report page moved from ~3.40 µs to ~2.02 µs per random lookup. The unique stratum is unchanged (−1.1 % on minima, 40 of 61 rounds — the estimators disagree, so: no effect), which is the expected shape: a unique-cell query does the same work at either resolution, and what changes is *how many* queries are unique.
+  * **What it cost:** `TimezoneFinderL`'s heap 176 KiB → 1.01 MiB, the default finder's 1.13 → 1.96 MiB, construction 7.98 → 8.28 ms. **The mapped mode's resident set went down**, 32.4 → 26.1 MiB, because far fewer candidate polygons are fetched and so far fewer coordinate pages are faulted in — a second-order effect worth remembering when pricing a future level.
+  * **The `ambiguous` benchmark stratum is not comparable across this change**, and neither is `unique`. Both are a *classification by the shortcut index*, so changing its resolution re-labels the points: the easy members of the old ambiguous set became unique, leaving a harder residue. `FIXTURE_VERSION` was bumped for exactly this. Compare `random` and `on_land`, which are sampled independently of the index.
+  * **Resolution 5 is refused on the exchange rate, not on its gains, which are real.** Memory paid per candidate polygon removed is 0.019 KiB going 2→3, 0.371 KiB going 3→4 and **7.600 KiB going 4→5** — each level about twenty times worse than the last. The table is `122 * 8**res`, fixed by the resolution rather than by the data, so it is 99.7 % of the index at resolution 5. 7.8 MiB resident is more than the entire index format generation 1 used, and would take `TimezoneFinderL` from ~176 KiB to ~7.9 MiB.
+  * **Resolutions above 5 are not worth measuring** — the table grows eightfold per level, so resolution 6 is ~63 MiB resident, the size of the polygon data it indexes.
+  * **A hierarchical index over several resolutions is refused** and its prototype deleted. The maximum resolution dominates the size, so a multi-resolution index is *larger* than the single-resolution one it contains; H3 cells do not nest cleanly, so a parent must be kept even once its children exist; and consulting several resolutions per query costs more than the refinement saves.
+  * **A resolution change is only safe because the file now stamps its own.** The binary layout is identical at every resolution, so `layout_version` cannot distinguish them and a stale data directory would silently index the wrong cells. The reader rejects a mismatch by name.
+  * **It was also only safe after the edge-crossing test.** A resolution 4 index built before that answered a point in the Strait of Malacca wrongly, because the overlap test ignored polygon edges crossing a cell — a defect that grows as cells shrink. Any future level must re-check that class before being adopted, not merely re-time.
 
 
-- **The shortcut index's shape — settled 2026-08-23 when it shipped, with six alternatives refused.**
-  It is a slot-addressed `int16` table plus deduplicated candidate lists; `docs/data_format.rst`
-  describes the layout and `timezonefinder/shortcut_index.py` says why it is shaped that way. What
-  lost, so that none of it is re-proposed:
+- **The shortcut index's shape — settled 2026-08-23 when it shipped, with six alternatives refused.** It is a slot-addressed `int16` table plus deduplicated candidate lists; `docs/data_format.rst` describes the layout and `timezonefinder/shortcut_index.py` says why it is shaped that way. What lost, so that none of it is re-proposed:
 
-  * **`np.searchsorted` over stored, sorted cell ids.** Refused on both paths it was proposed for:
-    it roughly doubles a unique-zone query, and vectorised over 10,000 points it is *still* slower
-    than a Python loop of dict lookups, because a binary search over 41,162 keys is
-    memory-latency-bound at about what one dict lookup costs. "Flat arrays vectorise" is what
-    re-proposes this; it does not follow.
-  * **Storing the cell ids at all**, to keep h3's index encoding out of the format. It does not
-    remove the dependency — if the encoding moved, stored 64-bit ids would no longer denote the
-    same cells either, and the reader slices bits in both designs because that is what makes the
-    lookup fast — and it pays ~260 KiB and a ~12 % slower load to store something derivable. What
-    makes the bit form safe is the build-time check against h3's public `get_base_cell_number` /
-    `cell_to_child_pos` over every cell, not the stored ids. **Without that check the stored-id
-    form is the safer one**, since an encoding change would otherwise return a neighbour's
-    timezone silently.
-  * **Enumerating the cell ids from h3's public API at load** instead of storing them: 4.5 ms
-    against 0.13 ms to read them, to save 329 KiB. Refused before the ids were dropped entirely.
-  * **Offsets per cell rather than per distinct candidate list.** Duplicates already collapse to
-    one list, so a per-cell column re-spends exactly the repetition the deduplication found — and
-    a cell a single zone covers reads no offset at all. Related: **deduplication via an entry-number
-    index** (slot → entry → range) costs an extra indirection on the ambiguous path to save ~100 KiB
-    and is unnecessary, since *equal offsets* achieve the same sharing with none. It looks like the
-    obvious way to implement sharing and is not.
-  * **Column widths chosen for headroom rather than for fit.** A 4x-headroom rule is what once put
-    `uint32` offsets in a draft and produced a false claim that deduplication paid for its own
-    addressing by narrowing them. The narrowest width that fits, plus a check whose message names
-    the value, the ceiling, the width to move to and the version bumps that follow, is strictly
-    better: smaller, and loud instead of silently truncating.
-  * **Dispatching on a candidate list's length at runtime** instead of on the table's sign: two
-    reads and a subtraction where the table needs one, measured at +230 ns against +73 ns on the
-    unique path. The length is the right column *in a file* and the wrong discriminator at runtime;
-    they are separate decisions.
-  * **Base-7 addressing at lookup time**, to drop the ~34 % of table slots no H3 cell can address.
-    +78 ns per query to save 121 KiB, on a stage that is only ~20 % of a unique query to begin
-    with. The *file* stores the compact base-7 form and the reader expands it by slice assignment
-    (0.039 ms); the asymmetry is deliberate. A denser index the public API would give — 41,162
-    slots against 62,464 — is refused for the same reason, and reproducing it from bits needs
-    per-digit arithmetic that pentagons, with 286 children rather than 343, do not obviously
-    satisfy.
+  * **`np.searchsorted` over stored, sorted cell ids.** Refused on both paths it was proposed for: it roughly doubles a unique-zone query, and vectorised over 10,000 points it is *still* slower than a Python loop of dict lookups, because a binary search over 41,162 keys is memory-latency-bound at about what one dict lookup costs. "Flat arrays vectorise" is what re-proposes this; it does not follow.
+  * **Storing the cell ids at all**, to keep h3's index encoding out of the format. It does not remove the dependency — if the encoding moved, stored 64-bit ids would no longer denote the same cells either, and the reader slices bits in both designs because that is what makes the lookup fast — and it pays ~260 KiB and a ~12 % slower load to store something derivable. What makes the bit form safe is the build-time check against h3's public `get_base_cell_number` / `cell_to_child_pos` over every cell, not the stored ids. **Without that check the stored-id form is the safer one**, since an encoding change would otherwise return a neighbour's timezone silently.
+  * **Enumerating the cell ids from h3's public API at load** instead of storing them: 4.5 ms against 0.13 ms to read them, to save 329 KiB. Refused before the ids were dropped entirely.
+  * **Offsets per cell rather than per distinct candidate list.** Duplicates already collapse to one list, so a per-cell column re-spends exactly the repetition the deduplication found — and a cell a single zone covers reads no offset at all. Related: **deduplication via an entry-number index** (slot → entry → range) costs an extra indirection on the ambiguous path to save ~100 KiB and is unnecessary, since *equal offsets* achieve the same sharing with none. It looks like the obvious way to implement sharing and is not.
+  * **Column widths chosen for headroom rather than for fit.** A 4x-headroom rule is what once put `uint32` offsets in a draft and produced a false claim that deduplication paid for its own addressing by narrowing them. The narrowest width that fits, plus a check whose message names the value, the ceiling, the width to move to and the version bumps that follow, is strictly better: smaller, and loud instead of silently truncating.
+  * **Dispatching on a candidate list's length at runtime** instead of on the table's sign: two reads and a subtraction where the table needs one, measured at +230 ns against +73 ns on the unique path. The length is the right column *in a file* and the wrong discriminator at runtime; they are separate decisions.
+  * **Base-7 addressing at lookup time**, to drop the ~34 % of table slots no H3 cell can address. +78 ns per query to save 121 KiB, on a stage that is only ~20 % of a unique query to begin with. The *file* stores the compact base-7 form and the reader expands it by slice assignment (0.039 ms); the asymmetry is deliberate. A denser index the public API would give — 41,162 slots against 62,464 — is refused for the same reason, and reproducing it from bits needs per-digit arithmetic that pentagons, with 286 children rather than 343, do not obviously satisfy.
 
-- **Hole coverage does not imply hole removability.** Every hole is covered by other zones, and
-  that is not enough to drop it: coverage says the right zone is among the shortcut candidates,
-  ordering decides whether it is reached first. Measured in GH-513 — dropping holes changes
-  answers today, wrongly. Any future "the holes are redundant" argument has to be an argument about
-  candidate ordering, not about geometry.
+- **Hole coverage does not imply hole removability.** Every hole is covered by other zones, and that is not enough to drop it: coverage says the right zone is among the shortcut candidates, ordering decides whether it is reached first. Measured in GH-513 — dropping holes changes answers today, wrongly. Any future "the holes are redundant" argument has to be an argument about candidate ordering, not about geometry.
 
-- **A zone-precedence engine for hole conflicts — rejected.** Explored on the original #350 branch:
-  configurable political precedence rules, overlap scoring and caching, to decide which zone "wins"
-  where a hole overlaps another zone. Rejected on the evidence above — the unmatched holes need no
-  resolution at all, they are an ordering question — and on principle: it would make timezone
-  answers depend on hand-maintained political configuration, which is an accuracy and maintenance
-  liability for a package whose selling point is that it does not simplify. Kept as a one-line
-  record in `prototypes/README.md` as well.
+- **A zone-precedence engine for hole conflicts — rejected.** Explored on the original #350 branch: configurable political precedence rules, overlap scoring and caching, to decide which zone "wins" where a hole overlaps another zone. Rejected on the evidence above — the unmatched holes need no resolution at all, they are an ordering question — and on principle: it would make timezone answers depend on hand-maintained political configuration, which is an accuracy and maintenance liability for a package whose selling point is that it does not simplify. Kept as a one-line record in `prototypes/README.md` as well.
 
-- Format-marker and release-batching decisions live in
-  [data-format version-marker and release-batching decisions](data-format-version-marker-and-release-batching-decisions.md).
+- Format-marker and release-batching decisions live in [data-format version-marker and release-batching decisions](data-format-version-marker-and-release-batching-decisions.md).
 
 - **No boundary polygon's coordinates can be dropped, and the unique-zone cells create no candidates for it.** Settled 2026-08-23, measured against release 2026c. The proposal was to delete the geometry of polygons reachable only through single-zone shortcut cells — a query answered from such a cell reads no geometry, so such a polygon would be paying for nothing — and to degrade `get_geometry` to a bounding box for them. There are none, and the reason is structural rather than a property of the release or the index resolution. The reasoning, the measurements and the three separate objections to the weaker form of the idea — dropping the polygons `timezone_at` returns by elimination without ever testing — are documented under *Why the index makes no polygon redundant* in `docs/data_format.rst`, next to the hole sections they parallel. Rejected with it: keeping the bounding boxes as a `get_geometry` fallback, which is what would make the failure a silent wrong answer rather than a loud missing one. The bbox vectors are already separate per-polygon files, so the fallback is cheap to build — that is the trap, not the argument for it.
 
-- **A correctness property is never expressed in terms of the H3 shortcut index.** Settled
-  2026-08-21, while removing GH-301 as GH-513's blocker. Zone precedence — which zone a query should
-  reach first where several cover a point — is a property of the zones and their geometry. Stating
-  it per H3 cell would make correctness depend on the spatial index, whose resolution, layout and
-  hybrid unique-zone encoding are implementation details the package is free to change; a future
-  resolution change would then silently move answers rather than only performance. The index is a
-  candidate *filter* and may be reordered, rebuilt or replaced freely, which is exactly why nothing
-  load-bearing may be derived from its structure. Applies to GH-513 first, and to any future
-  argument that reaches for the shortcuts to prove something about answers.
+- **A correctness property is never expressed in terms of the H3 shortcut index.** Settled 2026-08-21, while removing GH-301 as GH-513's blocker. Zone precedence — which zone a query should reach first where several cover a point — is a property of the zones and their geometry. Stating it per H3 cell would make correctness depend on the spatial index, whose resolution, layout and hybrid unique-zone encoding are implementation details the package is free to change; a future resolution change would then silently move answers rather than only performance. The index is a candidate *filter* and may be reordered, rebuilt or replaced freely, which is exactly why nothing load-bearing may be derived from its structure. Applies to GH-513 first, and to any future argument that reaches for the shortcuts to prove something about answers.
 
-- **A coordinate-reading interface never infers which column is which.** Settled in #504. Its first
-  cut read bare `lng,lat` pairs positionally; for any longitude between -90 and 90 — most of the
-  populated world — the swapped pair is still a valid coordinate, so a wrong order returns a real
-  but wrong zone rather than raising. 13 of 15 major cities tested have a silently valid swap, and
-  the wrong answers look plausible (Moscow's pair swapped gives `Asia/Tehran`). What shipped
-  resolves columns by header name or by an explicit flag, and rejects input it cannot resolve
-  instead of guessing. The same reasoning binds any interface that takes coordinates in bulk, and
-  the batch lookups are built on it: one keyword array per axis, an `(N, 2)` array rejected rather
-  than read by column position. It still binds a file format or an `update_data`-style subcommand.
+- **A coordinate-reading interface never infers which column is which.** Settled in #504. Its first cut read bare `lng,lat` pairs positionally; for any longitude between -90 and 90 — most of the populated world — the swapped pair is still a valid coordinate, so a wrong order returns a real but wrong zone rather than raising. 13 of 15 major cities tested have a silently valid swap, and the wrong answers look plausible (Moscow's pair swapped gives `Asia/Tehran`). What shipped resolves columns by header name or by an explicit flag, and rejects input it cannot resolve instead of guessing. The same reasoning binds any interface that takes coordinates in bulk, and the batch lookups are built on it: one keyword array per axis, an `(N, 2)` array rejected rather than read by column position. It still binds a file format or an `update_data`-style subcommand.

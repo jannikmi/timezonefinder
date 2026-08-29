@@ -5,5 +5,4 @@ description: "Briefs and records the maintainer decisions blocking ranked timezo
 
 # Maintainer decisions
 
-Read [CONTRIBUTING.md](../../../CONTRIBUTING.md), then follow the canonical
-[maintainer-decision workflow](../../../contributing/workflows/record-maintainer-decisions.md).
+Read [CONTRIBUTING.md](../../../CONTRIBUTING.md), then follow the canonical [maintainer-decision workflow](../../../contributing/workflows/record-maintainer-decisions.md).
