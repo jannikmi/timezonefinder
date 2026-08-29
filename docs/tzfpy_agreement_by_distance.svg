@@ -62,7 +62,6 @@
 <circle cx="676.0" cy="348.1" r="4" fill="#1f6feb"/>
 <text x="676.0" y="368.1" font-size="12" text-anchor="middle" fill="#1f6feb">0.12%</text>
 <circle cx="779.4" cy="419.1" r="4.5" fill="#ffffff" stroke="#1f6feb" stroke-width="1.8"/>
-<text x="779.4" y="403.1" font-size="12" text-anchor="middle" fill="#1f6feb">&lt;0.015%</text>
 <circle cx="824.0" cy="419.1" r="4.5" fill="#ffffff" stroke="#1f6feb" stroke-width="1.8"/>
 <text x="824.0" y="403.1" font-size="12" text-anchor="end" fill="#1f6feb">&lt;0.015%</text>
 <polyline points="84.0,144.1 187.4,145.5 232.0,146.8 335.4,153.9 380.0,155.9 483.4,161.6 528.0,168.5 631.4,216.0 676.0,340.1 779.4,409.7 824.0,409.7" fill="none" stroke="#c2570f" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
@@ -81,7 +80,6 @@
 <circle cx="676.0" cy="340.1" r="4" fill="#c2570f"/>
 <text x="676.0" y="324.1" font-size="12" text-anchor="middle" fill="#c2570f">0.152%</text>
 <circle cx="779.4" cy="409.7" r="4.5" fill="#ffffff" stroke="#c2570f" stroke-width="1.8"/>
-<text x="779.4" y="393.7" font-size="12" text-anchor="middle" fill="#c2570f">&lt;0.0198%</text>
 <circle cx="824.0" cy="409.7" r="4.5" fill="#ffffff" stroke="#c2570f" stroke-width="1.8"/>
 <text x="824.0" y="393.7" font-size="12" text-anchor="end" fill="#c2570f">&lt;0.0198%</text>
 <text x="454" y="479.0" font-size="12.5" text-anchor="middle" fill="#6b7a85">distance from the nearest timezone border</text>

@@ -228,6 +228,16 @@ def test_the_chart_states_every_measured_rate() -> None:
 
 
 @pytest.mark.unit
+def test_only_the_final_decade_labels_an_unobserved_tail() -> None:
+    """A hollow 500 m marker must not duplicate the 1 km bound label."""
+    svg = render_chart(_measurement((500.0, 0, 0), (1000.0, 0, 0)))
+
+    # One label per series remains at the final decade (1 km); the previous
+    # renderer also labelled the non-decade 500 m marker, making four copies.
+    assert svg.count("&lt;3%") == 2
+
+
+@pytest.mark.unit
 def test_the_chart_is_valid_xml() -> None:
     # nothing else validates this file: rstcheck accepts an `image::` whose
     # target does not parse, and the docs build copies it without reading it

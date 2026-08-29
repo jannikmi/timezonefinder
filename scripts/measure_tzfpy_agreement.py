@@ -897,9 +897,11 @@ def render_chart(measurement: Measurement) -> str:
                 parts.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{series.colour}"/>'
                 )
-            # only the decade positions carry a number. Every point would be 22
-            # labels over 11 markers, and the page prints the whole table anyway
-            if not is_decade(result.distance_m) and not point.is_upper_bound:
+            # Only the decade positions carry a number. Every point would be 22
+            # labels over 11 markers, and the page prints the whole table anyway.
+            # An unobserved group is still a hollow marker at every distance,
+            # but it does not earn an extra label merely for being an upper bound.
+            if not is_decade(result.distance_m):
                 continue
             # the end labels are anchored inwards, or half of the first one
             # sits outside the plot and over the percentage axis
