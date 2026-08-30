@@ -1,8 +1,8 @@
 # Run one improvement pass
 
-Deliver one reviewable improvement and one pull request against `master`. A pass takes the highest-ranked eligible item, not a theme or batch. Status-only requests use the triage mode below and change nothing.
+Deliver one reviewable pull request against `master`. A pass starts with the highest-ranked eligible item, then batches further eligible small items when they fit in the same focused, releasable pull request. Status-only requests use the triage mode below and change nothing.
 
-Read the [register rules](../improvements/improvement-register-rules.md), the [priority ranking](../improvements/improvement-priority-ranking.md), and only the selected item. Follow that item's links when sequencing, measurements, or recorded decisions apply.
+Read the [register rules](../improvements/improvement-register-rules.md), the [priority ranking](../improvements/improvement-priority-ranking.md), and only the selected items. Follow each item's links when sequencing, measurements, or recorded decisions apply.
 
 ## Hard boundaries
 
@@ -19,7 +19,9 @@ Treat entries as evidence, not gospel. Re-find locations by symbol rather than l
 
 Rank expected value first: likely defects, then unblockers, drift-prone duplication, then readability; size only breaks ties. A performance item is ranked on measured removable workload share, never intuition. Use the [measurement baseline](../improvements/query-performance-measurement-baseline.md); an unmeasured hypothesis becomes a measurement item.
 
-An item is eligible only when it is unclaimed, its [preconditions](../improvements/improvement-sequencing-and-preconditions.md) hold, every maintainer-owned choice is recorded, and it fits one releasable pull request. Resume existing work instead of racing it.
+An item is eligible only when it is unclaimed, its [preconditions](../improvements/improvement-sequencing-and-preconditions.md) hold, and every maintainer-owned choice is recorded. Resume existing work instead of racing it.
+
+Take the first eligible item in ranking order. Then add as many subsequent eligible small items as fit in the same focused, releasable pull request. Favor items with overlapping files, tests, documentation, or release context; independent small maintenance items may still share the pull request when their combined diff and verification remain easy to review. Do not batch an item that adds a new maintainer decision, materially broadens risk or verification, obscures the behavior of another item, or makes the pull request no longer releasable on its own. A larger item remains its own slice unless it is already part of the selected work's coherent deliverable.
 
 ## Decisions
 
@@ -39,15 +41,15 @@ git branch -r
 gh pr list --state open
 ```
 
-Create a uniquely named worktree and branch from `origin/master`, install, and record untouched `make test` and `make hook` baselines. Push the branch immediately after selecting the item so it acts as the claim. Stage explicit paths, never `git add -A`.
+Create a uniquely named worktree and branch from `origin/master`, install, and record untouched `make test` and `make hook` baselines. Push the branch immediately after selecting the first item so it acts as the claim. Claim every additional batched item before implementing it. Stage explicit paths, never `git add -A`.
 
 ## Deliverable
 
-Valid outcomes are one implemented item; briefed questions only; a design decomposed into releasable slices; or triage proving nothing is eligible. The latter three still produce a register-only pull request. Never manufacture cosmetic code to make a pass look productive.
+Valid outcomes are one or more implemented items; briefed questions only; a design decomposed into releasable slices; or triage proving nothing is eligible. The latter three still produce a register-only pull request. Never manufacture cosmetic code to make a pass look productive.
 
 A slice is releasable when one true standalone changelog sentence describes it without promising a follow-up. Prefer additive before subtractive changes. An atomic data-format migration is prototyped and measured rather than half-landed. While an unreleased `DATA_FORMAT_VERSION` bump is pending, take compatible format changes consecutively so they share one ordered data/code release.
 
-Implement only the selected slice, add a test for its seam, and commit it using the item ID. If it ships, delete its item file and ranking row in a separate commit. If work remains, rewrite the item to describe only the remainder. Rejections keep their item and move to `Closed`.
+Implement only the selected slice or batch, and add a test for each changed seam. Commit each item using its ID, or use all batched IDs when one cohesive change implements them together. If an item ships, delete its item file and ranking row in a separate register-only commit; a single register-only commit may remove every shipped batched item. If work remains, rewrite the item to describe only the remainder. Rejections keep their item and move to `Closed`.
 
 ## Final gate and pull request
 
@@ -55,7 +57,7 @@ Rebase onto `origin/master` before verification and repeat the gate if the base 
 
 Confirm packaged data is untouched unless regeneration was the selected item's subject; if it was, the data diff must list only intended binaries. Confirm the overall diff contains only intended paths, the register invariants pass, all discoveries are recorded, and no shipped ID remains. If a required gate cannot be fixed, push the findings but do not open a pull request.
 
-Open the pull request without merging or adding automation. Its body states what changed, why the item outranked or skipped higher work, recorded decisions, exact behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item.
+Open the pull request without merging or adding automation. Its body states what changed, why the first item outranked or skipped higher work, why each additional item belonged in the batch, recorded decisions, exact behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item.
 
 ## Triage-only mode
 
@@ -63,4 +65,4 @@ For `triage`, `status`, `dry-run`, “what is next,” or “what blocks this,�
 
 ## Final report
 
-Report the item and why higher rows were ineligible; decisions used or questions recorded; the pull request URL or why no code was correct; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
+Report the selected items and why higher rows were ineligible or eligible small items were not batched; decisions used or questions recorded; the pull request URL or why no code was correct; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
