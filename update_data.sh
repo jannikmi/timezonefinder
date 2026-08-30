@@ -6,7 +6,6 @@ set -euo pipefail
 
 WORKING_FOLDER_NAME=tmp
 DOWNLOADED_TAG_PATH=./$WORKING_FOLDER_NAME/downloaded_tag.txt
-RELEASE_API_URL=https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest
 JSON_PREFIX=combined
 JSON_SUFFIX=.json
 # the tagged release asset, not `releases/latest/download/...`: see the tag resolution below
@@ -67,7 +66,7 @@ mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 # data to the other - permanently, and with nothing able to notice afterwards. One
 # answer now governs the download URL, the file names and DATA_VERSION alike.
 echo "RESOLVING THE LATEST RELEASE..."
-DOWNLOADED_TAG=$(curl -sL --retry 3 $RELEASE_API_URL | grep '"tag_name"' | cut -d'"' -f4)
+DOWNLOADED_TAG=$(uv run python -m scripts.upstream_release resolve-tag)
 if [ -z "$DOWNLOADED_TAG" ]; then
     echo "ERROR: could not determine the latest timezone-boundary-builder release." >&2
     echo "Without it the data cannot be attributed to a release, so nothing is parsed." >&2
@@ -80,6 +79,7 @@ echo "$DOWNLOADED_TAG" >"$DOWNLOADED_TAG_PATH"
 # another release (or another variant) must not satisfy the "already downloaded"
 # checks below and be parsed in place of what was asked for.
 VARIANT=$INTERFIX$DATASET_SUFFIX
+ASSET_NAME=timezones$VARIANT$URL_SUFFIX
 ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/data_downloaded$VARIANT-$DOWNLOADED_TAG.zip
 UNPACKED_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT-$DOWNLOADED_TAG$JSON_SUFFIX
@@ -90,12 +90,27 @@ else
     if [ -f "$ZIP_ARCHIVE_PATH" ]; then
         echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
     else
-        URL=$URL_PREFIX/$DOWNLOADED_TAG/timezones$VARIANT$URL_SUFFIX
+        URL=$URL_PREFIX/$DOWNLOADED_TAG/$ASSET_NAME
         echo "DOWNLOADING $URL"
 
         # install command mac:
         # brew install wget
         wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
+    fi
+    # Whatever produced the archive - this run's download or a leftover from an
+    # interrupted one - nothing below can tell a truncated or replaced file from a
+    # good one, and the pipeline that parses it merges and publishes unattended. So
+    # the bytes are checked against the size and SHA-256 the release API publishes
+    # before anything reads them, and the verified digest is recorded in DATA_SOURCE.
+    # (Reached only when there is an archive to unpack: an already-unpacked
+    # $JSON_PATH is a local cache, and CI always starts from an empty tmp/.)
+    echo "VERIFYING THE DOWNLOAD..."
+    if ! uv run python -m scripts.upstream_release verify \
+        --tag "$DOWNLOADED_TAG" \
+        --asset "$ASSET_NAME" \
+        --archive "$ZIP_ARCHIVE_PATH"; then
+        echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
+        exit 1
     fi
     echo "UNPACKING..."
     unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
