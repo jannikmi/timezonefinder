@@ -60,6 +60,10 @@ POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 #   1 = coordinates in per-axis blocks [x0...xN-1, y0...yN-1], and a *hole* collection
 #       holds only the rings that are not a verbatim copy of a boundary polygon, with
 #       holes/poly_ref.npy mapping hole ids onto them
+#   2 = the same coordinates, plus the latitude block index beside them
+#       (block_ranges.npy / block_offsets.npy, see timezonefinder/configs.py's
+#       POLYGON_BLOCK_SIZE), and every ring rotated to the start index that index
+#       is cheapest at
 #
 # Deliberately NOT tied to the package version: bump it only when what the file means
 # changes, never for an ordinary release. Data compiled by any version that writes a
@@ -70,7 +74,16 @@ POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 # they ship together: neither has appeared in a release, so no version in the wild
 # reads or writes layout 1, and giving the second change a version of its own would
 # rewrite every packaged coordinate file to distinguish states that never coexisted.
-POLYGON_LAYOUT_VERSION: Final[int] = 1
+#
+# Layout 2 adds the latitude block index and the ring rotation that suits it. Neither
+# is stored *in* this file - the index sits in two .npy files next to it, and a
+# rotation is invisible by construction - so this marker is what a reader has to reject
+# a layout 1 directory by: there the index files are absent, and a coordinate file from
+# a layout 2 directory read at a different POLYGON_BLOCK_SIZE would be blocked
+# differently while parsing perfectly. The check therefore has to happen before
+# anything reads the index, which is where it does: PolygonArray builds its coordinate
+# accessor first.
+POLYGON_LAYOUT_VERSION: Final[int] = 2
 
 
 def flatten_polygon_coords(polygon: np.ndarray) -> np.ndarray:

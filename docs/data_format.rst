@@ -154,6 +154,8 @@ Polygon Data
 ------------
 
 * ``coordinates.bin``: FlatBuffer binary file containing all polygon coordinates
+* ``block_ranges.npy``, ``block_offsets.npy``: the latitude block index over those
+  coordinates (see `Latitude Block Index`_)
 * ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
   unsigned integers (``uint16`` by default, ``uint8`` for datasets with less than 256 timezones); pass
   ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
@@ -201,6 +203,80 @@ Other Files
   (``combined-with-oceans-2026c.json``), or from ``file_converter.py --data-version``
   for an input that cannot carry it. Data that is not a release at all - your own
   GeoJSON - is stamped ``unknown``
+
+Latitude Block Index
+====================
+
+Ray casting flips the inside/outside parity only on an edge that *spans* the query
+latitude: the kernel's test ``(y > y1) ^ (y > y2)`` is exactly
+``min(y1, y2) < y <= max(y1, y2)``. An edge that does not span it contributes nothing,
+however far the ray otherwise travels - and in a ring of nearly 200,000 vertices, almost
+none of them do.
+
+So every ring is split into fixed blocks of consecutive vertices, and the range of
+latitudes each block's edges span is stored beside the coordinates. A block whose range
+excludes the query latitude provably holds no flipping edge and is skipped whole.
+
+.. list-table::
+   :header-rows: 1
+
+   * - File
+     - What it holds
+   * - ``block_ranges.npy``
+     - ``int32``, shape ``(total blocks, 2)``: the ``[min, max]`` latitude of every
+       block, all rings' blocks concatenated in ring order
+   * - ``block_offsets.npy``
+     - ``uint32``, one entry per ring plus one: ring *i* owns
+       ``block_ranges[offsets[i]:offsets[i + 1]]``
+
+A block owns the edges *leaving* its own vertices, so its last edge reaches the first
+vertex of the next block - and on the final block, wraps to vertex 0. That bridging
+vertex is included in the range, which is what makes every edge lie inside exactly one
+block's stored range.
+
+``POLYGON_BLOCK_SIZE`` (``timezonefinder/configs.py``) is 128 vertices per block. It is
+chosen by measurement rather than by intuition, and the two sides of the trade run
+opposite ways: smaller blocks bound a ring's latitudes more tightly and skip more of it,
+larger blocks decide that in fewer comparisons.
+``scripts/tune_block_size.py`` re-runs the sweep over whatever data is packaged.
+Nothing in the files records the size they were built at, so it is part of what the
+polygon layout version means - a directory blocked at another size is rejected by the
+layout marker in ``coordinates.bin``, and by
+``scripts.data_integrity.validate_block_index`` where the data is produced.
+
+What it costs is one ``int32`` pair per block - about 0.5 MB against 63 MB of
+coordinates - and one comparison for the 30 % of polygons small enough to fit in a
+single block. What it buys is the long tail: the slowest queries this package answers
+are one ray cast across a very large ring, and
+:doc:`benchmark_results_timezonefinding` carries the distribution.
+
+Where a ring starts
+-------------------
+
+Blocks partition a ring from its first vertex, so *where a stored ring starts* changes
+how tightly its blocks bound it - and nothing downstream depends on that choice. The
+canonical key used to match holes against boundaries is rotation-invariant, the bounding
+boxes are unaffected, and a hole kept as a reference follows its boundary automatically.
+The converter therefore rotates each ring to the start index that minimises the summed
+per-block latitude span, and stores nothing to record it: no reader can tell, and none
+needs to.
+
+The objective is deliberately query-independent. For a latitude drawn uniformly from a
+ring's own range, the expected number of edges scanned is
+``block size × sum(block spans) / total span``, so minimising that sum minimises the
+expected scan without the builder ever seeing a query. It is worth ~3.9 % of the edges a
+query scans - real, but well below what the benchmark suite can resolve, which is why it
+is taken as a free step of a rebuild that was happening anyway rather than claimed as a
+speedup.
+
+The two rules that suggest themselves both *lose*: starting at the minimum-latitude
+vertex costs 1.026x the edges of the unrotated order and the maximum-latitude one
+1.010x. The reason is the bridging vertex - the last block's bridge wraps to vertex 0,
+so putting a latitude extreme there stretches exactly that block.
+
+A consequence worth knowing: ``get_geometry`` returns each ring starting at the vertex
+the converter chose, which is not the one the upstream GeoJSON began with. The ring is
+the same closed path either way.
 
 Holes as Boundary References
 ============================

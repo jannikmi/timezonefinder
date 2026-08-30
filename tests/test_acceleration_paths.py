@@ -1,10 +1,10 @@
 """Drive both point-in-polygon acceleration paths through the *real* lookup stack.
 
-``timezonefinder/utils.py`` binds ``inside_polygon`` once, at import time, and Numba
-wins whenever it is importable::
+``timezonefinder/utils.py`` binds ``inside_polygon_blocked`` once, at import time, and
+Numba wins whenever it is importable::
 
     if clang_extension_loaded and not using_numba:
-        inside_polygon = utils_clang.pt_in_poly_clang
+        inside_polygon_blocked = utils_clang.pt_in_poly_clang_blocked
 
 The recommended local setup installs Numba - ``make install`` / ``uv sync
 --all-groups`` pull in the ``numba`` group, and ``uv run`` syncs *inexactly*, so it
@@ -16,10 +16,11 @@ C-contiguity, read-only memory-mapped views, the lifetime of the ``ffi.from_buff
 handles - used to be exercised first in CI's non-numba tox envs, i.e. the
 configuration a plain ``pip install timezonefinder`` produces.
 
-These tests close that gap. ``PolygonArray.pip`` looks ``utils.inside_polygon`` up
-per call, so swapping the module attribute reroutes the whole lookup stack without
+These tests close that gap. ``PolygonArray.pip`` looks ``utils.inside_polygon_blocked``
+up per call, so swapping the module attribute reroutes the whole lookup stack without
 rebuilding a finder: both implementations run against the real coordinate accessors
-whatever happens to be installed.
+whatever happens to be installed - and against the real latitude block index, which is
+what decides which edges either kernel ever sees.
 """
 
 from collections.abc import Callable
@@ -27,8 +28,8 @@ from collections.abc import Callable
 import pytest
 
 from scripts.assert_acceleration_path import (
-    ACCELERATION_IMPLEMENTATIONS,
     ACCELERATION_PATHS,
+    BLOCKED_ACCELERATION_IMPLEMENTATIONS,
 )
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -75,16 +76,16 @@ def _lookup_all(
     query and the point in polygon implementation never ran at all - which is the
     same silent no-coverage failure these tests exist to prevent.
     """
-    impl = ACCELERATION_IMPLEMENTATIONS[path]
+    impl = BLOCKED_ACCELERATION_IMPLEMENTATIONS[path]
     calls = 0
 
-    def counting_impl(x, y, coords):
+    def counting_impl(x, y, coords, block_ranges, block_size):
         nonlocal calls
         calls += 1
-        return impl(x, y, coords)
+        return impl(x, y, coords, block_ranges, block_size)
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(utils, "inside_polygon", counting_impl)
+        monkeypatch.setattr(utils, "inside_polygon_blocked", counting_impl)
         results = [method(lng=lng, lat=lat) for lng, lat in points]
 
     return results, calls
@@ -144,7 +145,9 @@ def test_timezone_at_on_the_clang_path(
     The memory-mapped finder is used because its read-only views are what the C
     extension never saw locally.
     """
-    monkeypatch.setattr(utils, "inside_polygon", ACCELERATION_IMPLEMENTATIONS["clang"])
+    monkeypatch.setattr(
+        utils, "inside_polygon_blocked", BLOCKED_ACCELERATION_IMPLEMENTATIONS["clang"]
+    )
     single_location_test(
         timezonefinder_disk.timezone_at, lat, lng, description, expected
     )
@@ -160,7 +163,9 @@ def test_timezone_at_land_on_the_clang_path(
     description: str,
     expected: str,
 ) -> None:
-    monkeypatch.setattr(utils, "inside_polygon", ACCELERATION_IMPLEMENTATIONS["clang"])
+    monkeypatch.setattr(
+        utils, "inside_polygon_blocked", BLOCKED_ACCELERATION_IMPLEMENTATIONS["clang"]
+    )
     single_location_test(
         timezonefinder_disk.timezone_at_land, lat, lng, description, expected
     )
@@ -176,6 +181,8 @@ def test_using_clang_pip_reports_the_bound_implementation(
     ``main_test.py::test_using_clang_pip`` only asserts ``isinstance(res, bool)``,
     which passes on either path and so cannot catch the accessor going stale.
     """
-    monkeypatch.setattr(utils, "inside_polygon", ACCELERATION_IMPLEMENTATIONS[path])
+    monkeypatch.setattr(
+        utils, "inside_polygon_blocked", BLOCKED_ACCELERATION_IMPLEMENTATIONS[path]
+    )
 
     assert tf.using_clang_pip() is (path == "clang")

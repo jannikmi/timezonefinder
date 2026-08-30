@@ -122,6 +122,37 @@ rewrites ``ops``/``mean`` from the min before handing the report over, so the ch
 estimator this project chose rather than the one the extractor defaults to.
 
 
+What the batch form cannot say, and why a distribution is published beside it
+-----------------------------------------------------------------------------
+
+Everything above is built on the batch: one round is one pass over 2,500 points, and the tracked
+value is the fastest such pass. That design buys comparability on a noisy runner, and it pays for it
+by discarding the shape of the distribution *before* any estimator sees it. A batch mean cannot
+distinguish 2,500 queries that each cost 2 µs from 2,475 that cost 1 µs and 25 that cost 100 µs.
+
+For this package that distinction is the interesting one. A query whose H3 cell holds a single zone
+reads no geometry at all and costs ~1 µs; a query that falls in a very large boundary polygon is
+answered by one ray cast across that whole ring and costs tens of microseconds. Query time
+correlates 0.92 with *vertices tested* and only 0.76 with the number of candidate polygons: the tail
+is one expensive test, not many cheap ones. A change that halves that tail while leaving the median
+alone is a large improvement for anyone with a latency budget, and the batch estimators report it as
+a modest shift in one number.
+
+So the per-query distribution is measured separately - ``scripts/measure_query_latency.py``, run by
+``make latency`` - and published as a section of :doc:`benchmark_results_timezonefinding`. It reports
+p50/p90/p99/p99.9 per point class, in the default memory-mapped mode on the same acceleration path
+the batch suite asserts, and it times a single ``timezone_at`` call per sample. Each query keeps its
+fastest observation across repeated passes, which is the same argument ``min`` rests on applied per
+query rather than per round.
+
+It is published **beside** the batch tables rather than instead of them, because the two answer
+different questions and the batch form remains the right instrument for comparing two commits: it is
+the one whose noise behaviour is characterised, whose thresholds are derived, and which CI can run
+on a runner it does not control. The distribution is not tracked on the trend chart for exactly that
+reason - a p99 taken on one arbitrary machine of a heterogeneous pool would be noise on top of
+noise.
+
+
 What CI measures
 ----------------
 

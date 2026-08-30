@@ -161,13 +161,26 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     hole tests too, and a boundary-keyed index silently answered 6 of 5,000 points
     wrongly. Timing two functions that disagree measures nothing.
 
-What this does **not** establish: the same figures on the **C extension**, which is the
-tracked configuration. The two kernels measure within 5 % of each other on identical
-inputs, so the relative result should carry, but it has to be rebuilt and re-measured
-there. Two smaller caveats: building the index up front faults in every coordinate page,
-which favours neither variant but does not represent mapped mode's cold behaviour; and
-whether byte-aligned widths (+~8 MB, decode is a widening load) beat bit-packed ones is
-still unmeasured.
+8.  **The C extension was the open question, and it answered the same way.** Findings 1-7
+    are numba's. The index shipped in both kernels on 2026-08-30, and the same paired,
+    order-alternated A/B run against the C extension in the default mapped mode - one
+    process, the shipped data, only ``PolygonArray.pip`` swapped - gives **random
+    −20.2 %, on_land −42.2 %, ambiguous −41.0 % on minima, 41 of 41 rounds on each**,
+    with ``on_land`` p99 35.0 → 11.3 µs and p99.9 79.3 → 23.0 µs. Reproduced. The
+    unique-shortcut stratum is untouched, which it must be: it never reaches a
+    point-in-polygon test at all.
+
+    One measurement trap found while establishing that, worth more than the figure: a
+    worktree *outside* the repository picks a different interpreter, because uv resolves
+    ``.python-version`` by walking up from the working directory. Comparing two checkouts
+    that way put a free-threaded CPython against the pinned Homebrew one and showed a
+    17 % "regression" on a stratum whose code path had not changed. Pass ``--python``
+    explicitly, or compare inside one process.
+
+What this does **not** establish: whether byte-aligned widths (+~8 MB, decode is a
+widening load) beat bit-packed ones for FMT-2's payload. Building the index up front also
+faults in every coordinate page, which favours neither variant but does not represent
+mapped mode's cold behaviour.
 """
 
 import sys

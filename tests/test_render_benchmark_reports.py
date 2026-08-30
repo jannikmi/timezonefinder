@@ -466,9 +466,45 @@ def test_headline_section_describes_the_measured_environment():
 # renderers tolerate a missing benchmark (headline blocks are conditional), so
 # a minimal JSON still reaches the point where provenance is - or isn't -
 # stamped
+def _fake_latency_json() -> dict:
+    """A minimal query-latency report, in the shape ``scripts.measure_query_latency``
+    writes. Only the timezone-finding renderer takes one - it renders the distribution
+    as a section of its own page rather than as a page of its own."""
+    return {
+        "machine_info": {
+            "timezonefinder": {
+                **_FAKE_SYSTEM_INFO,
+                "fixture_version": 2,
+                "data_version": "2026c",
+                "latency_points": 100,
+                "latency_repetitions": 3,
+            }
+        },
+        "benchmarks": [
+            {
+                "fullname": f"latency::random::{statistic}",
+                "name": f"latency::random::{statistic}",
+                "stats": {"mean": value, "min": value, "max": value, "rounds": 1},
+            }
+            for statistic, value in (
+                ("p50", 1e-6),
+                ("p90", 3e-6),
+                ("p99", 3e-5),
+                ("p99.9", 6e-5),
+                ("mean", 2e-6),
+                ("max", 1e-4),
+            )
+        ],
+    }
+
+
+def _render_timezone_finding_with_latency(data: dict, output_path) -> None:
+    render_timezone_finding(data, _fake_latency_json(), output_path)
+
+
 _RENDERERS = {
     "timezonefinding": (
-        render_timezone_finding,
+        _render_timezone_finding_with_latency,
         "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
     ),
     "polygon": (

@@ -60,7 +60,9 @@ from scripts.configs import (
     resolve_data_version,
     resolve_zone_id_dtype,
 )
+from scripts.block_index import build_block_index, rotate_rings
 from scripts.data_integrity import (
+    validate_block_index,
     validate_coordinate_offset_table,
     validate_hole_references,
     validate_shipped_schemas,
@@ -78,6 +80,8 @@ from timezonefinder.configs import (
     UNKNOWN_DATA_VERSION,
 )
 from timezonefinder.np_binary_helpers import (
+    get_block_offsets_path,
+    get_block_ranges_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -190,7 +194,24 @@ def create_polygon_dirs(output_path: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
+def write_block_index(output_dir: Path, rings: list[np.ndarray]) -> None:
+    """Write the latitude block index of one polygon collection.
+
+    ``rings`` must be the rings *as they are stored*, i.e. already rotated: the index
+    describes a partition of each ring from its first vertex, so building it from a
+    differently rotated copy would produce ranges that filter the wrong edges.
+    """
+    ranges, offsets = build_block_index(rings)
+    store_per_polygon_vector(get_block_ranges_path(output_dir), ranges)
+    store_per_polygon_vector(get_block_offsets_path(output_dir), offsets)
+
+
+def write_numpy_binaries(
+    data: TimezoneData,
+    output_path: Path,
+    boundary_rings: list[np.ndarray],
+    hole_rings: list[np.ndarray],
+) -> None:
     print("Writing binary data to separate Numpy binary .npy files...")
     # some properties are very small but essential for the performance of the package
     # -> store them directly as numpy arrays (overhead is negligible) and read them into memory at runtime
@@ -237,10 +258,20 @@ def write_numpy_binaries(data: TimezoneData, output_path: Path) -> None:
         to_numpy_array(data.hole_poly_refs, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY),
     )
 
+    # LATITUDE BLOCK INDEX: per block of stored vertices, the latitude range its edges
+    # span. Built from the rings about to be written rather than from data.polygons,
+    # which is the unrotated model - see write_binary_files.
+    write_block_index(boundaries_dir, boundary_rings)
+    write_block_index(holes_dir, hole_rings)
+
     print("Numpy binary files written successfully")
 
 
-def write_flatbuffer_files(data: TimezoneData, output_path: Path) -> None:
+def write_flatbuffer_files(
+    output_path: Path,
+    boundary_rings: list[np.ndarray],
+    hole_rings: list[np.ndarray],
+) -> None:
     # separate output directories for holes and boundaries
     holes_dir: Path = get_holes_dir(output_path)
     boundaries_dir: Path = get_boundaries_dir(output_path)
@@ -248,12 +279,12 @@ def write_flatbuffer_files(data: TimezoneData, output_path: Path) -> None:
     print("Writing binary data to flatbuffer files...")
     # Write polygon boundary coordinates to flatbuffer
     boundary_polygon_file: Path = get_coordinate_path(boundaries_dir)
-    write_polygon_collection_flatbuffer(boundary_polygon_file, data.polygons)
+    write_polygon_collection_flatbuffer(boundary_polygon_file, boundary_rings)
 
     hole_polygon_file: Path = get_coordinate_path(holes_dir)
     # Write hole coordinates to flatbuffer. Only the rings that are not a verbatim copy
     # of a boundary polygon: the rest are resolved through poly_ref.npy at runtime.
-    write_polygon_collection_flatbuffer(hole_polygon_file, data.inline_holes)
+    write_polygon_collection_flatbuffer(hole_polygon_file, hole_rings)
     print("Flatbuffer files written successfully")
 
 
@@ -267,8 +298,20 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
         output_path: Directory where binary files will be written
     """
     create_polygon_dirs(output_path)
-    write_numpy_binaries(data, output_path)
-    write_flatbuffer_files(data, output_path)
+
+    # Where each ring starts is a free parameter - blocks partition it from its first
+    # vertex and no reader can tell which one that was - so it is chosen here, once, to
+    # make the block index skip as much as possible (scripts/block_index.py). The
+    # rotated rings are threaded to both writers rather than written back into `data`:
+    # the coordinate file and the index have to describe the same rotation, and the
+    # shortcut compilation that runs afterwards is rotation-invariant and keeps reading
+    # the model. ~2 s for the whole collection, and nothing is stored to record it.
+    print("Choosing the stored start vertex of every ring...")
+    boundary_rings = rotate_rings(data.polygons)
+    hole_rings = rotate_rings(data.inline_holes)
+
+    write_numpy_binaries(data, output_path, boundary_rings, hole_rings)
+    write_flatbuffer_files(output_path, boundary_rings, hole_rings)
     # Check the artifact rather than the in-memory model it came from: the hole
     # reference vector, the hole coordinate file and the hole bboxes are three separate
     # files, and only reading them back proves they agree. This is where the coherence
@@ -276,6 +319,7 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     print("Verifying the integrity of the written data...")
     validate_hole_references(output_path)
     validate_coordinate_offset_table(output_path)
+    validate_block_index(output_path)
     print("Binary files written successfully")
 
 

@@ -26,6 +26,8 @@ Timezone Finding
 
 See :doc:`benchmark_results_timezonefinding` for a comprehensive performance comparison between all timezone finding functions, auto-generated from the ``benchmarks/test_timezone_finding.py`` pytest-benchmark suite (``make reports``)
 
+That page ends with the **per-query latency distribution** - p50 through p99.9, measured one query at a time by ``scripts/measure_query_latency.py`` (``make latency``). Read it if you have a latency budget rather than a throughput target: the tables above it time a whole batch, and a batch mean cannot say what the slowest lookups cost.
+
 
 
 Point in Polygon Checks

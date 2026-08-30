@@ -90,6 +90,13 @@ Most modules are self-describing. The ones that carry the design:
 Three point-in-polygon backends, chosen once
 --------------------------------------------
 
+Whichever runs, it does not scan the whole ring. Each stored polygon carries a **latitude block
+index** - the range of latitudes each block of 128 vertices spans - and a block whose range excludes
+the query latitude cannot hold an edge that changes the answer, so it is skipped whole. Over the
+committed query fixtures that leaves ~2 % of the edge tests, which is where most of the tail latency
+of a lookup went. :ref:`The data format page <data_format>` describes the index and why the skip is
+exact rather than approximate.
+
 The ray-casting inner loop exists in three forms:
 
 - **clang C extension** - compiled by ``cffi`` at install time if a compiler is available.

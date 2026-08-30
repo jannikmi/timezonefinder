@@ -36,6 +36,9 @@ __all__ = [
     "UNKNOWN_DATA_VERSION",
     "DATA_FORMAT_VERSION",
     "DATA_FORMAT_LAYOUT_VERSIONS",
+    "POLYGON_BLOCK_SIZE",
+    "BLOCK_RANGE_DTYPE",
+    "BLOCK_OFFSET_DTYPE",
     "NO_ZONE_ID",
     "ZONE_ID_RESULT_DTYPE",
     # Type aliases
@@ -129,9 +132,36 @@ DATA_FORMAT_VERSION: Final[int] = 2
 # released bound can express ships under a version that claims the old one.
 # tests/test_data_version.py asserts it; nothing else would notice.
 DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
-    "POLYGON_LAYOUT_VERSION": 1,
+    "POLYGON_LAYOUT_VERSION": 2,
     "SHORTCUT_LAYOUT_VERSION": 2,
 }
+
+
+# POLYGON BLOCK INDEX
+# How many vertices of a ring share one entry of the latitude block index, which is
+# what lets the point-in-polygon kernels skip the parts of a ring a horizontal ray
+# cannot cross (``scripts/block_index.py`` builds it, ``docs/data_format.rst``
+# describes it). Part of what polygon layout 2 *means*: the stored ranges are only
+# interpretable together with this number, and the rings are rotated to suit it, so
+# changing it changes every boundary file and must move POLYGON_LAYOUT_VERSION with it.
+#
+# 128 is measured rather than assumed. Over the real (point, polygon) pairs the
+# committed fixtures produce, it minimises edge tests plus block tests; 32 and 512 both
+# cost more (`prototypes/polygon_block_encoding.py`, section `skip`, and
+# `scripts/tune_block_size.py` re-runs the sweep over the packaged data). Smaller
+# blocks skip more finely and cost more range comparisons; larger ones the reverse.
+POLYGON_BLOCK_SIZE: Final[int] = 128
+
+# One block's stored ``[min, max]`` latitude pair. Same width as a coordinate because
+# that is what it is - a latitude out of the ring it indexes, compared directly against
+# the query's scaled latitude with no conversion on the lookup path.
+BLOCK_RANGE_DTYPE: Final[np.dtype] = np.dtype("<i4")
+
+# Where each ring's blocks start in the flat range array. Unsigned and 32 bit because
+# the packaged boundaries hold ~62.6k blocks and a 16-bit column would already have
+# wrapped; the converter refuses a collection that outgrows this one
+# (``scripts.block_index.build_block_index``).
+BLOCK_OFFSET_DTYPE: Final[np.dtype] = np.dtype("<u4")
 
 
 # COORDINATE SCALING AND PRECISION

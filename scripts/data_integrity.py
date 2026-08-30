@@ -18,6 +18,7 @@ from pathlib import Path
 import numpy as np
 from h3.api import numpy_int as h3
 
+from scripts.block_index import block_latitude_ranges, nr_blocks_for
 from scripts.configs import MIN_HOLE_DEDUP_RATIO
 from timezonefinder.flatbuf.schemas import (
     SCHEMA_SUFFIX,
@@ -31,8 +32,16 @@ from timezonefinder.flatbuf.io.polygons import (
     read_polygon_array_at,
     read_polygon_array_from_binary,
 )
-from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
+from timezonefinder.configs import (
+    BLOCK_OFFSET_DTYPE,
+    BLOCK_RANGE_DTYPE,
+    POLYGON_BLOCK_SIZE,
+    SHORTCUT_H3_RES,
+    ZONE_ID_RESULT_DTYPE,
+)
 from timezonefinder.np_binary_helpers import (
+    get_block_offsets_path,
+    get_block_ranges_path,
     get_poly_ref_path,
     get_zone_ids_path,
     read_per_polygon_vector,
@@ -272,6 +281,105 @@ def validate_coordinate_offset_table(data_dir: Path) -> None:
                             f"FlatBuffers reader. The offset table does not address "
                             f"this file's layout, so lookups against it would return "
                             f"wrong coordinates silently."
+                        )
+
+
+def validate_block_index(data_dir: Path) -> None:
+    """Check that the latitude block index describes the rings stored next to it.
+
+    The kernels *skip* on what this file says, so every failure mode of it is a silently
+    wrong answer rather than an error: a range too narrow drops the block holding a
+    crossing edge and flips one point's parity, and an offset column built at a
+    different ``POLYGON_BLOCK_SIZE`` hands a ring some other ring's latitudes. Neither
+    is visible in an answer that still names a real timezone, and neither can be caught
+    at lookup time without re-deriving the index a query exists to avoid.
+
+    So it is re-derived here instead, exhaustively, over the rings in both coordinate
+    files - by the converter over what it just wrote, and by the test suite over what
+    the repository ships. That is also what pins ``POLYGON_BLOCK_SIZE``: a data
+    directory blocked at a different size fails the block-count check by name.
+
+    :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
+    :raises DataIntegrityError: if the index does not describe the stored rings
+    """
+    for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
+        coordinate_path = get_coordinate_path(polygon_dir)
+        ranges_path = get_block_ranges_path(polygon_dir)
+        offsets_path = get_block_offsets_path(polygon_dir)
+        ranges = read_per_polygon_vector(ranges_path)
+        offsets = read_per_polygon_vector(offsets_path)
+
+        if (
+            ranges.dtype != BLOCK_RANGE_DTYPE
+            or ranges.ndim != 2
+            or ranges.shape[1] != 2
+        ):
+            raise DataIntegrityError(
+                f"{ranges_path} holds {ranges.dtype} data of shape {ranges.shape}, but "
+                f"the block index is one {BLOCK_RANGE_DTYPE.name} [min, max] latitude "
+                f"pair per block. The kernels read it by position without checking it."
+            )
+        if offsets.dtype != BLOCK_OFFSET_DTYPE:
+            raise DataIntegrityError(
+                f"{offsets_path} holds {offsets.dtype} data, but the block offset "
+                f"column is {BLOCK_OFFSET_DTYPE.name}."
+            )
+
+        with open(coordinate_path, "rb") as coord_file:
+            with mmap.mmap(
+                coord_file.fileno(), 0, access=mmap.ACCESS_READ
+            ) as coord_buf:
+                collection = get_polygon_collection(coord_buf, coordinate_path)
+                coord_offsets, lengths = derive_coord_offset_table(collection)
+
+                nr_rings = len(coord_offsets)
+                if len(offsets) != nr_rings + 1:
+                    raise DataIntegrityError(
+                        f"{offsets_path} has {len(offsets)} entries but {coordinate_path} "
+                        f"holds {nr_rings} rings, which needs {nr_rings + 1} - one "
+                        f"boundary per ring plus the end of the last."
+                    )
+                if int(offsets[0]) != 0 or int(offsets[-1]) != len(ranges):
+                    raise DataIntegrityError(
+                        f"{offsets_path} spans [{int(offsets[0])}, {int(offsets[-1])}) "
+                        f"but {ranges_path} holds {len(ranges)} block ranges."
+                    )
+
+                # The ring is a zero-copy view onto the mapping, and a mapping refuses
+                # to close while an export of it is alive - so it must not outlive the
+                # iteration that made it, on the raising path either. Hence a function
+                # whose locals go out of scope per ring rather than a loop variable.
+                def describe(idx: int) -> tuple[int, np.ndarray]:
+                    ring = read_polygon_array_at(
+                        coord_buf, coord_offsets[idx], lengths[idx]
+                    )
+                    return ring.shape[1], block_latitude_ranges(
+                        ring[1], POLYGON_BLOCK_SIZE
+                    )
+
+                for idx in range(nr_rings):
+                    nr_vertices, expected = describe(idx)
+                    start, stop = int(offsets[idx]), int(offsets[idx + 1])
+                    expected_count = nr_blocks_for(nr_vertices, POLYGON_BLOCK_SIZE)
+                    if stop - start != expected_count:
+                        raise DataIntegrityError(
+                            f"ring {idx} of {coordinate_path} has {nr_vertices} "
+                            f"vertices, which is {expected_count} blocks at "
+                            f"POLYGON_BLOCK_SIZE={POLYGON_BLOCK_SIZE}, but "
+                            f"{ranges_path} gives it {stop - start}. This data "
+                            f"directory was blocked at a different size; regenerate it "
+                            f"with scripts/file_converter.py from the current checkout."
+                        )
+                    if not np.array_equal(ranges[start:stop], expected):
+                        offender = int(
+                            np.argmax(np.any(ranges[start:stop] != expected, axis=1))
+                        )
+                        raise DataIntegrityError(
+                            f"block {offender} of ring {idx} in {coordinate_path} is "
+                            f"recorded as {ranges[start + offender].tolist()} but its "
+                            f"edges span {expected[offender].tolist()}. A range that "
+                            f"does not cover its own edges makes the kernels skip "
+                            f"crossings, which changes answers rather than raising."
                         )
 
 

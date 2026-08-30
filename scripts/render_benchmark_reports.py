@@ -463,7 +463,75 @@ def add_fastest_slowest_bullet(
     )
 
 
-def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
+# How a latency metric is named by ``scripts.measure_query_latency``. Matched rather
+# than imported so that a stored JSON still renders from a checkout whose harness has
+# moved on - the same reason BATCH_SIZE is read out of the JSON.
+LATENCY_NAME_PATTERN = re.compile(r"^latency::(?P<stratum>.+)::(?P<statistic>[^:]+)$")
+
+# The columns of the distribution table, in order. The quantiles are why the harness
+# exists; ``p50`` is beside them because a change that improves the tail at the median's
+# expense is a bad trade, and only stating both can show which happened.
+LATENCY_COLUMNS: tuple[str, ...] = ("p50", "p90", "p99", "p99.9", "mean", "max")
+
+
+def latency_values_by_stratum(data: dict[str, Any]) -> dict[str, dict[str, float]]:
+    """``{stratum: {statistic: seconds}}`` from a query-latency report."""
+    values: dict[str, dict[str, float]] = {}
+    for bench in data.get("benchmarks", []):
+        match = LATENCY_NAME_PATTERN.match(bench.get("fullname", bench.get("name", "")))
+        if match is None:
+            continue
+        values.setdefault(match["stratum"], {})[match["statistic"]] = bench["stats"][
+            "mean"
+        ]
+    return values
+
+
+def add_latency_section(reporter: BenchmarkReporter, latency: dict[str, Any]) -> None:
+    """The per-query distribution, beside the batch tables rather than instead of them.
+
+    The tables above time one pass over a whole batch, so they report what a *workload*
+    costs and cannot express what a single unlucky query costs. Both are published
+    because they answer different questions - see docs/benchmarking_methodology.rst.
+    """
+    by_stratum = latency_values_by_stratum(latency)
+    if not by_stratum:
+        return
+    system_info = get_system_info(latency)
+    nr_points = system_info.get("latency_points")
+
+    reporter.add_section("Per-Query Latency Distribution", level=2)
+    reporter.add_text(
+        "Every table above times one pass over a whole batch of points, so it says what "
+        "a workload costs on average. This one times each query on its own, in the "
+        "default memory-mapped mode, and reports the distribution: the slowest queries "
+        "in this package cost tens of times the median, because a point falling in a "
+        "very large boundary polygon is answered by one ray cast across that whole "
+        "ring. A batch mean cannot show that, which is why both are published "
+        "(``scripts/measure_query_latency.py``, ``make latency``)."
+    )
+    if nr_points:
+        reporter.add_text(
+            f"{int(nr_points):,} queries per point class, each keeping its fastest of "
+            f"{int(system_info.get('latency_repetitions', 1))} passes."
+        )
+    rows = []
+    for stratum, statistics in by_stratum.items():
+        rows.append(
+            [PARAM_LABELS.get(stratum, stratum)]
+            + [
+                format_duration(statistics[column])
+                if column in statistics
+                else MEASUREMENT_UNAVAILABLE
+                for column in LATENCY_COLUMNS
+            ]
+        )
+    reporter.add_table(["Point class", *LATENCY_COLUMNS], rows)
+
+
+def render_timezone_finding(
+    data: dict[str, Any], latency: dict[str, Any], output_path: Path
+) -> None:
     reporter = BenchmarkReporter(
         title="Timezone Finding Performance Benchmark", output_path=output_path
     )
@@ -569,6 +637,8 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
         )
 
     add_fastest_slowest_bullet(reporter, benches)
+
+    add_latency_section(reporter, latency)
 
     reporter.write_report()
 
@@ -1171,6 +1241,17 @@ def main() -> None:
         help="Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`",
     )
     parser.add_argument(
+        "--latency-json",
+        type=Path,
+        required=True,
+        help=(
+            "Path to a JSON file produced by `scripts.measure_query_latency` "
+            "(`make latency`). Required, because the per-query distribution is a "
+            "section of the timezone-finding report rather than a page of its own - "
+            "rendering without it would silently drop that section."
+        ),
+    )
+    parser.add_argument(
         "--memory-json",
         type=Path,
         help=(
@@ -1181,7 +1262,8 @@ def main() -> None:
     args = parser.parse_args()
 
     data = load_benchmark_json(args.benchmark_json)
-    render_timezone_finding(data, PERFORMANCE_REPORT_FILE)
+    latency = load_benchmark_json(args.latency_json)
+    render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
     render_polygon(data, POLYGON_REPORT_FILE)
     render_initialization(data, INITIALIZATION_REPORT_FILE)
     render_comparison(data, COMPARISON_REPORT_FILE)
