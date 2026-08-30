@@ -1,5 +1,12 @@
 #include "inside_polygon_int.h"
+#include <stdint.h>
 #include <stdio.h>
+
+// The slope comparison below needs 63 bits (see the overflow note in
+// inside_polygon_int), and `long` does not supply them everywhere: it is 64
+// bits on LP64 (Linux, macOS) and 32 on LLP64 (Windows), which this package
+// ships wheels for. int64_t is the width the arithmetic actually requires, on
+// every platform.
 
 bool inside_polygon_int(int x, int y, int nr_coords, int x_coords[],
                         int y_coords[]) {
@@ -16,7 +23,7 @@ bool inside_polygon_int(int x, int y, int nr_coords, int x_coords[],
   //  return inside;
 
   bool inside, y_gt_y1, y_gt_y2, x_le_x1, x_le_x2;
-  long y1, y2, x1, x2, slope1, slope2; // int64 precision
+  int64_t y1, y2, x1, x2, slope1, slope2; // see the width note above
   int i, j;
 
   inside = false;
@@ -89,7 +96,7 @@ bool inside_polygon_blocked_int(int x, int y, int nr_coords, int x_coords[],
   // many times over.
 
   bool inside, y_gt_y1, y_gt_y2, x_le_x1, x_le_x2;
-  long y1, y2, x1, x2, slope1, slope2; // int64 precision
+  int64_t y1, y2, x1, x2, slope1, slope2; // see the width note above
   int b, i, j, start, stop;
 
   inside = false;

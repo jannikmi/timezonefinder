@@ -119,9 +119,14 @@ def main() -> None:
         f"from {args.points:,} points of each committed query fixture\n"
     )
 
-    # every ring in the collection, for the index size - not only the ones queried
+    # Every ring the converter would *store*, for the index size - not only the ones
+    # queried. Read through the coordinate accessor rather than through `coords_of`,
+    # because the index has one entry per stored ring: `HoleArray.coords_of` takes a
+    # hole id and resolves it through `poly_ref`, so indexing it by a storage position
+    # would measure some referenced boundary polygon instead of the inline ring meant
+    # (756 hole ids against 27 inline rings in the packaged data).
     all_vertex_counts = [
-        collection.coords_of(ring_id).shape[1]
+        collection.coordinates[ring_id].shape[1]
         for collection in (finder.boundaries, finder.holes)
         for ring_id in range(len(collection.coordinates))
     ]

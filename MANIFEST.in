@@ -4,6 +4,11 @@ include DATA_VERSION
 include pyproject.toml
 include setup.py
 recursive-include timezonefinder *.py *.fbs *.c *.h
+# cffi regenerates this wrapper from inside_poly_extension/ during the wheel build, so
+# the sdist neither needs nor should carry it. Without the exclusion it is shipped
+# whenever the extension happens to have been compiled in place, and check-manifest
+# then fails because the file is (correctly) not in version control.
+exclude timezonefinder/inside_polygon_ext.c
 # the second distribution in this workspace, built and released on its own
 prune packages
 recursive-exclude prototypes *

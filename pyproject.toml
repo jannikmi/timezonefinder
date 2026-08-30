@@ -164,6 +164,16 @@ packages = [
 [tool.setuptools.package-data]
 timezonefinder = ["**/*.fbs", "**/*.c", "**/*.h", ]
 
+# `**/*.c` above is meant for inside_poly_extension/, the hand-written extension
+# sources. It also matches `inside_polygon_ext.c`, which is not a source at all: cffi
+# generates it next to the package whenever the extension is compiled in place, and
+# regenerates it during every wheel build. Without this exclusion a build performed in
+# a tree where someone had compiled once ships that stale wrapper - which
+# tests/test_package_contents.py already asserts must not happen, and which until now
+# held only because a fresh checkout has no such file.
+[tool.setuptools.exclude-package-data]
+timezonefinder = ["inside_polygon_ext.c"]
+
 [tool.ruff]
 target-version = "py311"
 src = ["timezonefinder", "tests", "build.py"]
