@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788126600826,
+  "lastUpdate": 1788126603424,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6890,6 +6890,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "acc7c4d94a0d11667cead7b562d328e93570671b",
+          "message": "Require trade-offs to be surfaced in planning and validated by measurement (#568)\n\nCoding agents were finding critical trade-offs while implementing, where the\nsame trade-off named during discovery would have ruled the option out for free.\n\nAdds contributing/development/trade-off-surfacing-and-validation.md: name the\nlosing side of each axis before proposing work, kill options a project\nconstraint or the API contract already forbids, fix the deciding number and its\nthreshold before implementing, escalate an unmeasurable-but-expensive choice as\na briefed decision, and validate the traded-away side with paired evidence at\nimplementation time.\n\nRoutes it from a new planning row and the performance row in CONTRIBUTING.md,\nthe core contract, and both the ranking and final-gate steps of the improvement\npass.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-30T23:49:08+02:00",
+          "tree_id": "2bfd5c61cd860e164dcafdd98af5e45fc68ca4af",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/acc7c4d94a0d11667cead7b562d328e93570671b"
+        },
+        "date": 1788126602737,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0077600479125977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0079383850097656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.0763072967529297,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.085026741027832,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.08663463592529,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.095367431640625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3648 GHz"
           }
         ]
       }
