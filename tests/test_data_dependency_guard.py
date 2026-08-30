@@ -17,7 +17,7 @@ from scripts.check_data_dependency import (
     EXIT_INCOMPATIBLE,
     EXIT_UNDETERMINED,
     UndeterminedError,
-    find_wheel,
+    find_wheels,
     read_requirement,
     released_versions,
 )
@@ -26,9 +26,15 @@ from scripts.configs import DATA_DISTRIBUTION_NAME
 REQUIREMENT = f"{DATA_DISTRIBUTION_NAME}>=1.2026.3,<2"
 
 
-def _wheel(tmp_path, requires=(REQUIREMENT,), name="timezonefinder-8.2.5"):
+def _wheel(
+    tmp_path,
+    requires=(REQUIREMENT,),
+    name="timezonefinder-8.2.5",
+    tag="py3-none-any",
+):
     """A wheel carrying just enough metadata for the guard to read."""
-    path = tmp_path / f"{name.replace('-', '_')}-py3-none-any.whl"
+    distribution, version = name.rsplit("-", maxsplit=1)
+    path = tmp_path / f"{distribution.replace('-', '_')}-{version}-{tag}.whl"
     metadata = "Metadata-Version: 2.4\nName: timezonefinder\nVersion: 8.2.5\n"
     metadata += "".join(f"Requires-Dist: {r}\n" for r in requires)
     with zipfile.ZipFile(path, "w") as archive:
@@ -104,7 +110,23 @@ def test_only_a_version_inside_the_declared_bound_satisfies_it(published, satisf
 @pytest.mark.unit
 def test_a_missing_wheel_is_undetermined(tmp_path):
     with pytest.raises(UndeterminedError, match="no timezonefinder-\\*.whl"):
-        find_wheel(tmp_path, "timezonefinder")
+        find_wheels(tmp_path, "timezonefinder")
+
+
+@pytest.mark.unit
+def test_platform_wheels_for_one_version_are_all_accepted(tmp_path):
+    first = _wheel(tmp_path)
+    second = _wheel(tmp_path, tag="cp314-abi3-macosx_11_0_arm64")
+    assert find_wheels(tmp_path, "timezonefinder") == sorted([first, second])
+
+
+@pytest.mark.unit
+def test_wheels_for_multiple_versions_are_undetermined(tmp_path):
+    _wheel(tmp_path, name="timezonefinder-8.2.5")
+    _wheel(tmp_path, name="timezonefinder-8.3.0")
+
+    with pytest.raises(UndeterminedError, match="found 8.2.5, 8.3.0"):
+        find_wheels(tmp_path, "timezonefinder")
 
 
 @pytest.mark.unit

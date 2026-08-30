@@ -24,7 +24,7 @@ from urllib.request import Request, urlopen
 import zipfile
 
 from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
+from packaging.utils import canonicalize_name, parse_wheel_filename
 from packaging.version import InvalidVersion, Version
 
 from scripts.configs import DATA_DISTRIBUTION_NAME
@@ -111,13 +111,21 @@ def fetch_pypi_payload(distribution: str, timeout: float = 30.0) -> dict:
         raise UndeterminedError(f"could not read {url}: {error}") from error
 
 
-def find_wheel(dist_dir: Path, distribution: str) -> Path:
-    """The built wheel for ``distribution`` in ``dist_dir``."""
+def find_wheels(dist_dir: Path, distribution: str) -> list[Path]:
+    """The built wheels for one version of ``distribution`` in ``dist_dir``."""
     prefix = canonicalize_name(distribution).replace("-", "_")
     wheels = sorted(dist_dir.glob(f"{prefix}-*.whl"))
     if not wheels:
         raise UndeterminedError(f"no {prefix}-*.whl found in {dist_dir}")
-    return wheels[0]
+
+    versions = sorted({parse_wheel_filename(wheel.name)[1] for wheel in wheels})
+    if len(versions) != 1:
+        found = ", ".join(str(version) for version in versions)
+        raise UndeterminedError(
+            f"expected wheels for exactly one {distribution} version in {dist_dir}, "
+            f"found {found}"
+        )
+    return wheels
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -131,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        wheel = find_wheel(args.dist_dir, args.distribution)
+        wheel = find_wheels(args.dist_dir, args.distribution)[0]
         requirement = read_requirement(wheel, DATA_DISTRIBUTION_NAME)
         payload = fetch_pypi_payload(DATA_DISTRIBUTION_NAME)
     except UndeterminedError as error:

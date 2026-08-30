@@ -120,6 +120,14 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
     # rather than skipped for not being in the (much smaller) hole coordinate file.
     boundaries_dir = get_boundaries_dir(data_path)
     holes_dir = get_holes_dir(data_path)
+    hole_registry_path = get_hole_registry_path(data_path)
+    hole_coord_path = get_coordinate_path(holes_dir)
+    missing_hole_files = [
+        path for path in (hole_registry_path, hole_coord_path) if not path.exists()
+    ]
+    if missing_hole_files:
+        missing = ", ".join(str(path) for path in missing_hole_files)
+        raise FileNotFoundError(f"cannot generate the data report; missing {missing}")
 
     boundaries = PolygonArray(data_location=boundaries_dir)
     nr_of_polygons = len(boundaries)
@@ -127,26 +135,23 @@ def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
         boundaries.coords_of(idx).shape[1] for idx in range(nr_of_polygons)
     ]
 
-    hole_registry_path = get_hole_registry_path(data_path)
-    hole_coord_path = get_coordinate_path(holes_dir)
     polynrs_of_holes = []
     all_hole_lengths = []
 
-    if hole_registry_path.exists() and hole_coord_path.exists():
-        with open(hole_registry_path) as f:
-            hole_registry = json.load(f)
+    with open(hole_registry_path) as f:
+        hole_registry = json.load(f)
 
-        holes = HoleArray(data_location=holes_dir, boundaries=boundaries)
-        all_hole_lengths = [
-            holes.coords_of(hole_id).shape[1] for hole_id in range(len(holes))
-        ]
-        # which polygon each hole belongs to. Addressed through the registry's own
-        # first hole id: the JSON keys are sorted as strings, so iteration order is
-        # not ascending polygon id and a running counter would mislabel the holes.
-        polynrs_of_holes = [0] * len(holes)
-        for poly_id_str, (num_holes, first_hole_id) in hole_registry.items():
-            for offset in range(num_holes):
-                polynrs_of_holes[first_hole_id + offset] = int(poly_id_str)
+    holes = HoleArray(data_location=holes_dir, boundaries=boundaries)
+    all_hole_lengths = [
+        holes.coords_of(hole_id).shape[1] for hole_id in range(len(holes))
+    ]
+    # which polygon each hole belongs to. Addressed through the registry's own
+    # first hole id: the JSON keys are sorted as strings, so iteration order is
+    # not ascending polygon id and a running counter would mislabel the holes.
+    polynrs_of_holes = [0] * len(holes)
+    for poly_id_str, (num_holes, first_hole_id) in hole_registry.items():
+        for offset in range(num_holes):
+            polynrs_of_holes[first_hole_id + offset] = int(poly_id_str)
 
     return {
         "shortcuts": shortcuts,
