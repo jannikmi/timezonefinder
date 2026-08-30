@@ -24,7 +24,11 @@ from urllib.request import Request, urlopen
 import zipfile
 
 from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name, parse_wheel_filename
+from packaging.utils import (
+    InvalidWheelFilename,
+    canonicalize_name,
+    parse_wheel_filename,
+)
 from packaging.version import InvalidVersion, Version
 
 from scripts.configs import DATA_DISTRIBUTION_NAME
@@ -118,7 +122,15 @@ def find_wheels(dist_dir: Path, distribution: str) -> list[Path]:
     if not wheels:
         raise UndeterminedError(f"no {prefix}-*.whl found in {dist_dir}")
 
-    versions = sorted({parse_wheel_filename(wheel.name)[1] for wheel in wheels})
+    parsed_versions: set[Version] = set()
+    for wheel in wheels:
+        try:
+            parsed_versions.add(parse_wheel_filename(wheel.name)[1])
+        except InvalidWheelFilename as error:
+            raise UndeterminedError(
+                f"invalid wheel filename {wheel.name}: {error}"
+            ) from error
+    versions = sorted(parsed_versions)
     if len(versions) != 1:
         found = ", ".join(str(version) for version in versions)
         raise UndeterminedError(

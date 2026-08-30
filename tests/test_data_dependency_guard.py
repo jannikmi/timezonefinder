@@ -18,6 +18,7 @@ from scripts.check_data_dependency import (
     EXIT_UNDETERMINED,
     UndeterminedError,
     find_wheels,
+    main,
     read_requirement,
     released_versions,
 )
@@ -127,6 +128,15 @@ def test_wheels_for_multiple_versions_are_undetermined(tmp_path):
 
     with pytest.raises(UndeterminedError, match="found 8.2.5, 8.3.0"):
         find_wheels(tmp_path, "timezonefinder")
+
+
+@pytest.mark.unit
+def test_an_invalid_wheel_filename_exits_undetermined(tmp_path, capsys):
+    wheel = tmp_path / "timezonefinder-junk.whl"
+    wheel.touch()
+
+    assert main(["--dist-dir", str(tmp_path)]) == EXIT_UNDETERMINED
+    assert wheel.name in capsys.readouterr().err
 
 
 @pytest.mark.unit
