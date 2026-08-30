@@ -86,10 +86,10 @@ ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/data_downloaded$VARIANT-$DOWNLOADED_TAG.
 UNPACKED_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT-$DOWNLOADED_TAG$JSON_SUFFIX
 
-# Nothing needs downloading when a previous run left either artefact behind - but the
-# archive is the only one of the two that *can* be checked, since the unpacked JSON
+# The archive is cached between runs because it is the expensive artefact - 55 MB over
+# the network - and it is the only one that can be checked, since the unpacked GeoJSON
 # carries no digest of its own.
-if [ ! -f "$ZIP_ARCHIVE_PATH" ] && [ ! -f "$JSON_PATH" ]; then
+if [ ! -f "$ZIP_ARCHIVE_PATH" ]; then
     URL=$URL_PREFIX/$DOWNLOADED_TAG/$ASSET_NAME
     echo "DOWNLOADING $URL"
 
@@ -98,45 +98,35 @@ if [ ! -f "$ZIP_ARCHIVE_PATH" ] && [ ! -f "$JSON_PATH" ]; then
     wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
 fi
 
-# Whatever produced the archive - this run's download, or a leftover from an
-# interrupted one, or a run that already unpacked it - nothing below can tell a
-# truncated or replaced file from a good one, and what this script produces is merged
-# and published unattended. So the bytes are checked against the size and SHA-256 the
-# release API publishes before anything reads them, on every run rather than only on
-# the one that downloaded them: re-hashing 55 MB costs a fraction of a second, and
-# skipping it is how an archive corrupted after its first run gets parsed anyway.
-if [ -f "$ZIP_ARCHIVE_PATH" ]; then
-    echo "VERIFYING THE DOWNLOAD..."
-    if ! uv run python -m scripts.upstream_release verify \
-        --tag "$DOWNLOADED_TAG" \
-        --asset "$ASSET_NAME" \
-        --archive "$ZIP_ARCHIVE_PATH" \
-        --stage "$DATA_SOURCE_PATH"; then
-        echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
-        exit 1
-    fi
-else
-    # The JSON outlived the archive it came out of, or was put here by hand. Either
-    # way nothing states what those bytes are, and this script's output is released
-    # without a human reading it. Parsing data of your own is supported - through
-    # file_converter, which claims no release for what it is given.
-    echo "ERROR: $JSON_PATH exists but $ZIP_ARCHIVE_PATH does not, so nothing can" >&2
-    echo "establish what it holds, and an unattended release must not parse it." >&2
-    echo "Delete the JSON to re-download and verify $DOWNLOADED_TAG, or parse it" >&2
-    echo "deliberately: uv run python -m scripts.file_converter -inp $JSON_PATH" >&2
+# Whatever produced the archive - this run's download or a leftover from an earlier
+# one - nothing below can tell a truncated or replaced file from a good one, and what
+# this script produces is merged and published without a human reading it. So the
+# bytes are checked against the size and SHA-256 the release API publishes before
+# anything reads them, on every run rather than only on the one that downloaded them:
+# re-hashing 55 MB costs a fraction of a second, and skipping it is how an archive
+# corrupted after its first run gets parsed anyway.
+echo "VERIFYING THE DOWNLOAD..."
+if ! uv run python -m scripts.upstream_release verify \
+    --tag "$DOWNLOADED_TAG" \
+    --asset "$ASSET_NAME" \
+    --archive "$ZIP_ARCHIVE_PATH" \
+    --stage "$DATA_SOURCE_PATH"; then
+    echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
     exit 1
 fi
 
-if [ -f "$JSON_PATH" ]; then
-    echo "skip unpacking: $JSON_PATH already exists."
-else
-    echo "UNPACKING..."
-    unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
-    # The archive unpacks under a name that says nothing about where it came from, and
-    # this is the last point at which anything knows. The converter reads the release
-    # back off this name and refuses an upstream file that lacks it.
-    mv "$UNPACKED_PATH" "$JSON_PATH"
-fi
+# Unpacked every time, overwriting whatever sat here before. Caching this copy would
+# reintroduce the gap the verification above exists to close from the other end: the
+# digest would attest to the archive while a JSON edited or truncated after an earlier
+# run is what the converter actually read. Unzipping is local and takes seconds, so
+# the guarantee is nearly free - what everything downstream sees now derives from the
+# archive that was just verified, with no step of its own to trust.
+echo "UNPACKING (replacing any $JSON_PATH from an earlier run)..."
+unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
+# The archive unpacks under a name that says nothing about where it came from, and
+# this is the last point at which anything knows. The converter reads the release
+# back off this name and refuses an upstream file that lacks it.
+mv "$UNPACKED_PATH" "$JSON_PATH"
 
 echo "START PARSING..."
 echo "calling scripts.file_converter:"
