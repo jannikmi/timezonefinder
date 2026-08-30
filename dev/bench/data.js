@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788126263890,
+  "lastUpdate": 1788126600826,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3015,6 +3015,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0007047980401098049",
             "extra": "mean: 44.26261200000425 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "acc7c4d94a0d11667cead7b562d328e93570671b",
+          "message": "Require trade-offs to be surfaced in planning and validated by measurement (#568)\n\nCoding agents were finding critical trade-offs while implementing, where the\nsame trade-off named during discovery would have ruled the option out for free.\n\nAdds contributing/development/trade-off-surfacing-and-validation.md: name the\nlosing side of each axis before proposing work, kill options a project\nconstraint or the API contract already forbids, fix the deciding number and its\nthreshold before implementing, escalate an unmeasurable-but-expensive choice as\na briefed decision, and validate the traded-away side with paired evidence at\nimplementation time.\n\nRoutes it from a new planning row and the performance row in CONTRIBUTING.md,\nthe core contract, and both the ranking and final-gate steps of the improvement\npass.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-30T23:49:08+02:00",
+          "tree_id": "2bfd5c61cd860e164dcafdd98af5e45fc68ca4af",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/acc7c4d94a0d11667cead7b562d328e93570671b"
+        },
+        "date": 1788126599715,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 219.6681648768476,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000301158970850977",
+            "extra": "mean: 4.5523209999984715 msec\nrounds: 152 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 417.79890168965704,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006376360986085846",
+            "extra": "mean: 2.393496000003381 msec\nrounds: 333 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 39.81894960716858,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005398408782342558",
+            "extra": "mean: 25.113670999999727 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
           }
         ]
       }
