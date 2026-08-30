@@ -85,8 +85,25 @@ def best_rotation_offset(
     unaffected, and a hole kept as a reference follows its boundary automatically - so
     the choice costs nothing to store and nothing to read back.
 
-    Only offsets below ``block_size`` differ: rotating by a whole block relabels the
-    blocks without repartitioning anything but where the ragged final block falls.
+    **The search is bounded at ``block_size``, and that is a heuristic rather than an
+    identity** - measured 2026-08-30, after a review pointed out that it is not one.
+    Rotating by a whole block only relabels the blocks when ``block_size`` divides the
+    vertex count; otherwise it also moves the ragged final block, which repartitions the
+    ring. So there are ``n`` distinct rotations, not ``block_size`` of them, and this
+    search does miss the minimum of the objective below: for 392 of the 602 rings the
+    committed fixtures reach, an exhaustive search finds a smaller span sum, by up to
+    ~16 % on rings of a few hundred vertices.
+
+    Searching all ``n`` is affordable - the span sums of every rotation can be had in
+    O(n) from sliding-window extrema plus a recurrence, ~4.4 s for the whole collection
+    against ~2 s here - and it is **not** taken, because it buys nothing: the rings it
+    re-rotates scan **1.0013x** the edges over the real query pairs, i.e. very slightly
+    *worse*. The span sum is a proxy that assumes a query latitude drawn uniformly from
+    the ring's own range, and real query latitudes are not distributed that way, so
+    minimising the proxy harder does not track the goal. Both figures sit far inside the
+    noise floor; what settles it is that the exhaustive search is more code for no gain.
+    See the geometry decisions in ``contributing/improvements/decisions/`` before
+    re-proposing it.
 
     Measured over the real query pairs the committed fixtures produce, this objective
     scans **0.961x** the edges the unrotated order does. The two rules that suggest
@@ -105,8 +122,10 @@ def best_rotation_offset(
         # one block either way, and its range is the whole ring's - nothing to choose
         return 0
     y = np.asarray(y_coords, dtype=np.int64)
+    # bounded deliberately; see the heuristic note above rather than widening this
+    candidates = range(min(block_size, nr_vertices))
     return min(
-        range(block_size),
+        candidates,
         key=lambda offset: block_span_sum(np.roll(y, -offset), block_size),
     )
 

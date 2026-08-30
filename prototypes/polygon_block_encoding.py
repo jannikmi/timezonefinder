@@ -115,8 +115,8 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     rotates the stored ring and no reader can tell, since nothing downstream depends on
     where a ring begins (``canonical_ring_key`` is rotation-invariant, bboxes are
     unaffected, and a hole stored as a reference follows its boundary automatically).
-    Only offsets in [0, B) differ meaningfully - a whole-block rotation re-partitions
-    nothing but where the ragged final block falls. Swept over the same real query pairs:
+    The sweep is bounded at [0, B), which finding 9 records as a heuristic rather than
+    the identity this line once claimed. Swept over the same real query pairs:
 
         ring start                              edges scanned   vs shipped
         shipped order                               1,398,797       1.000x
@@ -176,6 +176,26 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     that way put a free-threaded CPython against the pinned Homebrew one and showed a
     17 % "regression" on a stratum whose code path had not changed. Pass ``--python``
     explicitly, or compare inside one process.
+
+9.  **The ring-start sweep is bounded at one block, and that is a heuristic - measured
+    2026-08-30 after a review said so.** Rotating by a whole block only relabels the
+    blocks when B divides the vertex count; otherwise it moves the ragged final block
+    and therefore repartitions the ring. There are n distinct rotations, not B, and the
+    bounded sweep does miss the minimum of its own objective: for **392 of the 602
+    rings** the fixtures reach, an exhaustive search finds a smaller span sum, by up to
+    ~16 % on rings of a few hundred vertices.
+
+    Searching all n is affordable - every rotation's span sum is available in O(n) from
+    sliding-window extrema plus the recurrence
+    ``S(r+B) = S(r) - span_B[r] + span_B[p] - span_L[p] + span_L[r+d]`` where
+    ``p = r+(nb-1)B`` and ``d = nb*B-n``, which is ~4.4 s for the whole collection
+    against ~2 s for the bounded sweep. It is **refused anyway**, because it buys
+    nothing: the exhaustively rotated rings scan **1.0013x** the edges over the real
+    query pairs, i.e. marginally *worse*. The span sum assumes a query latitude drawn
+    uniformly from a ring's own range, and real query latitudes are not distributed
+    that way - so past a point, minimising the proxy stops tracking the goal. Both
+    figures are far inside the noise floor; what decides it is that the exhaustive
+    search is more code for no gain.
 
 What this does **not** establish: whether byte-aligned widths (+~8 MB, decode is a
 widening load) beat bit-packed ones for FMT-2's payload. Building the index up front also
@@ -618,8 +638,10 @@ def report_size() -> None:
 
 def report_rotation() -> None:
     """Blocks partition a ring from its first vertex, so the stored start index is a
-    free parameter. Only offsets in [0, BLOCK_SIZE) are distinct: rotating by a whole
-    block relabels the blocks without repartitioning them.
+    free parameter. This sweeps offsets in [0, BLOCK_SIZE) only, which is a bounded
+    search and not an exhaustive one - rotating by a whole block relabels the blocks
+    only when BLOCK_SIZE divides the vertex count, and otherwise moves the ragged
+    final block as well. See finding 9.
     """
     print(f"\n=== 5. what the ring's start index is worth (B={BLOCK_SIZE}) ===\n")
     calls = _recorded_pip_calls(TimezoneFinder(), N_POINTS)

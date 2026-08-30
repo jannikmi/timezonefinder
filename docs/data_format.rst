@@ -274,6 +274,15 @@ vertex costs 1.026x the edges of the unrotated order and the maximum-latitude on
 1.010x. The reason is the bridging vertex - the last block's bridge wraps to vertex 0,
 so putting a latitude extreme there stretches exactly that block.
 
+The search over start indices is bounded at one block, which is a heuristic and not an
+identity: rotating by a whole block only relabels the blocks when the block size divides
+the vertex count, and otherwise moves the ragged final block too. An exhaustive search
+over all rotations is affordable and finds a smaller span sum for most rings, but scans
+1.0013x the edges over the real query pairs - slightly *worse*, because the span sum is
+a proxy that assumes a query latitude drawn uniformly from the ring's own range, and
+real ones are not. Both sit far inside the noise floor; the bounded search is kept
+because it is less code for no measurable difference.
+
 A consequence worth knowing: ``get_geometry`` returns each ring starting at the vertex
 the converter chose, which is not the one the upstream GeoJSON began with. The ring is
 the same closed path either way.
