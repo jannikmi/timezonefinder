@@ -13,7 +13,7 @@ Read the [register rules](../improvements/improvement-register-rules.md), the [p
 
 ## Re-verify and rank
 
-Fetch `origin`, list open pull requests and remote branches, and inspect any branch mentioning an item or issue before claiming it. Check every `GH-*` item under `contributing/improvements/items/` against the issue state. An item already implemented is deleted with its ranking row; a wrong, rejected, withdrawn, or out-of-scope item keeps its evidence but its row moves to `Closed`. Blocked, parked, and conditional work remains live.
+Fetch `origin`, list open pull requests, remote branches, and `origin/improvement-claims/*`, and inspect any claim, branch, or pull request associated with an item or issue before selecting it. A claim ref is authoritative even when its feature branch or pull request is not visible yet. Check every `GH-*` item under `contributing/improvements/items/` against the issue state. An item already implemented is deleted with its ranking row; a wrong, rejected, withdrawn, or out-of-scope item keeps its evidence but its row moves to `Closed`. Blocked, parked, and conditional work remains live.
 
 Treat entries as evidence, not gospel. Re-find locations by symbol rather than line, correct stale reasoning, and update the affected subject in the [coverage map](../improvements/improvement-discovery-coverage-map.md) instead of appending a dated pass. Do not re-propose anything in the linked decision or checked-and-sound memory without new evidence.
 
@@ -41,7 +41,17 @@ git branch -r
 gh pr list --state open
 ```
 
-Create a uniquely named worktree and branch from `origin/master`, install, and record untouched `make test` and `make hook` baselines. Push the branch immediately after selecting the first item so it acts as the claim. Claim every additional batched item before implementing it. Stage explicit paths, never `git add -A`.
+Finalize the proposed slice or batch before creating a worktree, installing, or running baselines. Atomically claim every selected item through its canonical remote ref, `refs/heads/improvement-claims/<ITEM-ID>`:
+
+1. Create one unique claim commit without adding it to the implementation branch. It uses the `origin/master` tree and parent, and its message records the selected item IDs, a unique run token, the planned feature branch, the base commit, and the creation time. Do not point a new claim ref directly at `origin/master`: concurrent pushes of the same commit can both appear successful.
+2. Push all selected claim refs in one `git push --atomic`. Guard each ref with `--force-with-lease=<claim-ref>:` so the push succeeds only when every canonical ref is absent. A rejected push acquires nothing; fetch again, inspect the winning claims and concurrent work, then re-rank rather than retrying the same selection blindly.
+3. Fetch the claim refs immediately after a successful push and verify that every ref points to this run's unique claim commit. Until that verification succeeds, the items are not claimed and no implementation work may begin.
+
+Never overwrite, delete, or steal another run's claim. Treat a foreign or orphaned claim as blocking, report its recorded metadata, and continue down the ranking. A maintainer may remove a confirmed orphan separately.
+
+After ownership is verified, create a uniquely named worktree and feature branch from the recorded `origin/master` commit. Include the first item ID in the feature-branch name and push the branch immediately so the work behind the claim is inspectable. Then install and record untouched `make test` and `make hook` baselines. Do not add another item after implementation begins; release the current claims and form a newly ranked batch if the scope must change.
+
+Keep each claim until its pull request is open and visible. Then delete only this run's claim refs, guarding each deletion with a force-with-lease that expects this run's claim commit; the open pull request becomes the durable claim. Release claims the same way when explicitly abandoning or yielding the work. If verification fails and findings are pushed without a pull request, retain the claims so another pass resumes rather than races that branch. Stage explicit paths, never `git add -A`.
 
 ## Deliverable
 
@@ -65,4 +75,4 @@ For `triage`, `status`, `dry-run`, “what is next,” or “what blocks this,�
 
 ## Final report
 
-Report the selected items and why higher rows were ineligible or eligible small items were not batched; decisions used or questions recorded; the pull request URL or why no code was correct; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
+Report the selected items and why higher rows were ineligible or eligible small items were not batched; decisions used or questions recorded; claims acquired, released, or left for resumable work; the pull request URL or why no code was correct; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
