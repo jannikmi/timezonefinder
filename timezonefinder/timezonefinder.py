@@ -231,7 +231,11 @@ class AbstractTimezoneFinder(ABC):
         """
         :return: True if the compiled C implementation of the point in polygon algorithm is being used
         """
-        return utils.inside_polygon == utils_clang.pt_in_poly_clang
+        # The block-filtered kernel, because that is the one a lookup reaches
+        # (``PolygonArray.pip``). ``utils.inside_polygon`` is bound by the same rule but
+        # serves callers holding a bare ring, so reading it here would answer about an
+        # implementation this method's caller never runs.
+        return utils.inside_polygon_blocked == utils_clang.pt_in_poly_clang_blocked
 
     # Validation happens at the public edge only. Every internal caller below obtains its
     # id from the shortcut index or from ``zone_ids``, neither of which can hold a negative

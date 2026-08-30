@@ -65,8 +65,10 @@ FUNCTION_LABELS = {
     "test_timezone_at": "TimezoneFinder.timezone_at()",
     "test_timezone_at_land": "TimezoneFinder.timezone_at_land()",
     "test_timezone_at_timezonefinderl": "TimezoneFinderL.timezone_at() (ambiguous-shortcut points)",
-    "test_pt_in_poly_clang": "point-in-polygon (C/clang)",
-    "test_pt_in_poly_python": "point-in-polygon (Python, Numba if available)",
+    "test_pt_in_poly_clang": "bare kernel (C/clang)",
+    "test_pt_in_poly_python": "bare kernel (Python, Numba if available)",
+    "test_pt_in_poly_clang_blocked": "block-filtered kernel (C/clang)",
+    "test_pt_in_poly_python_blocked": "block-filtered kernel (Python, Numba if available)",
     "test_initialization": "Initialization",
     "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
     "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
@@ -450,6 +452,11 @@ def add_comparison_bullet(
 def add_fastest_slowest_bullet(
     reporter: BenchmarkReporter, benches: list[dict[str, Any]], context: str = "Overall"
 ) -> None:
+    if not benches:
+        # a spread over nothing is not a spread; the other blocks on every page are
+        # conditional on their benchmarks being present and this one has to be too,
+        # now that a caller may hand over a filtered subset
+        return
     fastest = min(benches, key=lambda b: b["stats"]["mean"])
     slowest = max(benches, key=lambda b: b["stats"]["mean"])
     fastest_t, slowest_t = fastest["stats"]["mean"], slowest["stats"]["mean"]
@@ -463,7 +470,75 @@ def add_fastest_slowest_bullet(
     )
 
 
-def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
+# How a latency metric is named by ``scripts.measure_query_latency``. Matched rather
+# than imported so that a stored JSON still renders from a checkout whose harness has
+# moved on - the same reason BATCH_SIZE is read out of the JSON.
+LATENCY_NAME_PATTERN = re.compile(r"^latency::(?P<stratum>.+)::(?P<statistic>[^:]+)$")
+
+# The columns of the distribution table, in order. The quantiles are why the harness
+# exists; ``p50`` is beside them because a change that improves the tail at the median's
+# expense is a bad trade, and only stating both can show which happened.
+LATENCY_COLUMNS: tuple[str, ...] = ("p50", "p90", "p99", "p99.9", "mean", "max")
+
+
+def latency_values_by_stratum(data: dict[str, Any]) -> dict[str, dict[str, float]]:
+    """``{stratum: {statistic: seconds}}`` from a query-latency report."""
+    values: dict[str, dict[str, float]] = {}
+    for bench in data.get("benchmarks", []):
+        match = LATENCY_NAME_PATTERN.match(bench.get("fullname", bench.get("name", "")))
+        if match is None:
+            continue
+        values.setdefault(match["stratum"], {})[match["statistic"]] = bench["stats"][
+            "mean"
+        ]
+    return values
+
+
+def add_latency_section(reporter: BenchmarkReporter, latency: dict[str, Any]) -> None:
+    """The per-query distribution, beside the batch tables rather than instead of them.
+
+    The tables above time one pass over a whole batch, so they report what a *workload*
+    costs and cannot express what a single unlucky query costs. Both are published
+    because they answer different questions - see docs/benchmarking_methodology.rst.
+    """
+    by_stratum = latency_values_by_stratum(latency)
+    if not by_stratum:
+        return
+    system_info = get_system_info(latency)
+    nr_points = system_info.get("latency_points")
+
+    reporter.add_section("Per-Query Latency Distribution", level=2)
+    reporter.add_text(
+        "Every table above times one pass over a whole batch of points, so it says what "
+        "a workload costs on average. This one times each query on its own, in the "
+        "default memory-mapped mode, and reports the distribution: the slowest queries "
+        "in this package cost tens of times the median, because a point falling in a "
+        "very large boundary polygon is answered by one ray cast across that whole "
+        "ring. A batch mean cannot show that, which is why both are published "
+        "(``scripts/measure_query_latency.py``, ``make latency``)."
+    )
+    if nr_points:
+        reporter.add_text(
+            f"{int(nr_points):,} queries per point class, each keeping its fastest of "
+            f"{int(system_info.get('latency_repetitions', 1))} passes."
+        )
+    rows = []
+    for stratum, statistics in by_stratum.items():
+        rows.append(
+            [PARAM_LABELS.get(stratum, stratum)]
+            + [
+                format_duration(statistics[column])
+                if column in statistics
+                else MEASUREMENT_UNAVAILABLE
+                for column in LATENCY_COLUMNS
+            ]
+        )
+    reporter.add_table(["Point class", *LATENCY_COLUMNS], rows)
+
+
+def render_timezone_finding(
+    data: dict[str, Any], latency: dict[str, Any], output_path: Path
+) -> None:
     reporter = BenchmarkReporter(
         title="Timezone Finding Performance Benchmark", output_path=output_path
     )
@@ -570,6 +645,8 @@ def render_timezone_finding(data: dict[str, Any], output_path: Path) -> None:
 
     add_fastest_slowest_bullet(reporter, benches)
 
+    add_latency_section(reporter, latency)
+
     reporter.write_report()
 
 
@@ -586,25 +663,35 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
     # per-check cost of the faster backend in each stratum. The spread between
     # the smallest and largest stratum *is* the finding this suite exists to
     # report, so it is the headline rather than any single number.
-    per_check = {}
-    for stratum in ("small", "large"):
+    def fastest_per_check(stratum: str, suffix: str) -> float | None:
         measured = [
             by_name[name]["stats"]["mean"]
             for name in (
-                f"test_pt_in_poly_clang[{stratum}]",
-                f"test_pt_in_poly_python[{stratum}]",
+                f"test_pt_in_poly_clang{suffix}[{stratum}]",
+                f"test_pt_in_poly_python{suffix}[{stratum}]",
             )
             if name in by_name
         ]
-        if measured:
-            per_check[stratum] = min(measured) / batch_size
+        return min(measured) / batch_size if measured else None
+
+    blocked = {s: fastest_per_check(s, "_blocked") for s in ("small", "large")}
+    bare = {s: fastest_per_check(s, "") for s in ("small", "large")}
     headlines = []
-    if "small" in per_check and "large" in per_check:
+    if blocked["small"] and blocked["large"]:
         headlines.append(
-            f"**~{format_duration(per_check['small'])} per check on a small polygon, "
-            f"~{format_duration(per_check['large'])} on the largest** "
-            f"({format_ratio(per_check['large'] / per_check['small'])}) - which is why "
-            "this suite is stratified by vertex count instead of averaged."
+            f"**~{format_duration(blocked['small'])} per check on a small polygon, "
+            f"~{format_duration(blocked['large'])} on the largest** "
+            f"({format_ratio(blocked['large'] / blocked['small'])}) - the kernel a "
+            "lookup reaches, which skips the parts of a ring a horizontal ray cannot "
+            "cross and is therefore nearly flat in polygon size."
+        )
+    if bare["large"] and blocked["large"]:
+        headlines.append(
+            f"The same check without that index is "
+            f"~{format_duration(bare['large'])} on the largest polygon "
+            f"({format_ratio(bare['large'] / blocked['large'])} the block-filtered "
+            "cost) - which is what the stratification below is for, and what the "
+            "latitude block index removed."
         )
     add_headline_section(reporter, system_info, headlines)
 
@@ -625,6 +712,16 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         f"StdDev/Min/Max are for the full {batch_size:,}-pair batch; Throughput is "
         "queries/second for that batch."
     )
+    reporter.add_note(
+        "The point and the polygon in each pair are drawn independently, so many pairs "
+        "put the point nowhere near the polygon. That does not matter for the bare "
+        "kernel, which scans the whole ring either way, but it means a share of the "
+        "block-filtered checks are rejections rather than scans - cheapest on the small "
+        "stratum, where a rejection is most of what is left. A real lookup reaches this "
+        "stage only after a bounding-box check has passed, so read the block-filtered "
+        "figures as a floor and :doc:`benchmark_results_timezonefinding` for what a "
+        "query actually pays."
+    )
 
     extra_columns: tuple[ExtraColumn, ...] = (
         ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
@@ -634,9 +731,26 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
     add_benchmark_table(reporter, benches, section_level=3, extra_columns=extra_columns)
 
     reporter.add_section("Performance Summary", level=2)
+    reporter.add_text(
+        "**What the block index buys**, per polygon-size stratum - the same C kernel "
+        "over the same pairs, with and without the stored latitude ranges in front of "
+        "it:"
+    )
     for stratum in ("small", "medium", "large"):
-        clang = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
-        python = by_name.get(f"test_pt_in_poly_python[{stratum}]")
+        bare_bench = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
+        blocked_bench = by_name.get(f"test_pt_in_poly_clang_blocked[{stratum}]")
+        if bare_bench and blocked_bench:
+            add_comparison_bullet(
+                reporter,
+                PARAM_LABELS[stratum].capitalize(),
+                blocked_bench,
+                bare_bench,
+                label_fn=_function_label,
+            )
+    reporter.add_text("**C against Python/Numba**, on the kernel a lookup reaches:")
+    for stratum in ("small", "medium", "large"):
+        clang = by_name.get(f"test_pt_in_poly_clang_blocked[{stratum}]")
+        python = by_name.get(f"test_pt_in_poly_python_blocked[{stratum}]")
         if clang and python:
             add_comparison_bullet(
                 reporter,
@@ -645,7 +759,12 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
                 python,
                 label_fn=_function_label,
             )
-    add_fastest_slowest_bullet(reporter, benches)
+    # scoped to one kernel: a spread taken across both forms would be comparing the
+    # cheapest rejection against the most expensive full scan, which is not a range
+    # anything experiences
+    add_fastest_slowest_bullet(
+        reporter, [b for b in benches if "_blocked[" in b["name"]]
+    )
 
     reporter.write_report()
 
@@ -1171,6 +1290,17 @@ def main() -> None:
         help="Path to a JSON file produced by `pytest benchmarks/ --benchmark-json=...`",
     )
     parser.add_argument(
+        "--latency-json",
+        type=Path,
+        required=True,
+        help=(
+            "Path to a JSON file produced by `scripts.measure_query_latency` "
+            "(`make latency`). Required, because the per-query distribution is a "
+            "section of the timezone-finding report rather than a page of its own - "
+            "rendering without it would silently drop that section."
+        ),
+    )
+    parser.add_argument(
         "--memory-json",
         type=Path,
         help=(
@@ -1181,7 +1311,8 @@ def main() -> None:
     args = parser.parse_args()
 
     data = load_benchmark_json(args.benchmark_json)
-    render_timezone_finding(data, PERFORMANCE_REPORT_FILE)
+    latency = load_benchmark_json(args.latency_json)
+    render_timezone_finding(data, latency, PERFORMANCE_REPORT_FILE)
     render_polygon(data, POLYGON_REPORT_FILE)
     render_initialization(data, INITIALIZATION_REPORT_FILE)
     render_comparison(data, COMPARISON_REPORT_FILE)

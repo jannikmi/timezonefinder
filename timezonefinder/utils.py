@@ -42,6 +42,7 @@ __all__ = [
     "get_hole_registry_path",
     # Re-exported from submodules
     "inside_polygon",
+    "inside_polygon_blocked",
     "using_numba",
     "clang_extension_loaded",
 ]
@@ -59,13 +60,22 @@ convert2coord_pairs = utils_numba.convert2coord_pairs
 
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]
+# The same test with the packaged latitude block index in front of it. Two entry points
+# rather than one because they answer different questions: `inside_polygon` takes a bare
+# ring and is what build-time geometry code and the kernel tests use, while
+# `inside_polygon_blocked` takes a ring *plus its stored index* and is what the lookup
+# path runs. Neither can stand in for the other - an index cannot be derived per call
+# without an O(N) pass, which is the whole cost the index removes.
+inside_polygon_blocked: Callable[[int, int, np.ndarray, np.ndarray, int], bool]
 # at import time fix which "point-in-polygon" implementation will be used
 if clang_extension_loaded and not using_numba:
     # use the C implementation only if Numba is not present
     inside_polygon = utils_clang.pt_in_poly_clang
+    inside_polygon_blocked = utils_clang.pt_in_poly_clang_blocked
 else:
     # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
     inside_polygon = utils_numba.pt_in_poly_python
+    inside_polygon_blocked = utils_numba.pt_in_poly_blocked
 
 
 def _validate_coordinate(

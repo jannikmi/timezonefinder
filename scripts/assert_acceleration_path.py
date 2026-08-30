@@ -42,6 +42,17 @@ ACCELERATION_IMPLEMENTATIONS: dict[str, Callable[[int, int, np.ndarray], bool]] 
     "numba": utils_numba.pt_in_poly_python,
 }
 
+# The same per path for the block-filtered kernel, which is the one the lookup path
+# actually runs (``PolygonArray.pip``). Both are listed because they are dispatched
+# separately in ``utils.py`` and a half-wired dispatch - the bare kernel on one path and
+# the blocked one on the other - would still answer, just from two implementations.
+BLOCKED_ACCELERATION_IMPLEMENTATIONS: dict[
+    str, Callable[[int, int, np.ndarray, np.ndarray, int], bool]
+] = {
+    "clang": utils_clang.pt_in_poly_clang_blocked,
+    "numba": utils_numba.pt_in_poly_blocked,
+}
+
 
 def active_acceleration_path() -> AccelerationPath:
     """Return the acceleration path ``timezonefinder.utils`` actually bound."""
@@ -71,14 +82,19 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
             "pure-Python fallback would be benchmarked instead. Build the "
             "extension (`uv sync`) before benchmarking."
         )
-    expected_impl = ACCELERATION_IMPLEMENTATIONS[expected]
-    if utils.inside_polygon is not expected_impl:
-        raise RuntimeError(
-            f"the {expected!r} acceleration path is active, but "
-            f"utils.inside_polygon is bound to {utils.inside_polygon!r} instead "
-            f"of {expected_impl!r} - the dispatch in timezonefinder/utils.py "
-            "does not match the reported flags."
-        )
+    for attribute, table in (
+        ("inside_polygon", ACCELERATION_IMPLEMENTATIONS),
+        ("inside_polygon_blocked", BLOCKED_ACCELERATION_IMPLEMENTATIONS),
+    ):
+        expected_impl = table[expected]
+        bound = getattr(utils, attribute)
+        if bound is not expected_impl:
+            raise RuntimeError(
+                f"the {expected!r} acceleration path is active, but "
+                f"utils.{attribute} is bound to {bound!r} instead "
+                f"of {expected_impl!r} - the dispatch in timezonefinder/utils.py "
+                "does not match the reported flags."
+            )
 
 
 def main() -> None:

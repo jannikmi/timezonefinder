@@ -22,6 +22,7 @@
 #                configuration, writing tmp/benchmark.json
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
+#   latency    - measure the per-query latency distribution (p50/p90/p99/p99.9)
 #   memory     - measure the memory footprint of each finder configuration
 #   memory-ci  - the exact memory measurement the benchmark CI workflow records
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
@@ -108,6 +109,7 @@ testall:
 
 # path is relative to the repo root; tmp/ is already gitignored build/data scratch space
 BENCHMARK_JSON := tmp/benchmark.json
+LATENCY_JSON := tmp/latency.json
 MEMORY_JSON := tmp/memory.json
 # a footprint has no run-to-run variance worth averaging out the way a timing
 # does; these repetitions exist to catch a measurement that failed to settle,
@@ -160,9 +162,20 @@ memory:
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
-reports: benchmarks memory
+# the per-query distribution, which the batch suite above cannot express: one round
+# there is one pass over a whole batch, so a tail is averaged away before the tracked
+# estimator sees it. Same $(BENCHMARK_ENV) and the same asserted acceleration path, so
+# the distribution and the batch tables on the same page describe one configuration.
+latency:
+	@mkdir -p tmp
+	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
+	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
+
+reports: benchmarks latency memory
 	uv run python -m scripts.render_benchmark_reports \
-		--benchmark-json=$(BENCHMARK_JSON) --memory-json=$(MEMORY_JSON)
+		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
+		--memory-json=$(MEMORY_JSON)
 	uv run python -m scripts.reporting
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
@@ -350,5 +363,5 @@ docs:
 
 .PHONY: clean test testint testall build docs speedtest benchmarks reports \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
-	print-benchmark-acceleration-path \
+	print-benchmark-acceleration-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json

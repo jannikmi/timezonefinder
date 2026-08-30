@@ -16,6 +16,7 @@ from scripts.data_integrity import (
     validate_hole_dedup_ratio,
     validate_hole_references,
 )
+from scripts.file_converter import write_block_index
 from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder.configs import DEFAULT_DATA_DIR
@@ -24,6 +25,8 @@ from timezonefinder.flatbuf.io.polygons import (
     write_polygon_collection_flatbuffer,
 )
 from timezonefinder.np_binary_helpers import (
+    get_block_offsets_path,
+    get_block_ranges_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -151,6 +154,7 @@ def test_both_pip_backends_agree_on_resolved_hole_rings():
 def _write_hole_dir(path, *, rings, poly_ref, bboxes):
     path.mkdir(parents=True, exist_ok=True)
     write_polygon_collection_flatbuffer(get_coordinate_path(path), rings)
+    write_block_index(path, rings)
     xmin, xmax, ymin, ymax = zip(*bboxes)
     store_per_polygon_vector(get_xmin_path(path), np.array(xmin, dtype=np.int32))
     store_per_polygon_vector(get_xmax_path(path), np.array(xmax, dtype=np.int32))
@@ -385,6 +389,16 @@ def _inline_data_dir(destination) -> None:
     coord_path = get_coordinate_path(holes_dir)
     coord_path.unlink()  # drop the symlink, do not write through it
     write_polygon_collection_flatbuffer(coord_path, rings)
+
+    # the block index describes this collection's own rings, so it is rebuilt with
+    # them: a directory whose holes are all inline holds one entry per hole, where the
+    # packaged one holds only the 27 that are not references
+    for path in (
+        get_block_ranges_path(holes_dir),
+        get_block_offsets_path(holes_dir),
+    ):
+        path.unlink()
+    write_block_index(holes_dir, rings)
 
     # every hole addressed as its own inline ring: a valid directory in the same
     # layout, just one where nothing was deduplicated

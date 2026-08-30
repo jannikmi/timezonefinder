@@ -65,7 +65,7 @@ difference is in what they do with that dataset's geometry.
      - Imports in about a millisecond, then deserialises its index inside the *first query*
    * - Avg. Lookup Speed
      - Hundreds of thousands of queries/s on one core; :doc:`benchmark_results_timezonefinding` carries the measured figure and names the configuration behind it
-     - Faster per query, by a small single-digit factor on a representative query mix and by more than an order of magnitude on the points that cost this package the most (:doc:`benchmark_results_comparison`)
+     - Faster per query, by a small single-digit factor on a representative query mix and by a larger single-digit one on the ambiguous points that cost this package the most (:doc:`benchmark_results_comparison`)
    * - Memory Usage
      - Single-digit MiB allocated by default (polygon data stays memory-mapped), an order of magnitude more with ``in_memory=True`` (:doc:`benchmark_results_memory`)
      - Not measured here
@@ -92,11 +92,16 @@ difference is in what they do with that dataset's geometry.
    runners alone (:doc:`benchmarking_methodology`), so two numbers from two machines say nothing
    about two libraries.
 
-   What it shows: ``tzfpy`` is the faster one per lookup, and by a wider margin than "same order of
-   magnitude" would suggest - the gap is smallest where a coordinate's H3 cell already determines
-   the answer and widest where this package has to fall through to a full point-in-polygon test.
-   That is the shape you would predict from the design difference, and it is the price of the
-   accuracy this package is for.
+   What it shows: ``tzfpy`` is the faster one per lookup, on every point class and by a single-digit
+   factor throughout. The gap is smallest where a coordinate's H3 cell already determines the answer
+   and widest where this package has to fall through to a full point-in-polygon test - the shape you
+   would predict from the design difference, and the price of the accuracy this package is for.
+
+   That widest gap used to be more than an order of magnitude, and is not any more: the latitude
+   block index lets a ray cast skip the parts of a boundary polygon it cannot cross, which is
+   precisely the work that made an ambiguous lookup expensive here and does not exist in a
+   simplified-polygon design. Read the ratio off the generated page rather than from memory - it is
+   the row this project's own changes move most.
 
    What it also shows, and what this page previously got wrong: **neither package starts instantly.**
    ``tzfpy`` imports in about a millisecond, but it deserialises its index lazily inside the first

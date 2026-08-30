@@ -42,6 +42,16 @@ def get_poly_ref_path(path: Path) -> Path:
     return path / "poly_ref.npy"
 
 
+def get_block_ranges_path(path: Path) -> Path:
+    """Return the path to the block_ranges.npy file in the given directory."""
+    return path / "block_ranges.npy"
+
+
+def get_block_offsets_path(path: Path) -> Path:
+    """Return the path to the block_offsets.npy file in the given directory."""
+    return path / "block_offsets.npy"
+
+
 def store_per_polygon_vector(file_path: Path, vector: np.ndarray) -> None:
     """Store a vector as a .npy file in the specified file path."""
     print(f"Storing vector to {file_path}")

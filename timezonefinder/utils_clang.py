@@ -48,3 +48,48 @@ def pt_in_poly_clang(x: int, y: int, coords: np.ndarray) -> bool:
         x, y, nr_coords, x_coords_ffi, y_coords_ffi
     )
     return contained
+
+
+def pt_in_poly_clang_blocked(
+    x: int,
+    y: int,
+    coords: np.ndarray,
+    block_ranges: np.ndarray,
+    block_size: int,
+) -> bool:
+    """wrapper of the block-filtered point in polygon test algorithm C extension
+
+    The same kernel as :func:`pt_in_poly_clang` over fewer edges: ``block_ranges`` is
+    this ring's ``(nr_blocks, 2)`` slice of the collection's latitude block index, and
+    a block whose ``[min, max]`` excludes ``y`` cannot hold an edge that flips parity.
+    ``timezonefinder/utils_numba.py``'s ``pt_in_poly_blocked`` states why that is exact.
+
+    ATTENTION: the same contiguity requirement as :func:`pt_in_poly_clang`, and it
+    covers ``block_ranges`` too - the index is stored as one C-contiguous ``int32``
+    array per collection and sliced per ring, which keeps each slice contiguous. A
+    strided one raises rather than being copied, for the same reason.
+    """
+    if ffi is None:
+        raise ValueError(
+            "Trying to use the clang implementation of the point in polygon algorithm "
+            "while the C extension in not loaded."
+        )
+    x_coords = coords[0]
+    y_coords = coords[1]
+    nr_coords = len(x_coords)
+
+    # See pt_in_poly_clang for why these ignores are stub gaps rather than mismatches.
+    x_coords_ffi = ffi.from_buffer(INT_LIST_REP, x_coords)  # type: ignore[call-overload]
+    y_coords_ffi = ffi.from_buffer(INT_LIST_REP, y_coords)  # type: ignore[call-overload]
+    block_ranges_ffi = ffi.from_buffer(INT_LIST_REP, block_ranges)  # type: ignore[call-overload]
+    contained = inside_polygon_ext.lib.inside_polygon_blocked_int(
+        x,
+        y,
+        nr_coords,
+        x_coords_ffi,
+        y_coords_ffi,
+        len(block_ranges),
+        block_ranges_ffi,
+        block_size,
+    )
+    return contained

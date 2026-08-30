@@ -4,7 +4,9 @@ Point-in-Polygon Algorithm Performance Benchmark
 ================================================
 
 
-**~854ns per check on a small polygon, ~23.0µs on the largest** (26.9x) - which is why this suite is stratified by vertex count instead of averaged.
+**~679ns per check on a small polygon, ~1.68µs on the largest** (2.48x) - the kernel a lookup reaches, which skips the parts of a ring a horizontal ray cannot cross and is therefore nearly flat in polygon size.
+
+The same check without that index is ~23.1µs on the largest polygon (13.7x the block-filtered cost) - which is what the stratification below is for, and what the latitude block index removed.
 
 *Measured on Darwin arm64, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
@@ -72,6 +74,10 @@ Benchmark Configuration
 
 Each benchmark times one pass over 2,500 fixed, committed (point, polygon) pairs drawn from a single polygon-size stratum, so the cost of the largest polygons isn't hidden behind an unweighted average. Mean/Median/StdDev/Min/Max are for the full 2,500-pair batch; Throughput is queries/second for that batch.
 
+.. note::
+
+   The point and the polygon in each pair are drawn independently, so many pairs put the point nowhere near the polygon. That does not matter for the bare kernel, which scans the whole ring either way, but it means a share of the block-filtered checks are rejections rather than scans - cheapest on the small stratum, where a rejection is most of what is left. A real lookup reaches this stage only after a bounding-box check has passed, so read the block-filtered figures as a floor and :doc:`benchmark_results_timezonefinding` for what a query actually pays.
+
 
 
 Results
@@ -80,8 +86,8 @@ Results
 
 
 
-point-in-polygon (C/clang)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+bare kernel (C/clang)
+^^^^^^^^^^^^^^^^^^^^^
 
 
 
@@ -98,35 +104,35 @@ point-in-polygon (C/clang)
      - Rounds
      - Throughput
    * - large polygons
-     - 57.4ms
-     - 57.5ms
-     - 453µs
-     - 56.2ms
-     - 58.2ms
+     - 57.8ms
+     - 57.8ms
+     - 492µs
+     - 56.9ms
+     - 58.7ms
      - 17
-     - 43.5k/s
+     - 43.2k/s
    * - medium polygons
-     - 6.03ms
-     - 5.88ms
-     - 1.40ms
-     - 5.30ms
-     - 20.5ms
-     - 161
-     - 415k/s
+     - 6.23ms
+     - 6.25ms
+     - 281µs
+     - 5.64ms
+     - 6.85ms
+     - 147
+     - 401k/s
    * - small polygons
-     - 2.13ms
-     - 2.10ms
-     - 101µs
-     - 2.02ms
-     - 2.52ms
-     - 448
-     - 1.17M/s
+     - 2.61ms
+     - 2.58ms
+     - 189µs
+     - 2.34ms
+     - 3.58ms
+     - 368
+     - 956k/s
 
 
 
 
-point-in-polygon (Python, Numba if available)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+block-filtered kernel (C/clang)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 
@@ -143,29 +149,119 @@ point-in-polygon (Python, Numba if available)
      - Rounds
      - Throughput
    * - large polygons
-     - 12.4s
-     - 12.3s
-     - 51.4ms
-     - 12.3s
-     - 12.4s
-     - 5
-     - 202/s
+     - 4.21ms
+     - 4.16ms
+     - 339µs
+     - 3.76ms
+     - 7.73ms
+     - 244
+     - 594k/s
    * - medium polygons
-     - 801ms
-     - 801ms
-     - 2.00ms
-     - 799ms
-     - 804ms
-     - 5
-     - 3.12k/s
+     - 3.53ms
+     - 3.42ms
+     - 446µs
+     - 3.01ms
+     - 6.49ms
+     - 280
+     - 709k/s
    * - small polygons
-     - 29.6ms
-     - 29.7ms
-     - 527µs
-     - 28.5ms
-     - 31.2ms
-     - 34
-     - 84.3k/s
+     - 3.24ms
+     - 3.22ms
+     - 147µs
+     - 2.92ms
+     - 3.95ms
+     - 305
+     - 772k/s
+
+
+
+
+bare kernel (Python, Numba if available)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 10 10 10 10 10 10 16
+
+   * - Configuration
+     - Mean
+     - Median
+     - StdDev
+     - Min
+     - Max
+     - Rounds
+     - Throughput
+   * - large polygons
+     - 14.9s
+     - 14.9s
+     - 510ms
+     - 14.4s
+     - 15.5s
+     - 5
+     - 167/s
+   * - medium polygons
+     - 958ms
+     - 957ms
+     - 2.16ms
+     - 955ms
+     - 960ms
+     - 5
+     - 2.61k/s
+   * - small polygons
+     - 35.4ms
+     - 35.4ms
+     - 645µs
+     - 34.1ms
+     - 37.1ms
+     - 28
+     - 70.6k/s
+
+
+
+
+block-filtered kernel (Python, Numba if available)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 10 10 10 10 10 10 16
+
+   * - Configuration
+     - Mean
+     - Median
+     - StdDev
+     - Min
+     - Max
+     - Rounds
+     - Throughput
+   * - large polygons
+     - 154ms
+     - 154ms
+     - 1.87ms
+     - 152ms
+     - 158ms
+     - 7
+     - 16.2k/s
+   * - medium polygons
+     - 14.8ms
+     - 14.7ms
+     - 313µs
+     - 14.2ms
+     - 15.8ms
+     - 66
+     - 169k/s
+   * - small polygons
+     - 1.70ms
+     - 1.66ms
+     - 165µs
+     - 1.50ms
+     - 3.07ms
+     - 525
+     - 1.47M/s
 
 
 
@@ -174,10 +270,20 @@ Performance Summary
 ~~~~~~~~~~~~~~~~~~~
 
 
-* Small polygons: **point-in-polygon (C/clang)** is 1289% faster (13.9x) than **point-in-polygon (Python, Numba if available)** (2.13ms vs 29.6ms)
+**What the block index buys**, per polygon-size stratum - the same C kernel over the same pairs, with and without the stored latitude ranges in front of it:
 
-* Medium polygons: **point-in-polygon (C/clang)** is 13190% faster (133x) than **point-in-polygon (Python, Numba if available)** (6.03ms vs 801ms)
+* Small polygons: **bare kernel (C/clang)** is 24% faster (1.24x) than **block-filtered kernel (C/clang)** (2.61ms vs 3.24ms)
 
-* Large polygons: **point-in-polygon (C/clang)** is 21414% faster (215x) than **point-in-polygon (Python, Numba if available)** (57.4ms vs 12.4s)
+* Medium polygons: **block-filtered kernel (C/clang)** is 77% faster (1.77x) than **bare kernel (C/clang)** (3.53ms vs 6.23ms)
 
-* Overall: fastest is **point-in-polygon (C/clang) - small polygons** (2.13ms), slowest is **point-in-polygon (Python, Numba if available) - large polygons** (12.4s) - 579120% faster (5792x)
+* Large polygons: **block-filtered kernel (C/clang)** is 1273% faster (13.7x) than **bare kernel (C/clang)** (4.21ms vs 57.8ms)
+
+**C against Python/Numba**, on the kernel a lookup reaches:
+
+* Small polygons: **block-filtered kernel (Python, Numba if available)** is 91% faster (1.91x) than **block-filtered kernel (C/clang)** (1.70ms vs 3.24ms)
+
+* Medium polygons: **block-filtered kernel (C/clang)** is 320% faster (4.20x) than **block-filtered kernel (Python, Numba if available)** (3.53ms vs 14.8ms)
+
+* Large polygons: **block-filtered kernel (C/clang)** is 3563% faster (36.6x) than **block-filtered kernel (Python, Numba if available)** (4.21ms vs 154ms)
+
+* Overall: fastest is **block-filtered kernel (Python, Numba if available) - small polygons** (1.70ms), slowest is **block-filtered kernel (Python, Numba if available) - large polygons** (154ms) - 8986% faster (90.9x)

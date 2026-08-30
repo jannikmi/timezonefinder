@@ -15,6 +15,7 @@ from tests.auxiliaries import (
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
     benchmark_fixture_provenance,
+    group_blocked_pip_inputs_by_stratum,
     group_pip_inputs_by_stratum,
     load_benchmark_points,
     load_pip_inputs,
@@ -107,6 +108,17 @@ def unique_shortcut_points() -> list[tuple[float, float]]:
 @pytest.fixture(scope="session")
 def ambiguous_shortcut_points() -> list[tuple[float, float]]:
     return _load_batch(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)
+
+
+@pytest.fixture(scope="session")
+def blocked_pip_inputs_by_stratum() -> dict[
+    str, list[tuple[int, int, np.ndarray, np.ndarray]]
+]:
+    """The same pairs, plus each polygon's latitude block ranges - what the kernel a
+    lookup reaches is actually handed."""
+    return group_blocked_pip_inputs_by_stratum(
+        load_pip_inputs(), load_pip_strata(), BATCH_SIZE
+    )
 
 
 @pytest.fixture(scope="session")

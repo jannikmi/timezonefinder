@@ -37,6 +37,11 @@ except ImportError:
 # copied, which is what keeps the dense single-axis scan below honest.
 CoordType = Array(i4, 2, "C", True, aligned=True)
 
+# One ring's slice of the latitude block index: ``[min, max]`` per block, in ring
+# order. Eager for the same reason, and read-only because the index is shared by every
+# lookup against the collection that owns it and is never written after construction.
+BlockRangeType = Array(i4, 2, "C", True, aligned=True)
+
 
 # @cc.export('inside_polygon', 'b1(i4, i4, i4[:, :])')
 @njit(boolean(i4, i4, CoordType), cache=True)
@@ -132,6 +137,102 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
         # next point
         y1 = y2
         y_gt_y1 = y_gt_y2
+
+    return inside
+
+
+@njit(boolean(i4, i4, CoordType, BlockRangeType, i4), cache=True)
+def pt_in_poly_blocked(
+    x: int,
+    y: int,
+    coords: np.ndarray,
+    block_ranges: np.ndarray,
+    block_size: int,
+) -> bool:
+    """:func:`pt_in_poly_python` with the blocks the ray cannot cross skipped.
+
+    Same function, fewer edges. ``block_ranges[b]`` is the ``[min, max]`` latitude the
+    edges leaving block ``b``'s vertices span, so a block whose range excludes ``y``
+    provably holds no edge that can flip parity, and skipping it cannot change the
+    answer. Two properties carry that, and both are checked rather than argued (see
+    ``tests/test_block_index.py``):
+
+    * the flip condition ``(y > y1) ^ (y > y2)`` is exactly ``min(y1, y2) < y <=
+      max(y1, y2)``, so a flipping edge always lies inside a surviving block;
+    * parity is a sum mod 2 over *independent* per-edge predicates, so blocks may be
+      visited in any order or not at all. The unblocked kernel above carries ``y1``
+      from one iteration to the next, but that is a cached comparison rather than a
+      dependency - each block re-reads its own first vertex instead.
+
+    Over the real (point, polygon) pairs the committed fixtures produce this tests
+    ~2 % of the edges the unblocked kernel does; ``docs/data_format.rst`` and
+    ``docs/benchmark_results_timezonefinding.rst`` carry the counts and what they buy.
+
+    :param coords: the ring, as the ``(2, N)`` view the coordinate accessors hand out
+    :param block_ranges: that ring's ``(nr_blocks, 2)`` slice of the collection's
+        latitude block index
+    :param block_size: how many vertices one block owns - a property of the data
+        directory (``POLYGON_BLOCK_SIZE``), passed rather than compiled in so that
+        ``scripts/tune_block_size.py`` can sweep it without rebuilding the kernel.
+        ``i4`` to match the C kernel's ``int``, and because it is bounded by the vertex
+        count of the largest ring; the block arithmetic below promotes to 64 bits
+        either way, so the narrower declaration costs nothing.
+    """
+    x_coords = coords[0]
+    y_coords = coords[1]
+    nr_coords = len(x_coords)
+    inside = False
+
+    for block in range(len(block_ranges)):
+        if y < block_ranges[block, 0] or y > block_ranges[block, 1]:
+            continue
+        start = block * block_size
+        stop = start + block_size
+        if stop > nr_coords:
+            stop = nr_coords
+        # The comparison for a block's first vertex is the only one that has to be made
+        # from scratch: inside a block consecutive edges still share a vertex, so the
+        # rest carry exactly as the unblocked kernel's do. Only the block *boundary*
+        # breaks that adjacency, which is why the carry is re-seeded per block rather
+        # than abandoned - it halves the work on the edges that survive the filter.
+        y1 = y_coords[start]
+        y_gt_y1 = y > y1
+        for i in range(start, stop):
+            # the edge leaving vertex i, wrapping to vertex 0 on the very last one
+            j = i + 1
+            if j == nr_coords:
+                j = 0
+            y2 = y_coords[j]
+            y_gt_y2 = y > y2
+            if y_gt_y1 ^ y_gt_y2:  # XOR
+                # everything below is the predicate of pt_in_poly_python verbatim,
+                # applied to the same edge under a different name for its endpoints
+                x1 = x_coords[i]
+                x2 = x_coords[j]
+                x_le_x1 = x <= x1
+                x_le_x2 = x <= x2
+                if x_le_x1 or x_le_x2:
+                    if x_le_x1 and x_le_x2:
+                        inside = not inside
+                    else:
+                        # NOTE: int64 precision required to prevent overflow
+                        y_64 = np.int64(y)
+                        y1_64 = np.int64(y1)
+                        y2_64 = np.int64(y2)
+                        x_64 = np.int64(x)
+                        x1_64 = np.int64(x1)
+                        x2_64 = np.int64(x2)
+                        slope1 = (y2_64 - y_64) * (x2_64 - x1_64)
+                        slope2 = (y2_64 - y1_64) * (x2_64 - x_64)
+                        if y_gt_y1:
+                            if slope1 <= slope2:
+                                inside = not inside
+                        elif slope1 >= slope2:
+                            inside = not inside
+
+            # next edge of this block; the next block re-seeds these
+            y1 = y2
+            y_gt_y1 = y_gt_y2
 
     return inside
 

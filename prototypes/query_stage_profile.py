@@ -62,26 +62,15 @@ Inputs are the committed fixtures in ``tests/fixtures/benchmarks/``, so two runs
 same commit execute the same workload.
 
 
-FINDINGS (2026-08-23, `590e21b`, Apple arm64, Python 3.14.2, data 2026c, fixture set v3)
+FINDINGS (2026-08-30, Apple arm64, Python 3.14.2, data 2026c, fixture set v3)
 
-**One block below has since been superseded and is not re-measured here.** The batch
-lookups made the candidate loop shared code, so an ambiguous ``timezone_at`` executes one
-more Python method call than this run did: read the ``candidate loop`` block and the
-``real`` row of the ``ambiguous`` and ``on_land`` columns as order 1% light. The
-correction is not applied in place because it is below this machine's own 3-9% jitter, so
-re-running would replace a self-consistent set of figures with a noisier one taken on a
-different day - what a change of that size is worth is a sentence, not a re-measurement.
-``contributing/improvements/query-performance-measurement-baseline.md`` carries it with the paired runs
-behind it and is the anchor to reconcile against; re-take this block wholesale when a
-change moves a stage by more than the jitter, as the resolution move below did.
-
-Re-measured wholesale after the H3 shortcut index moved from resolution 3 to 4. That
-changes how many queries reach the geometry at all *and* re-labels two of the strata -
-``unique`` and ``ambiguous`` are a classification **by** this index, so they are not the
-same points the previous block measured. Every figure below comes from the same four runs,
-so they are comparable with each other and with nothing else - do not diff an individual
-stage against the previous block, which was taken at another resolution on a different
-day, and where a stage that did not change still moves by the machine's own 3-8%.
+Re-measured wholesale when the latitude block index landed, which moves the one stage
+this script exists to attribute. Every figure below comes from four runs of this script
+on one machine on one day - two backends x two coordinate access modes - so they are
+comparable with each other and with nothing else. Where a *before* is quoted it is the
+same script run against `origin/master` on the same machine, the same day and **the same
+interpreter**, which is the part that is easy to get wrong: see the interpreter note at
+the end.
 
 These are one machine's, and the three kinds of figure below do not travel equally.
 A *hit count* is a property of the code rather than the hardware and survives any
@@ -95,137 +84,169 @@ page's. One further correction before comparing anything: read the clang /
 ``in_memory=False`` column, which is what a plain install in a constrained container
 runs and what CI tracks for that reason. The ``random`` stratum is the
 workload-representative one and is measured here directly, so rank on it rather than
-converting an ambiguous-stratum share by hand - uniformly random points are ~11%
-ambiguous at this resolution and an ambiguous query costs ~11x a unique one.
+converting an ambiguous-stratum share by hand.
 
 All figures are nanoseconds per query. Ladder figures are the min over 15 passes of
 2,000 fixture points; the ``real`` row is ``tf.timezone_at(lng=, lat=)`` itself, and the
 gap above it is the bound-method call the ladder does not pay.
 
-Counts x sampled share, over the real function with nothing attached to it - blocks, so
-that the sampler's one-line skid stays inside a block. ``in_memory=False``:
+Counts x sampled share, over the real function with nothing attached to it. The sampler
+attributes to *blocks* of lines so that its one-line skid stays inside a block; since the
+candidate loop became shared code, ``timezone_at`` itself holds only the prologue and one
+call, so the breakdown is two blocks rather than five:
 
-    block            unique         ambiguous        random         on_land
-                  numba  clang    numba   clang   numba  clang   numba  clang
-    prologue        970    890    1,102   1,021     977    897   1,006    985
-    bookkeeping       -      -    1,554   1,352     147    136     298    272
-    candidate loop    -      -    8,302   8,655     742    765   2,218  2,362
-    zone name        38     33      185     216      62     83      86     86
-    unattributed     46     53      116      65      45     59      58     55
-    ---------------------------------------------------------------------------
-    total         1,055    977   11,260  11,309   1,972  1,939   3,667  3,760
+    stratum      in_memory=False        in_memory=True      master, clang, mapped
+                 numba    clang        numba    clang       (the same day)
+    unique       1,045      974        1,055      976              970
+    ambiguous    6,233    6,766        5,830    5,963           11,688
+    random       1,582    1,536        1,529    1,462            1,936
+    on_land      2,128    2,110        1,933    2,085            3,882
 
-  The unique stratum is almost entirely `prologue`: 92.0% (numba) / 91.2% (clang),
-  because the table read *is* the answer and there is no separate dispatch on it. At
-  resolution 4 that stratum is ~89% of a uniformly random workload, which is why the
-  `random` column is now dominated by the prologue too (46-50%).
+  The ambiguous stratum is **1.7x cheaper** than it was and ``on_land`` 1.9x; the unique
+  stratum, which reads no geometry at all, is unchanged (970 -> 976, inside this
+  machine's jitter). That is the shape the block index has to have: it can only remove
+  work from queries that reach a point-in-polygon test.
 
-  The number this construction gives that neither other instrument does is **cost per
-  candidate polygon tested**, since the candidate loop is one line and its hit count is
-  exact: **7,933 ns (numba) / 8,270 ns (clang)** per candidate on the ambiguous stratum,
-  10,538 / 11,220 ns on `on_land`, at 1.05 candidates per ambiguous query and 0.11 per
-  uniformly random one.
+  The `prologue` block - coordinate validation plus the H3 cell computation, before any
+  lookup logic - is 87.8 % of a unique query (clang, mapped), 53.5 % of a random one,
+  39.7 % of `on_land` and 13.3 % of an ambiguous one. Its *absolute* cost is flat across
+  strata at ~890-1,040 ns, which is the useful way to read it: what changes between
+  strata is everything else.
 
-Unique-shortcut stratum - the common case, and the one with no geometry in it at all:
+Unique-shortcut stratum - the common case, and the one with no geometry in it at all
+(``in_memory=False``):
 
     stage                       numba      clang
-    validate_coordinates          353        298
-    h3.latlng_to_cell             449        435
-    shortcut table read           123        129
-    zone_name_from_id              54         39
+    validate_coordinates          353        311
+    h3.latlng_to_cell             474        443
+    shortcut table read           108        140
+    zone_name_from_id              79         58
     ------------------------------------------------
-    ladder total                  962        885
-    real timezone_at()          1,038        975   (+76 / +90 call overhead)
+    ladder total                1,017        914
+    real timezone_at()          1,038        978   (+21 / +65 call overhead)
 
 Ambiguous-shortcut stratum, default ``in_memory=False`` (the same run with
 ``--in-memory`` in brackets):
 
     stage                       numba              clang
-    validate + h3 + table         932    (933)       846    (862)
-    candidate list slice          287    (286)       294    (291)
-    zone_ids_of                   608    (575)       590    (601)
-    last_change read              137    (128)        80    (100)
-    coord2int x2                  199    (218)       170    (177)
-    bbox rejection                802    (776)       755    (777)
-    hole checks                 1,186  (1,239)     1,148  (1,278)
-    boundary PIP                6,870  (6,096)     7,500  (6,800)
+    validate + h3 + table         934    (933)       846    (867)
+    candidate list slice          278    (314)       294    (314)
+    zone_ids_of                 2,226  (2,358)     2,004  (2,358)
+    last_change read               -5    (140)       159    (140)
+    coord2int x2                  211     (69)       114     (69)
+    bbox rejection                979  (1,333)       937  (1,333)
+    hole checks                 1,471  (1,393)     1,268  (1,393)
+    boundary PIP                2,264  (2,001)     3,074  (2,001)
     --------------------------------------------------------------
-    ladder total               11,015 (10,248)    11,395 (10,887)
-    real timezone_at()         11,164 (10,357)    11,682 (10,982)
+    ladder total                8,381  (8,501)     8,707  (8,501)
+    real timezone_at()          6,601  (6,573)     7,101  (6,573)
 
-One point-in-polygon test, per call, by polygon size stratum:
+  **The ladder now overshoots the real function by 20-25 % on this stratum, and that is
+  a property of the instrument rather than of the change.** It reads the same on
+  ``master`` (13,355 against 11,745), and it appeared when the candidate loop became
+  shared code: the ladder is a *copy* of the lookup, and its rungs are differences of
+  large numbers whose error no longer cancels. ``zone_ids_of`` at ~2 us is the row that
+  absorbs most of it - it also reads ~2 us on ``master``, so nothing here is evidence
+  about that call. Read this table for *ordering* and for the rows that moved by more
+  than the overshoot; the block breakdown above is the one to quote a share from.
 
-    stratum   vertices    coords_of  coords_of   ffi.from_buffer   kernel    kernel
-                            mapped   in-memory      (clang only)    numba     clang
-    small          112         803          62               713      313       299
-    medium       3,486         785          62               732    1,828     1,773
-    large       46,823         793          60               723   21,723    21,612
+One point-in-polygon test, per call, by polygon size stratum. ``fetch`` is what
+``PolygonArray.pip`` does before the kernel: the coordinate fetch plus the slice of the
+block index that says which parts of the ring may be skipped.
+
+    stratum   vertices     fetch      fetch    ffi.from_buffer   kernel    kernel
+                          mapped   in-memory      (clang only)    numba     clang
+    small          112       963         213               967      311       269
+    medium       3,486       947         221               951      390       319
+    large       46,823       987         206               925      581       604
+
+  and the same table on ``master``, clang and mapped, for the row that matters:
+
+    stratum   vertices   coords_of   ffi.from_buffer   kernel   total
+    small          112         814               700      288   1,802
+    medium       3,486         786               711    1,795   3,292
+    large       46,823         796               710   21,462  22,968
 
 CONCLUSIONS
 
-1. **A batch API would amortise real overhead, not noise, and resolution 4 made that
-   larger.** A unique-zone query is ~0.98-1.06 us of which *no stage is geometry*:
-   ~890-970 ns of four fixed-cost calls plus ~76-90 ns for the bound-method call itself.
-   The two largest, h3 cell computation (~435-449 ns) and coordinate validation
-   (298-353 ns), are exactly the two that vectorise over an array of points - over two
-   thirds of the query, addressable before any lookup logic is touched. The finer
-   resolution answers ~89% of uniformly random points from that path rather than ~75%,
-   so the prologue is now ~46-50% of a random-workload query.
+1. **The block index moved the point-in-polygon kernel from linear in polygon size to
+   almost flat, which is the whole story.** The clang kernel over the ``large`` stratum
+   (46,823 vertices) costs **604 ns against 21,462 ns before**, while ``small``
+   (112 vertices) is unchanged at ~269 ns. A ray only crosses a few blocks of any ring,
+   so what the kernel scans stopped being "the polygon" and became "a few hundred edges",
+   whatever the polygon. The ambiguous stratum is 1.7x cheaper end to end and ``on_land``
+   1.9x; a whole-query paired A/B puts it at -20 % random, -42 % on_land, -42 %
+   ambiguous, 41 of 41 rounds each, reproduced three times.
 
-2. **The shortcut lookup is a slot-addressed table read, and it is not where a query's
-   time goes.** Reading it costs 117-145 ns: 13-15% of a unique-zone query, ~1.0-1.2% of
-   an ambiguous one, and 6.9-7.7% of the workload-representative random stratum. That is
-   the *ceiling* on what any further work on this structure could return.
+2. **The one thing it made worse is a small polygon, and by ~400 ns.** A ``small``
+   point-in-polygon call is 2,199 ns against 1,802 ns before: the index slice (~140 ns)
+   and, on clang, a third ``ffi.from_buffer`` (~250 ns) buy nothing for a ring that fits
+   in a single block, because ``pip_with_bbox_check`` has already rejected everything
+   outside its bounding box and the one block therefore always survives. 29.7 % of
+   boundary polygons are in that class. It is ~3 % of an ambiguous query, below what any
+   benchmark here resolves, and it is recorded as PERF-7 rather than fixed with a branch.
 
-   Resolution 4 made the table seven times larger without making the read dearer - it is
-   one indexed load either way, and the arithmetic that addresses it is a shift and a
-   mask at every resolution. The structure was taken for its file size, its footprint and
-   its load time; nothing here is a speed argument for it in either direction.
+3. **A batch API would amortise real overhead, not noise.** A unique-zone query is
+   ~0.97-1.06 us of which *no stage is geometry*: ~910-1,020 ns of four fixed-cost calls
+   plus ~21-65 ns for the bound-method call. The two largest, h3 cell computation
+   (~425-474 ns) and coordinate validation (~300-360 ns), are exactly the two that
+   vectorise over an array of points - over two thirds of the query, addressable before
+   any lookup logic is touched. At resolution 4 ~89 % of uniformly random points are
+   answered from that path, so the prologue is ~54-63 % of a random-workload query, up
+   from ~46-50 % before the geometry got cheaper.
 
-3. **Per-polygon FFI marshalling is the same order as the fetch it used to be dwarfed
-   by.** ``ffi.from_buffer`` over both axes is 713-732 ns per PIP call and flat in polygon
-   size, against a mapped fetch of 785-803 ns. Together they are ~1.5 us of a
-   small-polygon candidate against a 299 ns kernel. A native candidate loop removes both -
-   but see 5 for how little of a *workload* that is.
+4. **The shortcut lookup is a slot-addressed table read, and it is not where a query's
+   time goes.** Reading it costs ~100-150 ns: ~11-16 % of a unique-zone query, ~1.2-1.5 %
+   of an ambiguous one, and well under a tenth of the workload-representative random
+   stratum.
+   That is the *ceiling* on what any further work on this structure could return.
+
+5. **Per-polygon FFI marshalling is now the largest single cost of a candidate on the
+   clang path.** ``ffi.from_buffer`` over the two axes and the block ranges is
+   925-967 ns per PIP call and flat in polygon size, against a mapped fetch of
+   947-987 ns and a kernel of 269-604 ns. Before the index the kernel dominated on
+   anything but a small polygon; now it never does. A native candidate loop removes both
+   the marshalling and the per-fetch buffer acquisition - see 7 for how little of a
+   *workload* that is.
 
    Also measured, and contrary to what the backend split suggests: **the two PIP kernels
-   are within 5% of each other and numba is not ahead** (small 313 vs 299 ns, medium 1,828
-   vs 1,773 ns, large 21.7 vs 21.6 us). numba's advantage on an ambiguous query is the
-   marshalling it does not do, not a faster kernel; and on the unique-zone path numba is
-   *slower*, because ``validate_coordinates`` calls two njit'd scalar functions whose
-   dispatch costs more than the pure-Python comparison it replaces (353 vs 298 ns).
+   are within ~20 % of each other and numba is not ahead on the two smaller strata**
+   (small 311 vs 269 ns, medium 390 vs 319, large 581 vs 604). numba's advantage on an
+   ambiguous query is the marshalling it does not do, not a faster kernel; and on the
+   unique-zone path numba is *slower*, because ``validate_coordinates`` calls two njit'd
+   scalar functions whose dispatch costs more than the pure-Python comparison it
+   replaces (353 vs 311 ns).
 
-4. **Better shortcut ordering has a ceiling of the boundary-PIP row**: 62-66% of an
-   ambiguous query mapped, 60-63% in memory - but only 29-34% of a random one, which is
-   the workload. Inside a candidate the balance sits where the clang kernel's
-   ~0.46 ns/vertex overtakes the ~1.5 us of fetch plus marshalling, at roughly 3,300
-   vertices: the medium stratum (3,486 vertices, a 1,773 ns kernel against 1,516 ns of
-   overhead) is just past that crossover and is kernel-bound. Ordering still wins by
+6. **Better shortcut ordering has a much lower ceiling than it had.** The boundary-PIP
+   rung is 27-35 % of an ambiguous query mapped and ~24 % in memory, against 59-66 %
+   before - and a correspondingly small share of a random one, which is the workload. Ordering still wins by
    reducing *how many* candidates are opened rather than by opening cheaper ones first,
-   and it was rejected on a count, which no timing here disturbs.
+   and it was rejected on a count, which no timing here disturbs. What changed is that
+   opening a *large* candidate is no longer expensive, so the case for ordering by size
+   is weaker than it was.
 
-5. **The mapped path's per-candidate fetch is ~790-800 ns against ~60 ns in memory.** It
-   once paid **4.9 us** - 80x for the same bytes - because the accessor was rebuilt from
-   scratch per candidate; addressing polygons by a precomputed ``(offset, length)`` table
-   is what closed that. The mapped mode now costs 6-8% more than in-memory on an ambiguous
-   query, where it cost ~46%.
+7. **The mapped path's per-candidate fetch is ~950-990 ns against ~210 ns in memory**,
+   of which ~140 ns on both sides is the block-index slice added with the index. It once
+   paid **4.9 us** - because the accessor was rebuilt from scratch per candidate;
+   addressing polygons by a precomputed ``(offset, length)`` table is what closed that.
+   The mapped mode now costs 12-16 % more than in-memory on an ambiguous query, up from
+   6-8 %: the fetch did not get slower, everything else got faster.
 
-6. **``zone_ids_of`` is the largest of the bookkeeping calls on its own.** It costs
-   0.58-0.61 us, ~5.2-5.6% of an ambiguous query, against the 0.08-0.14 us of reading
-   ``last_change`` - which used to be a ``get_last_change_idx`` scan and is now a single
-   array read, precomputed at build time. ``zone_ids_of`` is a numpy fancy-index over a
-   handful of elements, where the per-call overhead dominates whatever it computes; the
-   candidate slice next to it (0.29 us) is the same shape of cost.
+8. **``zone_ids_of`` reads ~2.0-2.4 us on this ladder and that is not a finding about
+   ``zone_ids_of``.** It reads the same on ``master``, and the ladder as a whole
+   overshoots the real function by ~20-30 % on the ambiguous stratum, on both trees. Both
+   appeared when the candidate loop became shared code and the ladder stopped being a
+   faithful copy of the lookup. Fixing the ladder is worth doing before any rung of it is
+   quoted again; until then use the block breakdown for shares.
 
-7. **What is left of the mapped-vs-in-memory gap is one buffer acquisition per fetch.**
-   ~790 ns against ~60 ns is still 13x, and it is not I/O: ``np.frombuffer`` re-acquires
-   the ``mmap`` object's buffer on every call. Slicing a single whole-file ``int32`` view
-   instead measures **298 ns against 630 ns** per fetch in isolation, paired and
-   order-alternated - but that view is a live export held for the accessor's lifetime,
-   which is the mapping-pinning trade the offset table was chosen to avoid and which
-   ``BufferError`` on ``cleanup()`` made real once already. Recorded in
-   ``contributing/improvements/items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md``
-   rather than taken here.
+9. **Two checkouts do not compare unless they name the same interpreter.** uv resolves
+   ``.python-version`` by walking up from the working directory, so a worktree created
+   *outside* the repository silently gets a different CPython - here a free-threaded
+   build against the pinned Homebrew one. Pure-Python call chains differ by ~50 % between
+   them: ``validate_coordinates`` reads 199 ns on one and 294 ns on the other with
+   *identical* code, which presents as a 17 % regression on the unique stratum, a stratum
+   the change under test does not touch. Pass ``--python`` explicitly when profiling a
+   second checkout, and prefer an A/B inside one process where the question allows it.
 
 """
 
@@ -252,7 +273,7 @@ from tests.auxiliaries import (
     load_pip_strata,
 )
 from timezonefinder import TimezoneFinder, utils, utils_clang
-from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.configs import POLYGON_BLOCK_SIZE as BLOCK_SIZE, SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import slot_of
 
 # one pass over this many points is a round; the reported value is the min over
@@ -547,6 +568,11 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
     Keeps the polygon *id* rather than a pre-resolved coordinate array, so
     ``coords_of`` is measured as the lookup performs it - through the memory map,
     unless ``--in-memory`` was passed.
+
+    ``fetch`` is both of the things ``PolygonArray.pip`` does before the kernel: the
+    coordinate fetch and the slice of the latitude block index that says which parts of
+    that ring the kernel may skip. ``ffi.from_buffer`` covers all three buffers the
+    clang wrapper hands over, so ``kernel`` stays the kernel.
     """
     strata = load_pip_strata()
     grouped: dict[str, list[tuple[int, int, int]]] = {name: [] for name in PIP_STRATA}
@@ -555,8 +581,12 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
         if len(bucket) < PIP_BATCH_SIZE:
             bucket.append((x, y, poly_id))
 
-    inside_polygon = utils.inside_polygon
+    # the *blocked* kernel and the ring's stored block ranges, because that is the pair
+    # ``PolygonArray.pip`` hands over - timing the bare kernel here would price a scan of
+    # every edge, which no lookup performs any more
+    inside_polygon_blocked = utils.inside_polygon_blocked
     coords_of = tf.boundaries.coords_of
+    block_ranges_of = tf.boundaries.block_ranges_of
     ffi = utils_clang.ffi
     # marshalling is a property of the *active* path: the C extension is importable
     # either way, but a numba lookup never crosses into it.
@@ -564,7 +594,7 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
 
     print(f"\n### point-in-polygon, per call ({PIP_BATCH_SIZE} per stratum)\n")
     print(
-        "| polygon stratum | vertices (mean) | coords_of | ffi.from_buffer | kernel | total |"
+        "| polygon stratum | vertices (mean) | fetch | ffi.from_buffer | kernel | total |"
     )
     print("|---|---:|---:|---:|---:|---:|")
     for stratum, entries in grouped.items():
@@ -581,6 +611,7 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
             n = 0
             for x, y, poly_id in entries:
                 coords_of(poly_id)
+                block_ranges_of(poly_id)
                 n += 1
             return n
 
@@ -588,15 +619,19 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
             n = 0
             for x, y, poly_id in entries:
                 coords = coords_of(poly_id)
+                ranges = block_ranges_of(poly_id)
                 ffi.from_buffer(utils_clang.INT_LIST_REP, coords[0])
                 ffi.from_buffer(utils_clang.INT_LIST_REP, coords[1])
+                ffi.from_buffer(utils_clang.INT_LIST_REP, ranges)
                 n += 1
             return n
 
         def do_pip(entries=entries) -> int:
             n = 0
             for x, y, poly_id in entries:
-                inside_polygon(x, y, coords_of(poly_id))
+                inside_polygon_blocked(
+                    x, y, coords_of(poly_id), block_ranges_of(poly_id), BLOCK_SIZE
+                )
                 n += 1
             return n
 

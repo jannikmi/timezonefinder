@@ -98,7 +98,7 @@ def _texts(reporter: BenchmarkReporter) -> list[str]:
         ),
         (
             "test_pt_in_poly_clang[large]",
-            "point-in-polygon (C/clang) - large polygons",
+            "bare kernel (C/clang) - large polygons",
         ),
         (
             "test_initialization[TimezoneFinder-in_memory]",
@@ -141,7 +141,7 @@ def test_humanize_benchmark_name_covers_every_expected_benchmark():
         ),
         (
             "test_pt_in_poly_clang[small]",
-            "point-in-polygon (C/clang)",
+            "bare kernel (C/clang)",
             "small polygons",
         ),
     ],
@@ -163,7 +163,7 @@ def test_add_benchmark_table_hoists_shared_function_label_out_of_rows():
 
     sections = [item for item in reporter.content if item[0] == "section"]
     tables = [item for item in reporter.content if item[0] == "table"]
-    assert [title for _, title, _ in sections] == ["point-in-polygon (C/clang)"]
+    assert [title for _, title, _ in sections] == ["bare kernel (C/clang)"]
 
     (_, _, rows) = tables[0]
     assert len(rows) == 3
@@ -293,12 +293,12 @@ def test_add_comparison_bullet_picks_the_actually_faster_bench():
     add_comparison_bullet(reporter, "Small polygons", slow, fast)
 
     (text,) = _texts(reporter)
-    assert "point-in-polygon (Python, Numba if available)" in text
+    assert "bare kernel (Python, Numba if available)" in text
     # fast=0.001s took half the time of slow=0.002s -> twice as fast -> 100% faster, 2x
     assert "100% faster" in text
     assert "2.00x" in text
     # the slower one must still be named as the one being compared against
-    assert "point-in-polygon (C/clang)" in text
+    assert "bare kernel (C/clang)" in text
 
 
 def test_add_comparison_bullet_custom_label_fn_avoids_redundancy():
@@ -466,9 +466,45 @@ def test_headline_section_describes_the_measured_environment():
 # renderers tolerate a missing benchmark (headline blocks are conditional), so
 # a minimal JSON still reaches the point where provenance is - or isn't -
 # stamped
+def _fake_latency_json() -> dict:
+    """A minimal query-latency report, in the shape ``scripts.measure_query_latency``
+    writes. Only the timezone-finding renderer takes one - it renders the distribution
+    as a section of its own page rather than as a page of its own."""
+    return {
+        "machine_info": {
+            "timezonefinder": {
+                **_FAKE_SYSTEM_INFO,
+                "fixture_version": 2,
+                "data_version": "2026c",
+                "latency_points": 100,
+                "latency_repetitions": 3,
+            }
+        },
+        "benchmarks": [
+            {
+                "fullname": f"latency::random::{statistic}",
+                "name": f"latency::random::{statistic}",
+                "stats": {"mean": value, "min": value, "max": value, "rounds": 1},
+            }
+            for statistic, value in (
+                ("p50", 1e-6),
+                ("p90", 3e-6),
+                ("p99", 3e-5),
+                ("p99.9", 6e-5),
+                ("mean", 2e-6),
+                ("max", 1e-4),
+            )
+        ],
+    }
+
+
+def _render_timezone_finding_with_latency(data: dict, output_path) -> None:
+    render_timezone_finding(data, _fake_latency_json(), output_path)
+
+
 _RENDERERS = {
     "timezonefinding": (
-        render_timezone_finding,
+        _render_timezone_finding_with_latency,
         "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
     ),
     "polygon": (
