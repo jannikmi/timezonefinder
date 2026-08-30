@@ -31,6 +31,6 @@
 
 For a PR, `measure` writes the comparison summary and `benchmark-comment` keeps one replacement comment naming the measured head commit; it reports base, head, signed change, and `base / head`. On `master`, results go to the [trend chart](https://jannikmi.github.io/timezonefinder/dev/bench/) under `gh-pages/dev/bench`; never edit that path. Workflow copies of `REPORT_FILENAME` and artifact names are guarded by `tests/test_benchmark_workflows.py`.
 
-Before judging a comparison, verify CPU and fixture set. `REGRESSION_THRESHOLD_PCT` is 110%; smaller changes are noise and comparisons are reporting-only (`--fail-on-regression` is unused). Reproduce only local-to-local with `make benchmarks-ci` on base and head, then `uv run python -m scripts.compare_benchmark_runs --base base.json --head head.json`.
+Before judging a comparison, verify CPU and fixture set. `REGRESSION_THRESHOLD_PCT` is 110%; smaller changes are noise and comparisons are reporting-only (`--fail-on-regression` is unused). Every row also carries a second estimator (`median` beside the tracked `min`) and is marked `unresolved` where the two disagree - believe a difference only when both estimators show it. Reproduce only local-to-local with `make benchmarks-ci` on base and head, then `uv run python -m scripts.compare_benchmark_runs --base base.json --head head.json`.
 
 Trend alerts remain non-blocking: check CPU, rerun, and treat a non-reproducing alert as noise. Recalibrate `ALERT_THRESHOLD` with `workflow_dispatch` repetitions whenever the runner pool or core set changes.

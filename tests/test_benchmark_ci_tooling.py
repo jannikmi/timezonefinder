@@ -34,6 +34,7 @@ from scripts.benchmark_noise import (
 )
 from scripts.benchmark_utils import load_benchmark_json, machine_label
 from scripts.compare_benchmark_runs import (
+    CORROBORATING_ESTIMATORS,
     REGRESSION_THRESHOLD_PCT,
     BenchmarkComparison,
     benchmark_set_warnings,
@@ -341,6 +342,71 @@ def test_comparison_markdown_names_the_machine_and_flags_the_verdicts():
 
 
 @pytest.mark.unit
+def test_compare_carries_a_second_estimator_for_every_row():
+    # a single estimator cannot express "no effect"; the corroborating one is
+    # what lets a reader see whether the two agree
+    base = _run(a=_stats(1.0, 2.0, 4.0))
+    head = _run(a=_stats(0.5, 2.0, 4.0))
+
+    (comparison,) = compare_runs([base], [head], "min")
+
+    assert CORROBORATING_ESTIMATORS["min"] == "median"
+    assert comparison.change_pct == pytest.approx(-50.0)
+    assert comparison.corroborating_change_pct == pytest.approx(0.0)
+
+
+@pytest.mark.unit
+def test_compare_drops_the_second_estimator_when_it_is_missing():
+    # an older report, or a metric that records one statistic only, loses the
+    # courtesy column rather than failing the comparison CI depends on
+    stats = {"min": 1.0, "mean": 1.0, "ops": 1.0, "rounds": 5}
+    base = _run(a=dict(stats))
+    head = _run(a=dict(stats))
+
+    (comparison,) = compare_runs([base], [head], "min")
+
+    assert comparison.corroborating_change_pct is None
+
+
+@pytest.mark.unit
+def test_comparison_markdown_marks_a_row_the_estimators_disagree_about():
+    disagreeing = BenchmarkComparison(
+        "benchmarks/test_x.py::a",
+        base=1.0,
+        head=0.5,
+        base_corroborating=1.0,
+        head_corroborating=1.0,
+    )
+    agreeing = BenchmarkComparison(
+        "benchmarks/test_x.py::b",
+        base=1.0,
+        head=0.5,
+        base_corroborating=1.0,
+        head_corroborating=0.5,
+    )
+
+    report = render_comparison([disagreeing, agreeing], estimator="min", machine=None)
+
+    rows = {
+        line.split("|")[1].strip(): line for line in report.splitlines() if "::" in line
+    }
+    assert "⚠️ unresolved" in rows["`benchmarks/test_x.py::a`"]
+    assert "⚠️ unresolved" not in rows["`benchmarks/test_x.py::b`"]
+    assert "median change" in report
+
+
+@pytest.mark.unit
+def test_comparison_markdown_renders_a_missing_second_estimator_as_absent():
+    report = render_comparison(
+        [BenchmarkComparison("a", base=1.0, head=1.0)], estimator="min", machine=None
+    )
+
+    (row,) = (line for line in report.splitlines() if line.startswith("| `"))
+    assert "| n/a |" in row
+    assert "⚠️ unresolved" not in row
+
+
+@pytest.mark.unit
 def test_comparison_markdown_surfaces_the_warnings():
     report = render_comparison(
         [BenchmarkComparison("a", base=1.0, head=1.0)],
@@ -364,7 +430,7 @@ def test_comparison_markdown_neutralises_the_benchmark_name():
     )
 
     (row,) = (line for line in report.splitlines() if line.startswith("| `"))
-    assert row.count("|") == 6  # 5 columns, not forged by the name
+    assert row.count("|") == 7  # 6 columns, not forged by the name
     assert "`evil'/' name second line`" in row
 
 

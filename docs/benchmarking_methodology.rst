@@ -233,6 +233,20 @@ it set the trend threshold; as a stand-in for single-machine jitter it is defens
 bound on it either way.
 
 
+Two estimators, and the rows they disagree about
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every row of the comparison also carries the ``median`` change beside the tracked ``min`` one, and
+is marked ``unresolved`` when the two land on different sides of the flag. This is the same rule the
+candidate comparisons below are held to, applied to the committed base/head table: where a
+difference is real the two estimators move together, and where they disagree the honest reading is
+that there is no demonstrable difference - an answer a single estimator has no way to give. The flag
+itself stays on ``min``, because that is the number the trend chart and ``--fail-on-regression``
+use. ``median`` is the corroborating statistic because ``scripts/normalize_benchmark_json.py``
+overwrites ``mean`` with the tracked value, which leaves it the only untouched estimator in a stored
+report.
+
+
 Reporting only
 ~~~~~~~~~~~~~~
 
