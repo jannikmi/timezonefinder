@@ -2,12 +2,12 @@
 
 Every timing quoted in this file comes from one run of `prototypes/query_stage_profile.py`, whose `FINDINGS` block holds the full per-stage breakdown. Repeated here is only what the ranking needs: the denominators, and how to tell whether they still describe the tree.
 
-- **Taken at** `b9881b0`, 2026-08-30 (**this SHA is an operand, not a citation** — the freshness command below diffs against it, so GH-522's history rewrite invalidates it and the baseline has to be re-anchored and re-measured in the same pass) — Apple arm64, Python 3.14.2, data 2026c, fixture set v3, both acceleration backends, both coordinate-access modes. Re-measured wholesale when the latitude block index landed, which is the largest move the geometry stage has had; figures from before it are not comparable stage by stage. The previous anchor was `590e21b`, taken when the H3 shortcut index moved from resolution 3 to 4.
+- **Taken at** `e1c3e15`, 2026-08-30 (**this SHA is an operand, not a citation** — the freshness command below diffs against it, so GH-522's history rewrite invalidates it and the baseline has to be re-anchored and re-measured in the same pass) — Apple arm64, Python 3.14.2, data 2026c, fixture set v3, both acceleration backends, both coordinate-access modes. Re-measured wholesale when the latitude block index landed, which is the largest move the geometry stage has had; figures from before it are not comparable stage by stage. The previous anchor was `590e21b`, taken when the H3 shortcut index moved from resolution 3 to 4.
 - **The denominators.** A unique-shortcut query is ~1.0 µs and contains no geometry at all; an ambiguous one is ~6.2-6.8 µs on the default mapped mode and ~5.5-5.9 µs with `in_memory=True`. The two backends differ by under 10 % on both. Every share below is a share of one of these, and the entry says which — a share of an ambiguous query is not a share of a workload. **An ambiguous query nearly halved when the latitude block index landed** (11.2-11.7 µs before), so any entry ranked on a share of one, taken before 2026-08-30, is now ranked on a denominator that no longer exists: re-read it against this line before acting on it.
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat b9881b0..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat e1c3e15..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
   ```
 
 Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an `__all__` list or a rename leaves them standing and is worth recording here so the next pass does not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the shortcut reader or the packaged data does not.
