@@ -72,22 +72,14 @@ MEMORY_MODES = [
 
 # The batch API is performance-sensitive in its own right: timing only N scalar
 # calls cannot catch a de-vectorised validation/scaling prologue or an extra
-# Python pass over the result. Use the default file-based mode and track both
-# public forms over the three strata CI uses to separate lookup costs.
+# Python pass over the result. Use the default file-based mode and report both
+# public forms over the three strata used to separate lookup costs. These stay
+# out of benchmark_core until the default-branch comparator can accept new IDs
+# and a workflow-dispatch study has calibrated the expanded set's noise.
 BATCH_CASES = [
-    pytest.param(
-        "random_points", id="random-file_based", marks=pytest.mark.benchmark_core
-    ),
-    pytest.param(
-        "unique_shortcut_points",
-        id="unique_shortcut-file_based",
-        marks=pytest.mark.benchmark_core,
-    ),
-    pytest.param(
-        "ambiguous_shortcut_points",
-        id="ambiguous_shortcut-file_based",
-        marks=pytest.mark.benchmark_core,
-    ),
+    pytest.param("random_points", id="random-file_based"),
+    pytest.param("unique_shortcut_points", id="unique_shortcut-file_based"),
+    pytest.param("ambiguous_shortcut_points", id="ambiguous_shortcut-file_based"),
 ]
 
 
