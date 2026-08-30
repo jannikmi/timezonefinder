@@ -20,6 +20,9 @@ The lookup returns an IANA timezone name, which is exactly what ``zoneinfo`` tak
     tz_name = tf.timezone_at(lng=13.41, lat=52.52)  # 'Europe/Berlin'
     aware = datetime.now(tz=ZoneInfo(tz_name))
 
+Windows does not ship a system timezone database, so install ``tzdata`` there
+(``pip install tzdata``) before resolving IANA names with ``zoneinfo``.
+
 ``examples/aware_datetime.py`` shows the same thing with ``pytz``, including the difference between
 attaching a timezone and localising a naive datetime.
 

@@ -20,7 +20,11 @@ from tests.test_flatbuf_format_guard import build_collection
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
-from timezonefinder.utils import get_boundaries_dir
+from timezonefinder.utils import (
+    get_boundaries_dir,
+    get_hole_registry_path,
+    get_holes_dir,
+)
 
 # Echoes a marker on each stream, then fails. The markers are split across implicitly
 # concatenated literals so that neither appears verbatim in the snippet itself:
@@ -100,6 +104,26 @@ def test_report_generation_names_the_incompatible_file(tmp_path):
         load_binary_data(data_dir)
 
     assert str(stale_file) in str(exc_info.value)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("missing_file", ["registry", "coordinates"])
+def test_report_generation_names_a_missing_hole_file(tmp_path, missing_file):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    _mirror_data_dir(DEFAULT_DATA_DIR, data_dir)
+
+    hole_files = {
+        "registry": get_hole_registry_path(data_dir),
+        "coordinates": get_coordinate_path(get_holes_dir(data_dir)),
+    }
+    missing_path = hole_files[missing_file]
+    missing_path.unlink()
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        load_binary_data(data_dir)
+
+    assert str(missing_path) in str(exc_info.value)
 
 
 @pytest.mark.unit
