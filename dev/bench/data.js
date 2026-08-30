@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788051485984,
+  "lastUpdate": 1788083681432,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2925,6 +2925,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00033682876251586974",
             "extra": "mean: 42.51450499999976 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "323ae2f602a74dd18200b5eebb7b047b2850f730",
+          "message": "Batch small maintenance improvements and codify improvement batching (#564)\n\n* DOC-3 TOOL-7 BIG-4: ship small maintenance fixes\n\n* Retire DOC-3 TOOL-7 and BIG-4 from the improvement queue\n\n* Batch small items in improvement passes\n\n* Handle malformed wheel names as undetermined\n\n* Keep improvement skill adapters thin",
+          "timestamp": "2026-08-30T11:53:55+02:00",
+          "tree_id": "8dcb659c05cb6e769fc6c790d1cb3dec41153883",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/323ae2f602a74dd18200b5eebb7b047b2850f730"
+        },
+        "date": 1788083680067,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 208.69258893005173,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012092164973954444",
+            "extra": "mean: 4.791736999990803 msec\nrounds: 146 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 409.5327763420016,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000365155598296211",
+            "extra": "mean: 2.441806999996743 msec\nrounds: 337 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 44.355583454231656,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008360323196569935",
+            "extra": "mean: 22.54507600000011 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
           }
         ]
       }
