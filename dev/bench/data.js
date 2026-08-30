@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788044996611,
+  "lastUpdate": 1788051483720,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -2880,6 +2880,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0003018697496727884",
             "extra": "mean: 52.509330999981785 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9afb89b73346176f7c2da10870fcba2c10fbc3b",
+          "message": "Replace GH-449 with FMT-1 and FMT-2, backed by a block-encoding prototype (#562)\n\n* Add the polygon block-encoding prototype behind FMT-1 and FMT-2\n\nMeasures the long tail of `timezone_at` and prices a blocked polygon\nlayout against issue #449's delta+varint proposal.\n\nThe tail is real and structural: on_land runs p50 1.00 us against p99\n39.71 us, and query time correlates 0.92 with vertices tested but only\n0.76 with candidate count - it is one ray cast across a huge ring, not\nmany candidates. Both #449 encodings decode sequentially, so each would\nput an O(N) serial pass in front of exactly that test.\n\nBlocks carrying their own latitude range instead let the ray skip whole\nblocks, exactly rather than approximately: 70,992,626 edge tests become\n1,398,797 plus 557,074 block tests over the real fixture pairs. A\nper-block coordinate frame then reaches 32,696,514 B against varint's\n29,043,454 B and today's 63,402,504 B, with no serial decode. The varint\nfigures reproduce the issue's to the byte, which is what validates the\npricing.\n\nThe correctness gate encodes 410 polygons and replays 1,463 real query\npairs against the shipped kernel: 0 round-trip failures, 0 disagreements.\nWhat it does not establish is wall clock, and it measures why - a\nnumpy-level block filter costs 2.73 us of dispatch per query.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Replace GH-449 with FMT-1 and FMT-2, and correct GH-542's stale gate\n\nGH-449's two candidate encodings are refused on measurement: both decode\nsequentially, in front of the ray cast that is already this package's\nworst latency. The size goal survives, so the entry is withdrawn and\nsuperseded rather than rejected, and the refusal is recorded in the\ngeometry decisions so a size table cannot re-propose it.\n\nWhat replaces it is split, because the two halves are separable and only\none needs the held release window:\n\n  FMT-1  a latitude block index over today's int32 payload. Additive,\n         carries the whole query win (~36x less geometry work), +0.50 MB.\n  FMT-2  a frame-of-reference payload on FMT-1's blocks. Pure size,\n         63,402,504 -> 32,696,514 B.\n\nPer the maintainer, FMT-1 alone rides the format-2 window and 2.x\npublishes once it lands; FMT-2 therefore takes a format 3 deliberately,\nand should share it with GH-513. FMT-1's scope includes measuring and\npublishing the per-query latency distribution - the tracked suite times a\n2,500-point batch as one round, so a tail win is invisible to it.\n\nGH-542's blocking and gating claims were stale from 2026-08-24, when its\nown source-precision finding answered the encoding half. It gates nothing;\nthe ranking, sequencing graph and batching decisions now say so.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Measure the ring start index, and refuse choosing it\n\nBlocks partition a ring from its first vertex, so the stored start index\nlooks like a free parameter - and starting each polygon at its\nminimum-latitude vertex is the natural guess. Measured over the real\nquery pairs it is 1.026x *worse* than the shipped order.\n\nThe mechanism is the seam: a block's stored range includes its bridging\nvertex, and the last block's bridge wraps to vertex 0, so putting a\nlatitude extreme there stretches exactly that block. It survives 840 of\n4,827 tests in shipped order against 1,367 rotated to min-latitude, which\nmore than accounts for the whole regression.\n\nThe lever is small either way - the entire rotation space spans ~5.7 %\nagainst the 36x the index itself buys, and only offsets within one block\nare distinct since rotating by a whole block relabels blocks without\nrepartitioning them. The per-polygon optimum (0.942x) needs a stored\noffset per polygon plus a build-time search.\n\nRecorded so it is not re-proposed. Note what is not the objection:\ncanonical_ring_key rotates only to build a comparison key and never\nrewrites a stored ring, so hole deduplication is rotation-invariant by\nconstruction and would survive any rotation.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Price the block skip on a whole query: FMT-1's wall-clock risk is retired\n\nThe 36x was a work count. This measures it, with the filter inside an\nnjit kernel and the index built in memory, A/B'd on a real timezone_at\nrather than on the point-in-polygon stage alone - paired, order-\nalternated, random visit order, 41 rounds x 2,000 points:\n\n  random    1.81 -> 1.38 us/query  (-24 %)  41 of 41 rounds\n  on_land   3.54 -> 1.84 us/query  (-48 %)  41 of 41 rounds\n\nBoth estimators agree, which is the bar the methodology sets. The tail\nmoves further than the mean - on_land p99 37.3 -> 8.2 us, p99.9 81.3 ->\n25.1 - and the median is unchanged (1.08 -> 1.00), which was the specific\nrisk: a filter that charged dispatch to queries reading no geometry would\nhave paid for the tail out of the common path. It does not. Reproduced\nacross two runs.\n\nThe correctness gate ran before any clock and earned its place: HoleArray\nsubclasses PolygonArray, so patching the base method intercepts hole\ntests too, and a boundary-keyed index answered 6 of 5,000 points wrongly\n- rare enough to read as noise.\n\nStill unmeasured: the same kernel in the C extension, which is the\ntracked configuration. The two kernels sit within 5 % on identical\ninputs so the relative result should carry, but FMT-1 rebuilds and\nre-measures there rather than assuming it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Correct the rotation finding: a build-time sweep pays, and stores nothing\n\nTwo claims in the previous commit were wrong, both raised by the\nmaintainer.\n\nRotation needs no stored offset. The converter rotates the written ring\nand no reader can tell: canonical_ring_key is rotation-invariant, the\nbbox vectors are unaffected, and a hole kept as a reference follows its\nboundary automatically. Nothing downstream depends on where a ring\nbegins.\n\nAnd the build-time search is not a blocker - measured, sweeping all 128\noffsets over the whole collection takes ~2 s, once.\n\nWith those out of the way the question becomes what a *query-independent*\nobjective can find, since a builder cannot see queries. Minimising the\nsummed per-block latitude spans gives 0.961x the edges scanned, about two\nthirds of the 0.939x that fitting to the fixtures themselves would give -\nand that last third is not reachable, being fitted.\n\nThe original finding survives where it was actually measured: both\nintuitive rules lose. Min-latitude start is 1.026x and max-latitude\n1.010x, because the last block's bridging edge wraps to vertex 0 and an\nextreme there stretches exactly that block.\n\n~3.9 % of edges scanned is below the noise floor a benchmark could\ndemonstrate, so this is recorded as a nearly-free build step to take\nwhile the converter is open, never as a change justified on speed.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-30T02:57:13+02:00",
+          "tree_id": "d6e353e913cd1c2bc661a4941681680e000d413b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e9afb89b73346176f7c2da10870fcba2c10fbc3b"
+        },
+        "date": 1788051482674,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 121.76835907641343,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000278781084310101",
+            "extra": "mean: 8.212313999997889 msec\nrounds: 95 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 242.43270552935056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003924788771675899",
+            "extra": "mean: 4.124856000004229 msec\nrounds: 221 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 23.521384054689232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00033682876251586974",
+            "extra": "mean: 42.51450499999976 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
