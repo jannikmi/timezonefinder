@@ -2,9 +2,10 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — gates the held 2.x release and everything queued behind it |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | L | blocked by GH-542 only — rides the held format-2 window, ahead of DATA-BINARIES |
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — the 2.x release is held until GH-449 lands or is rejected |
+| [FMT-1](items/lookup-geometry-and-data-format/fmt-1-a-latitude-block-index-over-the-boundary-polygons.md) | A latitude block index over the boundary polygons | performance / data format | L | free — gates the held format-2 window, and with it the whole pending code release |
+| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — the 2.x release is held until FMT-1 lands or is rejected |
+| [FMT-2](items/lookup-geometry-and-data-format/fmt-2-a-frame-of-reference-payload-for-the-boundary-coordinates.md) | A frame-of-reference payload for the boundary coordinates | data format | L | blocked by FMT-1 — needs its block structure, and a format 3 |
+| [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — no longer gates anything; PR #555 in flight |
 | [DOC-3](items/documentation/doc-3-the-zoneinfo-snippets-never-say-that-windows-needs-tzdata.md) | The `zoneinfo` snippets never say Windows needs `tzdata` | docs | ~3 | free |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-the-pull-request-benchmark-comparison-cannot-resolve-the-changes-worth-reviewing.md) | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
@@ -49,5 +50,6 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 | [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | rejected — 2.90 % headroom, bounded by enumeration over the packaged index |
 | [PERF-4](items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md) | The mapped fetch re-acquires the mmap buffer per candidate | performance | rejected — measured inside the query, below the noise floor |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
+| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | withdrawn — superseded by FMT-1 and FMT-2; both candidate encodings decode sequentially, in front of the ray cast that is already the worst latency |
 
 ---
