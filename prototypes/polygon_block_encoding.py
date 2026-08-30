@@ -16,7 +16,6 @@ Six sections, in the order the argument runs:
 * ``verify`` - that a block-encoded point-in-polygon test is the *same function* as the
                shipped kernel, over the query pairs the committed fixtures produce
 * ``size``   - what each candidate encoding costs on disk, including the block index
-* ``rotate`` - whether the ring's stored start index is worth choosing
 * ``bench``  - whether the work count in ``skip`` becomes wall clock, on a whole query
 
 The point-in-polygon backend is bound at *import* time and numba wins whenever it is
@@ -109,38 +108,22 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     one at full precision. Median block width is 19 bits against today's fixed 32
     (p99 25); 29.7 % of polygons fit in a single B=128 block, median 3, max 1,508.
 
-6.  **Where a ring starts is worth choosing at build time - but not by any obvious
-    rule, and starting at the minimum latitude is actively worse.** Blocks partition a
-    ring from its first vertex, so the start index is free to choose: the converter
-    rotates the stored ring and no reader can tell, since nothing downstream depends on
-    where a ring begins (``canonical_ring_key`` is rotation-invariant, bboxes are
-    unaffected, and a hole stored as a reference follows its boundary automatically).
-    The sweep is bounded at [0, B), which finding 9 records as a heuristic rather than
-    the identity this line once claimed. Swept over the same real query pairs:
+6.  **Where a ring starts is worth choosing at build time, and this script's answer to
+    how has been superseded.** Blocks partition a ring from its first vertex, so the
+    start index is free to choose: the converter rotates the stored ring and no reader
+    can tell, since nothing downstream depends on where a ring begins
+    (``canonical_ring_key`` is rotation-invariant, bboxes are unaffected, and a hole
+    stored as a reference follows its boundary automatically). That much still holds and
+    is what the shipped converter does.
 
-        ring start                              edges scanned   vs shipped
-        shipped order                               1,398,797       1.000x
-        rotated to min-latitude vertex              1,435,765       1.026x
-        rotated to max-latitude vertex              1,413,315       1.010x
-        min span-sum, chosen at build time          1,344,272       0.961x
-        fitted to these queries (overfit)           1,313,667       0.939x
-        worst offset per polygon (floor)            1,504,632       1.076x
-
-    The build-time objective is query-independent: expected edges scanned for a latitude
-    drawn uniformly from a ring's range is ``B * sum(block span) / total span``, so
-    minimising the span sum minimises the scan without the builder seeing a query. It
-    recovers **3.9 %**, about two thirds of what fitting to the queries themselves would
-    give - and that last third is not reachable, since it is fitted to the fixtures.
-    Sweeping all 128 offsets costs **~2 s for the whole collection, once**.
-
-    The two intuitive rules both *lose*, and for the same reason: a block's range
-    includes its bridging vertex, and the last block's bridge wraps to vertex 0, so
-    putting a latitude extreme there stretches exactly that block. The seam block
-    survives 840 of 4,827 tests in shipped order and **1,367 rotated to min-latitude**.
-
-    Worth ~3.9 % of the edges scanned, which is a small fraction of a query and below
-    the noise floor a benchmark could demonstrate - so take it as a nearly-free build
-    step if the converter is being touched anyway, never as a change justified on speed.
+    The section that measured it is gone, because both halves of what it measured were
+    wrong: it summed per-block latitude spans *unweighted*, which counts a ragged block
+    holding one edge like a full block holding 128, and it swept only [0, B) offsets,
+    which misses the minimum whenever B does not divide the vertex count. Fixing the
+    weight is worth 0.984x of the edges scanned and fixing the search as well 0.941x -
+    while fixing the search *alone* is 1.001x, marginally worse, which is why the two had
+    to be found together. ``scripts/block_index.py`` owns the objective, the search and
+    the numbers now; the geometry decisions memory carries the refusal.
 
 7.  **The work count does become wall clock, and the tail moves further than the mean.**
     Finding 3 is a count; this is the whole-query A/B that prices it, with the filter
@@ -176,30 +159,6 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     that way put a free-threaded CPython against the pinned Homebrew one and showed a
     17 % "regression" on a stratum whose code path had not changed. Pass ``--python``
     explicitly, or compare inside one process.
-
-9.  **The ring-start sweep was wrong twice over, and only fixing both helped - corrected
-    2026-08-30 after review.** Section 5 above minimises the summed per-block latitude
-    span over offsets in [0, B). Two defects, sharing one cause - the final block is
-    ragged:
-
-    * **The objective mis-weighted it.** Expected edges scanned is
-      ``sum(size_b * span_b) / total_span``; summing spans unweighted counts a ragged
-      block holding one edge the same as a full block holding 128.
-    * **The search space was too small.** Rotating by a whole block only relabels the
-      blocks when B divides the vertex count; otherwise it moves the ragged block and
-      repartitions the ring. There are n distinct rotations, not B - and the bounded
-      sweep missed the minimum for **392 of the 602 rings** the fixtures reach.
-
-    Measured over edges actually scanned on the real query pairs, against this section's
-    bounded sweep over unweighted spans: weighting alone **0.984x**, weighting plus every
-    rotation **0.941x**, and - the instructive one - **fixing the search without fixing
-    the weight is 1.001x**, marginally *worse*. Widening a search against a wrong
-    objective finds a better answer to the wrong question. Searching every rotation costs
-    ~12 s for the whole collection against ~2 s, once, at build time.
-
-    The figures in section 5's table are therefore the *old* objective's and are kept as
-    the record of what was measured then; ``scripts/block_index.py`` carries what ships.
-
 
 What this does **not** establish: whether byte-aligned widths (+~8 MB, decode is a
 widening load) beat bit-packed ones for FMT-2's payload. Building the index up front also
@@ -636,112 +595,6 @@ def report_size() -> None:
 
 
 # --------------------------------------------------------------------------------------
-# 5. does where a ring starts change how well the index skips?
-# --------------------------------------------------------------------------------------
-
-
-def report_rotation() -> None:
-    """Blocks partition a ring from its first vertex, so the stored start index is a
-    free parameter. This sweeps offsets in [0, BLOCK_SIZE) only, which is a bounded
-    search and not an exhaustive one - rotating by a whole block relabels the blocks
-    only when BLOCK_SIZE divides the vertex count, and otherwise moves the ragged
-    final block as well. See finding 9.
-    """
-    print(f"\n=== 5. what the ring's start index is worth (B={BLOCK_SIZE}) ===\n")
-    calls = _recorded_pip_calls(TimezoneFinder(), N_POINTS)
-    boundaries = _boundaries()
-    rings: dict[int, np.ndarray] = {}
-    asked: dict[int, list[int]] = {}
-    for poly_id, _, y in calls:
-        if poly_id not in rings:
-            rings[poly_id] = np.asarray(
-                boundaries.coords_of(poly_id)[1], dtype=np.int64
-            )
-            asked[poly_id] = []
-        asked[poly_id].append(y)
-
-    def scanned(poly_id: int, start: int) -> int:
-        y = np.roll(rings[poly_id], -start)
-        lo, hi = latitude_ranges(y, BLOCK_SIZE)
-        q = np.array(asked[poly_id])
-        hits = ((lo[None, :] <= q[:, None]) & (hi[None, :] >= q[:, None])).sum(
-            1
-        ) * BLOCK_SIZE
-        return int(np.minimum(hits, len(y)).sum())
-
-    def span_sum(poly_id: int, start: int) -> int:
-        """The build-time objective: total latitude covered by the blocks.
-
-        Expected edges scanned for a latitude drawn uniformly from the ring's range is
-        ``B * sum(span) / total_span``, so minimising this minimises the scan without
-        the builder ever seeing a query. Choosing the rotation on the *queries* instead
-        fits the fixtures and cannot be reproduced at build time.
-        """
-        lo, hi = latitude_ranges(np.roll(rings[poly_id], -start), BLOCK_SIZE)
-        return int((hi - lo).sum())
-
-    shipped = sum(scanned(p, 0) for p in rings)
-    started = time.perf_counter()
-    by_span = {
-        p: min(range(BLOCK_SIZE), key=lambda r, p=p: span_sum(p, r)) for p in rings
-    }
-    search_seconds = time.perf_counter() - started
-
-    rows = (
-        ("shipped order", shipped),
-        (
-            "rotated to min-latitude vertex",
-            sum(scanned(p, int(rings[p].argmin())) for p in rings),
-        ),
-        (
-            "rotated to max-latitude vertex",
-            sum(scanned(p, int(rings[p].argmax())) for p in rings),
-        ),
-        (
-            "min span-sum, chosen at build time",
-            sum(scanned(p, by_span[p]) for p in rings),
-        ),
-        (
-            "fitted to these queries (overfit)",
-            sum(min(scanned(p, r) for r in range(BLOCK_SIZE)) for p in rings),
-        ),
-        (
-            "worst offset per polygon (floor)",
-            sum(max(scanned(p, r) for r in range(BLOCK_SIZE)) for p in rings),
-        ),
-    )
-    print(f"{'ring start':<38}{'edges scanned':>15}{'vs shipped':>12}")
-    for label, value in rows:
-        print(f"{label:<38}{value:>15,}{value / shipped:>11.3f}x")
-
-    swept_vertices = sum(len(r) for r in rings.values())
-    all_vertices = sum(boundaries.coords_of(i).shape[1] for i in range(len(boundaries)))
-    print(
-        f"\nsweeping all {BLOCK_SIZE} offsets took {search_seconds:.1f} s over the "
-        f"{len(rings)} polygons the fixtures reach ({swept_vertices:,} of "
-        f"{all_vertices:,} vertices) -> ~{search_seconds * all_vertices / swept_vertices:.0f} s "
-        f"for the whole collection, once, at build time"
-    )
-
-    # The mechanism: the last block's range includes the bridging vertex, which wraps
-    # to vertex 0, so a latitude extreme there stretches exactly that block.
-    def seam_survivals(start_of) -> int:
-        total = 0
-        for poly_id, ring in rings.items():
-            y = np.roll(ring, -start_of(poly_id))
-            lo, hi = latitude_ranges(y, BLOCK_SIZE)
-            q = np.array(asked[poly_id])
-            total += int(((lo[-1] <= q) & (hi[-1] >= q)).sum())
-        return total
-
-    print(
-        f"\nseam block (the one holding the wrap edge) survives "
-        f"{seam_survivals(lambda p: 0):,} of {len(calls):,} tests in shipped order, "
-        f"{seam_survivals(lambda p: int(rings[p].argmin())):,} rotated to min-latitude"
-    )
-
-
-# --------------------------------------------------------------------------------------
 # 6. does the work count become wall clock?
 # --------------------------------------------------------------------------------------
 
@@ -931,7 +784,6 @@ if __name__ == "__main__":
         "skip": report_skip,
         "verify": report_verify,
         "size": report_size,
-        "rotate": report_rotation,
         "bench": report_bench,
     }
     wanted = sys.argv[1:] or list(sections)
