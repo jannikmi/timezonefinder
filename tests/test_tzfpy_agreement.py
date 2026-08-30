@@ -23,7 +23,7 @@ import pytest
 from timezonefinder import TimezoneFinder
 from timezonefinder.utils import coord2int
 
-from scripts.border_sampling import Candidate
+from scripts.border_sampling import Candidate, CandidatePair
 from scripts.configs import DOC_ROOT, read_data_version
 from scripts.measure_tzfpy_agreement import (
     AGREE,
@@ -35,6 +35,7 @@ from scripts.measure_tzfpy_agreement import (
     ChartPoint,
     DistanceResult,
     Measurement,
+    PairedAgreementCounts,
     _require_matching_dataset,
     axis_bound,
     axis_ticks,
@@ -42,6 +43,7 @@ from scripts.measure_tzfpy_agreement import (
     chart_point,
     classify,
     count_agreement,
+    count_paired_agreement,
     escape_svg_text,
     format_distance,
     is_decade,
@@ -61,8 +63,18 @@ def _counts(total: int, substantive: int) -> AgreementCounts:
     return AgreementCounts(total=total, overlap_policy=0, substantive=substantive)
 
 
+def _paired_counts(total: int, affected: int) -> PairedAgreementCounts:
+    return PairedAgreementCounts(
+        total=total,
+        affected_one_side=affected,
+        affected_both_sides=0,
+        overlap_policy=0,
+        not_attributed=0,
+    )
+
+
 def _measurement(*rates: tuple[float, int, int]) -> Measurement:
-    """A synthetic sweep. Both groups hold 100 points, so a count is a percent."""
+    """A synthetic sweep. Both groups hold 100 sites, so a count is a percent."""
     return Measurement(
         data_version="2026c",
         tzfpy_version="1.3.3",
@@ -72,6 +84,9 @@ def _measurement(*rates: tuple[float, int, int]) -> Measurement:
                 drawn=2 * 100,
                 all_borders=_counts(100, every),
                 land_borders=_counts(100, land),
+                paired_drawn=2 * 100,
+                paired_all_borders=_paired_counts(100, every),
+                paired_land_borders=_paired_counts(100, land),
             )
             for distance, every, land in rates
         ),
@@ -153,6 +168,50 @@ def test_rates_are_percentages_and_an_empty_group_is_not_a_division_error() -> N
 
 
 @pytest.mark.unit
+def test_paired_count_reports_one_side_both_sides_and_unclaimed_separately() -> None:
+    def candidate(lng: float) -> Candidate:
+        return Candidate(lng=lng, lat=0.0, distance_m=1.0, rings_at_distance=(0,))
+
+    pairs = [
+        CandidatePair(candidate(1.0), candidate(2.0), (0,)),
+        CandidatePair(candidate(3.0), candidate(4.0), (0,)),
+        CandidatePair(candidate(5.0), candidate(6.0), (0,)),
+        CandidatePair(candidate(7.0), candidate(8.0), (0,)),
+    ]
+    ours = {lng: "A" for lng in range(1, 9)}
+    theirs_first = {
+        1: "B",
+        2: "A",
+        3: "B",
+        4: "B",
+        5: "B",
+        6: "A",
+        7: "B",
+        8: "A",
+    }
+    theirs_all = {
+        lng: (["A", "B"] if lng == 5 else [answer])
+        for lng, answer in theirs_first.items()
+    }
+
+    counts = count_paired_agreement(
+        pairs,
+        lambda lng, lat: ours[int(lng)],
+        lambda lng, lat: theirs_first[int(lng)],
+        lambda lng, lat: theirs_all[int(lng)],
+        lambda lng, lat: lng != 7.0,
+    )
+
+    assert counts.total == 4
+    assert counts.affected_one_side == 1
+    assert counts.affected_both_sides == 1
+    assert counts.affected == 2
+    assert counts.affected_rate == 50.0
+    assert counts.overlap_policy == 1
+    assert counts.not_attributed == 1
+
+
+@pytest.mark.unit
 def test_a_coastline_counts_as_a_land_zone_border() -> None:
     # a coastline is stored twice, in the land polygon and in the ocean polygon
     # around it, so one of the rings at the point is a land one
@@ -202,29 +261,31 @@ def test_nothing_observed_is_an_upper_bound_and_never_a_zero() -> None:
     # rate is under about 3/n - and plotting the zero is what would let a reader
     # conclude the curve reaches the axis
     assert AgreementCounts(total=20_000, overlap_policy=0, substantive=0).rate(0) == 0.0
-    assert chart_point(
-        AgreementCounts(total=20_000, overlap_policy=0, substantive=0)
-    ) == ChartPoint(percent=0.015, is_upper_bound=True)
-    assert chart_point(
-        AgreementCounts(total=20_000, overlap_policy=0, substantive=3)
-    ) == ChartPoint(percent=0.015, is_upper_bound=False)
+    assert chart_point(_paired_counts(total=20_000, affected=0)) == ChartPoint(
+        percent=0.015, is_upper_bound=True
+    )
+    assert chart_point(_paired_counts(total=20_000, affected=3)) == ChartPoint(
+        percent=0.015, is_upper_bound=False
+    )
 
 
 @pytest.mark.unit
 def test_an_upper_bound_says_so_in_its_label() -> None:
     assert ChartPoint(0.015, is_upper_bound=True).label == "<0.015%"
     assert ChartPoint(26.2, is_upper_bound=False).label == "26.2%"
+    assert ChartPoint(36.0, is_upper_bound=False).label == "36.0%"
+    assert ChartPoint(0.2, is_upper_bound=False).label == "0.20%"
 
 
 @pytest.mark.unit
-def test_the_chart_states_every_measured_rate() -> None:
+def test_the_chart_states_every_decade_rate() -> None:
     svg = render_chart(_measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0)))
     assert svg.startswith("<svg ") and svg.rstrip().endswith("</svg>")
-    for label in ("26%", "34%", "17%", "22%", "1 m", "10 m", "1 km"):
+    for label in ("26.0%", "34.0%", "17.0%", "22.0%", "1 m", "10 m", "1 km"):
         assert label in svg, f"the chart does not state {label}"
     # the zero group is plotted as a bound, and the "<" has to survive as
     # markup or the whole file is a parse error rather than a chart
-    assert "&lt;3%" in svg
+    assert "&lt;3.0%" in svg
 
 
 @pytest.mark.unit
@@ -234,7 +295,47 @@ def test_only_the_final_decade_labels_an_unobserved_tail() -> None:
 
     # One label per series remains at the final decade (1 km); the previous
     # renderer also labelled the non-decade 500 m marker, making four copies.
-    assert svg.count("&lt;3%") == 2
+    assert svg.count("&lt;3.0%") == 2
+
+
+@pytest.mark.unit
+def test_land_decade_labels_move_down_and_the_100_m_label_moves_right() -> None:
+    measurement = _measurement((1.0, 26, 34), (100.0, 17, 22), (1000.0, 0, 0))
+    root = ElementTree.fromstring(render_chart(measurement))
+    nodes = list(root)
+
+    land_1_m_label = next(node for node in nodes if node.text == "34.0%")
+    land_100_m_label = next(node for node in nodes if node.text == "22.0%")
+    land_1_km_label = next(
+        node
+        for node in nodes
+        if node.text == "<3.0%" and node.attrib.get("fill") == "#c2570f"
+    )
+    land_markers = [
+        node
+        for node in nodes
+        if node.tag.endswith("circle")
+        and (
+            node.attrib.get("fill") == "#c2570f"
+            or node.attrib.get("stroke") == "#c2570f"
+        )
+    ]
+
+    # The orange labels at observed decades sit 10 px above their marker
+    # instead of 16 px; at 100 m that label is also shifted 20 px right.
+    assert float(land_1_m_label.attrib["y"]) == pytest.approx(
+        float(land_markers[0].attrib["cy"]) - 10.0
+    )
+    assert float(land_100_m_label.attrib["x"]) == pytest.approx(
+        float(land_markers[1].attrib["cx"]) + 20.0
+    )
+    assert float(land_100_m_label.attrib["y"]) == pytest.approx(
+        float(land_markers[1].attrib["cy"]) - 10.0
+    )
+    # The final upper-bound label retains the original 16 px offset.
+    assert float(land_1_km_label.attrib["y"]) == pytest.approx(
+        float(land_markers[2].attrib["cy"]) - 16.0
+    )
 
 
 @pytest.mark.unit
@@ -307,7 +408,17 @@ def test_a_saved_run_keeps_what_the_measurement_cannot_attribute() -> None:
     measurement = Measurement(
         "2026c",
         "1.3.3",
-        (DistanceResult(1000.0, 50_000, counts, counts),),
+        (
+            DistanceResult(
+                1000.0,
+                50_000,
+                counts,
+                counts,
+                40_000,
+                _paired_counts(20_000, 3),
+                _paired_counts(15_000, 2),
+            ),
+        ),
         {},
     )
     assert Measurement.from_json(measurement.as_json()) == measurement
@@ -361,8 +472,8 @@ def test_the_gridlines_step_through_ones_and_fives() -> None:
 def test_only_the_decade_distances_carry_a_printed_value(
     distance_m: float, expected: bool
 ) -> None:
-    # eleven distances times two series is twenty-two labels over the curve;
-    # the page prints the full table, so the chart names the decades only
+    # The log axis needs exact values at each decade, but the half-decades stay
+    # unlabelled so 500 m does not duplicate the final 1 km annotation.
     assert is_decade(distance_m) is expected
 
 

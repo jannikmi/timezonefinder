@@ -204,6 +204,33 @@ def test_every_drawn_point_is_at_the_distance_it_was_asked_for(
 
 
 @pytest.mark.unit
+def test_a_paired_sample_verifies_both_sides_of_one_border_site(
+    square: BorderGeometry,
+) -> None:
+    rng = np.random.default_rng(7)
+    accepted, drawn = square.sample_pairs(rng, 100.0, 200)
+
+    assert drawn >= len(accepted) == 200
+    for pair in accepted:
+        assert pair.rings_at_distance == (0,)
+        assert pair.multiplicity == 1
+        assert pair.positive.distance_m == pytest.approx(100.0, rel=DISTANCE_TOLERANCE)
+        assert pair.negative.distance_m == pytest.approx(100.0, rel=DISTANCE_TOLERANCE)
+
+
+@pytest.mark.unit
+def test_a_paired_sample_rejects_a_site_shadowed_on_either_side(
+    square: BorderGeometry,
+) -> None:
+    # A 10 km inward probe crosses this ~2.2 km square. Pair acceptance requires
+    # both probes to remain exactly 10 km from their sampled edge, so no such
+    # site can be accepted as a valid pair.
+    rng = np.random.default_rng(8)
+    source_ring, positive, negative = square.draw_pair(rng, 10_000.0)
+    assert square.verify_pair(source_ring, positive, negative, 10_000.0) is None
+
+
+@pytest.mark.unit
 def test_the_arcs_at_the_corners_are_sampled_too(square: BorderGeometry) -> None:
     # a point diagonally out from a corner can only come from that corner's
     # arc; an edge-only sampler produces none of them, which is the bias this

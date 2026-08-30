@@ -238,6 +238,23 @@
         "overlap_policy": 51,
         "substantive": 7152,
         "total": 15223
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 559,
+          "affected_one_side": 13803,
+          "not_attributed": 19,
+          "overlap_policy": 94,
+          "total": 20000
+        },
+        "drawn": 38250,
+        "land_borders": {
+          "affected_both_sides": 557,
+          "affected_one_side": 13058,
+          "not_attributed": 14,
+          "overlap_policy": 92,
+          "total": 15203
+        }
       }
     },
     {
@@ -308,6 +325,23 @@
         "overlap_policy": 63,
         "substantive": 6799,
         "total": 15050
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 9,
+          "affected_one_side": 13808,
+          "not_attributed": 0,
+          "overlap_policy": 78,
+          "total": 20000
+        },
+        "drawn": 38820,
+        "land_borders": {
+          "affected_both_sides": 9,
+          "affected_one_side": 13802,
+          "not_attributed": 0,
+          "overlap_policy": 78,
+          "total": 15262
+        }
       }
     },
     {
@@ -378,6 +412,23 @@
         "overlap_policy": 65,
         "substantive": 6540,
         "total": 15065
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 7,
+          "affected_one_side": 13374,
+          "not_attributed": 0,
+          "overlap_policy": 73,
+          "total": 20000
+        },
+        "drawn": 38865,
+        "land_borders": {
+          "affected_both_sides": 7,
+          "affected_one_side": 13367,
+          "not_attributed": 0,
+          "overlap_policy": 73,
+          "total": 15254
+        }
       }
     },
     {
@@ -448,6 +499,23 @@
         "overlap_policy": 86,
         "substantive": 5373,
         "total": 15241
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 5,
+          "affected_one_side": 10874,
+          "not_attributed": 0,
+          "overlap_policy": 160,
+          "total": 20000
+        },
+        "drawn": 38539,
+        "land_borders": {
+          "affected_both_sides": 5,
+          "affected_one_side": 10867,
+          "not_attributed": 0,
+          "overlap_policy": 160,
+          "total": 15235
+        }
       }
     },
     {
@@ -518,6 +586,23 @@
         "overlap_policy": 93,
         "substantive": 5034,
         "total": 15132
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 3,
+          "affected_one_side": 10151,
+          "not_attributed": 0,
+          "overlap_policy": 157,
+          "total": 20000
+        },
+        "drawn": 38645,
+        "land_borders": {
+          "affected_both_sides": 3,
+          "affected_one_side": 10146,
+          "not_attributed": 0,
+          "overlap_policy": 157,
+          "total": 15130
+        }
       }
     },
     {
@@ -588,6 +673,23 @@
         "overlap_policy": 77,
         "substantive": 4249,
         "total": 15087
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 2,
+          "affected_one_side": 8593,
+          "not_attributed": 0,
+          "overlap_policy": 168,
+          "total": 20000
+        },
+        "drawn": 38636,
+        "land_borders": {
+          "affected_both_sides": 2,
+          "affected_one_side": 8587,
+          "not_attributed": 0,
+          "overlap_policy": 168,
+          "total": 15279
+        }
       }
     },
     {
@@ -658,6 +760,23 @@
         "overlap_policy": 77,
         "substantive": 3508,
         "total": 15251
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 7209,
+          "not_attributed": 0,
+          "overlap_policy": 170,
+          "total": 20000
+        },
+        "drawn": 38795,
+        "land_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 7204,
+          "not_attributed": 0,
+          "overlap_policy": 170,
+          "total": 15176
+        }
       }
     },
     {
@@ -728,6 +847,23 @@
         "overlap_policy": 99,
         "substantive": 867,
         "total": 15142
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 1726,
+          "not_attributed": 0,
+          "overlap_policy": 158,
+          "total": 20000
+        },
+        "drawn": 39658,
+        "land_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 1724,
+          "not_attributed": 0,
+          "overlap_policy": 158,
+          "total": 14907
+        }
       }
     },
     {
@@ -1122,6 +1258,23 @@
         "overlap_policy": 88,
         "substantive": 23,
         "total": 15175
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 40,
+          "not_attributed": 0,
+          "overlap_policy": 165,
+          "total": 20000
+        },
+        "drawn": 40658,
+        "land_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 40,
+          "not_attributed": 0,
+          "overlap_policy": 165,
+          "total": 14926
+        }
       }
     },
     {
@@ -1142,6 +1295,23 @@
         "overlap_policy": 101,
         "substantive": 0,
         "total": 15169
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 0,
+          "not_attributed": 0,
+          "overlap_policy": 125,
+          "total": 20000
+        },
+        "drawn": 45004,
+        "land_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 0,
+          "not_attributed": 0,
+          "overlap_policy": 125,
+          "total": 14476
+        }
       }
     },
     {
@@ -1162,6 +1332,23 @@
         "overlap_policy": 89,
         "substantive": 0,
         "total": 15151
+      },
+      "paired_border_locations": {
+        "all_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 0,
+          "not_attributed": 0,
+          "overlap_policy": 86,
+          "total": 20000
+        },
+        "drawn": 47359,
+        "land_borders": {
+          "affected_both_sides": 0,
+          "affected_one_side": 0,
+          "not_attributed": 0,
+          "overlap_policy": 86,
+          "total": 14111
+        }
       }
     }
   ],

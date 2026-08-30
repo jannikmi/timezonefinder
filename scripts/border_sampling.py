@@ -136,6 +136,19 @@ class Candidate(NamedTuple):
         return len(self.rings_at_distance)
 
 
+class CandidatePair(NamedTuple):
+    """Two verified probes on opposite sides of one sampled border site."""
+
+    positive: Candidate
+    negative: Candidate
+    rings_at_distance: tuple[int, ...]
+
+    @property
+    def multiplicity(self) -> int:
+        """How many stored rings describe the sampled physical border."""
+        return len(self.rings_at_distance)
+
+
 # scalar for one ring, array for all of them at once - the formula is the same
 # and the sampler needs both, so it is written once and applied elementwise
 Measure = TypeVar("Measure", float, np.ndarray)
@@ -197,6 +210,35 @@ class BorderGeometry:
         else:
             base_lng, base_lat, bearing = self._draw_on_arc(rng, ring)
 
+        return self._offset(base_lng, base_lat, bearing, distance_m)
+
+    def draw_pair(
+        self, rng: np.random.Generator, distance_m: float
+    ) -> tuple[int, tuple[float, float], tuple[float, float]]:
+        """One border site and probes ``distance_m`` along both edge normals.
+
+        This population is deliberately different from :meth:`draw`. A paired
+        question is about uniformly sampled *border locations*, so rings and
+        edges are weighted only by border length. Vertex arcs belong to the
+        offset-locus point population; a vertex itself has zero border length
+        and no unique opposite normal to pair with it.
+        """
+        ring_id = int(
+            rng.choice(self.ring_count, p=self.edge_length / self.edge_length.sum())
+        )
+        ring = self.ring(ring_id)
+        base_lng, base_lat, heading = self._draw_edge_site(rng, ring)
+        normal = heading + math.pi / 2.0
+        return (
+            ring_id,
+            self._offset(base_lng, base_lat, normal, distance_m),
+            self._offset(base_lng, base_lat, normal + math.pi, distance_m),
+        )
+
+    @staticmethod
+    def _offset(
+        base_lng: float, base_lat: float, bearing: float, distance_m: float
+    ) -> tuple[float, float]:
         cos_lat = max(math.cos(math.radians(base_lat)), MIN_COS_LATITUDE)
         return (
             base_lng
@@ -209,14 +251,22 @@ class BorderGeometry:
         rng: np.random.Generator, ring: Ring
     ) -> tuple[float, float, float]:
         """A point along an edge, and the normal pointing to one of its sides."""
+        base_lng, base_lat, heading = BorderGeometry._draw_edge_site(rng, ring)
+        side = 1.0 if rng.random() < 0.5 else -1.0
+        return base_lng, base_lat, heading + side * math.pi / 2.0
+
+    @staticmethod
+    def _draw_edge_site(
+        rng: np.random.Generator, ring: Ring
+    ) -> tuple[float, float, float]:
+        """A border location drawn uniformly by edge length and its heading."""
         edge = int(rng.choice(len(ring.length), p=ring.length / ring.length.sum()))
         along = rng.random()
         following = (edge + 1) % len(ring.length)
-        side = 1.0 if rng.random() < 0.5 else -1.0
         return (
             float(ring.lng[edge] + along * (ring.lng[following] - ring.lng[edge])),
             float(ring.lat[edge] + along * (ring.lat[following] - ring.lat[edge])),
-            float(ring.heading[edge] + side * math.pi / 2.0),
+            float(ring.heading[edge]),
         )
 
     @staticmethod
@@ -365,6 +415,53 @@ class BorderGeometry:
                 continue
             # a border described by several rings would otherwise be drawn once
             # per ring; keep one draw in `multiplicity` of them
+            if rng.random() * candidate.multiplicity >= 1.0:
+                continue
+            accepted.append(candidate)
+        return accepted, drawn
+
+    def verify_pair(
+        self,
+        source_ring: int,
+        positive: tuple[float, float],
+        negative: tuple[float, float],
+        distance_m: float,
+    ) -> CandidatePair | None:
+        """Verify both sides and identify the rings describing their border."""
+        positive_candidate = self.verify(*positive, distance_m)
+        negative_candidate = self.verify(*negative, distance_m)
+        if positive_candidate is None or negative_candidate is None:
+            return None
+
+        negative_rings = set(negative_candidate.rings_at_distance)
+        shared_rings = tuple(
+            ring_id
+            for ring_id in positive_candidate.rings_at_distance
+            if ring_id in negative_rings
+        )
+        # The sampled source ring must remain the nearest border to both probes.
+        # Otherwise the pair belongs to a different or shadowing border and no
+        # longer answers the question asked at the sampled site.
+        if source_ring not in shared_rings:
+            return None
+        return CandidatePair(
+            positive=positive_candidate,
+            negative=negative_candidate,
+            rings_at_distance=shared_rings,
+        )
+
+    def sample_pairs(
+        self, rng: np.random.Generator, distance_m: float, count: int
+    ) -> tuple[list[CandidatePair], int]:
+        """``count`` verified two-sided border locations and raw draw count."""
+        accepted: list[CandidatePair] = []
+        drawn = 0
+        while len(accepted) < count:
+            drawn += 1
+            candidate = self.verify_pair(*self.draw_pair(rng, distance_m), distance_m)
+            if candidate is None:
+                continue
+            # The same physical border is stored once in each adjacent zone.
             if rng.random() * candidate.multiplicity >= 1.0:
                 continue
             accepted.append(candidate)

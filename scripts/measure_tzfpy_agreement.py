@@ -29,23 +29,21 @@ goes wrong - is :mod:`scripts.border_sampling`.
 Reading the curve
 -----------------
 
-The number is what it says: of points exactly this far from a border, the share
-that get a different zone from the two packages. It levels off just under half
-rather than at 100 %, because the points sit on both sides of this package's
-border and only the side the other package's boundary has moved away from can
-disagree.
+The primary number is paired by border location: draw one site uniformly by
+border length, verify probes exactly this far away on both sides, and ask
+whether either probe gets a different zone from the two packages. Its ceiling
+is therefore 100 %: every sampled border location can be affected even when a
+boundary displacement changes answers on only one of its two sides. The
+individual-point rate is retained in the machine-readable run and report as a
+secondary probability over the full two-sided offset locus.
 
 ``tzfpy``'s maintainer gives that boundary's maximum *displacement* as roughly
-111 m. The far end of the sweep is not there to confirm it but to show what it
-does not cover: a displacement bound governs how far a boundary that survives
-simplification may move, and says nothing about features the simplification
-removes or merges outright. Those keep the curve above zero a full kilometre
-from any border, which is the reason for both the sample size and the log axis
-below.
+111 m. The sweep therefore continues to 1 km rather than assuming the bound;
+the committed run finds no attributable disagreement beyond 100 m and reports
+the empty groups as statistical upper bounds rather than as proof of zero.
 
-The overlapping-zone rate in the last column is near-flat across distances by
-construction - it is about zone naming, not geometry - and is a useful check
-that the sweep is working.
+The secondary report keeps the overlapping-zone rate separate. It is about
+zone naming rather than geometry and is a useful check that the sweep works.
 
 Two things make the numbers attributable, and without either they would not be
 -----------------------------------------------------------------------------
@@ -82,7 +80,7 @@ from typing import Callable, Iterable, NamedTuple, Sequence
 import numpy as np
 
 from scripts.benchmark_utils import TZFPY_DISTRIBUTION, tzfpy_version
-from scripts.border_sampling import BorderGeometry, Candidate
+from scripts.border_sampling import BorderGeometry, Candidate, CandidatePair
 from scripts.utils import write_json
 from scripts.configs import DOC_ROOT, read_data_version
 from tests.auxiliaries import (
@@ -125,6 +123,11 @@ DEFAULT_DISTANCES_M: tuple[float, ...] = (
 # without measuring again.
 DEFAULT_POINTS = 20_000
 
+# Border locations for the primary paired metric. Each accepted location costs
+# two verified probes, one on either side. Kept equal to the point count so the
+# paired rate has the same rule-of-three upper bound when no difference appears.
+DEFAULT_PAIRS = 20_000
+
 # Fixed so that two runs are comparable; there is nothing to tune here, and a
 # wandering sample would be mistaken for a `tzfpy` release.
 DEFAULT_SEED = 20260824
@@ -143,6 +146,7 @@ POINT_CLASSES: tuple[str, ...] = (
 AGREE = "agree"
 OVERLAP_POLICY = "overlap_policy"
 SUBSTANTIVE = "substantive"
+NOT_ATTRIBUTED = "not_attributed"
 
 
 # How many substantive disagreements to keep per group. A bare count is
@@ -227,6 +231,31 @@ class AgreementCounts(NamedTuple):
         return 300.0 / self.total if self.total else 0.0
 
 
+class PairedAgreementCounts(NamedTuple):
+    """Outcomes for verified probes on both sides of sampled border sites."""
+
+    total: int
+    affected_one_side: int
+    affected_both_sides: int
+    overlap_policy: int
+    not_attributed: int
+
+    @property
+    def affected(self) -> int:
+        return self.affected_one_side + self.affected_both_sides
+
+    def rate(self, count: int) -> float:
+        return 100.0 * count / self.total if self.total else 0.0
+
+    @property
+    def affected_rate(self) -> float:
+        return self.rate(self.affected)
+
+    @property
+    def upper_bound_rate(self) -> float:
+        return 300.0 / self.total if self.total else 0.0
+
+
 class DistanceResult(NamedTuple):
     """One column of the sweep."""
 
@@ -234,10 +263,21 @@ class DistanceResult(NamedTuple):
     drawn: int
     all_borders: AgreementCounts
     land_borders: AgreementCounts
+    paired_drawn: int
+    paired_all_borders: PairedAgreementCounts
+    paired_land_borders: PairedAgreementCounts
 
     @property
     def acceptance_rate(self) -> float:
         return 100.0 * self.all_borders.total / self.drawn if self.drawn else 0.0
+
+    @property
+    def paired_acceptance_rate(self) -> float:
+        return (
+            100.0 * self.paired_all_borders.total / self.paired_drawn
+            if self.paired_drawn
+            else 0.0
+        )
 
 
 def classify(
@@ -326,7 +366,54 @@ def count_agreement(
     )
 
 
-def borders_a_land_zone(candidate: Candidate, ocean_ring: np.ndarray) -> bool:
+def count_paired_agreement(
+    pairs: Iterable[CandidatePair],
+    ours: Callable[[float, float], str | None],
+    theirs_first: Callable[[float, float], str | None],
+    theirs_all: Callable[[float, float], Sequence[str]],
+    ours_is_attributable: Callable[[float, float], bool],
+) -> PairedAgreementCounts:
+    """Count border locations affected on neither, one, or both sides."""
+
+    def verdict(candidate: Candidate) -> str:
+        their_zones = tuple(theirs_all(candidate.lng, candidate.lat))
+        relation = classify(
+            ours(candidate.lng, candidate.lat),
+            theirs_first(candidate.lng, candidate.lat),
+            their_zones,
+        )
+        if relation == SUBSTANTIVE and not ours_is_attributable(
+            candidate.lng, candidate.lat
+        ):
+            return NOT_ATTRIBUTED
+        return relation
+
+    total = one_side = both_sides = overlap = not_attributed = 0
+    for pair in pairs:
+        total += 1
+        relations = (verdict(pair.positive), verdict(pair.negative))
+        attributable_sides = relations.count(SUBSTANTIVE)
+        if attributable_sides == 2:
+            both_sides += 1
+        elif attributable_sides == 1:
+            one_side += 1
+        elif NOT_ATTRIBUTED in relations:
+            not_attributed += 1
+        elif OVERLAP_POLICY in relations:
+            overlap += 1
+
+    return PairedAgreementCounts(
+        total=total,
+        affected_one_side=one_side,
+        affected_both_sides=both_sides,
+        overlap_policy=overlap,
+        not_attributed=not_attributed,
+    )
+
+
+def borders_a_land_zone(
+    candidate: Candidate | CandidatePair, ocean_ring: np.ndarray
+) -> bool:
     """Whether the border this point sits by belongs to a real timezone.
 
     The ocean zones are lunes of longitude and the border between two of them
@@ -360,6 +447,11 @@ class Measurement(NamedTuple):
                     "drawn": result.drawn,
                     "all_borders": result.all_borders._asdict(),
                     "land_borders": result.land_borders._asdict(),
+                    "paired_border_locations": {
+                        "drawn": result.paired_drawn,
+                        "all_borders": result.paired_all_borders._asdict(),
+                        "land_borders": result.paired_land_borders._asdict(),
+                    },
                 }
                 for result in self.by_distance
             ],
@@ -386,6 +478,13 @@ class Measurement(NamedTuple):
                     drawn=result["drawn"],
                     all_borders=_counts_from_json(result["all_borders"]),
                     land_borders=_counts_from_json(result["land_borders"]),
+                    paired_drawn=result["paired_border_locations"]["drawn"],
+                    paired_all_borders=_paired_counts_from_json(
+                        result["paired_border_locations"]["all_borders"]
+                    ),
+                    paired_land_borders=_paired_counts_from_json(
+                        result["paired_border_locations"]["land_borders"]
+                    ),
                 )
                 for result in payload["by_distance_m"]
             ),
@@ -413,6 +512,16 @@ def _counts_from_json(payload: dict) -> AgreementCounts:
     )
 
 
+def _paired_counts_from_json(payload: dict) -> PairedAgreementCounts:
+    return PairedAgreementCounts(
+        total=payload["total"],
+        affected_one_side=payload["affected_one_side"],
+        affected_both_sides=payload["affected_both_sides"],
+        overlap_policy=payload["overlap_policy"],
+        not_attributed=payload["not_attributed"],
+    )
+
+
 def _require_matching_dataset(tzfpy) -> str:
     """The guard the whole measurement rests on - see the module docstring."""
     ours = read_data_version()
@@ -430,6 +539,7 @@ def _require_matching_dataset(tzfpy) -> str:
 def measure(
     distances_m: Sequence[float] = DEFAULT_DISTANCES_M,
     points: int = DEFAULT_POINTS,
+    pairs: int = DEFAULT_PAIRS,
     seed: int = DEFAULT_SEED,
     include_point_classes: bool = True,
 ) -> Measurement:
@@ -438,7 +548,8 @@ def measure(
     from tests.auxiliaries import boundaries
 
     data_version = _require_matching_dataset(tzfpy)
-    rng = np.random.default_rng(seed)
+    point_rng = np.random.default_rng(seed)
+    pair_rng = np.random.default_rng(seed + 1)
     geometry = BorderGeometry(boundaries)
 
     with TimezoneFinder(in_memory=True) as finder:
@@ -462,12 +573,19 @@ def measure(
             # tell a long run from a wedged one
             print(
                 f"[{index}/{len(distances_m)}] sampling {points:,} points "
+                f"and {pairs:,} paired border locations "
                 f"{format_distance(distance)} from a border...",
                 file=sys.stderr,
                 flush=True,
             )
-            accepted, drawn = geometry.sample(rng, distance, points)
+            accepted, drawn = geometry.sample(point_rng, distance, points)
             land = [c for c in accepted if borders_a_land_zone(c, ocean_ring)]
+            accepted_pairs, paired_drawn = geometry.sample_pairs(
+                pair_rng, distance, pairs
+            )
+            land_pairs = [
+                pair for pair in accepted_pairs if borders_a_land_zone(pair, ocean_ring)
+            ]
             by_distance.append(
                 DistanceResult(
                     distance_m=distance,
@@ -481,6 +599,21 @@ def measure(
                     ),
                     land_borders=count_agreement(
                         [(c.lng, c.lat) for c in land],
+                        ours,
+                        tzfpy.get_tz,
+                        tzfpy.get_tzs,
+                        ours_is_attributable,
+                    ),
+                    paired_drawn=paired_drawn,
+                    paired_all_borders=count_paired_agreement(
+                        accepted_pairs,
+                        ours,
+                        tzfpy.get_tz,
+                        tzfpy.get_tzs,
+                        ours_is_attributable,
+                    ),
+                    paired_land_borders=count_paired_agreement(
+                        land_pairs,
                         ours,
                         tzfpy.get_tz,
                         tzfpy.get_tzs,
@@ -554,9 +687,33 @@ def format_report(measurement: Measurement) -> str:
         f"boundary release {measurement.data_version} on both sides "
         f"({TZFPY_DISTRIBUTION} {measurement.tzfpy_version})",
         "",
-        "a different zone returned, by distance from the nearest timezone border",
-        "(just under half is the most this can reach: the points sit on both sides",
-        " of our border and only one of them can be the side tzfpy moved away from)",
+        "border locations affected, using verified probes on both sides",
+        "(a location is affected when either side has an attributable disagreement)",
+        "",
+        f"{'distance':>10}{'pairs':>8}{'accepted':>10}"
+        f"{'any border':>16}{'land zone border':>20}{'one side':>16}"
+        f"{'both sides':>16}{'not attributed':>16}",
+    ]
+    for result in measurement.by_distance:
+        every_pair = result.paired_all_borders
+        land_pair = result.paired_land_borders
+        lines.append(
+            f"{format_distance(result.distance_m):>10}{every_pair.total:>8}"
+            f"{result.paired_acceptance_rate:>9.0f}%"
+            f"{every_pair.affected:>8} {every_pair.affected_rate:>5.2f}%"
+            f"{land_pair.affected:>12} {land_pair.affected_rate:>5.2f}%"
+            f"{every_pair.affected_one_side:>9} "
+            f"{every_pair.rate(every_pair.affected_one_side):>5.2f}%"
+            f"{every_pair.affected_both_sides:>9} "
+            f"{every_pair.rate(every_pair.affected_both_sides):>5.2f}%"
+            f"{every_pair.not_attributed:>9} "
+            f"{every_pair.rate(every_pair.not_attributed):>5.2f}%"
+        )
+
+    lines += [
+        "",
+        "individual point disagreements over the full two-sided offset locus",
+        "(secondary: this is a query probability, whose usual displacement ceiling is 50%)",
         "",
         f"{'distance':>10}{'points':>8}{'accepted':>10}"
         f"{'any border':>16}{'land zone border':>20}{'overlap-policy':>17}"
@@ -624,18 +781,9 @@ CHART_MARGIN_LEFT = 84
 CHART_MARGIN_RIGHT = 56
 CHART_MARGIN_TOP = 142
 CHART_MARGIN_BOTTOM = 62
-# The y axis is logarithmic, because the interesting part of this measurement
-# spans four orders of magnitude: about half of the points a centimetre from a
-# border get a different zone, and a few hundredths of a percent still do a
-# kilometre away. On a linear axis the second number is the axis itself, which
-# is exactly the reading to avoid - "no disagreements out here" is the thing
-# that is not true.
-# The y axis is logarithmic, because the interesting part of this measurement
-# spans four orders of magnitude: about half of the points a centimetre from a
-# border get a different zone, and a few hundredths of a percent still do a
-# kilometre away. On a linear axis the second number is the axis itself, which
-# is exactly the reading to avoid - "no disagreements out here" is the thing
-# that is not true.
+# The y axis is logarithmic because the paired impact falls from nearly every
+# border location close to the boundary to a rule-of-three upper bound at the
+# far end. On a linear axis the latter is indistinguishable from zero.
 #
 # Its ends are the nearest 1-or-5 step outside the data rather than a fixed
 # decade, so the top of the axis is a value the measurement reaches. A 100 %
@@ -657,19 +805,23 @@ class ChartSeries(NamedTuple):
     # where the value label goes relative to its marker, so the two series do
     # not print over each other where the curves converge
     label_offset: float
-    counts: Callable[[DistanceResult], AgreementCounts]
+    counts: Callable[[DistanceResult], PairedAgreementCounts]
 
 
 CHART_SERIES = (
     ChartSeries(
-        "any timezone border", CHART_SERIES_ALL, "", 20.0, lambda r: r.all_borders
+        "any timezone border",
+        CHART_SERIES_ALL,
+        "",
+        20.0,
+        lambda r: r.paired_all_borders,
     ),
     ChartSeries(
         "border of a land zone",
         CHART_SERIES_LAND,
         "7 5",
         -16.0,
-        lambda r: r.land_borders,
+        lambda r: r.paired_land_borders,
     ),
 )
 
@@ -692,20 +844,24 @@ class ChartPoint(NamedTuple):
 
     @property
     def label(self) -> str:
-        return (
-            f"<{self.percent:.3g}%" if self.is_upper_bound else f"{self.percent:.3g}%"
-        )
+        # Match the displayed precision to what a 20,000-site sample supports:
+        # tenths for ordinary rates, hundredths below 1 %, thousandths below
+        # 0.1 %. This retains meaningful trailing zeroes without suggesting
+        # precision the sample does not have.
+        decimals = 1 if self.percent >= 1.0 else 2 if self.percent >= 0.1 else 3
+        prefix = "<" if self.is_upper_bound else ""
+        return f"{prefix}{self.percent:.{decimals}f}%"
 
 
-def chart_point(counts: AgreementCounts) -> ChartPoint:
+def chart_point(counts: PairedAgreementCounts) -> ChartPoint:
     """What to plot for one group - never a zero, which a log axis cannot show.
 
     A group with no disagreement in it is plotted at its 95 % upper bound and
     drawn hollow. That is the honest reading and it is also the one this chart
     exists to give: zero observations bound a rate; they do not prove one.
     """
-    if counts.substantive:
-        return ChartPoint(counts.substantive_rate, is_upper_bound=False)
+    if counts.affected:
+        return ChartPoint(counts.affected_rate, is_upper_bound=False)
     return ChartPoint(counts.upper_bound_rate, is_upper_bound=True)
 
 
@@ -713,6 +869,16 @@ def _chart_x(distance_m: float, low: float, high: float) -> float:
     span = CHART_WIDTH - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT
     position = (np.log10(distance_m) - low) / (high - low) if high > low else 0.5
     return CHART_MARGIN_LEFT + span * float(position)
+
+
+def is_decade(distance_m: float) -> bool:
+    """Whether a swept distance is a power of ten - 1 cm, 1 m, 100 m.
+
+    ``bool`` rather than whatever numpy hands back: this is a plain predicate
+    and a ``np.bool_`` leaking out of it fails an ``is True`` on the far side.
+    """
+    exponent = np.log10(distance_m)
+    return bool(abs(exponent - round(float(exponent))) < 1e-9)
 
 
 def axis_bound(value: float, upwards: bool) -> float:
@@ -766,16 +932,6 @@ def _percent_axis_label(percent: float) -> str:
     return f"{percent:.3g}%"
 
 
-def is_decade(distance_m: float) -> bool:
-    """Whether a swept distance is a power of ten - 1 cm, 1 m, 100 m.
-
-    ``bool`` rather than whatever numpy hands back: this is a plain predicate
-    and a ``np.bool_`` leaking out of it fails an ``is True`` on the far side.
-    """
-    exponent = np.log10(distance_m)
-    return bool(abs(exponent - round(float(exponent))) < 1e-9)
-
-
 def render_chart(measurement: Measurement) -> str:
     """The sweep as an SVG line chart, ready to be written next to the docs."""
     distances = [result.distance_m for result in measurement.by_distance]
@@ -806,16 +962,17 @@ def render_chart(measurement: Measurement) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
         f'{CHART_HEIGHT}" width="{CHART_WIDTH}" height="{CHART_HEIGHT}" '
         f'font-family="Helvetica, Arial, sans-serif" role="img" '
-        f'aria-label="How often timezonefinder and tzfpy return a different zone, '
-        f'against distance from the nearest timezone border">',
+        f'aria-label="Share of timezone border locations where timezonefinder and '
+        f'tzfpy differ on at least one side, against distance from the border">',
         f'<rect width="{CHART_WIDTH}" height="{CHART_HEIGHT}" fill="#ffffff"/>',
         f'<text x="{CHART_MARGIN_LEFT}" y="32" font-size="17" font-weight="600" '
-        f'fill="{CHART_INK}">Where timezonefinder and tzfpy stop agreeing</text>',
+        f'fill="{CHART_INK}">Border locations affected by tzfpy simplification</text>',
         f'<text x="{CHART_MARGIN_LEFT}" y="52" font-size="12.5" fill="{CHART_MUTED}">'
         f"boundary release {escape_svg_text(measurement.data_version)} on both "
         f"sides, {TZFPY_DISTRIBUTION} "
         f"{escape_svg_text(str(measurement.tzfpy_version))}, "
-        f"{measurement.by_distance[0].all_borders.total} points per distance; "
+        f"{measurement.by_distance[0].paired_all_borders.total} paired locations "
+        f"per distance; "
         f"both axes logarithmic</text>",
     ]
 
@@ -897,10 +1054,10 @@ def render_chart(measurement: Measurement) -> str:
                 parts.append(
                     f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{series.colour}"/>'
                 )
-            # Only the decade positions carry a number. Every point would be 22
-            # labels over 11 markers, and the page prints the whole table anyway.
-            # An unobserved group is still a hollow marker at every distance,
-            # but it does not earn an extra label merely for being an upper bound.
+            # Label the decade positions: a logarithmic axis does not let the
+            # intervening values be read accurately by eye, while labelling all
+            # 22 markers would obscure the curve. In particular, 500 m stays
+            # unlabelled beside the final 1 km upper-bound annotation.
             if not is_decade(result.distance_m):
                 continue
             # the end labels are anchored inwards, or half of the first one
@@ -914,10 +1071,18 @@ def render_chart(measurement: Measurement) -> str:
             )
             # a label below a point near the floor would land under the axis
             offset = series.label_offset
+            label_x = x
+            if series.colour == CHART_SERIES_LAND and index != len(points) - 1:
+                # Bring the orange decade labels closer to their markers. The
+                # final 1 km bound keeps its established position, while the
+                # crowded 100 m label also moves right of the descending lines.
+                offset += 6.0
+                if result.distance_m == 100.0:
+                    label_x += 20.0
             if offset > 0 and y + offset > baseline - 4:
                 offset = -16.0
             parts.append(
-                f'<text x="{x:.1f}" y="{y + offset:.1f}" font-size="12" '
+                f'<text x="{label_x:.1f}" y="{y + offset:.1f}" font-size="12" '
                 f'text-anchor="{anchor}" fill="{series.colour}">'
                 f"{escape_svg_text(point.label)}</text>"
             )
@@ -930,7 +1095,7 @@ def render_chart(measurement: Measurement) -> str:
     parts.append(
         f'<text x="20" y="{(CHART_MARGIN_TOP + baseline) / 2:.0f}" font-size="12.5" '
         f'text-anchor="middle" fill="{CHART_MUTED}" transform="rotate(-90 20 '
-        f'{(CHART_MARGIN_TOP + baseline) / 2:.0f})">a different zone returned</text>'
+        f'{(CHART_MARGIN_TOP + baseline) / 2:.0f})">border locations affected</text>'
     )
     parts.append("</svg>")
     return "\n".join(parts) + "\n"
@@ -951,6 +1116,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=int,
         default=DEFAULT_POINTS,
         help="accepted points per distance",
+    )
+    parser.add_argument(
+        "--pairs",
+        type=int,
+        default=DEFAULT_PAIRS,
+        help="accepted two-sided border locations per distance",
     )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument(
@@ -996,6 +1167,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         else measure(
             distances_m=args.distances,
             points=args.points,
+            pairs=args.pairs,
             seed=args.seed,
             include_point_classes=not args.no_point_classes,
         )
