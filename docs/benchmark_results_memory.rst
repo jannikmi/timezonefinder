@@ -91,8 +91,8 @@ Results
    * - TimezoneFinderL
      - 1.01 MiB
      - 1.01 MiB
-     - 1.47 MiB
-     - 1.53 MiB
+     - 1.44 MiB
+     - 1.50 MiB
    * - TimezoneFinder[file_based]
      - 1.61 MiB
      - 1.62 MiB
@@ -101,8 +101,8 @@ Results
    * - TimezoneFinder[in_memory]
      - 62.6 MiB
      - 62.6 MiB
-     - 63.6 MiB
      - 63.8 MiB
+     - 63.9 MiB
 
 
 

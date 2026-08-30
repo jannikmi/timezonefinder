@@ -109,13 +109,18 @@ bool inside_polygon_blocked_int(int x, int y, int nr_coords, int x_coords[],
     if (stop > nr_coords) {
       stop = nr_coords;
     }
+    // Only a block's first vertex needs its comparison made from scratch:
+    // inside a block consecutive edges still share a vertex, so the rest carry
+    // exactly as the unblocked loop's do. It is the block *boundary* that
+    // breaks that adjacency, so the carry is re-seeded per block rather than
+    // abandoned - which halves the work on the edges that survive the filter.
+    y_gt_y1 = y > y_coords[start];
     for (i = start; i < stop; i++) {
       // the edge leaving vertex i, wrapping to vertex 0 on the very last one
       j = i + 1;
       if (j == nr_coords) {
         j = 0;
       }
-      y_gt_y1 = y > y_coords[i];
       y_gt_y2 = y > y_coords[j];
       if (y_gt_y1 ^ y_gt_y2) { // XOR
         x_le_x1 = x <= x_coords[i];
@@ -145,6 +150,8 @@ bool inside_polygon_blocked_int(int x, int y, int nr_coords, int x_coords[],
           }
         }
       }
+      // next edge of this block; the next block re-seeds this
+      y_gt_y1 = y_gt_y2;
     }
   }
   return inside;

@@ -21,14 +21,14 @@ from timezonefinder.configs import (
 )
 
 try:
-    from numba import njit, boolean, i4, i8, f8
+    from numba import njit, boolean, i4, f8
     from numba.types import Array
 
     using_numba = True
 except ImportError:
     using_numba = False
     # replace Numba functionality with "transparent" implementations
-    from timezonefinder._numba_replacements import njit, boolean, Array, i4, i8, f8
+    from timezonefinder._numba_replacements import njit, boolean, Array, i4, f8
 
 
 # Coordinates are stored one axis at a time ([x0...xN-1, y0...yN-1]), so a (2, N)
@@ -141,7 +141,7 @@ def pt_in_poly_python(x: int, y: int, coords: np.ndarray) -> bool:
     return inside
 
 
-@njit(boolean(i4, i4, CoordType, BlockRangeType, i8), cache=True)
+@njit(boolean(i4, i4, CoordType, BlockRangeType, i4), cache=True)
 def pt_in_poly_blocked(
     x: int,
     y: int,
@@ -173,7 +173,10 @@ def pt_in_poly_blocked(
         latitude block index
     :param block_size: how many vertices one block owns - a property of the data
         directory (``POLYGON_BLOCK_SIZE``), passed rather than compiled in so that
-        ``scripts/tune_block_size.py`` can sweep it without rebuilding the kernel
+        ``scripts/tune_block_size.py`` can sweep it without rebuilding the kernel.
+        ``i4`` to match the C kernel's ``int``, and because it is bounded by the vertex
+        count of the largest ring; the block arithmetic below promotes to 64 bits
+        either way, so the narrower declaration costs nothing.
     """
     x_coords = coords[0]
     y_coords = coords[1]
@@ -187,14 +190,19 @@ def pt_in_poly_blocked(
         stop = start + block_size
         if stop > nr_coords:
             stop = nr_coords
+        # The comparison for a block's first vertex is the only one that has to be made
+        # from scratch: inside a block consecutive edges still share a vertex, so the
+        # rest carry exactly as the unblocked kernel's do. Only the block *boundary*
+        # breaks that adjacency, which is why the carry is re-seeded per block rather
+        # than abandoned - it halves the work on the edges that survive the filter.
+        y1 = y_coords[start]
+        y_gt_y1 = y > y1
         for i in range(start, stop):
             # the edge leaving vertex i, wrapping to vertex 0 on the very last one
             j = i + 1
             if j == nr_coords:
                 j = 0
-            y1 = y_coords[i]
             y2 = y_coords[j]
-            y_gt_y1 = y > y1
             y_gt_y2 = y > y2
             if y_gt_y1 ^ y_gt_y2:  # XOR
                 # everything below is the predicate of pt_in_poly_python verbatim,
@@ -221,6 +229,10 @@ def pt_in_poly_blocked(
                                 inside = not inside
                         elif slope1 >= slope2:
                             inside = not inside
+
+            # next edge of this block; the next block re-seeds these
+            y1 = y2
+            y_gt_y1 = y_gt_y2
 
     return inside
 
