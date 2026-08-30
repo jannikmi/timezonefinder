@@ -96,13 +96,13 @@ Results
    * - TimezoneFinder[file_based]
      - 1.61 MiB
      - 1.62 MiB
-     - 2.19 MiB
+     - 2.16 MiB
      - 17.4 MiB
    * - TimezoneFinder[in_memory]
      - 62.6 MiB
      - 62.6 MiB
-     - 63.5 MiB
-     - 63.7 MiB
+     - 63.6 MiB
+     - 63.8 MiB
 
 
 
@@ -111,11 +111,11 @@ Summary
 ~~~~~~~
 
 
-* Importing the package costs **16.8 MiB** of resident memory before any timezone data is touched.
+* Importing the package costs **16.7 MiB** of resident memory before any timezone data is touched.
 
 * ``in_memory=True`` holds **62.6 MiB** on the heap against **1.62 MiB** for the default file-based mode (38.7x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
-* The file-based mode's resident set grows from **2.19 MiB** at construction to **17.4 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
+* The file-based mode's resident set grows from **2.16 MiB** at construction to **17.4 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
 
 * ``TimezoneFinderL`` holds **1.01 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
 

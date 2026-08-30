@@ -98,7 +98,7 @@ def _texts(reporter: BenchmarkReporter) -> list[str]:
         ),
         (
             "test_pt_in_poly_clang[large]",
-            "point-in-polygon (C/clang) - large polygons",
+            "bare kernel (C/clang) - large polygons",
         ),
         (
             "test_initialization[TimezoneFinder-in_memory]",
@@ -141,7 +141,7 @@ def test_humanize_benchmark_name_covers_every_expected_benchmark():
         ),
         (
             "test_pt_in_poly_clang[small]",
-            "point-in-polygon (C/clang)",
+            "bare kernel (C/clang)",
             "small polygons",
         ),
     ],
@@ -163,7 +163,7 @@ def test_add_benchmark_table_hoists_shared_function_label_out_of_rows():
 
     sections = [item for item in reporter.content if item[0] == "section"]
     tables = [item for item in reporter.content if item[0] == "table"]
-    assert [title for _, title, _ in sections] == ["point-in-polygon (C/clang)"]
+    assert [title for _, title, _ in sections] == ["bare kernel (C/clang)"]
 
     (_, _, rows) = tables[0]
     assert len(rows) == 3
@@ -293,12 +293,12 @@ def test_add_comparison_bullet_picks_the_actually_faster_bench():
     add_comparison_bullet(reporter, "Small polygons", slow, fast)
 
     (text,) = _texts(reporter)
-    assert "point-in-polygon (Python, Numba if available)" in text
+    assert "bare kernel (Python, Numba if available)" in text
     # fast=0.001s took half the time of slow=0.002s -> twice as fast -> 100% faster, 2x
     assert "100% faster" in text
     assert "2.00x" in text
     # the slower one must still be named as the one being compared against
-    assert "point-in-polygon (C/clang)" in text
+    assert "bare kernel (C/clang)" in text
 
 
 def test_add_comparison_bullet_custom_label_fn_avoids_redundancy():

@@ -4,7 +4,7 @@ Timezone Finding Performance Benchmark
 ======================================
 
 
-**~1.63µs per lookup, ~614k/s** - ``TimezoneFinder.timezone_at()`` over uniformly random query points in memory, the workload closest to a real query mix.
+**~1.47µs per lookup, ~681k/s** - ``TimezoneFinder.timezone_at()`` over uniformly random query points in memory, the workload closest to a real query mix.
 
 *Measured on Darwin arm64, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
@@ -97,41 +97,41 @@ TimezoneFinder.timezone_at()
      - Time/Query
      - Throughput
    * - ambiguous-shortcut points, in-memory
-     - 16.2ms
-     - 16.3ms
-     - 684µs
-     - 14.9ms
-     - 17.6ms
-     - 60
-     - 6.49µs
-     - 154k/s
+     - 14.8ms
+     - 14.3ms
+     - 827µs
+     - 14.1ms
+     - 17.0ms
+     - 61
+     - 5.91µs
+     - 169k/s
    * - on-land points, in-memory
-     - 5.58ms
-     - 5.40ms
-     - 1.49ms
+     - 4.86ms
+     - 4.80ms
+     - 222µs
      - 4.69ms
-     - 17.2ms
+     - 6.04ms
      - 187
-     - 2.23µs
-     - 448k/s
+     - 1.95µs
+     - 514k/s
    * - random points, in-memory
-     - 4.07ms
-     - 4.05ms
-     - 358µs
-     - 3.57ms
-     - 4.88ms
-     - 200
-     - 1.63µs
-     - 614k/s
+     - 3.67ms
+     - 3.64ms
+     - 134µs
+     - 3.58ms
+     - 4.53ms
+     - 188
+     - 1.47µs
+     - 681k/s
    * - unique-shortcut points, in-memory
-     - 2.58ms
-     - 2.57ms
-     - 147µs
+     - 2.44ms
+     - 2.42ms
+     - 63.7µs
      - 2.37ms
-     - 3.01ms
-     - 373
-     - 1.03µs
-     - 971k/s
+     - 3.06ms
+     - 371
+     - 975ns
+     - 1.03M/s
 
 
 
@@ -155,14 +155,14 @@ TimezoneFinder.timezone_at_land()
      - Time/Query
      - Throughput
    * - in-memory
-     - 6.52ms
-     - 6.55ms
-     - 458µs
-     - 5.71ms
-     - 7.81ms
-     - 162
-     - 2.61µs
-     - 383k/s
+     - 6.15ms
+     - 5.79ms
+     - 1.36ms
+     - 5.68ms
+     - 21.1ms
+     - 158
+     - 2.46µs
+     - 406k/s
 
 
 
@@ -192,41 +192,41 @@ TimezoneFinder.timezone_at()
      - Time/Query
      - Throughput
    * - ambiguous-shortcut points, file-based
-     - 18.0ms
-     - 17.9ms
-     - 814µs
-     - 16.5ms
-     - 19.8ms
+     - 16.4ms
+     - 16.3ms
+     - 531µs
+     - 16.0ms
+     - 18.1ms
      - 49
-     - 7.21µs
-     - 139k/s
+     - 6.57µs
+     - 152k/s
    * - on-land points, file-based
-     - 5.83ms
-     - 5.85ms
-     - 425µs
-     - 5.14ms
-     - 6.84ms
-     - 141
-     - 2.33µs
-     - 429k/s
-   * - random points, file-based
-     - 4.29ms
-     - 4.24ms
-     - 364µs
-     - 3.75ms
+     - 5.21ms
      - 5.18ms
-     - 207
-     - 1.72µs
-     - 582k/s
+     - 141µs
+     - 5.10ms
+     - 6.12ms
+     - 160
+     - 2.08µs
+     - 480k/s
+   * - random points, file-based
+     - 3.83ms
+     - 3.81ms
+     - 123µs
+     - 3.74ms
+     - 4.76ms
+     - 231
+     - 1.53µs
+     - 652k/s
    * - unique-shortcut points, file-based
-     - 2.57ms
-     - 2.56ms
-     - 155µs
+     - 2.43ms
+     - 2.42ms
+     - 52.4µs
      - 2.37ms
-     - 3.17ms
-     - 360
-     - 1.03µs
-     - 972k/s
+     - 3.01ms
+     - 389
+     - 971ns
+     - 1.03M/s
 
 
 
@@ -250,14 +250,14 @@ TimezoneFinder.timezone_at_land()
      - Time/Query
      - Throughput
    * - file-based
-     - 6.86ms
-     - 6.86ms
-     - 404µs
-     - 6.12ms
-     - 7.71ms
-     - 117
-     - 2.74µs
-     - 365k/s
+     - 6.30ms
+     - 6.23ms
+     - 204µs
+     - 6.16ms
+     - 7.36ms
+     - 136
+     - 2.52µs
+     - 397k/s
 
 
 
@@ -291,14 +291,14 @@ TimezoneFinderL.timezone_at() (ambiguous-shortcut points)
      - Time/Query
      - Throughput
    * - -
-     - 3.86ms
-     - 3.82ms
-     - 232µs
-     - 3.52ms
-     - 4.48ms
+     - 3.60ms
+     - 3.59ms
+     - 85.8µs
+     - 3.51ms
+     - 4.15ms
      - 272
-     - 1.54µs
-     - 648k/s
+     - 1.44µs
+     - 693k/s
 
 
 
@@ -309,19 +309,19 @@ Performance Summary
 
 **In-memory vs file-based** (``TimezoneFinder.timezone_at()``):
 
-* Random points: **in-memory** is 5% faster (1.05x) than **file-based** (4.07ms vs 4.29ms)
+* Random points: **in-memory** is 4% faster (1.04x) than **file-based** (3.67ms vs 3.83ms)
 
-* On-land points: **in-memory** is 4% faster (1.04x) than **file-based** (5.58ms vs 5.83ms)
+* On-land points: **in-memory** is 7% faster (1.07x) than **file-based** (4.86ms vs 5.21ms)
 
-* Unique-shortcut points: **file-based** and **in-memory** perform about the same (2.57ms vs 2.58ms, 0.1% difference)
+* Unique-shortcut points: **file-based** and **in-memory** perform about the same (2.43ms vs 2.44ms, 0.4% difference)
 
-* Ambiguous-shortcut points: **in-memory** is 11% faster (1.11x) than **file-based** (16.2ms vs 18.0ms)
+* Ambiguous-shortcut points: **in-memory** is 11% faster (1.11x) than **file-based** (14.8ms vs 16.4ms)
 
-* TimezoneFinder.timezone_at_land(): **in-memory** is 5% faster (1.05x) than **file-based** (6.52ms vs 6.86ms)
+* TimezoneFinder.timezone_at_land(): **in-memory** is 2% faster (1.02x) than **file-based** (6.15ms vs 6.30ms)
 
-* Ambiguous-shortcut points are 6.3x slower than unique-shortcut points (in-memory): a unique shortcut resolves directly from the H3 index, while an ambiguous one falls through to the full point-in-polygon check.
+* Ambiguous-shortcut points are 6.1x slower than unique-shortcut points (in-memory): a unique shortcut resolves directly from the H3 index, while an ambiguous one falls through to the full point-in-polygon check.
 
-* Overall: fastest is **TimezoneFinder.timezone_at() - unique-shortcut points, file-based** (2.57ms), slowest is **TimezoneFinder.timezone_at() - ambiguous-shortcut points, file-based** (18.0ms) - 601% faster (7.01x)
+* Overall: fastest is **TimezoneFinder.timezone_at() - unique-shortcut points, file-based** (2.43ms), slowest is **TimezoneFinder.timezone_at() - ambiguous-shortcut points, file-based** (16.4ms) - 576% faster (6.76x)
 
 
 
@@ -346,30 +346,30 @@ Every table above times one pass over a whole batch of points, so it says what a
      - mean
      - max
    * - random points
-     - 1.04µs
-     - 2.79µs
-     - 10.8µs
-     - 17.4µs
-     - 1.67µs
-     - 34.2µs
+     - 1.00µs
+     - 2.71µs
+     - 9.96µs
+     - 16.3µs
+     - 1.56µs
+     - 31.5µs
    * - on-land points
      - 1.04µs
-     - 6.54µs
-     - 10.5µs
-     - 22.6µs
-     - 2.15µs
-     - 32.3µs
+     - 6.62µs
+     - 10.8µs
+     - 23.4µs
+     - 2.17µs
+     - 32.0µs
    * - unique-shortcut points
      - 1.00µs
      - 1.04µs
+     - 1.08µs
      - 1.13µs
+     - 989ns
      - 1.17µs
-     - 1.01µs
-     - 1.21µs
    * - ambiguous-shortcut points
-     - 6.62µs
-     - 10.1µs
-     - 17.1µs
-     - 30.8µs
-     - 6.71µs
-     - 32.5µs
+     - 6.38µs
+     - 9.88µs
+     - 17.0µs
+     - 30.7µs
+     - 6.50µs
+     - 32.2µs

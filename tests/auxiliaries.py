@@ -707,6 +707,34 @@ def group_pip_inputs_by_stratum(
     return grouped
 
 
+def group_blocked_pip_inputs_by_stratum(
+    inputs: list[tuple[int, int, int]],
+    strata: list[str],
+    batch_size: int,
+) -> dict[str, list[tuple[int, int, np.ndarray, np.ndarray]]]:
+    """:func:`group_pip_inputs_by_stratum`, plus each polygon's latitude block ranges.
+
+    ``(x, y, polygon_coords, block_ranges)`` quadruples - what ``PolygonArray.pip`` hands
+    the kernel that a lookup actually reaches. Kept beside the triple form rather than
+    replacing it: the bare kernel is still what the pure-Python fallback and the
+    build-time geometry helpers run, so both are worth timing, and the two benchmark
+    them under separate names.
+    """
+    grouped = group_pip_inputs_by_stratum(inputs, strata, batch_size)
+    by_stratum: dict[str, list[tuple[int, int, np.ndarray, np.ndarray]]] = {}
+    for stratum, bucket in grouped.items():
+        ids = [
+            poly_id
+            for (_, _, poly_id), label in zip(inputs, strata)
+            if label == stratum
+        ]
+        by_stratum[stratum] = [
+            (x, y, coords, boundaries.block_ranges_of(poly_id))
+            for (x, y, coords), poly_id in zip(bucket, ids[: len(bucket)])
+        ]
+    return by_stratum
+
+
 def single_location_test(func, lat, lng, description, expected_orig):
     result = func(lng=lng, lat=lat)
     func_name = func.__name__
