@@ -4,6 +4,10 @@
 
 # Available targets:
 #   install    - install all dependencies using uv sync for the current project
+#   bootstrap  - populate the packaged boundary data from the published
+#                timezonefinder-data wheel (idempotent; re-fetches when the checkout
+#                moves to a commit declaring a different data version)
+#   check-data - fail with the `make bootstrap` hint if that data is missing or stale
 #   update     - update dependency pins and refresh pre-commit hooks
 #   lock       - lock dependencies from pyproject.toml to uv.lock
 #   force_update - force update dependencies by removing the lock file
@@ -48,6 +52,22 @@ install:
 	@echo "installing all specified dependencies..."
 	# NOTE: root package needs to be installed for CLI tests to work!
 	@uv sync --all-groups
+
+# The packaged boundary data is ~62 MB and is obtained rather than carried: this fetches
+# the `timezonefinder-data` release `packages/timezonefinder-data/pyproject.toml`
+# declares, verifies it against the digest PyPI publishes for it, and unpacks only the
+# dataset. Running it again does nothing; running it after moving to a commit that
+# declares a different data version re-fetches, which is the case a bare "is the
+# directory there" check cannot see.
+bootstrap:
+	@uv run python -m scripts.bootstrap_data
+
+# The guard the data-consuming targets below depend on. Separate from `bootstrap` so a
+# missing dataset is reported rather than silently downloaded in the middle of a test
+# run - which would make `make test` occasionally take a 50 MB detour and hide the fact
+# that the checkout was stale.
+check-data:
+	@uv run python -m scripts.bootstrap_data --check
 
 update: hookup
 	@echo "updating and pinning the dependencies specified in 'pyproject.toml':"
@@ -97,15 +117,15 @@ testparse:
 benchmark-fixtures:
 	uv run python -m scripts.generate_benchmark_fixtures
 
-test:
+test: check-data
 # 	@uv run pytest
 	@uv run pytest -m "not integration and not slow"
 
-testint:
+testint: check-data
 	@uv run pytest -m "integration"
 
 # includes slow tests
-testall:
+testall: check-data
 	@uv run pytest
 
 # path is relative to the repo root; tmp/ is already gitignored build/data scratch space
@@ -173,7 +193,7 @@ latency:
 		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
-reports: benchmarks latency memory
+reports: check-data benchmarks latency memory
 	uv run python -m scripts.render_benchmark_reports \
 		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
 		--memory-json=$(MEMORY_JSON)
@@ -373,6 +393,7 @@ docs:
 	(cd docs && make html)
 
 .PHONY: clean test testint testall build docs speedtest benchmarks reports \
+	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json
