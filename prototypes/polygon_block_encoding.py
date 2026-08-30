@@ -9,7 +9,7 @@ the right trade by measuring the thing it would make worse (the long tail), and 
 prices a family the issue did not consider: fixed-size blocks carrying a latitude
 range and a per-block coordinate frame.
 
-Five sections, in the order the argument runs:
+Six sections, in the order the argument runs:
 
 * ``tail``   - where the long tail of ``timezone_at`` actually is, and what it is made of
 * ``skip``   - how much of a polygon a horizontal ray needs, given per-block latitude ranges
@@ -17,6 +17,7 @@ Five sections, in the order the argument runs:
                shipped kernel, over the query pairs the committed fixtures produce
 * ``size``   - what each candidate encoding costs on disk, including the block index
 * ``rotate`` - whether the ring's stored start index is worth choosing
+* ``bench``  - whether the work count in ``skip`` becomes wall clock, on a whole query
 
 The point-in-polygon backend is bound at *import* time and numba wins whenever it is
 importable, so the tail section must be run the way CI measures::
@@ -28,7 +29,8 @@ importable, so the tail section must be run the way CI measures::
     # numba (what a dev checkout runs)
     PYTHONPATH=. uv run python prototypes/polygon_block_encoding.py
 
-Every section but ``tail`` reports counts rather than times and is backend-independent.
+Every section but ``tail`` and ``bench`` reports counts rather than times and is
+backend-independent. ``bench`` needs numba, so run it from a dev checkout.
 
 
 FINDINGS (release 2026c, 1,322 boundary polygons / 7,925,313 vertices; times Darwin
@@ -129,12 +131,32 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     per-polygon optimum is not reachable by a rule anyway: it needs a stored start
     offset per polygon, so it costs bytes and a build-time search to save ~6 % of ~2 %.
 
-What this does **not** establish: wall clock. The reduction in finding 3 is a work
-*count*, and realising it requires the filter to live inside the C/numba kernel. Section
-2 measures why: the same filter written in numpy costs 2.73 us per query at B=128 and
-5.31 us at B=32 on the largest polygon - dispatch charged to every query however few
-blocks survive, which would swamp the ~1 us median. Also unmeasured here: whether
-byte-aligned widths (+~8 MB, decode is a widening load) beat bit-packed ones.
+7.  **The work count does become wall clock, and the tail moves further than the mean.**
+    Finding 3 is a count; this is the whole-query A/B that prices it, with the filter
+    inside an ``njit`` kernel and the index built in memory. Paired, order-alternated,
+    random visit order, 41 rounds x 2,000 points, numba backend, mapped mode:
+
+        stratum    min us/query        rounds won   p99            p99.9
+        random     1.81 -> 1.38 (-24 %)   41 of 41   25.9 -> 9.8    38.2 -> 14.7
+        on_land    3.54 -> 1.84 (-48 %)   41 of 41   37.3 -> 8.2    81.3 -> 25.1
+
+    Both estimators agree, which is the bar. **The median is unchanged** (1.00 -> 1.04
+    random, 1.08 -> 1.00 on_land): the filter costs nothing on the path that reads no
+    geometry, which was the main risk. A second run reproduced every figure within the
+    machine's own jitter (-24.8 %, -48.3 %, 41 of 41 twice).
+
+    The correctness gate ran first and is why this is trustworthy: it caught that
+    ``HoleArray`` subclasses ``PolygonArray``, so patching the base method intercepts
+    hole tests too, and a boundary-keyed index silently answered 6 of 5,000 points
+    wrongly. Timing two functions that disagree measures nothing.
+
+What this does **not** establish: the same figures on the **C extension**, which is the
+tracked configuration. The two kernels measure within 5 % of each other on identical
+inputs, so the relative result should carry, but it has to be rebuilt and re-measured
+there. Two smaller caveats: building the index up front faults in every coordinate page,
+which favours neither variant but does not represent mapped mode's cold behaviour; and
+whether byte-aligned widths (+~8 MB, decode is a widening load) beat bit-packed ones is
+still unmeasured.
 """
 
 import sys
@@ -641,6 +663,190 @@ def report_rotation() -> None:
     )
 
 
+# --------------------------------------------------------------------------------------
+# 6. does the work count become wall clock?
+# --------------------------------------------------------------------------------------
+
+try:
+    from numba import njit, boolean, i4, i8
+    from numba.types import Array
+
+    _CoordType = Array(i4, 2, "C", True, aligned=True)
+    _IndexType = Array(i4, 1, "C", True, aligned=True)
+    _HAVE_NUMBA = True
+except ImportError:  # the clang-only environment cannot run this section
+    _HAVE_NUMBA = False
+
+
+if _HAVE_NUMBA:
+
+    @njit(boolean(i4, i4, _CoordType, _IndexType, _IndexType, i8), cache=True)
+    def pt_in_poly_blocked(x, y, coords, block_lo, block_hi, block_size):
+        """``pt_in_poly_python`` with the blocks the ray cannot cross skipped.
+
+        The per-edge predicate is copied verbatim from the shipped kernel; the only
+        change is which edges it is applied to, and in what order. Parity is a sum mod 2
+        over independent per-edge predicates, so order does not matter and a block whose
+        latitude range excludes ``y`` provably contributes nothing.
+        """
+        x_coords = coords[0]
+        y_coords = coords[1]
+        n = len(x_coords)
+        inside = False
+        for b in range(len(block_lo)):
+            if y < block_lo[b] or y > block_hi[b]:
+                continue
+            start = b * block_size
+            stop = start + block_size
+            if stop > n:
+                stop = n
+            for j in range(start, stop):
+                k = j + 1
+                if k == n:
+                    k = 0
+                y1 = y_coords[j]
+                y2 = y_coords[k]
+                y_gt_y1 = y > y1
+                y_gt_y2 = y > y2
+                if y_gt_y1 ^ y_gt_y2:
+                    x1 = x_coords[j]
+                    x2 = x_coords[k]
+                    x_le_x1 = x <= x1
+                    x_le_x2 = x <= x2
+                    if x_le_x1 or x_le_x2:
+                        if x_le_x1 and x_le_x2:
+                            inside = not inside
+                        else:
+                            slope1 = (np.int64(y2) - np.int64(y)) * (
+                                np.int64(x2) - np.int64(x1)
+                            )
+                            slope2 = (np.int64(y2) - np.int64(y1)) * (
+                                np.int64(x2) - np.int64(x)
+                            )
+                            if y_gt_y1:
+                                if slope1 <= slope2:
+                                    inside = not inside
+                            elif slope1 >= slope2:
+                                inside = not inside
+        return inside
+
+
+def _build_index(collection: PolygonArray, block_size: int) -> list:
+    """Per ring id, the latitude range of each block. Built once, in memory.
+
+    Keyed per *collection*, not globally: ``HoleArray`` subclasses ``PolygonArray``, so
+    patching the base method below intercepts hole tests too, and hole ids index a
+    different space than boundary ids. Sharing one table across both silently hands a
+    hole some boundary polygon's block ranges - which skips edges that matter and
+    answers wrongly, rarely enough to look like noise. The correctness gate found
+    exactly that: 6 wrong answers in 5,000.
+    """
+    index = []
+    for ring_id in range(len(collection)):
+        y = np.asarray(collection.coords_of(ring_id)[1], dtype=np.int64)
+        lo, hi = latitude_ranges(y, block_size)
+        index.append(
+            (
+                np.ascontiguousarray(lo, dtype=np.int32),
+                np.ascontiguousarray(hi, dtype=np.int32),
+            )
+        )
+    return index
+
+
+def report_bench() -> None:
+    """Whole-query A/B, paired and order-alternated, as this repository's methodology asks.
+
+    Deliberately not a microbenchmark of the point-in-polygon stage: a stage measured on
+    its own has repeatedly disagreed with the same change measured inside a query.
+    """
+    if not _HAVE_NUMBA:
+        print("\n=== 6. skipped: this section needs numba ===")
+        return
+    print(f"\n=== 6. does the work count become wall clock? (B={BLOCK_SIZE}) ===\n")
+
+    finder = TimezoneFinder()
+    indices = {
+        id(finder.boundaries): _build_index(finder.boundaries, BLOCK_SIZE),
+        id(finder.holes): _build_index(finder.holes, BLOCK_SIZE),
+    }
+    baseline_pip = PolygonArray.pip
+
+    def blocked_pip_method(self, poly_id, x, y):
+        lo, hi = indices[id(self)][int(poly_id)]
+        return pt_in_poly_blocked(x, y, self.coords_of(poly_id), lo, hi, BLOCK_SIZE)
+
+    # Correctness first: a timing comparison between two functions that disagree is
+    # meaningless, so this gate runs before any clock is read.
+    points = load_benchmark_points(ON_LAND_POINTS_FIXTURE)[:N_POINTS]
+    expected = [finder.timezone_at(lng=lng, lat=lat) for lng, lat in points]
+    PolygonArray.pip = blocked_pip_method
+    try:
+        got = [finder.timezone_at(lng=lng, lat=lat) for lng, lat in points]
+    finally:
+        PolygonArray.pip = baseline_pip
+    mismatches = sum(a != b for a, b in zip(expected, got))
+    print(f"answers differing over {len(points):,} on_land points: {mismatches}")
+    if mismatches:
+        print("REFUSING to time two functions that disagree")
+        return
+
+    def run(batch):
+        for lng, lat in batch:
+            finder.timezone_at(lng=lng, lat=lat)
+
+    rng = np.random.default_rng(0)
+    for name, fixture in (
+        ("random", RANDOM_POINTS_FIXTURE),
+        ("on_land", ON_LAND_POINTS_FIXTURE),
+    ):
+        pts = load_benchmark_points(fixture)[:2000]
+        base_rounds, blocked_rounds = [], []
+        for round_nr in range(41):
+            # Sample the order the points are visited, and alternate which variant runs
+            # first: a fixed order lets whichever runs first warm everything they share.
+            batch = [pts[i] for i in rng.permutation(len(pts))]
+            order = (baseline_pip, blocked_pip_method)
+            if round_nr % 2:
+                order = order[::-1]
+            timings = {}
+            for variant in order:
+                PolygonArray.pip = variant
+                try:
+                    start = time.perf_counter()
+                    run(batch)
+                    timings[variant is baseline_pip] = time.perf_counter() - start
+                finally:
+                    PolygonArray.pip = baseline_pip
+            base_rounds.append(timings[True])
+            blocked_rounds.append(timings[False])
+        base = np.array(base_rounds)
+        blocked = np.array(blocked_rounds)
+        wins = int((blocked < base).sum())
+        print(
+            f"\n{name}: min {base.min() * 1e6 / len(pts):.2f} -> "
+            f"{blocked.min() * 1e6 / len(pts):.2f} us/query  "
+            f"({blocked.min() / base.min() - 1:+.1%} on minima), "
+            f"blocked won {wins} of {len(base)} rounds"
+        )
+
+        # The distribution, which is the quantity this whole item exists for.
+        for label, variant in (
+            ("today", baseline_pip),
+            ("blocked", blocked_pip_method),
+        ):
+            PolygonArray.pip = variant
+            try:
+                t, _, _ = _time_queries(finder, pts, False)
+            finally:
+                PolygonArray.pip = baseline_pip
+            q = np.percentile(t, [50, 90, 99, 99.9])
+            print(
+                f"  {label:<8} p50 {q[0]:6.2f}  p90 {q[1]:6.2f}  p99 {q[2]:7.2f}  "
+                f"p99.9 {q[3]:7.2f}  max {t.max():7.2f}  (us)"
+            )
+
+
 if __name__ == "__main__":
     sections = {
         "tail": report_tail,
@@ -648,6 +854,7 @@ if __name__ == "__main__":
         "verify": report_verify,
         "size": report_size,
         "rotate": report_rotation,
+        "bench": report_bench,
     }
     wanted = sys.argv[1:] or list(sections)
     for name in wanted:
