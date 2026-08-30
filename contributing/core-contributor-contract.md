@@ -8,6 +8,8 @@ Do not break exported functions, classes, signatures, or documented semantics be
 
 Never edit generated files directly. Change the generator or schema, regenerate, and require the generator to emit pre-commit-clean output. Validate artifacts where they are produced and in tests, not repeatedly in latency-sensitive runtime construction.
 
+Name what a change trades away before implementing it, rule out the options a project constraint already forbids, and validate the surviving trade-off with measurement rather than argument; the [trade-off rules](development/trade-off-surfacing-and-validation.md) say when a trade-off is instead a maintainer decision.
+
 Keep changes focused and production-ready: no placeholders, speculative compatibility, unrelated cleanup, or unmeasured fast-path trade-offs. Preserve unrelated working-tree changes and stage explicit paths. Put durable reasoning at the decision site or in the narrowest contributor-memory file; do not use temporary plans, issues, or pull-request numbers as the sole explanation.
 
 Add targeted tests for behavioral changes. Select integration, slow, acceleration-path, benchmark, or documentation gates by the changed subsystem rather than running expensive suites reflexively. Rebase onto current `master` before the final gate, because rebasing afterwards invalidates it.

@@ -17,6 +17,8 @@ Fetch `origin`, list open pull requests and remote branches, and inspect any bra
 
 Treat entries as evidence, not gospel. Re-find locations by symbol rather than line, correct stale reasoning, and update the affected subject in the [coverage map](../improvements/improvement-discovery-coverage-map.md) instead of appending a dated pass. Do not re-propose anything in the linked decision or checked-and-sound memory without new evidence.
 
+Surface each candidate's trade-off while ranking, following the [trade-off rules](../development/trade-off-surfacing-and-validation.md): an option whose losing side is forbidden by a project constraint or the API contract is ruled out before it is ranked, and a trade-off no available measurement can settle becomes a briefed decision rather than an implementation attempt.
+
 Rank expected value first: likely defects, then unblockers, drift-prone duplication, then readability; size only breaks ties. A performance item is ranked on measured removable workload share, never intuition. Use the [measurement baseline](../improvements/query-performance-measurement-baseline.md); an unmeasured hypothesis becomes a measurement item.
 
 An item is eligible only when it is unclaimed, its [preconditions](../improvements/improvement-sequencing-and-preconditions.md) hold, and every maintainer-owned choice is recorded. Resume existing work instead of racing it.
@@ -53,7 +55,7 @@ Implement only the selected slice or batch, and add a test for each changed seam
 
 ## Final gate and pull request
 
-Rebase onto `origin/master` before verification and repeat the gate if the base moves. Run `make hook`, `make test`, scope-specific integration or slow tests, and `make testall` once as the final gate. Apply the [testing rules](../development/testing-strategy-and-change-scope.md), the [benchmark rules](../development/benchmarking-and-performance-validation.md), and the [changelog policy](../development/changelog-and-release-note-policy.md).
+Rebase onto `origin/master` before verification and repeat the gate if the base moves. Run `make hook`, `make test`, scope-specific integration or slow tests, and `make testall` once as the final gate. Apply the [testing rules](../development/testing-strategy-and-change-scope.md), the [benchmark rules](../development/benchmarking-and-performance-validation.md), and the [changelog policy](../development/changelog-and-release-note-policy.md), and validate every trade-off predicted during selection, measuring the side that was traded away as well as the side that was bought.
 
 Confirm packaged data is untouched unless regeneration was the selected item's subject; if it was, the data diff must list only intended binaries. Confirm the overall diff contains only intended paths, the register invariants pass, all discoveries are recorded, and no shipped ID remains. If a required gate cannot be fixed, push the findings but do not open a pull request.
 
