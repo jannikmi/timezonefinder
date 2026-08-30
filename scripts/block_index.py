@@ -137,6 +137,13 @@ def best_rotation_offset(
     Worth a few percent of the edges a query scans, which is well under the benchmark
     suite's noise floor. It is taken because the converter is already rewriting these
     files, not because it can be demonstrated on a clock.
+
+    Neither half is a candidate for simplification, and the weighting is the half that
+    cannot go: dropping it while keeping the wider search measures **1.001x** - worse
+    than the bounded-and-unweighted version it started from, because a search widened
+    against a wrong objective just finds a better answer to the wrong question. Dropping
+    the wider search instead keeps 0.984x of the 0.941x. The refusal is recorded in
+    ``contributing/improvements/decisions/geometry-data-format-and-validation-decisions.md``.
     """
     y = np.asarray(y_coords, dtype=np.int64)
     nr_vertices = y.shape[0]
