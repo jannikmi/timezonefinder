@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788083681432,
+  "lastUpdate": 1788083684073,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6668,6 +6668,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2422 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "323ae2f602a74dd18200b5eebb7b047b2850f730",
+          "message": "Batch small maintenance improvements and codify improvement batching (#564)\n\n* DOC-3 TOOL-7 BIG-4: ship small maintenance fixes\n\n* Retire DOC-3 TOOL-7 and BIG-4 from the improvement queue\n\n* Batch small items in improvement passes\n\n* Handle malformed wheel names as undetermined\n\n* Keep improvement skill adapters thin",
+          "timestamp": "2026-08-30T11:53:55+02:00",
+          "tree_id": "8dcb659c05cb6e769fc6c790d1cb3dec41153883",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/323ae2f602a74dd18200b5eebb7b047b2850f730"
+        },
+        "date": 1788083683167,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0078039169311523,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0079822540283203,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.0762643814086914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.0850086212158203,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.08671951293945,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.09532165527344,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.3493 GHz"
           }
         ]
       }
