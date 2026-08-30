@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from scripts.upstream_release import (
+    RETRY_ATTEMPTS,
     TOKEN_VARIABLES,
     UpstreamAsset,
     _read_url,
@@ -361,3 +362,89 @@ def test_no_token_means_one_anonymous_read(
     monkeypatch.setattr("scripts.upstream_release._request", request)
     assert _read_url("https://api.github.com/x") == b"{}"
     assert seen == [None]
+
+
+@pytest.fixture
+def instant_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Retry without paying the wait, so the tests below stay sub-millisecond."""
+    monkeypatch.setattr("scripts.upstream_release._sleep", lambda seconds: None)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("code", [500, 502, 503, 429])
+def test_a_transient_failure_is_retried(
+    monkeypatch: pytest.MonkeyPatch, no_token: None, instant_backoff: None, code: int
+) -> None:
+    """The weekly update is unattended, so a blip must not cost a maintenance issue.
+
+    This replaced a `curl --retry 3`, and dropping the retries would have made a
+    one-second 503 during either release lookup abort an otherwise valid update.
+    """
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        if attempts < RETRY_ATTEMPTS:
+            raise _http_error(code)
+        return b"{}"
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert _read_url("https://api.github.com/x") == b"{}"
+    assert attempts == RETRY_ATTEMPTS
+
+
+@pytest.mark.unit
+def test_a_transport_error_without_a_status_is_retried(
+    monkeypatch: pytest.MonkeyPatch, no_token: None, instant_backoff: None
+) -> None:
+    """A reset connection or DNS hiccup carries no HTTP status at all."""
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise urllib.error.URLError("connection reset by peer")
+        return b"{}"
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert _read_url("https://api.github.com/x") == b"{}"
+    assert attempts == 2
+
+
+@pytest.mark.unit
+def test_retries_are_bounded(
+    monkeypatch: pytest.MonkeyPatch, no_token: None, instant_backoff: None
+) -> None:
+    """A release API that stays down fails the run rather than looping."""
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        raise _http_error(503)
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    with pytest.raises(urllib.error.HTTPError):
+        _read_url("https://api.github.com/x")
+    assert attempts == RETRY_ATTEMPTS
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("code", [404, 403])
+def test_an_answer_is_not_retried(
+    monkeypatch: pytest.MonkeyPatch, no_token: None, instant_backoff: None, code: int
+) -> None:
+    """A missing tag and a rate limit are answers; retrying only delays the report."""
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        raise _http_error(code)
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    with pytest.raises(urllib.error.HTTPError):
+        _read_url("https://api.github.com/x")
+    assert attempts == 1

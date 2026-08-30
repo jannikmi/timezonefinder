@@ -27,6 +27,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from argparse import ArgumentParser
@@ -60,6 +61,13 @@ _TIMEOUT_SECONDS = 60
 # Checked in order, first non-empty wins. Both are conventional names for a
 # GitHub credential, and CI sets the first one on the job that runs update_data.sh.
 TOKEN_VARIABLES = ("GH_TOKEN", "GITHUB_TOKEN")
+
+# Matching the `curl --retry 3` this module replaced. The weekly update is unattended
+# and a failure here opens a maintenance issue for a human, so a blip that resolves
+# itself in a second must not cost that: the release API is read twice per run and
+# neither read is idempotency-sensitive.
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 2.0
 
 
 @dataclass(frozen=True)
@@ -138,6 +146,43 @@ def _request(url: str, token: str | None) -> bytes:
     return data
 
 
+def _is_transient(error: Exception) -> bool:
+    """Whether retrying ``error`` could plausibly succeed.
+
+    ``HTTPError`` is checked first because it *is* a ``URLError``: a 404 for a tag
+    that does not exist, or a 401 for a bad credential, is an answer rather than a
+    blip, and retrying it only delays the report. What is worth another attempt is a
+    server-side failure, the documented secondary-rate-limit 429, and the transport
+    errors that carry no status at all - a reset connection, a DNS hiccup, a timeout.
+    """
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code == 429 or error.code >= 500
+    return isinstance(error, (urllib.error.URLError, TimeoutError))
+
+
+def _sleep(seconds: float) -> None:
+    """Indirection so the retry tests do not spend the backoff."""
+    time.sleep(seconds)
+
+
+def _fetch(url: str, token: str | None) -> bytes:
+    """``_request`` with bounded retries over transient failures."""
+    attempt = 1
+    while True:
+        try:
+            return _request(url, token)
+        except (urllib.error.URLError, TimeoutError) as error:
+            if attempt >= RETRY_ATTEMPTS or not _is_transient(error):
+                raise
+            print(
+                f"{url} failed with {error} (attempt {attempt} of "
+                f"{RETRY_ATTEMPTS}); retrying",
+                file=sys.stderr,
+            )
+            _sleep(RETRY_BACKOFF_SECONDS * attempt)
+            attempt += 1
+
+
 def _read_url(url: str) -> bytes:
     """Fetch ``url``, using an environment token only while it is being accepted.
 
@@ -157,9 +202,9 @@ def _read_url(url: str) -> bytes:
         None,
     )
     if variable is None:
-        return _request(url, None)
+        return _fetch(url, None)
     try:
-        return _request(url, os.environ[variable])
+        return _fetch(url, os.environ[variable])
     except urllib.error.HTTPError as error:
         if error.code != 401:
             raise
@@ -168,7 +213,7 @@ def _read_url(url: str) -> bytes:
             "the release API is public, so retrying without it",
             file=sys.stderr,
         )
-        return _request(url, None)
+        return _fetch(url, None)
 
 
 def fetch_release(tag: str | None = None) -> dict[str, Any]:

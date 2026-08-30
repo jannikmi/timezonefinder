@@ -86,26 +86,26 @@ ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/data_downloaded$VARIANT-$DOWNLOADED_TAG.
 UNPACKED_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT-$DOWNLOADED_TAG$JSON_SUFFIX
 
-if [ -f "$JSON_PATH" ]; then
-    echo "skip unpacking: $JSON_PATH already exists."
-else
-    if [ -f "$ZIP_ARCHIVE_PATH" ]; then
-        echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
-    else
-        URL=$URL_PREFIX/$DOWNLOADED_TAG/$ASSET_NAME
-        echo "DOWNLOADING $URL"
+# Nothing needs downloading when a previous run left either artefact behind - but the
+# archive is the only one of the two that *can* be checked, since the unpacked JSON
+# carries no digest of its own.
+if [ ! -f "$ZIP_ARCHIVE_PATH" ] && [ ! -f "$JSON_PATH" ]; then
+    URL=$URL_PREFIX/$DOWNLOADED_TAG/$ASSET_NAME
+    echo "DOWNLOADING $URL"
 
-        # install command mac:
-        # brew install wget
-        wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
-    fi
-    # Whatever produced the archive - this run's download or a leftover from an
-    # interrupted one - nothing below can tell a truncated or replaced file from a
-    # good one, and the pipeline that parses it merges and publishes unattended. So
-    # the bytes are checked against the size and SHA-256 the release API publishes
-    # before anything reads them, and the verified digest is recorded in DATA_SOURCE.
-    # (Reached only when there is an archive to unpack: an already-unpacked
-    # $JSON_PATH is a local cache, and CI always starts from an empty tmp/.)
+    # install command mac:
+    # brew install wget
+    wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
+fi
+
+# Whatever produced the archive - this run's download, or a leftover from an
+# interrupted one, or a run that already unpacked it - nothing below can tell a
+# truncated or replaced file from a good one, and what this script produces is merged
+# and published unattended. So the bytes are checked against the size and SHA-256 the
+# release API publishes before anything reads them, on every run rather than only on
+# the one that downloaded them: re-hashing 55 MB costs a fraction of a second, and
+# skipping it is how an archive corrupted after its first run gets parsed anyway.
+if [ -f "$ZIP_ARCHIVE_PATH" ]; then
     echo "VERIFYING THE DOWNLOAD..."
     if ! uv run python -m scripts.upstream_release verify \
         --tag "$DOWNLOADED_TAG" \
@@ -115,6 +115,21 @@ else
         echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
         exit 1
     fi
+else
+    # The JSON outlived the archive it came out of, or was put here by hand. Either
+    # way nothing states what those bytes are, and this script's output is released
+    # without a human reading it. Parsing data of your own is supported - through
+    # file_converter, which claims no release for what it is given.
+    echo "ERROR: $JSON_PATH exists but $ZIP_ARCHIVE_PATH does not, so nothing can" >&2
+    echo "establish what it holds, and an unattended release must not parse it." >&2
+    echo "Delete the JSON to re-download and verify $DOWNLOADED_TAG, or parse it" >&2
+    echo "deliberately: uv run python -m scripts.file_converter -inp $JSON_PATH" >&2
+    exit 1
+fi
+
+if [ -f "$JSON_PATH" ]; then
+    echo "skip unpacking: $JSON_PATH already exists."
+else
     echo "UNPACKING..."
     unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
     # The archive unpacks under a name that says nothing about where it came from, and
@@ -141,15 +156,8 @@ echo "DATA_VERSION set to $(cat DATA_VERSION)"
 # ... and the archive those bytes came from, installed here rather than where it was
 # verified so that the two stamps advance together: a run that fails between the two
 # would otherwise leave DATA_SOURCE describing a release the packaged data is not.
-if [ -f "$DATA_SOURCE_PATH" ]; then
-    cp "$DATA_SOURCE_PATH" DATA_SOURCE
-    echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
-else
-    # only reachable through the "$JSON_PATH already exists" shortcut above, which
-    # parses an input this run never saw an archive for
-    echo "WARNING: no archive was verified this run, so DATA_SOURCE still describes" >&2
-    echo "the previously packaged release and now disagrees with DATA_VERSION." >&2
-fi
+cp "$DATA_SOURCE_PATH" DATA_SOURCE
+echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
