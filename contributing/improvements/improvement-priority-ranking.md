@@ -8,7 +8,6 @@
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-the-pull-request-benchmark-comparison-cannot-resolve-the-changes-worth-reviewing.md) | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
 | [GH-501](items/packaging-distribution-and-release/gh-501-guardrails-on-the-automated-data-update-pipeline.md) | Guardrails on the automated data update pipeline | release | M | free — decided |
-| [IMMUTABLE-1](items/public-api-and-behavior/immutable-1-loaded-dataset-arrays-are-writeable.md) | Loaded dataset arrays are writeable | correctness / state | ~60 | free |
 | [GH-500](items/data-pipeline-and-developer-tooling/gh-500-validate-a-data-directory-s-cross-file-invariants.md) | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
 | [GH-428](items/data-pipeline-and-developer-tooling/gh-428-data-parsing-ux-and-the-cli-shape-it-shares-with-gh-500.md) | Data parsing UX, and the CLI shape it shares with GH-500 | CLI / UX | M | free — decided |
 | [BIG-1](items/lookup-geometry-and-data-format/big-1-iter-boundary-ids-of-zone-re-opens-zone-positions-npy-on-every-call.md) | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
