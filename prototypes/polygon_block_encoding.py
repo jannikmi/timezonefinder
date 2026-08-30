@@ -9,13 +9,14 @@ the right trade by measuring the thing it would make worse (the long tail), and 
 prices a family the issue did not consider: fixed-size blocks carrying a latitude
 range and a per-block coordinate frame.
 
-Four sections, in the order the argument runs:
+Five sections, in the order the argument runs:
 
 * ``tail``   - where the long tail of ``timezone_at`` actually is, and what it is made of
 * ``skip``   - how much of a polygon a horizontal ray needs, given per-block latitude ranges
 * ``verify`` - that a block-encoded point-in-polygon test is the *same function* as the
                shipped kernel, over the query pairs the committed fixtures produce
 * ``size``   - what each candidate encoding costs on disk, including the block index
+* ``rotate`` - whether the ring's stored start index is worth choosing
 
 The point-in-polygon backend is bound at *import* time and numba wins whenever it is
 importable, so the tail section must be run the way CI measures::
@@ -27,8 +28,7 @@ importable, so the tail section must be run the way CI measures::
     # numba (what a dev checkout runs)
     PYTHONPATH=. uv run python prototypes/polygon_block_encoding.py
 
-The ``skip``, ``verify`` and ``size`` sections report counts rather than times and are
-backend-independent.
+Every section but ``tail`` reports counts rather than times and is backend-independent.
 
 
 FINDINGS (release 2026c, 1,322 boundary polygons / 7,925,313 vertices; times Darwin
@@ -106,6 +106,28 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     carrying six decimals - the random-access encoding is smaller than the sequential
     one at full precision. Median block width is 19 bits against today's fixed 32
     (p99 25); 29.7 % of polygons fit in a single B=128 block, median 3, max 1,508.
+
+6.  **Where a ring starts is not worth choosing, and starting at the minimum latitude
+    is actively worse.** Blocks partition a ring from its first vertex, so the stored
+    start index is a free parameter - and only offsets in [0, B) are distinct, since
+    rotating by a whole block relabels blocks without repartitioning them. Swept over
+    the same real query pairs:
+
+        ring start                          edges scanned   vs shipped
+        shipped order                           1,398,797       1.000x
+        rotated to min-latitude vertex          1,435,765       1.026x
+        rotated to max-latitude vertex          1,413,315       1.010x
+        best single offset (sampled /8)         1,382,091       0.988x
+        best offset per polygon (ceiling)       1,318,275       0.942x
+        worst offset per polygon (floor)        1,478,554       1.057x
+
+    The mechanism is the **seam**: a block's stored range includes its bridging vertex,
+    and the last block's bridge wraps to vertex 0, so putting a latitude extreme there
+    stretches exactly that block. It survives 840 of 4,827 tests in shipped order and
+    **1,367 rotated to min-latitude** - more than the whole net regression. The entire
+    rotation space spans ~5.7 %, against the 36x the index itself buys, and the
+    per-polygon optimum is not reachable by a rule anyway: it needs a stored start
+    offset per polygon, so it costs bytes and a build-time search to save ~6 % of ~2 %.
 
 What this does **not** establish: wall clock. The reduction in finding 3 is a work
 *count*, and realising it requires the filter to live inside the C/numba kernel. Section
@@ -543,12 +565,89 @@ def report_size() -> None:
     )
 
 
+# --------------------------------------------------------------------------------------
+# 5. does where a ring starts change how well the index skips?
+# --------------------------------------------------------------------------------------
+
+
+def report_rotation() -> None:
+    """Blocks partition a ring from its first vertex, so the stored start index is a
+    free parameter. Only offsets in [0, BLOCK_SIZE) are distinct: rotating by a whole
+    block relabels the blocks without repartitioning them.
+    """
+    print(f"\n=== 5. what the ring's start index is worth (B={BLOCK_SIZE}) ===\n")
+    calls = _recorded_pip_calls(TimezoneFinder(), N_POINTS)
+    boundaries = _boundaries()
+    rings: dict[int, np.ndarray] = {}
+    asked: dict[int, list[int]] = {}
+    for poly_id, _, y in calls:
+        if poly_id not in rings:
+            rings[poly_id] = np.asarray(
+                boundaries.coords_of(poly_id)[1], dtype=np.int64
+            )
+            asked[poly_id] = []
+        asked[poly_id].append(y)
+
+    def scanned(poly_id: int, start: int) -> int:
+        y = np.roll(rings[poly_id], -start)
+        lo, hi = latitude_ranges(y, BLOCK_SIZE)
+        q = np.array(asked[poly_id])
+        hits = ((lo[None, :] <= q[:, None]) & (hi[None, :] >= q[:, None])).sum(
+            1
+        ) * BLOCK_SIZE
+        return int(np.minimum(hits, len(y)).sum())
+
+    shipped = sum(scanned(p, 0) for p in rings)
+    swept = {p: [scanned(p, r) for r in range(0, BLOCK_SIZE, 8)] for p in rings}
+    rows = (
+        ("shipped order", shipped),
+        (
+            "rotated to min-latitude vertex",
+            sum(scanned(p, int(rings[p].argmin())) for p in rings),
+        ),
+        (
+            "rotated to max-latitude vertex",
+            sum(scanned(p, int(rings[p].argmax())) for p in rings),
+        ),
+        (
+            "best single offset (sampled /8)",
+            min(
+                sum(swept[p][i] for p in rings)
+                for i in range(len(next(iter(swept.values()))))
+            ),
+        ),
+        ("best offset per polygon (ceiling)", sum(min(v) for v in swept.values())),
+        ("worst offset per polygon (floor)", sum(max(v) for v in swept.values())),
+    )
+    print(f"{'ring start':<36}{'edges scanned':>15}{'vs shipped':>12}")
+    for label, value in rows:
+        print(f"{label:<36}{value:>15,}{value / shipped:>11.3f}x")
+
+    # The mechanism: the last block's range includes the bridging vertex, which wraps to
+    # vertex 0, so putting a latitude extreme there stretches exactly that block.
+    def seam_survivals(start_of) -> int:
+        total = 0
+        for poly_id, ring in rings.items():
+            y = np.roll(ring, -start_of(poly_id))
+            lo, hi = latitude_ranges(y, BLOCK_SIZE)
+            q = np.array(asked[poly_id])
+            total += int(((lo[-1] <= q) & (hi[-1] >= q)).sum())
+        return total
+
+    print(
+        f"\nseam block (the one holding the wrap edge) survives "
+        f"{seam_survivals(lambda p: 0):,} of {len(calls):,} tests in shipped order, "
+        f"{seam_survivals(lambda p: int(rings[p].argmin())):,} rotated to min-latitude"
+    )
+
+
 if __name__ == "__main__":
     sections = {
         "tail": report_tail,
         "skip": report_skip,
         "verify": report_verify,
         "size": report_size,
+        "rotate": report_rotation,
     }
     wanted = sys.argv[1:] or list(sections)
     for name in wanted:
