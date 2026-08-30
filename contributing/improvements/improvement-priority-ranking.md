@@ -2,9 +2,8 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [FMT-1](items/lookup-geometry-and-data-format/fmt-1-a-latitude-block-index-over-the-boundary-polygons.md) | A latitude block index over the boundary polygons | performance / data format | L | free — gates the held format-2 window, and with it the whole pending code release |
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — the 2.x release is held until FMT-1 lands or is rejected |
-| [FMT-2](items/lookup-geometry-and-data-format/fmt-2-a-frame-of-reference-payload-for-the-boundary-coordinates.md) | A frame-of-reference payload for the boundary coordinates | data format | L | blocked by FMT-1 — needs its block structure, and a format 3 |
+| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | L | blocked — needs a published `timezonefinder-data` 2.x, which the format work is now ready for |
+| [FMT-2](items/lookup-geometry-and-data-format/fmt-2-a-frame-of-reference-payload-for-the-boundary-coordinates.md) | A frame-of-reference payload for the boundary coordinates | data format | L | free — the block structure it extends has landed; costs a format 3 |
 | [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — no longer gates anything; PR #555 in flight |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-the-pull-request-benchmark-comparison-cannot-resolve-the-changes-worth-reviewing.md) | The pull request benchmark comparison cannot resolve the changes worth reviewing | tooling | M | free |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | free |
@@ -25,6 +24,7 @@
 | [BATCH-1](items/public-api-and-behavior/batch-1-timezone-at-land-has-no-batch-form.md) | `timezone_at_land` has no batch form | public API | ~30 | below PERF-1 |
 | [PERF-2](items/lookup-geometry-and-data-format/perf-2-zone-ids-of-is-a-numpy-fancy-index-over-a-handful-of-candidates.md) | `zone_ids_of` is a numpy fancy-index over a handful of candidates | performance | ~25 | free — ranked on simplicity, not on the timing |
 | [PERF-6](items/lookup-geometry-and-data-format/perf-6-scalar-njit-helpers-on-the-query-path-cost-more-to-call-than-to-compute.md) | Scalar `njit` helpers on the query path cost more to call than to compute | performance | ~20 | free — measured |
+| [PERF-7](items/lookup-geometry-and-data-format/perf-7-a-single-block-ring-pays-for-an-index-it-cannot-use.md) | A single-block ring pays for a block index it can never skip with | performance | ~15 | free — ranked on a count, below the noise floor |
 | [DUP-1](items/lookup-geometry-and-data-format/dup-1-the-coordinate-bounds-are-declared-three-times.md) | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | [BIG-2](items/data-pipeline-and-developer-tooling/big-2-calculate-shortcut-index-stats-computes-four-unrelated-things-in-one-pass.md) | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | [TOOL-1](items/data-pipeline-and-developer-tooling/tool-1-ruff-runs-close-to-its-default-rule-set.md) | ruff runs close to its default rule set | tooling | M | free |
@@ -47,6 +47,6 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 | [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | rejected — 2.90 % headroom, bounded by enumeration over the packaged index |
 | [PERF-4](items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md) | The mapped fetch re-acquires the mmap buffer per candidate | performance | rejected — measured inside the query, below the noise floor |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | withdrawn — superseded by FMT-1 and FMT-2; both candidate encodings decode sequentially, in front of the ray cast that is already the worst latency |
+| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | withdrawn — superseded by the latitude block index (shipped) and FMT-2; both candidate encodings decode sequentially, in front of the ray cast that is already the worst latency |
 
 ---
