@@ -13,7 +13,7 @@ Read the [register rules](../improvements/improvement-register-rules.md), the [p
 
 ## Re-verify and rank
 
-Fetch `origin`, list open pull requests, remote branches, and `origin/improvement-claims/*`, and inspect any claim, branch, or pull request associated with an item or issue before selecting it. A claim ref is authoritative even when its feature branch or pull request is not visible yet. Check every `GH-*` item under `contributing/improvements/items/` against the issue state. An item already implemented is deleted with its ranking row; a wrong, rejected, withdrawn, or out-of-scope item keeps its evidence but its row moves to `Closed`. Blocked, parked, and conditional work remains live.
+Fetch and prune `origin`, list open pull requests, remote branches, and `origin/improvement-claims/*`, and inspect any claim, branch, or pull request associated with an item or issue before selecting it. Pruning is required before treating a remote-tracking claim as authoritative because another pass may have released its remote ref. A current claim ref is authoritative even when its feature branch or pull request is not visible yet. Check every `GH-*` item under `contributing/improvements/items/` against the issue state. An item already implemented is deleted with its ranking row; a wrong, rejected, withdrawn, or out-of-scope item keeps its evidence but its row moves to `Closed`. Blocked, parked, and conditional work remains live.
 
 Treat entries as evidence, not gospel. Re-find locations by symbol rather than line, correct stale reasoning, and update the affected subject in the [coverage map](../improvements/improvement-discovery-coverage-map.md) instead of appending a dated pass. Do not re-propose anything in the linked decision or checked-and-sound memory without new evidence.
 
@@ -36,7 +36,7 @@ Recorded decisions are binding. New contrary evidence creates a new briefed ques
 Preserve the shared checkout. Survey first:
 
 ```bash
-git fetch origin
+git fetch --prune origin
 git branch -r
 gh pr list --state open
 ```
