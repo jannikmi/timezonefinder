@@ -376,9 +376,12 @@ def read_shortcuts_binary(file_path: Path) -> ShortcutIndex:
     last_change = np.frombuffer(
         buf, dtype=np.dtype(f"uint{length_width * 8}"), count=nr_entries, offset=pos
     ).copy()
-    # read-only, because cells with identical candidate lists share one range of it:
-    # writing through one cell's slice would change another cell's answer
-    payload.flags.writeable = False
+    # Loaded index arrays are the dataset, not caller-owned working state. Some are
+    # publicly reachable for build-time checks and reporting, so freeze every owner
+    # before handing out views. In particular, cells with identical candidate lists
+    # share one payload range, and starts/ends share the bounds array.
+    for array in (table, bounds, last_change, payload):
+        array.flags.writeable = False
     return ShortcutIndex(table, bounds[:-1], bounds[1:], last_change, payload)
 
 

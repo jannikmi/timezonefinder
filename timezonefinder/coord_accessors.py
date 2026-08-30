@@ -125,6 +125,8 @@ class FileCoordAccessor(AbstractCoordAccessor):
             self.coord_offsets, self.coord_lengths = derive_coord_offset_table(
                 collection, self.coord_file
             )
+            self.coord_offsets.flags.writeable = False
+            self.coord_lengths.flags.writeable = False
         except Exception:
             # Clean up any partially initialized resources
             self.cleanup()
