@@ -36,6 +36,7 @@ from scripts.benchmark_utils import load_benchmark_json, machine_label
 from scripts.compare_benchmark_runs import (
     REGRESSION_THRESHOLD_PCT,
     BenchmarkComparison,
+    benchmark_set_warnings,
     comparability_warnings,
     compare_runs,
     regressions,
@@ -226,8 +227,25 @@ def test_compare_rejects_a_renamed_benchmark():
     base = _run(a=_stats(1.0, 1.0, 1.0))
     head = _run(b=_stats(1.0, 1.0, 1.0))
 
-    with pytest.raises(ValueError, match="same benchmarks"):
+    with pytest.raises(ValueError, match="no common benchmarks"):
         compare_runs([base], [head], "min")
+
+
+@pytest.mark.unit
+def test_compare_uses_shared_benchmarks_when_the_head_adds_one():
+    base = _run(a=_stats(1.0, 1.0, 1.0))
+    head = _run(
+        a=_stats(1.1, 1.1, 1.1),
+        new_benchmark=_stats(2.0, 2.0, 2.0),
+    )
+
+    (comparison,) = compare_runs([base], [head], "min")
+    (warning,) = benchmark_set_warnings([base], [head])
+
+    assert comparison.name == "benchmarks/test_x.py::a"
+    assert comparison.change_pct == pytest.approx(10.0)
+    assert "new head benchmark" in warning
+    assert "new_benchmark" in warning
 
 
 @pytest.mark.unit

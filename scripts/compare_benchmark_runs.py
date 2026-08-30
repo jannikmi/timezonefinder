@@ -150,31 +150,58 @@ def compare_runs(
 ) -> list[BenchmarkComparison]:
     """Compare two sides benchmark by benchmark, worst regression first.
 
-    :raises ValueError: if the two sides do not contain the same benchmarks -
-        which happens when the pull request renames or adds one, and means
-        there is nothing to compare that entry against.
+    New or removed benchmarks are omitted because they have no ratio; the
+    caller reports them through :func:`benchmark_set_warnings`.
+
+    :raises ValueError: if the two sides contain no common benchmarks, as in a
+        pure rename where every trend-history join key changed.
     """
     base = reduce_side(base_runs, estimator)
     head = reduce_side(head_runs, estimator)
-    if set(base) != set(head):
+    shared_names = set(base) & set(head)
+    if not shared_names:
         raise ValueError(
-            "base and head do not contain the same benchmarks, so they cannot "
-            f"be compared. Only in base: {sorted(set(base) - set(head))}; "
-            f"only in head: {sorted(set(head) - set(base))}. Renaming a "
-            "benchmark also resets its trend history - see "
-            "tests/test_benchmark_names.py."
+            "base and head contain no common benchmarks, so no ratio can be "
+            "computed. Renaming every benchmark also resets its trend history "
+            "- see tests/test_benchmark_names.py."
         )
-    for name, value in (*base.items(), *head.items()):
-        if value <= 0:
+    for name in shared_names:
+        for side, value in (("base", base[name]), ("head", head[name])):
+            if value > 0:
+                continue
             raise ValueError(
-                f"benchmark {name!r} reports a non-positive '{estimator}' of "
-                f"{value!r}s, so a ratio cannot be derived from it"
+                f"benchmark {name!r} reports a non-positive {side} "
+                f"'{estimator}' of {value!r}s, so a ratio cannot be derived from it"
             )
     comparisons = [
         BenchmarkComparison(name=name, base=base[name], head=head[name])
-        for name in base
+        for name in shared_names
     ]
     return sorted(comparisons, key=lambda c: c.ratio_pct, reverse=True)
+
+
+def benchmark_set_warnings(
+    base_runs: Sequence[dict[str, Any]], head_runs: Sequence[dict[str, Any]]
+) -> list[str]:
+    """Explain measurements present on only one side of the comparison."""
+    base_names = set(collect_estimator_values(base_runs, "min"))
+    head_names = set(collect_estimator_values(head_runs, "min"))
+    warnings = []
+    only_base = sorted(base_names - head_names)
+    only_head = sorted(head_names - base_names)
+    if only_head:
+        names = ", ".join(_render_name(name) for name in only_head)
+        warnings.append(
+            f"new head benchmark(s) have no merge-base measurement and are not "
+            f"ratioed in this run: {names}. Their trend history starts here."
+        )
+    if only_base:
+        names = ", ".join(_render_name(name) for name in only_base)
+        warnings.append(
+            f"merge-base benchmark(s) are absent from the head and are not ratioed: "
+            f"{names}. Confirm that removing or renaming their trend history was intended."
+        )
+    return warnings
 
 
 def comparability_warnings(
@@ -367,7 +394,10 @@ def main() -> None:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    warnings = comparability_warnings(base_runs, head_runs)
+    warnings = [
+        *comparability_warnings(base_runs, head_runs),
+        *benchmark_set_warnings(base_runs, head_runs),
+    ]
     report = render_markdown(
         comparisons,
         estimator=estimator,

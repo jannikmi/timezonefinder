@@ -12,6 +12,7 @@ names collected from this package, so a rename fails loudly instead.
 
 from typing import Callable, Iterable
 
+import numpy as np
 import pytest
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
@@ -69,6 +70,26 @@ MEMORY_MODES = [
     pytest.param(False, id="file_based"),
 ]
 
+# The batch API is performance-sensitive in its own right: timing only N scalar
+# calls cannot catch a de-vectorised validation/scaling prologue or an extra
+# Python pass over the result. Use the default file-based mode and track both
+# public forms over the three strata CI uses to separate lookup costs.
+BATCH_CASES = [
+    pytest.param(
+        "random_points", id="random-file_based", marks=pytest.mark.benchmark_core
+    ),
+    pytest.param(
+        "unique_shortcut_points",
+        id="unique_shortcut-file_based",
+        marks=pytest.mark.benchmark_core,
+    ),
+    pytest.param(
+        "ambiguous_shortcut_points",
+        id="ambiguous_shortcut-file_based",
+        marks=pytest.mark.benchmark_core,
+    ),
+]
+
 
 def _run_over(func: Callable, points: Iterable[tuple[float, float]]) -> None:
     for lng, lat in points:
@@ -96,3 +117,27 @@ def test_timezone_at_timezonefinderl(benchmark, ambiguous_shortcut_points):
     # trade-off matters most exactly where shortcuts are ambiguous.
     tf_l = TimezoneFinderL()
     benchmark(_run_over, tf_l.timezone_at, ambiguous_shortcut_points)
+
+
+def _batch_axes(points: Iterable[tuple[float, float]]) -> tuple[np.ndarray, np.ndarray]:
+    lngs, lats = zip(*points)
+    # One contiguous array per axis is the batch API's zero-copy input form.
+    # Slicing columns out of an (N, 2) array would create strided views and
+    # benchmark an input copy on every call instead of the lookup itself.
+    return np.asarray(lngs, dtype=np.float64), np.asarray(lats, dtype=np.float64)
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("points_fixture_name", BATCH_CASES)
+def test_timezone_ids_at(benchmark, request, points_fixture_name):
+    lngs, lats = _batch_axes(request.getfixturevalue(points_fixture_name))
+    tf = TimezoneFinder(in_memory=False)
+    benchmark(tf.timezone_ids_at, lngs=lngs, lats=lats)
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize("points_fixture_name", BATCH_CASES)
+def test_timezone_names_at(benchmark, request, points_fixture_name):
+    lngs, lats = _batch_axes(request.getfixturevalue(points_fixture_name))
+    tf = TimezoneFinder(in_memory=False)
+    benchmark(tf.timezone_names_at, lngs=lngs, lats=lats)

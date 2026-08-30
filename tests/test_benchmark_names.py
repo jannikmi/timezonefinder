@@ -67,17 +67,26 @@ EXPECTED_BENCHMARK_NAMES = EXPECTED_COMPARISON_NAMES | {
     "benchmarks/test_timezone_finding.py::test_timezone_at_land[in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at_land[file_based]",
     "benchmarks/test_timezone_finding.py::test_timezone_at_timezonefinderl",
+    *(
+        f"benchmarks/test_timezone_finding.py::{function}[{point_class}-file_based]"
+        for function in ("test_timezone_ids_at", "test_timezone_names_at")
+        for point_class in ("random", "unique_shortcut", "ambiguous_shortcut")
+    ),
 }
 
-# the benchmarks the CI workflow tracks on every PR: the globally
-# representative `random` headline plus the two per-class diagnostics that
-# attribute a change to the unique- or ambiguous-shortcut path - see the
-# comment above `TIMEZONE_AT_CASES` in benchmarks/test_timezone_finding.py
-# for why exactly these three
+# The benchmarks the CI workflow tracks on every PR: the globally
+# representative scalar `random` headline plus two scalar diagnostics, and
+# both batch result forms over those same three strata. See the comments above
+# `TIMEZONE_AT_CASES` and `BATCH_CASES` in benchmarks/test_timezone_finding.py.
 EXPECTED_CORE_BENCHMARK_NAMES = {
     "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+    *(
+        f"benchmarks/test_timezone_finding.py::{function}[{point_class}-file_based]"
+        for function in ("test_timezone_ids_at", "test_timezone_names_at")
+        for point_class in ("random", "unique_shortcut", "ambiguous_shortcut")
+    ),
 }
 
 
