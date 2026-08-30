@@ -62,22 +62,50 @@ def block_latitude_ranges(
     return ranges
 
 
-def block_span_sum(y_coords: np.ndarray, block_size: int = POLYGON_BLOCK_SIZE) -> int:
-    """Total latitude covered by a ring's blocks - the objective the rotation minimises.
+def block_scan_cost(y_coords: np.ndarray, block_size: int = POLYGON_BLOCK_SIZE) -> int:
+    """What a rotation costs: expected edges scanned, up to a constant factor.
 
-    For a latitude drawn uniformly from the ring's own range, the expected number of
-    edges scanned is ``block_size * sum(block spans) / total span``. The denominator does
-    not move under rotation, so minimising this sum minimises the expected scan without
-    the builder ever seeing a query.
+    For a query latitude drawn uniformly from the ring's own range - which is the range
+    a bounding-box check has already narrowed it to - the expected number of edges
+    scanned is ``sum(size_b * span_b) / total_span``. The denominator does not move under
+    rotation, so minimising the numerator minimises the expected scan without the builder
+    ever seeing a query.
+
+    **Every block is weighted by how many edges it actually holds**, which is the whole
+    difference between this and summing the spans. The final block is ragged: for a ring
+    of 129 vertices at 128 per block it holds one edge against the first block's 128, and
+    weighting the two equally would trade a large real cost for a tiny one. Rings whose
+    vertex count the block size does not divide are the common case, so this is not an
+    edge case - it is most of them.
     """
     ranges = block_latitude_ranges(y_coords, block_size)
-    return int((ranges[:, 1].astype(np.int64) - ranges[:, 0].astype(np.int64)).sum())
+    spans = ranges[:, 1].astype(np.int64) - ranges[:, 0].astype(np.int64)
+    return int((block_edge_counts(len(y_coords), block_size) * spans).sum())
+
+
+def block_edge_counts(
+    nr_vertices: int, block_size: int = POLYGON_BLOCK_SIZE
+) -> np.ndarray:
+    """How many edges each block owns - ``block_size`` each, and the remainder last."""
+    nr_blocks = nr_blocks_for(nr_vertices, block_size)
+    counts = np.full(nr_blocks, block_size, dtype=np.int64)
+    counts[-1] = nr_vertices - (nr_blocks - 1) * block_size
+    return counts
+
+
+def _every_window_span(y: np.ndarray, width: int) -> np.ndarray:
+    """``max - min`` over the cyclic window of ``width`` vertices starting at each index."""
+    extended = np.concatenate([y, np.resize(y, width - 1)])
+    windows = np.lib.stride_tricks.sliding_window_view(extended, width)
+    return windows.max(axis=1) - windows.min(axis=1)
 
 
 def best_rotation_offset(
-    y_coords: np.ndarray, block_size: int = POLYGON_BLOCK_SIZE
+    y_coords: np.ndarray,
+    block_size: int = POLYGON_BLOCK_SIZE,
+    chunk: int = 2048,
 ) -> int:
-    """Which vertex the stored ring should start at, in ``[0, block_size)``.
+    """Which vertex the stored ring should start at, in ``[0, nr_vertices)``.
 
     Blocks partition a ring from its first vertex, so where it starts is free to choose:
     the converter rotates what it stores and no reader can tell. Nothing downstream
@@ -85,49 +113,64 @@ def best_rotation_offset(
     unaffected, and a hole kept as a reference follows its boundary automatically - so
     the choice costs nothing to store and nothing to read back.
 
-    **The search is bounded at ``block_size``, and that is a heuristic rather than an
-    identity** - measured 2026-08-30, after a review pointed out that it is not one.
-    Rotating by a whole block only relabels the blocks when ``block_size`` divides the
-    vertex count; otherwise it also moves the ragged final block, which repartitions the
-    ring. So there are ``n`` distinct rotations, not ``block_size`` of them, and this
-    search does miss the minimum of the objective below: for 392 of the 602 rings the
-    committed fixtures reach, an exhaustive search finds a smaller span sum, by up to
-    ~16 % on rings of a few hundred vertices.
+    **All ``n`` rotations are searched, not one block of them.** Rotating by a whole
+    block only relabels the blocks when ``block_size`` divides the vertex count;
+    otherwise it also moves the ragged final block, which repartitions the ring. A search
+    bounded at ``block_size`` therefore misses the minimum for most rings - measured at
+    392 of the 602 the committed fixtures reach.
 
-    Searching all ``n`` is affordable - the span sums of every rotation can be had in
-    O(n) from sliding-window extrema plus a recurrence, ~4.4 s for the whole collection
-    against ~2 s here - and it is **not** taken, because it buys nothing: the rings it
-    re-rotates scan **1.0013x** the edges over the real query pairs, i.e. very slightly
-    *worse*. The span sum is a proxy that assumes a query latitude drawn uniformly from
-    the ring's own range, and real query latitudes are not distributed that way, so
-    minimising the proxy harder does not track the goal. Both figures sit far inside the
-    noise floor; what settles it is that the exhaustive search is more code for no gain.
-    See the geometry decisions in ``contributing/improvements/decisions/`` before
-    re-proposing it.
+    Done directly this would be O(n^2). It is O(n * nr_blocks) instead: the span of every
+    window is computed once for all start positions, and each rotation is then a gather
+    and a sum over ``nr_blocks`` of them, chunked so the index array stays small. ~12 s
+    for the whole collection against ~2 s for the bounded search, in a converter that
+    takes about a minute.
 
-    Measured over the real query pairs the committed fixtures produce, this objective
-    scans **0.961x** the edges the unrotated order does. The two rules that suggest
-    themselves both *lose* - starting at the minimum-latitude vertex costs 1.026x and
-    the maximum-latitude one 1.010x - because a block's range includes its bridging
-    vertex and the last block's bridge wraps to vertex 0, so putting a latitude extreme
-    there stretches exactly that block. Fitting the rotation to the fixtures themselves
-    would give 0.939x, and the gap is not reachable: it is fitted.
+    Measured over the real query pairs the committed fixtures produce, the two changes
+    together - weighting each block by its edge count, and searching every rotation -
+    scan **0.941x** the edges of the bounded search over unweighted spans. Weighting
+    alone accounts for 0.984x of that and costs nothing; the wider search is what needs
+    the machinery above. The two rules that suggest themselves both *lose* - starting at
+    the minimum-latitude vertex costs 1.026x and the maximum-latitude one 1.010x -
+    because a block's range includes its bridging vertex and the last block's bridge
+    wraps to vertex 0, so putting a latitude extreme there stretches exactly that block.
 
-    Worth ~3.9 % of the edges a query scans, which is well under the benchmark suite's
-    noise floor. It is taken because the converter is already rewriting these files, not
-    because it can be demonstrated on a clock.
+    Worth a few percent of the edges a query scans, which is well under the benchmark
+    suite's noise floor. It is taken because the converter is already rewriting these
+    files, not because it can be demonstrated on a clock.
     """
-    nr_vertices = np.asarray(y_coords).shape[0]
+    y = np.asarray(y_coords, dtype=np.int64)
+    nr_vertices = y.shape[0]
     if nr_vertices <= block_size:
         # one block either way, and its range is the whole ring's - nothing to choose
         return 0
-    y = np.asarray(y_coords, dtype=np.int64)
-    # bounded deliberately; see the heuristic note above rather than widening this
-    candidates = range(min(block_size, nr_vertices))
-    return min(
-        candidates,
-        key=lambda offset: block_span_sum(np.roll(y, -offset), block_size),
+
+    counts = block_edge_counts(nr_vertices, block_size)
+    nr_blocks = len(counts)
+    full_span = _every_window_span(y, block_size + 1)
+    last_span = (
+        full_span
+        if counts[-1] == block_size
+        else _every_window_span(y, int(counts[-1]) + 1)
     )
+
+    # where each block starts, relative to the rotation, and where the ragged one does
+    offsets = np.arange(nr_blocks - 1) * block_size
+    last_start = (np.arange(nr_vertices) + (nr_blocks - 1) * block_size) % nr_vertices
+
+    best_cost: int | None = None
+    best_offset = 0
+    for lo in range(0, nr_vertices, chunk):
+        rotations = np.arange(lo, min(lo + chunk, nr_vertices))
+        starts = (rotations[:, None] + offsets[None, :]) % nr_vertices
+        cost = (
+            block_size * full_span[starts].sum(axis=1)
+            + counts[-1] * last_span[last_start[rotations]]
+        )
+        winner = int(cost.argmin())
+        if best_cost is None or int(cost[winner]) < best_cost:
+            best_cost = int(cost[winner])
+            best_offset = int(rotations[winner])
+    return best_offset
 
 
 def rotate_ring(ring: np.ndarray, offset: int) -> np.ndarray:

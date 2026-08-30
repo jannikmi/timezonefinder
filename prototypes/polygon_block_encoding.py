@@ -177,25 +177,29 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     17 % "regression" on a stratum whose code path had not changed. Pass ``--python``
     explicitly, or compare inside one process.
 
-9.  **The ring-start sweep is bounded at one block, and that is a heuristic - measured
-    2026-08-30 after a review said so.** Rotating by a whole block only relabels the
-    blocks when B divides the vertex count; otherwise it moves the ragged final block
-    and therefore repartitions the ring. There are n distinct rotations, not B, and the
-    bounded sweep does miss the minimum of its own objective: for **392 of the 602
-    rings** the fixtures reach, an exhaustive search finds a smaller span sum, by up to
-    ~16 % on rings of a few hundred vertices.
+9.  **The ring-start sweep was wrong twice over, and only fixing both helped - corrected
+    2026-08-30 after review.** Section 5 above minimises the summed per-block latitude
+    span over offsets in [0, B). Two defects, sharing one cause - the final block is
+    ragged:
 
-    Searching all n is affordable - every rotation's span sum is available in O(n) from
-    sliding-window extrema plus the recurrence
-    ``S(r+B) = S(r) - span_B[r] + span_B[p] - span_L[p] + span_L[r+d]`` where
-    ``p = r+(nb-1)B`` and ``d = nb*B-n``, which is ~4.4 s for the whole collection
-    against ~2 s for the bounded sweep. It is **refused anyway**, because it buys
-    nothing: the exhaustively rotated rings scan **1.0013x** the edges over the real
-    query pairs, i.e. marginally *worse*. The span sum assumes a query latitude drawn
-    uniformly from a ring's own range, and real query latitudes are not distributed
-    that way - so past a point, minimising the proxy stops tracking the goal. Both
-    figures are far inside the noise floor; what decides it is that the exhaustive
-    search is more code for no gain.
+    * **The objective mis-weighted it.** Expected edges scanned is
+      ``sum(size_b * span_b) / total_span``; summing spans unweighted counts a ragged
+      block holding one edge the same as a full block holding 128.
+    * **The search space was too small.** Rotating by a whole block only relabels the
+      blocks when B divides the vertex count; otherwise it moves the ragged block and
+      repartitions the ring. There are n distinct rotations, not B - and the bounded
+      sweep missed the minimum for **392 of the 602 rings** the fixtures reach.
+
+    Measured over edges actually scanned on the real query pairs, against this section's
+    bounded sweep over unweighted spans: weighting alone **0.984x**, weighting plus every
+    rotation **0.941x**, and - the instructive one - **fixing the search without fixing
+    the weight is 1.001x**, marginally *worse*. Widening a search against a wrong
+    objective finds a better answer to the wrong question. Searching every rotation costs
+    ~12 s for the whole collection against ~2 s, once, at build time.
+
+    The figures in section 5's table are therefore the *old* objective's and are kept as
+    the record of what was measured then; ``scripts/block_index.py`` carries what ships.
+
 
 What this does **not** establish: whether byte-aligned widths (+~8 MB, decode is a
 widening load) beat bit-packed ones for FMT-2's payload. Building the index up front also

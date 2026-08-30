@@ -257,31 +257,31 @@ Blocks partition a ring from its first vertex, so *where a stored ring starts* c
 how tightly its blocks bound it - and nothing downstream depends on that choice. The
 canonical key used to match holes against boundaries is rotation-invariant, the bounding
 boxes are unaffected, and a hole kept as a reference follows its boundary automatically.
-The converter therefore rotates each ring to the start index that minimises the summed
-per-block latitude span, and stores nothing to record it: no reader can tell, and none
-needs to.
+The converter therefore rotates each ring to the start index that minimises the expected
+scan, and stores nothing to record it: no reader can tell, and none needs to.
 
 The objective is deliberately query-independent. For a latitude drawn uniformly from a
-ring's own range, the expected number of edges scanned is
-``block size × sum(block spans) / total span``, so minimising that sum minimises the
-expected scan without the builder ever seeing a query. It is worth ~3.9 % of the edges a
-query scans - real, but well below what the benchmark suite can resolve, which is why it
-is taken as a free step of a rebuild that was happening anyway rather than claimed as a
-speedup.
+ring's own range - which is what a bounding-box check has already narrowed a query to -
+the expected number of edges scanned is ``sum(edges in block × block span) / total
+span``, so minimising the numerator minimises the expected scan without the builder ever
+seeing a query. **Each block is weighted by the number of edges it holds**, which
+matters because the final block is ragged: for a ring of 129 vertices it holds one edge
+against the first block's 128, and weighting the two equally would trade a large real
+cost for a tiny one. All rotations are searched, not one block of them, since rotating
+by a whole block moves that ragged block and so repartitions the ring rather than
+relabelling it. It is worth ~9 % of the edges a query scans - real, but well below what
+the benchmark suite can resolve, which is why it is taken as a free step of a rebuild
+that was happening anyway rather than claimed as a speedup.
 
 The two rules that suggest themselves both *lose*: starting at the minimum-latitude
 vertex costs 1.026x the edges of the unrotated order and the maximum-latitude one
 1.010x. The reason is the bridging vertex - the last block's bridge wraps to vertex 0,
 so putting a latitude extreme there stretches exactly that block.
 
-The search over start indices is bounded at one block, which is a heuristic and not an
-identity: rotating by a whole block only relabels the blocks when the block size divides
-the vertex count, and otherwise moves the ragged final block too. An exhaustive search
-over all rotations is affordable and finds a smaller span sum for most rings, but scans
-1.0013x the edges over the real query pairs - slightly *worse*, because the span sum is
-a proxy that assumes a query latitude drawn uniformly from the ring's own range, and
-real ones are not. Both sit far inside the noise floor; the bounded search is kept
-because it is less code for no measurable difference.
+Searching every rotation would be quadratic done directly. It is linear in the number of
+blocks instead: the span of every window is computed once for all start positions, and
+each rotation is then a gather and a sum over those. That is ~12 s for the whole
+collection, in a converter that takes about a minute.
 
 A consequence worth knowing: ``get_geometry`` returns each ring starting at the vertex
 the converter chose, which is not the one the upstream GeoJSON began with. The ring is

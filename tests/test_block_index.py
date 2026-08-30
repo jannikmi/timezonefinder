@@ -13,8 +13,9 @@ import pytest
 
 from scripts.block_index import (
     best_rotation_offset,
+    block_edge_counts,
     block_latitude_ranges,
-    block_span_sum,
+    block_scan_cost,
     build_block_index,
     nr_blocks_for,
     rotate_ring,
@@ -359,14 +360,37 @@ def test_every_edge_lies_inside_its_own_block_range(block_size):
 
 
 @pytest.mark.unit
-def test_best_rotation_offset_attains_the_minimum():
-    block_size = 7
-    offset = best_rotation_offset(_RING[1], block_size)
-    sums = [
-        block_span_sum(np.roll(_RING[1], -candidate), block_size)
-        for candidate in range(block_size)
-    ]
-    assert sums[offset] == min(sums)
+@pytest.mark.parametrize("block_size", [3, 7, 16, 39])
+def test_best_rotation_offset_attains_the_global_minimum(block_size):
+    """Every rotation is searched, not one block of them.
+
+    The bounded search this replaced was not a smaller way of finding the same answer:
+    rotating by a whole block moves the ragged final block whenever the block size does
+    not divide the vertex count, so it repartitions the ring rather than relabelling it.
+    """
+    y = _RING[1]
+    offset = best_rotation_offset(y, block_size)
+    costs = [block_scan_cost(np.roll(y, -r), block_size) for r in range(len(y))]
+    assert costs[offset] == min(costs)
+
+
+@pytest.mark.unit
+def test_block_scan_cost_weights_each_block_by_the_edges_it_holds():
+    """The ragged block holds fewer edges and must count for less.
+
+    Summing the spans unweighted lets a one-edge block outvote a full one, which is what
+    made the objective disagree with the thing it stands for.
+    """
+    block_size = 4
+    # 5 vertices: a full block of 4 edges, then a ragged block holding 1
+    ring_y = np.array([0, 10, 20, 30, 1_000], dtype=np.int32)
+    counts = block_edge_counts(len(ring_y), block_size)
+    assert counts.tolist() == [4, 1]
+
+    ranges = block_latitude_ranges(ring_y, block_size)
+    spans = (ranges[:, 1].astype(np.int64) - ranges[:, 0]).tolist()
+    assert block_scan_cost(ring_y, block_size) == 4 * spans[0] + 1 * spans[1]
+    assert block_scan_cost(ring_y, block_size) != sum(spans)
 
 
 @pytest.mark.unit
