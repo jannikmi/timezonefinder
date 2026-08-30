@@ -8,12 +8,16 @@ touches the network, which is what lets everything above it be tested at all.
 """
 
 import json
+import urllib.error
+from email.message import Message
 from pathlib import Path
 
 import pytest
 
 from scripts.upstream_release import (
+    TOKEN_VARIABLES,
     UpstreamAsset,
+    _read_url,
     check_against_record,
     main,
     published_asset,
@@ -196,27 +200,67 @@ def test_the_record_only_speaks_about_the_tag_it_names(recorded_tag: str) -> Non
     check_against_record(recorded, published_asset(_release(), ARCHIVE_NAME))
 
 
+def _verify_argv(archive: Path, *, record: Path, stage: Path | None) -> list[str]:
+    argv = [
+        "verify",
+        "--tag",
+        "2026c",
+        "--asset",
+        ARCHIVE_NAME,
+        "--archive",
+        str(archive),
+        "--record",
+        str(record),
+    ]
+    if stage is not None:
+        argv += ["--stage", str(stage)]
+    return argv
+
+
 @pytest.mark.unit
-def test_verify_records_what_it_verified(archive: Path, api, tmp_path: Path) -> None:
+def test_verify_stages_what_it_verified(archive: Path, api, tmp_path: Path) -> None:
     api(_release())
-    record = tmp_path / "DATA_SOURCE"
-    exit_code = main(
-        [
-            "verify",
-            "--tag",
-            "2026c",
-            "--asset",
-            ARCHIVE_NAME,
-            "--archive",
-            str(archive),
-            "--record",
-            str(record),
-        ]
+    stage = tmp_path / "staged"
+    assert (
+        main(_verify_argv(archive, record=tmp_path / "DATA_SOURCE", stage=stage)) == 0
     )
-    assert exit_code == 0
-    assert read_record(record) == UpstreamAsset(
+    assert read_record(stage) == UpstreamAsset(
         tag="2026c", asset=ARCHIVE_NAME, size=PAYLOAD_SIZE, sha256=PAYLOAD_SHA256
     )
+
+
+@pytest.mark.unit
+def test_verify_does_not_install_the_record_itself(
+    archive: Path, api, tmp_path: Path
+) -> None:
+    """The two stamps have to advance together, and the parse sits between them.
+
+    ``update_data.sh`` installs the staged record next to ``DATA_VERSION`` only once
+    the converter has succeeded. Writing it here instead would leave a run that
+    failed in between describing an upstream release the packaged data is not - which
+    ``tests/test_data_version.py`` then reports as drift rather than as a failed run.
+    """
+    api(_release())
+    record = tmp_path / "DATA_SOURCE"
+    record.write_text(
+        UpstreamAsset(
+            tag="2026b", asset=ARCHIVE_NAME, size=1, sha256="ab" * 32
+        ).render(),
+        encoding="utf-8",
+    )
+    assert main(_verify_argv(archive, record=record, stage=tmp_path / "staged")) == 0
+    untouched = read_record(record)
+    assert untouched is not None and untouched.tag == "2026b"
+
+
+@pytest.mark.unit
+def test_verify_without_a_stage_writes_nothing(
+    archive: Path, api, tmp_path: Path
+) -> None:
+    """Verification on its own is a question, not an edit."""
+    api(_release())
+    assert main(_verify_argv(archive, record=tmp_path / "DATA_SOURCE", stage=None)) == 0
+    assert list(tmp_path.iterdir()) == [archive]
 
 
 @pytest.mark.unit
@@ -226,22 +270,12 @@ def test_a_failed_verification_records_nothing(
     """Recording a digest the bytes never matched would launder the failure."""
     archive.write_bytes(PAYLOAD[:-1])
     api(_release())
-    record = tmp_path / "DATA_SOURCE"
+    stage = tmp_path / "staged"
     exit_code = main(
-        [
-            "verify",
-            "--tag",
-            "2026c",
-            "--asset",
-            ARCHIVE_NAME,
-            "--archive",
-            str(archive),
-            "--record",
-            str(record),
-        ]
+        _verify_argv(archive, record=tmp_path / "DATA_SOURCE", stage=stage)
     )
     assert exit_code == 1
-    assert not record.exists()
+    assert not stage.exists()
     assert "bytes" in capsys.readouterr().err
 
 
@@ -251,3 +285,79 @@ def test_resolve_tag_prints_the_bare_tag(api, capsys: pytest.CaptureFixture) -> 
     api(_release("2027a"))
     assert main(["resolve-tag"]) == 0
     assert capsys.readouterr().out == "2027a\n"
+
+
+@pytest.fixture
+def no_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A clean environment, so a real one on the machine cannot decide these."""
+    for name in TOKEN_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+
+
+def _http_error(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError(
+        "https://api.github.com/x", code, "Unauthorized", Message(), None
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("variable", TOKEN_VARIABLES)
+def test_a_rejected_token_falls_back_to_an_unauthenticated_read(
+    monkeypatch: pytest.MonkeyPatch, no_token: None, variable: str
+) -> None:
+    """A stale token in a shell must not fail a request that needs no token.
+
+    The release API is public, so the only thing authentication buys here is quota -
+    and a developer with an expired ``GITHUB_TOKEN`` exported for other tooling would
+    otherwise get a 401 on an endpoint ``curl`` had always read anonymously.
+    """
+    monkeypatch.setenv(variable, "expired")
+    seen: list[str | None] = []
+
+    def request(url: str, token: str | None) -> bytes:
+        seen.append(token)
+        if token is not None:
+            raise _http_error(401)
+        return b"{}"
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert _read_url("https://api.github.com/x") == b"{}"
+    assert seen == ["expired", None]
+
+
+@pytest.mark.unit
+def test_a_rate_limited_token_is_not_retried_anonymously(
+    monkeypatch: pytest.MonkeyPatch, no_token: None
+) -> None:
+    """403 with a token is the rate limit, and the anonymous limit is stricter.
+
+    Retrying would replace a diagnosis the maintainer can act on with a second
+    failure against a lower quota.
+    """
+    monkeypatch.setenv("GH_TOKEN", "valid")
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        raise _http_error(403)
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    with pytest.raises(urllib.error.HTTPError):
+        _read_url("https://api.github.com/x")
+    assert attempts == 1
+
+
+@pytest.mark.unit
+def test_no_token_means_one_anonymous_read(
+    monkeypatch: pytest.MonkeyPatch, no_token: None
+) -> None:
+    seen: list[str | None] = []
+
+    def request(url: str, token: str | None) -> bytes:
+        seen.append(token)
+        return b"{}"
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert _read_url("https://api.github.com/x") == b"{}"
+    assert seen == [None]

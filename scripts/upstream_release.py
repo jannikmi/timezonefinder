@@ -13,10 +13,14 @@ independent statement of what the bytes should be - independent of the transfer 
 fetched them, which is the whole point - and this module is the only thing that reads
 it. Verification is therefore possible without asking upstream for anything new.
 
-The verified digest is then recorded in ``DATA_SOURCE`` beside ``DATA_VERSION``, so
-that an update pull request states which upstream bytes produced its binaries and a
-re-run over an already-recorded tag notices an asset that was replaced in place -
-the one corruption the API digest cannot report, since it moves with the asset.
+The verified digest is then staged, for the caller to install as ``DATA_SOURCE``
+beside ``DATA_VERSION`` once the parse has succeeded - the same two-step
+``update_data.sh`` already uses for the release tag, and for the same reason: a run
+that fails between verifying and parsing must not leave the two stamps naming
+different releases. The record states in an update pull request which upstream bytes
+produced its binaries, and lets a later run notice an asset that was replaced in
+place - the one corruption the API digest cannot report, since it moves with the
+asset.
 """
 
 import hashlib
@@ -52,6 +56,10 @@ HASH_CHUNK_BYTES = 1 << 20
 RECORD_FIELDS = ("tag", "asset", "size", "sha256")
 
 _TIMEOUT_SECONDS = 60
+
+# Checked in order, first non-empty wins. Both are conventional names for a
+# GitHub credential, and CI sets the first one on the job that runs update_data.sh.
+TOKEN_VARIABLES = ("GH_TOKEN", "GITHUB_TOKEN")
 
 
 @dataclass(frozen=True)
@@ -109,13 +117,11 @@ class UpstreamAsset:
         )
 
 
-def _read_url(url: str) -> bytes:
-    """Fetch ``url``, authenticated when a token is in the environment.
+def _request(url: str, token: str | None) -> bytes:
+    """Fetch ``url``, presenting ``token`` when there is one.
 
     The single network boundary of this module, so that everything above it is
-    exercised offline. Authentication is optional and only buys API quota: the
-    release data being read is public, and the runner making two calls per update
-    shares its rate limit with every other unauthenticated caller on its address.
+    exercised offline.
     """
     request = urllib.request.Request(
         url,
@@ -125,12 +131,44 @@ def _read_url(url: str) -> bytes:
             "User-Agent": "timezonefinder-update-data",
         },
     )
-    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
         data: bytes = response.read()
     return data
+
+
+def _read_url(url: str) -> bytes:
+    """Fetch ``url``, using an environment token only while it is being accepted.
+
+    Authentication is optional here and buys nothing but API quota: the release data
+    is public, and a runner making two unauthenticated calls per update shares its
+    rate limit with every other caller on its address. So a *rejected* credential is
+    the environment's problem rather than the request's - a token left over in a
+    developer's shell must not be able to fail a request that needs no token at all,
+    which is what happens when it has expired or been revoked.
+
+    Only 401 falls back. A 403 with a token is usually the rate limit, and retrying
+    that unauthenticated would trade a good diagnosis for a worse one against a
+    stricter limit.
+    """
+    variable = next(
+        (name for name in TOKEN_VARIABLES if os.environ.get(name)),
+        None,
+    )
+    if variable is None:
+        return _request(url, None)
+    try:
+        return _request(url, os.environ[variable])
+    except urllib.error.HTTPError as error:
+        if error.code != 401:
+            raise
+        print(
+            f"{variable} was rejected by {url} ({error.code} {error.reason}); "
+            "the release API is public, so retrying without it",
+            file=sys.stderr,
+        )
+        return _request(url, None)
 
 
 def fetch_release(tag: str | None = None) -> dict[str, Any]:
@@ -270,7 +308,7 @@ def read_record(path: Path) -> UpstreamAsset | None:
 
 
 def write_record(path: Path, asset: UpstreamAsset) -> None:
-    """Record ``asset`` as the source of the data this checkout is about to build."""
+    """Write the verified ``asset`` out, for the caller to install after the parse."""
     path.write_text(asset.render(), encoding="utf-8")
 
 
@@ -289,7 +327,13 @@ def main(argv: list[str] | None = None) -> int:
     verify_parser.add_argument("--tag", required=True)
     verify_parser.add_argument("--asset", required=True)
     verify_parser.add_argument("--archive", type=Path, required=True)
+    # what the packaged data was built from, read to catch an asset replaced in place
     verify_parser.add_argument("--record", type=Path, default=DATA_SOURCE_FILE)
+    # Where to leave the verified record, and deliberately not --record's file: the
+    # caller stages it and installs it beside DATA_VERSION only once the parse has
+    # succeeded, so that a run failing in between cannot leave the two stamps naming
+    # different releases. Omitted, this verifies and writes nothing.
+    verify_parser.add_argument("--stage", type=Path, default=None)
 
     args = parser.parse_args(argv)
     try:
@@ -300,7 +344,8 @@ def main(argv: list[str] | None = None) -> int:
         published = published_asset(fetch_release(args.tag), args.asset)
         check_against_record(read_record(args.record), published)
         verify_archive(args.archive, published)
-        write_record(args.record, published)
+        if args.stage is not None:
+            write_record(args.stage, published)
         print(
             f"verified {args.archive} against {args.tag}/{args.asset} "
             f"({published.size} bytes, sha256 {published.sha256})"

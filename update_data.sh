@@ -6,6 +6,8 @@ set -euo pipefail
 
 WORKING_FOLDER_NAME=tmp
 DOWNLOADED_TAG_PATH=./$WORKING_FOLDER_NAME/downloaded_tag.txt
+# Staged next to the tag and installed with it, once the parse has succeeded.
+DATA_SOURCE_PATH=./$WORKING_FOLDER_NAME/data_source.txt
 JSON_PREFIX=combined
 JSON_SUFFIX=.json
 # the tagged release asset, not `releases/latest/download/...`: see the tag resolution below
@@ -108,7 +110,8 @@ else
     if ! uv run python -m scripts.upstream_release verify \
         --tag "$DOWNLOADED_TAG" \
         --asset "$ASSET_NAME" \
-        --archive "$ZIP_ARCHIVE_PATH"; then
+        --archive "$ZIP_ARCHIVE_PATH" \
+        --stage "$DATA_SOURCE_PATH"; then
         echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
         exit 1
     fi
@@ -134,6 +137,19 @@ fi
 # no second copy here: the parse above already wrote it from the same tag.
 cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
 echo "DATA_VERSION set to $(cat DATA_VERSION)"
+
+# ... and the archive those bytes came from, installed here rather than where it was
+# verified so that the two stamps advance together: a run that fails between the two
+# would otherwise leave DATA_SOURCE describing a release the packaged data is not.
+if [ -f "$DATA_SOURCE_PATH" ]; then
+    cp "$DATA_SOURCE_PATH" DATA_SOURCE
+    echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
+else
+    # only reachable through the "$JSON_PATH already exists" shortcut above, which
+    # parses an input this run never saw an archive for
+    echo "WARNING: no archive was verified this run, so DATA_SOURCE still describes" >&2
+    echo "the previously packaged release and now disagrees with DATA_VERSION." >&2
+fi
 
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
