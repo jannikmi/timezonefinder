@@ -15,7 +15,9 @@ name: Compile the packaged data
 # converter: no stamps, no version bump, no fixtures, no reports. Those belong to the
 # branch and are already in its tree - the author generated them when they generated the
 # data. Regenerating the report pages here would overwrite measured figures with a
-# runner's, and a runner is not what the committed benchmarks describe.
+# runner's, and a runner is not what the committed benchmarks describe. The one report
+# the converter writes by itself is restored by that flag rather than left behind, so
+# this job's checkout ends as clean as it started.
 #
 # What makes the output trustworthy is that nothing here chooses anything. The release
 # is read out of the branch's own `DATA_VERSION` rather than resolved as "latest", so

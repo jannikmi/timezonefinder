@@ -265,6 +265,41 @@ def test_the_update_script_still_prepares_a_release_by_default() -> None:
 
 
 @pytest.mark.unit
+def test_binaries_only_leaves_the_committed_data_report_alone() -> None:
+    """The converter writes one committed file on its own, and the flag has to undo it.
+
+    ``parse_data`` calls ``write_data_report_from_binary`` unconditionally, and that
+    writes the checkout's ``docs/data_report.rst`` whatever ``-out`` it was given - the
+    behaviour TOOL-6 is about. So a ``--binaries-only`` run that did nothing about it
+    would leave a modified tracked file behind, which is precisely what the mode exists
+    not to do, and on a runner it leaves the dispatch's checkout dirty for whatever
+    step looks next.
+
+    The premise is asserted alongside the fix. When TOOL-6 makes the converter respect
+    ``-out``, this restore becomes dead code, and a test that only checked for the
+    restore would keep it alive for ever.
+    """
+    converter = (PROJECT_ROOT / "scripts" / "file_converter.py").read_text(
+        encoding="utf-8"
+    )
+    assert "write_data_report_from_binary(" in converter, (
+        "the converter no longer writes the committed data report, so the restore in "
+        f"{UPDATE_SCRIPT.name}'s --binaries-only branch is dead and should go"
+    )
+
+    script = UPDATE_SCRIPT.read_text(encoding="utf-8")
+    start = script.index('if [ "$BINARIES_ONLY" -eq 1 ]; then')
+    binaries_only = script[start : script.index("exit 0", start)]
+    assert "git checkout --" in binaries_only, (
+        "--binaries-only does not restore the report the converter rewrote, so it "
+        "leaves a tracked file modified while promising it does not"
+    )
+    assert "DATA_REPORT_PATH" in binaries_only, (
+        "the restore does not name the report path declared at the top of the script"
+    )
+
+
+@pytest.mark.unit
 def test_the_update_branch_stages_the_paths_it_names() -> None:
     """`git add -A` would make "no binaries are committed" .gitignore's property alone.
 

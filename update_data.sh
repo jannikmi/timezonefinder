@@ -15,6 +15,8 @@ URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/down
 URL_SUFFIX=.geojson.zip
 DATA_PACKAGE=timezonefinder-data
 DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
+# The committed report the converter rewrites on every parse; see --binaries-only below.
+DATA_REPORT_PATH=docs/data_report.rst
 
 usage() {
     cat <<EOF
@@ -31,10 +33,11 @@ Options:
                              branch already declares in DATA_VERSION, where "latest"
                              would silently compile a different release
   --binaries-only            stop once the converter has run: write no stamps, bump no
-                             version, regenerate no fixtures or reports. For a branch
-                             whose data is compiled by CI rather than committed - the
-                             surrounding files are already in that branch's tree, and
-                             rewriting them from a runner would only add noise
+                             version, regenerate no fixtures, and leave every committed
+                             report as it was. For a branch whose data is compiled by CI
+                             rather than committed - the surrounding files are already in
+                             that branch's tree, and rewriting them from a runner would
+                             only add noise
   -h, --help                 show this help message and exit
 EOF
 }
@@ -161,6 +164,19 @@ fi
 # the reports and the version bump. A caller that only wants the binaries has all of
 # those in its tree already and would be overwriting them with a runner's numbers.
 if [ "$BINARIES_ONLY" -eq 1 ]; then
+    # One committed file the converter writes on its own: `parse_data` calls
+    # `write_data_report_from_binary` unconditionally, and that writes the checkout's
+    # docs/data_report.rst whatever -out it was given (the behaviour TOOL-6 is about).
+    # So "leaves every committed report as it was" is only true if this one is put back,
+    # and without it a `--binaries-only` run leaves a modified tracked file behind -
+    # exactly what this mode exists not to do. A converter run dirties nothing else.
+    # It describes the binaries just compiled, which on this path is what the branch has
+    # already committed, so restoring it discards a no-op; if it is not a no-op then the
+    # branch's report was wrong before this ran, and the full run is what fixes that.
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        echo "restoring the committed $DATA_REPORT_PATH the converter rewrote"
+        git checkout -- "$DATA_REPORT_PATH"
+    fi
     echo "SUCCESS! binaries for $DOWNLOADED_TAG compiled; stopping before the release preparation."
     if [ "$RM_TMP" -eq 1 ]; then
         echo "deleting temporary data files..."
