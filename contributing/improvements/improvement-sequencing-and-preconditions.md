@@ -8,7 +8,7 @@ DATA-BINARIES: git-ignore `data/` ─→ GH-522
 
 FMT-2 (frame-of-reference payload) ─→ [a format 3, shared with GH-513]
 
-GH-542 (precision) gates nothing — its encoding half is answered
+Coordinate precision gates nothing — six source decimals are the measured accuracy floor
 
 GH-543 (cffi bump) ─→ GH-364's abi3t option
 
