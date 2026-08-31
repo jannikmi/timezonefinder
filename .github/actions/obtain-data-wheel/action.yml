@@ -1,8 +1,13 @@
 name: Obtain the timezonefinder-data wheel
 description: >
   Put the data distribution's wheel in dist/, taking the artefact uploaded by the run
-  that compiled the data whenever DATA_BUILD_RUN names one, and building it from this
-  checkout otherwise.
+  that compiled the data whenever DATA_BUILD_RUN names one and that artefact still
+  matches this checkout, and building it here otherwise.
+
+  Every mismatch falls back to building rather than failing, because the tree is the
+  authority: it is on master, master's own run tested it, and a tag that cannot publish
+  is the one failure state this pipeline has no good recovery for - the data is merged,
+  the tag is pushed, and re-running changes nothing.
 
   Why it is not simply built where it is needed: the data pipeline's invariant is that
   the bytes build.yml validated on the update pull request are the bytes the tag
@@ -47,7 +52,41 @@ runs:
 
         version=$(uv version --short --package timezonefinder-data)
         expected="timezonefinder_data-${version}-py3-none-any.whl"
+        data_package=packages/timezonefinder-data
         mkdir -p dist
+
+        # Whether a candidate wheel is what building *this* checkout would produce.
+        # The filename settles only the version, and the data package ships more than
+        # data: a module, a licence, and a README that is its PyPI description. A data
+        # update takes minutes to merge, and anything landing on master in that window
+        # is in the tree the tag names but not in an artefact built before it - so
+        # matching versions is not enough to call the artefact this tree's.
+        #
+        # Compared against the *tracked* files rather than the directory, which is what
+        # lets the same rule survive the data no longer being committed: a wheel may
+        # carry payload the checkout does not have, never the other way round.
+        # Not covered: the .dist-info METADATA fields derived from pyproject.toml -
+        # description and classifiers. The one that is load-bearing there is the
+        # version, which the filename check above already settles.
+        packaged_inputs_match() {
+          local candidate="$1" unpacked licence tracked
+          unpacked=$(mktemp -d)
+          unzip -q "$candidate" -d "$unpacked"
+
+          licence=$(find "$unpacked" -path '*.dist-info/licenses/DATA_LICENSE')
+          if [[ ! -f "$licence" ]] || ! cmp -s "$licence" "$data_package/DATA_LICENSE"; then
+            echo "  DATA_LICENSE differs from this checkout"
+            return 1
+          fi
+
+          while IFS= read -r tracked; do
+            if ! cmp -s "$unpacked/${tracked#"$data_package/"}" "$tracked"; then
+              echo "  $tracked differs from this checkout, or is missing from the wheel"
+              return 1
+            fi
+          done < <(git ls-files -- "$data_package/timezonefinder_data")
+          return 0
+        }
 
         source=build
         if [[ -f "$stamp" ]]; then
@@ -69,17 +108,15 @@ runs:
             fi
             wheel=$(find "$staging" -name 'timezonefinder_data-*.whl')
             found=$(basename "$wheel")
-            if [[ "$found" == "$expected" ]]; then
-              mv "$wheel" dist/
-              source=artifact
-            else
-              # Not an error: this is what a checkout whose data was regenerated
-              # without going through check_data_updates.yml looks like - a format
-              # change, say - and building from the tree is the right answer there.
-              # The version, not the run id, is what decides whether the recorded
-              # artefact describes this tree.
+            if [[ "$found" != "$expected" ]]; then
               echo "::warning::run $run_id built $found, but this checkout declares" \
                 "$version; building the wheel here instead"
+            elif ! packaged_inputs_match "$wheel"; then
+              echo "::warning::run $run_id's $found predates a change to this" \
+                "checkout's packaged inputs; building the wheel here instead"
+            else
+              mv "$wheel" dist/
+              source=artifact
             fi
           else
             echo "::warning::run $run_id no longer offers $artifact (expired, deleted," \
@@ -121,32 +158,3 @@ runs:
           exit 1
         fi
         echo "$wheel carries $packaged data files"
-
-    - name: Compare the wheel's dataset with the checkout
-      shell: bash
-      run: |
-        set -euo pipefail
-
-        data_dir=packages/timezonefinder-data/timezonefinder_data/data
-        # Only while the binaries are still committed (DATA-BINARIES). Until then this
-        # is the one step that shows the hand-off end to end: the tree is what the test
-        # matrix validated and what a reviewer read, so the wheel matching it byte for
-        # byte is the whole invariant, checked rather than argued. It retires by itself
-        # when the directory stops being tracked, because there is then nothing left to
-        # compare against.
-        if [[ -z "$(git ls-files -- "$data_dir")" ]]; then
-          echo "$data_dir is not tracked here; nothing to compare the wheel against"
-          exit 0
-        fi
-
-        version=$(uv version --short --package timezonefinder-data)
-        wheel="dist/timezonefinder_data-${version}-py3-none-any.whl"
-        unpacked=$(mktemp -d)
-        unzip -q "$wheel" 'timezonefinder_data/data/*' -d "$unpacked"
-        if ! diff -r "$unpacked/timezonefinder_data/data" "$data_dir"; then
-          echo "::error::$wheel does not carry the dataset in this checkout. The tree is" \
-            "what the test matrix validated and what a reviewer read, so a wheel that" \
-            "differs from it is not the artefact this release was approved as."
-          exit 1
-        fi
-        echo "the wheel's dataset is identical to the checkout's"
