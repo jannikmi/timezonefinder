@@ -151,6 +151,7 @@ class ZoneNames:
         lookup = self._gather_lookup
         if lookup is None:
             lookup = np.asarray([*self.names, None], dtype=object)
+            lookup.flags.writeable = False
             self._gather_lookup = lookup
         return lookup
 

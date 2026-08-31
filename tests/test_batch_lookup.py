@@ -29,7 +29,7 @@ from timezonefinder import (
     timezone_names_at,
 )
 from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
-from timezonefinder.shortcut_index import ABSENT, slot_of
+from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 # enough points to reach every branch without turning a unit test into a sweep; the
@@ -349,7 +349,17 @@ def test_a_cell_no_zone_covers_answers_the_same_as_the_scalar_lookup():
     with TimezoneFinder(in_memory=True) as tf:
         slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
         assert tf.shortcuts.table[slot] != ABSENT, "the cell is covered to begin with"
-        tf.shortcuts.table[slot] = ABSENT
+        # Loaded index state is immutable. Replace it with purpose-built test state
+        # instead of mutating the dataset the finder loaded.
+        table = tf.shortcuts.table.copy()
+        table[slot] = ABSENT
+        tf.shortcuts = ShortcutIndex(
+            table,
+            tf.shortcuts.starts,
+            tf.shortcuts.ends,
+            tf.shortcuts.last_change,
+            tf.shortcuts.payload,
+        )
 
         assert tf.timezone_at(lng=lng, lat=lat) is None
         assert tf.timezone_ids_at(lngs=[lng], lats=[lat])[0] == NO_ZONE_ID

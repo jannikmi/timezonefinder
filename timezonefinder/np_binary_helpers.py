@@ -59,6 +59,13 @@ def store_per_polygon_vector(file_path: Path, vector: np.ndarray) -> None:
 
 
 def read_per_polygon_vector(file_path: Path) -> np.ndarray:
-    """Read a vector from a .npy file in the specified file path."""
+    """Read an immutable runtime vector from a ``.npy`` file.
+
+    These vectors describe the loaded dataset rather than caller-owned working state.
+    Every runtime consumer only reads them, and several are publicly reachable through
+    a finder, so making that contract explicit prevents an accidental assignment from
+    silently changing later lookup answers.
+    """
     vector = np.load(file_path)
+    vector.flags.writeable = False
     return vector

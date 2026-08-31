@@ -230,3 +230,57 @@ def test_shortcut_arrays_do_not_pin_the_file_buffer(hybrid_shortcuts):
         "shared backing array must not be writeable through its slices - cells with "
         "identical candidate lists share one range of it"
     )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("in_memory", [False, True])
+def test_loaded_dataset_arrays_are_read_only(in_memory):
+    """Publicly reachable dataset state must not be mutable by accident.
+
+    These arrays feed later lookups directly. An assignment used to succeed and silently
+    changed their answers; the coordinate arrays were already read-only because their
+    backing bytes are immutable, so include them to pin one contract across both storage
+    modes.
+    """
+    with TimezoneFinder(in_memory=in_memory) as finder:
+        arrays = {
+            "zone_ids": finder.zone_ids,
+            **{
+                f"shortcuts.{name}": getattr(finder.shortcuts, name)
+                for name in ("table", "starts", "ends", "last_change", "payload")
+            },
+            **{
+                f"boundaries.{name}": getattr(finder.boundaries, name)
+                for name in ("xmin", "xmax", "ymin", "ymax")
+            },
+            **{
+                f"holes.{name}": getattr(finder.holes, name)
+                for name in ("xmin", "xmax", "ymin", "ymax", "poly_ref")
+            },
+            "boundary coordinates": finder.boundaries.coords_of(0),
+            "hole coordinates": finder.holes.coords_of(0),
+        }
+        if not in_memory:
+            arrays.update(
+                {
+                    "boundary coordinate offsets": (
+                        finder.boundaries.coordinates.coord_offsets
+                    ),
+                    "boundary coordinate lengths": (
+                        finder.boundaries.coordinates.coord_lengths
+                    ),
+                    "hole coordinate offsets": finder.holes.coordinates.coord_offsets,
+                    "hole coordinate lengths": finder.holes.coordinates.coord_lengths,
+                }
+            )
+
+        # Materialise the lazy names gather too: it is runtime dataset state, while the
+        # array returned by a public batch lookup remains a fresh, writeable result.
+        finder.zone_names.names_of(np.zeros(128, dtype=np.int32))
+        assert finder.zone_names._gather_lookup is not None
+        arrays["zone-name gather"] = finder.zone_names._gather_lookup
+
+        for name, array in arrays.items():
+            assert not array.flags.writeable, name
+            with pytest.raises(ValueError, match="read-only"):
+                array.flat[0] = array.flat[0]
