@@ -1,0 +1,162 @@
+{
+  "by_distance_m": [
+    {
+      "all_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 4876,
+        "examples": [
+          [
+            149.56234582424733,
+            -37.343966250760715,
+            "Australia/Sydney",
+            "Australia/Melbourne"
+          ],
+          [
+            146.9239483439333,
+            7.985540984081446,
+            "Pacific/Chuuk",
+            "Etc/GMT-10"
+          ],
+          [
+            11.234526638831861,
+            54.63907584984068,
+            "Europe/Copenhagen",
+            "Etc/GMT-1"
+          ],
+          [
+            -61.64625201377156,
+            -51.61010356667623,
+            "Etc/GMT+4",
+            "Atlantic/Stanley"
+          ],
+          [
+            94.06677200726277,
+            76.9566450149462,
+            "Etc/GMT-6",
+            "Asia/Krasnoyarsk"
+          ]
+        ],
+        "total": 10000
+      },
+      "distance_m": 0.1,
+      "drawn": 19350,
+      "land_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 4873,
+        "examples": [],
+        "total": 7597
+      }
+    },
+    {
+      "all_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 231,
+        "examples": [
+          [
+            -71.80531714842286,
+            -40.108005323444665,
+            "America/Santiago",
+            "America/Argentina/Salta"
+          ],
+          [
+            -60.34297449632282,
+            7.013291677413126,
+            "America/Caracas",
+            "America/Guyana"
+          ],
+          [
+            -178.26206983065364,
+            -30.386688829732435,
+            "Pacific/Auckland",
+            "Etc/GMT+12"
+          ],
+          [
+            49.84202693705918,
+            7.335113612998217,
+            "Etc/GMT-3",
+            "Africa/Mogadishu"
+          ],
+          [
+            127.44973781863438,
+            -8.609654677920862,
+            "Etc/GMT-8",
+            "Asia/Dili"
+          ]
+        ],
+        "total": 10000
+      },
+      "distance_m": 0.5,
+      "drawn": 19244,
+      "land_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 231,
+        "examples": [],
+        "total": 7548
+      }
+    },
+    {
+      "all_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 0,
+        "examples": [],
+        "total": 10000
+      },
+      "distance_m": 1.0,
+      "drawn": 19342,
+      "land_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 0,
+        "examples": [],
+        "total": 7735
+      }
+    },
+    {
+      "all_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 0,
+        "examples": [],
+        "total": 10000
+      },
+      "distance_m": 5.0,
+      "drawn": 19404,
+      "land_borders": {
+        "affected_both_sides": 0,
+        "affected_one_side": 0,
+        "examples": [],
+        "total": 7659
+      }
+    }
+  ],
+  "by_point_class": {
+    "ambiguous_shortcut_points": {
+      "changed": 0,
+      "examples": [],
+      "total": 5000
+    },
+    "on_land_points": {
+      "changed": 0,
+      "examples": [],
+      "total": 10000
+    },
+    "random_points": {
+      "changed": 0,
+      "examples": [],
+      "total": 10000
+    },
+    "unique_shortcut_points": {
+      "changed": 0,
+      "examples": [],
+      "total": 5000
+    }
+  },
+  "data_version": "2026c",
+  "quantization": "nearest, ties away from zero",
+  "seed": 20260831,
+  "source_decimal_places": 6,
+  "tested_decimal_places": 5,
+  "uniform_globe": {
+    "changed": 0,
+    "examples": [],
+    "total": 200000
+  }
+}

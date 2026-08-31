@@ -63,6 +63,7 @@ References
 
    Architecture <architecture>
    Data Format <data_format>
+   Coordinate Precision Impact <coordinate_precision_impact>
    Data Report <data_report>
    Alternatives <alternatives>
 

@@ -108,6 +108,8 @@ The width is set by the *range*, not by the precision. Covering ±180° at 10\ :
 
 Where it *would* pay is a variable-width encoding, which is why the two are considered together rather than separately. Storing per-polygon deltas as varints, measured over the packaged boundaries: 60.5 MiB fixed-width today, 33.7 MiB at 10\ :sup:`-7`, and **27.7 MiB at 10\ :sup:`-6`** - so the decimal that carries no information costs ~18 % of the encoded size once the encoding is able to charge for it.
 
+Dropping another decimal is not free. :doc:`coordinate_precision_impact` rebuilds every binary and the H3 shortcut index after nearest-rounding the source geometry to five decimal places, then compares answers over workload-shaped and verified near-border populations. Ordinary coordinates do not resolve the effect; targeted border probes do, so six source decimals remain the accuracy floor while the redundant seventh may be omitted by an encoding that can benefit from doing so.
+
 For scale in the other direction, consecutive vertices of the packaged polygons are a median 47.6 m apart, and only 0.02 % of edges are shorter than the source's own 11.1 cm step. Coordinate precision and vertex density are separate axes, and neither is the binding constraint on accuracy at a border.
 
 The figures are derived, not quoted: :func:`timezonefinder.utils.coordinate_resolution` returns the representable step of a dtype and :func:`timezonefinder.utils.degrees_to_metres` converts it to ground distance, and ``tests/test_coordinate_precision.py`` holds every claim on this page to what they compute.

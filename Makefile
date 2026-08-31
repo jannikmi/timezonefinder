@@ -32,6 +32,7 @@
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
 #   reports    - benchmarks + memory + render docs/benchmark_results_*.rst + the data report
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
+#   precision-impact - rebuild data at five decimal places and measure changed answers
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
 #   hookup     - update pre-commit hooks, then update dependencies
@@ -193,7 +194,7 @@ latency:
 		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
-reports: check-data benchmarks latency memory
+reports: check-data benchmarks latency memory precision-impact
 	uv run python -m scripts.render_benchmark_reports \
 		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
 		--memory-json=$(MEMORY_JSON)
@@ -208,6 +209,12 @@ reports: check-data benchmarks latency memory
 # acceleration path does not matter and this checkout's environment will do.
 tzfpy-agreement:
 	uv run --group compare python -m scripts.measure_tzfpy_agreement --chart --json-out
+
+# Rebuild the packaged release with one fewer source decimal place, including its H3
+# shortcut index, then compare answers over uniform, workload-shaped and near-border
+# populations. The JSON is the measured run and the RST page is rendered from it.
+precision-impact:
+	uv run python -m scripts.measure_coordinate_precision --json-out --report-out
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them
