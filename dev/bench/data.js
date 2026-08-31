@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788208303827,
+  "lastUpdate": 1788211287581,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3465,6 +3465,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00036334394146683713",
             "extra": "mean: 25.327564999997776 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ac82ea088f221c899ce28798766b074c2e88df2",
+          "message": "Compile a branch's packaged data in CI instead of committing it (#578)\n\n* DATA-COMPILE: compile a branch's data in CI instead of committing it\n\nGit-ignoring the dataset left hand-made branches without a producer. Every\ndata-format change declares a `timezonefinder-data` version PyPI has never\nserved, so `make bootstrap` has nothing to fetch, and only the weekly update job\nrecorded the `DATA_BUILD_RUN` that CI reads instead - which left `git add -f` and\n~63 MB of history per format change as the way to give CI something to test.\n\n`compile_data.yml` is the missing half. Dispatched on a branch, it compiles the\ntimezone-boundary-builder release that branch's own `DATA_VERSION` names, checks\nthe result answers a lookup, and uploads `artifact-data-wheel`. Every consumer\nalready knew what to do with a recorded run.\n\nIt pins the release rather than resolving upstream afresh, because the branch's\ncommitted benchmark fixtures and report pages are pinned to that tag: compiling a\nnewer one would produce a dataset that installs, answers lookups, and disagrees\nwith every figure the branch published.\n\n`update_data.sh` grew the two flags it needs. `--tag` pins the release; the\nverification against the release API is unchanged, so a tag that does not exist\nfails there rather than compiling something unattributed. `--binaries-only` stops\nafter the converter, leaving the stamps, fixtures, reports and version bump alone\n- those belong to the branch, and a runner's measurements are not what its\ncommitted benchmarks describe. Both default off, so what the weekly pipeline runs\nunattended is untouched.\n\nThe wheel that run builds is the one the pull request's matrix installs and the\none the `data-v*` tag publishes, so a format change now reaches PyPI through a\nsingle build - the property the weekly pipeline already rests on, extended to the\nbranches that could not have it.\n\nThe handoff tests were scanning a hardcoded set of workflows, so a second builder\nin a new file was invisible to exactly the check meant to catch one. They now scan\nthe workflow directory and pin both producers.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DATA-COMPILE: record the decision and drop the committed-binaries fallback\n\nThe maintainer's choice goes in the format-release decisions, with the refused\noption kept: committing a branch's binaries needs no machinery, which is why it\nhas to be argued against rather than merely dropped, and it costs ~63 MB of\nhistory per format change plus a release vouched for by a diff over\nlaptop-compiled bytes.\n\nWhat pointed at `git add -f` now points at the dispatch: the sequencing rules,\nFMT-2's entry - the next branch that needs it - and GH-522, whose caveat is gone\nentirely. That rewrite no longer has to be timed against what is unmerged,\nbecause nothing adds a 47th coordinate blob.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Leave the committed data report alone in --binaries-only mode\n\nReview of #578 found the flag's promise was not true. `parse_data` calls\n`write_data_report_from_binary` unconditionally, and that writes the checkout's\n`docs/data_report.rst` whatever `-out` it was given - the behaviour TOOL-6 is\nabout - so a `--binaries-only` run left a modified tracked file behind while\nsaying it regenerates no reports, and the dispatch left its runner's checkout\ndirty for whatever step looked next.\n\nMeasured rather than assumed: a converter run over the test fixture dirties that\none file and nothing else. So the flag puts it back, in the checkout it was run\nfrom, and the converter is untouched - making it respect `-out` is TOOL-6's job\nand its own slice.\n\nThe test pins the premise as well as the fix. When TOOL-6 lands, the restore\nbecomes dead code, and a test that only checked for the restore would keep it\nalive for ever.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-31T23:20:41+02:00",
+          "tree_id": "5284cdcf00e40a2c9a193f34fc7a1120dd052e5e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9ac82ea088f221c899ce28798766b074c2e88df2"
+        },
+        "date": 1788211286863,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 152.12825141750977,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022413354416398842",
+            "extra": "mean: 6.573401000025569 msec\nrounds: 111 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 226.2518685575327,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003547108999948945",
+            "extra": "mean: 4.4198530000016945 msec\nrounds: 198 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 38.981354828159745,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00036957445056864897",
+            "extra": "mean: 25.653290000008155 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
           }
         ]
       }
