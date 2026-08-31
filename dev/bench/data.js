@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788136260603,
+  "lastUpdate": 1788136262735,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7112,6 +7112,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6049defd1f03fa12b3320c4a14a34be5816a86d6",
+          "message": "GH-501: verify the upstream archive before the data update parses it (#569)\n\n* GH-501: verify the upstream archive before the data update parses it\n\nThe weekly data update is unattended end to end - its pull request is\nmerged and its PyPI release tagged with no human reading either - and\nnothing had ever looked at the ~55 MB archive it downloaded. A truncated\ntransfer, a half-written leftover in tmp/ or an asset replaced upstream\nreached the converter as ordinary input.\n\ntimezone-boundary-builder publishes no checksum file, but the GitHub\nrelease API states a SHA-256 digest and a byte size for every asset, and\nthat is an independent statement of what the bytes should be. Confirmed\nagainst the real 2026c archive: the published digest is the SHA-256 of\nthe 55,449,715 bytes served.\n\nupdate_data.sh now checks the archive against it before anything parses\nit - whether this run downloaded it or found it in tmp/ - and refuses an\nasset that publishes no digest rather than parsing it unverified; the\nexisting fallback opens a notification issue. The verified digest is\nrecorded in the root DATA_SOURCE beside DATA_VERSION, which states in\nthe update pull request which upstream bytes produced its binaries and\ncatches an asset upstream replaced in place: the one substitution the\npublished digest cannot report, since it moves with the asset.\n\nResolving the release tag moves into the same module, replacing a\ngrep/cut over the API's JSON.\n\n* Record GH-501's download guard as shipped and rewrite it to the remainder\n\nPart (a) is done, so the entry now describes only the committed point\nsample, the diff report and the gates that read it. What is kept rather\nthan deleted with it is the fact that made (a) possible and that the\nissue's proposal assumed did not exist: the GitHub release API publishes\na per-asset SHA-256, so verification needs nothing from upstream that\ntimezone-boundary-builder does not already ship.\n\n* Advance DATA_SOURCE with DATA_VERSION, and drop a rejected token\n\nTwo review findings on the download guard.\n\nThe record was written where the digest is known - during verification,\nbefore the converter runs - while DATA_VERSION is written only after a\nsuccessful parse. A run that died in between left the two stamps naming\ndifferent releases, which the new consistency test then reported as\ndrift rather than as a failed run, recoverable only by hand. `verify`\nnow stages the record to a path the caller names and installs nothing;\nupdate_data.sh copies it beside DATA_VERSION in the same step, which is\nthe two-step it already uses for the release tag. Verification with no\n--stage is a question and edits nothing.\n\nThe release API is public, so authentication buys quota and nothing\nelse - but the module presented whatever GH_TOKEN or GITHUB_TOKEN\nhappened to be exported and had no way back. A stale token in a\ndeveloper's shell turned a request curl had always read anonymously\ninto a 401 that failed the update. A rejected credential now falls back\nto an anonymous read. Only 401: a 403 with a token is usually the rate\nlimit, and retrying that against the stricter anonymous quota would\ntrade a good diagnosis for a worse one.\n\n* Verify a cached archive too, and retry a transient release API failure\n\nTwo review findings.\n\nThe verification sat inside the branch that unpacks, so a tmp/ holding\nan already-unpacked JSON skipped it and the converter parsed an input\nnothing vouched for - the one path where this guard was supposed to be\ntotal and was not. Re-hashing 55 MB costs a fraction of a second, so it\nnow runs on every run rather than only on the one that downloaded the\narchive. An unpacked input whose archive is gone can be checked against\nnothing at all and is refused outright: compiling data of your own is\nwhat file_converter is for, and it claims no upstream release for what\nit is given. The staged record is therefore always present by the time\nthe parse has succeeded, so its install loses the branch it needed.\n\nThe module also replaced a `curl --retry 3` with a single urlopen, so a\none-second 503 or a reset connection during either release lookup would\nabort an otherwise valid weekly update and open a maintenance issue for\na human. Reads are now retried three times over transient failures -\n5xx, the secondary-rate-limit 429, and the transport errors that carry\nno status. A 404 or a 403 is an answer rather than a blip and is not\nretried, which is also what keeps the rate-limit diagnosis intact.\n\n* Unpack from the verified archive on every run\n\nThe verification attested to the archive while the converter could still\nread a JSON left over from an earlier run - edited by hand to debug a\nparse, or truncated after it was unpacked - so DATA_SOURCE would record\na digest for bytes that did not produce the binaries. Closing the gap\nfrom the download side last round left it open from this one.\n\nThe unpacked copy is no longer cached: the archive is, since it is the\n55 MB one, and unzipping is local and takes seconds. Everything the\nconverter sees therefore derives from bytes verified in the same run,\nwith no artefact of its own to trust.\n\nThat also collapses the branching this had grown. There is no longer a\nmatrix of which artefacts survived from when - download if the archive\nis absent, verify it, unpack it, parse - so the refusal added last\nround for an unpacked input with no archive goes: the archive is simply\nfetched and the stale copy replaced, which is what the user wanted\nanyway. Parsing data of your own is still file_converter's job.\n\n* Retry direct HTTP response transport failures\n\n* Retry the full HTTP transport error boundary",
+          "timestamp": "2026-08-31T02:30:16+02:00",
+          "tree_id": "74d07fe19ecbd1aa4686c951cb4dfd1cda9ca75e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6049defd1f03fa12b3320c4a14a34be5816a86d6"
+        },
+        "date": 1788136262188,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0077600479125977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0079383850097656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.6024599075317383,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.611119270324707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.612648010253906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.621347427368164,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
           }
         ]
       }
