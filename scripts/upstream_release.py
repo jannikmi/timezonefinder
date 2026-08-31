@@ -70,13 +70,14 @@ TOKEN_VARIABLES = ("GH_TOKEN", "GITHUB_TOKEN")
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 2.0
 
-# urllib wraps many transport failures in URLError, but exceptions raised while
-# reading the HTTP response can escape directly from http.client instead.
+# This function does only network I/O. urllib wraps most transport failures in
+# URLError (an OSError), while socket/SSL errors can escape from response.read() as
+# OSError subclasses and malformed or incomplete responses as HTTPException.
+# Classifying the boundary rather than individual subclasses keeps every transport
+# phase under the same retry policy.
 TRANSIENT_TRANSPORT_ERRORS = (
-    urllib.error.URLError,
-    TimeoutError,
-    http.client.RemoteDisconnected,
-    http.client.IncompleteRead,
+    OSError,
+    http.client.HTTPException,
 )
 
 

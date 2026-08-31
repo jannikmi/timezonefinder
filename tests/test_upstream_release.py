@@ -418,17 +418,20 @@ def test_a_transport_error_without_a_status_is_retried(
 @pytest.mark.parametrize(
     "error",
     [
+        ConnectionResetError("connection reset during response body"),
+        ConnectionAbortedError("connection aborted during response body"),
         http.client.RemoteDisconnected("connection closed before response"),
         http.client.IncompleteRead(b"partial response"),
+        http.client.BadStatusLine("not an HTTP status line"),
     ],
 )
-def test_an_http_client_transport_error_is_retried(
+def test_a_response_transport_error_is_retried(
     monkeypatch: pytest.MonkeyPatch,
     no_token: None,
     instant_backoff: None,
     error: Exception,
 ) -> None:
-    """urllib can expose response connection failures without wrapping them."""
+    """Socket and HTTP response failures can escape without urllib wrapping them."""
     attempts = 0
 
     def request(url: str, token: str | None) -> bytes:
