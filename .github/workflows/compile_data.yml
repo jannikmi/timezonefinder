@@ -1,0 +1,126 @@
+name: Compile the packaged data
+
+# Compiles the boundary binaries for the branch it is dispatched on and uploads them as
+# the data wheel, so that a branch never has to commit them.
+#
+# Who needs this. The dataset is git-ignored, and every consumer resolves it one of two
+# ways: from the `timezonefinder-data` release the branch declares, or - when that
+# version is not published yet - from the run named in `DATA_BUILD_RUN`. The weekly
+# update job produces such a run for itself. Nothing did for a *hand-made* branch, and
+# every format change is one: it bumps the data version to something PyPI has never
+# served, so `make bootstrap` has nothing to fetch and the branch had to carry ~63 MB of
+# binaries in git just to have something for CI to read. This is the missing producer.
+#
+# What it does NOT do, and why. `update_data.sh --binaries-only` stops after the
+# converter: no stamps, no version bump, no fixtures, no reports. Those belong to the
+# branch and are already in its tree - the author generated them when they generated the
+# data. Regenerating the report pages here would overwrite measured figures with a
+# runner's, and a runner is not what the committed benchmarks describe. The one report
+# the converter writes by itself is restored by that flag rather than left behind, so
+# this job's checkout ends as clean as it started.
+#
+# What makes the output trustworthy is that nothing here chooses anything. The release
+# is read out of the branch's own `DATA_VERSION` rather than resolved as "latest", so
+# this compiles the release the branch says it packages; the archive is verified against
+# the digest the GitHub release API publishes before the converter reads a byte; and the
+# wheel that is uploaded is the one the pull request's matrix installs and the one the
+# `data-v*` tag publishes. One build, from the pull request to PyPI - which is the
+# property `publish_data.yml` states in its header, and which a laptop-compiled,
+# git-committed dataset cannot offer.
+#
+# Usage:
+#   gh workflow run compile_data.yml --ref <branch>
+# then record the run it reports in `DATA_BUILD_RUN` and commit that. The job summary
+# spells out the command.
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  compile:
+    name: Compile the boundary data and upload its wheel
+    runs-on: ubuntu-latest
+    # Matches the weekly update job. Deliberately an unmeasured ceiling rather than a
+    # figure: the regeneration has never run in CI - upstream has published nothing
+    # since the pipeline was built - so the first dispatch is what measures it.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      # Pinned to what the branch declares, never "latest": this exists to reproduce the
+      # binaries a branch already describes in its committed reports and benchmark
+      # fixtures, and compiling a newer upstream release would silently produce a
+      # dataset none of them match.
+      # GH_TOKEN because the release API is asked twice (tag, then the digest to verify
+      # against) and an unauthenticated runner shares its rate limit with its whole host.
+      - name: Compile the binaries for the declared release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(cat DATA_VERSION)
+          echo "compiling timezone-boundary-builder $tag"
+          bash update_data.sh --dataset=full --with-oceans --tag="$tag" --binaries-only
+
+      # Before the upload, not after: this artefact is about to become the only copy of
+      # this branch's dataset, read by the test matrix and published by the tag. A
+      # compile that produced unreadable geometry would otherwise be found four jobs
+      # later, in a log nobody attributes to this run. Same assertion the end-to-end job
+      # makes of a released wheel - and on a format branch it is the branch's own reader
+      # being pointed at the branch's own data for the first time.
+      - name: Check the compiled data answers a lookup
+        run: |
+          set -euo pipefail
+          uv run python -c "
+          from timezonefinder import TimezoneFinder
+          result = TimezoneFinder().timezone_at(lat=40.5, lng=11.7)
+          assert result == 'Etc/GMT-1', result
+          print('lookup ok:', result)
+          "
+
+      - name: Build the data wheel
+        run: uv build -v --package timezonefinder-data --wheel -o dist/
+
+      # Longer than the default because of what this artefact is for. The weekly
+      # update's wheel is consumed within minutes by a pull request that auto-merges;
+      # this one has to survive the review of a format change, which is measured in
+      # weeks. If it does expire, re-dispatch and record the new run - nothing else is
+      # lost, because the run id is the only reference to it.
+      - name: Upload the data wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-data-wheel
+          path: dist/timezonefinder_data-*.whl
+          retention-days: 90
+
+      - name: Say how to record this run
+        run: |
+          set -euo pipefail
+          version=$(uv version --short --package timezonefinder-data)
+          {
+            echo "## Data compiled for \`timezonefinder-data $version\`"
+            echo
+            echo "Record this run on the branch so CI reads its wheel instead of PyPI:"
+            echo
+            echo '```bash'
+            echo "echo $GITHUB_RUN_ID > DATA_BUILD_RUN"
+            echo '```'
+            echo
+            echo "Then commit \`DATA_BUILD_RUN\`. It travels with the branch to the"
+            echo "\`data-v$version\` tag, so the matrix and the release read one wheel."
+          } >> "$GITHUB_STEP_SUMMARY"
