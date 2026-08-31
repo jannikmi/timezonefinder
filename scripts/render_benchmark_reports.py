@@ -63,6 +63,8 @@ CONFIG_HEADERS = [
 # is intentionally dropped here.
 FUNCTION_LABELS = {
     "test_timezone_at": "TimezoneFinder.timezone_at()",
+    "test_timezone_ids_at": "TimezoneFinder.timezone_ids_at()",
+    "test_timezone_names_at": "TimezoneFinder.timezone_names_at()",
     "test_timezone_at_land": "TimezoneFinder.timezone_at_land()",
     "test_timezone_at_timezonefinderl": "TimezoneFinderL.timezone_at() (ambiguous-shortcut points)",
     "test_pt_in_poly_clang": "bare kernel (C/clang)",
@@ -632,6 +634,22 @@ def render_timezone_finding(
             land_file_b,
             label_fn=_memory_mode_label,
         )
+
+    reporter.add_text("**Scalar vs batch lookups** (file-based):")
+    for point_type in ("random", "unique_shortcut", "ambiguous_shortcut"):
+        scalar = by_name.get(f"test_timezone_at[{point_type}-file_based]")
+        ids = by_name.get(f"test_timezone_ids_at[{point_type}-file_based]")
+        names = by_name.get(f"test_timezone_names_at[{point_type}-file_based]")
+        if scalar and ids:
+            context = f"{PARAM_LABELS.get(point_type, point_type).capitalize()}, ids"
+            add_comparison_bullet(
+                reporter, context, scalar, ids, label_fn=_function_label
+            )
+        if scalar and names:
+            context = f"{PARAM_LABELS.get(point_type, point_type).capitalize()}, names"
+            add_comparison_bullet(
+                reporter, context, scalar, names, label_fn=_function_label
+            )
 
     unique = by_name.get("test_timezone_at[unique_shortcut-in_memory]")
     ambiguous = by_name.get("test_timezone_at[ambiguous_shortcut-in_memory]")

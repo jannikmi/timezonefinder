@@ -121,7 +121,6 @@ pytest extractor reads only ``stats.ops`` (``= 1 / stats.mean``). ``scripts/norm
 rewrites ``ops``/``mean`` from the min before handing the report over, so the chart tracks the
 estimator this project chose rather than the one the extractor defaults to.
 
-
 What the batch form cannot say, and why a distribution is published beside it
 -----------------------------------------------------------------------------
 
@@ -159,8 +158,12 @@ What CI measures
 The core subset
 ~~~~~~~~~~~~~~~
 
-Only three benchmarks (``-m benchmark_core``), all ``in_memory``. The full suite is for the docs,
-on demand; it is not run per PR.
+Only three benchmarks (``-m benchmark_core``), all ``in_memory``. The full report additionally
+compares ``timezone_ids_at`` and ``timezone_names_at`` with scalar lookup in the default file-based
+mode across the random, unique-shortcut and ambiguous-shortcut strata. Those six cases remain
+on-demand until the default-branch comparator can accept new IDs and a workflow-dispatch study has
+measured the expanded set's cross-runner noise. The rest of the suite is likewise for the docs; it
+is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
