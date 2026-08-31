@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788137112266,
+  "lastUpdate": 1788167937757,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3240,6 +3240,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0013594541845323358",
             "extra": "mean: 26.564952000001085 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b38013393f78ca3b25a06554d7737f809c8c9614",
+          "message": "Prepare batch benchmarks for safe CI promotion (#566)\n\n* BATCH-2: track batch lookup performance\n\n* Retire BATCH-2 from the improvement queue\n\n* Sequence BATCH-2 after comparator compatibility\n\n* Regenerate benchmark reports after rebase",
+          "timestamp": "2026-08-31T11:17:53+02:00",
+          "tree_id": "67c0fa94469384debbd762f9813865a017ca51ca",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b38013393f78ca3b25a06554d7737f809c8c9614"
+        },
+        "date": 1788167936148,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 223.25804030382173,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014195405399620433",
+            "extra": "mean: 4.4791219999922305 msec\nrounds: 141 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 353.5269081702599,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013860038604423852",
+            "extra": "mean: 2.8286390000005213 msec\nrounds: 304 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 63.42389991403606,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011904603752389276",
+            "extra": "mean: 15.766927000001374 msec\nrounds: 51 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
