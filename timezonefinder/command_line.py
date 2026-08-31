@@ -95,10 +95,7 @@ def get_timezone_function(
     )
 
 
-COMMANDS = ("query", "rows", "validate-data")
-
-
-def _add_lookup_options(parser: argparse.ArgumentParser, *, rows: bool) -> None:
+def _add_lookup_options(parser: argparse.ArgumentParser) -> None:
     """Add options shared by the single-query and row-stream lookup modes."""
     parser.add_argument(
         "--in-memory",
@@ -117,28 +114,26 @@ def _add_lookup_options(parser: argparse.ArgumentParser, *, rows: bool) -> None:
         "3 TimezoneFinderL.timezone_at, 4 TimezoneFinderL.timezone_at_land, "
         "or 5 timezone_at_land",
     )
-    parser.set_defaults(stdin=rows)
 
 
-def _add_row_format_options(parser: argparse.ArgumentParser, *, legacy: bool) -> None:
-    """Add the delimited-row options to ``rows`` and the legacy parser."""
-    mode = "--stdin" if legacy else "rows"
+def _add_row_format_options(parser: argparse.ArgumentParser) -> None:
+    """Add options for delimited rows read from standard input."""
     parser.add_argument(
         "-d",
         "--delimiter",
         default=",",
-        help=f"field delimiter for {mode} input and output (default: ','). "
+        help="field delimiter for rows input and output (default: ','). "
         "Spell tab as '\\t'.",
     )
     parser.add_argument(
         "--lng-col",
-        help=f"which {mode} column holds longitude: a header name, or a 1-based "
+        help="which input column holds longitude: a header name, or a 1-based "
         "column number for input without a header. Required when the input has no "
         "header, since the column order is never guessed.",
     )
     parser.add_argument(
         "--lat-col",
-        help=f"which {mode} column holds latitude: a header name, or a 1-based "
+        help="which input column holds latitude: a header name, or a 1-based "
         "column number for input without a header.",
     )
     header_group = parser.add_mutually_exclusive_group()
@@ -148,14 +143,14 @@ def _add_row_format_options(parser: argparse.ArgumentParser, *, legacy: bool) ->
         action="store_const",
         const=True,
         default=None,
-        help=f"treat the first {mode} row as a header rather than probing it",
+        help="treat the first input row as a header rather than probing it",
     )
     header_group.add_argument(
         "--no-header",
         dest="header",
         action="store_const",
         const=False,
-        help=f"treat every {mode} row as data, including the first",
+        help="treat every input row as data, including the first",
     )
 
 
@@ -170,67 +165,10 @@ def _validate_lookup_options(
         )
 
 
-def _parse_legacy_arguments(argv: list[str]) -> argparse.Namespace:
-    """Parse the pre-subcommand surface kept as an alias for one minor release."""
-    parser = argparse.ArgumentParser(
-        description="query a coordinate, or use --stdin for delimited rows"
-    )
-    parser.add_argument("lng", type=float, nargs="?", help="longitude to be queried")
-    parser.add_argument("lat", type=float, nargs="?", help="latitude to be queried")
-    parser.add_argument("-v", action="store_true", help="verbosity flag")
-    parser.add_argument(
-        "--stdin",
-        action="store_true",
-        help="read delimited rows from stdin and append a timezone column",
-    )
-    _add_row_format_options(parser, legacy=True)
-    _add_lookup_options(parser, rows=False)
-    args = parser.parse_args(argv)
-
-    # `nargs="?"` moved the required-argument check off argparse, which named
-    # only what was actually missing. Rebuild that: telling someone who forgot
-    # the latitude that the longitude is missing too sends them to check the
-    # half they got right.
-    missing = [
-        name for name, value in (("lng", args.lng), ("lat", args.lat)) if value is None
-    ]
-    if not args.stdin and missing:
-        parser.error(f"the following arguments are required: {', '.join(missing)}")
-
-    # len(missing) != 2 rather than `not missing`: a lone `--stdin 5` supplies
-    # one positional, which would otherwise still be discarded in silence.
-    if args.stdin and len(missing) != 2:
-        parser.error(
-            "--stdin reads the coordinates from stdin: do not pass lng and lat"
-        )
-
-    _validate_lookup_options(parser, args)
-
-    if args.stdin and args.v:
-        parser.error("--stdin and -v are mutually exclusive")
-
-    stdin_only = [
-        flag
-        for flag, value in (
-            ("-d/--delimiter", args.delimiter != ","),
-            ("--lng-col", args.lng_col is not None),
-            ("--lat-col", args.lat_col is not None),
-            ("--header/--no-header", args.header is not None),
-        )
-        if value
-    ]
-    if stdin_only and not args.stdin:
-        parser.error(f"{', '.join(stdin_only)} only apply to --stdin")
-
-    args.command = "rows" if args.stdin else "query"
-    return args
-
-
-def _parse_subcommand_arguments(argv: list[str]) -> argparse.Namespace:
+def _parse_arguments() -> argparse.Namespace:
     """Parse the installed CLI's explicit command surface."""
     parser = argparse.ArgumentParser(
-        description="offline timezone lookup and compiled-data validation",
-        epilog="Legacy bare coordinates and --stdin remain aliases for query and rows.",
+        description="offline timezone lookup and compiled-data validation"
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -238,33 +176,23 @@ def _parse_subcommand_arguments(argv: list[str]) -> argparse.Namespace:
     query.add_argument("lng", type=float, help="longitude to be queried")
     query.add_argument("lat", type=float, help="latitude to be queried")
     query.add_argument("-v", action="store_true", help="show lookup details")
-    _add_lookup_options(query, rows=False)
-    query.set_defaults(delimiter=",", lng_col=None, lat_col=None, header=None)
+    _add_lookup_options(query)
 
     rows = subparsers.add_parser(
         "rows", help="append timezone answers to delimited rows read from stdin"
     )
-    _add_row_format_options(rows, legacy=False)
-    _add_lookup_options(rows, rows=True)
-    rows.set_defaults(lng=None, lat=None, v=False)
+    _add_row_format_options(rows)
+    _add_lookup_options(rows)
 
     validation = subparsers.add_parser(
         "validate-data", help="exhaustively check a compiled data directory"
     )
     validation.add_argument("data_dir", type=Path, metavar="DIR")
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
     if args.command in ("query", "rows"):
         _validate_lookup_options(parser, args)
     return args
-
-
-def _parse_arguments() -> argparse.Namespace:
-    """Parse subcommands, falling back to the compatible bare invocation."""
-    argv = sys.argv[1:]
-    if (argv and argv[0] in COMMANDS) or argv in (["-h"], ["--help"]):
-        return _parse_subcommand_arguments(argv)
-    return _parse_legacy_arguments(argv)
 
 
 def _format_lookup_details(
@@ -483,7 +411,7 @@ def _coordinates_from_row(
     return validate_coordinates(lng, lat)
 
 
-def _run_stdin(
+def _run_rows(
     timezone_function: Callable[..., str | None],
     delimiter: str,
     lng_spec: str | None,
@@ -616,9 +544,9 @@ def main() -> None:
 
     timezone_function = get_timezone_function(args.function, args.in_memory)
 
-    if args.stdin:
+    if args.command == "rows":
         try:
-            rejected = _run_stdin(
+            rejected = _run_rows(
                 timezone_function,
                 _resolve_delimiter(args.delimiter),
                 args.lng_col,

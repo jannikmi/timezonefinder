@@ -475,9 +475,10 @@ With the argument of the flag ``-f`` one can choose between the different functi
     within Python, because it pays the full initialisation cost to answer one query.
     Use ``rows`` (below) for more than a handful of coordinates.
 
-Bare coordinates remain a compatibility alias for ``query``, and ``--stdin`` remains
-an alias for ``rows``. New scripts should use the explicit commands so that argparse
-can reject a row-format option on a single query before any lookup runs.
+Each command owns only the options that apply to it. For example, ``--lng-col`` is a
+``rows`` option and ``-v`` is a ``query`` option, so argparse rejects a cross-mode flag
+before any finder is constructed. The earlier flat forms (bare coordinates and
+``--stdin``) are not accepted; this command structure is part of the major-version CLI.
 
 
 Validating compiled data
