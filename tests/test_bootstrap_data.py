@@ -26,6 +26,7 @@ from scripts.bootstrap_data import (
     download_verified,
     require_bootstrapped_data,
     select_wheel,
+    staged_destination,
 )
 from scripts.configs import DATA_PYPROJECT_FILE, PROJECT_ROOT, SOURCE_DATA_DIR
 from timezonefinder.configs import DATA_VERSION_FILENAME
@@ -233,3 +234,75 @@ def test_an_unpublished_version_says_to_release_the_data_first(monkeypatch):
     monkeypatch.setattr(bootstrap_data, "urlopen", not_found)
     with pytest.raises(BootstrapError, match="not published on PyPI"):
         bootstrap_data.fetch_release_files("0.1970.1")
+
+
+@pytest.mark.parametrize(
+    "escaping",
+    [
+        f"{bootstrap_data.WHEEL_DATA_PREFIX}../../Makefile",
+        f"{bootstrap_data.WHEEL_DATA_PREFIX}boundaries/../../../etc/passwd",
+        f"{bootstrap_data.WHEEL_DATA_PREFIX}/etc/passwd",
+    ],
+)
+def test_a_member_that_escapes_the_staging_directory_is_refused(tmp_path, escaping):
+    """A zip entry names its own path, so the wheel decides where a member lands.
+
+    The absolute case is the one that reads as safe and is not: ``staging / "/etc/x"``
+    is ``/etc/x``, because joining an absolute path discards the left side.
+    """
+    with pytest.raises(BootstrapError, match="would unpack outside"):
+        staged_destination(tmp_path / "staging", escaping)
+
+
+def test_a_hostile_wheel_writes_nothing(tmp_path):
+    """The refusal has to happen before any member is written, not partway through."""
+    outside = tmp_path / "victim.txt"
+    outside.write_text("original", encoding="utf-8")
+    wheel = tmp_path / "hostile-1.0-py3-none-any.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr(
+            f"{bootstrap_data.WHEEL_DATA_PREFIX}{DATA_VERSION_FILENAME}", "2026c"
+        )
+        archive.writestr(f"{bootstrap_data.WHEEL_DATA_PREFIX}../victim.txt", "owned")
+
+    data_dir = tmp_path / "data"
+    with pytest.raises(BootstrapError, match="would unpack outside"):
+        extract_data(wheel, data_dir)
+    assert outside.read_text(encoding="utf-8") == "original"
+    assert not data_dir.exists(), "a refused wheel must not leave a partial dataset"
+
+
+def test_regenerated_data_is_not_reported_stale_after_the_version_bump(
+    tmp_path, monkeypatch
+):
+    """`update_data.sh` regenerates the data and *then* bumps the declared version.
+
+    Without a way to restate what the directory holds, that bump makes the newest data
+    in the repository read as stale, and no fetch can repair it: the version the guard
+    would ask PyPI for is the one this update is still preparing.
+    """
+    data_dir = make_data_dir(tmp_path)
+    stamp = tmp_path / ".bootstrapped-data-version"
+    monkeypatch.setattr(bootstrap_data, "STAMP_FILE", stamp)
+
+    stamp.write_text("2.2026.3\n", encoding="utf-8")
+    monkeypatch.setattr(bootstrap_data, "declared_data_version", lambda: "2.2026.4")
+
+    assert "was bootstrapped from" in (describe_data_state(data_dir) or "")
+
+    assert bootstrap_data.mark_data_current() == "2.2026.4"
+    assert describe_data_state(data_dir) is None
+
+
+def test_the_regeneration_path_restates_what_the_data_directory_holds():
+    """The guard above is only sound if `update_data.sh` actually calls it."""
+    script = (PROJECT_ROOT / "update_data.sh").read_text(encoding="utf-8")
+    assert "bootstrap_data --mark-current" in script, (
+        "update_data.sh bumps the data version after regenerating the binaries, so it "
+        "must restate what the data directory holds or leave every guarded target "
+        "refusing the data it just produced"
+    )
+    bump = script.index('uv version --package "$DATA_PACKAGE"')
+    assert script.index("bootstrap_data --mark-current") > bump, (
+        "the stamp must be rewritten after the version bump, not before it"
+    )

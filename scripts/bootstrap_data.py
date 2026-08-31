@@ -15,11 +15,17 @@ beside the data directory rather than inside it - ``data/`` is package data, so 
 in there would be published in the next wheel and would then describe the machine that
 built it.
 
-**Version-aware.** The stamp records *which* ``timezonefinder-data`` version was
-unpacked. A checkout that moves to a commit declaring a different one is stale, not
-merely populated, and ``--check`` says so: the failure mode this exists to prevent is a
-run that silently tests yesterday's data against today's code, which no amount of
+**Version-aware.** The stamp records *which* ``timezonefinder-data`` version the data
+directory holds. A checkout that moves to a commit declaring a different one is stale,
+not merely populated, and ``--check`` says so: the failure mode this exists to prevent
+is a run that silently tests yesterday's data against today's code, which no amount of
 "the directory is there" can detect.
+
+The stamp says what the directory *holds*, not where it came from, because the data has
+a second producer: ``update_data.sh`` regenerates it from upstream and then bumps the
+declared version. That output is the newest data there is and is not yet published
+anywhere, so ``--mark-current`` is how the regeneration states it - without it the bump
+would make the freshly generated dataset read as stale, and no fetch could repair it.
 
 The wheel is fetched from PyPI and its SHA-256 is checked against the digest the index
 publishes for it, so a truncated or substituted download is refused before anything is
@@ -86,6 +92,22 @@ def stamped_data_version() -> str | None:
     if not STAMP_FILE.is_file():
         return None
     return STAMP_FILE.read_text(encoding="utf-8").strip() or None
+
+
+def mark_data_current() -> str:
+    """Record that the data directory holds the version this checkout declares.
+
+    For the *other* producer of that directory: ``update_data.sh`` regenerates the
+    binaries from upstream and then bumps the data package's version, which leaves a
+    stamp from before the bump describing data that no longer exists. Everything
+    guarded by ``--check`` - ``make test``, ``make testall``, ``make reports`` - would
+    then refuse the newest data in the repository, and ``bootstrap`` could not fix it:
+    the version it would fetch is the one the update is *preparing* and PyPI does not
+    have it yet. Returns the version stamped, so the caller can echo it.
+    """
+    version = declared_data_version()
+    STAMP_FILE.write_text(f"{version}\n", encoding="utf-8")
+    return version
 
 
 def data_dir_is_populated(data_dir: Path = SOURCE_DATA_DIR) -> bool:
@@ -192,6 +214,33 @@ def download_verified(url: str, expected_sha256: str, target: Path) -> None:
         )
 
 
+def staged_destination(staging: Path, member: str) -> Path:
+    """Where ``member`` unpacks to, refusing any name that escapes ``staging``.
+
+    A zip entry carries its own path, so a crafted or malformed wheel can name
+    ``timezonefinder_data/data/../../Makefile`` - or a suffix starting with ``/``, which
+    ``Path.__truediv__`` resolves to the absolute path rather than below ``staging`` -
+    and write wherever the developer running ``make bootstrap`` can write. The index
+    digest checked before this does not cover it: it certifies that these are the bytes
+    PyPI published, not that they are benign, so a malicious release carries a matching
+    digest for its own payload.
+
+    The check is on the name rather than on a resolved path because the unpack writes
+    file bytes and never creates a symlink, so there is no link for a later member to
+    be redirected through.
+
+    :raises BootstrapError: naming the member, since a wheel that trips this is a
+        supply-chain event and not a transient failure to retry.
+    """
+    relative = Path(member[len(WHEEL_DATA_PREFIX) :])
+    if relative.is_absolute() or ".." in relative.parts:
+        raise BootstrapError(
+            f"{member!r} would unpack outside {staging}. The wheel is malformed or "
+            "hostile; nothing was written."
+        )
+    return staging / relative
+
+
 def extract_data(wheel: Path, data_dir: Path) -> int:
     """Replace ``data_dir`` with the wheel's payload. Returns the file count.
 
@@ -214,8 +263,7 @@ def extract_data(wheel: Path, data_dir: Path) -> int:
         shutil.rmtree(staging, ignore_errors=True)
         try:
             for name in members:
-                relative = Path(name[len(WHEEL_DATA_PREFIX) :])
-                destination = staging / relative
+                destination = staged_destination(staging, name)
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 with archive.open(name) as source, destination.open("wb") as file:
                     shutil.copyfileobj(source, file)
@@ -255,7 +303,7 @@ def bootstrap(
             wheel,
         )
         count = extract_data(wheel, data_dir)
-    STAMP_FILE.write_text(f"{version}\n", encoding="utf-8")
+    mark_data_current()
     say(f"unpacked {count} files into {data_dir} ({DATA_DISTRIBUTION_NAME} {version})")
     return True
 
@@ -272,8 +320,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="re-fetch even when the declared version is already unpacked",
     )
+    parser.add_argument(
+        "--mark-current",
+        action="store_true",
+        help=(
+            "record the declared version as what the data directory holds, without "
+            "fetching; for the regeneration path, which produces data no release has"
+        ),
+    )
     parser.add_argument("--data-dir", type=Path, default=SOURCE_DATA_DIR)
     args = parser.parse_args(argv)
+
+    if args.mark_current:
+        print(
+            f"stamped the data directory as {DATA_DISTRIBUTION_NAME} {mark_data_current()}"
+        )
+        return 0
 
     if args.check:
         reason = describe_data_state(args.data_dir)
