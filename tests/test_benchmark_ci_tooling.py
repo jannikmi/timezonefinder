@@ -356,6 +356,24 @@ def test_compare_carries_a_second_estimator_for_every_row():
 
 
 @pytest.mark.unit
+def test_a_head_only_benchmark_does_not_shift_the_second_estimator():
+    # the two features meet here: rows are restricted to the shared names,
+    # while the corroborating estimator is reduced per side over every
+    # benchmark that side carries. Looking the second estimator up by name
+    # rather than by position is what keeps a head-only benchmark from
+    # pairing `a`'s min against `new_benchmark`'s median.
+    base = _run(a=_stats(1.0, 4.0, 1.0))
+    head = _run(a=_stats(1.0, 2.0, 1.0), new_benchmark=_stats(9.0, 9.0, 9.0))
+
+    (comparison,) = compare_runs([base], [head], "min")
+
+    assert comparison.name == "benchmarks/test_x.py::a"
+    assert comparison.base_corroborating == pytest.approx(4.0)
+    assert comparison.head_corroborating == pytest.approx(2.0)
+    assert comparison.corroborating_change_pct == pytest.approx(-50.0)
+
+
+@pytest.mark.unit
 def test_compare_drops_the_second_estimator_when_it_is_missing():
     # an older report, or a metric that records one statistic only, loses the
     # courtesy column rather than failing the comparison CI depends on
