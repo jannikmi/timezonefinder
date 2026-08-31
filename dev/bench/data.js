@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788180131255,
+  "lastUpdate": 1788181142808,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3375,6 +3375,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00016297928401210507",
             "extra": "mean: 26.878325000012637 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "72678a1cf607eaf47202645c66abddfa44d19617",
+          "message": "DATA-BINARIES: publish the data wheel the update pull request tested (#572)\n\n* DATA-BINARIES: publish the data wheel the update pull request tested\n\npublish_data.yml states in its own header that it does not re-validate the\ndata, because build.yml compiled and checked it on the update pull request.\nThat only holds while the two are looking at one wheel: both used to run their\nown `uv build`, so the property rested on the converter being deterministic -\nshown once, on one machine, and unable to survive an upstream asset replaced\nafter the pull request was tested.\n\ncheck_data_updates.yml now builds the wheel from the data it just regenerated,\nuploads it as `artifact-data-wheel`, and records that run in the root\nDATA_BUILD_RUN, which the same commit carries to the tag. build.yml's\nmake-data-wheel and publish_data.yml both go through one composite action,\nwhich downloads that artefact and builds only when no recorded run offers one -\nthe artefact expired, or the data was regenerated outside the pipeline, which\nupdate_data.sh makes recognisable by clearing the stamp.\n\nHowever the wheel was obtained it is checked to carry a dataset at all, and -\nwhile the binaries are still committed - to match the checkout byte for byte.\nThat comparison is the reason this lands ahead of git-ignoring the data rather\nthan with it: it is the only window in which the hand-off can be checked\ninstead of argued, and it retires itself once the directory stops being\ntracked.\n\nThe recorded 2026-08-24 decision is implemented, not extended. What it left\nopen was the carrier: a tag push sees only the tagged tree and the API, so the\nrun id has to be committed with the data.\n\n* Record the DATA-BINARIES hand-off and re-sequence what remains\n\nThe 2.x precondition cleared on 2026-08-30, so the entry stops being blocked.\nThe release-side artifact hand-off has shipped; the consuming half is in flight\nas #571 and is independent of it, and git-ignoring the data goes strictly after\nboth. The carrier question the 2026-08-24 decision left open is recorded with\nthe option it refused.\n\n* Record that #555 shipped GH-542's competitor half\n\nFound while re-verifying the ranking for this pass: #555 merged on 2026-08-31\nand published the tzfpy disagreement rate, but the entry and its eligibility\ncell still describe that work as in flight. What remains of GH-542 is the\nuser-facing half alone, which needs a regeneration.\n\n* Bind the recorded artefact to every packaged input, not just the data\n\nReview of #572: the filename settles only the version, and the wheel carries\nmore than data. A change to `timezonefinder_data/__init__.py`, `DATA_LICENSE`\nor the package metadata landing on master while an update pull request is open\nis in the tree the tag names but not in an artefact built before it - and the\nold comparison, which covered `data/` alone, accepted it. The update would then\npublish a wheel omitting the intervening change. `release_data_update.yml`'s\nmaster-moved guard does not cover this: it compares master across the *merge*,\nnot across the window from the wheel build to it.\n\nThe artefact is now accepted only when every tracked packaged input matches it,\ncompared against `git ls-files` rather than the directory so the same rule\nsurvives the data no longer being committed. A mismatch falls back to building\nrather than failing, for the same reason every other mismatch does: the tree is\non master, master's run tested it, and a tag that cannot publish is the one\nstate this pipeline has no recovery for.\n\n* Record the input binding in the changelog and the register\n\nThe changelog bullet and the entry described a comparison over the dataset\nalone; both now describe what the action actually accepts.",
+          "timestamp": "2026-08-31T14:58:10+02:00",
+          "tree_id": "a80dcd9d48eabf88a26817c951a0c6995543d45c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/72678a1cf607eaf47202645c66abddfa44d19617"
+        },
+        "date": 1788181141695,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 148.25089150672636,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009559603910170941",
+            "extra": "mean: 6.745322000000442 msec\nrounds: 75 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 241.80709210534383,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004710902176693601",
+            "extra": "mean: 4.135527999999056 msec\nrounds: 217 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 36.53393765336693,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0018872874949748268",
+            "extra": "mean: 27.371810000005325 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
           }
         ]
       }
