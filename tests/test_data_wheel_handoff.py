@@ -28,10 +28,11 @@ import re
 import pytest
 import yaml
 
-from scripts.configs import DATA_BUILD_RUN_FILE, PROJECT_ROOT
+from scripts.configs import DATA_BUILD_RUN_FILE, DATA_VERSION_FILE, PROJECT_ROOT
 from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 
 UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
+COMPILE_WORKFLOW = WORKFLOW_DIR / "compile_data.yml"
 BUILD_WORKFLOW = WORKFLOW_DIR / "build.yml"
 PUBLISH_DATA_WORKFLOW = WORKFLOW_DIR / "publish_data.yml"
 BENCHMARK_WORKFLOW = WORKFLOW_DIR / "benchmark.yml"
@@ -44,8 +45,12 @@ UPDATE_SCRIPT = PROJECT_ROOT / "update_data.sh"
 # Every workflow that reaches for the recorded run, through either action.
 RECORDED_RUN_CONSUMERS = (BUILD_WORKFLOW, PUBLISH_DATA_WORKFLOW, BENCHMARK_WORKFLOW)
 
-# the update job, which is where the data is compiled and the wheel built from it
+# The two jobs that compile data and build a wheel from it: the weekly update, and the
+# dispatch a hand-made branch uses instead of committing binaries. Both produce the
+# artefact every consumer reads, so both are held to the same agreements below.
 UPDATE_JOB = "open_update_pr"
+COMPILE_JOB = "compile"
+PRODUCERS = ((UPDATE_WORKFLOW, UPDATE_JOB), (COMPILE_WORKFLOW, COMPILE_JOB))
 # the step whose commit has to carry the stamp to the tag
 COMMIT_STEP = "Commit and push the update branch"
 
@@ -82,7 +87,13 @@ def test_one_stamp_name_across_its_writer_its_reader_and_what_clears_it() -> Non
     hand. ``scripts/configs.py`` holds the copy the tests read, so the assertion is that
     the shell-side spellings match it rather than each other.
     """
-    for path in (UPDATE_WORKFLOW, OBTAIN_ACTION, OBTAIN_DATA_ACTION, UPDATE_SCRIPT):
+    for path in (
+        UPDATE_WORKFLOW,
+        COMPILE_WORKFLOW,
+        OBTAIN_ACTION,
+        OBTAIN_DATA_ACTION,
+        UPDATE_SCRIPT,
+    ):
         assert STAMP_NAME in path.read_text(encoding="utf-8"), (
             f"{path.name} does not name {STAMP_NAME}; the stamp is written, read and "
             "cleared in three separate files and nothing else ties them together"
@@ -97,17 +108,27 @@ def test_the_wheel_is_uploaded_under_the_name_the_action_downloads() -> None:
     download simply finds nothing, the action warns, and both consumers build their own
     wheel again. That is the state this whole mechanism exists to leave.
     """
-    uploads = [
-        step
-        for step in _workflow(UPDATE_WORKFLOW)["jobs"][UPDATE_JOB]["steps"]
-        if str(step.get("uses", "")).startswith("actions/upload-artifact")
-    ]
-    assert len(uploads) == 1, "the update job must upload exactly one artefact"
-    uploaded = uploads[0]["with"]["name"]
+    names = set()
+    for workflow, job in PRODUCERS:
+        uploads = [
+            step
+            for step in _workflow(workflow)["jobs"][job]["steps"]
+            if str(step.get("uses", "")).startswith("actions/upload-artifact")
+        ]
+        assert len(uploads) == 1, (
+            f"{workflow.name}'s {job} must upload exactly one artefact, got {uploads}"
+        )
+        names.add(uploads[0]["with"]["name"])
+
+    assert len(names) == 1, (
+        f"the producers upload under different names: {sorted(names)}. A consumer "
+        "downloads one name, so the other producer's wheel is simply never found."
+    )
+    uploaded = names.pop()
 
     for action in (OBTAIN_ACTION, OBTAIN_DATA_ACTION):
         assert f"artifact={uploaded}" in _action_script(action), (
-            f"the update job uploads {uploaded!r}, which {action.parent.name} does "
+            f"the wheel is uploaded as {uploaded!r}, which {action.parent.name} does "
             "not download"
         )
 
@@ -182,6 +203,68 @@ def test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts() -> Non
 
 
 @pytest.mark.unit
+def test_the_dispatch_compiles_the_release_its_branch_declares() -> None:
+    """ "Latest" would compile a release the branch does not describe.
+
+    The dispatch exists to reproduce binaries a branch already committed *reports* and
+    *benchmark fixtures* for, and those are pinned to `DATA_VERSION`. Resolving upstream
+    afresh would silently hand a format branch a newer dataset - not a broken one, which
+    is the problem: it installs, it answers lookups, and it disagrees with every figure
+    the branch published. So the tag is read out of the tree.
+
+    `--binaries-only` is the other half. Without it the run would rewrite the stamps,
+    the fixtures and all five report pages, replacing measured figures with a runner's.
+    """
+    steps = _workflow(COMPILE_WORKFLOW)["jobs"][COMPILE_JOB]["steps"]
+    compile_step = next(
+        step for step in steps if "update_data.sh" in str(step.get("run", ""))
+    )
+    script = str(compile_step["run"])
+
+    assert "--tag=" in script, (
+        "the dispatch does not pin a release, so it compiles whatever is latest rather "
+        "than what this branch declares"
+    )
+    assert DATA_VERSION_FILE.name in script, (
+        f"the pinned tag does not come from {DATA_VERSION_FILE.name}, which is the only "
+        "statement of which release this branch packages"
+    )
+    assert "--binaries-only" in script, (
+        "the dispatch runs the full release preparation, so it overwrites the branch's "
+        "committed fixtures and report pages with a runner's measurements"
+    )
+
+
+@pytest.mark.unit
+def test_the_update_script_still_prepares_a_release_by_default() -> None:
+    """The flags the dispatch needs must not change what the weekly pipeline does.
+
+    `update_data.sh` is what an auto-merging, auto-tagging pipeline runs unattended, and
+    both new flags subtract from it. Defaulting either one on would leave the update
+    pull request with regenerated binaries and stale everything else - which is green
+    everywhere, since the checks that would notice are the fixtures and reports it
+    failed to regenerate.
+    """
+    script = UPDATE_SCRIPT.read_text(encoding="utf-8")
+    assert 'PINNED_TAG=""' in script, (
+        "--tag must default to resolving the latest release"
+    )
+    assert "BINARIES_ONLY=0" in script, (
+        "--binaries-only must default off, or the weekly update stops before the "
+        "version bump and the release it prepares is never prepared"
+    )
+    # the tail the flag skips, in the order the script runs it
+    for required in (
+        'cp "$DOWNLOADED_TAG_PATH" DATA_VERSION',
+        "scripts.generate_benchmark_fixtures",
+        "make reports",
+        'uv version --package "$DATA_PACKAGE"',
+        "bootstrap_data --mark-current",
+    ):
+        assert required in script, f"{required!r} is no longer part of the default run"
+
+
+@pytest.mark.unit
 def test_the_update_branch_stages_the_paths_it_names() -> None:
     """`git add -A` would make "no binaries are committed" .gitignore's property alone.
 
@@ -208,24 +291,32 @@ def test_the_update_branch_stages_the_paths_it_names() -> None:
 
 @pytest.mark.unit
 def test_the_wheel_is_built_in_exactly_two_places() -> None:
-    """One build for the release, one fallback - and no third that quietly reintroduces two.
+    """The wheel is built only where the data was compiled - plus the action's fallback.
 
     The refused option here was "the publish job regenerates", and it is one line to
-    re-add. A second build looks identical in a log to the artefact path, so nothing
-    downstream would report that the tag stopped publishing what CI validated.
+    re-add. A build somewhere that did not compile the data looks identical in a log to
+    the artefact path, so nothing downstream would report that the tag stopped
+    publishing what CI validated.
+
+    Two producers is not two builds of one wheel: the weekly update compiles the data it
+    was triggered for, the dispatch compiles the data a hand-made branch declares, and a
+    given branch has exactly one of them. The scan is over every workflow rather than a
+    named few, because the failure this guards against arrives as a *new* file.
     """
     builders = {
-        path.name: [
-            step.get("name", step.get("uses", ""))
-            for step in _steps(_workflow(path))
-            if BUILD_COMMAND in str(step.get("run", ""))
-        ]
-        for path in (UPDATE_WORKFLOW, BUILD_WORKFLOW, PUBLISH_DATA_WORKFLOW)
+        path.name: names
+        for path in sorted(WORKFLOW_DIR.glob("*.yml"))
+        if (
+            names := [
+                step.get("name", step.get("uses", ""))
+                for step in _steps(_workflow(path))
+                if BUILD_COMMAND in str(step.get("run", ""))
+            ]
+        )
     }
     assert builders == {
         UPDATE_WORKFLOW.name: ["Build the data wheel"],
-        BUILD_WORKFLOW.name: [],
-        PUBLISH_DATA_WORKFLOW.name: [],
-    }, f"the data wheel is built outside the update job: {builders}"
+        COMPILE_WORKFLOW.name: ["Build the data wheel"],
+    }, f"the data wheel is built somewhere that does not compile it: {builders}"
 
     assert len(re.findall(re.escape(BUILD_COMMAND), _action_script())) == 1

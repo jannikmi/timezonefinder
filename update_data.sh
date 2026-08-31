@@ -26,6 +26,15 @@ Options:
                              timezones with identical behavior from now on
   --with-oceans              include ocean timezones (Etc/GMT+-XX)
   --rm-tmp                   delete the temporary data folder ($WORKING_FOLDER_NAME) at the end
+  --tag=<release>            compile this timezone-boundary-builder release instead of
+                             whichever one is latest. For reproducing the binaries a
+                             branch already declares in DATA_VERSION, where "latest"
+                             would silently compile a different release
+  --binaries-only            stop once the converter has run: write no stamps, bump no
+                             version, regenerate no fixtures or reports. For a branch
+                             whose data is compiled by CI rather than committed - the
+                             surrounding files are already in that branch's tree, and
+                             rewriting them from a runner would only add noise
   -h, --help                 show this help message and exit
 EOF
 }
@@ -33,6 +42,8 @@ EOF
 DATASET_SUFFIX=""
 INTERFIX=""
 RM_TMP=0
+PINNED_TAG=""
+BINARIES_ONLY=0
 
 for arg in "$@"; do
     case $arg in
@@ -40,6 +51,8 @@ for arg in "$@"; do
     --dataset=same-since-now) DATASET_SUFFIX=-now ;;
     --with-oceans) INTERFIX=-with-oceans ;;
     --rm-tmp) RM_TMP=1 ;;
+    --tag=*) PINNED_TAG="${arg#--tag=}" ;;
+    --binaries-only) BINARIES_ONLY=1 ;;
     -h | --help)
         usage
         exit 0
@@ -67,14 +80,22 @@ mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 # independent questions, so a release landing between them attributed one release's
 # data to the other - permanently, and with nothing able to notice afterwards. One
 # answer now governs the download URL, the file names and DATA_VERSION alike.
-echo "RESOLVING THE LATEST RELEASE..."
-DOWNLOADED_TAG=$(uv run python -m scripts.upstream_release resolve-tag)
-if [ -z "$DOWNLOADED_TAG" ]; then
-    echo "ERROR: could not determine the latest timezone-boundary-builder release." >&2
-    echo "Without it the data cannot be attributed to a release, so nothing is parsed." >&2
-    exit 1
+if [ -n "$PINNED_TAG" ]; then
+    # Everything below still derives from one tag; it is simply given rather than
+    # asked for. The verification against the release API is unchanged, so a tag that
+    # does not exist fails there rather than compiling something unattributed.
+    DOWNLOADED_TAG=$PINNED_TAG
+    echo "PINNED TO RELEASE $DOWNLOADED_TAG"
+else
+    echo "RESOLVING THE LATEST RELEASE..."
+    DOWNLOADED_TAG=$(uv run python -m scripts.upstream_release resolve-tag)
+    if [ -z "$DOWNLOADED_TAG" ]; then
+        echo "ERROR: could not determine the latest timezone-boundary-builder release." >&2
+        echo "Without it the data cannot be attributed to a release, so nothing is parsed." >&2
+        exit 1
+    fi
+    echo "latest release: $DOWNLOADED_TAG"
 fi
-echo "latest release: $DOWNLOADED_TAG"
 echo "$DOWNLOADED_TAG" >"$DOWNLOADED_TAG_PATH"
 
 # Both artefacts carry the release *and* the dataset variant: a leftover file from
@@ -134,6 +155,18 @@ echo "calling scripts.file_converter:"
 if ! uv run python -m scripts.file_converter -inp "$JSON_PATH"; then
     echo "file_converter failed!"
     exit 1
+fi
+
+# Everything below turns a parse into a *prepared release*: the stamps, the fixtures,
+# the reports and the version bump. A caller that only wants the binaries has all of
+# those in its tree already and would be overwriting them with a runner's numbers.
+if [ "$BINARIES_ONLY" -eq 1 ]; then
+    echo "SUCCESS! binaries for $DOWNLOADED_TAG compiled; stopping before the release preparation."
+    if [ "$RM_TMP" -eq 1 ]; then
+        echo "deleting temporary data files..."
+        rm -r "$WORKING_FOLDER_NAME"
+    fi
+    exit 0
 fi
 
 # update DATA_VERSION to the release just parsed
