@@ -1,0 +1,152 @@
+name: Obtain the timezonefinder-data wheel
+description: >
+  Put the data distribution's wheel in dist/, taking the artefact uploaded by the run
+  that compiled the data whenever DATA_BUILD_RUN names one, and building it from this
+  checkout otherwise.
+
+  Why it is not simply built where it is needed: the data pipeline's invariant is that
+  the bytes build.yml validated on the update pull request are the bytes the tag
+  publishes. Two independent builds satisfying that is a claim about determinism, not a
+  fact about the release - so the wheel is built once, by check_data_updates.yml from
+  the data it just compiled, and every consumer reads that one artefact. Written as an
+  action rather than twice inline because the two callers must not drift: a
+  publish-side copy that quietly rebuilt would look identical in every log.
+
+inputs:
+  token:
+    description: >
+      Token used to read the recorded run's artefacts. Needs `actions: read`, which a
+      caller has to declare - a job that declares any permission gets none of the rest.
+    required: true
+
+outputs:
+  source:
+    description: >
+      `artifact` when the recorded run supplied the wheel, `build` when it was built
+      here. Asserted by nothing; it exists so a caller's log states which path it took.
+    value: ${{ steps.obtain.outputs.source }}
+
+runs:
+  using: composite
+  steps:
+    - name: Obtain the data wheel
+      id: obtain
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        # One name, three files: written by check_data_updates.yml, cleared by
+        # update_data.sh, read here. tests/test_data_wheel_handoff.py holds them together.
+        stamp=DATA_BUILD_RUN
+        # what check_data_updates.yml uploads, and what build.yml re-uploads for the
+        # end-to-end job; a rename on one side makes every consumer silently rebuild
+        artifact=artifact-data-wheel
+
+        version=$(uv version --short --package timezonefinder-data)
+        expected="timezonefinder_data-${version}-py3-none-any.whl"
+        mkdir -p dist
+
+        source=build
+        if [[ -f "$stamp" ]]; then
+          run_id=$(tr -d '[:space:]' < "$stamp")
+          # strict, not "extract the digits": a stamp that is not a bare run id has been
+          # written by something other than the update job, and guessing which part of it
+          # is the run would resolve to some other run's artefact
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::$stamp holds '$run_id', which is not a workflow run id"
+            exit 1
+          fi
+          staging=$(mktemp -d)
+          if gh run download "$run_id" --repo "$GH_REPO" --name "$artifact" --dir "$staging"; then
+            count=$(find "$staging" -name 'timezonefinder_data-*.whl' | wc -l | tr -d ' ')
+            if [[ "$count" -ne 1 ]]; then
+              echo "::error::run $run_id's $artifact holds $count data wheels," \
+                "expected exactly one"
+              exit 1
+            fi
+            wheel=$(find "$staging" -name 'timezonefinder_data-*.whl')
+            found=$(basename "$wheel")
+            if [[ "$found" == "$expected" ]]; then
+              mv "$wheel" dist/
+              source=artifact
+            else
+              # Not an error: this is what a checkout whose data was regenerated
+              # without going through check_data_updates.yml looks like - a format
+              # change, say - and building from the tree is the right answer there.
+              # The version, not the run id, is what decides whether the recorded
+              # artefact describes this tree.
+              echo "::warning::run $run_id built $found, but this checkout declares" \
+                "$version; building the wheel here instead"
+            fi
+          else
+            echo "::warning::run $run_id no longer offers $artifact (expired, deleted," \
+              "or never uploaded); building $expected from this checkout instead"
+          fi
+        fi
+
+        if [[ "$source" == "build" ]]; then
+          # wheel only: a pure-data py3-none-any distribution has no build-from-source
+          # case, and an sdist would double the ~63 MB each data release costs
+          uv build -v --package timezonefinder-data --wheel -o dist/
+        fi
+
+        echo "obtained $expected ($source)"
+        echo "source=$source" >> "$GITHUB_OUTPUT"
+        ls -l dist/
+
+    - name: Verify the wheel carries a dataset
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        version=$(uv version --short --package timezonefinder-data)
+        wheel="dist/timezonefinder_data-${version}-py3-none-any.whl"
+        data_prefix=timezonefinder_data/data/
+
+        # A wheel with no dataset in it installs cleanly and fails at the first lookup,
+        # which is the worst shape a data release can take. It is a real failure mode
+        # rather than a hypothetical: the package-data globs stop matching under
+        # setuptools<62.3 (see the data package's pyproject.toml), and once the
+        # binaries are no longer committed a build from a tree that never obtained
+        # them produces exactly this.
+        # `|| true` inside the subshell: `unzip -Z1` exits 11 when its pattern matches
+        # nothing, which under `pipefail` would fail the step before the message below
+        # is ever printed - with a bare exit code as the only account of what went wrong
+        packaged=$( (unzip -Z1 "$wheel" "${data_prefix}*" 2>/dev/null || true) | wc -l | tr -d ' ')
+        if [[ "$packaged" -eq 0 ]]; then
+          echo "::error::$wheel carries no ${data_prefix} payload"
+          exit 1
+        fi
+        echo "$wheel carries $packaged data files"
+
+    - name: Compare the wheel's dataset with the checkout
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        data_dir=packages/timezonefinder-data/timezonefinder_data/data
+        # Only while the binaries are still committed (DATA-BINARIES). Until then this
+        # is the one step that shows the hand-off end to end: the tree is what the test
+        # matrix validated and what a reviewer read, so the wheel matching it byte for
+        # byte is the whole invariant, checked rather than argued. It retires by itself
+        # when the directory stops being tracked, because there is then nothing left to
+        # compare against.
+        if [[ -z "$(git ls-files -- "$data_dir")" ]]; then
+          echo "$data_dir is not tracked here; nothing to compare the wheel against"
+          exit 0
+        fi
+
+        version=$(uv version --short --package timezonefinder-data)
+        wheel="dist/timezonefinder_data-${version}-py3-none-any.whl"
+        unpacked=$(mktemp -d)
+        unzip -q "$wheel" 'timezonefinder_data/data/*' -d "$unpacked"
+        if ! diff -r "$unpacked/timezonefinder_data/data" "$data_dir"; then
+          echo "::error::$wheel does not carry the dataset in this checkout. The tree is" \
+            "what the test matrix validated and what a reviewer read, so a wheel that" \
+            "differs from it is not the artefact this release was approved as."
+          exit 1
+        fi
+        echo "the wheel's dataset is identical to the checkout's"

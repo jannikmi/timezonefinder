@@ -116,6 +116,32 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash update_data.sh --dataset=full --with-oceans --rm-tmp
 
+      # The wheel is built here, from the data this job just compiled, and every later
+      # consumer reads *this* artefact: build.yml on the pull request opened below, and
+      # publish_data.yml on the tag that merges it. publish_data.yml states in its own
+      # header that it does not re-validate the data because build.yml checked it on the
+      # pull request - which is only true while both are looking at one build. Two
+      # builds agreeing is a claim about the converter being deterministic; one build is
+      # the property itself.
+      # dist/ is git-ignored, so this cannot reach the commit below.
+      - name: Build the data wheel
+        run: uv build -v --package timezonefinder-data --wheel -o dist/
+
+      - name: Upload the data wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-data-wheel
+          path: dist/timezonefinder_data-*.whl
+
+      # After the upload, never before it: the stamp's meaning is "run <id> holds the
+      # wheel for this data", and a stamp written ahead of the upload would name a run
+      # that has none whenever the upload fails. Before the commit, because the commit
+      # is what carries it to the tag - update_data.sh cleared the previous release's
+      # stamp, so a step that failed to write this one leaves no stamp rather than a
+      # stale one.
+      - name: Record the run that compiled the data
+        run: echo "$GITHUB_RUN_ID" > DATA_BUILD_RUN
+
       - name: Commit and push the update branch
         run: |
           set -euo pipefail

@@ -43,6 +43,11 @@ jobs:
       # required for Trusted Publishing: the job exchanges this for a short-lived
       # PyPI token, which is why no secret appears anywhere below
       id-token: write
+      contents: read
+      # `obtain-data-wheel` reads the artefacts of the run named by DATA_BUILD_RUN.
+      # Without it the download 403s at tag-push time, which is the one moment there is
+      # nothing useful to do about it.
+      actions: read
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -78,10 +83,16 @@ jobs:
           fi
           echo "publishing timezonefinder-data $version"
 
-      # wheel only: a pure-data py3-none-any distribution has no build-from-source
-      # case, and an sdist would double the ~63 MB each data release costs
-      - name: Build the data wheel
-        run: uv build -v --package timezonefinder-data --wheel -o dist/
+      # Not a build: the header above says the data is not re-validated here because
+      # build.yml checked it on the pull request, and that only holds while both are
+      # looking at one wheel. So this takes the artefact check_data_updates.yml built
+      # from the data it compiled - the same one the matrix installed - and rebuilds
+      # only when no recorded run offers it, which is what a data release prepared by
+      # hand looks like.
+      - name: Obtain the data wheel
+        uses: ./.github/actions/obtain-data-wheel
+        with:
+          token: ${{ github.token }}
 
       - name: PyPI Publishing
         uses: pypa/gh-action-pypi-publish@release/v1
