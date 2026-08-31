@@ -2,7 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | S–M | free — the bootstrap and the release-side artifact hand-off have both shipped; git-ignoring `data/` is all that is left |
 | [FMT-2](items/lookup-geometry-and-data-format/fmt-2-a-frame-of-reference-payload-for-the-boundary-coordinates.md) | A frame-of-reference payload for the boundary coordinates | data format | L | free — the block structure it extends has landed; costs a format 3 |
 | [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — no longer gates anything; the competitor half shipped in #555, the rest needs a regeneration |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-comparing-two-candidate-implementations-hand-rolls-a-harness-every-time.md) | Comparing two candidate implementations hand-rolls a harness every time | tooling | M | free |
@@ -31,7 +30,7 @@
 | [GH-543](items/data-pipeline-and-developer-tooling/gh-543-the-numba-group-s-numpy-2-4-pin-is-stale-and-redundant.md) | The numba group's `numpy<2.4` pin is stale and redundant | tooling | ~4 | free |
 | [DEAD-5](items/data-pipeline-and-developer-tooling/dead-5-reduced-timezone-mapping-has-no-consumer.md) | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | [DEAD-6](items/data-pipeline-and-developer-tooling/dead-6-iter-boundaries-in-shortcut-has-no-caller-outside-the-test-suite.md) | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
-| [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | blocked by DATA-BINARIES |
+| [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | free — nothing re-adds the binaries now; re-anchor the measurement baseline in the same pass |
 | [GH-513](items/lookup-geometry-and-data-format/gh-513-drop-hole-polygons-entirely.md) | Drop hole polygons entirely | data format | L | blocked by GH-500 |
 | [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | conditional — only if PyPI storage is exhausted |
 | [GH-505](items/lookup-geometry-and-data-format/gh-505-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |

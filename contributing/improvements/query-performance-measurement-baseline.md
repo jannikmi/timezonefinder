@@ -7,10 +7,10 @@ Every timing quoted in this file comes from one run of `prototypes/query_stage_p
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat e1c3e15..HEAD -- timezonefinder/ packages/timezonefinder-data/timezonefinder_data/data
+  git diff --stat e1c3e15..HEAD -- timezonefinder/ DATA_VERSION packages/timezonefinder-data/pyproject.toml
   ```
 
-Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an `__all__` list or a rename leaves them standing and is worth recording here so the next pass does not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the shortcut reader or the packaged data does not.
+Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an `__all__` list or a rename leaves them standing and is worth recording here so the next pass does not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the shortcut reader or the packaged data does not. The packaged binaries are not in the diff because they are not committed — the two stamps that stand in for them are, and no regeneration reaches `master` without moving one.
 
 Read the [query-path change-classification log](query-path-change-classification-log.md) only when the freshness diff is non-empty or when adding a new classification.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how well a figure travels:
