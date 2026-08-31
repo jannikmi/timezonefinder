@@ -7,11 +7,12 @@ once by the build, and re-deriving it in every user's process would spend startu
 re-answering a question that already has an answer.
 
 What that buys is the freedom to check properly. Nothing here is written to be cheap:
-the reference check resolves every hole ring and compares its extent against the stored
-bounding box, which is O(all hole vertices) and would be indefensible on an
-initialisation path.
+the hole checks resolve every ring, compare its extent against the stored bounding box,
+and test every vertex against the boundary its registry entry names. That is O(all hole
+vertices) and would be indefensible on an initialisation path.
 """
 
+import json
 import mmap
 from pathlib import Path
 
@@ -56,6 +57,10 @@ from timezonefinder.np_binary_helpers import (
     get_block_widths_path,
     get_nr_vertices_path,
     get_poly_ref_path,
+    get_xmax_path,
+    get_xmin_path,
+    get_ymax_path,
+    get_ymin_path,
     get_zone_ids_path,
     get_zone_positions_path,
     read_per_polygon_vector,
@@ -72,12 +77,21 @@ from timezonefinder.shortcut_index import (
     read_shortcuts_binary,
     slots_of,
 )
-from timezonefinder.utils import get_boundaries_dir, get_holes_dir
+from timezonefinder.utils import (
+    get_boundaries_dir,
+    get_hole_registry_path,
+    get_holes_dir,
+    inside_polygon,
+)
 from timezonefinder.zone_names import read_zone_names
 
 
 class DataIntegrityError(ValueError):
     """A compiled data directory is internally inconsistent."""
+
+
+class _JSONObjectPairs(list[tuple[str, object]]):
+    """JSON object entries, retained as pairs so duplicate keys remain visible."""
 
 
 def validate_hole_references(data_dir: Path) -> None:
@@ -150,6 +164,102 @@ def validate_hole_references(data_dir: Path) -> None:
                 f"{actual} does not match the bounding box {expected} stored for it. "
                 f"The reference points at the wrong geometry."
             )
+
+
+def validate_hole_registry(data_dir: Path) -> None:
+    """Check that every hole belongs to exactly one real boundary polygon.
+
+    ``hole_registry.json`` is the only mapping from a boundary polygon to its holes.
+    Lookups trust each ``[count, first_hole_id]`` range directly, so an overlap, gap, or
+    wrong owner still addresses valid arrays while subtracting the wrong geometry.
+    Retaining JSON object pairs also catches duplicate keys before ``dict`` parsing could
+    silently keep only the last one.
+
+    Ownership has to rest on evidence outside the registry itself. Every vertex of each
+    resolved hole ring is therefore checked against its registered boundary polygon.
+
+    :param data_dir: A compiled data directory, as written by
+        ``scripts/file_converter.py``
+    :raises DataIntegrityError: if the registry is malformed or assigns holes wrongly
+    """
+    path = get_hole_registry_path(data_dir)
+    with open(path, encoding="utf-8") as registry_file:
+        raw_registry = json.load(registry_file, object_pairs_hook=_JSONObjectPairs)
+    if not isinstance(raw_registry, _JSONObjectPairs):
+        raise DataIntegrityError(f"{path} must contain one JSON object.")
+
+    boundaries = PolygonArray(data_location=get_boundaries_dir(data_dir))
+    holes = HoleArray(
+        data_location=get_holes_dir(data_dir),
+        boundaries=boundaries,
+    )
+    owners = np.full(len(holes), -1, dtype=np.int64)
+    boundary_ids: set[int] = set()
+
+    for raw_boundary_id, raw_range in raw_registry:
+        try:
+            boundary_id = int(raw_boundary_id)
+        except ValueError:
+            raise DataIntegrityError(
+                f"{path} has a non-integer boundary id {raw_boundary_id!r}."
+            ) from None
+        if str(boundary_id) != raw_boundary_id or boundary_id in boundary_ids:
+            raise DataIntegrityError(
+                f"{path} names boundary {boundary_id} more than once or with a "
+                f"non-canonical key {raw_boundary_id!r}."
+            )
+        boundary_ids.add(boundary_id)
+        if not 0 <= boundary_id < len(boundaries):
+            raise DataIntegrityError(
+                f"{path} assigns holes to boundary {boundary_id}, but only "
+                f"{len(boundaries)} boundary polygons exist."
+            )
+
+        if (
+            not isinstance(raw_range, list)
+            or isinstance(raw_range, _JSONObjectPairs)
+            or len(raw_range) != 2
+            or any(type(value) is not int for value in raw_range)
+        ):
+            raise DataIntegrityError(
+                f"{path} must map boundary {boundary_id} to two integers: "
+                "[hole count, first hole id]."
+            )
+        count, first_hole_id = raw_range
+        last_hole_id = first_hole_id + count
+        if count <= 0 or first_hole_id < 0 or last_hole_id > len(holes):
+            raise DataIntegrityError(
+                f"{path} gives boundary {boundary_id} the hole range "
+                f"[{first_hole_id}, {last_hole_id}), but {len(holes)} holes exist."
+            )
+
+        already_owned = np.flatnonzero(owners[first_hole_id:last_hole_id] >= 0)
+        if len(already_owned):
+            hole_id = first_hole_id + int(already_owned[0])
+            raise DataIntegrityError(
+                f"{path} assigns hole {hole_id} to both boundary "
+                f"{int(owners[hole_id])} and boundary {boundary_id}."
+            )
+        owners[first_hole_id:last_hole_id] = boundary_id
+
+    missing = np.flatnonzero(owners < 0)
+    if len(missing):
+        raise DataIntegrityError(
+            f"{path} does not assign hole {int(missing[0])} to any boundary polygon."
+        )
+
+    for hole_id, boundary_id_value in enumerate(owners):
+        boundary_id = int(boundary_id_value)
+        boundary = boundaries.coords_of(boundary_id)
+        hole = holes.coords_of(hole_id)
+        for vertex_id, (x, y) in enumerate(zip(hole[0], hole[1])):
+            if boundaries.outside_bbox(
+                boundary_id, int(x), int(y)
+            ) or not inside_polygon(int(x), int(y), boundary):
+                raise DataIntegrityError(
+                    f"{path} assigns hole {hole_id} to boundary {boundary_id}, but "
+                    f"vertex {vertex_id} of that hole does not lie inside the boundary."
+                )
 
 
 def validate_shipped_schemas(data_dir: Path) -> None:
@@ -511,12 +621,13 @@ def validate_block_payload(
 
 
 def validate_zone_data(data_dir: Path) -> None:
-    """Check that zone positions and polygon zone ids describe one grouping.
+    """Check that zone positions and boundary data describe one grouping.
 
     ``certain_timezone_at`` addresses the first and last polygon of a zone through
     ``zone_positions``. The main lookup assumes the parallel ``zone_ids`` vector is
     grouped by zone when it stops testing candidates early and returns the final zone
-    untested. Both arrays therefore have to state the same complete partition.
+    untested. Both arrays therefore have to state the same complete partition, and that
+    partition must cover the boundary coordinates and each boundary-indexed vector.
 
     :param data_dir: A compiled data directory, as written by
         ``scripts/file_converter.py``
@@ -576,6 +687,25 @@ def validate_zone_data(data_dir: Path) -> None:
             f"{int(actual[mismatch])}, but {positions_path} assigns it to zone "
             f"{int(expected[mismatch])}. The lookup requires polygons to be grouped "
             "by zone."
+        )
+
+    boundaries = PolygonArray(data_location=get_boundaries_dir(data_dir))
+    boundaries_dir = boundaries.data_location
+    boundary_counts = {
+        get_coordinate_path(boundaries_dir): len(boundaries.coordinates),
+        get_xmin_path(boundaries_dir): len(boundaries.xmin),
+        get_xmax_path(boundaries_dir): len(boundaries.xmax),
+        get_ymin_path(boundaries_dir): len(boundaries.ymin),
+        get_ymax_path(boundaries_dir): len(boundaries.ymax),
+    }
+    mismatched = {
+        path: count for path, count in boundary_counts.items() if count != len(zone_ids)
+    }
+    if mismatched:
+        counts = ", ".join(f"{path} has {count}" for path, count in mismatched.items())
+        raise DataIntegrityError(
+            f"{zone_ids_path} holds {len(zone_ids)} boundary zone ids, but {counts}. "
+            "Every boundary-indexed file must describe the same polygon collection."
         )
 
 
@@ -808,4 +938,5 @@ def validate_data_dir(data_dir: Path) -> None:
     validate_payload_offset_table(data_dir)
     validate_block_index(data_dir)
     validate_block_payload(data_dir)
+    validate_hole_registry(data_dir)
     validate_shortcut_index(data_dir)

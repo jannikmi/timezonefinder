@@ -490,12 +490,12 @@ Validate a custom data directory before constructing a finder from it:
 
     timezonefinder validate-data /path/to/compiled-data
 
-The command exhaustively checks the file schemas, polygon coordinate tables, latitude
-block indexes, hole references, shortcut index, and the grouping shared by
-``zone_positions.npy`` and ``zone_ids.npy``. The converter runs the same entry point
-over what it writes, and the test suite runs it over the packaged data. It is opt-in:
-finder construction and the lookup path do not repeat work the build has already
-settled.
+The command exhaustively checks the file schemas, polygon coordinate tables and boundary
+counts, latitude block indexes, hole references, hole-registry ranges and ownership,
+shortcut index, and the grouping shared by ``zone_positions.npy`` and ``zone_ids.npy``.
+The converter runs the same entry point over what it writes, and the test suite runs it
+over the packaged data. It is opt-in: finder construction and the lookup path do not
+repeat work the build has already settled.
 
 
 Looking up many coordinates at once

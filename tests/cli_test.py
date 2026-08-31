@@ -8,9 +8,12 @@ in :mod:`timezonefinder.command_line`.
 import csv
 import subprocess
 import sys
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from timezonefinder import command_line
 from timezonefinder.command_line import _format_lookup_details, get_timezone_function
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.zone_names import read_zone_names
@@ -227,6 +230,32 @@ def test_validate_data_reports_a_missing_directory_without_a_traceback(tmp_path)
         f"error: {missing} is not a compiled data directory."
     ]
     assert "Traceback" not in result.stderr
+
+
+@pytest.mark.unit
+def test_validate_data_reports_a_truncated_numpy_file_without_a_traceback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+):
+    monkeypatch.setattr(
+        command_line,
+        "_parse_arguments",
+        lambda: SimpleNamespace(command="validate-data", data_dir=tmp_path),
+    )
+
+    def truncated_numpy_file(data_dir: Path) -> None:
+        assert data_dir == tmp_path
+        raise EOFError("No data left in file")
+
+    monkeypatch.setattr(command_line, "validate_data_dir", truncated_numpy_file)
+    with pytest.raises(SystemExit) as exc_info:
+        command_line.main()
+
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "error: No data left in file\n"
 
 
 # --- row streaming command tests ---

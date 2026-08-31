@@ -536,7 +536,7 @@ def main() -> None:
     if args.command == "validate-data":
         try:
             validate_data_dir(args.data_dir)
-        except (OSError, ValueError) as e:
+        except (EOFError, OSError, ValueError) as e:
             sys.stderr.write(f"error: {e}\n")
             raise SystemExit(1) from None
         print(f"validated compiled data directory: {args.data_dir}")

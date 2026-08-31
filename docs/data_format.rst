@@ -82,6 +82,13 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
 6. **Schemas**: a copy of the FlatBuffers schema definitions the binaries above were written by, under ``schemas/``
 
+``hole_registry.json`` maps each boundary polygon ID to ``[hole count, first hole ID]``.
+Those half-open ranges form one exact partition of the dense hole-ID space: no hole is
+missing or owned twice, and every registered hole ring lies inside the boundary that
+names it. ``timezonefinder validate-data`` establishes these properties before a custom
+directory is used; lookups can then address the ranges directly without repeating the
+geometry work.
+
 
 Coordinate Representation
 -------------------------
