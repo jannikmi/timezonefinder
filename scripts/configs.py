@@ -33,6 +33,15 @@ COMPARISON_REPORT_FILE = DOC_ROOT / "benchmark_results_comparison.rst"
 # and a second copy of the path would silently stop tracking this one.
 DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 
+# The upstream archive the packaged data was built from - release tag, asset name,
+# byte size and SHA-256 - written by update_data.sh once it has verified the download
+# against what the GitHub release API publishes (scripts/upstream_release.py).
+# It sits beside DATA_VERSION rather than inside it because that file is read as a
+# bare tag by three consumers, and it is deliberately extensionless: a root-level
+# `*.json` would be claimed by the essential-file patterns in
+# tests/test_package_contents.py, which mean "the fixtures under tests/".
+DATA_SOURCE_FILE = PROJECT_ROOT / "DATA_SOURCE"
+
 # The package metadata. Read by tests that hold a second statement of something it
 # declares to it - the supported Python versions, and the version the installed
 # distribution reports as ``timezonefinder.__version__``. Under a workspace "the"

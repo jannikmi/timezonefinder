@@ -18,6 +18,7 @@ from scripts.configs import (
     DATA_DISTRIBUTION_NAME,
     DATA_PYPROJECT_FILE,
     DATA_REPORT_FILE,
+    DATA_SOURCE_FILE,
     DATA_VERSION_FILE,
     DATA_VERSION_TAG_PATTERN,
     DEFAULT_INPUT_PATH,
@@ -30,6 +31,7 @@ from scripts.configs import (
     resolve_data_version,
 )
 from scripts.reporting import DATA_VERSION_LABEL
+from scripts.upstream_release import read_record
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import (
     DATA_FORMAT_LAYOUT_VERSIONS,
@@ -74,6 +76,27 @@ def test_data_version_format():
     assert DATA_VERSION_TAG_PATTERN.fullmatch(content), (
         f"DATA_VERSION content {content!r} does not match the "
         "timezone-boundary-builder release tag format (e.g. '2026c')"
+    )
+
+
+def test_the_recorded_upstream_source_is_the_packaged_release():
+    # DATA_SOURCE names the upstream archive the packaged binaries were built from,
+    # and is what the next update compares against to notice an asset replaced in
+    # place. Both facts are worthless if it describes a different release than
+    # DATA_VERSION, which is what a hand-run regeneration that skipped
+    # update_data.sh would leave behind. A malformed digest is the quieter failure
+    # of the two: the comparison it guards would still run and still pass.
+    record = read_record(DATA_SOURCE_FILE)
+    assert record is not None, (
+        f"{DATA_SOURCE_FILE.name} is missing. It is written by update_data.sh once "
+        "it has verified the download against the release API."
+    )
+    assert record.tag == read_data_version(), (
+        f"{DATA_SOURCE_FILE.name} records the upstream release {record.tag!r}, but "
+        f"{DATA_VERSION_FILE.name} says the packaged data is {read_data_version()!r}."
+    )
+    assert len(record.sha256) == 64 and set(record.sha256) <= set("0123456789abcdef"), (
+        f"{DATA_SOURCE_FILE.name} records {record.sha256!r}, which is not a SHA-256"
     )
 
 

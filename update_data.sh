@@ -6,7 +6,8 @@ set -euo pipefail
 
 WORKING_FOLDER_NAME=tmp
 DOWNLOADED_TAG_PATH=./$WORKING_FOLDER_NAME/downloaded_tag.txt
-RELEASE_API_URL=https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases/latest
+# Staged next to the tag and installed with it, once the parse has succeeded.
+DATA_SOURCE_PATH=./$WORKING_FOLDER_NAME/data_source.txt
 JSON_PREFIX=combined
 JSON_SUFFIX=.json
 # the tagged release asset, not `releases/latest/download/...`: see the tag resolution below
@@ -67,7 +68,7 @@ mkdir -p "$WORKING_FOLDER_NAME" # if does not exist
 # data to the other - permanently, and with nothing able to notice afterwards. One
 # answer now governs the download URL, the file names and DATA_VERSION alike.
 echo "RESOLVING THE LATEST RELEASE..."
-DOWNLOADED_TAG=$(curl -sL --retry 3 $RELEASE_API_URL | grep '"tag_name"' | cut -d'"' -f4)
+DOWNLOADED_TAG=$(uv run python -m scripts.upstream_release resolve-tag)
 if [ -z "$DOWNLOADED_TAG" ]; then
     echo "ERROR: could not determine the latest timezone-boundary-builder release." >&2
     echo "Without it the data cannot be attributed to a release, so nothing is parsed." >&2
@@ -80,30 +81,52 @@ echo "$DOWNLOADED_TAG" >"$DOWNLOADED_TAG_PATH"
 # another release (or another variant) must not satisfy the "already downloaded"
 # checks below and be parsed in place of what was asked for.
 VARIANT=$INTERFIX$DATASET_SUFFIX
+ASSET_NAME=timezones$VARIANT$URL_SUFFIX
 ZIP_ARCHIVE_PATH=./$WORKING_FOLDER_NAME/data_downloaded$VARIANT-$DOWNLOADED_TAG.zip
 UNPACKED_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT$JSON_SUFFIX
 JSON_PATH=./$WORKING_FOLDER_NAME/$JSON_PREFIX$VARIANT-$DOWNLOADED_TAG$JSON_SUFFIX
 
-if [ -f "$JSON_PATH" ]; then
-    echo "skip unpacking: $JSON_PATH already exists."
-else
-    if [ -f "$ZIP_ARCHIVE_PATH" ]; then
-        echo "skipping download: $ZIP_ARCHIVE_PATH already exists."
-    else
-        URL=$URL_PREFIX/$DOWNLOADED_TAG/timezones$VARIANT$URL_SUFFIX
-        echo "DOWNLOADING $URL"
+# The archive is cached between runs because it is the expensive artefact - 55 MB over
+# the network - and it is the only one that can be checked, since the unpacked GeoJSON
+# carries no digest of its own.
+if [ ! -f "$ZIP_ARCHIVE_PATH" ]; then
+    URL=$URL_PREFIX/$DOWNLOADED_TAG/$ASSET_NAME
+    echo "DOWNLOADING $URL"
 
-        # install command mac:
-        # brew install wget
-        wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
-    fi
-    echo "UNPACKING..."
-    unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
-    # The archive unpacks under a name that says nothing about where it came from, and
-    # this is the last point at which anything knows. The converter reads the release
-    # back off this name and refuses an upstream file that lacks it.
-    mv "$UNPACKED_PATH" "$JSON_PATH"
+    # install command mac:
+    # brew install wget
+    wget -O "$ZIP_ARCHIVE_PATH" "$URL" --tries=3
 fi
+
+# Whatever produced the archive - this run's download or a leftover from an earlier
+# one - nothing below can tell a truncated or replaced file from a good one, and what
+# this script produces is merged and published without a human reading it. So the
+# bytes are checked against the size and SHA-256 the release API publishes before
+# anything reads them, on every run rather than only on the one that downloaded them:
+# re-hashing 55 MB costs a fraction of a second, and skipping it is how an archive
+# corrupted after its first run gets parsed anyway.
+echo "VERIFYING THE DOWNLOAD..."
+if ! uv run python -m scripts.upstream_release verify \
+    --tag "$DOWNLOADED_TAG" \
+    --asset "$ASSET_NAME" \
+    --archive "$ZIP_ARCHIVE_PATH" \
+    --stage "$DATA_SOURCE_PATH"; then
+    echo "the downloaded archive is not what $DOWNLOADED_TAG published!" >&2
+    exit 1
+fi
+
+# Unpacked every time, overwriting whatever sat here before. Caching this copy would
+# reintroduce the gap the verification above exists to close from the other end: the
+# digest would attest to the archive while a JSON edited or truncated after an earlier
+# run is what the converter actually read. Unzipping is local and takes seconds, so
+# the guarantee is nearly free - what everything downstream sees now derives from the
+# archive that was just verified, with no step of its own to trust.
+echo "UNPACKING (replacing any $JSON_PATH from an earlier run)..."
+unzip -o "$ZIP_ARCHIVE_PATH" -d $WORKING_FOLDER_NAME
+# The archive unpacks under a name that says nothing about where it came from, and
+# this is the last point at which anything knows. The converter reads the release
+# back off this name and refuses an upstream file that lacks it.
+mv "$UNPACKED_PATH" "$JSON_PATH"
 
 echo "START PARSING..."
 echo "calling scripts.file_converter:"
@@ -119,6 +142,12 @@ fi
 # no second copy here: the parse above already wrote it from the same tag.
 cp "$DOWNLOADED_TAG_PATH" DATA_VERSION
 echo "DATA_VERSION set to $(cat DATA_VERSION)"
+
+# ... and the archive those bytes came from, installed here rather than where it was
+# verified so that the two stamps advance together: a run that fails between the two
+# would otherwise leave DATA_SOURCE describing a release the packaged data is not.
+cp "$DATA_SOURCE_PATH" DATA_SOURCE
+echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
