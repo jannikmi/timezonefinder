@@ -24,6 +24,7 @@ asset.
 """
 
 import hashlib
+import http.client
 import json
 import os
 import sys
@@ -68,6 +69,15 @@ TOKEN_VARIABLES = ("GH_TOKEN", "GITHUB_TOKEN")
 # neither read is idempotency-sensitive.
 RETRY_ATTEMPTS = 3
 RETRY_BACKOFF_SECONDS = 2.0
+
+# urllib wraps many transport failures in URLError, but exceptions raised while
+# reading the HTTP response can escape directly from http.client instead.
+TRANSIENT_TRANSPORT_ERRORS = (
+    urllib.error.URLError,
+    TimeoutError,
+    http.client.RemoteDisconnected,
+    http.client.IncompleteRead,
+)
 
 
 @dataclass(frozen=True)
@@ -157,7 +167,7 @@ def _is_transient(error: Exception) -> bool:
     """
     if isinstance(error, urllib.error.HTTPError):
         return error.code == 429 or error.code >= 500
-    return isinstance(error, (urllib.error.URLError, TimeoutError))
+    return isinstance(error, TRANSIENT_TRANSPORT_ERRORS)
 
 
 def _sleep(seconds: float) -> None:
@@ -171,7 +181,7 @@ def _fetch(url: str, token: str | None) -> bytes:
     while True:
         try:
             return _request(url, token)
-        except (urllib.error.URLError, TimeoutError) as error:
+        except TRANSIENT_TRANSPORT_ERRORS as error:
             if attempt >= RETRY_ATTEMPTS or not _is_transient(error):
                 raise
             print(
@@ -396,7 +406,7 @@ def main(argv: list[str] | None = None) -> int:
             f"({published.size} bytes, sha256 {published.sha256})"
         )
         return 0
-    except (OSError, ValueError, urllib.error.URLError) as error:
+    except (OSError, ValueError, *TRANSIENT_TRANSPORT_ERRORS) as error:
         print(f"{parser.prog}: {error}", file=sys.stderr)
         return 1
 

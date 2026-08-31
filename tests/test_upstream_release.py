@@ -8,6 +8,7 @@ touches the network, which is what lets everything above it be tested at all.
 """
 
 import json
+import http.client
 import urllib.error
 from email.message import Message
 from pathlib import Path
@@ -414,6 +415,35 @@ def test_a_transport_error_without_a_status_is_retried(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "error",
+    [
+        http.client.RemoteDisconnected("connection closed before response"),
+        http.client.IncompleteRead(b"partial response"),
+    ],
+)
+def test_an_http_client_transport_error_is_retried(
+    monkeypatch: pytest.MonkeyPatch,
+    no_token: None,
+    instant_backoff: None,
+    error: Exception,
+) -> None:
+    """urllib can expose response connection failures without wrapping them."""
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise error
+        return b"{}"
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert _read_url("https://api.github.com/x") == b"{}"
+    assert attempts == 2
+
+
+@pytest.mark.unit
 def test_retries_are_bounded(
     monkeypatch: pytest.MonkeyPatch, no_token: None, instant_backoff: None
 ) -> None:
@@ -429,6 +459,27 @@ def test_retries_are_bounded(
     with pytest.raises(urllib.error.HTTPError):
         _read_url("https://api.github.com/x")
     assert attempts == RETRY_ATTEMPTS
+
+
+@pytest.mark.unit
+def test_an_incomplete_response_fails_cleanly_after_retries(
+    monkeypatch: pytest.MonkeyPatch,
+    no_token: None,
+    instant_backoff: None,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """An exhausted partial response is a normal CLI failure, not a traceback."""
+    attempts = 0
+
+    def request(url: str, token: str | None) -> bytes:
+        nonlocal attempts
+        attempts += 1
+        raise http.client.IncompleteRead(b"partial response")
+
+    monkeypatch.setattr("scripts.upstream_release._request", request)
+    assert main(["resolve-tag"]) == 1
+    assert attempts == RETRY_ATTEMPTS
+    assert "IncompleteRead" in capsys.readouterr().err
 
 
 @pytest.mark.unit
