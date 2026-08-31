@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788178661732,
+  "lastUpdate": 1788178663943,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7556,6 +7556,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.1997 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10c028d8cc42c147cc7f4310f2d78ccc09c4d128",
+          "message": "Report a second estimator beside the tracked one in the benchmark comparison (#565)\n\n* BENCH-1: report a second estimator beside the tracked one\n\nThe pull request comparison reduced each side to a single `min` and\ndiscarded every other statistic pytest-benchmark had already recorded,\nwhich left the table unable to express \"no demonstrable difference\" -\nthe answer the shortcut structure comparison actually needed, where\n`min` said +0.5% and a round-level sign count said 26 of 61.\n\nEvery row now carries its `median` change beside the `min` change and\nis marked `unresolved` where the two land on different sides of the\nflag. The flag itself is unchanged and still derived from the tracked\nestimator, so what CI reports for a real change is the same; a report\ncarrying only one statistic drops the column instead of failing the\ncomparison.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BENCH-1: rewrite the item to the remaining A/B harness\n\nThe dispersion reporting shipped, so the entry describes only what is\nleft: the paired, order-alternating harness three prototypes have now\nhand-rolled, and the recorded reason not to attempt in-process\ninterleaving blind.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BENCH-1: narrow the item to the remaining harness\n\nThe register is a to-do list, not a history, so the entry carried\nshipped work it should not have: a \"Shipped\" bullet and prose framing\nthe second-estimator reporting as a change. Both are gone.\n\nWhat is left is one subject - a reusable, order-alternating harness for\ncomparing two candidate implementations of one stage - so the entry,\nits filename and its ranking row now name that instead of the\nbase/head comparison. FMT-1's cross-reference described the old\nsubject and is rewritten to the lasting fact.\n\nAlso records why a change to the comparison table cannot be seen on its\nown pull request: `benchmark-comment` is a `workflow_run` job and runs\nthe default branch's copy of the script.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BENCH-1: pin the seam with the one-sided benchmark handling\n\nRebasing onto #566 put two changes in the same function: rows are now\nrestricted to the benchmarks both sides carry, while the corroborating\nestimator is reduced per side over everything that side holds. The\nconflict resolution is only correct because the second estimator is\nlooked up by name, so a head-only benchmark cannot pair one row's min\nagainst another row's median. A test now says so.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-31T14:16:57+02:00",
+          "tree_id": "5805d3d22d5e2f9c6004bef17e478c389aece0b9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/10c028d8cc42c147cc7f4310f2d78ccc09c4d128"
+        },
+        "date": 1788178663404,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.007990837097168,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008169174194336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.6027774810791016,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.6114788055419922,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.613112449645996,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.62181377410889,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2379 GHz"
           }
         ]
       }
