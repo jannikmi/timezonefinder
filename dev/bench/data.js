@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788178663943,
+  "lastUpdate": 1788180128529,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3330,6 +3330,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000652598671997623",
             "extra": "mean: 26.867641999999137 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39578942487609d09a4b4b56a1f5fd4a9fb9bd41",
+          "message": "DATA-BINARIES: obtain the packaged boundary data with `make bootstrap` (#571)\n\n* DATA-BINARIES: obtain the packaged boundary data with `make bootstrap`\n\nThe consuming half of not committing the ~62 MB dataset. `scripts/bootstrap_data.py`\nfetches the `timezonefinder-data` release the workspace declares, verifies its SHA-256\nagainst the digest PyPI publishes for it, and unpacks only `timezonefinder_data/data/`.\n\nTwo properties a \"the directory exists\" check cannot express, and which the entry-point\nguards depend on: a second run does nothing, and a checkout that has moved to a commit\ndeclaring a different data version is reported as *stale* rather than accepted - which\nis what stops one release's data being tested against another release's code with\nnothing to signal it. The stamp recording which version was unpacked sits beside the\ndata directory, not in it: everything inside it is package data and would be published\nwith the next data wheel.\n\n`make test`/`testint`/`testall`/`reports` depend on the check, and\n`tests/auxiliaries.py` asks it before it builds its PolygonArray - the suite's single\nchoke point on the dataset, and early enough to matter, since `tests/conftest.py`\nimports that module and a `pytest_configure` hook would run after the\nFileNotFoundError it exists to replace.\n\nThe dataset stays committed; the release-side artifact hand-off and the git-ignore are\nthe two steps still ahead of it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DATA-BINARIES: rewrite the register entry to the remaining two steps\n\nThe `timezonefinder-data` 2.x publication it was blocked on happened (2.2026.3,\n2026-08-30), and the bootstrap half has shipped. What is left is the release-side\nartifact hand-off and then the git-ignore, in that order - additive before subtractive,\nbecause the subtractive step is what breaks every checkout if the hand-off does not\nalready exist. Both were already decided; no new question.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DATA-BINARIES: address the review on the bootstrap\n\nTwo findings from the review of #571, both confirmed by reproduction before\nfixing.\n\nRefuse a wheel member that would unpack outside the staging directory. A zip\nentry carries its own path, so `timezonefinder_data/data/../../Makefile` - or a\nsuffix starting with `/`, which `Path.__truediv__` resolves to the absolute path\nrather than below the staging root - wrote wherever the developer running\n`make bootstrap` could write. Reproduced against the previous code: a crafted\nwheel replaced a file outside the data directory. The index digest checked\nbefore the unpack does not cover this; it certifies that these are the bytes\nPyPI published, not that they are benign.\n\nLet the regeneration path restate what the data directory holds. `update_data.sh`\nregenerates the binaries and *then* bumps the declared data version, which left\nthe stamp describing a version the directory no longer held. Everything behind\n`check-data` - `make test`, `make testall`, `make reports` - then refused the\nnewest data in the repository, and `make bootstrap` could not repair it: the\nversion it would fetch is the one the update is still preparing, so PyPI does\nnot have it. That is a deadlock in exactly the pipeline this item exists to\nserve, and it arrives for good once `data/` is git-ignored in step (3). The new\n`--mark-current` states the invariant the guard actually checks - which version\nthe directory holds - and the regeneration is what makes it true.\n\nSix tests: three escaping member names, a hostile wheel that must write nothing\nand leave no partial dataset, the bump-then-stale sequence, and one asserting\n`update_data.sh` restates the stamp after the bump rather than before it.\n\n* DATA-BINARIES: GH-501 landed, so the next step builds on it\n\nPR #569 merged, so the note telling the next step to rebase onto it rather\nthan race it describes work that is already on master. Point it at PR #572,\nwhich is that step in flight.\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-31T14:41:17+02:00",
+          "tree_id": "43f60eda2139659de8f8cdeda339a523d63c214d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/39578942487609d09a4b4b56a1f5fd4a9fb9bd41"
+        },
+        "date": 1788180127104,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 150.2413100801918,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006234941137415933",
+            "extra": "mean: 6.6559589999997115 msec\nrounds: 111 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 247.14803524761888,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009404389175731673",
+            "extra": "mean: 4.046157999994193 msec\nrounds: 222 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 37.20469932555432,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016297928401210507",
+            "extra": "mean: 26.878325000012637 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           }
         ]
       }
