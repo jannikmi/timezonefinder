@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788208301710,
+  "lastUpdate": 1788208303827,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7889,6 +7889,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2435 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c068642d9de114d9a64d32b42b5410b5f7c2abf7",
+          "message": "DATA-BINARIES: stop committing the packaged boundary data (#575)\n\n* DATA-BINARIES: stop committing the packaged boundary data\n\nGit-ignore `packages/timezonefinder-data/timezonefinder_data/data/` and drop\nits 22 files from the index. The published `timezonefinder-data 2.2026.3` wheel\nwas verified byte-identical to what git held, so nothing is lost; what stops is\n~62 MB of permanent history growth per regeneration.\n\nThe two additive halves this depends on already shipped. A clone now runs\n`make bootstrap`, and every CI job that reads the dataset goes through the new\n`.github/actions/obtain-data`. That action exists for the one case the published\nrelease cannot serve: a data update bumps `timezonefinder-data` to a version PyPI\ndoes not have until its tag publishes, so on that pull request fetching the\nrelease would validate the *previous* dataset and pass. When `DATA_BUILD_RUN`\nnames a run whose `artifact-data-wheel` carries the declared version, the dataset\ncomes out of that wheel instead - `scripts/bootstrap_data.py --from-wheel`, which\nrefuses a wheel for any other version rather than stamping something false.\n\n`obtain-data-wheel` bootstraps before its fallback build, since the tree it builds\nfrom no longer carries a dataset and would otherwise produce a payload-free wheel.\n\nThe update job stages the paths it names instead of `git add -A`, and fails on\nanything `update_data.sh` wrote that the list forgot: with the data ignored, `-A`\nwould have made \"the update commits no binaries\" a property of .gitignore alone,\nin a pull request that auto-merges.\n\nIgnoring never affects a tracked file, so a branch regenerating the data under a\nversion nobody has published - every format change - can still `git add -f` it and\ndrop it again once that release is out. The data-pipeline rules say so, and the\nlarge-file hook exempts the directory for it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DATA-BINARIES: remove the shipped item and unblock GH-522\n\nThe last step landed, so the entry and its ranking row go. What pointed at it now\nstates the lasting fact: GH-522's precondition is met and its row is free, the\nsequencing rules carry the `git add -f` escape a branch with an unpublished data\nversion needs, and the recorded distribution decisions name the change rather than\nthe item handle. FMT-2's entry gains that instruction, since it is the next format\nitem and declares a `timezonefinder-data` 3.x nobody has published.\n\nTwo checks that read git for a baseline no longer have one: the regeneration diff\nbecomes `diff -rq` against a copy taken beforehand, and the measurement baseline's\nfreshness command watches `DATA_VERSION` and the data package's version instead of\nthe binaries.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-08-31T22:30:48+02:00",
+          "tree_id": "bca7be08fe9b72407bfb134358b2291d932c1fbe",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c068642d9de114d9a64d32b42b5410b5f7c2abf7"
+        },
+        "date": 1788208303202,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.007948875427246,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008127212524414,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 1.6026477813720703,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 1.6114006042480469,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 62.613271713256836,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 62.621795654296875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
