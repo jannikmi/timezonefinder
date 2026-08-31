@@ -182,6 +182,61 @@ def test_details_name_the_function_they_were_given():
     assert "Result: Found timezone 'Europe/Amsterdam'" in details
 
 
+# --- explicit command surface ---
+
+
+@pytest.mark.unit
+def test_query_subcommand_matches_the_bare_compatibility_alias():
+    explicit = run_cli("query", "-f", "0", "--", *AMSTERDAM)
+    legacy = run_cli("-f", "0", "--", *AMSTERDAM)
+    assert explicit.returncode == 0, explicit.stderr
+    assert explicit.stdout == legacy.stdout
+
+
+@pytest.mark.unit
+def test_rows_subcommand_matches_the_stdin_compatibility_alias():
+    rows = csv_input(AMSTERDAM_ROW, PACIFIC_ROW)
+    explicit = run_cli("rows", input=rows)
+    legacy = run_cli("--stdin", input=rows)
+    assert explicit.returncode == 0, explicit.stderr
+    assert explicit.stdout == legacy.stdout
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("query", "--lng-col", "1", *AMSTERDAM),
+        ("rows", "-v"),
+        ("validate-data", "-f", "0", "."),
+    ],
+)
+def test_subcommands_reject_options_owned_by_another_mode(args: tuple[str, ...]):
+    result = run_cli(*args, input="")
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "unrecognized arguments" in result.stderr
+
+
+@pytest.mark.unit
+def test_validate_data_checks_the_packaged_directory():
+    result = run_cli("validate-data", str(DEFAULT_DATA_DIR))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == f"validated compiled data directory: {DEFAULT_DATA_DIR}\n"
+
+
+@pytest.mark.unit
+def test_validate_data_reports_a_missing_directory_without_a_traceback(tmp_path):
+    missing = tmp_path / "missing"
+    result = run_cli("validate-data", str(missing))
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert cli_diagnostics(result) == [
+        f"error: {missing} is not a compiled data directory."
+    ]
+    assert "Traceback" not in result.stderr
+
+
 # --- stdin streaming mode tests ---
 
 # A header naming the two axes, so most cases need no column flags. `lat` comes

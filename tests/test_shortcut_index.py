@@ -3,7 +3,7 @@
 The lookup reads one ``int16`` out of a table it addressed by slicing bits out of an H3
 cell id, and follows what it finds there straight into the payload - no bounds check, no
 key comparison, no dispatch beyond the sign. Every assumption that makes that safe is
-established where the data is built (``scripts.data_integrity.validate_shortcut_index``)
+established where the data is built (``timezonefinder._data_integrity.validate_shortcut_index``)
 and asserted here over what is committed, sharing one implementation so the two cannot
 drift.
 
@@ -22,7 +22,7 @@ import pytest
 from h3.api import numpy_int as h3
 
 from scripts.configs import ZONE_ID_DTYPE
-from scripts.data_integrity import (
+from timezonefinder._data_integrity import (
     DataIntegrityError,
     all_cells_at_shortcut_res,
     validate_shortcut_index,

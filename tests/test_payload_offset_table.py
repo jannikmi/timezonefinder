@@ -14,7 +14,10 @@ import mmap
 import numpy as np
 import pytest
 
-from scripts.data_integrity import DataIntegrityError, validate_payload_offset_table
+from timezonefinder._data_integrity import (
+    DataIntegrityError,
+    validate_payload_offset_table,
+)
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.coord_accessors import FileCoordAccessor, MemoryCoordAccessor
@@ -272,7 +275,7 @@ def test_packaged_data_offset_table_matches_the_reader():
     """The exhaustive check, over what the repository actually ships.
 
     Runs the same assertions the converter applies to what it just wrote, which is why
-    they live in ``scripts.data_integrity`` rather than here - the two must not drift
+    they live in ``timezonefinder._data_integrity`` rather than here - the two must not drift
     into asserting different things about the same files.
     """
     validate_payload_offset_table(DEFAULT_DATA_DIR)
@@ -298,7 +301,9 @@ def test_integrity_check_rejects_a_table_that_addresses_the_wrong_bytes(
         return offsets - 1, lengths
 
     monkeypatch.setattr(
-        "scripts.data_integrity.derive_payload_offset_table", shifted, raising=True
+        "timezonefinder._data_integrity.derive_payload_offset_table",
+        shifted,
+        raising=True,
     )
     with pytest.raises(DataIntegrityError, match="offset table does not address"):
         validate_payload_offset_table(data_dir)

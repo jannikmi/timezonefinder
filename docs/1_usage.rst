@@ -438,21 +438,22 @@ Calling timezonefinder from the command line
 
 A command line script is being installed as part of this package.
 
-**Command Line Syntax**:
+The interface has one command per input shape:
 
 ::
 
-    timezonefinder [-h] [-v] [--stdin] [-d DELIMITER] [--lng-col LNG_COL]
-                   [--lat-col LAT_COL] [--header | --no-header]
-                   [--in-memory] [-f {0,1,3,4,5}]
-                   [lng] [lat]
+    timezonefinder query [-v] [--in-memory] [-f {0,1,3,4,5}] LNG LAT
+    timezonefinder rows [-d DELIMITER] [--lng-col LNG_COL] [--lat-col LAT_COL]
+                        [--header | --no-header] [--in-memory]
+                        [-f {0,1,3,4,5}]
+    timezonefinder validate-data DIR
 
 
-**Example**:
+**Single-query example**:
 
 ::
 
-    timezonefinder -f 4 40.5 11.7
+    timezonefinder query -f 4 40.5 11.7
 
 
 With ``-v`` you get verbose output, without it only the timezone name is being printed.
@@ -472,13 +473,34 @@ With the argument of the flag ``-f`` one can choose between the different functi
 
     A single invocation is orders of magnitude slower than using the package from
     within Python, because it pays the full initialisation cost to answer one query.
-    Use ``--stdin`` (below) for more than a handful of coordinates.
+    Use ``rows`` (below) for more than a handful of coordinates.
+
+Bare coordinates remain a compatibility alias for ``query``, and ``--stdin`` remains
+an alias for ``rows``. New scripts should use the explicit commands so that argparse
+can reject a row-format option on a single query before any lookup runs.
+
+
+Validating compiled data
+------------------------
+
+Validate a custom data directory before constructing a finder from it:
+
+::
+
+    timezonefinder validate-data /path/to/compiled-data
+
+The command exhaustively checks the file schemas, polygon coordinate tables, latitude
+block indexes, hole references, shortcut index, and the grouping shared by
+``zone_positions.npy`` and ``zone_ids.npy``. The converter runs the same entry point
+over what it writes, and the test suite runs it over the packaged data. It is opt-in:
+finder construction and the lookup path do not repeat work the build has already
+settled.
 
 
 Looking up many coordinates at once
 -----------------------------------
 
-With ``--stdin`` the script reads delimited rows from standard input and writes
+With ``rows`` the script reads delimited rows from standard input and writes
 each row back out with a ``timezone`` column appended. The finder is built once,
 so initialisation amortises across the whole input instead of being paid per
 coordinate:
@@ -490,7 +512,7 @@ coordinate:
     S-1,Amsterdam Centraal,52.37,4.89
     S-2,Pacific Buoy,0.0,-150.0
 
-    $ timezonefinder --stdin < stores.csv
+    $ timezonefinder rows < stores.csv
     store_id,name,lat,lng,timezone
     S-1,Amsterdam Centraal,52.37,4.89,Europe/Amsterdam
     S-2,Pacific Buoy,0.0,-150.0,Etc/GMT+10
@@ -508,8 +530,8 @@ or for input with no header at all, name them explicitly - a header name, or a
 
 ::
 
-    timezonefinder --stdin --lng-col 3 --lat-col 2 < headerless.csv
-    timezonefinder --stdin --lng-col longitude_deg --lat-col latitude_deg < f.csv
+    timezonefinder rows --lng-col 3 --lat-col 2 < headerless.csv
+    timezonefinder rows --lng-col longitude_deg --lat-col latitude_deg < f.csv
 
 **Header or not.** Whether the first row names the columns or already holds data
 is worked out from the row itself when nothing says otherwise. Say it outright with

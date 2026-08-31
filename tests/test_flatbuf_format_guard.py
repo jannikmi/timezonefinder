@@ -39,7 +39,7 @@ from timezonefinder.flatbuf.io.polygons import (
     write_polygon_collection_flatbuffer,
 )
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
-from scripts.data_integrity import validate_shipped_schemas
+from timezonefinder._data_integrity import validate_shipped_schemas
 
 #: Payloads, not rings: this module tests the container and the markers on it, so what
 #: the words mean is beside the point and anything decodable would only add a dependency

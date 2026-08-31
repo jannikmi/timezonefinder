@@ -15,6 +15,6 @@ Corollary: don't edit a generated file directly. Change the generator or the sch
 
 ## Validate artifacts at production
 
-Check an artifact where it is produced, never where it is consumed. Build-established facts—above all packaged binaries—must not be re-derived whenever a finder is constructed. Assert them in the generator over what it wrote and in the test suite over what is committed, sharing one implementation. `scripts/data_integrity.py` is the pattern. Moving checks off initialization also lets them be exhaustive instead of shallow enough for a latency budget.
+Check an artifact where it is produced, never automatically where it is consumed. Build-established facts—above all packaged binaries—must not be re-derived whenever a finder is constructed. Assert them in the generator over what it wrote and in the test suite over what is committed, and expose the same implementation only through an explicit validation command when users compile custom data. `timezonefinder/_data_integrity.py` is the pattern. Moving checks off initialization also lets them be exhaustive instead of shallow enough for a latency budget.
 
 Pick the narrowest integer dtype that fits and guard it; headroom alone is not a reason to pad. Overflow must fail in the generator and committed-data tests. The error must name the value, dtype ceiling, wider type required, and version bumps that follow. A guarded narrow type is smaller and louder than an unguarded wide one.

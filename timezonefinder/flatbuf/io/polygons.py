@@ -218,7 +218,7 @@ def read_payload_from_binary(
     re-walks the vtables through the generated accessors on every call. The lookup path
     goes through :func:`derive_payload_offset_table` and :func:`read_payload_at`
     instead; this is what those are checked against, by
-    ``scripts.data_integrity.validate_payload_offset_table``.
+    ``timezonefinder._data_integrity.validate_payload_offset_table``.
     """
     # value checks not required as this is a private function
     # processed polygon indices are expected to be in range
@@ -312,8 +312,8 @@ def derive_payload_offset_table(
     vectors are aligned to ``uoffset`` and vtables to ``voffset``. Nothing here rejects a
     file that violates that - a misaligned position would read a neighbouring word and
     yield wrong coordinates silently, so what establishes it is
-    ``scripts.data_integrity.validate_coordinate_offset_table``, comparing this table
-    against :func:`read_payload_from_binary` for every polygon where the data is
+    ``timezonefinder._data_integrity.validate_payload_offset_table``, comparing this
+    table against :func:`read_payload_from_binary` for every polygon where the data is
     produced and again over what the repository ships.
 
     :param poly_collection: A collection returned by :func:`get_polygon_collection`

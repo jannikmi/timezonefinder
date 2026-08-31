@@ -299,8 +299,8 @@ def decode_ring(
 
     Bridging vertices are dropped rather than checked, because each is a copy of a vertex
     the next block stores: what proves the two agree is a round trip over the whole ring,
-    which ``scripts.data_integrity.validate_block_payload`` runs against the rings the
-    converter was given.
+    which ``timezonefinder._data_integrity.validate_block_payload`` runs against the
+    rings the converter was given.
 
     :param bases: the ring's ``(nr_blocks,)`` x frame origins
     :param block_ranges: the ring's latitude index, whose ``[:, 0]`` column *is* the y

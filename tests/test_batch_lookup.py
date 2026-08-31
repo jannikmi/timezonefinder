@@ -221,7 +221,7 @@ def test_the_answer_dtype_is_the_declared_one(finder):
 def test_the_answer_dtype_holds_every_id_and_the_sentinel(finder):
     """The width is chosen by fit, so what has to hold is that it fits: signed for the
     sentinel, and wide enough for the largest id this dataset can produce.
-    ``scripts.data_integrity.validate_shortcut_index`` refuses a data directory that
+    ``timezonefinder._data_integrity.validate_shortcut_index`` refuses a data directory that
     outgrows it, at build time and over the committed data, so this is the runtime half
     of the same statement rather than a second guard on the query path."""
     info = np.iinfo(ZONE_ID_RESULT_DTYPE)

@@ -11,14 +11,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.data_integrity import (
-    DataIntegrityError,
-    validate_hole_dedup_ratio,
-    validate_hole_references,
-)
+from scripts.data_integrity import validate_hole_dedup_ratio
 from scripts.file_converter import write_polygon_collection
 from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
+from timezonefinder._data_integrity import DataIntegrityError, validate_hole_references
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -103,10 +100,10 @@ def test_packaged_data_passes_the_integrity_check():
     coordinate file and the bounding boxes agreeing with one another, every reference
     resolving to the geometry its bounding box describes, and - separately, since it
     only means anything at dataset scale - the deduplication ratio clearing its floor.
-    The checks live in ``scripts/data_integrity`` so that the
-    converter and this test assert the same thing rather than two drifting
-    approximations of it - and so that neither obligation falls on ``HoleArray``, where
-    every user would re-derive it on every construction.
+    The directory checks live in ``timezonefinder._data_integrity`` so that the
+    converter, installed CLI and this test assert the same thing rather than drifting.
+    The packaged-dataset-only ratio stays in ``scripts.data_integrity``; applying it to
+    custom data would reject valid holes that are not enclaves.
     """
     validate_hole_references(DEFAULT_DATA_DIR)
     validate_hole_dedup_ratio(DEFAULT_DATA_DIR)

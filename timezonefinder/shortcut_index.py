@@ -34,7 +34,7 @@ directory be rejected.
 records the measurement.
 
 Everything the layout assumes is checked where the data is produced -
-``scripts/data_integrity.validate_shortcut_index`` - and never when a finder is built. In
+``timezonefinder._data_integrity.validate_shortcut_index`` - and never when a finder is built. In
 particular the bit arithmetic above is confirmed against h3's public
 ``get_base_cell_number`` / ``cell_to_child_pos`` over every cell that exists, which turns
 an encoding h3-py does not promise as API into an invariant that fails loudly at build
@@ -206,7 +206,7 @@ class ShortcutIndex:
     slot arithmetic, the ``-(entry + 2)`` entry index, the CSR bounds) stops here, which
     is what lets the storage change without touching ``timezonefinder.py``.
 
-    The arrays stay public because the build-time checks in ``scripts/data_integrity.py``
+    The arrays stay public because the build-time checks in ``timezonefinder/_data_integrity.py``
     and the format tests legitimately inspect them; the query path does not.
     """
 
@@ -260,7 +260,7 @@ class ShortcutIndex:
         """Index into :meth:`candidates_of` past which no other zone can be matched.
 
         Precomputed when the index is built, so a query reads it rather than scanning for
-        it. ``get_last_change_idx`` is the definition, and ``scripts/data_integrity.py``
+        it. ``get_last_change_idx`` is the definition, and ``timezonefinder/_data_integrity.py``
         holds the stored values to it.
 
         Cast to ``int`` here, like :meth:`entry_of`: the column is a narrow unsigned dtype,
@@ -391,7 +391,7 @@ def narrowest_dtype_for(max_value: int, *, what: str) -> np.dtype:
     Headroom is not the safeguard here - being handed the column's *maximum* is. Callers
     pass ``values.max()``, so the width fits by construction and there is nothing left for
     a follow-up guard to catch; what a narrow width still needs is a check that the file
-    it produced holds together, which ``scripts/data_integrity.validate_shortcut_index``
+    it produced holds together, which ``timezonefinder._data_integrity.validate_shortcut_index``
     does over what is committed. A guarded narrow width is strictly better than an
     unguarded wide one: smaller, and loud instead of silently truncating.
     """
@@ -438,7 +438,7 @@ def get_last_change_idx(zone_ids: np.ndarray) -> int:
     out of the shortcut index, which stores one value per *distinct* candidate list. It
     lives here beside the builder that writes those values rather than in
     ``timezonefinder/utils_numba.py``, where it was compiled at import for a function no
-    query calls - and ``scripts/data_integrity.py`` re-checks the committed values against
+    query calls - and ``timezonefinder/_data_integrity.py`` re-checks the committed values against
     this same implementation, so the two cannot drift.
     """
     nr_entries = zone_ids.shape[0]
@@ -552,7 +552,7 @@ def write_shortcuts_binary(index: ShortcutIndex, output_file: Path) -> None:
 
     The two data-dependent widths are recorded in the header rather than fixed by the
     format, which is what lets them be chosen by fit rather than by headroom: each is the
-    narrowest that holds its column's maximum, and ``scripts/data_integrity.py`` asserts
+    narrowest that holds its column's maximum, and ``timezonefinder/_data_integrity.py`` asserts
     over the committed file that it still is.
 
     **One file, and a raw layout rather than four ``.npy`` arrays.** The obvious
