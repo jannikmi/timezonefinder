@@ -42,6 +42,15 @@ DATA_VERSION_FILE = PROJECT_ROOT / "DATA_VERSION"
 # tests/test_package_contents.py, which mean "the fixtures under tests/".
 DATA_SOURCE_FILE = PROJECT_ROOT / "DATA_SOURCE"
 
+# The GitHub Actions run that compiled the packaged data and built the data wheel from
+# it, written by .github/workflows/check_data_updates.yml and cleared by update_data.sh.
+# It is what lets build.yml and publish_data.yml read one wheel instead of building two:
+# the file is absent whenever the data was regenerated outside that pipeline, and both
+# consumers then build from the checkout. Not present in a fresh clone, therefore -
+# tests/test_data_wheel_handoff.py holds the three files that name it together rather
+# than asserting it exists.
+DATA_BUILD_RUN_FILE = PROJECT_ROOT / "DATA_BUILD_RUN"
+
 # The package metadata. Read by tests that hold a second statement of something it
 # declares to it - the supported Python versions, and the version the installed
 # distribution reports as ``timezonefinder.__version__``. Under a workspace "the"

@@ -157,16 +157,27 @@ jobs:
   make-data-wheel:
     name: Make the data distribution wheel
     runs-on: ubuntu-latest
+    permissions:
+      # `obtain-data-wheel` reads the artefacts of the run named by DATA_BUILD_RUN.
+      # Declaring any permission zeroes every other one, so the checkout's read has to
+      # be listed alongside it.
+      contents: read
+      actions: read
     steps:
     - uses: actions/checkout@v7
 
     - name: Install uv
       uses: astral-sh/setup-uv@v7
 
-    # wheel only, no sdist: there is no build-from-source case for a pure-data
-    # py3-none-any wheel, and an sdist would double what each data release costs
-    # against the data project's fresh quota - halving that burn is the point of the split
-    - run: uv build -v --package timezonefinder-data --wheel -o dist/
+    # Not `uv build` here: on a data-update pull request the wheel this job hands the
+    # end-to-end test has to be the same artefact the tag will publish, or "the matrix
+    # validated what ships" is an inference about two builds rather than a fact. The
+    # action falls back to building whenever no recorded run offers one, which is every
+    # pull request that did not come out of the data pipeline.
+    - name: Obtain the data wheel
+      uses: ./.github/actions/obtain-data-wheel
+      with:
+        token: ${{ github.token }}
 
     - uses: actions/upload-artifact@v7
       with:

@@ -297,7 +297,13 @@ because the job can be re-run once master is green.
 **The data pipeline releases itself.** A weekly workflow compares ``DATA_VERSION`` against the latest
 timezone-boundary-builder release, regenerates the data and opens a pull request; when that pull
 request's CI passes, a second workflow merges it and pushes a ``data-v*`` tag, which publishes
-``timezonefinder-data`` and nothing else. That the two streams cannot block each other is the point:
+``timezonefinder-data`` and nothing else. What that tag publishes is the wheel the update run built
+from the data it compiled - attached to that run, installed by the pull request's end-to-end job,
+and downloaded rather than rebuilt by the tag job, which finds the run through a ``DATA_BUILD_RUN``
+stamp committed with the data. The publishing job does not re-validate the dataset, so it matters
+that "the pull request checked what ships" is a statement about one artefact rather than an
+inference about two builds agreeing; the converter being deterministic was shown once, on one
+machine. That the two streams cannot block each other is the point:
 a data update once had to wait for whatever code work sat unreleased, because it *was* a patch
 release of ``timezonefinder`` and would have shipped that work under release notes describing only
 the data. Now it releases a distribution containing no code, so the question does not arise.

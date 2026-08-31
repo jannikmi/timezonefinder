@@ -149,6 +149,14 @@ echo "DATA_VERSION set to $(cat DATA_VERSION)"
 cp "$DATA_SOURCE_PATH" DATA_SOURCE
 echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 
+# The third stamp, and the only one whose correct value this script cannot know: it
+# names the CI run holding the wheel built from the packaged data, and the data on disk
+# is no longer that data. .github/workflows/check_data_updates.yml writes the new one
+# after uploading the wheel it built from this output; a run anywhere else leaves none,
+# and publish_data.yml then builds from the tree the way it always did. Clearing it is
+# what keeps "no stamp" and "a stamp for another release" from looking alike.
+rm -f DATA_BUILD_RUN
+
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
 # from the boundary data just regenerated above (on-land/shortcut

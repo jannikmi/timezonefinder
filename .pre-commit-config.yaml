@@ -70,7 +70,11 @@ repos:
         rev: "0.51"
         hooks:
             -   id: check-manifest
-                args: [ "--no-build-isolation", "--ignore",  ".*,.*/*,docs/*,examples/*,scripts/*,benchmarks/*,packages/*,*.sh,CHANGELOG.rst,Makefile,readthedocs.yml,uv.lock,tox.ini" ]
+                # DATA_BUILD_RUN is CI provenance written by the data-update workflow (see
+                # scripts/configs.py): it belongs in the repository and in no sdist, and
+                # it appears only after a data update, so the ignore has to be here before
+                # the first one rather than added by it
+                args: [ "--no-build-isolation", "--ignore",  ".*,.*/*,docs/*,examples/*,scripts/*,benchmarks/*,packages/*,*.sh,CHANGELOG.rst,Makefile,readthedocs.yml,uv.lock,tox.ini,DATA_BUILD_RUN" ]
                 additional_dependencies: [ numpy, uv, cffi ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
