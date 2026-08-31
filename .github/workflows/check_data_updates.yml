@@ -109,6 +109,11 @@ jobs:
         run: uv sync --all-groups
 
       - name: Regenerate the data
+        # the script now asks the release API twice - once for the tag, once for the
+        # digest it verifies the download against - and an unauthenticated runner
+        # shares its rate limit with everything else on its address
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash update_data.sh --dataset=full --with-oceans --rm-tmp
 
       - name: Commit and push the update branch
