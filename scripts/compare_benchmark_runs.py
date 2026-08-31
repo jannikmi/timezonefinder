@@ -79,6 +79,19 @@ REGRESSION_THRESHOLD_PCT = 110.0
 # of markdown-significant characters and bounded in length.
 MAX_RENDERED_NAME_LEN = 120
 
+# The second estimator every row is also reported on. A single estimator cannot
+# express "no effect": comparing shortcut structures, the tracked ``min`` said
+# +0.5% where a round-level count said 26 of 61, and the disagreement was the
+# correct answer. ``median`` is the corroborating statistic because it assumes
+# a different thing about the noise than ``min`` does - and because
+# ``scripts.normalize_benchmark_json`` overwrites ``mean`` with the tracked
+# value, leaving ``median`` the only untouched estimator in a stored report.
+CORROBORATING_ESTIMATORS: dict[str, BenchmarkEstimator] = {
+    "min": "median",
+    "mean": "median",
+    "median": "min",
+}
+
 
 @dataclass(frozen=True)
 class BenchmarkComparison:
@@ -87,6 +100,23 @@ class BenchmarkComparison:
     name: str
     base: float
     head: float
+    #: the same benchmark reduced by :data:`CORROBORATING_ESTIMATORS`, or
+    #: ``None`` when the reports do not carry a usable second estimator
+    base_corroborating: float | None = None
+    head_corroborating: float | None = None
+
+    @property
+    def corroborating_ratio_pct(self) -> float | None:
+        """:attr:`ratio_pct` under the corroborating estimator, if recorded."""
+        if self.base_corroborating is None or self.head_corroborating is None:
+            return None
+        return self.head_corroborating / self.base_corroborating * 100.0
+
+    @property
+    def corroborating_change_pct(self) -> float | None:
+        """:attr:`change_pct` under the corroborating estimator, if recorded."""
+        ratio_pct = self.corroborating_ratio_pct
+        return None if ratio_pct is None else ratio_pct - 100.0
 
     @property
     def ratio_pct(self) -> float:
@@ -143,6 +173,26 @@ def reduce_side(
     }
 
 
+def reduce_side_optional(
+    runs: Sequence[dict[str, Any]], estimator: BenchmarkEstimator
+) -> dict[str, float]:
+    """:func:`reduce_side` for an estimator the reports may not carry.
+
+    The corroborating estimator is a courtesy column, so a report written by
+    an older pipeline (or a metric that only records one statistic, such as
+    :mod:`scripts.measure_memory`) drops the column instead of failing the
+    comparison the workflow actually depends on.
+    """
+    if any(
+        estimator not in bench["stats"]
+        for run in runs
+        for bench in run.get("benchmarks") or ()
+    ):
+        return {}
+    reduced = reduce_side(runs, estimator)
+    return reduced if all(value > 0 for value in reduced.values()) else {}
+
+
 def compare_runs(
     base_runs: Sequence[dict[str, Any]],
     head_runs: Sequence[dict[str, Any]],
@@ -173,8 +223,17 @@ def compare_runs(
                 f"benchmark {name!r} reports a non-positive {side} "
                 f"'{estimator}' of {value!r}s, so a ratio cannot be derived from it"
             )
+    corroborating = CORROBORATING_ESTIMATORS[estimator]
+    base_second = reduce_side_optional(base_runs, corroborating)
+    head_second = reduce_side_optional(head_runs, corroborating)
     comparisons = [
-        BenchmarkComparison(name=name, base=base[name], head=head[name])
+        BenchmarkComparison(
+            name=name,
+            base=base[name],
+            head=head[name],
+            base_corroborating=base_second.get(name),
+            head_corroborating=head_second.get(name),
+        )
         for name in shared_names
     ]
     return sorted(comparisons, key=lambda c: c.ratio_pct, reverse=True)
@@ -254,14 +313,41 @@ def _render_name(name: str) -> str:
     return f"`{cleaned}`"
 
 
+def _direction(ratio_pct: float, threshold_pct: float) -> int:
+    """``+1`` slower, ``-1`` faster, ``0`` inside the threshold band.
+
+    Both sides of the band are expressed as a ratio reaching ``threshold_pct``,
+    so a change is called out on exactly the same evidence whichever way it
+    points.
+    """
+    if ratio_pct >= threshold_pct:
+        return 1
+    if 100.0 / ratio_pct * 100.0 >= threshold_pct:
+        return -1
+    return 0
+
+
 def _verdict(
     comparison: BenchmarkComparison, threshold_pct: float, metric: MetricSpec
 ) -> str:
-    if comparison.ratio_pct >= threshold_pct:
-        return f"🔴 {metric.worse}"
-    if comparison.factor * 100.0 >= threshold_pct:
-        return f"🟢 {metric.better}"
-    return "⚪ unchanged"
+    """The row's verdict, marked when the two estimators do not agree.
+
+    The flag itself stays on the tracked estimator, because that is the number
+    the trend chart and ``--fail-on-regression`` use. What the second estimator
+    adds is the one answer a single estimator cannot give: that the difference
+    is not resolvable, which is what a disagreement means.
+    """
+    tracked = _direction(comparison.ratio_pct, threshold_pct)
+    verdict = {1: f"🔴 {metric.worse}", -1: f"🟢 {metric.better}", 0: "⚪ unchanged"}[
+        tracked
+    ]
+    corroborating = comparison.corroborating_ratio_pct
+    if (
+        corroborating is not None
+        and _direction(corroborating, threshold_pct) != tracked
+    ):
+        return f"{verdict} ⚠️ unresolved"
+    return verdict
 
 
 def regressions(
@@ -295,19 +381,27 @@ def render_markdown(
     ]
     for warning in warnings:
         lines += ["> [!WARNING]", f"> {warning}", ""]
+    corroborating = CORROBORATING_ESTIMATORS[estimator]
     lines += [
-        f"| {metric.row_noun} | {base_label} | {head_label} | change | |",
-        "| --- | ---: | ---: | ---: | --- |",
+        f"| {metric.row_noun} | {base_label} | {head_label} | change | "
+        f"{corroborating} change | |",
+        "| --- | ---: | ---: | ---: | ---: | --- |",
     ]
     for c in comparisons:
+        second = c.corroborating_change_pct
         lines.append(
             f"| {_render_name(c.name)} | {metric.format_value(c.base)} | "
             f"{metric.format_value(c.head)} | {c.change_pct:+.1f}% ({c.factor:.2f}x) | "
+            f"{'n/a' if second is None else f'{second:+.1f}%'} | "
             f"{_verdict(c, threshold_pct, metric)} |"
         )
     lines += [
         "",
-        f"{metric.change_help} Rows are flagged at {threshold_pct:.0f}%.",
+        f"{metric.change_help} Rows are flagged at {threshold_pct:.0f}% on the "
+        f"`{estimator}`; the `{corroborating} change` column is the same rows "
+        f"under a second estimator, and a row marked ⚠️ unresolved is one the "
+        "two disagree about - read that as no demonstrable difference rather "
+        "than as the tracked verdict.",
         "",
         f"> {metric.noise_note}",
     ]
