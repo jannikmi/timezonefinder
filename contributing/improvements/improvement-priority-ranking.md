@@ -2,7 +2,7 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | M | free — unblocked; the bootstrap half shipped, the release-side artifact hand-off and the git-ignore remain |
+| [DATA-BINARIES](items/packaging-distribution-and-release/data-binaries-stop-committing-the-packaged-data-binaries.md) | Stop committing the packaged data binaries | packaging | S–M | free — the bootstrap and the release-side artifact hand-off have both shipped; git-ignoring `data/` is all that is left |
 | [FMT-2](items/lookup-geometry-and-data-format/fmt-2-a-frame-of-reference-payload-for-the-boundary-coordinates.md) | A frame-of-reference payload for the boundary coordinates | data format | L | free — the block structure it extends has landed; costs a format 3 |
 | [GH-542](items/lookup-geometry-and-data-format/gh-542-establish-what-coordinate-precision-is-worth.md) | Establish what coordinate precision is worth | data format | M | free — no longer gates anything; PR #555 in flight |
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-comparing-two-candidate-implementations-hand-rolls-a-harness-every-time.md) | Comparing two candidate implementations hand-rolls a harness every time | tooling | M | free |
