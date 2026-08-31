@@ -6,6 +6,12 @@ scripts/*.bin
 scripts/*.json
 MANIFEST
 tmp.py
+# written by `make bootstrap`: which timezonefinder-data release the packaged data
+# directory was unpacked from. Beside that directory rather than in it, because
+# everything inside it is package data and would be published with the next data wheel.
+packages/timezonefinder-data/.bootstrapped-data-version
+# the staging directory `make bootstrap` unpacks into before swapping it into place
+packages/timezonefinder-data/timezonefinder_data/.data.incoming/
 tmp/
 .venv/
 list/

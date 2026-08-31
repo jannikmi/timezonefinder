@@ -192,6 +192,14 @@ uv run python -m scripts.data_releases insert-data-release \
     --data-repo-url "$DATA_REPO_URL"
 echo "recorded the data release $NEW_VERSION ($RELEASE_DATE)"
 
+# The bump above renamed the version this checkout declares, while the data directory
+# still carries the stamp written before it. On a checkout that obtained its data with
+# `make bootstrap` that combination reads as stale, so `make test` and `make reports`
+# would refuse the data this script just generated - and `make bootstrap` could not
+# repair it, since $NEW_VERSION is precisely what is not published yet. Restate what the
+# directory holds; the regeneration above is what makes it true.
+uv run python -m scripts.bootstrap_data --mark-current
+
 if [ "$RM_TMP" -eq 1 ]; then
     echo "deleting temporary data files..."
     rm -r "$WORKING_FOLDER_NAME"

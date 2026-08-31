@@ -8,7 +8,7 @@
 ## Development Workflow
 
 1. Fork the repository and create a feature branch: `git checkout -b my-topic`.
-2. Install tooling with `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime validation only).
+2. Install tooling with `uv sync --all-groups` (or `pip install timezonefinder[numba]` for runtime validation only), then run `make bootstrap` to obtain the packaged boundary data. It fetches the `timezonefinder-data` release this checkout declares, verified against the digest PyPI publishes for it, and does nothing on a second run. Run it again after switching to a commit that declares a different data version: `make test`, `make testall`, `make testint` and `make reports` refuse to start against a missing *or stale* dataset rather than failing inside a reader, and the stale case is the one no amount of "the files are there" can see.
 3. Activate the environment via `uv run` and work from the project root. Run targeted commands through `make` or `uv run …` to ensure reproducibility.
 4. Formatting and linting are enforced via pre-commit hooks (install with `make hook`) and can be run manually with `ruff`, `isort`, and `mypy`.
 5. Keep pull requests focused. Reference issue numbers and describe user-facing impact, dataset changes, and risk areas up front.

@@ -17,6 +17,7 @@ from typing import Any, Iterator
 import numpy as np
 import pytest
 
+from scripts.bootstrap_data import require_bootstrapped_data
 from scripts.configs import DEBUG, PROJECT_ROOT, read_data_version
 from scripts.utils import validate_coord_array_shape
 from timezonefinder import utils
@@ -104,6 +105,15 @@ BUILD_CMD = ["uv", "build", "-v", "--python", sys.executable, "-o", "dist/"]
 BUILD_SDIST_CMD = [*BUILD_CMD, "--sdist"]
 BUILD_WHEEL_CMD = [*BUILD_CMD, "--wheel"]
 
+
+# The suite's single choke point on the packaged dataset: this module is imported by
+# tests/conftest.py, so it is reached before any test is collected. Asking here is what
+# turns "FileNotFoundError: .../boundaries/xmin.npy" - raised two lines below, from
+# three frames down, on a checkout that simply has not run `make bootstrap` - into a
+# sentence naming the command. It also catches the stale case, which no reader can:
+# a complete dataset from a *different* timezonefinder-data release than this checkout
+# declares would load fine and silently test yesterday's data against today's code.
+require_bootstrapped_data()
 
 # for reading coordinates
 boundaries_dir = utils.get_boundaries_dir()
