@@ -5,9 +5,14 @@ because ``build.yml`` compiled and checked it on the update pull request. That h
 only while the pull request and the tag are looking at *one* wheel: two builds agreeing
 is a property of the converter being deterministic, which was shown once on one machine
 and is not what a release should rest on. So ``check_data_updates.yml`` builds the wheel
-from the data it just compiled, uploads it, and records its run id in ``DATA_BUILD_RUN``;
-``.github/actions/obtain-data-wheel`` is the only reader, and both consumers go through
-it.
+from the data it just compiled, uploads it, and records its run id in ``DATA_BUILD_RUN``.
+
+That one artefact is read from two ends, by one action each.
+``.github/actions/obtain-data-wheel`` wants the wheel, to publish it;
+``.github/actions/obtain-data`` wants the dataset inside it, because the binaries are
+not committed and PyPI serves only the *previous* release while an update is in flight.
+Both are the same hand-off and both fail the same quiet way, so they are covered
+together here.
 
 Nothing here can be executed - these files run on GitHub and a data update happens a few
 times a year - so what is asserted is the handful of agreements that would otherwise fail
@@ -29,9 +34,15 @@ from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
 BUILD_WORKFLOW = WORKFLOW_DIR / "build.yml"
 PUBLISH_DATA_WORKFLOW = WORKFLOW_DIR / "publish_data.yml"
+BENCHMARK_WORKFLOW = WORKFLOW_DIR / "benchmark.yml"
 OBTAIN_ACTION = ACTION_DIR / "obtain-data-wheel" / "action.yml"
 OBTAIN_ACTION_REF = "./.github/actions/obtain-data-wheel"
+OBTAIN_DATA_ACTION = ACTION_DIR / "obtain-data" / "action.yml"
+OBTAIN_DATA_ACTION_REF = "./.github/actions/obtain-data"
 UPDATE_SCRIPT = PROJECT_ROOT / "update_data.sh"
+
+# Every workflow that reaches for the recorded run, through either action.
+RECORDED_RUN_CONSUMERS = (BUILD_WORKFLOW, PUBLISH_DATA_WORKFLOW, BENCHMARK_WORKFLOW)
 
 # the update job, which is where the data is compiled and the wheel built from it
 UPDATE_JOB = "open_update_pr"
@@ -53,8 +64,8 @@ def _steps(workflow: dict) -> list[dict]:
     return [step for job in workflow["jobs"].values() for step in job["steps"]]
 
 
-def _action_script() -> str:
-    action = _workflow(OBTAIN_ACTION)
+def _action_script(path=OBTAIN_ACTION) -> str:
+    action = _workflow(path)
     return "\n".join(str(step.get("run", "")) for step in action["runs"]["steps"])
 
 
@@ -71,7 +82,7 @@ def test_one_stamp_name_across_its_writer_its_reader_and_what_clears_it() -> Non
     hand. ``scripts/configs.py`` holds the copy the tests read, so the assertion is that
     the shell-side spellings match it rather than each other.
     """
-    for path in (UPDATE_WORKFLOW, OBTAIN_ACTION, UPDATE_SCRIPT):
+    for path in (UPDATE_WORKFLOW, OBTAIN_ACTION, OBTAIN_DATA_ACTION, UPDATE_SCRIPT):
         assert STAMP_NAME in path.read_text(encoding="utf-8"), (
             f"{path.name} does not name {STAMP_NAME}; the stamp is written, read and "
             "cleared in three separate files and nothing else ties them together"
@@ -94,9 +105,11 @@ def test_the_wheel_is_uploaded_under_the_name_the_action_downloads() -> None:
     assert len(uploads) == 1, "the update job must upload exactly one artefact"
     uploaded = uploads[0]["with"]["name"]
 
-    assert f"artifact={uploaded}" in _action_script(), (
-        f"the update job uploads {uploaded!r}, which the action does not download"
-    )
+    for action in (OBTAIN_ACTION, OBTAIN_DATA_ACTION):
+        assert f"artifact={uploaded}" in _action_script(action), (
+            f"the update job uploads {uploaded!r}, which {action.parent.name} does "
+            "not download"
+        )
 
 
 @pytest.mark.unit
@@ -123,6 +136,17 @@ def test_the_run_is_recorded_after_the_upload_and_before_the_commit() -> None:
     assert upload < names.index(recording) < names.index(COMMIT_STEP)
 
 
+def _recorded_run_callers() -> list[tuple[str, str, dict]]:
+    """Every job that reaches for DATA_BUILD_RUN's artefact, through either action."""
+    refs = {OBTAIN_ACTION_REF, OBTAIN_DATA_ACTION_REF}
+    return [
+        (path.name, name, job)
+        for path in RECORDED_RUN_CONSUMERS
+        for name, job in _workflow(path)["jobs"].items()
+        if any(step.get("uses") in refs for step in job["steps"])
+    ]
+
+
 @pytest.mark.unit
 def test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts() -> None:
     """``actions: read`` is not implied, and its absence surfaces at the worst moment.
@@ -130,15 +154,21 @@ def test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts() -> Non
     Declaring any permission zeroes the rest, so a job that lists `id-token` and
     nothing else cannot read an artefact - and in ``publish_data.yml`` that is
     discovered on a tag push, with the release already half out.
+
+    For the dataset side the failure is not even loud: ``obtain-data`` treats a failed
+    download as "the recorded run has nothing" and fetches the published release
+    instead, which on a data-update pull request is the release *before* the one under
+    test. Everything then passes, against the wrong data.
     """
-    callers = [
-        (path.name, name, job)
-        for path in (BUILD_WORKFLOW, PUBLISH_DATA_WORKFLOW)
-        for name, job in _workflow(path)["jobs"].items()
-        if any(step.get("uses") == OBTAIN_ACTION_REF for step in job["steps"])
-    ]
-    assert len(callers) == 2, (
-        f"expected both consumers to use the action, got {callers}"
+    callers = _recorded_run_callers()
+    expected = {
+        ("build.yml", "test"),
+        ("build.yml", "make-data-wheel"),
+        ("publish_data.yml", "publish-data-pypi"),
+        ("benchmark.yml", "measure"),
+    }
+    assert {(path, job) for path, job, _ in callers} == expected, (
+        f"the set of jobs reading the recorded run changed: {callers}"
     )
 
     for workflow_name, job_name, job in callers:
@@ -149,6 +179,31 @@ def test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts() -> Non
         assert permissions.get("contents") == "read", (
             f"{workflow_name}'s {job_name} zeroes its checkout's `contents: read`"
         )
+
+
+@pytest.mark.unit
+def test_the_update_branch_stages_the_paths_it_names() -> None:
+    """`git add -A` would make "no binaries are committed" .gitignore's property alone.
+
+    The update job runs unattended and its pull request auto-merges, so a single file
+    under the data directory escaping the ignore - a new subdirectory, a rule someone
+    narrowed - would put ~62 MB into master with nobody in the loop. Staging by name
+    means the job has to be changed on purpose for that to happen.
+    """
+    commit = next(
+        step
+        for step in _workflow(UPDATE_WORKFLOW)["jobs"][UPDATE_JOB]["steps"]
+        if step.get("name") == COMMIT_STEP
+    )
+    script = str(commit["run"])
+    for wildcard in ("git add -A", "git add --all", "git add ."):
+        assert wildcard not in script, (
+            f"the update job stages with {wildcard!r}; name the paths instead"
+        )
+    assert "packages/timezonefinder-data/pyproject.toml" in script, (
+        "the data package's version bump is what a data release is; staging it by name "
+        "is the point of the list"
+    )
 
 
 @pytest.mark.unit

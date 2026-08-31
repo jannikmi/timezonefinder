@@ -12,6 +12,7 @@ with something to get wrong.
 import hashlib
 from pathlib import Path
 import re
+import subprocess
 import zipfile
 
 import pytest
@@ -27,6 +28,7 @@ from scripts.bootstrap_data import (
     require_bootstrapped_data,
     select_wheel,
     staged_destination,
+    unpack_local_wheel,
 )
 from scripts.configs import DATA_PYPROJECT_FILE, PROJECT_ROOT, SOURCE_DATA_DIR
 from timezonefinder.configs import DATA_VERSION_FILENAME
@@ -66,10 +68,39 @@ def test_the_declared_version_is_the_one_the_workspace_pins():
     assert f'version = "{declared}"' in DATA_PYPROJECT_FILE.read_text(encoding="utf-8")
 
 
-def test_the_committed_checkout_is_reported_as_usable():
-    """A checkout that still carries the binaries has no stamp and needs none."""
+def test_this_checkout_is_reported_as_usable():
+    """Whatever put the data here - a fetch, a wheel, the converter - it is accepted.
+
+    The suite cannot run at all without the dataset, so reaching this assertion already
+    proves the guard let the session start; what it adds is that the same answer comes
+    back when it is asked directly, on the real directory rather than a fixture.
+    """
     assert data_dir_is_populated(SOURCE_DATA_DIR)
     assert describe_data_state(SOURCE_DATA_DIR) is None
+
+
+@pytest.mark.skipif(not (PROJECT_ROOT / ".git").exists(), reason="not a git checkout")
+def test_the_dataset_is_not_carried_by_this_repository():
+    """The property every entry point's bootstrap guard exists to compensate for.
+
+    Losing the ignore rule would not fail anything on its own - the data would simply
+    start being committable again, and the next regeneration would add ~62 MB to the
+    history permanently, which is the cost this whole mechanism was built to remove.
+    The check is on the rule and not on what is tracked: ignoring never affects a file
+    already in the index, and a branch regenerating the data under a version PyPI
+    cannot serve yet is expected to `git add -f` it until that release is out.
+    """
+    for relative in ("boundaries/coordinates.bin", "shortcuts.bin", "zone_ids.npy"):
+        path = SOURCE_DATA_DIR / relative
+        ignored = subprocess.run(
+            ["git", "check-ignore", "--quiet", str(path)],
+            cwd=PROJECT_ROOT,
+            check=False,
+        )
+        assert ignored.returncode == 0, (
+            f"{path} is not git-ignored, so a regeneration can be committed by "
+            "accident and every one of them costs this repository ~62 MB of history"
+        )
 
 
 def test_a_missing_dataset_names_the_command_that_fixes_it(tmp_path):
@@ -292,6 +323,56 @@ def test_regenerated_data_is_not_reported_stale_after_the_version_bump(
 
     assert bootstrap_data.mark_data_current() == "2.2026.4"
     assert describe_data_state(data_dir) is None
+
+
+def test_a_local_wheel_lands_exactly_as_a_fetched_one_does(tmp_path, monkeypatch):
+    """The path a data update takes in CI: PyPI has nothing to fetch for that version.
+
+    Nothing about the result may differ from a fetch - same replace-don't-merge unpack,
+    same stamp - or the pull request that validates a data release would be testing a
+    directory the release-time guards describe differently.
+    """
+    stamp = tmp_path / "stamp"
+    monkeypatch.setattr(bootstrap_data, "STAMP_FILE", stamp)
+    monkeypatch.setattr(bootstrap_data, "declared_data_version", lambda: "9.2026.1")
+    data_dir = make_data_dir(tmp_path)
+    (data_dir / "stale.npy").write_bytes(b"from the previous release")
+    wheel = make_wheel(
+        tmp_path, {DATA_VERSION_FILENAME: b"2027a\n", "shortcuts.bin": b"\x01"}
+    )
+
+    assert unpack_local_wheel(wheel, data_dir) == 2
+    assert (data_dir / DATA_VERSION_FILENAME).read_bytes() == b"2027a\n"
+    assert not (data_dir / "stale.npy").exists()
+    assert stamp.read_text(encoding="utf-8").strip() == "9.2026.1"
+
+
+def test_a_local_wheel_for_another_version_is_refused(tmp_path, monkeypatch):
+    """The mismatch the filename is the only witness to.
+
+    A payload carries no release name, so unpacking the wrong wheel and then stamping
+    the declared version would state something false about the data on disk - the exact
+    "yesterday's data against today's code" the stamp exists to make impossible. In CI
+    the wheel comes from a run id read out of a committed file, which is precisely the
+    reference that can go stale.
+    """
+    monkeypatch.setattr(bootstrap_data, "declared_data_version", lambda: "9.2026.2")
+    data_dir = make_data_dir(tmp_path)
+    wheel = make_wheel(tmp_path, {"shortcuts.bin": b"\x01"}, version="9.2026.1")
+
+    with pytest.raises(BootstrapError, match="9.2026.1.*declares 9.2026.2"):
+        unpack_local_wheel(wheel, data_dir)
+    assert (data_dir / "shortcuts.bin").read_bytes() == b"\x00", (
+        "a refused wheel must not have been unpacked"
+    )
+
+
+def test_a_file_that_is_not_a_data_wheel_is_refused(tmp_path):
+    """`gh run download` yields whatever the artefact holds, named however it was."""
+    stray = tmp_path / "timezonefinder-8.3.0-py3-none-any.whl"
+    stray.write_bytes(b"not a data wheel")
+    with pytest.raises(BootstrapError, match="not a timezonefinder-data wheel name"):
+        unpack_local_wheel(stray, make_data_dir(tmp_path))
 
 
 def test_the_regeneration_path_restates_what_the_data_directory_holds():

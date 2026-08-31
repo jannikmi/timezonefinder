@@ -2,10 +2,10 @@
 
 ``packages/timezonefinder-data/timezonefinder_data/data/`` is where the converter
 writes and where an editable install reads from, and it is the ~62 MB that makes every
-regeneration expensive to keep in this repository's history (DATA-BINARIES). This
-module is the *consuming* half of stopping that: a checkout that does not carry the
-binaries obtains them here instead, from the ``timezonefinder-data`` release the
-workspace already pins.
+regeneration would cost this repository's history if it were committed. It is not: the
+directory is git-ignored, and this module is how a checkout gets one - from the
+``timezonefinder-data`` release the workspace pins, or from a wheel CI already built
+when that release is not published yet.
 
 Two properties the directory cannot supply on its own, and which the entry points below
 depend on:
@@ -37,6 +37,7 @@ from argparse import ArgumentParser
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -65,6 +66,13 @@ STAMP_FILE = DATA_PACKAGE_ROOT / ".bootstrapped-data-version"
 # package's pyproject is what puts the payload here.
 WHEEL_DATA_PREFIX = "timezonefinder_data/data/"
 
+# What a data wheel is called, and the only place its version is written down: a wheel
+# carries no marker naming the release inside its payload, so `--from-wheel` reads it
+# off the name the build gave it.
+WHEEL_NAME_PATTERN = re.compile(
+    r"^timezonefinder_data-(?P<version>[^-]+)-py3-none-any\.whl$"
+)
+
 # One wording, so every entry point that refuses to run without the data names the same
 # command. Deliberately path-free: the caller's own reason already says which directory.
 BOOTSTRAP_HINT = (
@@ -86,8 +94,10 @@ def declared_data_version() -> str:
 def stamped_data_version() -> str | None:
     """The version a previous bootstrap unpacked, or ``None`` if never bootstrapped.
 
-    ``None`` is not "broken": a checkout that still carries the binaries in git has no
-    stamp and needs none.
+    ``None`` is not "broken". The converter writes the data directory directly, and
+    ``update_data.sh`` stamps it only once the version bump that follows has settled -
+    so an unstamped dataset is a regeneration in progress, which is the one state where
+    no release name describes what is on disk.
     """
     if not STAMP_FILE.is_file():
         return None
@@ -276,6 +286,39 @@ def extract_data(wheel: Path, data_dir: Path) -> int:
     return len(members)
 
 
+def unpack_local_wheel(wheel: Path, data_dir: Path = SOURCE_DATA_DIR) -> int:
+    """Populate ``data_dir`` from a data wheel already on disk. Returns the file count.
+
+    The case PyPI cannot serve: a branch whose declared ``timezonefinder-data`` version
+    is not published yet - every data update, and every format change - has its data
+    only inside the wheel the run that compiled it uploaded. CI hands that wheel here
+    (``.github/actions/obtain-data``) rather than to a second implementation of the
+    unpack, so the path-traversal refusal and the "rebuild, never merge" swap below
+    cover it too.
+
+    :raises BootstrapError: when the wheel is not this checkout's declared version. The
+        stamp written afterwards states which release the directory holds, and a wheel
+        for a different one would make that statement false - which is exactly the
+        silent mismatch the stamp exists to catch.
+    """
+    declared = declared_data_version()
+    match = WHEEL_NAME_PATTERN.match(wheel.name)
+    if match is None:
+        raise BootstrapError(
+            f"{wheel.name} is not a {DATA_DISTRIBUTION_NAME} wheel name; nothing was "
+            "unpacked"
+        )
+    found = match.group("version")
+    if found != declared:
+        raise BootstrapError(
+            f"{wheel.name} carries {DATA_DISTRIBUTION_NAME} {found}, but this checkout "
+            f"declares {declared}; nothing was unpacked"
+        )
+    count = extract_data(wheel, data_dir)
+    mark_data_current()
+    return count
+
+
 def bootstrap(
     data_dir: Path = SOURCE_DATA_DIR, force: bool = False, quiet: bool = False
 ) -> bool:
@@ -328,6 +371,15 @@ def main(argv: list[str] | None = None) -> int:
             "fetching; for the regeneration path, which produces data no release has"
         ),
     )
+    parser.add_argument(
+        "--from-wheel",
+        type=Path,
+        default=None,
+        help=(
+            "unpack this data wheel instead of fetching one; for CI on a branch whose "
+            "declared version PyPI does not have, which is every data update"
+        ),
+    )
     parser.add_argument("--data-dir", type=Path, default=SOURCE_DATA_DIR)
     args = parser.parse_args(argv)
 
@@ -346,7 +398,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        bootstrap(args.data_dir, force=args.force)
+        if args.from_wheel is not None:
+            count = unpack_local_wheel(args.from_wheel, args.data_dir)
+            print(
+                f"unpacked {count} files into {args.data_dir} from "
+                f"{args.from_wheel.name}"
+            )
+        else:
+            bootstrap(args.data_dir, force=args.force)
     except BootstrapError as error:
         print(f"::error::{error}", file=sys.stderr)
         return 1

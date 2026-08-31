@@ -6,6 +6,14 @@ scripts/*.bin
 scripts/*.json
 MANIFEST
 tmp.py
+# The packaged boundary data is obtained, not carried: ~62 MB that every regeneration
+# would otherwise add to this repository's history permanently. `make bootstrap` fetches
+# the `timezonefinder-data` release this checkout declares; CI on a branch declaring a
+# version PyPI does not have yet takes it from the run recorded in DATA_BUILD_RUN
+# instead (.github/actions/obtain-data). Ignoring a path never affects files already
+# tracked, so a branch with no published version to fetch and no recorded run can still
+# `git add -f` its regeneration and drop it again once that release is out.
+packages/timezonefinder-data/timezonefinder_data/data/
 # written by `make bootstrap`: which timezonefinder-data release the packaged data
 # directory was unpacked from. Beside that directory rather than in it, because
 # everything inside it is package data and would be published with the next data wheel.

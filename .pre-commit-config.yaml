@@ -8,7 +8,12 @@ repos:
             -   id: end-of-file-fixer
             -   id: check-yaml
             -   id: check-added-large-files
-                exclude: ^packages/timezonefinder-data/timezonefinder_data/data/.*\.bin$
+                # The packaged dataset is git-ignored and normally never staged at all.
+                # The exemption covers the deliberate exception: a branch regenerating
+                # the data under a version PyPI cannot serve yet has to `git add -f` it
+                # so CI has something to test, and every file under here is package
+                # data whose size is the format's business rather than this hook's.
+                exclude: ^packages/timezonefinder-data/timezonefinder_data/data/
             -   id: check-case-conflict
             -   id: check-json
             -   id: pretty-format-json

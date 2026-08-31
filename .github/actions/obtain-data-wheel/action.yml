@@ -9,6 +9,13 @@ description: >
   is the one failure state this pipeline has no good recovery for - the data is merged,
   the tag is pushed, and re-running changes nothing.
 
+  What the fallback can and cannot reconstruct changed when the dataset stopped being
+  committed. It builds from a checkout that has to *obtain* its data, so for a version
+  PyPI already serves it reproduces the release exactly, and for one it does not - the
+  tag of a data update whose artefact has since expired - there is nothing left to build
+  from and the step says so. That is the honest outcome: the alternative is publishing
+  the previous release's bytes under the new version's name, silently.
+
   Why it is not simply built where it is needed: the data pipeline's invariant is that
   the bytes build.yml validated on the update pull request are the bytes the tag
   publishes. Two independent builds satisfying that is a claim about determinism, not a
@@ -125,6 +132,13 @@ runs:
         fi
 
         if [[ "$source" == "build" ]]; then
+          # The dataset is git-ignored, so a fresh checkout's data directory is empty
+          # and the build would produce a payload-free wheel - which the step below
+          # catches, but only after it has been uploaded and named as the release. Get
+          # the data first. On a branch declaring a version PyPI does not have and with
+          # no usable recorded run, this fails here, by name: the bytes that tree
+          # describes exist in exactly one place and it is that run's artefact.
+          uv run python -m scripts.bootstrap_data
           # wheel only: a pure-data py3-none-any distribution has no build-from-source
           # case, and an sdist would double the ~63 MB each data release costs
           uv build -v --package timezonefinder-data --wheel -o dist/

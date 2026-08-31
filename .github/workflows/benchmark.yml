@@ -175,6 +175,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # `obtain-data` reads the artefacts of the run named by DATA_BUILD_RUN, which is
+      # where a data-update pull request's dataset lives - PyPI has only the release
+      # before it. Read-only and artefact-scoped, so this job still holds no write
+      # permission and no secret while it runs untrusted pull request code.
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -196,6 +201,15 @@ jobs:
       # container audience in contributing/core-contributor-contract.md actually runs.
       - name: Install dependencies (without numba)
         run: uv sync --group test
+
+      # The dataset is git-ignored, and every benchmark below reads it. On a
+      # data-update pull request this takes the head's data from the run that
+      # compiled it, so the comparison is new data against the base's old data
+      # rather than one dataset measured twice.
+      - name: Obtain the packaged boundary data
+        uses: ./.github/actions/obtain-data
+        with:
+          token: ${{ github.token }}
 
       # assert rather than assume: a numba dependency sneaking in via a
       # transitive dependency or a lockfile change would silently corrupt the
@@ -233,6 +247,16 @@ jobs:
         if: github.event_name == 'pull_request'
         working-directory: base
         run: uv sync --group test
+
+      # The base declares its own data version, which on a data-update pull request
+      # is the one before the head's - so this resolves separately rather than
+      # sharing the head's directory.
+      - name: Obtain the merge base's packaged boundary data
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/obtain-data
+        with:
+          token: ${{ github.token }}
+          working-directory: base
 
       # the same guard as for the head: a base checkout that silently fell back
       # to the pure-Python point-in-polygon path would report a ~50x

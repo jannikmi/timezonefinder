@@ -8,7 +8,7 @@ skip it - see ``timezonefinder/utils_numba.py``'s ``pt_in_poly_blocked`` for why
 is exact, and ``docs/data_format.rst`` for what it is worth.
 
 Nothing here runs at lookup time. It builds what the converter writes, and it is what
-``scripts/data_integrity.py`` re-derives to check the committed binaries against.
+``scripts/data_integrity.py`` re-derives to check the packaged binaries against.
 
 **A block's range includes its bridging vertex**, the first vertex of the next block,
 because the block owns the edge reaching it. On the last block that vertex is vertex 0.

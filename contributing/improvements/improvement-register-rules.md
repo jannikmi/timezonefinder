@@ -54,7 +54,7 @@ Every entry has exactly one row in the ranking and every row has exactly one ent
 
 `prototypes/` is excluded throughout — it carries its own crop of ruff findings (`RUF012` mutable class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave in exploratory code.
 
-`packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited directly; findings there belong against the generator or the schema instead.
+`packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited directly; findings there belong against the generator or the schema instead. The first is not in the repository at all — `make bootstrap` obtains it — so nothing there can be read from a diff.
 
 The `timezonefinder-data` distribution is deliberately thin — one `DATA_DIR` constant and a version in `packages/timezonefinder-data/timezonefinder_data/__init__.py`, plus the payload. The package has been reviewed and contains no code that can carry meaningful debt; the [data-distribution decisions](decisions/data-distribution-packaging-and-release-decisions.md) refuse moving the binary-format reader into it.
 
