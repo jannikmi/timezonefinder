@@ -77,6 +77,12 @@ jobs:
             tox-env: "py314,py314-numba,py314-pytz,slow"
     env:
       TOX_SKIP_MISSING_INTERPRETERS: False
+    permissions:
+      # `obtain-data` reads the artefacts of the run named by DATA_BUILD_RUN.
+      # Declaring any permission zeroes every other one, so the checkout's read has to
+      # be listed alongside it.
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
 
@@ -90,6 +96,15 @@ jobs:
 
       - name: Install test dependencies
         run: uv sync --group test
+
+      # The dataset is not in the checkout - it is obtained, and on a data-update pull
+      # request it comes from the wheel that update's own run built rather than from
+      # PyPI, which still serves the previous release. That is what keeps this matrix
+      # the thing that validated the bytes the tag goes on to publish.
+      - name: Obtain the packaged boundary data
+        uses: ./.github/actions/obtain-data
+        with:
+          token: ${{ github.token }}
 
       - name: Run tox
         run: uv run tox -e ${{ matrix.tox-env }}

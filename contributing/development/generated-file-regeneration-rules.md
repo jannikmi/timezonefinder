@@ -1,6 +1,6 @@
 # Generated-file regeneration rules
 
-**Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and diffing compares like with like. Keep it that way — when it breaks, a re-parse shows spurious diffs that look like converter drift, or real changes drown in formatting churn, and the lossless check after a data regeneration (`git status --short packages/timezonefinder-data/timezonefinder_data/data` listing only genuinely changed binaries) stops meaning anything.
+**Invariant: every generator emits output that is already pre-commit-clean**, so regenerating and diffing compares like with like. Keep it that way — when it breaks, a re-parse shows spurious diffs that look like converter drift, or real changes drown in formatting churn, and the lossless check after a data regeneration (`diff -rq` against a copy of the data directory taken before it, listing only genuinely changed binaries) stops meaning anything.
 
 What it takes to hold, for anything you add:
 

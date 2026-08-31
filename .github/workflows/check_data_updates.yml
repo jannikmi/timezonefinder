@@ -142,13 +142,43 @@ jobs:
       - name: Record the run that compiled the data
         run: echo "$GITHUB_RUN_ID" > DATA_BUILD_RUN
 
+      # Explicit paths, not `git add -A`. The dataset itself is git-ignored, so `-A`
+      # would already skip it - but "the update commits no binaries" would then be a
+      # property of .gitignore rather than of this job, and a single un-ignored file
+      # under the data directory would put ~62 MB into a branch that auto-merges.
+      # Naming what an update writes also makes the reverse failure visible: the guard
+      # below refuses to commit anything the script produced that this list forgot,
+      # rather than dropping it and opening a pull request that is quietly incomplete.
       - name: Commit and push the update branch
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "data-update-$LATEST"
-          git add -A
+          git add \
+            DATA_VERSION \
+            DATA_SOURCE \
+            DATA_BUILD_RUN \
+            packages/timezonefinder-data/pyproject.toml \
+            packages/timezonefinder-data/README.md \
+            tests/fixtures/benchmarks \
+            docs/benchmark_results_comparison.rst \
+            docs/benchmark_results_initialization.rst \
+            docs/benchmark_results_memory.rst \
+            docs/benchmark_results_polygon.rst \
+            docs/benchmark_results_timezonefinding.rst \
+            docs/data_report.rst \
+            uv.lock
+          # Anything modified or untracked that the list above did not stage. A line
+          # whose worktree column (the second character) is not a space is exactly
+          # that, and `??` for an untracked file fails the same test.
+          leftover=$(git status --porcelain --untracked-files=all | awk '$0 !~ /^[A-Z] /')
+          if [[ -n "$leftover" ]]; then
+            echo "::error::update_data.sh wrote files this job does not stage:"
+            echo "$leftover"
+            echo 'Add them to the staging list above, or ignore them deliberately.'
+            exit 1
+          fi
           git commit -m "Data $LATEST"
           # force push: a leftover branch from a previous failed run must not block the update
           git push --force origin "data-update-$LATEST"

@@ -1,0 +1,109 @@
+name: Obtain the packaged boundary data
+description: >
+  Populate a checkout's `packages/timezonefinder-data/timezonefinder_data/data/`, which
+  is git-ignored and therefore empty in every fresh clone.
+
+  Two sources, and which one applies is decided by the tree rather than by the caller.
+  When DATA_BUILD_RUN names a run whose `artifact-data-wheel` carries the version this
+  checkout declares, the data comes out of that wheel; otherwise it is fetched from the
+  published release, digest-checked, by `make bootstrap`'s own script.
+
+  The recorded run is not an optimisation here, it is the only source that exists for
+  the case it covers: a data update bumps `timezonefinder-data` to a version PyPI does
+  not have until the tag publishes, so on that pull request - and on any branch
+  carrying a format change - the published release is either the *previous* dataset or
+  nothing at all. Pointing CI at `make bootstrap` alone would therefore validate last
+  release's data against this branch's code, silently, which is precisely the failure
+  the version stamp exists to make impossible.
+
+  Falling back the other way is safe and is the common case: every pull request that
+  did not come out of the data pipeline declares a published version, and the wheel
+  PyPI serves for it is the artefact that release published.
+
+inputs:
+  token:
+    description: >
+      Token used to read the recorded run's artefacts. Needs `actions: read`, which a
+      caller has to declare - a job that declares any permission gets none of the rest.
+    required: true
+  working-directory:
+    description: >
+      The checkout to populate. Not always the workspace root: benchmark.yml measures a
+      pull request's merge base from a second checkout beside the head one, and each
+      needs the data version its own tree declares.
+    required: false
+    default: "."
+
+outputs:
+  source:
+    description: >
+      `artifact` when the recorded run supplied the data, `release` when it was fetched
+      from PyPI. Exists so a caller's log states which path it took.
+    value: ${{ steps.obtain.outputs.source }}
+
+runs:
+  using: composite
+  steps:
+    - name: Obtain the packaged boundary data
+      id: obtain
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        # The same three names `.github/actions/obtain-data-wheel` reads, because this
+        # is the same hand-off seen from the other end: that action wants the wheel to
+        # publish, this one wants the dataset inside it.
+        # tests/test_data_wheel_handoff.py holds the spellings together.
+        stamp=DATA_BUILD_RUN
+        artifact=artifact-data-wheel
+
+        version=$(uv version --short --package timezonefinder-data)
+        expected="timezonefinder_data-${version}-py3-none-any.whl"
+
+        source=release
+        if [[ -f "$stamp" ]]; then
+          run_id=$(tr -d '[:space:]' < "$stamp")
+          # strict, not "extract the digits": a stamp that is not a bare run id has been
+          # written by something other than the update job, and guessing which part of
+          # it is the run would resolve to some other run's artefact
+          if [[ ! "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::$stamp holds '$run_id', which is not a workflow run id"
+            exit 1
+          fi
+          staging=$(mktemp -d)
+          if gh run download "$run_id" --repo "$GH_REPO" --name "$artifact" --dir "$staging"; then
+            wheel=$(find "$staging" -name 'timezonefinder_data-*.whl' | head -n 1)
+            found=$(basename "${wheel:-none}")
+            if [[ "$found" == "$expected" ]]; then
+              # The unpack itself is the bootstrap script's, not a second copy of it:
+              # rebuilding the directory rather than merging into it, and refusing a
+              # wheel member whose name would escape it, are properties this path needs
+              # exactly as much as the fetching one does.
+              uv run python -m scripts.bootstrap_data --from-wheel "$wheel"
+              source=artifact
+            else
+              echo "::warning::run $run_id offers $found, but this checkout declares" \
+                "$version; fetching the published release instead"
+            fi
+          else
+            echo "::warning::run $run_id no longer offers $artifact (expired, deleted," \
+              "or never uploaded); fetching the published release instead"
+          fi
+        fi
+
+        if [[ "$source" == "release" ]]; then
+          uv run python -m scripts.bootstrap_data
+        fi
+
+        # Neither branch above is trusted to have left the directory usable: the fetch
+        # reports what it did rather than what is on disk, and the unpack is handed a
+        # wheel this step chose by name. The check is what the test targets depend on
+        # anyway, so running it here costs nothing and moves the failure to the step
+        # whose job this was.
+        uv run python -m scripts.bootstrap_data --check
+        echo "obtained the packaged boundary data ($source)"
+        echo "source=$source" >> "$GITHUB_OUTPUT"
