@@ -52,6 +52,21 @@ def get_block_offsets_path(path: Path) -> Path:
     return path / "block_offsets.npy"
 
 
+def get_block_bases_path(path: Path) -> Path:
+    """Return the path to the block_bases.npy file in the given directory."""
+    return path / "block_bases.npy"
+
+
+def get_block_widths_path(path: Path) -> Path:
+    """Return the path to the block_widths.npy file in the given directory."""
+    return path / "block_widths.npy"
+
+
+def get_nr_vertices_path(path: Path) -> Path:
+    """Return the path to the nr_vertices.npy file in the given directory."""
+    return path / "nr_vertices.npy"
+
+
 def store_per_polygon_vector(file_path: Path, vector: np.ndarray) -> None:
     """Store a vector as a .npy file in the specified file path."""
     print(f"Storing vector to {file_path}")

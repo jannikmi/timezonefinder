@@ -18,10 +18,10 @@ import pytest
 from timezonefinder import TimezoneFinder
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
-    PolygonAddCoords,
+    PolygonAddPayload,
     PolygonEnd,
     PolygonStart,
-    PolygonStartCoordsVector,
+    PolygonStartPayloadVector,
 )
 from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
@@ -34,7 +34,6 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
 from timezonefinder.flatbuf.io.polygons import (
     POLYGON_FILE_IDENTIFIER,
     POLYGON_LAYOUT_VERSION,
-    flatten_polygon_coords,
     get_coordinate_path,
     get_polygon_collection,
     write_polygon_collection_flatbuffer,
@@ -42,14 +41,17 @@ from timezonefinder.flatbuf.io.polygons import (
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
 from scripts.data_integrity import validate_shipped_schemas
 
-POLYGONS = [
-    np.array([[0, 1, 2], [3, 4, 5]]),
-    np.array([[100, 200], [300, 400]]),
+#: Payloads, not rings: this module tests the container and the markers on it, so what
+#: the words mean is beside the point and anything decodable would only add a dependency
+#: on the encoding these tests are not about.
+PAYLOADS = [
+    np.array([0, 1, 2, 3, 4, 5], dtype=np.uint32),
+    np.array([100, 200, 300, 400], dtype=np.uint32),
 ]
 
 
 def build_collection(
-    polygons=POLYGONS,
+    payloads=PAYLOADS,
     *,
     with_identifier: bool = True,
     layout_version: int | None = POLYGON_LAYOUT_VERSION,
@@ -63,14 +65,13 @@ def build_collection(
     """
     builder = flatbuffers.Builder(0)
     polygon_offsets = []
-    for polygon in polygons:
-        coords = flatten_polygon_coords(polygon)
-        PolygonStartCoordsVector(builder, len(coords))
-        for coord in reversed(coords):
-            builder.PrependInt32(int(coord))
-        coords_offset = builder.EndVector()
+    for payload in payloads:
+        PolygonStartPayloadVector(builder, len(payload))
+        for word in reversed(payload):
+            builder.PrependUint32(int(word))
+        payload_offset = builder.EndVector()
         PolygonStart(builder)
-        PolygonAddCoords(builder, coords_offset)
+        PolygonAddPayload(builder, payload_offset)
         polygon_offsets.append(PolygonEnd(builder))
 
     PolygonCollectionStartPolygonsVector(builder, len(polygon_offsets))
@@ -95,7 +96,7 @@ def build_collection(
 def test_written_file_carries_layout_markers(tmp_path):
     """A file this version writes is one this version accepts."""
     output_file = tmp_path / "coordinates.bin"
-    write_polygon_collection_flatbuffer(output_file, POLYGONS)
+    write_polygon_collection_flatbuffer(output_file, PAYLOADS)
     with open(output_file, "rb") as f:
         buffer = f.read()
 
@@ -165,14 +166,21 @@ def test_packaged_data_passes_guard(get_dir):
 
 @pytest.mark.unit
 @pytest.mark.parametrize("in_memory", [False, True])
-def test_guard_keeps_coordinates_zero_copy(in_memory):
-    """Checking the markers must not turn the coordinate views into copies."""
+def test_guard_keeps_the_payload_zero_copy(in_memory):
+    """Checking the markers must not turn the payload views into copies.
+
+    ``coords_of`` itself owns its data since polygon layout 3 - it decodes a ring
+    rather than viewing one - so what has to stay zero-copy is the payload underneath
+    it, which is what the point-in-polygon kernels are handed and what would otherwise
+    be copied per lookup.
+    """
     tf = TimezoneFinder(in_memory=in_memory)
     try:
-        coords = tf.coords_of(boundary_id=0)
-        assert coords.flags["OWNDATA"] is False
+        payload = tf.boundaries.coordinates[0]
+        assert payload.flags["OWNDATA"] is False
+        assert tf.boundaries.coordinates.words.flags["OWNDATA"] is False
     finally:
-        del coords
+        del payload
         del tf
 
 

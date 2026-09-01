@@ -42,15 +42,21 @@ ACCELERATION_IMPLEMENTATIONS: dict[str, Callable[[int, int, np.ndarray], bool]] 
     "numba": utils_numba.pt_in_poly_python,
 }
 
-# The same per path for the block-filtered kernel, which is the one the lookup path
-# actually runs (``PolygonArray.pip``). Both are listed because they are dispatched
-# separately in ``utils.py`` and a half-wired dispatch - the bare kernel on one path and
-# the blocked one on the other - would still answer, just from two implementations.
-BLOCKED_ACCELERATION_IMPLEMENTATIONS: dict[
-    str, Callable[[int, int, np.ndarray, np.ndarray, int], bool]
-] = {
-    "clang": utils_clang.pt_in_poly_clang_blocked,
-    "numba": utils_numba.pt_in_poly_blocked,
+# And for the packed kernel, which is the one the lookup path actually runs
+# (``PolygonArray.pip``), together with the factory that wraps a collection's arrays for
+# it. The two go together and are listed as a pair on purpose: what a collection stores
+# in ``PolygonArray.packed`` is whatever the bound factory made, so a kernel from one
+# path handed the other's buffers is a segfault rather than a wrong answer. That pairing
+# is also why swapping these rebinds nothing on a finder that already exists - a test
+# covering the other path has to construct one *under* the patch.
+PACKED_ACCELERATION_IMPLEMENTATIONS: dict[str, Callable[..., bool]] = {
+    "clang": utils_clang.pt_in_poly_clang_packed,
+    "numba": utils_numba.pt_in_poly_packed,
+}
+
+PACKED_BUFFER_FACTORIES: dict[str, Callable[..., tuple]] = {
+    "clang": utils_clang.packed_buffers_clang,
+    "numba": utils_numba.packed_buffers_numba,
 }
 
 
@@ -84,7 +90,8 @@ def check_acceleration_path(expected: AccelerationPath) -> None:
         )
     for attribute, table in (
         ("inside_polygon", ACCELERATION_IMPLEMENTATIONS),
-        ("inside_polygon_blocked", BLOCKED_ACCELERATION_IMPLEMENTATIONS),
+        ("inside_polygon_packed", PACKED_ACCELERATION_IMPLEMENTATIONS),
+        ("packed_buffers", PACKED_BUFFER_FACTORIES),
     ):
         expected_impl = table[expected]
         bound = getattr(utils, attribute)

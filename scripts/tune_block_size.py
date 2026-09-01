@@ -40,14 +40,25 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import BLOCK_RANGE_DTYPE, POLYGON_BLOCK_SIZE
+from timezonefinder.configs import (
+    BLOCK_BASE_DTYPE,
+    BLOCK_RANGE_DTYPE,
+    BLOCK_WIDTH_DTYPE,
+    POLYGON_BLOCK_SIZE,
+)
 from timezonefinder.polygon_array import PolygonArray
 
 DEFAULT_SIZES = (32, 64, 128, 256, 512)
 DEFAULT_NR_POINTS = 5_000
 
-# Bytes one block costs in the index: a [min, max] pair of BLOCK_RANGE_DTYPE.
-BYTES_PER_BLOCK = 2 * BLOCK_RANGE_DTYPE.itemsize
+# Bytes one block costs beside the payload, all of which scale with the block count:
+# the latitude index's [min, max] pair, the frame's x origin, and the two bit widths.
+# There is no y origin - the index's lower bound is it (timezonefinder/block_payload.py).
+BYTES_PER_BLOCK = (
+    2 * BLOCK_RANGE_DTYPE.itemsize
+    + BLOCK_BASE_DTYPE.itemsize
+    + 2 * BLOCK_WIDTH_DTYPE.itemsize
+)
 
 
 def record_pip_calls(
@@ -120,13 +131,16 @@ def main() -> None:
     )
 
     # Every ring the converter would *store*, for the index size - not only the ones
-    # queried. Read through the coordinate accessor rather than through `coords_of`,
-    # because the index has one entry per stored ring: `HoleArray.coords_of` takes a
-    # hole id and resolves it through `poly_ref`, so indexing it by a storage position
-    # would measure some referenced boundary polygon instead of the inline ring meant
-    # (756 hole ids against 27 inline rings in the packaged data).
+    # queried. Read `nr_vertices`, which is keyed by *storage* position exactly as the
+    # coordinate accessor is, rather than going through `coords_of`: the index has one
+    # entry per stored ring, and `HoleArray.coords_of` takes a hole id and resolves it
+    # through `poly_ref`, so indexing it by a storage position would measure some
+    # referenced boundary polygon instead of the inline ring meant (756 hole ids against
+    # 27 inline rings in the packaged data). Since polygon layout 3 the accessor hands
+    # out a ring's packed payload words, whose length is a byte count rather than a
+    # vertex count - `nr_vertices` is where that number lives now.
     all_vertex_counts = [
-        collection.coordinates[ring_id].shape[1]
+        int(collection.nr_vertices[ring_id])
         for collection in (finder.boundaries, finder.holes)
         for ring_id in range(len(collection.coordinates))
     ]

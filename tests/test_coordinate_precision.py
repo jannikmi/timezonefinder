@@ -28,6 +28,7 @@ from timezonefinder.configs import (
     MAX_LAT_VAL,
     MAX_LNG_VAL,
     NR_BYTES_I,
+    SOURCE_COORD_STEP,
 )
 
 #: the packaged encoding: signed ``NR_BYTES_I``-byte integers scaled by COORD2INT_FACTOR
@@ -199,29 +200,38 @@ def test_the_dtype_comparison_table_in_the_docs_still_holds(dtype, step_deg, gro
 
 
 @pytest.mark.unit
-def test_the_packaged_coordinates_carry_only_six_decimal_places():
-    """``docs/data_format.rst`` says the stored encoding is ten times finer than the
-    source, and that the seventh decimal carries nothing. This is what makes that a
-    measurement rather than an assumption - and what will fail, correctly, if upstream
-    ever publishes a seventh digit, because the page would then be wrong.
+def test_the_packaged_coordinates_sit_on_the_source_grid():
+    """Every packaged coordinate is a multiple of :data:`SOURCE_COORD_STEP`, exactly.
 
-    The signal is not statistical: a genuinely seven-decimal source would spread the
-    last digit over 0-9, and instead it is only ever ``0`` or ``9``. Those nines are
-    ``coord2int`` truncating toward zero, e.g. ``133580000`` stored as ``133579999``.
+    ``docs/data_format.rst`` says the boundary data carries the six decimal places
+    timezone-boundary-builder publishes, and that it is *stored* in units of them - which
+    is where ~6.4 MB of the file went. This is what makes that a measurement rather than
+    an assumption.
+
+    It used to read differently, and the change is the point. The packaged values were
+    once ten times finer and only ever ended in ``0`` or ``9``, the nines being
+    ``coord2int`` truncating toward zero - ``133580000`` stored as ``133579999``, 1.1 cm
+    off the vertex upstream published, on 6.27 % of them. The conversion rounds onto the
+    source's own grid now, so the boundary *is* the published boundary and the last digit
+    is only ever ``0``.
+
+    The tripwire for an upstream that starts publishing a seventh decimal moved with it,
+    from here to where it can still act: ``scripts.utils.source_coord2int`` refuses to
+    convert a coordinate off the grid, so such a release stops the converter instead of
+    being silently rounded away. ``test_the_conversion_refuses_a_seventh_decimal`` covers
+    that half.
     """
     with TimezoneFinder(in_memory=True) as tf:
         sampled = np.concatenate(
             [tf.coords_of(i).ravel() for i in range(0, tf.nr_of_polygons, 11)]
         ).astype(np.int64)
 
-    last_digit = np.abs(sampled) % 10
     assert sampled.size > 100_000, "sample too small to be conclusive"
-    assert set(np.unique(last_digit).tolist()) == {0, 9}, (
-        "the source now carries a meaningful seventh decimal, so the stored encoding is "
-        "no longer ten times finer than it - docs/data_format.rst says it is"
+    off_grid = sampled % SOURCE_COORD_STEP != 0
+    assert not off_grid.any(), (
+        f"{int(off_grid.sum())} packaged coordinates are not on the source grid, so "
+        f"the stored residuals do not mean what docs/data_format.rst says they mean"
     )
-    # overwhelmingly multiples of ten; the rest is truncation, not precision
-    assert np.mean(last_digit == 0) > 0.9
 
 
 @pytest.mark.unit

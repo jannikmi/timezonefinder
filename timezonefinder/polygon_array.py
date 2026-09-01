@@ -6,13 +6,17 @@ import numpy as np
 from timezonefinder.configs import POLYGON_BLOCK_SIZE, IntegerLike
 
 from timezonefinder import utils
+from timezonefinder.block_payload import decode_ring, derive_payload_offsets
 from timezonefinder.coord_accessors import AbstractCoordAccessor, create_coord_accessor
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
 )
 from timezonefinder.np_binary_helpers import (
+    get_block_bases_path,
     get_block_offsets_path,
     get_block_ranges_path,
+    get_block_widths_path,
+    get_nr_vertices_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -29,6 +33,10 @@ class PolygonArray:
     ymax: np.ndarray
     block_ranges: np.ndarray
     block_offsets: list[int]
+    block_bases: np.ndarray
+    block_widths: np.ndarray
+    block_payload_offsets: np.ndarray
+    nr_vertices: np.ndarray
     coordinates: AbstractCoordAccessor
 
     def __init__(
@@ -82,16 +90,66 @@ class PolygonArray:
         # makes the kernels' read-only eager signatures describe the truth rather than
         # tolerate it.
         self.block_ranges.flags.writeable = False
+        block_offsets = read_per_polygon_vector(
+            get_block_offsets_path(self.data_location)
+        )
         # The offsets become plain Python ints, which is worth ~100 ns of every
-        # point-in-polygon test: slicing an array with two ``numpy.uint32`` bounds costs
-        # 217 ns against 117 ns with ``int`` bounds, because each bound is unboxed
-        # through ``__index__`` per slice. The file stores the narrow unsigned column -
-        # its width is checked where the data is built and over what ships
+        # point-in-polygon test: reaching the kernel with two ``numpy.uint32`` bounds
+        # costs 217 ns against 117 ns with ``int`` ones, because each is unboxed through
+        # ``__index__``. The file stores the narrow unsigned column - its width is
+        # checked where the data is built and over what ships
         # (``scripts.data_integrity.validate_block_index``), which is the only place a
         # stored width can be checked at all.
-        self.block_offsets: list[int] = read_per_polygon_vector(
-            get_block_offsets_path(self.data_location)
-        ).tolist()
+        self.block_offsets: list[int] = block_offsets.tolist()
+
+        # The per-block coordinate frames: the x origin and both bit widths, which with
+        # the latitude index's own lower bound are what turn a block's payload words back
+        # into coordinates. The y origin is that lower bound and is not stored again. Resident in both
+        # modes like the ranges above and for the same reason - together they are ~1 MB
+        # against a 38 MB payload, and a lookup consults them to decide which pages of
+        # that payload it has to touch at all.
+        self.block_bases = read_per_polygon_vector(
+            get_block_bases_path(self.data_location)
+        )
+        self.block_widths = read_per_polygon_vector(
+            get_block_widths_path(self.data_location)
+        )
+        # How many vertices each ring holds, which a packed payload's length no longer
+        # says: the byte count depends on the widths, so the ragged last block's size
+        # cannot be read back out of it.
+        self.nr_vertices = read_per_polygon_vector(
+            get_nr_vertices_path(self.data_location)
+        )
+        # Where each block's residuals start, derived rather than stored - the widths
+        # and the vertex counts already say it. Made absolute against the coordinate
+        # buffer here, so the kernels take one array and no per-ring rebasing.
+        self.block_payload_offsets = derive_payload_offsets(
+            self.nr_vertices,
+            self.block_widths,
+            block_offsets,
+            POLYGON_BLOCK_SIZE,
+        )
+        self.block_payload_offsets += np.repeat(
+            self.coordinates.word_offsets, np.diff(block_offsets.astype(np.int64))
+        ).astype(self.block_payload_offsets.dtype)
+
+        # Nothing writes to any of these after this point and every lookup shares them,
+        # which is what lets one finder serve concurrent readers. Saying so to numpy
+        # makes the kernels' read-only eager signatures describe the truth rather than
+        # tolerate it.
+        for array in (self.block_bases, self.block_widths, self.block_payload_offsets):
+            array.flags.writeable = False
+
+        # What the backend needs to reach the payload, wrapped once. On the C backend
+        # this is five ``ffi.from_buffer`` calls at ~0.30 us each - a fifth of a whole
+        # point-in-polygon test, which is why they happen here and not per lookup.
+        self.packed = utils.packed_buffers(
+            self.coordinates.words,
+            self.block_ranges,
+            self.block_bases,
+            self.block_widths,
+            self.block_payload_offsets,
+        )
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed.
@@ -105,6 +163,9 @@ class PolygonArray:
         nothing about the real error already propagating out of ``__init__``.
         """
         for attr in (
+            # the wrapped buffers first: on the C backend they hold the mapping open,
+            # and the accessor below is what closes it
+            "packed",
             "coordinates",
             "xmin",
             "xmax",
@@ -112,6 +173,10 @@ class PolygonArray:
             "ymax",
             "block_ranges",
             "block_offsets",
+            "block_bases",
+            "block_widths",
+            "block_payload_offsets",
+            "nr_vertices",
         ):
             if hasattr(self, attr):
                 delattr(self, attr)
@@ -146,24 +211,66 @@ class PolygonArray:
         """
         Get the polygon coordinates for the given index.
 
+        Decodes the ring's payload, which is the only place an absolute coordinate is
+        rebuilt: the point-in-polygon path stays in each block's own frame and never
+        materialises one. Costs an allocation and a pass over the ring, so it serves
+        ``get_geometry()`` and the integrity checks rather than a lookup.
+
         Args:
             idx: The polygon index
 
         Returns:
             A numpy array containing the polygon coordinates
         """
-        return self.coordinates[idx]
+        return self._decode(idx)
+
+    def _decode(self, idx: IntegerLike) -> np.ndarray:
+        """Decode the ring this collection stores at ``idx``.
+
+        ``idx`` is a *storage* index: for holes that is not the hole id, which is what
+        :meth:`HoleArray.coords_of` resolves before calling this.
+        """
+        start = self.block_offsets[idx]
+        stop = self.block_offsets[idx + 1]
+        ring = decode_ring(
+            self.coordinates[idx],
+            self.block_bases[start:stop],
+            self.block_ranges[start:stop],
+            self.block_widths[start:stop],
+            int(self.nr_vertices[idx]),
+            POLYGON_BLOCK_SIZE,
+        )
+        # Read-only although this array is freshly allocated and owned by the caller,
+        # unlike every other array a finder hands out. Under polygon layout 2 this was a
+        # view onto the mapping and had to be; keeping it read-only now is a choice, so
+        # that `get_geometry()` answers the same way in both layouts and a caller who
+        # wants to modify a ring copies it deliberately rather than discovering that a
+        # format change made writes stick.
+        ring.flags.writeable = False
+        return ring
 
     def block_ranges_of(self, idx: IntegerLike) -> np.ndarray:
         """Get the latitude block ranges of the ring stored for the given index.
 
         Keyed exactly like :meth:`coords_of`, which is what makes the pair safe: the
         index describes the ring that method returns, and any collection that resolves
-        ids differently (:class:`HoleArray` does) has to override both together or a
-        lookup silently filters one ring by another's latitudes.
+        ids differently (:class:`HoleArray` does) has to resolve for both or a lookup
+        silently filters one ring by another's latitudes.
+
+        Not used by :meth:`pip`, which reaches the same ranges through the collection's
+        flat array; this is for the build-time and test callers that want one ring's.
 
         :param idx: The polygon index
         :return: A ``(nr_blocks, 2)`` view of ``[min, max]`` latitude per block
+        """
+        return self._block_ranges_at(idx)
+
+    def _block_ranges_at(self, idx: IntegerLike) -> np.ndarray:
+        """The block ranges of the ring this collection stores at ``idx``.
+
+        A *storage* index, as :meth:`_decode` takes: the resolution :class:`HoleArray`
+        performs happens once, above this, and calling the public method again with an
+        already-resolved index would perform it twice.
         """
         return self.block_ranges[self.block_offsets[idx] : self.block_offsets[idx + 1]]
 
@@ -176,10 +283,24 @@ class PolygonArray:
         :param y: Y-coordinate of the point
         :return: True if the point is inside the polygon, False otherwise
         """
-        polygon = self.coords_of(poly_id)
-        block_ranges = self.block_ranges_of(poly_id)
-        return utils.inside_polygon_blocked(
-            x, y, polygon, block_ranges, POLYGON_BLOCK_SIZE
+        return self._pip_at(poly_id, x, y)
+
+    def _pip_at(self, idx: IntegerLike, x: int, y: int) -> bool:
+        """The point-in-polygon test against the ring this collection stores at ``idx``.
+
+        Nothing is sliced and no ring is decoded: the kernel is handed this collection's
+        whole payload and the four per-block columns, and finds the ring by where its
+        blocks start. :class:`HoleArray` overrides which collection answers, not this.
+        """
+        start = self.block_offsets[idx]
+        return utils.inside_polygon_packed(
+            x,
+            y,
+            self.nr_vertices[idx],
+            POLYGON_BLOCK_SIZE,
+            start,
+            self.block_offsets[idx + 1] - start,
+            *self.packed,
         )
 
     def pip_with_bbox_check(self, poly_id: IntegerLike, x: int, y: int) -> bool:
@@ -270,6 +391,26 @@ class HoleArray(PolygonArray):
         # `exists()` on every construction to say the same thing.
         self.poly_ref = read_per_polygon_vector(get_poly_ref_path(self.data_location))
 
+    def _resolve(self, idx: IntegerLike) -> tuple[PolygonArray, int]:
+        """Which collection holds this hole id's ring, and where.
+
+        The one place the reference vector is read, because every accessor below has to
+        agree on the answer: hole ids and boundary polygon ids are two dense spaces
+        starting at 0, so a resolution that disagrees with another still answers, with
+        some other ring. What that produces is a ring filtered against latitudes it has
+        nothing to do with - blocks holding the crossing edges skipped, and a wrong
+        answer for the handful of points that fall in them. It reads as noise rather
+        than as a failure: keying this collection's own index by boundary ids answered
+        6 of 5,000 points wrongly while everything else passed.
+
+        :param idx: The hole id
+        :return: the collection that stores the ring, and its index inside it
+        """
+        ref = int(self.poly_ref[idx])
+        if ref >= 0:
+            return self.boundaries, ref
+        return self, -(ref + 1)
+
     def coords_of(self, idx: IntegerLike) -> np.ndarray:
         """
         Get the hole coordinates for the given hole id, resolving a reference if needed.
@@ -277,33 +418,28 @@ class HoleArray(PolygonArray):
         :param idx: The hole id
         :return: A numpy array containing the hole coordinates
         """
-        ref = int(self.poly_ref[idx])
-        if ref >= 0:
-            return self.boundaries.coords_of(ref)
-        return self.coordinates[-(ref + 1)]
+        collection, storage_idx = self._resolve(idx)
+        return collection._decode(storage_idx)
 
     def block_ranges_of(self, idx: IntegerLike) -> np.ndarray:
         """Get the block ranges of the ring this hole id resolves to.
 
-        Resolves the reference exactly as :meth:`coords_of` does, and must: hole ids and
-        boundary polygon ids are two dense spaces starting at 0, so a block index keyed
-        by the wrong one still answers, with some other ring's latitudes. What that
-        produces is a ring filtered against a range it has nothing to do with - blocks
-        holding the crossing edges skipped, and a wrong answer for the handful of points
-        that happen to fall in them. It reads as noise rather than as a failure: keying
-        this collection's own index by boundary ids answered 6 of 5,000 points wrongly
-        while everything else passed.
-
         :param idx: The hole id
         :return: A ``(nr_blocks, 2)`` view of ``[min, max]`` latitude per block
         """
-        ref = int(self.poly_ref[idx])
-        if ref >= 0:
-            return self.boundaries.block_ranges_of(ref)
-        inline_id = -(ref + 1)
-        return self.block_ranges[
-            self.block_offsets[inline_id] : self.block_offsets[inline_id + 1]
-        ]
+        collection, storage_idx = self._resolve(idx)
+        return collection._block_ranges_at(storage_idx)
+
+    def pip(self, poly_id: IntegerLike, x: int, y: int) -> bool:
+        """Point in polygon (PIP) test against the ring this hole id resolves to.
+
+        :param poly_id: The hole id
+        :param x: X-coordinate of the point
+        :param y: Y-coordinate of the point
+        :return: True if the point is inside the hole, False otherwise
+        """
+        collection, storage_idx = self._resolve(poly_id)
+        return collection._pip_at(storage_idx, x, y)
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed.

@@ -15,7 +15,8 @@ from tests.auxiliaries import (
     RANDOM_POINTS_FIXTURE,
     UNIQUE_SHORTCUT_POINTS_FIXTURE,
     benchmark_fixture_provenance,
-    group_blocked_pip_inputs_by_stratum,
+    group_packed_pip_inputs_by_stratum,
+    packed_buffers_by_backend as _packed_buffers_by_backend,
     group_pip_inputs_by_stratum,
     load_benchmark_points,
     load_pip_inputs,
@@ -111,14 +112,18 @@ def ambiguous_shortcut_points() -> list[tuple[float, float]]:
 
 
 @pytest.fixture(scope="session")
-def blocked_pip_inputs_by_stratum() -> dict[
-    str, list[tuple[int, int, np.ndarray, np.ndarray]]
-]:
-    """The same pairs, plus each polygon's latitude block ranges - what the kernel a
-    lookup reaches is actually handed."""
-    return group_blocked_pip_inputs_by_stratum(
+def packed_pip_inputs_by_stratum() -> dict[str, list[tuple[int, int, int, int, int]]]:
+    """What the packed kernel is called with per ring - the arrays are shared, not
+    passed per call, exactly as a lookup shares them."""
+    return group_packed_pip_inputs_by_stratum(
         load_pip_inputs(), load_pip_strata(), BATCH_SIZE
     )
+
+
+@pytest.fixture(scope="session")
+def packed_buffers_by_backend() -> dict[str, tuple]:
+    """The boundary collection's packed arrays, wrapped once for each backend."""
+    return _packed_buffers_by_backend()
 
 
 @pytest.fixture(scope="session")

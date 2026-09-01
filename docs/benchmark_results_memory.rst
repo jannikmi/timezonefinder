@@ -4,7 +4,7 @@ TimezoneFinder Memory Footprint
 ===============================
 
 
-**~1.65 MiB** allocated in the default mode, **~62.7 MiB** with ``in_memory=True`` - the default maps the coordinate data instead of reading it, which is what keeps it viable in a constrained container.
+**~2.24 MiB** allocated in the default mode, **~32.6 MiB** with ``in_memory=True`` - the default maps the coordinate data instead of reading it, which is what keeps it viable in a constrained container.
 
 *Measured on Darwin arm64, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
@@ -89,20 +89,20 @@ Results
      - RSS after init
      - RSS after workload
    * - TimezoneFinderL
-     - 1.02 MiB
-     - 1.02 MiB
-     - 1.66 MiB
-     - 1.72 MiB
+     - 1.01 MiB
+     - 1.01 MiB
+     - 1.62 MiB
+     - 1.69 MiB
    * - TimezoneFinder[file_based]
-     - 1.64 MiB
-     - 1.65 MiB
-     - 3.39 MiB
-     - 18.6 MiB
+     - 2.24 MiB
+     - 2.24 MiB
+     - 3.77 MiB
+     - 12.2 MiB
    * - TimezoneFinder[in_memory]
-     - 62.7 MiB
-     - 62.7 MiB
-     - 64.5 MiB
-     - 64.6 MiB
+     - 32.6 MiB
+     - 32.6 MiB
+     - 33.7 MiB
+     - 33.8 MiB
 
 
 
@@ -111,13 +111,13 @@ Summary
 ~~~~~~~
 
 
-* Importing the package costs **19.0 MiB** of resident memory before any timezone data is touched.
+* Importing the package costs **16.8 MiB** of resident memory before any timezone data is touched.
 
-* ``in_memory=True`` holds **62.7 MiB** on the heap against **1.65 MiB** for the default file-based mode (38.0x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
+* ``in_memory=True`` holds **32.6 MiB** on the heap against **2.24 MiB** for the default file-based mode (14.6x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
-* The file-based mode's resident set grows from **3.39 MiB** at construction to **18.6 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
+* The file-based mode's resident set grows from **3.77 MiB** at construction to **12.2 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
 
-* ``TimezoneFinderL`` holds **1.02 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
+* ``TimezoneFinderL`` holds **1.01 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
 
 .. note::
 

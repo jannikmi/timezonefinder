@@ -42,7 +42,8 @@ __all__ = [
     "get_hole_registry_path",
     # Re-exported from submodules
     "inside_polygon",
-    "inside_polygon_blocked",
+    "inside_polygon_packed",
+    "packed_buffers",
     "using_numba",
     "clang_extension_loaded",
 ]
@@ -60,22 +61,30 @@ convert2coord_pairs = utils_numba.convert2coord_pairs
 
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]
-# The same test with the packaged latitude block index in front of it. Two entry points
-# rather than one because they answer different questions: `inside_polygon` takes a bare
-# ring and is what build-time geometry code and the kernel tests use, while
-# `inside_polygon_blocked` takes a ring *plus its stored index* and is what the lookup
-# path runs. Neither can stand in for the other - an index cannot be derived per call
-# without an O(N) pass, which is the whole cost the index removes.
-inside_polygon_blocked: Callable[[int, int, np.ndarray, np.ndarray, int], bool]
+# The same test over the packed payload a data directory actually stores, which is what
+# the lookup path runs. Two entry points rather than one because they answer different
+# questions: `inside_polygon` takes a bare coordinate array and is the naive reference -
+# what build-time geometry code holds, and what the kernel tests check answers against -
+# while `inside_polygon_packed` takes a whole collection and finds the ring by where its
+# blocks start. Neither can stand in for the other: a payload cannot be built per call
+# without encoding the ring, which is the cost the format exists to have already paid.
+inside_polygon_packed: Callable[..., bool]
+# What a collection hands that kernel, built once when it is loaded: the arrays
+# themselves on the numba backend, cffi handles onto them on the C one.
+packed_buffers: Callable[
+    [np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray], tuple
+]
 # at import time fix which "point-in-polygon" implementation will be used
 if clang_extension_loaded and not using_numba:
     # use the C implementation only if Numba is not present
     inside_polygon = utils_clang.pt_in_poly_clang
-    inside_polygon_blocked = utils_clang.pt_in_poly_clang_blocked
+    inside_polygon_packed = utils_clang.pt_in_poly_clang_packed
+    packed_buffers = utils_clang.packed_buffers_clang
 else:
     # use the (JIT compiled) python function if Numba is present or the C extension cannot be loaded
     inside_polygon = utils_numba.pt_in_poly_python
-    inside_polygon_blocked = utils_numba.pt_in_poly_blocked
+    inside_polygon_packed = utils_numba.pt_in_poly_packed
+    packed_buffers = utils_numba.packed_buffers_numba
 
 
 def _validate_coordinate(

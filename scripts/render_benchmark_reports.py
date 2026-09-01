@@ -69,8 +69,8 @@ FUNCTION_LABELS = {
     "test_timezone_at_timezonefinderl": "TimezoneFinderL.timezone_at() (ambiguous-shortcut points)",
     "test_pt_in_poly_clang": "bare kernel (C/clang)",
     "test_pt_in_poly_python": "bare kernel (Python, Numba if available)",
-    "test_pt_in_poly_clang_blocked": "block-filtered kernel (C/clang)",
-    "test_pt_in_poly_python_blocked": "block-filtered kernel (Python, Numba if available)",
+    "test_pt_in_poly_clang_packed": "packed kernel (C/clang)",
+    "test_pt_in_poly_python_packed": "packed kernel (Python, Numba if available)",
     "test_initialization": "Initialization",
     "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
     "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
@@ -692,24 +692,24 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         ]
         return min(measured) / batch_size if measured else None
 
-    blocked = {s: fastest_per_check(s, "_blocked") for s in ("small", "large")}
+    packed = {s: fastest_per_check(s, "_packed") for s in ("small", "large")}
     bare = {s: fastest_per_check(s, "") for s in ("small", "large")}
     headlines = []
-    if blocked["small"] and blocked["large"]:
+    if packed["small"] and packed["large"]:
         headlines.append(
-            f"**~{format_duration(blocked['small'])} per check on a small polygon, "
-            f"~{format_duration(blocked['large'])} on the largest** "
-            f"({format_ratio(blocked['large'] / blocked['small'])}) - the kernel a "
+            f"**~{format_duration(packed['small'])} per check on a small polygon, "
+            f"~{format_duration(packed['large'])} on the largest** "
+            f"({format_ratio(packed['large'] / packed['small'])}) - the kernel a "
             "lookup reaches, which skips the parts of a ring a horizontal ray cannot "
             "cross and is therefore nearly flat in polygon size."
         )
-    if bare["large"] and blocked["large"]:
+    if bare["large"] and packed["large"]:
         headlines.append(
-            f"The same check without that index is "
+            f"The same check over an unindexed coordinate array is "
             f"~{format_duration(bare['large'])} on the largest polygon "
-            f"({format_ratio(bare['large'] / blocked['large'])} the block-filtered "
-            "cost) - which is what the stratification below is for, and what the "
-            "latitude block index removed."
+            f"({format_ratio(bare['large'] / packed['large'])} the packed cost) - "
+            "which is what the stratification below is for, and what the latitude "
+            "block index removed."
         )
     add_headline_section(reporter, system_info, headlines)
 
@@ -750,25 +750,25 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
 
     reporter.add_section("Performance Summary", level=2)
     reporter.add_text(
-        "**What the block index buys**, per polygon-size stratum - the same C kernel "
-        "over the same pairs, with and without the stored latitude ranges in front of "
-        "it:"
+        "**What the stored index and payload buy**, per polygon-size stratum - the "
+        "same C predicate over the same pairs, reading the packed collection against "
+        "reading a plain coordinate array with nothing in front of it:"
     )
     for stratum in ("small", "medium", "large"):
         bare_bench = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
-        blocked_bench = by_name.get(f"test_pt_in_poly_clang_blocked[{stratum}]")
-        if bare_bench and blocked_bench:
+        packed_bench = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
+        if bare_bench and packed_bench:
             add_comparison_bullet(
                 reporter,
                 PARAM_LABELS[stratum].capitalize(),
-                blocked_bench,
+                packed_bench,
                 bare_bench,
                 label_fn=_function_label,
             )
     reporter.add_text("**C against Python/Numba**, on the kernel a lookup reaches:")
     for stratum in ("small", "medium", "large"):
-        clang = by_name.get(f"test_pt_in_poly_clang_blocked[{stratum}]")
-        python = by_name.get(f"test_pt_in_poly_python_blocked[{stratum}]")
+        clang = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
+        python = by_name.get(f"test_pt_in_poly_python_packed[{stratum}]")
         if clang and python:
             add_comparison_bullet(
                 reporter,
@@ -781,7 +781,7 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
     # cheapest rejection against the most expensive full scan, which is not a range
     # anything experiences
     add_fastest_slowest_bullet(
-        reporter, [b for b in benches if "_blocked[" in b["name"]]
+        reporter, [b for b in benches if "_packed[" in b["name"]]
     )
 
     reporter.write_report()

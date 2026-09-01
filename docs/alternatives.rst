@@ -7,7 +7,7 @@ The position in one paragraph
 
 ``timezonefinder`` optimises for **correctness at timezone borders**. It stores the boundary
 polygons exactly as the source dataset provides them - every vertex of every polygon and every
-hole, at ~1 cm coordinate resolution - and never simplifies them. :doc:`data_report` is generated
+hole, at the ~11 cm resolution its source publishes - and never simplifies them. :doc:`data_report` is generated
 from the packaged data and carries the current counts. Speed is the constraint that work is done
 under, not the goal: the H3 spatial
 index, the integer coordinate representation and the optional acceleration backends exist to make
@@ -52,7 +52,7 @@ difference is in what they do with that dataset's geometry.
      - Full original dataset (>440 timezones)
      - Full original dataset (>440 timezones)
    * - Data Representation
-     - Complete, non-simplified polygons at ~1 cm coordinate resolution; :doc:`data_report` lists the current vertex, polygon and hole counts
+     - Complete, non-simplified polygons at the ~11 cm resolution timezone-boundary-builder publishes; :doc:`data_report` lists the current vertex, polygon and hole counts
      - Simplified polygons, by design
    * - Border Accuracy
      - Limited only by the source dataset
@@ -122,7 +122,7 @@ difference is in what they do with that dataset's geometry.
    a *stated distance from a border* instead. Its primary measure draws border locations uniformly
    by length, verifies a probe on each side, and asks whether either answer differs; the secondary
    measure remains a point drawn uniformly from the full two-sided offset locus. Both sweep from
-   this package's own ~1.1 cm coordinate resolution outwards.
+   this package's own ~1.1 cm coordinate grid outwards.
 
 .. image:: tzfpy_agreement_by_distance.svg
    :alt: At a centimetre from a timezone border, the packages differ on at least one side of about
@@ -410,7 +410,7 @@ reason this package exists.
 
 Against that, the design decisions below are all the same decision made repeatedly:
 
-- 32-bit integer coordinates instead of 64-bit floats. The worst-case accuracy is ~1 cm at the
+- 32-bit integer coordinates instead of 64-bit floats. The coordinate grid steps ~1.1 cm at the
   equator, far finer than the discrete polygons in the source data, so the extra precision was
   paying for nothing.
 - Memory-friendly binary files instead of text, read on demand rather than parsed up front.

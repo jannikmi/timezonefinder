@@ -1,185 +1,163 @@
+"""The polygon container: one payload vector per ring, and what it guarantees.
+
+Only the container. What the words inside a payload *mean* is
+``tests/test_block_payload.py``'s subject, and the two are kept apart on purpose - this
+module has to keep passing over buffers that are not decodable at all, which is what
+lets it pin the wire format rather than a round trip through the encoder.
+"""
+
 import struct
 import numpy as np
 import pytest
+from timezonefinder.block_payload import PAYLOAD_WORD_DTYPE
 from timezonefinder.flatbuf.io.polygons import (
+    derive_payload_offset_table,
     get_polygon_collection,
+    read_payload_at,
+    read_payload_from_binary,
     write_polygon_collection_flatbuffer,
-    read_polygon_array_from_binary,
-    flatten_polygon_coords,
-    reshape_to_polygon_coords,
 )
 from timezonefinder.utils import close_resource
 
+PAYLOADS = [
+    np.array([0, 1, 2], dtype=PAYLOAD_WORD_DTYPE),
+    np.array([6, 7, 8, 9], dtype=PAYLOAD_WORD_DTYPE),
+]
 
-@pytest.mark.parametrize(
-    "polygons",
-    [
-        [
-            # Example polygons with separate x and y coordinates
-            np.array([[0, 1, 2], [3, 4, 5]]),
-            np.array([[6, 7, 8, 9], [10, 11, 12, 13]]),
-        ],
-    ],
-)
-def test_single_polygon_collection_round_trip(tmp_path, polygons):
+
+@pytest.mark.parametrize("payloads", [PAYLOADS])
+def test_single_polygon_collection_round_trip(tmp_path, payloads):
     """Test that writing and reading a single polygon collection gives the same results."""
-    # Define output path
     output_file = tmp_path / "polygons.bin"
 
-    # Write polygons to a single binary file
-    write_polygon_collection_flatbuffer(output_file, polygons)
+    write_polygon_collection_flatbuffer(output_file, payloads)
 
     assert output_file.exists(), "Output file should exist after writing."
     assert output_file.stat().st_size > 0, "Output file should be non-empty."
 
     with open(output_file, "rb") as file:
-        # Read the binary file and verify the polygons
         buffer = file.read()
     poly_collection = get_polygon_collection(buffer)
-    for idx, original_polygon in enumerate(polygons):
-        read_polygon = read_polygon_array_from_binary(poly_collection, idx)
-        np.testing.assert_array_equal(
-            read_polygon, original_polygon, "Polygon mismatch."
-        )
+    for idx, original in enumerate(payloads):
+        read_back = read_payload_from_binary(poly_collection, idx)
+        np.testing.assert_array_equal(read_back, original, "Payload mismatch.")
 
-    with pytest.raises(struct.error):
-        # Attempt to read a polygon with an out-of-bounds index
-        read_polygon = read_polygon_array_from_binary(poly_collection, idx + 1)
+    # An out-of-bounds index must not answer with a payload. Which exception carries
+    # that is FlatBuffers' business and changed with the element type - a `[uint]`
+    # vector rejects the nonsense offset it reads as a number where `[int]` failed to
+    # unpack it - so what is pinned here is that it raises at all.
+    with pytest.raises((struct.error, TypeError, IndexError)):
+        read_payload_from_binary(poly_collection, idx + 1)
 
     close_resource(buffer)
     close_resource(file)
 
 
-@pytest.mark.parametrize(
-    "polygon",
-    [
-        # Test with different shapes and values
-        np.array([[0, 1, 2], [3, 4, 5]]),  # 2x3 array
-        np.array([[6, 7, 8, 9], [10, 11, 12, 13]]),  # 2x4 array
-        np.array([[100, 200], [300, 400]]),  # 2x2 array
-        np.array([[1000], [2000]]),  # 2x1 array
-        np.array(
-            [[-10, -20, -30, -40, -50], [60, 70, 80, 90, 100]]
-        ),  # 2x5 array with negative values
-    ],
-)
-def test_coordinate_transformation_functions(polygon):
-    """Test that flatten_polygon_coords and reshape_to_polygon_coords are inverses of each other."""
-    # Test polygon -> flattened -> polygon round trip
-    flattened = flatten_polygon_coords(polygon)
-    reconstructed = reshape_to_polygon_coords(flattened)
-    np.testing.assert_array_equal(
-        reconstructed,
-        polygon,
-        "Reconstructed polygon does not match the original after flattening and reshaping.",
-    )
+@pytest.mark.unit
+def test_the_written_file_is_a_whole_number_of_words(tmp_path):
+    """The reader views the whole file as ``uint32``, which a ragged tail forbids.
 
-    # Verify the flattened structure: [x0...xN-1, y0...yN-1]
-    expected_flat = np.concatenate([polygon[0], polygon[1]])
-    np.testing.assert_array_equal(
-        flattened,
-        expected_flat,
-        "Flattened array structure does not match expected [x0...xN-1, y0...yN-1] pattern.",
-    )
-
-    n = polygon.shape[1]
-    np.testing.assert_array_equal(
-        flattened[:n], polygon[0], "Leading block is not the x coordinates."
-    )
-    np.testing.assert_array_equal(
-        flattened[n:], polygon[1], "Trailing block is not the y coordinates."
-    )
-
-    # Verify dimensions
-    assert flattened.shape[0] == polygon.shape[0] * polygon.shape[1], (
-        "Flattened shape is incorrect"
-    )
-    assert reconstructed.shape == polygon.shape, (
-        "Reconstructed shape does not match original"
-    )
-
-    # Both acceleration backends require contiguous rows: the C extension rejects a
-    # strided row, the Numba kernel's eager signature demands C order.
-    assert reconstructed.flags["C_CONTIGUOUS"], "Reconstructed array is not contiguous"
-    assert reconstructed[0].flags["C_CONTIGUOUS"], "x row is not contiguous"
-    assert reconstructed[1].flags["C_CONTIGUOUS"], "y row is not contiguous"
+    FlatBuffers aligns what it writes but does not pad the end of the buffer, so without
+    the writer's own padding a file could end mid-word - and ``np.frombuffer`` then
+    refuses the *buffer*, failing to open a data directory rather than to read any one
+    polygon. One payload per length here, so that whichever tail FlatBuffers happens to
+    produce is covered.
+    """
+    for count in range(1, 6):
+        output_file = tmp_path / f"polygons_{count}.bin"
+        write_polygon_collection_flatbuffer(
+            output_file, [np.arange(count, dtype=PAYLOAD_WORD_DTYPE)]
+        )
+        size = output_file.stat().st_size
+        assert size % PAYLOAD_WORD_DTYPE.itemsize == 0, (
+            f"a collection of {count} words is {size} bytes, which is not a whole "
+            f"number of payload words"
+        )
+        buffer = output_file.read_bytes()
+        # the operation the padding exists for
+        np.frombuffer(buffer, dtype=PAYLOAD_WORD_DTYPE)
+        close_resource(buffer)
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
-    "polygons",
-    [
-        [
-            np.array([[0, 1, 2], [3, 4, 5]]),
-            np.array([[100, 200], [300, 400]]),
-            np.array([[-10, -20, -30, -40, -50], [60, 70, 80, 90, 100]]),
-        ],
-    ],
-)
-def test_on_disk_coordinate_layout(tmp_path, polygons):
-    """The bytes on disk hold one axis after the other, checked without the reader.
+@pytest.mark.parametrize("payloads", [PAYLOADS])
+def test_on_disk_payload_element_width(tmp_path, payloads):
+    """The bytes on disk hold 32-bit words, checked without the reader.
 
-    Going through ``read_polygon_array_from_binary`` cannot catch a flatten/reshape
-    pair that is wrong in mutually cancelling ways - every round trip still passes.
-    Reading the raw vector back is the only thing that pins the wire format down.
+    Going through :func:`read_payload_from_binary` cannot catch a writer and a reader
+    that are wrong in mutually cancelling ways - every round trip still passes. Reading
+    the raw vector back is the only thing that pins the wire format down, and the
+    element width is the half of it that matters: at eight bytes per element every
+    second word would be a zero from the high half of its neighbour, and the offset
+    table would agree with the reader about the same wrong bytes.
     """
     output_file = tmp_path / "polygons.bin"
-    write_polygon_collection_flatbuffer(output_file, polygons)
+    write_polygon_collection_flatbuffer(output_file, payloads)
 
     with open(output_file, "rb") as file:
         buffer = file.read()
     poly_collection = get_polygon_collection(buffer)
 
-    for idx, polygon in enumerate(polygons):
-        raw = poly_collection.Polygons(idx).CoordsAsNumpy()
-        np.testing.assert_array_equal(
-            raw,
-            np.concatenate([polygon[0], polygon[1]]),
-            "On-disk coordinate vector is not stored one axis at a time.",
-        )
+    for idx, payload in enumerate(payloads):
+        raw = poly_collection.Polygons(idx).PayloadAsNumpy()
+        assert raw.dtype == np.uint32, "payload is not stored as 32-bit words"
+        assert len(raw) == len(payload), "word count changed with the element width"
+        np.testing.assert_array_equal(raw, payload)
 
     close_resource(buffer)
 
 
-def test_wider_integer_input_is_stored_as_int32(tmp_path):
-    """A polygon that is not already int32 must still be written 4 bytes per coordinate.
+@pytest.mark.unit
+def test_wider_integer_input_is_stored_as_a_word(tmp_path):
+    """A payload that is not already ``uint32`` must still be written 4 bytes per word.
 
-    ``np.array([[0, 1], [2, 3]])`` is int64 on every platform this runs on, and callers
-    build polygons that way - most of the cases above do. The writer hands the array to
-    ``Builder.CreateNumpyVector``, which takes the element width from its dtype, so
-    without the cast this would lay down 8-byte elements while the schema, the reader
-    and the offset table all read int32: every second value would be a zero from the
-    high half of its neighbour.
+    ``np.array([0, 1])`` is int64 on every platform this runs on. The writer hands the
+    array to ``Builder.CreateNumpyVector``, which takes the element width from its
+    dtype, so without the cast this would lay down 8-byte elements while the schema, the
+    reader and the offset table all read 4.
     """
-    polygon = np.array([[0, 1, 2], [3, 4, 5]])
-    assert polygon.dtype != np.int32, "fixture no longer exercises the cast"
+    payload = np.array([0, 1, 2, 3])
+    assert payload.dtype != PAYLOAD_WORD_DTYPE, "fixture no longer exercises the cast"
     output_file = tmp_path / "polygons.bin"
 
-    write_polygon_collection_flatbuffer(output_file, [polygon])
+    write_polygon_collection_flatbuffer(output_file, [payload])
 
     with open(output_file, "rb") as file:
         buffer = file.read()
-    raw = get_polygon_collection(buffer).Polygons(0).CoordsAsNumpy()
+    raw = get_polygon_collection(buffer).Polygons(0).PayloadAsNumpy()
 
-    assert len(raw) == polygon.size, "coordinate count changed with the element width"
-    np.testing.assert_array_equal(raw, np.concatenate([polygon[0], polygon[1]]))
+    assert len(raw) == payload.size, "word count changed with the element width"
+    np.testing.assert_array_equal(raw, payload)
     close_resource(buffer)
 
 
-def test_coordinate_outside_the_int32_range_is_refused(tmp_path):
-    """A value that does not fit must raise rather than wrap.
+@pytest.mark.unit
+@pytest.mark.parametrize("payloads", [PAYLOADS])
+def test_offset_table_and_reader_address_the_same_words(tmp_path, payloads):
+    """The two ways to reach a payload have to agree, which is what the lookup path assumes.
 
-    ``astype`` truncates silently, and a wrapped coordinate is a plausible one: it is
-    still a valid int32 at a valid position, so neither the reader nor
-    ``validate_coordinate_offset_table`` can tell it from an intended value - both read
-    the same bytes. This is the check ``Builder.PrependInt32`` used to perform per
-    coordinate, kept once per polygon instead.
+    ``scripts.data_integrity.validate_payload_offset_table`` makes this statement over
+    real data directories; here it is made over a collection built by hand, so a
+    regression shows up without a regenerated 38 MB binary.
     """
-    too_large = np.iinfo(np.int32).max + 1
-    polygon = np.array([[0, too_large], [1, 2]], dtype=np.int64)
+    output_file = tmp_path / "polygons.bin"
+    write_polygon_collection_flatbuffer(output_file, payloads)
+    buffer = output_file.read_bytes()
+    collection = get_polygon_collection(buffer)
 
-    with pytest.raises(ValueError, match="outside the"):
-        write_polygon_collection_flatbuffer(tmp_path / "polygons.bin", [polygon])
+    offsets, lengths = derive_payload_offset_table(collection)
+    words = np.frombuffer(buffer, dtype=PAYLOAD_WORD_DTYPE)
+    assert len(offsets) == len(payloads)
+    for idx, payload in enumerate(payloads):
+        np.testing.assert_array_equal(
+            read_payload_at(words, offsets[idx], lengths[idx]), payload
+        )
+        np.testing.assert_array_equal(
+            read_payload_at(words, offsets[idx], lengths[idx]),
+            read_payload_from_binary(collection, idx),
+        )
+    del words
+    close_resource(buffer)
 
 
 if __name__ == "__main__":

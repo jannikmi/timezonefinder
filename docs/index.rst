@@ -17,7 +17,7 @@ It combines preprocessed polygon data, H3-based spatial shortcuts, and optional 
 How it works
 ------------
 
-A lookup scales the coordinates to 32-bit integers (x 10\ :sup:`7`, ~1 cm resolution), finds the
+A lookup scales the coordinates to 32-bit integers (x 10\ :sup:`7`, ~1.1 cm steps), finds the
 point's H3 hexagon at resolution 4 (~288k cells worldwide), and reads a precomputed shortcut for that
 cell. Most cells are covered by a single timezone, so the answer is returned immediately with no
 geometry touched at all. Only an ambiguous cell falls through to the polygons it lists: bounding-box

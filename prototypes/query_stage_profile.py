@@ -150,41 +150,44 @@ Ambiguous-shortcut stratum, default ``in_memory=False`` (the same run with
   about that call. Read this table for *ordering* and for the rows that moved by more
   than the overshoot; the block breakdown above is the one to quote a share from.
 
-One point-in-polygon test, per call, by polygon size stratum. ``fetch`` is what
-``PolygonArray.pip`` does before the kernel: the coordinate fetch plus the slice of the
-block index that says which parts of the ring may be skipped.
+One point-in-polygon test, per call, by polygon size stratum. Nothing precedes the
+kernel any more: since polygon layout 3 a collection binds its backend and wraps its
+buffers once, and ``PolygonArray.pip`` is a single call that finds the ring by where its
+blocks start. ``decode`` is ``coords_of``, which no lookup performs - it is what
+``get_geometry()`` costs, and what testing a block in its own frame avoids.
 
-    stratum   vertices     fetch      fetch    ffi.from_buffer   kernel    kernel
-                          mapped   in-memory      (clang only)    numba     clang
-    small          112       963         213               967      311       269
-    medium       3,486       947         221               951      390       319
-    large       46,823       987         206               925      581       604
+    stratum   vertices    clang     clang     numba     numba     decode
+                         mapped  in-memory   mapped  in-memory  (coords_of)
+    small          112      528        532      814        845       41,544
+    medium       3,486      566        572      868        881      129,435
+    large       46,823      746        746    1,189      1,203    1,150,634
 
-  and the same table on ``master``, clang and mapped, for the row that matters:
+  and the same call under polygon layout 2, which is what it replaced - there the total
+  was a coordinate fetch plus, on clang, three ``ffi.from_buffer`` calls, plus the
+  kernel:
 
-    stratum   vertices   coords_of   ffi.from_buffer   kernel   total
-    small          112         814               700      288   1,802
-    medium       3,486         786               711    1,795   3,292
-    large       46,823         796               710   21,462  22,968
+    stratum   vertices   clang mapped   clang in-mem   numba mapped   numba in-mem
+    small          112          2,199          1,449          1,274            524
+    medium       3,486          2,217          1,491          1,337            611
+    large       46,823          2,516          1,735          1,568            787
 
 CONCLUSIONS
 
 1. **The block index moved the point-in-polygon kernel from linear in polygon size to
-   almost flat, which is the whole story.** The clang kernel over the ``large`` stratum
-   (46,823 vertices) costs **604 ns against 21,462 ns before**, while ``small``
-   (112 vertices) is unchanged at ~269 ns. A ray only crosses a few blocks of any ring,
-   so what the kernel scans stopped being "the polygon" and became "a few hundred edges",
-   whatever the polygon. The ambiguous stratum is 1.7x cheaper end to end and ``on_land``
-   1.9x; a whole-query paired A/B puts it at -20 % random, -42 % on_land, -42 %
-   ambiguous, 41 of 41 rounds each, reproduced three times.
+   almost flat, and the packed payload then removed everything in front of it.** A whole
+   candidate now costs 528-746 ns on clang against 2,199-2,516 ns under layout 2 and
+   ~23,000 ns on the largest stratum before the index - and it is flat in polygon size
+   to within 40 %, where it was once proportional. A ray only crosses a few blocks of any
+   ring, so what the kernel scans is "a few hundred edges" whatever the polygon; what
+   layout 3 added is that reaching those edges costs nothing per call.
 
-2. **The one thing it made worse is a small polygon, and by ~400 ns.** A ``small``
-   point-in-polygon call is 2,199 ns against 1,802 ns before: the index slice (~140 ns)
-   and, on clang, a third ``ffi.from_buffer`` (~250 ns) buy nothing for a ring that fits
-   in a single block, because ``pip_with_bbox_check`` has already rejected everything
-   outside its bounding box and the one block therefore always survives. 29.7 % of
-   boundary polygons are in that class. It is ~3 % of an ambiguous query, below what any
-   benchmark here resolves, and it is recorded as PERF-7 rather than fixed with a branch.
+2. **The mapped mode's per-candidate penalty is gone, not reduced.** ``pip`` reads
+   528/566/746 ns mapped against 532/572/746 in memory - the same number three times
+   over. Under layout 2 the mapped fetch was ~950-990 ns against ~210 in memory, which
+   was the entire difference between the two memory modes on the geometry path; now
+   neither mode fetches anything, because the kernel addresses the collection's payload
+   directly. The batch suite reads the same way: ``timezone_at_land`` over the on-land
+   fixture is 5.29 ms both ways, against 6.70 vs 6.09 ms before.
 
 3. **A batch API would amortise real overhead, not noise.** A unique-zone query is
    ~0.97-1.06 us of which *no stage is geometry*: ~910-1,020 ns of four fixed-cost calls
@@ -192,61 +195,62 @@ CONCLUSIONS
    (~425-474 ns) and coordinate validation (~300-360 ns), are exactly the two that
    vectorise over an array of points - over two thirds of the query, addressable before
    any lookup logic is touched. At resolution 4 ~89 % of uniformly random points are
-   answered from that path, so the prologue is ~54-63 % of a random-workload query, up
-   from ~46-50 % before the geometry got cheaper.
+   answered from that path, so the prologue is ~54-64 % of a random-workload query, and
+   it has grown as a share every time the geometry got cheaper.
 
 4. **The shortcut lookup is a slot-addressed table read, and it is not where a query's
-   time goes.** Reading it costs ~100-150 ns: ~11-16 % of a unique-zone query, ~1.2-1.5 %
-   of an ambiguous one, and well under a tenth of the workload-representative random
+   time goes.** Reading it costs ~100-150 ns: ~11-16 % of a unique-zone query, ~1.8 % of
+   an ambiguous one, and well under a tenth of the workload-representative random
    stratum.
    That is the *ceiling* on what any further work on this structure could return.
 
-5. **Per-polygon FFI marshalling is now the largest single cost of a candidate on the
-   clang path.** ``ffi.from_buffer`` over the two axes and the block ranges is
-   925-967 ns per PIP call and flat in polygon size, against a mapped fetch of
-   947-987 ns and a kernel of 269-604 ns. Before the index the kernel dominated on
-   anything but a small polygon; now it never does. A native candidate loop removes both
-   the marshalling and the per-fetch buffer acquisition - see 7 for how little of a
-   *workload* that is.
-
-   Also measured, and contrary to what the backend split suggests: **the two PIP kernels
-   are within ~20 % of each other and numba is not ahead on the two smaller strata**
-   (small 311 vs 269 ns, medium 390 vs 319, large 581 vs 604). numba's advantage on an
-   ambiguous query is the marshalling it does not do, not a faster kernel; and on the
-   unique-zone path numba is *slower*, because ``validate_coordinates`` calls two njit'd
-   scalar functions whose dispatch costs more than the pure-Python comparison it
-   replaces (353 vs 311 ns).
+5. **Per-polygon FFI marshalling is gone, and with it the largest single cost a
+   candidate used to carry on the clang path.** ``ffi.from_buffer`` over the two axes and
+   the block ranges was 925-967 ns per PIP call and flat in polygon size - more than the
+   kernel on every stratum but the largest. Layout 3 removed it by giving the kernel the
+   *collection's* arrays and a block offset, so the five buffer handles are built once
+   when the collection is loaded. **That is most of what this format change bought**, and
+   it is worth separating from the encoding: the same hoisting was available to layout 2
+   and was not taken, while the bit-packed decode on its own costs ~+34 % of a hoisted
+   kernel on clang and ~+88 % on numba (measured over 279 real query pairs, 41 paired
+   order-alternated rounds). What remains of the case for a native candidate loop is the
+   kernel itself, not the crossing.
 
 6. **Better shortcut ordering has a much lower ceiling than it had.** The boundary-PIP
-   rung is 27-35 % of an ambiguous query mapped and ~24 % in memory, against 59-66 %
-   before - and a correspondingly small share of a random one, which is the workload. Ordering still wins by
-   reducing *how many* candidates are opened rather than by opening cheaper ones first,
-   and it was rejected on a count, which no timing here disturbs. What changed is that
-   opening a *large* candidate is no longer expensive, so the case for ordering by size
-   is weaker than it was.
+   rung is ~20 % of an ambiguous query mapped and ~15 % in memory, against 59-66 % before
+   the index - and a correspondingly small share of a random one, which is the workload.
+   Ordering still wins by reducing *how many* candidates are opened rather than by
+   opening cheaper ones first, and it was rejected on a count, which no timing here
+   disturbs. What changed is that opening a *large* candidate is no longer expensive, so
+   the case for ordering by size is weaker than it was.
 
-7. **The mapped path's per-candidate fetch is ~950-990 ns against ~210 ns in memory**,
-   of which ~140 ns on both sides is the block-index slice added with the index. It once
-   paid **4.9 us** - because the accessor was rebuilt from scratch per candidate;
-   addressing polygons by a precomputed ``(offset, length)`` table is what closed that.
-   The mapped mode now costs 12-16 % more than in-memory on an ambiguous query, up from
-   6-8 %: the fetch did not get slower, everything else got faster.
+7. **What layout 3 costs is ``get_geometry()``, and it is the only thing it costs.**
+   ``coords_of`` rebuilds absolute coordinates from residuals, which is ~40 us of fixed
+   numpy overhead plus ~24 ns per vertex - 41.5 us for a 112-vertex ring and 1.15 ms for
+   a 46,823-vertex one, against a zero-copy view before. Nothing on the lookup path
+   reaches it; ``get_polygon`` / ``get_geometry`` and the integrity checks are the whole
+   population. It is worth knowing that the obvious implementation is far worse: decoding
+   block by block, which is how the frames are stored, cost 5.4 ms on that same ring
+   because a block is only ~129 values and numpy call overhead dominates. One gather over
+   the whole ring is what makes it 5x cheaper.
 
-8. **``zone_ids_of`` reads ~2.0-2.4 us on this ladder and that is not a finding about
-   ``zone_ids_of``.** It reads the same on ``master``, and the ladder as a whole
-   overshoots the real function by ~20-30 % on the ambiguous stratum, on both trees. Both
-   appeared when the candidate loop became shared code and the ladder stopped being a
-   faithful copy of the lookup. Fixing the ladder is worth doing before any rung of it is
-   quoted again; until then use the block breakdown for shares.
+8. **``zone_ids_of`` reads ~2.0 us on this ladder and that is not a finding about
+   ``zone_ids_of``.** It read the same before, and the ladder as a whole overshoots the
+   real function by ~30-37 % on the ambiguous stratum. Both appeared when the candidate
+   loop became shared code and the ladder stopped being a faithful copy of the lookup.
+   Fixing the ladder is worth doing before any rung of it is quoted again; until then use
+   the block breakdown for shares.
 
-9. **Two checkouts do not compare unless they name the same interpreter.** uv resolves
-   ``.python-version`` by walking up from the working directory, so a worktree created
-   *outside* the repository silently gets a different CPython - here a free-threaded
-   build against the pinned Homebrew one. Pure-Python call chains differ by ~50 % between
-   them: ``validate_coordinates`` reads 199 ns on one and 294 ns on the other with
-   *identical* code, which presents as a 17 % regression on the unique stratum, a stratum
-   the change under test does not touch. Pass ``--python`` explicitly when profiling a
-   second checkout, and prefer an A/B inside one process where the question allows it.
+9. **Two checkouts do not compare unless they name the same interpreter.** uv picks a
+   Python per invocation, and two worktrees *inside* this repository, on one machine and
+   one ``.python-version``, resolved a free-threaded CPython and the regular one - so
+   where the worktree sits is not what decides it. Pure-Python call chains differ by
+   ~50 % between those builds: ``validate_coordinates`` reads 199 ns on one and 294 ns on
+   the other with *identical* code, which presents as a 17 % regression on the unique
+   stratum, a stratum the change under test does not touch. Pass ``--python`` explicitly
+   when profiling a second checkout, and prefer an A/B inside one process where the
+   question allows it. The contributor memory carries the rule; this is where it was
+   measured.
 
 """
 
@@ -272,8 +276,8 @@ from tests.auxiliaries import (
     load_pip_inputs,
     load_pip_strata,
 )
-from timezonefinder import TimezoneFinder, utils, utils_clang
-from timezonefinder.configs import POLYGON_BLOCK_SIZE as BLOCK_SIZE, SHORTCUT_H3_RES
+from timezonefinder import TimezoneFinder, utils
+from timezonefinder.configs import SHORTCUT_H3_RES
 from timezonefinder.shortcut_index import slot_of
 
 # one pass over this many points is a round; the reported value is the min over
@@ -565,14 +569,17 @@ def profile_query_stages(tf: TimezoneFinder) -> None:
 def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
     """Ladder again, one level down: what one candidate polygon costs.
 
-    Keeps the polygon *id* rather than a pre-resolved coordinate array, so
-    ``coords_of`` is measured as the lookup performs it - through the memory map,
-    unless ``--in-memory`` was passed.
+    Keeps the polygon *id* rather than a pre-resolved ring, so this measures what the
+    lookup performs - which since polygon layout 3 is the whole of it. There is no fetch
+    stage left to separate out and, on clang, no per-call marshalling: the kernel is
+    handed the collection's arrays once when the collection is loaded and finds a ring by
+    where its blocks start, so ``PolygonArray.pip`` is one call with nothing in front of
+    it.
 
-    ``fetch`` is both of the things ``PolygonArray.pip`` does before the kernel: the
-    coordinate fetch and the slice of the latitude block index that says which parts of
-    that ring the kernel may skip. ``ffi.from_buffer`` covers all three buffers the
-    clang wrapper hands over, so ``kernel`` stays the kernel.
+    ``decode`` is the cost of *not* doing it that way, and it is here for scale rather
+    than because a lookup pays it: ``coords_of`` rebuilds a whole ring's absolute
+    coordinates, which is what ``get_geometry()`` costs and what a kernel reading
+    residuals in the block's own frame avoids.
     """
     strata = load_pip_strata()
     grouped: dict[str, list[tuple[int, int, int]]] = {name: [] for name in PIP_STRATA}
@@ -581,25 +588,15 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
         if len(bucket) < PIP_BATCH_SIZE:
             bucket.append((x, y, poly_id))
 
-    # the *blocked* kernel and the ring's stored block ranges, because that is the pair
-    # ``PolygonArray.pip`` hands over - timing the bare kernel here would price a scan of
-    # every edge, which no lookup performs any more
-    inside_polygon_blocked = utils.inside_polygon_blocked
+    pip = tf.boundaries.pip
     coords_of = tf.boundaries.coords_of
-    block_ranges_of = tf.boundaries.block_ranges_of
-    ffi = utils_clang.ffi
-    # marshalling is a property of the *active* path: the C extension is importable
-    # either way, but a numba lookup never crosses into it.
-    measure_marshalling = backend == "clang" and ffi is not None
 
     print(f"\n### point-in-polygon, per call ({PIP_BATCH_SIZE} per stratum)\n")
-    print(
-        "| polygon stratum | vertices (mean) | fetch | ffi.from_buffer | kernel | total |"
-    )
-    print("|---|---:|---:|---:|---:|---:|")
+    print("| polygon stratum | vertices (mean) | pip | decode (`coords_of`) |")
+    print("|---|---:|---:|---:|")
     for stratum, entries in grouped.items():
         n = len(entries)
-        vertices = np.mean([coords_of(poly_id).shape[1] for _, _, poly_id in entries])
+        vertices = np.mean([int(tf.boundaries.nr_vertices[p]) for _, _, p in entries])
 
         def do_loop(entries=entries) -> int:
             n = 0
@@ -607,56 +604,34 @@ def profile_pip_stages(tf: TimezoneFinder, backend: str) -> None:
                 n += 1
             return n
 
-        def do_coords_of(entries=entries) -> int:
-            n = 0
-            for x, y, poly_id in entries:
-                coords_of(poly_id)
-                block_ranges_of(poly_id)
-                n += 1
-            return n
-
-        def do_marshal(entries=entries) -> int:
-            n = 0
-            for x, y, poly_id in entries:
-                coords = coords_of(poly_id)
-                ranges = block_ranges_of(poly_id)
-                ffi.from_buffer(utils_clang.INT_LIST_REP, coords[0])
-                ffi.from_buffer(utils_clang.INT_LIST_REP, coords[1])
-                ffi.from_buffer(utils_clang.INT_LIST_REP, ranges)
-                n += 1
-            return n
-
         def do_pip(entries=entries) -> int:
             n = 0
             for x, y, poly_id in entries:
-                inside_polygon_blocked(
-                    x, y, coords_of(poly_id), block_ranges_of(poly_id), BLOCK_SIZE
-                )
+                pip(poly_id, x, y)
+                n += 1
+            return n
+
+        def do_decode(entries=entries) -> int:
+            n = 0
+            for x, y, poly_id in entries:
+                coords_of(poly_id)
                 n += 1
             return n
 
         t_base = measure(do_loop)
-        t_coords = measure(do_coords_of)
         t_pip = measure(do_pip)
-        t_marshal = measure(do_marshal) if measure_marshalling else t_coords
+        t_decode = measure(do_decode)
 
         per_call = 1e9 / n
-        marshal_ns = (
-            f"{(t_marshal - t_coords) * per_call:,.0f}"
-            if measure_marshalling
-            else "n/a"
-        )
         print(
-            f"| {stratum} | {vertices:,.0f} | {(t_coords - t_base) * per_call:,.0f} | "
-            f"{marshal_ns} | {(t_pip - t_marshal) * per_call:,.0f} | "
-            f"{(t_pip - t_base) * per_call:,.0f} |"
+            f"| {stratum} | {vertices:,.0f} | {(t_pip - t_base) * per_call:,.0f} | "
+            f"{(t_decode - t_base) * per_call:,.0f} |"
         )
-    if not measure_marshalling:
-        print(
-            f"\n(the {backend} backend crosses no FFI boundary at all - the "
-            "marshalling cost that motivates the native candidate loop only exists "
-            "on the clang path, and the kernel column absorbs it there)"
-        )
+    print(
+        f"\n(the {backend} backend is bound when the collection is loaded, so neither "
+        "column crosses an FFI boundary per call any more; on clang that removed three "
+        "`ffi.from_buffer` calls at ~0.30 us each from every test)"
+    )
 
 
 # ---------------------------------------------------------------------------
