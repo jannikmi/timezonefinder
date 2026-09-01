@@ -17,6 +17,7 @@
 
 - `scripts/block_index.py`, `scripts/measure_query_latency.py`, and `scripts/tune_block_size.py` have not received an independent review since they arrived with the latitude block index.
 - `scripts/bootstrap_data.py`, including the path that unpacks a CI-built wheel for a data version absent from PyPI, has not received an independent review since it arrived with the data bootstrap.
+- `scripts/assert_acceleration_path.py`, `scripts/data_integrity.py`, `scripts/file_converter.py`, `scripts/render_benchmark_reports.py`, `scripts/timezone_data.py`, and `scripts/utils.py` changed with the frame-of-reference payload in `7c06d0c` and have not received an independent review of those deltas.
 
 ## Durable evidence
 
@@ -24,4 +25,4 @@
 
 ## Next useful gap
 
-- Read the three block-index scripts, starting with `scripts/block_index.py`, whose output controls what the kernels skip.
+- Read the three block-index scripts, starting with `scripts/block_index.py`, whose output controls what the kernels skip; then delta-review the frame-of-reference script changes listed above.
