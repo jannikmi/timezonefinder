@@ -45,6 +45,5 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 | [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | rejected — 2.90 % headroom, bounded by enumeration over the packaged index |
 | [PERF-4](items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md) | The mapped fetch re-acquires the mmap buffer per candidate | performance | rejected — measured inside the query, below the noise floor |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | withdrawn — superseded by the latitude block index and the frame-of-reference payload, both shipped; its own candidate encodings decode sequentially, in front of the ray cast that is already the worst latency |
 
 ---
