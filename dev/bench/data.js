@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788306154012,
+  "lastUpdate": 1788306156238,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8333,6 +8333,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "053b4e654da8f1f3bcdf1a4ae90725f603884ee5",
+          "message": "GH-513: refuse dropping the hole polygons, on a cyclic precedence relation (#579)\n\nDropping every hole was expected to be answer-preserving, because every hole\nis covered by other zones. Coverage says the right zone is among the shortcut\ncandidates; ordering decides whether it is reached first.\n\nBoth committed prototypes re-run against the format-3 dataset this tree ships,\nsince which holes the ordering happens to get right is a property of the\ncompiled data: dropping all holes moves 1,404 of 6,048 hole-interior answers\nand 2 of 20,000 random ones, dropping only the 27 without a boundary twin\nstill breaks 20 of 27. `hole_removal_impact.py` could no longer run at all -\nit symlinked the per-ring derived files while rewriting the rings they\ndescribe - and now writes the whole collection through the converter's own\n`write_polygon_collection`, which stays correct as the layout gains files.\n\nThe new `hole_precedence_relation.py` derives the zone precedence relation a\nhole-free lookup would need, from the geometry alone and without consulting\nthe H3 shortcut index, as the recorded H3-independence decision requires. The\nrelation is cyclic: 216 edges over 218 zones, containing 7 two-cycles, every\none a second-order enclave. No candidate ordering satisfies a cyclic relation,\nso there is nothing to enforce and no ordering work that would unblock this.\nThe size-derived rule fails separately on 20 of the 216 edges. That result is\nidentical on formats 2 and 3, down to the witnesses.\n\n`tests/test_hole_lookup_regression.py` is the gate the issue asked for either\nway: interior points of every packaged hole, each answer checked against the\ngeometry rather than a committed fixture, failing on 1,404 of 6,048 points\nagainst hole-free data.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T01:41:10+02:00",
+          "tree_id": "e77c8b8ff9bf4bfadc85adb1515c9914910485b3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/053b4e654da8f1f3bcdf1a4ae90725f603884ee5"
+        },
+        "date": 1788306155590,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0079345703125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008112907409668,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.228351593017578,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2291603088378906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.581305503845215,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58202934265137,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
