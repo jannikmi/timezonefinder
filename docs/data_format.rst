@@ -466,12 +466,27 @@ stored inline. These are mostly ocean zones (``Etc/GMT±XX``) cut by a hole whos
 covered by a *union* of several land zones rather than by any single polygon, plus the
 ``Asia/Jerusalem`` enclaves.
 
-They are kept rather than dropped. Probing their interiors shows every one of them is in
-fact covered by other zones, so dropping them would not leave a gap — but only as long as
-each covering polygon is tested before the parent polygon in every shortcut cell the hole
-touches. That ordering is an emergent property of how shortcut candidates are sorted, not
-an invariant the data guarantees, so relying on it is a separate change with a separate
-risk profile.
+They are kept rather than dropped, and so is every other hole. Probing their interiors
+shows every one of them is in fact covered by other zones, so dropping them would not leave
+a gap — but coverage only says the right zone is *among* the candidates, and what decides
+the answer is whether it is reached first.
+
+That ordering cannot be guaranteed, and the reason is structural rather than a property of
+one release. Dropping holes would need a precedence relation over zones — "where these two
+both cover a point, this one is the answer" — and the relation the packaged geometry demands
+is **cyclic**: seven zone pairs each have to precede the other. Every one is a second-order
+enclave, a zone inside a zone inside the first zone again — Baarle-Hertog and its Dutch
+counter-enclaves, Nahwa inside Madha inside the UAE, the Hopi reservation inside the Navajo
+Nation. Precedence is a relation between zones while containment is a relation between
+rings, and two levels of nesting map two opposite ring relations onto one zone pair. Both
+Dubai/Muscat witnesses lie inside the same hole, so not even a per-hole rule breaks the tie.
+
+Measured consequences, on release ``2026c``: dropping every hole changes 1,404 of 6,048
+hole-interior answers and 2 of 20,000 uniformly random ones, and dropping only these 27
+still breaks 20 of them. ``prototypes/hole_removal_impact.py`` measures that,
+``prototypes/hole_precedence_relation.py`` derives the relation and its cycles, and
+``tests/test_hole_lookup_regression.py`` checks interior points of every hole against the
+geometry so a future attempt fails loudly.
 
 FlatBuffers Schema
 ==================

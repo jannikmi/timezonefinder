@@ -22,41 +22,50 @@ Run with::
     PYTHONPATH=. uv run python prototypes/hole_removal_impact.py
 
 
-FINDINGS (release 2026c: 756 holes, 729 of them stored as boundary references):
+FINDINGS (timezonefinder-data 3.2026.3, release 2026c: 756 holes, 729 of them stored as
+boundary references). Re-measured 2026-09-02 against the dataset the tree ships, which is
+what the numbers below are and what the ones in issue #513 are not: they were taken before
+the shortcut index was reshaped, before the latitude block index landed and before the
+frame-of-reference payload took the format to 3. Which holes the candidate ordering happens
+to get right is a property of the compiled data, so this is re-run rather than trusted.
 
     variant     hole interior pts changed   holes affected   random global pts changed
-    no_inline            160 / 6,048           20 of 27              0 / 20,000
-    no_holes           1,703 / 6,048          224 of 756           16 / 20,000
+    no_inline            159 / 6,048           20 of 27              0 / 20,000
+    no_holes           1,404 / 6,048          188 of 756            2 / 20,000
+
+    (issue #513, on the older compilation: 160 / 20 / 0 and 1,703 / 224 / 16)
 
 The changed answers are wrong, not merely different (correct -> what you get instead):
 
     no_inline     152  Asia/Hebron                ->  Asia/Jerusalem
-                    8  Asia/Kolkata               ->  Etc/GMT-6
+                    7  Asia/Kolkata               ->  Etc/GMT-6
 
     no_holes      760  America/Argentina/Cordoba  ->  America/Asuncion
                   168  Europe/Brussels            ->  Europe/Amsterdam
                   152  Asia/Hebron                ->  Asia/Jerusalem
-                  126  Europe/Athens              ->  Etc/GMT-2
                    40  Europe/Berlin              ->  Europe/Brussels
-                   ... 46 distinct transitions in total
+                   36  Europe/Athens              ->  Etc/GMT-2
+                   ... 35 distinct transitions in total
 
-CONCLUSION: holes cannot be dropped, in either variant, and the reason is worth stating
-because the opposite conclusion is easy to reach. Its companion script
-``hole_boundary_redundancy.py`` shows every unmatched hole is *fully covered* by other
-zones - 0 of 1,620 sampled interior points fell outside every other zone - which reads
-like "the hole is redundant". It is not sufficient: coverage says the right zone is
-among the shortcut candidates, ordering decides whether it is reached first.
-``optimise_shortcut_ordering`` sorts zones by total size ascending, which gets many
-enclaves right by accident and evidently not these.
+Three compilations now agree on the conclusion and disagree on the details, which is the
+useful part: the failure is structural, not a quirk of one build. Against issue #513's
+figures the reshaped shortcut index moved the totals ~18 %; the format-3 payload then left
+every headline count identical and moved only the uniformly random tail, 6 changed points
+to 2, since the coordinate scale that rode format 3 shifts a handful of borderline points.
 
-So dropping holes needs a candidate-ordering guarantee *established* in shortcut
-compilation, not merely verified. Two further complications belong to that guarantee:
-the ``last_zone_change_idx`` early break in ``timezone_at`` returns the final candidate
-untested, so "present in the list" is not "reached", and holes covered only by a
-*union* of zones need all of those zones ordered correctly, not just one.
+CONCLUSION: holes cannot be dropped, in either variant, and since 2026-09-01 the reason is
+proved rather than observed. ``hole_precedence_relation.py`` derives the zone precedence
+relation such a drop would need and shows it contains 7 two-cycles - Europe/Amsterdam and
+Europe/Brussels each have to precede the other - so no candidate ordering satisfies it, at
+any H3 resolution. Its companion ``hole_boundary_redundancy.py`` shows every unmatched hole
+is *fully covered* by other zones, which reads like "the hole is redundant"; it is not
+sufficient, because coverage says the right zone is among the candidates and ordering
+decides whether it is reached first.
 
-This is the evidence behind keeping the unmatched holes stored inline rather than
-dropping them - see the "Holes without a twin" section of docs/data_format.rst.
+The regression gate for all of this is ``tests/test_hole_lookup_regression.py``, which
+walks interior points of every hole and checks the answer against the geometry directly,
+and the documented consequence is the "Holes without a twin" section of
+docs/data_format.rst.
 """
 
 import json
@@ -66,13 +75,16 @@ from pathlib import Path
 
 import numpy as np
 
+from scripts.file_converter import write_polygon_collection
 from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import DEFAULT_DATA_DIR
-from timezonefinder.flatbuf.io.polygons import (
-    get_coordinate_path,
-    write_polygon_collection_flatbuffer,
-)
+from timezonefinder.flatbuf.io.polygons import get_coordinate_path
 from timezonefinder.np_binary_helpers import (
+    get_block_bases_path,
+    get_block_offsets_path,
+    get_block_ranges_path,
+    get_nr_vertices_path,
+    get_block_widths_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -104,6 +116,11 @@ def build_variant(finder: TimezoneFinder, name: str, keep: set[int]) -> Path:
     Every surviving hole is written as its own inline ring, so the variant needs no
     boundary references - what is being measured is the presence of the holes, not how
     they are stored.
+
+    Everything derived from the rings is rewritten with them, not symlinked - the
+    latitude block index, the per-block coordinate frames and the vertex counts. All of
+    them are keyed by stored ring, and a variant stores a different number of rings, so
+    a symlinked one addresses rings this directory does not have.
     """
     dest = WORK_DIR / name
     shutil.rmtree(dest, ignore_errors=True)
@@ -124,6 +141,11 @@ def build_variant(finder: TimezoneFinder, name: str, keep: set[int]) -> Path:
 
     for path in (
         get_coordinate_path(holes_dir),
+        get_block_ranges_path(holes_dir),
+        get_block_offsets_path(holes_dir),
+        get_block_bases_path(holes_dir),
+        get_block_widths_path(holes_dir),
+        get_nr_vertices_path(holes_dir),
         get_poly_ref_path(holes_dir),
         get_xmin_path(holes_dir),
         get_xmax_path(holes_dir),
@@ -133,7 +155,11 @@ def build_variant(finder: TimezoneFinder, name: str, keep: set[int]) -> Path:
     ):
         path.unlink()  # drop the symlink, never write through it
 
-    write_polygon_collection_flatbuffer(get_coordinate_path(holes_dir), rings)
+    # One call, because the payload, the coordinate frames and the latitude index are
+    # one statement about one partition - which is also why none of them may be left
+    # symlinked while the rings are rewritten. The rings come straight out of storage,
+    # so they are already rotated and are encoded as-is.
+    write_polygon_collection(holes_dir, rings)
     store_per_polygon_vector(
         get_poly_ref_path(holes_dir),
         np.array([-(i + 1) for i in range(len(kept))], dtype=np.int32),
