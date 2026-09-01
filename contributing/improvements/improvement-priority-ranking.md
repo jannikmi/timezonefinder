@@ -3,6 +3,7 @@
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-comparing-two-candidate-implementations-hand-rolls-a-harness-every-time.md) | Comparing two candidate implementations hand-rolls a harness every time | tooling | M | free |
+| [CHANGELOG-1](items/packaging-distribution-and-release/changelog-1-changelog-fragments-keep-concurrent-pull-requests-out-of-one-unreleased-section.md) | Changelog fragments keep concurrent pull requests out of one unreleased section | release tooling | M | free — removes the remaining routine shared append point |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | blocked — merge comparator compatibility in PR #566, then measure the expanded core set's noise |
 | [GH-501](items/packaging-distribution-and-release/gh-501-guardrails-on-the-automated-data-update-pipeline.md) | Guardrails on the automated data update pipeline | release | M | free — decided |
 | [GH-500](items/data-pipeline-and-developer-tooling/gh-500-validate-a-data-directory-s-cross-file-invariants.md) | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
@@ -28,7 +29,7 @@
 | [GH-543](items/data-pipeline-and-developer-tooling/gh-543-the-numba-group-s-numpy-2-4-pin-is-stale-and-redundant.md) | The numba group's `numpy<2.4` pin is stale and redundant | tooling | ~4 | free |
 | [DEAD-5](items/data-pipeline-and-developer-tooling/dead-5-reduced-timezone-mapping-has-no-consumer.md) | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | [DEAD-6](items/data-pipeline-and-developer-tooling/dead-6-iter-boundaries-in-shortcut-has-no-caller-outside-the-test-suite.md) | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
-| [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | free — nothing re-adds the binaries now; re-anchor the measurement baseline in the same pass |
+| [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | parked — resume only for a concrete repository-history size need |
 | [GH-513](items/lookup-geometry-and-data-format/gh-513-drop-hole-polygons-entirely.md) | Drop hole polygons entirely | data format | L | blocked by GH-500 — but rides the unreleased format 3 if it lands before that release |
 | [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | conditional — only if PyPI storage is exhausted |
 | [GH-505](items/lookup-geometry-and-data-format/gh-505-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
@@ -44,6 +45,5 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 | [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | rejected — 2.90 % headroom, bounded by enumeration over the packaged index |
 | [PERF-4](items/lookup-geometry-and-data-format/perf-4-the-mapped-fetch-re-acquires-the-mmap-s-buffer-on-every-candidate.md) | The mapped fetch re-acquires the mmap buffer per candidate | performance | rejected — measured inside the query, below the noise floor |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
-| [GH-449](items/lookup-geometry-and-data-format/gh-449-polygon-encoding-delta-varint.md) | Polygon encoding: delta + varint | data format | withdrawn — superseded by the latitude block index and the frame-of-reference payload, both shipped; its own candidate encodings decode sequentially, in front of the ray cast that is already the worst latency |
 
 ---
