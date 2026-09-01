@@ -3,6 +3,7 @@
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | [BENCH-1](items/packaging-distribution-and-release/bench-1-comparing-two-candidate-implementations-hand-rolls-a-harness-every-time.md) | Comparing two candidate implementations hand-rolls a harness every time | tooling | M | free |
+| [CHANGELOG-1](items/packaging-distribution-and-release/changelog-1-changelog-fragments-keep-concurrent-pull-requests-out-of-one-unreleased-section.md) | Changelog fragments keep concurrent pull requests out of one unreleased section | release tooling | M | free — removes the remaining routine shared append point |
 | [BATCH-2](items/packaging-distribution-and-release/batch-2-the-batch-lookups-are-measured-by-nothing-the-ci-tracks.md) | The batch lookups are measured by nothing the CI tracks | tooling | S–M | blocked — merge comparator compatibility in PR #566, then measure the expanded core set's noise |
 | [GH-501](items/packaging-distribution-and-release/gh-501-guardrails-on-the-automated-data-update-pipeline.md) | Guardrails on the automated data update pipeline | release | M | free — decided |
 | [GH-500](items/data-pipeline-and-developer-tooling/gh-500-validate-a-data-directory-s-cross-file-invariants.md) | Validate a data directory's cross-file invariants | data integrity | M | free — decided |
