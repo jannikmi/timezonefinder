@@ -61,7 +61,7 @@ Valid outcomes are one or more implemented items; briefed questions only; a desi
 
 A slice is releasable when one true standalone changelog sentence describes it without promising a follow-up. Prefer additive before subtractive changes. An atomic data-format migration is prototyped and measured rather than half-landed. While an unreleased `DATA_FORMAT_VERSION` bump is pending, take compatible format changes consecutively so they share one ordered data/code release.
 
-Implement only the selected slice or batch, and add a test for each changed seam. Commit each item using its ID, or use all batched IDs when one cohesive change implements them together. If an item ships, delete its item file and ranking row in a separate register-only commit; a single register-only commit may remove every shipped batched item. If work remains, rewrite the item to describe only the remainder. Rejections keep their item and move to `Closed`.
+Implement only the selected slice or batch, and add a test for each changed seam. Commit each item using its ID, or use all batched IDs when one cohesive change implements them together. If an item ships, delete its item file and ranking row in a separate register-only commit; a single register-only commit may remove every shipped batched item. If work remains, rewrite the item to describe only the remainder. Rejections normally keep their item and move to `Closed`; apply the register's redundant-route deletion exception when the canonical decision record already retains the refusal and decision evidence.
 
 ## Final gate and pull request
 
