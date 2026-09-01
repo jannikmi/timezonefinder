@@ -15,8 +15,10 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Self
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from h3.api import numpy_int as h3
@@ -116,21 +118,17 @@ class AbstractTimezoneFinder(ABC):
     def __init__(
         self,
         bin_file_location: str | Path | None = None,
-        in_memory: bool = False,
     ):
         """
         Initialize the AbstractTimezoneFinder.
 
-        Loads the zone names, the per-polygon zone ids and the shortcut index. These are
-        always held in memory; only the polygon coordinate data a subclass may load is
-        subject to ``in_memory``.
+        Loads the zone names, the per-polygon zone ids and the shortcut index, all of
+        which are always held in memory. Selecting how the polygon coordinate data is
+        accessed belongs to the subclass that loads it: ``TimezoneFinder`` takes
+        ``in_memory`` for that, and this class has nothing to apply it to.
 
         :param bin_file_location: Path to the directory containing binary timezone data.
                                  If None, uses the bundled package data directory.
-        :param in_memory: Whether to read the polygon coordinate data into memory instead of
-                         accessing it through a memory-mapped file. Selects the access mode of
-                         ``TimezoneFinder``'s boundary and hole data; ``TimezoneFinderL`` loads
-                         no polygon data at all, so it is without effect there.
         :raises FileNotFoundError: If timezone data files cannot be found at the specified location
         :raises ValueError: If timezone data files are corrupted or in an invalid format
         """
@@ -615,6 +613,107 @@ class AbstractTimezoneFinder(ABC):
             return None
         return self.zone_names.name_of(zone_id)
 
+    # --- turning the answer into something usable -------------------------------
+    #
+    # The three steps every caller takes next, and the reason they are here rather
+    # than in each caller: the ``Etc/GMT`` zones the packaged data returns for every
+    # coordinate at sea carry an **inverted** sign convention - ``Etc/GMT+5`` is
+    # UTC-5. Deriving an offset by reading the name produces the wrong sign without
+    # failing, and the library is the party that knows this. All three resolve the
+    # name through the standard library's ``zoneinfo``, which applies the convention
+    # correctly and caches its ``ZoneInfo`` objects, so repeated calls do not re-read
+    # the timezone database.
+
+    def zoneinfo_at(self, *, lng: float, lat: float) -> ZoneInfo | None:
+        """The timezone covering a point, as a ``zoneinfo.ZoneInfo``.
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the zone :meth:`timezone_at` names, or ``None`` where that answers
+            ``None``
+        :raises ValueError: if the coordinates are out of bounds
+        :raises zoneinfo.ZoneInfoNotFoundError: if the platform has no timezone
+            database holding that name. Windows ships none, so ``pip install tzdata``
+            is required there - this package returns IANA names and does not carry
+            the database itself.
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.zoneinfo_at(lng=13.358, lat=52.5061)
+            zoneinfo.ZoneInfo(key='Europe/Berlin')
+        """
+        tz_name = self.timezone_at(lng=lng, lat=lat)
+        if tz_name is None:
+            return None
+        return ZoneInfo(tz_name)
+
+    def utc_offset_at(
+        self, *, lng: float, lat: float, when: datetime | None = None
+    ) -> timedelta | None:
+        """The UTC offset in force at a point, at a given moment.
+
+        The offset is a property of a zone *and a date*, since it changes with daylight
+        saving time - so it is read off an aware datetime rather than off the zone.
+
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :param when: the moment to read the offset at, defaulting to now. A naive
+            datetime is read as local wall-clock time in the zone found; an aware one
+            is read as the instant it denotes.
+        :return: the offset as a ``timedelta``, or ``None`` where :meth:`timezone_at`
+            answers ``None``
+        :raises ValueError: if the coordinates are out of bounds
+        :raises zoneinfo.ZoneInfoNotFoundError: on a platform without a timezone
+            database - see :meth:`zoneinfo_at`, which names the Windows case
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.utc_offset_at(lng=13.358, lat=52.5061, when=datetime(2026, 1, 1))
+            datetime.timedelta(seconds=3600)
+        """
+        zone = self.zoneinfo_at(lng=lng, lat=lat)
+        if zone is None:
+            return None
+        if when is None:
+            return datetime.now(tz=zone).utcoffset()
+        if when.tzinfo is None:
+            return when.replace(tzinfo=zone).utcoffset()
+        return when.astimezone(zone).utcoffset()
+
+    def localize(self, dt: datetime, *, lng: float, lat: float) -> datetime | None:
+        """Attach the timezone covering a point to a naive datetime.
+
+        The datetime is read as local wall-clock time there: the instant it denotes is
+        decided by the zone, which is what makes this different from
+        ``dt.astimezone(...)`` on an already-aware value.
+
+        :param dt: a naive datetime, i.e. local time at the point
+        :param lng: longitude of the point in degree (-180.0 to 180.0)
+        :param lat: latitude in degree (90.0 to -90.0)
+        :return: the same wall-clock time made aware, or ``None`` where
+            :meth:`timezone_at` answers ``None``
+        :raises ValueError: if the coordinates are out of bounds, or if ``dt`` already
+            carries a timezone - converting one is ``dt.astimezone()``'s job, and
+            silently re-labelling it would move the instant it denotes
+        :raises zoneinfo.ZoneInfoNotFoundError: on a platform without a timezone
+            database - see :meth:`zoneinfo_at`, which names the Windows case
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.localize(datetime(2026, 1, 1, 12), lng=13.358, lat=52.5061)
+            datetime.datetime(2026, 1, 1, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Berlin'))
+        """
+        if dt.tzinfo is not None:
+            raise ValueError(
+                f"{dt!r} already carries a timezone. localize() interprets a naive "
+                "datetime as local time at the given point; to convert an aware one, "
+                "call dt.astimezone(tf.zoneinfo_at(lng=..., lat=...))."
+            )
+        zone = self.zoneinfo_at(lng=lng, lat=lat)
+        if zone is None:
+            return None
+        return dt.replace(tzinfo=zone)
+
     def cleanup(self) -> None:
         """Clean up resources. Override in subclasses as needed."""
         # At termination utils may have been tidied up. If we're terminating we don't need to
@@ -650,13 +749,6 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         Each thread that performs timezone lookups must create its own independent
         TimezoneFinderL instance. Do not share a single instance across threads.
     """
-
-    def __init__(
-        self,
-        bin_file_location: str | Path | None = None,
-        in_memory: bool = False,
-    ):
-        super().__init__(bin_file_location, in_memory)
 
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """instantly returns the name of the most common zone within the corresponding shortcut
@@ -768,7 +860,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         bin_file_location: str | Path | None = None,
         in_memory: bool = False,
     ):
-        super().__init__(bin_file_location, in_memory)
+        super().__init__(bin_file_location)
         self.holes_dir = utils.get_holes_dir(self.data_location)
         self.boundaries_dir = utils.get_boundaries_dir(self.data_location)
         self.boundaries = PolygonArray(

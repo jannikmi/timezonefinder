@@ -44,10 +44,18 @@ FIXTURES = [
 ]
 
 
-@pytest.fixture(scope="module", params=[TimezoneFinder, TimezoneFinderL])
+# ``TimezoneFinder`` is built in memory so the batch runs against loaded coordinates;
+# ``TimezoneFinderL`` loads no polygon data and takes no ``in_memory`` at all
+FINDERS = [
+    pytest.param(lambda: TimezoneFinder(in_memory=True), id="TimezoneFinder"),
+    pytest.param(TimezoneFinderL, id="TimezoneFinderL"),
+]
+
+
+@pytest.fixture(scope="module", params=FINDERS)
 def finder(request):
     """Both finders: the batch path is inherited, the ambiguous fallback is not."""
-    with request.param(in_memory=True) as instance:
+    with request.param() as instance:
         yield instance
 
 

@@ -1,20 +1,23 @@
-from typing import Final
+from typing import Any, Final
 
 import cffi
 
 import numpy as np
 
 ffi: cffi.FFI | None = None
+# declared before the import so the two branches agree on one type. The extension is a
+# cffi C extension with no stubs, and the fallback is ``None``; without this mypy joins
+# them and rejects every ``.lib`` access below on the ``None`` half.
+inside_polygon_ext: Any = None
 try:
     # Note: IDE might complain as this import comes from a cffi C extension
-    from timezonefinder import inside_polygon_ext  # type: ignore
+    from timezonefinder import inside_polygon_ext  # type: ignore[no-redef]
 
     clang_extension_loaded = True
     ffi = cffi.FFI()
 
 except ImportError:
     clang_extension_loaded = False
-    inside_polygon_ext = None
 
 INT_LIST_REP: Final[str] = "int []"
 

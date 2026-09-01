@@ -75,8 +75,10 @@ def get_timezone_function(
         return getattr(TimezoneFinder(in_memory=True), method_name)
 
     if function_id in TIMEZONE_FINDER_L_FUNCTIONS:
-        # For TimezoneFinderL methods, create an instance
-        tf_instance = TimezoneFinderL(in_memory=in_memory)
+        # For TimezoneFinderL methods, create an instance. It takes no ``in_memory``
+        # at all - loading no polygon data, it has nothing to apply one to - which is
+        # the same refusal ``_parse_arguments`` makes for these ids.
+        tf_instance = TimezoneFinderL()
         return (
             tf_instance.timezone_at
             if function_id == 3

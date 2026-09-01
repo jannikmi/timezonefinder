@@ -7,14 +7,11 @@ Check these explicitly before taking an item, and name the blocking one when you
 
 GH-543 (cffi bump) ─→ GH-364's abi3t option
 
-API-2 ─→ API-1   [same major; API-2 first, it decides how much surface API-1 touches]
-
 GH-500 ←→ GH-428: one CLI design — SETTLED (subcommands), so neither waits on the other
 
 PERF-1 (ocean check without a regex) ─→ BATCH-1 (batch `timezone_at_land`)
 
 independent: GH-362, GH-524, PERF-2, GH-543
-   GH-502 is independent too, but should ride the API major so the docs are rewritten once
 ```
 
 - **Regenerating the packaged data is a normal thing for an item to do**, and no item is parked for needing it. Two things it has to respect: it must not collide with the weekly data-update pipeline, which opens *and auto-merges* its own pull requests, so rebase before the final gate; and it must not be incidental — `diff -rq` against a copy of the data directory taken before the regeneration should list only binaries the change had a reason to move, since a file left byte-identical costs the release nothing and git no longer holds a baseline to compare against.

@@ -103,7 +103,10 @@ def measure(
     baseline_rss = read_rss()
     tracemalloc.start()
 
-    finder = finder_cls(in_memory=in_memory)
+    # ``TimezoneFinderL`` takes no ``in_memory``: it loads no polygon data, so there
+    # is no access mode to select. Its one config passes False, which is simply the
+    # absence of the argument there.
+    finder = finder_cls(in_memory=in_memory) if in_memory else finder_cls()
 
     gc.collect()
     init_heap = tracemalloc.get_traced_memory()[0]

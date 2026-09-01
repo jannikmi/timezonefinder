@@ -42,8 +42,7 @@ EXPECTED_COMPARISON_NAMES = {
 EXPECTED_BENCHMARK_NAMES = EXPECTED_COMPARISON_NAMES | {
     "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-in_memory]",
     "benchmarks/test_initialization.py::test_initialization[TimezoneFinder-file_based]",
-    "benchmarks/test_initialization.py::test_initialization[TimezoneFinderL-in_memory]",
-    "benchmarks/test_initialization.py::test_initialization[TimezoneFinderL-file_based]",
+    "benchmarks/test_initialization.py::test_initialization[TimezoneFinderL]",
     "benchmarks/test_inside_polygon.py::test_pt_in_poly_clang[small]",
     "benchmarks/test_inside_polygon.py::test_pt_in_poly_clang[medium]",
     "benchmarks/test_inside_polygon.py::test_pt_in_poly_clang[large]",

@@ -8,20 +8,37 @@ Use Cases:
 Creating aware datetime objects
 -------------------------------
 
-The lookup returns an IANA timezone name, which is exactly what ``zoneinfo`` takes:
+:meth:`localize <timezonefinder.TimezoneFinder.localize>` reads a naive datetime as local
+wall-clock time at the coordinate and returns it aware:
 
 .. code-block:: python
 
     from datetime import datetime
-    from zoneinfo import ZoneInfo
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz_name = tf.timezone_at(lng=13.41, lat=52.52)  # 'Europe/Berlin'
-    aware = datetime.now(tz=ZoneInfo(tz_name))
+    aware = tf.localize(datetime(2026, 1, 1, 12), lng=13.41, lat=52.52)
+    # datetime.datetime(2026, 1, 1, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Berlin'))
+
+:meth:`zoneinfo_at <timezonefinder.TimezoneFinder.zoneinfo_at>` returns the zone itself,
+for the cases that need it rather than a datetime:
+
+.. code-block:: python
+
+    from datetime import datetime
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    zone = tf.zoneinfo_at(lng=13.41, lat=52.52)  # ZoneInfo(key='Europe/Berlin')
+    now_there = datetime.now(tz=zone)
+
+Both answer ``None`` wherever ``timezone_at()`` does, and both are available as global
+functions (``from timezonefinder import localize, zoneinfo_at``) - see :ref:`the API
+documentation <api_zoneinfo>`.
 
 Windows does not ship a system timezone database, so install ``tzdata`` there
-(``pip install tzdata``) before resolving IANA names with ``zoneinfo``.
+(``pip install tzdata``) before resolving IANA names with ``zoneinfo``; without it these
+raise ``zoneinfo.ZoneInfoNotFoundError``.
 
 ``examples/aware_datetime.py`` shows the same thing with ``pytz``, including the difference between
 attaching a timezone and localising a naive datetime.
@@ -30,23 +47,19 @@ attaching a timezone and localising a naive datetime.
 Getting a location's time zone offset
 --------------------------------------
 
-The offset is a property of the aware datetime, so it comes straight from ``utcoffset()`` - and it
-depends on the date, since it changes with daylight saving time:
+:meth:`utc_offset_at <timezonefinder.TimezoneFinder.utc_offset_at>` answers it directly.
+The offset depends on the date, since it changes with daylight saving time, so it takes
+the moment to read it at and defaults to now:
 
 .. code-block:: python
 
     from datetime import datetime
-    from zoneinfo import ZoneInfo
     from timezonefinder import TimezoneFinder
 
     tf = TimezoneFinder()
-    tz_name = tf.timezone_at(lng=9.67, lat=45.69)  # 'Europe/Rome'
-    offset = datetime.now(tz=ZoneInfo(tz_name)).utcoffset()
-
-``examples/get_offset.py`` answers the same question with the optional ``pytz`` extra,
-returning the offset in minutes from ``certain_timezone_at()``. For new code, the stdlib
-`zoneinfo <https://docs.python.org/3/library/zoneinfo.html>`_ module is the
-recommended way to attach an IANA timezone to a datetime.
+    tf.utc_offset_at(lng=9.67, lat=45.69)  # right now
+    tf.utc_offset_at(lng=9.67, lat=45.69, when=datetime(2026, 7, 1))
+    # datetime.timedelta(seconds=7200)
 
 .. warning::
 
@@ -54,8 +67,14 @@ recommended way to attach an IANA timezone to a datetime.
     UTC-5 and ``Etc/GMT-5`` is UTC+5. The packaged data covers the oceans, so any
     coordinate at sea resolves to an ``Etc/GMT`` zone, the UTC+0 band to the
     signless ``Etc/GMT`` itself. Computing an offset by parsing the returned name
-    will silently produce the wrong sign — always call ``utcoffset()`` on an
-    aware datetime instead.
+    will silently produce the wrong sign — which is what ``utc_offset_at()`` exists to
+    save you from, since ``zoneinfo`` applies the convention correctly. Doing it by
+    hand, always call ``utcoffset()`` on an aware datetime rather than reading the name.
+
+``examples/get_offset.py`` answers the same question with the optional ``pytz`` extra,
+returning the offset in minutes from ``certain_timezone_at()``. For new code, the stdlib
+`zoneinfo <https://docs.python.org/3/library/zoneinfo.html>`_ module is the
+recommended way to attach an IANA timezone to a datetime.
 
 
 Django
