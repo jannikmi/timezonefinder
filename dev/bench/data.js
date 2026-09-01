@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788282681376,
+  "lastUpdate": 1788303291028,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3555,6 +3555,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00020129197453879483",
             "extra": "mean: 25.255497000003402 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39e5ea68702d5aa725de0dd7ce1042f5ae2ce745",
+          "message": "Make concurrent improvement passes merge-friendly (#577)\n\n* Make concurrent improvement passes merge-friendly\n\n* CHANGELOG-1: Record changelog fragments\n\n* Remove redundant GH-449 register item\n\n* Clarify redundant closed-item retention\n\n* Document int32 coordinate headroom\n\n* Address improvement workflow review findings\n\n* Restore payload decision reachability\n\n* Preserve FMT-2 script discovery deltas\n\n* Stop automatic Codex review retriggers\n\n* Align rejection cleanup paths\n\n* Park GH-522 until history shrink is needed",
+          "timestamp": "2026-09-02T00:53:49+02:00",
+          "tree_id": "d4eed6fa49357c3d3a83899c13c81f05ed6053f3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/39e5ea68702d5aa725de0dd7ce1042f5ae2ce745"
+        },
+        "date": 1788303289793,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 157.0894220542,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011695792529693091",
+            "extra": "mean: 6.365800999986959 msec\nrounds: 133 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 235.8317585657654,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010075879097552641",
+            "extra": "mean: 4.240311000017982 msec\nrounds: 218 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 41.04500753360047,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027454808539517536",
+            "extra": "mean: 24.36349900000323 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
