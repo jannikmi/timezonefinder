@@ -68,14 +68,14 @@ same shape works just as well: pass it as ``bin_file_location`` (see :ref:`use c
 
 That distribution's **major version is the data format generation**
 (``timezonefinder.configs.DATA_FORMAT_VERSION``), and its remaining two components name the
-upstream release: ``2.2026.3`` is format 2 built from ``2026c``. ``timezonefinder`` requires
+upstream release: ``3.2026.3`` is format 3 built from ``2026c``. ``timezonefinder`` requires
 ``timezonefinder-data>=…,<N+1``, so a dataset update needs no code release while a format change is
 refused when resolving rather than when reading. Bumping either per-file ``layout_version`` below
 requires bumping ``DATA_FORMAT_VERSION`` too.
 
 The timezonefinder library uses highly optimized binary data structures to enable fast and memory-efficient timezone lookups. The data is organized into several files:
 
-1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes. The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
+1. **Polygon Coordinates**: Stored in a FlatBuffers binary file (``coordinates.bin``) one for all timezone boundary polygons and one for all holes, as bit-packed residuals against a per-block coordinate frame (see `Block Coordinate Frames`_). The hole file holds only the rings that are not a copy of a boundary polygon (see `Holes as Boundary References`_)
 2. **Shortcut Index**: Spatial index over H3 hexagons (``shortcuts.bin``) holding, per cell, either the timezone that covers it or the polygons a lookup there has to test
 3. **Numpy Arrays**: Various NumPy binary files (.npy) storing information about the polygons
 4. **Zone Names**: Text file listing the timezone names
@@ -86,27 +86,44 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 Coordinate Representation
 -------------------------
 
-All coordinates (longitude and latitude) from the timezone polygons are converted from floating-point to 32-bit integers by multiplying them by 10^7. This transformation:
+All coordinates (longitude and latitude) are held as 32-bit integers scaled by 10^7. This transformation:
 
 * Makes computations faster
 * Requires significantly less storage space
-* Maintains high accuracy (minimum accuracy at the equator is still ~1 cm)
+* Maintains high accuracy (see the two grids below)
 
-What that scale factor buys, and why it is enough
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Two grids, and the difference matters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-One unit is 10\ :sup:`-7` degrees - a *tenth* of a microdegree, not a microdegree.
-At the equator, where a degree of longitude is longest and the ground error of a fixed angular step is therefore worst, that is **~1.11 cm**.
-The error is a whole step rather than half of one because the conversion truncates toward zero rather than rounding; a rounding conversion would halve it.
+**The encoding** resolves 10\ :sup:`-7` degrees - a *tenth* of a microdegree, not a
+microdegree. At the equator, where a degree of longitude is longest and the ground error
+of a fixed angular step is therefore worst, that is **~1.11 cm**. This is the grid a
+*query* is placed on, by :func:`timezonefinder.utils.coord2int`, which truncates toward
+zero - so a caller's own coordinate can be a whole step from its stored form rather than
+half of one.
 
-The two properties that make this a ceiling rather than a defect:
+**The boundary data** resolves 10\ :sup:`-6` degrees, **~11.1 cm**, because that is what
+timezone-boundary-builder publishes: six decimal places, never seven. Measured over
+3,589,489 coordinate literals of the 2026c release, the decimal places published are
+``{1: 307, 2: 2064, 3: 12778, 4: 57575, 5: 430811, 6: 3085954}``. The packaged data sits
+on that grid exactly - every one of its 15,850,626 values is a multiple of ten
+tenth-of-a-microdegree steps - and is *stored* in units of it, which is where ~6.4 MB of
+`Block Coordinate Frames`_ went. The conversion **rounds** rather than truncating, so a
+packaged coordinate is the vertex upstream published rather than one step short of it;
+``scripts.utils.source_coord2int`` refuses an input carrying a seventh decimal rather
+than rounding real information away.
+
+The two are independent. The boundary can be stored as coarsely as its source allows
+while a query stays as fine as ``int32`` allows, because the kernel scales a residual up
+into the query's units rather than rounding the query down into the boundary's - see
+`Block Coordinate Frames`_.
+
+Why 1.11 cm is a ceiling rather than a defect:
 
 * **The spacing is even.** A fixed-point integer resolves the same amount at the antimeridian as at Greenwich, which a float does not.
-* **It is finer than the source data, by exactly a factor of ten.** timezone-boundary-builder publishes coordinates with **six** decimal places - 10\ :sup:`-6` degrees, ~11.1 cm at the equator - so the seventh decimal this encoding provides carries no information from upstream. That is measurable rather than assumed: across all 15,850,626 packaged coordinate values the last decimal digit is only ever ``0`` or ``9`` and never ``1``-``8``, and the ``9``\ s are the conversion truncating toward zero (``133580000`` stored as ``133579999``) rather than a seventh digit that means anything.
+* **It is already finer than the data it is compared against**, by a factor of ten, and there is no headroom to go further: ±180° at 10\ :sup:`-7` uses 1.8 × 10\ :sup:`9` of ``int32``'s 2.15 × 10\ :sup:`9`, so a ten-times-finer grid would need 64-bit coordinates.
 
-The width is set by the *range*, not by the precision. Covering ±180° at 10\ :sup:`-7` needs 3.6 × 10\ :sup:`9` distinct values, which is 32 bits - but so does 10\ :sup:`-6`, at 3.6 × 10\ :sup:`8`. No precision a boundary dataset could plausibly want brings the global range inside ``int16``, whose 65,536 values over 360° would be 610 m apart. Dropping the redundant decimal would therefore not save a single byte of the current fixed-width layout, and would not make a query faster: the ray-casting kernel does ``int32`` arithmetic whose cost does not depend on the magnitudes involved.
-
-Where it *would* pay is a variable-width encoding, which is why the two are considered together rather than separately. Storing per-polygon deltas as varints, measured over the packaged boundaries: 60.5 MiB fixed-width today, 33.7 MiB at 10\ :sup:`-7`, and **27.7 MiB at 10\ :sup:`-6`** - so the decimal that carries no information costs ~18 % of the encoded size once the encoding is able to charge for it.
+The width is set by the *range*, not by the precision. Covering ±180° at 10\ :sup:`-7` needs 3.6 × 10\ :sup:`9` distinct values, which is 32 bits - but so does 10\ :sup:`-6`, at 3.6 × 10\ :sup:`8`. No precision a boundary dataset could plausibly want brings the global range inside ``int16``, whose 65,536 values over 360° would be 610 m apart. Which is why storing the coarser grid saves nothing in a *fixed-width* layout and ~6.4 MB in the variable-width one this format uses: only an encoding able to charge per value can charge less for a narrower one.
 
 For scale in the other direction, consecutive vertices of the packaged polygons are a median 47.6 m apart, and only 0.02 % of edges are shorter than the source's own 11.1 cm step. Coordinate precision and vertex density are separate axes, and neither is the binding constraint on accuracy at a border.
 
@@ -143,7 +160,7 @@ The figures are derived, not quoted: :func:`timezonefinder.utils.coordinate_reso
 
 The consequence for a caller is under :ref:`the batch lookups <usage>`: coordinates handed over as ``float32`` can be rounded across a border before the lookup ever runs.
 
-Each polygon's integer coordinates are stored one axis at a time inside a single ``int32`` vector: all x (longitude) values followed by all y (latitude) values (``[x0...xN-1, y0...yN-1]``). The raycasting point in polygon algorithm scans a single axis per iteration, so contiguous per-axis blocks keep every loaded cache line fully used and let both acceleration backends read an axis without copying it first.
+Those integers are what a coordinate *means*; they are not how one is stored. A ring is held as bit-packed residuals against one coordinate frame per block, which is described under `Block Coordinate Frames`_ - and the ray-casting kernels never rebuild an absolute coordinate at all, because every quantity their predicate forms is a difference of two of them.
 
 Data Files
 ==========
@@ -153,9 +170,13 @@ The library creates and uses the following files:
 Polygon Data
 ------------
 
-* ``coordinates.bin``: FlatBuffer binary file containing all polygon coordinates
+* ``coordinates.bin``: FlatBuffer binary file containing all polygon coordinates, one
+  packed payload per ring (see `Block Coordinate Frames`_)
 * ``block_ranges.npy``, ``block_offsets.npy``: the latitude block index over those
   coordinates (see `Latitude Block Index`_)
+* ``block_bases.npy``, ``block_widths.npy``, ``nr_vertices.npy``: what decodes a
+  payload - the coordinate frame each block's residuals are relative to, and the ring
+  sizes a packed payload's length no longer gives (see `Block Coordinate Frames`_)
 * ``zone_ids.npy``: NumPy array mapping polygon IDs to timezone IDs. Stored as
   unsigned integers (``uint16`` by default, ``uint8`` for datasets with less than 256 timezones); pass
   ``--zone-id-dtype`` to ``scripts/file_converter.py`` or set the environment variable
@@ -244,7 +265,7 @@ polygon layout version means - a directory blocked at another size is rejected b
 layout marker in ``coordinates.bin``, and by
 ``scripts.data_integrity.validate_block_index`` where the data is produced.
 
-What it costs is one ``int32`` pair per block - about 0.5 MB against 63 MB of
+What it costs is one ``int32`` pair per block - about 0.5 MB against 38 MB of
 coordinates - and one comparison for the 30 % of polygons small enough to fit in a
 single block. What it buys is the long tail: the slowest queries this package answers
 are one ray cast across a very large ring, and
@@ -286,6 +307,108 @@ collection, in a converter that takes about a minute.
 A consequence worth knowing: ``get_geometry`` returns each ring starting at the vertex
 the converter chose, which is not the one the upstream GeoJSON began with. The ring is
 the same closed path either way.
+
+Block Coordinate Frames
+=======================
+
+Storing a coordinate as a fixed 32-bit absolute spends the same 32 bits on a vertex in
+Luxembourg as on the span of the Pacific, and a block of 128 consecutive vertices of a
+boundary ring covers very little ground. So each block carries its own **frame** - the
+minimum x and y its vertices take - and holds them as residuals against it, in as many
+bits as that block's own span needs.
+
+A residual counts steps of the grid the *source* is published on, not of the finer grid a
+coordinate is stored in. timezone-boundary-builder states boundaries to six decimal
+places, so every packaged coordinate is a multiple of ten of the tenth-of-a-microdegree
+units above (``SOURCE_COORD_STEP``), and dividing by it is exact - it takes a further
+log2(10) ~ 3.3 bits off every field. What it costs is one multiply where a residual is
+read, and a hard requirement that compiled data sit on that grid, which
+``scripts.utils.source_coord2int`` enforces at conversion time.
+
+Together those take ``boundaries/coordinates.bin`` from **63,423,696 to 31,735,692
+bytes**, and the whole compiled directory from ~64.6 MB to ~31.9 MB.
+
+The blocks are exactly the ones `Latitude Block Index`_ already partitions a ring into.
+Nothing new is cut, and no query does more work deciding what to read: the same range
+comparison decides whether a block is touched at all, and only a surviving block is
+unpacked.
+
+.. list-table::
+   :header-rows: 1
+
+   * - File
+     - What it holds
+   * - ``coordinates.bin``
+     - one payload per ring: a stream of 32-bit words, blocks in ring order
+   * - ``block_bases.npy``
+     - ``int32``, one entry per block: the frame's **x** origin. There is no y column -
+       the latitude index beside it already opens each block with the y origin, and the
+       encoder frames against that rather than writing the same number twice
+   * - ``block_widths.npy``
+     - ``uint8``, shape ``(total blocks, 2)``: bits per residual, x then y. A bit
+       *length*, so ``0`` is a block that is constant on that axis and occupies no
+       words for it
+   * - ``nr_vertices.npy``
+     - ``uint32``, one entry per ring. A packed payload's length no longer gives the
+       vertex count - the byte count depends on the widths - and only the ragged last
+       block's size depends on it
+
+Within a block the x residuals come first, then the y ones, each region starting on a
+word boundary; residual *k* occupies bits ``[k*w, (k+1)*w)`` of its region, least
+significant bit first. The word alignment is what lets a kernel read any field with two
+loads: a field is at most 32 bits wide and starts at most 31 bits into a word, so two
+consecutive words always hold it. Addressing the payload by *byte* instead makes the
+same read five dependent byte loads, which measured 2.2x the whole kernel on the numba
+backend - the alignment costs ~2 bytes per region and buys that back.
+
+A block stores its bridging vertex - the first vertex of the next block, wrapping to
+vertex 0 on the last - exactly as the latitude index includes it in its range. That is
+what keeps a block self-contained: both endpoints of every edge it owns are inside it,
+so no edge is ever read through two frames.
+
+The y origin costs nothing to read: a kernel has already loaded ``block_ranges[b][0]``
+to decide whether the block survives the latitude test at all. What it costs instead is
+a check that can no longer be made after the fact - a lower bound that is also a frame
+origin cannot be re-derived from a decode that used it - so the converter refuses to
+encode a block whose latitudes its index does not describe, and that is where the two are
+held together.
+
+Why the query moves instead of the vertices
+-------------------------------------------
+
+Nothing is reconstructed. Every quantity the ray-casting predicate forms is a
+*difference* of two coordinates, so subtracting a block's origin from the query point
+once is exact and the origin is never added back per vertex: ``x2 - xq`` computed in the
+frame **is** ``x2_absolute - x``. The arithmetic therefore stays inside the same bounds
+the unpacked kernel documents, and the answers are identical rather than merely close -
+:doc:`the packed kernel <benchmark_results_timezonefinding>` is checked against the
+unpacked one over the real query pairs the committed fixtures produce.
+
+Two consequences worth knowing. ``get_geometry()`` decodes, so it costs a pass over the
+ring where it used to hand out a view - it is not a lookup path and never was. And
+``in_memory=True`` now holds the *packed* payload rather than pre-decoded rings, which is
+the same code path as the mapped mode with a heap buffer instead of a mapping, and ~32 MB
+where it used to hold ~63 MB.
+
+**Two grids, and the difference matters.** The *encoding* is unchanged: a coordinate is
+still a 32-bit integer scaled by 10\ :sup:`7`, and a query is still placed on that grid
+and compared against the boundary exactly. The *boundary data* sits on the coarser grid
+its source is published on - six decimal places, ~11 cm - and always did: the seventh
+digit was never information. What changed is that the packaged file now says so, instead
+of storing a seventh digit that was an artifact of the conversion.
+
+That conversion is the second half. It moved the boundary toward its source rather than
+away from it. ``coord2int`` truncates toward zero,
+which is right for a query and wrong for the source - it stored the vertex upstream
+publishes as ``13.358`` as ``133579999``, 1.1 cm short, on 6.27 % of all coordinates.
+The converter rounds onto the source's own grid now, so the packaged boundary *is* the
+published boundary. No vertex is dropped and no ring is redrawn - this is not
+simplification, it is the removal of a conversion error.
+
+``scripts.data_integrity.validate_block_payload`` re-derives every frame from its own
+decode, in the converter against the rings it was given and in the test suite over what
+the repository ships, and ``tests/test_coordinate_precision.py`` holds the packaged
+coordinates to the source grid.
 
 Holes as Boundary References
 ============================
@@ -608,7 +731,7 @@ The data format and algorithms used by ``timezonefinder`` provide several key ad
 
 2. **Memory Efficiency**: The library has a small memory footprint due to its binary data format and memory mapping
 
-3. **Accuracy**: The data maintains high precision (~1 cm at the equator) despite the space-saving optimizations
+3. **Accuracy**: The boundary data is stored at the ~11 cm resolution its source publishes, on a coordinate grid ten times finer than that, despite the space-saving optimizations
 
 4. **Offline Operation**: No internet connection is required for lookups
 

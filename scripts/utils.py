@@ -9,6 +9,7 @@ import numpy as np
 from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_NUMPY
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
+from timezonefinder.configs import COORD2INT_FACTOR, SOURCE_COORD_STEP
 from timezonefinder.utils_numba import coord2int
 
 
@@ -62,16 +63,79 @@ def validate_coord_array_shape(coords: np.ndarray):
     )
 
 
+#: How far a scaled source coordinate may sit from the grid before it is refused, in
+#: units of :data:`~timezonefinder.configs.SOURCE_COORD_STEP`. Not zero, because the
+#: value arrives as a ``float``: a six-decimal coordinate near +-180 scales to ~1.8e8,
+#: where a double's own representation error is ~4e-8 grid units. This is ~25x that, and
+#: ~100,000x below the 0.1 a genuine seventh decimal would show - so it separates float
+#: noise from real precision with orders of magnitude to spare either way.
+SOURCE_GRID_TOLERANCE: float = 1e-6
+
+
+def source_coord2int(value: float) -> int:
+    """One upstream coordinate as the scaled integer the packaged data stores.
+
+    **Not** ``timezonefinder.utils.coord2int``, and the difference is the point. That one
+    truncates toward zero, which is right for a *query* - it is where the caller's float
+    falls on the storage grid. Applied to the *source* it introduces an error the source
+    does not have: ``13.358`` becomes ``133579999`` rather than ``133580000``, because
+    the double nearest ``13.358`` is a hair below it. Measured against the 2026c GeoJSON,
+    that is 6.27 % of all coordinates, each 1.1 cm off the boundary upstream published.
+
+    Rounding removes it. The result is exact for every value the source can express,
+    because timezone-boundary-builder publishes at most six decimals - so this lands on
+    the same grid the source itself uses, and the packaged boundary *is* the published
+    boundary rather than a truncation of it.
+
+    **The grid is checked before the rounding, not after.** Rounding first and testing
+    the result for divisibility cannot see anything finer than a storage step: a value
+    like ``13.35800004`` rounds onto the grid and would pass, silently discarding
+    precision the guard exists to refuse. Measuring the *unrounded* value's distance from
+    the grid is what makes the promise below true rather than approximately true.
+
+    :param value: a coordinate in degrees, as the upstream GeoJSON states it
+    :return: the coordinate scaled by ``COORD2INT_FACTOR``, always a multiple of
+        :data:`~timezonefinder.configs.SOURCE_COORD_STEP`
+    :raises ValueError: if the value does not lie on the source's own grid
+    """
+    on_grid = value * (COORD2INT_FACTOR / SOURCE_COORD_STEP)
+    nearest = round(on_grid)
+    if abs(on_grid - nearest) > SOURCE_GRID_TOLERANCE:
+        raise ValueError(
+            f"the coordinate {value!r} needs more than six decimal places (it sits "
+            f"{abs(on_grid - nearest):g} of a source grid step from one). The packaged "
+            f"data stores boundary coordinates on the source's own grid, so a seventh "
+            f"decimal cannot be represented - see scripts/utils.py's source_coord2int "
+            f"and docs/data_format.rst."
+        )
+    return int(nearest) * SOURCE_COORD_STEP
+
+
 # NOTE: no JIT compilation. slows down the execution
-def convert2ints(coordinates: configs.CoordLists) -> configs.IntLists:
+def convert2ints(
+    coordinates: configs.CoordLists, from_source: bool = False
+) -> configs.IntLists:
+    """Scale a ring's coordinates to integers.
+
+    :param from_source: whether these coordinates come from the upstream dataset and
+        will therefore be *stored*. Those must land on the source's own grid
+        (:func:`source_coord2int`), because the packed payload holds residuals in units
+        of it. Everything else is transient geometry computed here - an H3 cell's
+        boundary, tested for overlap and then discarded - which has no such grid and
+        would be refused by that conversion for having more decimals than a published
+        coordinate ever does.
+    """
+    convert = source_coord2int if from_source else coord2int
     # return a tuple of coordinate lists
     return [
-        [coord2int(x) for x in coordinates[0]],
-        [coord2int(y) for y in coordinates[1]],
+        [convert(x) for x in coordinates[0]],
+        [convert(y) for y in coordinates[1]],
     ]
 
 
-def convert_polygon(coords, validate: bool = True) -> np.ndarray:
+def convert_polygon(
+    coords, validate: bool = True, from_source: bool = False
+) -> np.ndarray:
     coord_array = np.array(coords, dtype=DTYPE_FORMAT_F_NUMPY)
     validate_coord_array_shape(coord_array)
     x_coords, y_coords = coord_array
@@ -79,7 +143,7 @@ def convert_polygon(coords, validate: bool = True) -> np.ndarray:
         assert len(x_coords) >= 3, "Polygon must have at least 3 coordinates"
         assert is_valid_lng_vec(x_coords), "encountered invalid longitude values."
         assert is_valid_lat_vec(y_coords), "encountered invalid latitude values."
-    x_ints, y_ints = convert2ints(coords)
+    x_ints, y_ints = convert2ints(coords, from_source=from_source)
     # NOTE: jit compiled functions expect C ordered arrays (CoordType). signatures must match
     poly = np.array((x_ints, y_ints), dtype=DTYPE_FORMAT_SIGNED_I_NUMPY, order="C")
     return poly
@@ -122,7 +186,9 @@ def canonical_ring_key(ring: np.ndarray) -> bytes:
     return best
 
 
-def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
+def to_numpy_polygon_repr(
+    coord_pairs, flipped: bool = False, from_source: bool = False
+) -> np.ndarray:
     if flipped:
         # support the (lat, lng) format used by h3
         y_coords, x_coords = zip(*coord_pairs)
@@ -133,4 +199,6 @@ def to_numpy_polygon_repr(coord_pairs, flipped: bool = False) -> np.ndarray:
         x_coords = x_coords[:-1]
         y_coords = y_coords[:-1]
     # NOTE: skip expensive validation
-    return convert_polygon((x_coords, y_coords), validate=DEBUG)
+    return convert_polygon(
+        (x_coords, y_coords), validate=DEBUG, from_source=from_source
+    )

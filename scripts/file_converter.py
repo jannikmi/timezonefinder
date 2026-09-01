@@ -63,8 +63,9 @@ from scripts.configs import (
 from scripts.block_index import build_block_index, rotate_rings
 from scripts.data_integrity import (
     validate_block_index,
-    validate_coordinate_offset_table,
+    validate_block_payload,
     validate_hole_references,
+    validate_payload_offset_table,
     validate_shipped_schemas,
     validate_shortcut_index,
 )
@@ -79,9 +80,19 @@ from timezonefinder.configs import (
     DATA_VERSION_FILENAME,
     UNKNOWN_DATA_VERSION,
 )
+from timezonefinder.block_payload import encode_ring
+from timezonefinder.configs import (
+    BLOCK_BASE_DTYPE,
+    BLOCK_WIDTH_DTYPE,
+    POLYGON_BLOCK_SIZE,
+    VERTEX_COUNT_DTYPE,
+)
 from timezonefinder.np_binary_helpers import (
+    get_block_bases_path,
     get_block_offsets_path,
     get_block_ranges_path,
+    get_block_widths_path,
+    get_nr_vertices_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -194,16 +205,56 @@ def create_polygon_dirs(output_path: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def write_block_index(output_dir: Path, rings: list[np.ndarray]) -> None:
-    """Write the latitude block index of one polygon collection.
+def write_polygon_collection(output_dir: Path, rings: list[np.ndarray]) -> None:
+    """Write everything one polygon collection consists of, from a single encode.
 
-    ``rings`` must be the rings *as they are stored*, i.e. already rotated: the index
-    describes a partition of each ring from its first vertex, so building it from a
-    differently rotated copy would produce ranges that filter the wrong edges.
+    ``coordinates.bin`` holds the packed payloads; ``block_ranges.npy`` /
+    ``block_offsets.npy`` the latitude index; ``block_bases.npy`` /
+    ``block_widths.npy`` the coordinate frame each block's residuals are relative to;
+    and ``nr_vertices.npy`` the ring sizes a packed payload's length no longer gives.
+
+    One function rather than one per file, because they are one statement about the
+    same partition: the frames and the payload come out of the same encode - writing
+    them from two passes would let a width and the bytes it describes disagree - and the
+    latitude index has to be built over exactly the blocks the payload was cut into.
+
+    ``rings`` must be the rings *as they are stored*, i.e. already rotated: blocks
+    partition each ring from its first vertex, so building any of this from a
+    differently rotated copy describes edges the file does not hold.
     """
+    # The latitude index first: the payload is framed against it rather than against a
+    # second copy of the same minima, so it has to exist before anything is encoded.
     ranges, offsets = build_block_index(rings)
+
+    payloads, bases, widths = [], [], []
+    for i, ring in enumerate(rings):
+        payload, ring_bases, ring_widths = encode_ring(
+            ring, ranges[offsets[i] : offsets[i + 1]], POLYGON_BLOCK_SIZE
+        )
+        payloads.append(payload)
+        bases.append(ring_bases)
+        widths.append(ring_widths)
+
+    write_polygon_collection_flatbuffer(get_coordinate_path(output_dir), payloads)
+
     store_per_polygon_vector(get_block_ranges_path(output_dir), ranges)
     store_per_polygon_vector(get_block_offsets_path(output_dir), offsets)
+    store_per_polygon_vector(
+        get_block_bases_path(output_dir),
+        np.concatenate(bases).astype(BLOCK_BASE_DTYPE)
+        if bases
+        else np.empty(0, dtype=BLOCK_BASE_DTYPE),
+    )
+    store_per_polygon_vector(
+        get_block_widths_path(output_dir),
+        np.concatenate(widths).astype(BLOCK_WIDTH_DTYPE)
+        if widths
+        else np.empty((0, 2), dtype=BLOCK_WIDTH_DTYPE),
+    )
+    store_per_polygon_vector(
+        get_nr_vertices_path(output_dir),
+        np.array([ring.shape[1] for ring in rings], dtype=VERTEX_COUNT_DTYPE),
+    )
 
 
 def write_numpy_binaries(
@@ -258,34 +309,20 @@ def write_numpy_binaries(
         to_numpy_array(data.hole_poly_refs, dtype=DTYPE_FORMAT_SIGNED_I_NUMPY),
     )
 
-    # LATITUDE BLOCK INDEX: per block of stored vertices, the latitude range its edges
-    # span. Built from the rings about to be written rather than from data.polygons,
-    # which is the unrotated model - see write_binary_files.
-    write_block_index(boundaries_dir, boundary_rings)
-    write_block_index(holes_dir, hole_rings)
-
     print("Numpy binary files written successfully")
 
 
-def write_flatbuffer_files(
+def write_polygon_collections(
     output_path: Path,
     boundary_rings: list[np.ndarray],
     hole_rings: list[np.ndarray],
 ) -> None:
-    # separate output directories for holes and boundaries
-    holes_dir: Path = get_holes_dir(output_path)
-    boundaries_dir: Path = get_boundaries_dir(output_path)
-
-    print("Writing binary data to flatbuffer files...")
-    # Write polygon boundary coordinates to flatbuffer
-    boundary_polygon_file: Path = get_coordinate_path(boundaries_dir)
-    write_polygon_collection_flatbuffer(boundary_polygon_file, boundary_rings)
-
-    hole_polygon_file: Path = get_coordinate_path(holes_dir)
-    # Write hole coordinates to flatbuffer. Only the rings that are not a verbatim copy
-    # of a boundary polygon: the rest are resolved through poly_ref.npy at runtime.
-    write_polygon_collection_flatbuffer(hole_polygon_file, hole_rings)
-    print("Flatbuffer files written successfully")
+    print("Writing the polygon collections...")
+    write_polygon_collection(get_boundaries_dir(output_path), boundary_rings)
+    # Only the hole rings that are not a verbatim copy of a boundary polygon: the rest
+    # are resolved through poly_ref.npy at runtime.
+    write_polygon_collection(get_holes_dir(output_path), hole_rings)
+    print("Polygon collections written successfully")
 
 
 def write_binary_files(data: TimezoneData, output_path: Path) -> None:
@@ -311,15 +348,19 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     hole_rings = rotate_rings(data.inline_holes)
 
     write_numpy_binaries(data, output_path, boundary_rings, hole_rings)
-    write_flatbuffer_files(output_path, boundary_rings, hole_rings)
+    write_polygon_collections(output_path, boundary_rings, hole_rings)
     # Check the artifact rather than the in-memory model it came from: the hole
     # reference vector, the hole coordinate file and the hole bboxes are three separate
     # files, and only reading them back proves they agree. This is where the coherence
     # of a data directory is established - the runtime trusts it and does not re-derive it.
     print("Verifying the integrity of the written data...")
     validate_hole_references(output_path)
-    validate_coordinate_offset_table(output_path)
+    validate_payload_offset_table(output_path)
     validate_block_index(output_path)
+    # The rings are still here, which is the only moment the packed payload can be
+    # checked against what it was made from: afterwards there is nothing left to
+    # compare a decode with but the decode itself.
+    validate_block_payload(output_path, boundary_rings, hole_rings)
     print("Binary files written successfully")
 
 

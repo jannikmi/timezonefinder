@@ -28,6 +28,7 @@ __all__ = [
     "OCEAN_TIMEZONE_PREFIX",
     "COORD2INT_FACTOR",
     "INT2COORD_FACTOR",
+    "SOURCE_COORD_STEP",
     "MAX_LNG_VAL",
     "MAX_LAT_VAL",
     "MAX_LNG_VAL_INT",
@@ -39,6 +40,10 @@ __all__ = [
     "POLYGON_BLOCK_SIZE",
     "BLOCK_RANGE_DTYPE",
     "BLOCK_OFFSET_DTYPE",
+    "BLOCK_BASE_DTYPE",
+    "BLOCK_WIDTH_DTYPE",
+    "BLOCK_PAYLOAD_OFFSET_DTYPE",
+    "VERTEX_COUNT_DTYPE",
     "NO_ZONE_ID",
     "ZONE_ID_RESULT_DTYPE",
     # Type aliases
@@ -122,7 +127,7 @@ UNKNOWN_DATA_VERSION = "unknown"
 # into one field written into every binary would rewrite the 63 MB coordinate file to
 # record a shortcut-format change that did not touch its layout, and those binaries
 # are committed.
-DATA_FORMAT_VERSION: Final[int] = 2
+DATA_FORMAT_VERSION: Final[int] = 3
 
 # What this generation is made of: the per-file layout versions in force when
 # DATA_FORMAT_VERSION was last bumped. Restated rather than imported, because
@@ -132,7 +137,7 @@ DATA_FORMAT_VERSION: Final[int] = 2
 # released bound can express ships under a version that claims the old one.
 # tests/test_data_version.py asserts it; nothing else would notice.
 DATA_FORMAT_LAYOUT_VERSIONS: Final[dict[str, int]] = {
-    "POLYGON_LAYOUT_VERSION": 2,
+    "POLYGON_LAYOUT_VERSION": 3,
     "SHORTCUT_LAYOUT_VERSION": 2,
 }
 
@@ -164,6 +169,34 @@ BLOCK_RANGE_DTYPE: Final[np.dtype] = np.dtype("<i4")
 BLOCK_OFFSET_DTYPE: Final[np.dtype] = np.dtype("<u4")
 
 
+# POLYGON BLOCK PAYLOAD
+# What the coordinates themselves are stored as, since polygon layout 3: bit-packed
+# residuals against one coordinate frame per block. ``timezonefinder/block_payload.py``
+# describes the encoding and owns both directions of it.
+
+# A block frame's x origin, one per block. The same width as a coordinate because that
+# is what it is - the minimum longitude the block's vertices take. There is no y column:
+# the latitude index's ``[min, max]`` pair already opens with the y origin, and storing
+# it twice would hold ~0.24 MiB of duplicate numbers resident (see
+# ``timezonefinder/block_payload.py``).
+BLOCK_BASE_DTYPE: Final[np.dtype] = np.dtype("<i4")
+
+# How many bits one residual occupies, per block and axis. A bit *length*, so 0 means an
+# axis the block is constant on and stores nothing for; 32 is the ceiling, reached by
+# the blocks of rings that straddle the antimeridian.
+BLOCK_WIDTH_DTYPE: Final[np.dtype] = np.dtype("u1")
+
+# Where a block's residuals begin inside its own ring's payload. Derived when a
+# collection is loaded rather than stored - the widths and the vertex counts already
+# say it - and unsigned 32 bit because the largest packaged ring's payload is ~1.2 MB.
+BLOCK_PAYLOAD_OFFSET_DTYPE: Final[np.dtype] = np.dtype("<u4")
+
+# How many vertices a ring holds. Stored per ring because a packed payload's length no
+# longer says it: the byte count depends on the block widths, so the ragged last block's
+# vertex count cannot be read back out of it.
+VERTEX_COUNT_DTYPE: Final[np.dtype] = np.dtype("<u4")
+
+
 # COORDINATE SCALING AND PRECISION
 # Integer representation uses signed 4-byte (32-bit) integers
 # Coordinate values are stored multiplied by 10^7, so one unit is 10^-7 degrees -
@@ -186,6 +219,24 @@ INT2COORD_FACTOR = 10 ** (
 COORD2INT_FACTOR = (
     10**DECIMAL_PLACES_SHIFT
 )  # Convert from degrees to int: multiply by 10^7
+# What one step of the *source* grid is, in the units above. timezone-boundary-builder
+# publishes at most six decimal places, so every boundary coordinate it states is a
+# multiple of ten of our tenth-of-a-microdegree steps. The packaged data is stored on
+# that grid rather than on the finer one: the seventh digit carries no information the
+# source has, and storing it costs ~6.4 MB of residual width to reproduce a truncation
+# artifact. `scripts.utils.source_coord2int` is what holds the conversion to it, and
+# `timezonefinder/block_payload.py` what stores residuals in units of it.
+#
+# Queries are NOT quantised, and the asymmetry is deliberate. A boundary is the polygon
+# *through* those vertices, so its edges are continuous lines between them and a point's
+# side of one is determined at any precision the caller can supply - a query 1.1 cm from
+# an edge is genuinely on one side of it, however coarsely the edge's endpoints are
+# stated. Rounding the query onto this grid too would discard up to half a step of the
+# caller's own position and flip the answer for points within ~5.5 cm of an edge, to buy
+# nothing: the kernel's arithmetic is exact integer either way, since a residual is
+# scaled back by this constant rather than the query being divided by it.
+SOURCE_COORD_STEP: Final[int] = 10
+
 MAX_LNG_VAL = 180.0
 MAX_LAT_VAL = 90.0
 MAX_LNG_VAL_INT = int(MAX_LNG_VAL * COORD2INT_FACTOR)

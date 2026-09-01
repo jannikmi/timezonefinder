@@ -25,23 +25,37 @@ from timezonefinder.flatbuf.schemas import (
     get_schemas_dir,
     iter_schema_files,
 )
+from timezonefinder.block_payload import (
+    MAX_RESIDUAL_BITS,
+    PAYLOAD_WORD_DTYPE,
+    block_vertex_counts,
+    decode_ring,
+    ring_payload_length,
+)
 from timezonefinder.flatbuf.io.polygons import (
-    derive_coord_offset_table,
+    derive_payload_offset_table,
     get_coordinate_path,
     get_polygon_collection,
-    read_polygon_array_at,
-    read_polygon_array_from_binary,
+    read_payload_at,
+    read_payload_from_binary,
 )
 from timezonefinder.configs import (
+    BLOCK_BASE_DTYPE,
     BLOCK_OFFSET_DTYPE,
     BLOCK_RANGE_DTYPE,
+    BLOCK_WIDTH_DTYPE,
     POLYGON_BLOCK_SIZE,
+    SOURCE_COORD_STEP,
+    VERTEX_COUNT_DTYPE,
     SHORTCUT_H3_RES,
     ZONE_ID_RESULT_DTYPE,
 )
 from timezonefinder.np_binary_helpers import (
+    get_block_bases_path,
     get_block_offsets_path,
     get_block_ranges_path,
+    get_block_widths_path,
+    get_nr_vertices_path,
     get_poly_ref_path,
     get_zone_ids_path,
     read_per_polygon_vector,
@@ -220,26 +234,26 @@ def validate_shipped_schemas(data_dir: Path) -> None:
         )
 
 
-def validate_coordinate_offset_table(data_dir: Path) -> None:
-    """Check that the offset table addresses the same bytes the FlatBuffers reader does.
+def validate_payload_offset_table(data_dir: Path) -> None:
+    """Check that the offset table addresses the same words the FlatBuffers reader does.
 
-    The lookup path does not walk the FlatBuffers structure. It resolves every polygon's
-    ``(byte offset, length)`` once, with whole-array arithmetic over the vtables
-    (``timezonefinder.flatbuf.io.polygons.derive_coord_offset_table``), and afterwards
-    slices coordinates straight out of the buffer. That is what makes a candidate
+    The lookup path does not walk the FlatBuffers structure. It resolves every ring's
+    ``(word offset, length)`` once, with whole-array arithmetic over the vtables
+    (``timezonefinder.flatbuf.io.polygons.derive_payload_offset_table``), and afterwards
+    addresses payload words straight in the buffer. That is what makes a candidate
     polygon cheap to fetch on the memory-mapped path, and it means the reader's
     guarantees - that a table is where its reference says, that a vtable is aligned, that
-    the coords field is present - are assumed there rather than checked.
+    the payload field is present - are assumed there rather than checked.
 
     Nothing about a violated assumption announces itself: an offset landing one word
-    early still yields plausible ``int32`` coordinates and therefore a plausible wrong
-    timezone. So it is established here, over every polygon in both coordinate files, by
-    comparing against ``read_polygon_array_from_binary`` - the same bytes read the slow,
-    structural way. Exhaustive on purpose, which is affordable because this runs where
-    the data is produced and in the test suite, never when a ``TimezoneFinder`` is built.
+    early still yields plausible residuals and therefore a plausible wrong timezone. So
+    it is established here, over every ring in both coordinate files, by comparing
+    against ``read_payload_from_binary`` - the same bytes read the slow, structural way.
+    Exhaustive on purpose, which is affordable because this runs where the data is
+    produced and in the test suite, never when a ``TimezoneFinder`` is built.
 
     :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
-    :raises DataIntegrityError: if the table disagrees with the reader for any polygon
+    :raises DataIntegrityError: if the table disagrees with the reader for any ring
     """
     for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
         coordinate_path = get_coordinate_path(polygon_dir)
@@ -248,7 +262,7 @@ def validate_coordinate_offset_table(data_dir: Path) -> None:
                 coord_file.fileno(), 0, access=mmap.ACCESS_READ
             ) as coord_buf:
                 collection = get_polygon_collection(coord_buf, coordinate_path)
-                offsets, lengths = derive_coord_offset_table(collection)
+                offsets, lengths = derive_payload_offset_table(collection)
 
                 nr_polygons = collection.PolygonsLength()
                 if len(offsets) != nr_polygons:
@@ -261,26 +275,29 @@ def validate_coordinate_offset_table(data_dir: Path) -> None:
                 # Both readers hand out zero-copy views, and a mapping refuses to
                 # close while an export of it is alive - so the comparison happens
                 # inside a scope the views do not outlive, on the raising path too.
-                def compare(idx: int) -> tuple[bool, tuple[int, ...], tuple[int, ...]]:
-                    expected = read_polygon_array_from_binary(collection, idx)
-                    actual = read_polygon_array_at(
-                        coord_buf, offsets[idx], lengths[idx]
-                    )
+                # That is also why the word view is rebuilt per ring rather than hoisted:
+                # a raise below would keep the frame holding it alive through its own
+                # traceback, and the BufferError from leaving this block would replace
+                # the real complaint.
+                def compare(idx: int) -> tuple[bool, int, int]:
+                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                    expected = read_payload_from_binary(collection, idx)
+                    actual = read_payload_at(words, offsets[idx], lengths[idx])
                     agree = actual.shape == expected.shape and np.array_equal(
                         actual, expected
                     )
-                    return agree, actual.shape, expected.shape
+                    return agree, actual.size, expected.size
 
                 for idx in range(nr_polygons):
-                    agree, actual_shape, expected_shape = compare(idx)
+                    agree, actual_size, expected_size = compare(idx)
                     if not agree:
                         raise DataIntegrityError(
-                            f"polygon {idx} of {coordinate_path} reads as "
-                            f"{actual_shape} coordinates at byte offset "
-                            f"{int(offsets[idx])} but as {expected_shape} through the "
-                            f"FlatBuffers reader. The offset table does not address "
-                            f"this file's layout, so lookups against it would return "
-                            f"wrong coordinates silently."
+                            f"ring {idx} of {coordinate_path} reads as {actual_size} "
+                            f"payload words at word offset {int(offsets[idx])} but as "
+                            f"{expected_size} through the FlatBuffers reader. The "
+                            f"offset table does not address this file's layout, so "
+                            f"lookups against it would return wrong coordinates "
+                            f"silently."
                         )
 
 
@@ -298,6 +315,15 @@ def validate_block_index(data_dir: Path) -> None:
     files - by the converter over what it just wrote, and by the test suite over what
     the repository ships. That is also what pins ``POLYGON_BLOCK_SIZE``: a data
     directory blocked at a different size fails the block-count check by name.
+
+    **What this cannot witness, since polygon layout 3: the lower bound.** It is also the
+    block's y frame origin, so a ring decoded against a shifted one comes back shifted by
+    exactly the same amount and re-deriving the range reproduces the corrupted file. A
+    number stored once has nothing to be compared against - which is the price of not
+    storing it twice, and it is paid where it cannot be written rather than where it
+    would be read: ``timezonefinder.block_payload.encode_ring`` is handed these ranges
+    and refuses to frame a block whose latitudes they do not describe. The upper bound is
+    unaffected and is checked here as before.
 
     :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
     :raises DataIntegrityError: if the index does not describe the stored rings
@@ -330,36 +356,49 @@ def validate_block_index(data_dir: Path) -> None:
                 coord_file.fileno(), 0, access=mmap.ACCESS_READ
             ) as coord_buf:
                 collection = get_polygon_collection(coord_buf, coordinate_path)
-                coord_offsets, lengths = derive_coord_offset_table(collection)
+                coord_offsets, lengths = derive_payload_offset_table(collection)
+                bases = read_per_polygon_vector(get_block_bases_path(polygon_dir))
+                widths = read_per_polygon_vector(get_block_widths_path(polygon_dir))
+                ring_sizes = read_per_polygon_vector(get_nr_vertices_path(polygon_dir))
 
                 nr_rings = len(coord_offsets)
+
+                # The payload is a zero-copy view onto the mapping, and a mapping
+                # refuses to close while an export of it is alive - so it must not
+                # outlive the iteration that made it, on the raising path either. Hence
+                # a function whose locals go out of scope per ring rather than a loop
+                # variable.
+                def block_ranges_of(idx: int, start: int, stop: int) -> np.ndarray:
+                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                    ring = decode_ring(
+                        read_payload_at(words, coord_offsets[idx], lengths[idx]),
+                        bases[start:stop],
+                        ranges[start:stop],
+                        widths[start:stop],
+                        int(ring_sizes[idx]),
+                        POLYGON_BLOCK_SIZE,
+                    )
+                    return block_latitude_ranges(ring[1], POLYGON_BLOCK_SIZE)
+
                 if len(offsets) != nr_rings + 1:
                     raise DataIntegrityError(
-                        f"{offsets_path} has {len(offsets)} entries but {coordinate_path} "
-                        f"holds {nr_rings} rings, which needs {nr_rings + 1} - one "
-                        f"boundary per ring plus the end of the last."
+                        f"{offsets_path} has {len(offsets)} entries but "
+                        f"{coordinate_path} holds {nr_rings} rings, which needs "
+                        f"{nr_rings + 1} - one boundary per ring plus the end of "
+                        f"the last."
                     )
                 if int(offsets[0]) != 0 or int(offsets[-1]) != len(ranges):
                     raise DataIntegrityError(
-                        f"{offsets_path} spans [{int(offsets[0])}, {int(offsets[-1])}) "
-                        f"but {ranges_path} holds {len(ranges)} block ranges."
+                        f"{offsets_path} spans [{int(offsets[0])}, "
+                        f"{int(offsets[-1])}) but {ranges_path} holds "
+                        f"{len(ranges)} block ranges."
                     )
-
-                # The ring is a zero-copy view onto the mapping, and a mapping refuses
-                # to close while an export of it is alive - so it must not outlive the
-                # iteration that made it, on the raising path either. Hence a function
-                # whose locals go out of scope per ring rather than a loop variable.
-                def describe(idx: int) -> tuple[int, np.ndarray]:
-                    ring = read_polygon_array_at(
-                        coord_buf, coord_offsets[idx], lengths[idx]
-                    )
-                    return ring.shape[1], block_latitude_ranges(
-                        ring[1], POLYGON_BLOCK_SIZE
-                    )
-
                 for idx in range(nr_rings):
-                    nr_vertices, expected = describe(idx)
                     start, stop = int(offsets[idx]), int(offsets[idx + 1])
+                    nr_vertices = int(ring_sizes[idx])
+                    # Before the decode, not after: decoding slices the frames by
+                    # these same offsets, so a directory blocked at another size
+                    # fails there first with a shape error rather than by name.
                     expected_count = nr_blocks_for(nr_vertices, POLYGON_BLOCK_SIZE)
                     if stop - start != expected_count:
                         raise DataIntegrityError(
@@ -367,19 +406,191 @@ def validate_block_index(data_dir: Path) -> None:
                             f"vertices, which is {expected_count} blocks at "
                             f"POLYGON_BLOCK_SIZE={POLYGON_BLOCK_SIZE}, but "
                             f"{ranges_path} gives it {stop - start}. This data "
-                            f"directory was blocked at a different size; regenerate it "
-                            f"with scripts/file_converter.py from the current checkout."
+                            f"directory was blocked at a different size; "
+                            f"regenerate it with scripts/file_converter.py from "
+                            f"the current checkout."
                         )
+                    expected = block_ranges_of(idx, start, stop)
                     if not np.array_equal(ranges[start:stop], expected):
                         offender = int(
                             np.argmax(np.any(ranges[start:stop] != expected, axis=1))
                         )
                         raise DataIntegrityError(
-                            f"block {offender} of ring {idx} in {coordinate_path} is "
-                            f"recorded as {ranges[start + offender].tolist()} but its "
-                            f"edges span {expected[offender].tolist()}. A range that "
+                            f"block {offender} of ring {idx} in {coordinate_path} "
+                            f"is recorded as "
+                            f"{ranges[start + offender].tolist()} but its edges "
+                            f"span {expected[offender].tolist()}. A range that "
                             f"does not cover its own edges makes the kernels skip "
                             f"crossings, which changes answers rather than raising."
+                        )
+
+
+def validate_block_payload(
+    data_dir: Path,
+    boundary_rings: list[np.ndarray] | None = None,
+    hole_rings: list[np.ndarray] | None = None,
+) -> None:
+    """Check that the packed payload decodes to the rings it was made from.
+
+    Polygon layout 3 stores no coordinates: a ring is bit-packed residuals against one
+    frame per block, and the frames live in three files beside the payload. Every way
+    that can go wrong is silent - a width one bit short truncates a coordinate into a
+    plausible other one, a base off by a step shifts a whole block, and a stale
+    ``nr_vertices`` makes the last block ragged in the wrong place. None of it raises,
+    and all of it moves borders.
+
+    Two levels, because the converter and the test suite can prove different things.
+    With ``boundary_rings`` / ``hole_rings`` - the rings the converter just encoded -
+    this compares the decode against them directly, which is the strongest statement
+    available and the only moment it can be made. Without them, over the shipped
+    binaries, it re-derives each frame from its own decode and checks the latitude index
+    against it: ``block_ranges`` opens with exactly the minimum the y frame subtracts,
+    so the two files are two statements of one number and cannot drift unnoticed.
+
+    :param data_dir: A compiled data directory, as written by ``scripts/file_converter.py``
+    :param boundary_rings: the boundary rings as stored, if they are still in hand
+    :param hole_rings: the inline hole rings as stored, if they are still in hand
+    :raises DataIntegrityError: if the payload does not describe the stored rings
+    """
+    sources = (
+        (get_boundaries_dir(data_dir), boundary_rings),
+        (get_holes_dir(data_dir), hole_rings),
+    )
+    for polygon_dir, rings in sources:
+        coordinate_path = get_coordinate_path(polygon_dir)
+        bases_path = get_block_bases_path(polygon_dir)
+        widths_path = get_block_widths_path(polygon_dir)
+        vertices_path = get_nr_vertices_path(polygon_dir)
+        bases = read_per_polygon_vector(bases_path)
+        widths = read_per_polygon_vector(widths_path)
+        nr_vertices = read_per_polygon_vector(vertices_path)
+        block_offsets = read_per_polygon_vector(get_block_offsets_path(polygon_dir))
+        block_ranges = read_per_polygon_vector(get_block_ranges_path(polygon_dir))
+
+        for path, array, dtype in (
+            (bases_path, bases, BLOCK_BASE_DTYPE),
+            (widths_path, widths, BLOCK_WIDTH_DTYPE),
+            (vertices_path, nr_vertices, VERTEX_COUNT_DTYPE),
+        ):
+            if array.dtype != dtype:
+                raise DataIntegrityError(
+                    f"{path} holds {array.dtype} data, but the column is {dtype.name}. "
+                    f"The kernels read it by position without checking it."
+                )
+        if bases.ndim != 1:
+            raise DataIntegrityError(
+                f"{bases_path} has shape {bases.shape}, but it is one x frame origin "
+                f"per block - the y origin is the latitude index's own lower bound and "
+                f"is not stored again."
+            )
+        if widths.ndim != 2 or widths.shape[1] != 2:
+            raise DataIntegrityError(
+                f"{widths_path} has shape {widths.shape}, but it is one x and one y "
+                f"entry per block."
+            )
+        if len(bases) != len(widths):
+            raise DataIntegrityError(
+                f"{bases_path} has {len(bases)} entries and {widths_path} "
+                f"{len(widths)}; both are one per block."
+            )
+        if len(nr_vertices) != len(block_offsets) - 1:
+            raise DataIntegrityError(
+                f"{vertices_path} has {len(nr_vertices)} entries but "
+                f"{coordinate_path} holds {len(block_offsets) - 1} rings."
+            )
+        if int(widths.max(initial=0)) > MAX_RESIDUAL_BITS:
+            raise DataIntegrityError(
+                f"{widths_path} holds a width of {int(widths.max())} bits, above the "
+                f"{MAX_RESIDUAL_BITS} a residual may occupy."
+            )
+
+        with open(coordinate_path, "rb") as coord_file:
+            with mmap.mmap(
+                coord_file.fileno(), 0, access=mmap.ACCESS_READ
+            ) as coord_buf:
+                collection = get_polygon_collection(coord_buf, coordinate_path)
+                offsets, lengths = derive_payload_offset_table(collection)
+
+                # Views onto the mapping must not outlive the iteration that made
+                # them, on the raising path either - hence a function per ring.
+                def check(idx: int) -> str | None:
+                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                    start, stop = int(block_offsets[idx]), int(block_offsets[idx + 1])
+                    ring_bases = bases[start:stop]
+                    ring_widths = widths[start:stop]
+                    vertices = int(nr_vertices[idx])
+                    counts = block_vertex_counts(vertices, POLYGON_BLOCK_SIZE)
+                    if len(counts) != stop - start:
+                        return (
+                            f"has {vertices} vertices, which is {len(counts)} blocks, "
+                            f"but the frames give it {stop - start}"
+                        )
+                    expected_words = ring_payload_length(counts, ring_widths)
+                    if int(lengths[idx]) != expected_words:
+                        return (
+                            f"occupies {int(lengths[idx])} payload words where its "
+                            f"frames describe {expected_words}"
+                        )
+                    ring = decode_ring(
+                        read_payload_at(words, offsets[idx], lengths[idx]),
+                        ring_bases,
+                        block_ranges[start:stop],
+                        ring_widths,
+                        vertices,
+                        POLYGON_BLOCK_SIZE,
+                    )
+                    if rings is not None and not np.array_equal(ring, rings[idx]):
+                        return "does not decode to the ring it was encoded from"
+                    # Re-derive the frames from the decode. Cheap, and it is what makes
+                    # this worth running over binaries whose source rings are gone.
+                    for block in range(len(counts)):
+                        first = block * POLYGON_BLOCK_SIZE
+                        index = np.arange(first, first + counts[block]) % vertices
+                        # x is framed by block_bases; y by the latitude index itself,
+                        # which is the whole reason there is no second y column to check
+                        # against - the two cannot disagree because there is one of them
+                        origins = (
+                            int(ring_bases[block]),
+                            int(block_ranges[start + block, 0]),
+                        )
+                        for axis in (0, 1):
+                            values = ring[axis][index].astype(np.int64)
+                            base = int(values.min())
+                            span = int(values.max()) - base
+                            if base != origins[axis]:
+                                return (
+                                    f"block {block} axis {axis} is framed at "
+                                    f"{origins[axis]} but its values start at {base}"
+                                )
+                            if span % SOURCE_COORD_STEP:
+                                return (
+                                    f"block {block} axis {axis} spans {span}, which is "
+                                    f"not a whole number of source grid steps - the "
+                                    f"ring is not on the grid the payload assumes"
+                                )
+                            # the stored width counts source steps, not coordinate
+                            # units; see timezonefinder/block_payload.py
+                            width = (span // SOURCE_COORD_STEP).bit_length()
+                            if width != int(ring_widths[block, axis]):
+                                return (
+                                    f"block {block} axis {axis} is stored at "
+                                    f"{int(ring_widths[block, axis])} bits but its "
+                                    f"residuals span {width}"
+                                )
+                    return None
+
+                if rings is not None and len(rings) != len(offsets):
+                    raise DataIntegrityError(
+                        f"{coordinate_path} holds {len(offsets)} rings but "
+                        f"{len(rings)} were encoded into it."
+                    )
+                for idx in range(len(offsets)):
+                    complaint = check(idx)
+                    if complaint is not None:
+                        raise DataIntegrityError(
+                            f"ring {idx} of {coordinate_path} {complaint}. A "
+                            f"payload its frames do not describe decodes to "
+                            f"plausible wrong coordinates rather than raising."
                         )
 
 

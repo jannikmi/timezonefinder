@@ -54,24 +54,30 @@ def test_pt_in_poly_python(benchmark, pip_inputs_by_stratum, stratum):
     benchmark(_run_over, utils_numba.pt_in_poly_python, inputs)
 
 
-def _run_over_blocked(
-    func: Callable, inputs: Iterable[tuple[int, int, np.ndarray, np.ndarray]]
+def _run_over_packed(
+    func: Callable, buffers: tuple, inputs: Iterable[tuple[int, int, int, int, int]]
 ) -> None:
-    for x, y, poly, block_ranges in inputs:
-        func(x, y, poly, block_ranges, POLYGON_BLOCK_SIZE)
+    for x, y, nr_coords, block_start, nr_blocks in inputs:
+        func(x, y, nr_coords, POLYGON_BLOCK_SIZE, block_start, nr_blocks, *buffers)
 
 
 @pytest.mark.benchmark
 @pytest.mark.parametrize("stratum", STRATA)
 @pytest.mark.usefixtures("strict_numpy_warnings")
-def test_pt_in_poly_clang_blocked(benchmark, blocked_pip_inputs_by_stratum, stratum):
-    inputs = blocked_pip_inputs_by_stratum[stratum]
-    benchmark(_run_over_blocked, utils_clang.pt_in_poly_clang_blocked, inputs)
+def test_pt_in_poly_clang_packed(
+    benchmark, packed_pip_inputs_by_stratum, packed_buffers_by_backend, stratum
+):
+    inputs = packed_pip_inputs_by_stratum[stratum]
+    buffers = packed_buffers_by_backend["clang"]
+    benchmark(_run_over_packed, utils_clang.pt_in_poly_clang_packed, buffers, inputs)
 
 
 @pytest.mark.benchmark
 @pytest.mark.parametrize("stratum", STRATA)
 @pytest.mark.usefixtures("strict_numpy_warnings")
-def test_pt_in_poly_python_blocked(benchmark, blocked_pip_inputs_by_stratum, stratum):
-    inputs = blocked_pip_inputs_by_stratum[stratum]
-    benchmark(_run_over_blocked, utils_numba.pt_in_poly_blocked, inputs)
+def test_pt_in_poly_python_packed(
+    benchmark, packed_pip_inputs_by_stratum, packed_buffers_by_backend, stratum
+):
+    inputs = packed_pip_inputs_by_stratum[stratum]
+    buffers = packed_buffers_by_backend["numba"]
+    benchmark(_run_over_packed, utils_numba.pt_in_poly_packed, buffers, inputs)

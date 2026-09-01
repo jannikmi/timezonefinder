@@ -1,13 +1,14 @@
 namespace timezonefinder.flatbuf.generated.polygons;
 
 table Polygon {
-  // all x coordinates followed by all y coordinates, in a single vector
-  coords:[int];
+  // the ring's bit-packed residuals, as 32-bit words; see
+  // timezonefinder/block_payload.py for what one block holds
+  payload:[uint];
 }
 
 table PolygonCollection {
   polygons:[Polygon];
-  // encoding of the `coords` vectors; see POLYGON_LAYOUT_VERSION in
+  // encoding of the `payload` vectors; see POLYGON_LAYOUT_VERSION in
   // timezonefinder/flatbuf/io/polygons.py. absent (= 0) in files written
   // before the per-axis layout was introduced.
   layout_version:ushort;

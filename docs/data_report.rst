@@ -423,14 +423,14 @@ Binary File Sizes
      - Size (MB)
      - Percentage
    * - boundary polygon data
-     - 60.49
-     - 98.79%
+     - 30.27
+     - 97.83%
    * - hole polygon data
-     - 0.16
-     - 0.26%
+     - 0.09
+     - 0.29%
    * - shortcut index
      - 0.58
-     - 0.95%
+     - 1.88%
    * - Total
-     - 61.23
+     - 30.94
      - 100.00%

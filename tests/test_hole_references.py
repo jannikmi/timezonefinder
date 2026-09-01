@@ -16,17 +16,19 @@ from scripts.data_integrity import (
     validate_hole_dedup_ratio,
     validate_hole_references,
 )
-from scripts.file_converter import write_block_index
+from scripts.file_converter import write_polygon_collection
 from scripts.utils import canonical_ring_key
 from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
 from timezonefinder.configs import DEFAULT_DATA_DIR
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
-    write_polygon_collection_flatbuffer,
 )
 from timezonefinder.np_binary_helpers import (
+    get_block_bases_path,
     get_block_offsets_path,
     get_block_ranges_path,
+    get_block_widths_path,
+    get_nr_vertices_path,
     get_poly_ref_path,
     get_xmax_path,
     get_xmin_path,
@@ -153,8 +155,7 @@ def test_both_pip_backends_agree_on_resolved_hole_rings():
 
 def _write_hole_dir(path, *, rings, poly_ref, bboxes):
     path.mkdir(parents=True, exist_ok=True)
-    write_polygon_collection_flatbuffer(get_coordinate_path(path), rings)
-    write_block_index(path, rings)
+    write_polygon_collection(path, rings)
     xmin, xmax, ymin, ymax = zip(*bboxes)
     store_per_polygon_vector(get_xmin_path(path), np.array(xmin, dtype=np.int32))
     store_per_polygon_vector(get_xmax_path(path), np.array(xmax, dtype=np.int32))
@@ -201,12 +202,12 @@ def _bbox_of(ring) -> tuple[int, int, int, int]:
 def test_reference_and_inline_rings_resolve(tmp_path, boundaries):
     """A negative entry addresses the inline ring at ``-(v + 1)``, a non-negative one a
     boundary polygon. Inline ring 0 and boundary polygon 0 must not collide."""
-    inline = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
+    inline = np.array([[10, 20, 30], [40, 50, 60]], dtype=np.int32)
     _write_hole_dir(
         tmp_path,
         rings=[inline],
         poly_ref=[-1, 0],  # inline ring 0, then boundary polygon 0
-        bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],
+        bboxes=[(10, 30, 40, 60), (0, 0, 0, 0)],
     )
     holes = HoleArray(data_location=tmp_path, boundaries=boundaries)
     assert np.array_equal(holes.coords_of(0), inline)
@@ -223,11 +224,14 @@ def test_missing_reference_vector_is_not_readable(tmp_path, boundaries):
     not index it. Failing on the missing file beats guessing at an interpretation.
     """
     rings = [
-        np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32),
-        np.array([[7, 8, 9], [1, 2, 3]], dtype=np.int32),
+        np.array([[10, 20, 30], [40, 50, 60]], dtype=np.int32),
+        np.array([[70, 80, 90], [10, 20, 30]], dtype=np.int32),
     ]
     _write_hole_dir(
-        tmp_path, rings=rings, poly_ref=None, bboxes=[(1, 3, 4, 6), (7, 9, 1, 3)]
+        tmp_path,
+        rings=rings,
+        poly_ref=None,
+        bboxes=[(10, 30, 40, 60), (70, 90, 10, 30)],
     )
     with pytest.raises(FileNotFoundError, match="poly_ref"):
         HoleArray(data_location=tmp_path, boundaries=boundaries)
@@ -246,7 +250,7 @@ def test_hole_array_does_not_validate_on_construction(tmp_path, boundaries):
         tmp_path,
         rings=[],  # the reference claims an inline ring the file does not contain
         poly_ref=[-1],
-        bboxes=[(1, 3, 4, 6)],
+        bboxes=[(10, 30, 40, 60)],
     )
     HoleArray(data_location=get_holes_dir(data_dir), boundaries=boundaries)  # no raise
 
@@ -261,7 +265,7 @@ def test_hole_array_does_not_validate_on_construction(tmp_path, boundaries):
 
 @pytest.mark.unit
 def test_integrity_check_accepts_a_consistent_directory(tmp_path, boundaries):
-    inline = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
+    inline = np.array([[10, 20, 30], [40, 50, 60]], dtype=np.int32)
     data_dir = _synthetic_data_dir(
         tmp_path,
         rings=[inline],
@@ -277,9 +281,9 @@ def test_integrity_check_rejects_a_reference_vector_of_the_wrong_length(
 ):
     data_dir = _synthetic_data_dir(
         tmp_path,
-        rings=[np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)],
+        rings=[np.array([[10, 20, 30], [40, 50, 60]], dtype=np.int32)],
         poly_ref=[-1],
-        bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],  # two holes, one reference entry
+        bboxes=[(10, 30, 40, 60), (0, 0, 0, 0)],  # two holes, one reference entry
     )
     with pytest.raises(DataIntegrityError, match="entries but there are 2 holes"):
         validate_hole_references(data_dir)
@@ -293,7 +297,7 @@ def test_integrity_check_rejects_an_inline_ring_count_mismatch(tmp_path, boundar
     own - it would surface as a wrong timezone, not as an error.
     """
     data_dir = _synthetic_data_dir(
-        tmp_path, rings=[], poly_ref=[-1], bboxes=[(1, 3, 4, 6)]
+        tmp_path, rings=[], poly_ref=[-1], bboxes=[(10, 30, 40, 60)]
     )
     with pytest.raises(DataIntegrityError, match="exactly once"):
         validate_hole_references(data_dir)
@@ -333,9 +337,9 @@ def test_integrity_check_rejects_a_directory_without_references(tmp_path, bounda
     """A hole directory missing ``poly_ref.npy`` is rejected rather than guessed at."""
     data_dir = _synthetic_data_dir(
         tmp_path,
-        rings=[np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)],
+        rings=[np.array([[10, 20, 30], [40, 50, 60]], dtype=np.int32)],
         poly_ref=None,
-        bboxes=[(1, 3, 4, 6), (0, 0, 0, 0)],
+        bboxes=[(10, 30, 40, 60), (0, 0, 0, 0)],
     )
     with pytest.raises(FileNotFoundError, match="poly_ref"):
         validate_hole_references(data_dir)
@@ -386,19 +390,20 @@ def _inline_data_dir(destination) -> None:
     rings = [tf.holes.coords_of(i) for i in range(len(tf.holes))]
 
     holes_dir = destination / get_holes_dir(source).relative_to(source)
-    coord_path = get_coordinate_path(holes_dir)
-    coord_path.unlink()  # drop the symlink, do not write through it
-    write_polygon_collection_flatbuffer(coord_path, rings)
-
-    # the block index describes this collection's own rings, so it is rebuilt with
-    # them: a directory whose holes are all inline holds one entry per hole, where the
-    # packaged one holds only the 27 that are not references
+    # the payload and the block files describe this collection's own rings, so they are
+    # rewritten with them: a directory whose holes are all inline holds one entry per
+    # hole, where the packaged one holds only the 27 that are not references. The
+    # symlinks are dropped first rather than written through.
     for path in (
+        get_coordinate_path(holes_dir),
         get_block_ranges_path(holes_dir),
         get_block_offsets_path(holes_dir),
+        get_block_bases_path(holes_dir),
+        get_block_widths_path(holes_dir),
+        get_nr_vertices_path(holes_dir),
     ):
         path.unlink()
-    write_block_index(holes_dir, rings)
+    write_polygon_collection(holes_dir, rings)
 
     # every hole addressed as its own inline ring: a valid directory in the same
     # layout, just one where nothing was deduplicated

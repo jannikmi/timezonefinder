@@ -8,7 +8,12 @@ import pytest
 
 from scripts import reporting
 from scripts.configs import BinaryData, ShortcutIndexStats
-from scripts.utils import convert2ints, convert_polygon, write_json
+from scripts.utils import (
+    convert2ints,
+    convert_polygon,
+    source_coord2int,
+    write_json,
+)
 from tests.auxiliaries import (
     convert_inside_polygon_input,
     get_rnd_poly,
@@ -167,6 +172,28 @@ def test_convert2coords():
     np.testing.assert_almost_equal(coords_converted, coords_true)
 
 
+def test_the_conversion_refuses_a_seventh_decimal():
+    """The guard that lets the packaged data be stored on the source's own grid.
+
+    Rounding a coordinate onto that grid is lossless only while the source stays on it,
+    and timezone-boundary-builder has published at most six decimals in every release so
+    far. An upstream that started publishing a seventh would have real information
+    rounded away, silently, and every downstream check would still pass because the file
+    would be internally consistent. So the converter stops instead.
+    """
+    assert source_coord2int(13.358) == 133580000
+    assert source_coord2int(-13.358) == -133580000
+    assert source_coord2int(0.1) == 1000000
+
+    with pytest.raises(ValueError, match="more than six decimal places"):
+        source_coord2int(13.3580001)
+
+    # ... and a value finer than a storage step, which is the case a check applied
+    # *after* the rounding cannot see: this one rounds onto the grid and would pass
+    with pytest.raises(ValueError, match="more than six decimal places"):
+        source_coord2int(13.35800004)
+
+
 def test_convert2ints():
     coords_true = get_rnd_poly()
     poly_int = convert2ints(coords_true)
@@ -181,6 +208,26 @@ def test_convert2ints():
     y_ints = [utils.coord2int(y) for y in latitudes]
     ints_true = np.array((x_ints, y_ints))
     np.testing.assert_almost_equal(ints_converted, ints_true)
+
+
+def test_convert2ints_from_source_rounds_onto_the_source_grid():
+    """The default conversion is for transient geometry; stored rings ask for the grid.
+
+    Both exist because both are needed: an H3 cell's boundary is computed here and has
+    as many decimals as a float carries, while a *stored* boundary coordinate has to sit
+    on the grid the packed payload counts residuals in. Converting the first the second
+    way raises - which is how this got the wrong way round once, and what
+    `scripts/hex_utils.py` would hit again.
+    """
+    coords = ([13.358, -0.5], [52.5186, 0.25])
+    assert convert2ints(coords, from_source=True) == [
+        [133580000, -5000000],
+        [525186000, 2500000],
+    ]
+    from timezonefinder.configs import SOURCE_COORD_STEP
+
+    for axis in convert2ints(coords, from_source=True):
+        assert all(v % SOURCE_COORD_STEP == 0 for v in axis)
 
 
 def test_clang_extension_loaded():

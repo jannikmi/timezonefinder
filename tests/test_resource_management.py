@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder.block_payload import PAYLOAD_WORD_DTYPE
 from timezonefinder.coord_accessors import FileCoordAccessor
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
 from timezonefinder.utils import close_resource, get_boundaries_dir
@@ -101,34 +102,33 @@ class TestNumpyViewOutlivesAccessor:
         finally:
             accessor.cleanup()
 
-    def test_returned_array_rows_are_contiguous(self):
-        """Coordinates are stored one axis at a time, so each row is a dense block.
+    def test_returned_payload_is_contiguous(self):
+        """A ring's payload is a dense run of words inside the collection's buffer.
 
-        Both acceleration backends depend on it: the C extension rejects a strided row
-        outright, and the Numba kernel's eager signature is C-ordered. A view whose rows
-        went back to being strided would reintroduce a per-call copy silently.
+        Both acceleration backends depend on it: the C extension rejects a strided
+        buffer outright, and the Numba kernel's eager signature is C-ordered. A view
+        that went back to being strided would reintroduce a per-call copy silently.
         """
         accessor = self._accessor()
         try:
-            coords = accessor[0]
-            assert coords.dtype == np.int32
-            assert coords.flags["C_CONTIGUOUS"]
-            assert coords[0].flags["C_CONTIGUOUS"]
-            assert coords[1].flags["C_CONTIGUOUS"]
+            payload = accessor[0]
+            assert payload.dtype == PAYLOAD_WORD_DTYPE
+            assert payload.flags["C_CONTIGUOUS"]
+            assert accessor.words.flags["C_CONTIGUOUS"]
         finally:
-            del coords
+            del payload
             accessor.cleanup()
 
     def test_cleanup_with_live_view_does_not_raise(self):
         """Explicit cleanup() must not propagate the BufferError from mmap.close()."""
         accessor = self._accessor()
-        coords = accessor[0]  # keeps a view onto the mmap alive
+        payload = accessor[0]  # keeps a view onto the mmap alive
 
         accessor.cleanup()  # used to raise BufferError
 
         # the view is still valid: suppressing the error kept the mapping alive
-        assert coords.shape[0] == 2
-        assert coords.size > 0
+        assert payload.ndim == 1
+        assert payload.size > 0
 
     def test_cleanup_releases_mapping_once_the_view_is_dropped(self):
         """A refused close must only defer the unmapping, not pin it to the accessor.
@@ -263,14 +263,14 @@ def test_loaded_dataset_arrays_are_read_only(in_memory):
         if not in_memory:
             arrays.update(
                 {
-                    "boundary coordinate offsets": (
-                        finder.boundaries.coordinates.coord_offsets
+                    "boundary payload offsets": (
+                        finder.boundaries.coordinates.word_offsets
                     ),
-                    "boundary coordinate lengths": (
-                        finder.boundaries.coordinates.coord_lengths
+                    "boundary payload lengths": (
+                        finder.boundaries.coordinates.word_lengths
                     ),
-                    "hole coordinate offsets": finder.holes.coordinates.coord_offsets,
-                    "hole coordinate lengths": finder.holes.coordinates.coord_lengths,
+                    "hole payload offsets": finder.holes.coordinates.word_offsets,
+                    "hole payload lengths": finder.holes.coordinates.word_lengths,
                 }
             )
 

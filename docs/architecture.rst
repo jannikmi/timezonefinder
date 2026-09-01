@@ -330,10 +330,12 @@ Non-goals and deliberate ceilings
 What was **not** built matters as much as what was.
 
 **~1.1 cm coordinate resolution is a chosen ceiling, not a defect.** Coordinates are scaled by
-10\ :sup:`7` into ``int32``, which bounds the worst-case error at roughly 1 cm at the equator. That
-is already far below the precision of the underlying boundary data, which is digitised from
-OpenStreetMap. Spending 64-bit floats to represent uncertainty the source does not have would cost
-memory and speed for no accuracy.
+10\ :sup:`7` into ``int32``, which steps ~1.1 cm at the equator. That is exactly ten times finer
+than the boundary data it is compared against: timezone-boundary-builder publishes six decimal
+places, ~11 cm, and the packaged geometry sits on that grid. Spending 64-bit floats to represent
+uncertainty the source does not have would cost memory and speed for no accuracy - and there is no
+room to spend them anyway, since ±180° at 10\ :sup:`-7` already uses 1.8 of ``int32``'s 2.15
+billion. :doc:`data_format` carries both grids and why they are independent.
 
 **No geometry simplification, ever.** This is the one line that is not negotiable, because it is the
 entire reason to choose this package over a faster one. See :doc:`alternatives` for who should

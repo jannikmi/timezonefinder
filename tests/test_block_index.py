@@ -26,7 +26,8 @@ from tests.auxiliaries import (
     ON_LAND_POINTS_FIXTURE,
     load_benchmark_points,
 )
-from timezonefinder import TimezoneFinder, utils, utils_clang, utils_numba
+from timezonefinder import TimezoneFinder, utils, utils_numba
+from timezonefinder.block_payload import encode_ring
 from timezonefinder.configs import (
     BLOCK_OFFSET_DTYPE,
     BLOCK_RANGE_DTYPE,
@@ -39,6 +40,7 @@ from timezonefinder.np_binary_helpers import (
     read_per_polygon_vector,
     store_per_polygon_vector,
 )
+from timezonefinder.polygon_array import PolygonArray
 from timezonefinder.utils import get_boundaries_dir, get_holes_dir
 
 # How many query points to replay per fixture. The committed ``pip_inputs`` fixture is
@@ -54,15 +56,6 @@ NR_QUERY_POINTS = 1_500
 # update, while losing the filter altogether would put it at 100 %.
 MAX_EDGE_FRACTION = 0.10
 
-KERNEL_PAIRS = [
-    pytest.param(
-        utils_numba.pt_in_poly_python, utils_numba.pt_in_poly_blocked, id="numba"
-    ),
-    pytest.param(
-        utils_clang.pt_in_poly_clang, utils_clang.pt_in_poly_clang_blocked, id="clang"
-    ),
-]
-
 
 @pytest.fixture(scope="module")
 def finder() -> TimezoneFinder:
@@ -72,27 +65,38 @@ def finder() -> TimezoneFinder:
 
 
 @pytest.fixture(scope="module")
-def real_pip_calls(finder) -> list[tuple[int, int, np.ndarray, np.ndarray]]:
-    """Every ``(x, y, ring, block ranges)`` a real lookup reaches a kernel with.
+def real_pip_calls(finder) -> list[tuple]:
+    """Every ``(collection, poly_id, x, y, ring, block ranges)`` a real lookup makes.
 
     Recorded off the committed query fixtures rather than constructed, because which
     polygons a point is tested against - and with which of the two id spaces the index
     is addressed by - is decided by the lookup stack and not by this test.
     """
-    calls: list[tuple[int, int, np.ndarray, np.ndarray]] = []
-    original = utils.inside_polygon_blocked
+    calls: list[tuple] = []
+    original = PolygonArray.pip
 
-    def recording(x, y, coords, block_ranges, block_size):
-        calls.append((x, y, coords, block_ranges))
-        return original(x, y, coords, block_ranges, block_size)
+    def recording(self, poly_id, x, y):
+        # The collection and the id, so a test can re-run the *shipped* path; and the
+        # ring and its ranges, which since polygon layout 3 only exist as such above the
+        # kernel - it is handed the whole collection and a block offset - and which the
+        # unblocked reference below has to be given at this level.
+        calls.append(
+            (
+                self,
+                poly_id,
+                x,
+                y,
+                self.coords_of(poly_id),
+                self.block_ranges_of(poly_id),
+            )
+        )
+        return original(self, poly_id, x, y)
 
-    utils.inside_polygon_blocked = recording
-    try:
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(PolygonArray, "pip", recording)
         for fixture in (AMBIGUOUS_SHORTCUT_POINTS_FIXTURE, ON_LAND_POINTS_FIXTURE):
             for lng, lat in load_benchmark_points(fixture)[:NR_QUERY_POINTS]:
                 finder.timezone_at(lng=lng, lat=lat)
-    finally:
-        utils.inside_polygon_blocked = original
 
     assert calls, (
         "the query fixtures no longer reach the point-in-polygon stage, so everything "
@@ -119,25 +123,27 @@ def _edges_in_surviving_blocks(
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("unblocked, blocked", KERNEL_PAIRS)
-def test_the_blocked_kernel_answers_what_the_unblocked_one_does(
-    real_pip_calls, unblocked, blocked
-):
-    """Skipping blocks may not change a single answer, on either acceleration path.
+def test_the_shipped_kernel_answers_what_the_naive_one_does(real_pip_calls):
+    """Neither skipping blocks nor unpacking residuals may change a single answer.
 
-    Over every point-in-polygon test the committed query fixtures actually produce, so
-    the rings and the ranges are paired the way the lookup stack pairs them - holes
-    resolved through their references included.
+    The reference is ``utils.inside_polygon``: the plain ray cast over an absolute
+    coordinate array, which is what every other kernel here is a faster spelling of.
+    Run over every point-in-polygon test the committed query fixtures actually produce,
+    so the rings are paired the way the lookup stack pairs them - holes resolved
+    through their references included.
+
+    Only one backend is exercised, whichever is bound; ``tests/test_acceleration_paths``
+    is what holds the two to each other, and it does so over this same shipped path.
     """
     disagreements = []
-    for x, y, ring, ranges in real_pip_calls:
-        expected = unblocked(x, y, ring)
-        got = blocked(x, y, ring, ranges, POLYGON_BLOCK_SIZE)
+    for collection, poly_id, x, y, ring, _ in real_pip_calls:
+        expected = utils.inside_polygon(x, y, ring)
+        got = collection.pip(poly_id, x, y)
         if expected != got:
             disagreements.append((x, y, ring.shape[1], expected, got))
     assert not disagreements, (
         f"{len(disagreements)} of {len(real_pip_calls)} point-in-polygon tests disagree "
-        f"between the blocked and unblocked kernels, first: {disagreements[0]}"
+        f"between the shipped kernel and the naive one, first: {disagreements[0]}"
     )
 
 
@@ -151,14 +157,13 @@ def test_a_vertex_of_every_ring_is_answered_alike(finder):
     boundaries = finder.boundaries
     for poly_id in range(len(boundaries)):
         ring = boundaries.coords_of(poly_id)
-        ranges = boundaries.block_ranges_of(poly_id)
         for vertex in (0, ring.shape[1] // 2, ring.shape[1] - 1):
             x, y = int(ring[0][vertex]), int(ring[1][vertex])
-            assert utils_numba.pt_in_poly_blocked(
-                x, y, ring, ranges, POLYGON_BLOCK_SIZE
-            ) == utils_numba.pt_in_poly_python(x, y, ring), (
+            assert boundaries.pip(poly_id, x, y) == utils_numba.pt_in_poly_python(
+                x, y, ring
+            ), (
                 f"polygon {poly_id} answers its own vertex {vertex} differently "
-                f"with the block filter"
+                f"through the block filter and the packed payload"
             )
 
 
@@ -168,7 +173,7 @@ def test_the_filter_actually_skips(real_pip_calls):
     catches, since every equality assertion above would still pass."""
     scanned = 0
     total = 0
-    for _, y, ring, ranges in real_pip_calls:
+    for _, _, _, y, ring, ranges in real_pip_calls:
         nr_vertices = ring.shape[1]
         scanned += _edges_in_surviving_blocks(
             ranges, nr_vertices, y, POLYGON_BLOCK_SIZE
@@ -275,16 +280,47 @@ def test_the_integrity_check_rejects_a_narrowed_range(tmp_path):
     A range one unit too narrow is exactly the defect that does not announce itself:
     the file still parses, the block count is right, and only the points whose latitude
     falls in the dropped sliver are answered wrongly.
+
+    The *upper* bound is what this can catch by re-derivation, and the reason is worth
+    knowing: since polygon layout 3 the lower bound is also the block's y frame origin,
+    so a decode performed with a shifted one produces latitudes shifted by exactly the
+    same amount and re-deriving the range reproduces the corrupted file. Nothing
+    internal can witness a number that is stored once -
+    ``test_the_encoder_rejects_a_range_that_does_not_describe_the_ring`` is where that
+    half is guarded instead, at build time, where it cannot be written in the first
+    place.
     """
     data_dir = _writable_boundaries_dir(tmp_path)
     path = get_block_ranges_path(get_boundaries_dir(data_dir))
     ranges = read_per_polygon_vector(path).copy()
-    ranges[0, 0] += 1
+    ranges[0, 1] -= 1
     path.unlink()
     store_per_polygon_vector(path, ranges)
 
     with pytest.raises(DataIntegrityError, match="does not cover its own edges"):
         validate_block_index(data_dir)
+
+
+@pytest.mark.unit
+def test_the_encoder_rejects_a_range_that_does_not_describe_the_ring():
+    """The build-time half of the check above, and what lets the y frame be stored once.
+
+    The encoder frames each block's latitudes against the index rather than against a
+    second copy of the same minima, so the two cannot disagree in a written file - but
+    only because it refuses to write one where they would. Without this a mis-built
+    index would silently produce residuals relative to the wrong origin.
+    """
+    boundaries = PolygonArray(
+        data_location=get_boundaries_dir(DEFAULT_DATA_DIR), in_memory=True
+    )
+    ring = np.ascontiguousarray(boundaries.coords_of(0))
+    ranges = np.array(boundaries.block_ranges_of(0), copy=True)
+
+    encode_ring(ring, ranges, POLYGON_BLOCK_SIZE)  # the honest index is accepted
+
+    ranges[0, 0] += 1
+    with pytest.raises(ValueError, match="the index records"):
+        encode_ring(ring, ranges, POLYGON_BLOCK_SIZE)
 
 
 @pytest.mark.unit
@@ -412,16 +448,14 @@ def test_rotating_a_ring_does_not_change_an_answer(finder, by):
     poly_id = int(np.argmax([boundaries.coords_of(i).shape[1] for i in range(200)]))
     ring = boundaries.coords_of(poly_id)
     rotated = rotate_ring(ring, by)
-    rotated_ranges = block_latitude_ranges(rotated[1], POLYGON_BLOCK_SIZE)
-    ranges = boundaries.block_ranges_of(poly_id)
 
     rng = np.random.default_rng(0)
     xs = rng.integers(int(ring[0].min()), int(ring[0].max()) + 1, 200)
     ys = rng.integers(int(ring[1].min()), int(ring[1].max()) + 1, 200)
+    # the rotated ring through the naive kernel against the stored one through the
+    # shipped path: if where a ring starts were observable, these would part company
     for x, y in zip(xs.tolist(), ys.tolist()):
-        assert utils_numba.pt_in_poly_blocked(
-            x, y, rotated, rotated_ranges, POLYGON_BLOCK_SIZE
-        ) == utils_numba.pt_in_poly_blocked(x, y, ring, ranges, POLYGON_BLOCK_SIZE)
+        assert utils.inside_polygon(x, y, rotated) == boundaries.pip(poly_id, x, y)
 
 
 @pytest.mark.unit

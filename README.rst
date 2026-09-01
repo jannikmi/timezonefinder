@@ -93,7 +93,7 @@ The timezone boundary data is installed automatically as the separate ``timezone
 How it works
 ------------
 
-A lookup scales the coordinates to 32-bit integers (x 10^7, ~1 cm resolution), finds the point's
+A lookup scales the coordinates to 32-bit integers (x 10^7, ~1.1 cm steps), finds the point's
 H3 hexagon at resolution 4, and reads a precomputed shortcut for that cell. Most cells are covered
 by a single timezone, so the answer is returned immediately with no geometry touched at all. Only
 an ambiguous cell falls through to the polygons it lists: bounding-box rejection first, then a

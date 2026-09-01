@@ -453,7 +453,7 @@ class TimezoneData(BaseModel):
             flush=True,
         )
         polynrs_of_holes.append(poly_id)
-        hole_poly = to_numpy_polygon_repr(hole)
+        hole_poly = to_numpy_polygon_repr(hole, from_source=True)
         holes.append(hole_poly)
         nr_coords = hole_poly.shape[1]
         all_hole_lengths.append(nr_coords)
@@ -489,7 +489,7 @@ class TimezoneData(BaseModel):
         )
         original_polygons.append(original_coord_array)
 
-        poly = to_numpy_polygon_repr(poly_with_hole.pop(0))
+        poly = to_numpy_polygon_repr(poly_with_hole.pop(0), from_source=True)
         polygons.append(poly)
         x_coords = poly[0]
         polygon_lengths.append(len(x_coords))

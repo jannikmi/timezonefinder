@@ -717,32 +717,68 @@ def group_pip_inputs_by_stratum(
     return grouped
 
 
-def group_blocked_pip_inputs_by_stratum(
+def group_packed_pip_inputs_by_stratum(
     inputs: list[tuple[int, int, int]],
     strata: list[str],
     batch_size: int,
-) -> dict[str, list[tuple[int, int, np.ndarray, np.ndarray]]]:
-    """:func:`group_pip_inputs_by_stratum`, plus each polygon's latitude block ranges.
+) -> dict[str, list[tuple[int, int, int, int, int]]]:
+    """What the packed kernel is called with, per stratum.
 
-    ``(x, y, polygon_coords, block_ranges)`` quadruples - what ``PolygonArray.pip`` hands
-    the kernel that a lookup actually reaches. Kept beside the triple form rather than
-    replacing it: the bare kernel is still what the pure-Python fallback and the
-    build-time geometry helpers run, so both are worth timing, and the two benchmark
-    them under separate names.
+    ``(x, y, nr_coords, block_start, nr_blocks)`` - everything that varies per ring.
+    The arrays themselves do not: since polygon layout 3 the kernel takes the *whole*
+    collection and finds a ring by where its blocks begin, so they are wrapped once by
+    :func:`packed_buffers_by_backend` and shared by every call, exactly as a lookup
+    shares them.
+
+    Kept beside the triple form rather than replacing it: ``inside_polygon`` over a bare
+    coordinate array is still what build-time geometry code runs and what every other
+    kernel is checked against, so both are worth timing, under separate names.
     """
     grouped = group_pip_inputs_by_stratum(inputs, strata, batch_size)
-    by_stratum: dict[str, list[tuple[int, int, np.ndarray, np.ndarray]]] = {}
+    by_stratum: dict[str, list[tuple[int, int, int, int, int]]] = {}
     for stratum, bucket in grouped.items():
         ids = [
             poly_id
             for (_, _, poly_id), label in zip(inputs, strata)
             if label == stratum
         ]
-        by_stratum[stratum] = [
-            (x, y, coords, boundaries.block_ranges_of(poly_id))
-            for (x, y, coords), poly_id in zip(bucket, ids[: len(bucket)])
-        ]
+        rows = []
+        for (x, y, _coords), poly_id in zip(bucket, ids[: len(bucket)]):
+            start = boundaries.block_offsets[poly_id]
+            rows.append(
+                (
+                    x,
+                    y,
+                    int(boundaries.nr_vertices[poly_id]),
+                    start,
+                    boundaries.block_offsets[poly_id + 1] - start,
+                )
+            )
+        by_stratum[stratum] = rows
     return by_stratum
+
+
+def packed_buffers_by_backend() -> dict[str, tuple]:
+    """The boundary collection's packed arrays, wrapped for each acceleration path.
+
+    Both, rather than whichever is bound: the two kernels are benchmarked side by side
+    and each needs its own handles - the C one cffi buffers, the numba one the arrays
+    themselves. A kernel handed the other path's buffers is a segfault rather than a
+    wrong answer, which is why they are built by the same factories the runtime uses.
+    """
+    from timezonefinder import utils_clang, utils_numba
+
+    args = (
+        boundaries.coordinates.words,
+        boundaries.block_ranges,
+        boundaries.block_bases,
+        boundaries.block_widths,
+        boundaries.block_payload_offsets,
+    )
+    return {
+        "clang": utils_clang.packed_buffers_clang(*args),
+        "numba": utils_numba.packed_buffers_numba(*args),
+    }
 
 
 def single_location_test(func, lat, lng, description, expected_orig):

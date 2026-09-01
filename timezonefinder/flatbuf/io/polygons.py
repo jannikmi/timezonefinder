@@ -5,12 +5,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO, Final
 
+from timezonefinder.block_payload import PAYLOAD_WORD_DTYPE
 from timezonefinder.configs import DEFAULT_DATA_DIR, IntegerLike
 from timezonefinder.layout import incompatible_layout_error
 from timezonefinder.flatbuf.generated.polygons.Polygon import (
     PolygonStart,
     PolygonEnd,
-    PolygonAddCoords,
+    PolygonAddPayload,
 )
 from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
     PolygonCollection,
@@ -22,11 +23,11 @@ from timezonefinder.flatbuf.generated.polygons.PolygonCollection import (
 )
 
 # Byte offset of a field inside a FlatBuffers vtable, as the generated accessors spell
-# it: `Polygon.CoordsAsNumpy` opens with `self._tab.Offset(4)` and
+# it: `Polygon.PayloadAsNumpy` opens with `self._tab.Offset(4)` and
 # `PolygonCollection.Polygons` with the same 4. Named here because
-# `derive_coord_offset_table` walks those vtables itself instead of going through the
+# `derive_payload_offset_table` walks those vtables itself instead of going through the
 # generated classes, and a bare 4 in that arithmetic says nothing.
-COORDS_VTABLE_SLOT: Final[int] = 4
+PAYLOAD_VTABLE_SLOT: Final[int] = 4
 POLYGONS_VTABLE_SLOT: Final[int] = 4
 
 # Widths of the FlatBuffers primitives the vtable walk steps over.
@@ -43,11 +44,12 @@ _WORD_BYTES: Final[dict[str, int]] = {
     _VOFFSET: _VOFFSET_BYTES,
 }
 
-# What a coordinate is on disk, and so what the writer emits and the reader reads.
-# Named once because the two sides have to agree on it: `Builder.CreateNumpyVector`
-# takes the element width from the array's dtype, so an int64 array would write 8-byte
-# elements that `read_polygon_array_at` then reads back as pairs of int32.
-COORD_DTYPE: Final[np.dtype] = np.dtype("<i4")
+# How many bytes one payload word occupies, which is what the offset arithmetic below
+# converts between. The element type itself is
+# :data:`~timezonefinder.block_payload.PAYLOAD_WORD_DTYPE`, and the two sides have to
+# agree on it: `Builder.CreateNumpyVector` takes the element width from the array's
+# dtype, so a wider array would write elements `read_payload_at` reads back as several.
+PAYLOAD_WORD_BYTES: Final[int] = PAYLOAD_WORD_DTYPE.itemsize
 
 # FlatBuffers file identifier (bytes 4-8), answering "is this a timezonefinder
 # polygon file at all?". Files written before this marker existed carry none.
@@ -64,6 +66,11 @@ POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 #       (block_ranges.npy / block_offsets.npy, see timezonefinder/configs.py's
 #       POLYGON_BLOCK_SIZE), and every ring rotated to the start index that index
 #       is cheapest at
+#   3 = the coordinates themselves are gone: each ring is a stream of 32-bit words
+#       holding bit-packed residuals against one coordinate frame per block
+#       (timezonefinder/block_payload.py), with the frames in block_bases.npy /
+#       block_widths.npy and the vertex counts in nr_vertices.npy, which a packed
+#       payload's length no longer gives
 #
 # Deliberately NOT tied to the package version: bump it only when what the file means
 # changes, never for an ordinary release. Data compiled by any version that writes a
@@ -83,64 +90,12 @@ POLYGON_FILE_IDENTIFIER: Final[bytes] = b"TZFP"
 # differently while parsing perfectly. The check therefore has to happen before
 # anything reads the index, which is where it does: PolygonArray builds its coordinate
 # accessor first.
-POLYGON_LAYOUT_VERSION: Final[int] = 2
-
-
-def flatten_polygon_coords(polygon: np.ndarray) -> np.ndarray:
-    """Convert polygon coordinates from shape (2, N) to a flat [x0...xN-1, y0...yN-1] array.
-
-    All x coordinates are stored first, followed by all y coordinates, so that each
-    axis forms one contiguous block on disk.
-
-    Args:
-        polygon: Array of polygon coordinates with shape (2, N)
-                where the first row contains x coordinates and the second row contains y coordinates
-
-    Returns:
-        Flattened 1D array of coordinates in the format [x0...xN-1, y0...yN-1]
-    """
-    # C order ravels row by row, i.e. all of row 0 (x) then all of row 1 (y).
-    # Kept layout-agnostic on purpose: an F-ordered input still ravels to the same
-    # result (via a copy), so the writer cannot silently emit the interleaved layout.
-    return polygon.ravel(order="C")
-
-
-def reshape_to_polygon_coords(coords: np.ndarray) -> np.ndarray:
-    """Reshape flattened coordinates to the format (2, N).
-
-    Returns a **view** onto ``coords`` whose rows are each C-contiguous: row 0 is the
-    leading x block, row 1 the trailing y block. That is what keeps ``coords_of()``
-    zero-copy, and both acceleration backends depend on it - the C extension rejects a
-    strided row outright, and the Numba kernel's eager signature requires C order.
-
-    Args:
-        coords: Flattened 1D array of coordinates in the format [x0...xN-1, y0...yN-1]
-
-    Returns:
-        Array of polygon coordinates with shape (2, N)
-        where the first row contains x coordinates and the second row contains y coordinates
-    """
-    return coords.reshape(2, -1)
-
-
-def _as_coord_dtype(coords: np.ndarray) -> np.ndarray:
-    """Return ``coords`` as :data:`COORD_DTYPE`, refusing values that do not fit.
-
-    The range check is what ``Builder.PrependInt32`` performed per coordinate before the
-    whole block was written in one copy. It is kept because ``astype`` wraps silently,
-    and a wrapped coordinate is a plausible wrong one that no later check would catch:
-    the offset table and the FlatBuffers reader would agree on the same wrong bytes.
-    One comparison over the array costs nothing next to writing it.
-    """
-    if coords.dtype == COORD_DTYPE:
-        return coords
-    limits = np.iinfo(COORD_DTYPE)
-    if coords.size and (coords.min() < limits.min or coords.max() > limits.max):
-        raise ValueError(
-            f"coordinate outside the {COORD_DTYPE} range "
-            f"[{limits.min}, {limits.max}]: [{coords.min()}, {coords.max()}]"
-        )
-    return coords.astype(COORD_DTYPE)
+#
+# Layout 3 changes the vector's element type as well as its meaning, so a layout 2 file
+# read as layout 3 would parse - `[int]` and `[uint]` are the same bytes - and answer
+# with nonsense. The marker is the only thing that separates them, which is why it is
+# checked before the payload is touched rather than trusted.
+POLYGON_LAYOUT_VERSION: Final[int] = 3
 
 
 def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
@@ -155,35 +110,32 @@ def get_coordinate_path(data_dir: Path = DEFAULT_DATA_DIR) -> Path:
 
 
 def write_polygon_collection_flatbuffer(
-    file_path: Path, polygons: list[np.ndarray]
+    file_path: Path, payloads: list[np.ndarray]
 ) -> None:
-    """Write a collection of polygons to a flatbuffer file using a single coordinate vector.
+    """Write one packed payload per ring to a flatbuffer file.
 
-    Args:
-        file_path: Path to save the flatbuffer file
-        polygons: List of polygon coordinates as numpy arrays with shape (2, N)
-                  where the first row contains x coordinates and the second row contains y coordinates
+    The container half of polygon layout 3, and only that: what a payload *means* is
+    ``timezonefinder/block_payload.py``'s, and what a data directory needs beside it is
+    ``scripts.file_converter.write_polygon_collection``'s. Splitting them is what keeps
+    this testable against a hand-built collection that is not a timezone at all.
 
-    Returns:
-        None
+    :param file_path: where to write the collection
+    :param payloads: one ring's payload words each, as :func:`.block_payload.encode_ring`
+        returns them
     """
-    print(f"writing {len(polygons)} polygons to binary file {file_path}")
+    print(f"writing {len(payloads)} polygons to binary file {file_path}")
     builder = flatbuffers.Builder(0)
     polygon_offsets = []
 
-    # Create each polygon and store its offset
-    for polygon in polygons:
-        # Flatten coordinates to [x0...xN-1, y0...yN-1] format and write the block in
-        # one copy. A `PrependInt32` per coordinate costs ~8.6 s for the 15.85 M
-        # coordinates of the packaged boundaries against ~0.03 s here, for output that
-        # is byte-identical - the builder lays a numpy vector down exactly as the
-        # element-wise loop did.
-        coords = _as_coord_dtype(flatten_polygon_coords(polygon))
-        coords_offset = builder.CreateNumpyVector(coords)
+    for payload in payloads:
+        # One copy per ring rather than a `Prepend` per word: the builder lays a numpy
+        # vector down exactly as the element-wise loop did, for output that is
+        # byte-identical and ~300x faster over a collection this size.
+        words = np.ascontiguousarray(payload, dtype=PAYLOAD_WORD_DTYPE)
+        payload_offset = builder.CreateNumpyVector(words)
 
-        # Create polygon
         PolygonStart(builder)
-        PolygonAddCoords(builder, coords_offset)  # Use Coords for combined vector
+        PolygonAddPayload(builder, payload_offset)
         polygon_offsets.append(PolygonEnd(builder))
 
     # Create polygon vector
@@ -206,6 +158,13 @@ def write_polygon_collection_flatbuffer(
     with open(file_path, "wb") as f:
         buf = builder.Output()
         f.write(buf)
+        # The whole file is read back as one `uint32` array, so its length has to be a
+        # multiple of a word. FlatBuffers aligns what it writes but does not pad the
+        # tail, and a file one byte short of a word would make `np.frombuffer` refuse
+        # the buffer rather than any single polygon.
+        padding = -len(buf) % PAYLOAD_WORD_BYTES
+        if padding:
+            f.write(b"\x00" * padding)
 
 
 def _incompatible_layout_error(
@@ -250,28 +209,21 @@ def get_polygon_collection(
     return collection
 
 
-def read_polygon_array_from_binary(
+def read_payload_from_binary(
     poly_collection: PolygonCollection, idx: IntegerLike
 ) -> np.ndarray:
-    """Read a polygon's coordinates from a FlatBuffers collection.
+    """Read a ring's payload words from a FlatBuffers collection.
 
-    The reference implementation of what a stored polygon means, and the slow one: it
+    The reference implementation of where a stored ring lives, and the slow one: it
     re-walks the vtables through the generated accessors on every call. The lookup path
-    goes through :func:`derive_coord_offset_table` and :func:`read_polygon_array_at`
+    goes through :func:`derive_payload_offset_table` and :func:`read_payload_at`
     instead; this is what those are checked against, by
-    ``scripts.data_integrity.validate_coordinate_offset_table``.
+    ``scripts.data_integrity.validate_payload_offset_table``.
     """
     # value checks not required as this is a private function
     # processed polygon indices are expected to be in range
-    # nr_polygons = collection.PolygonsLength()
-    # if idx >= nr_polygons:
-    #     raise IndexError(
-    #         f"Index {idx} out of bounds for collection with {nr_polygons} polygons."
-    #     )
     poly = poly_collection.Polygons(idx)
-    coords = poly.CoordsAsNumpy()  # flat 1D array: all x values, then all y values
-    # Reshape to a (2, N) view with contiguous rows
-    return reshape_to_polygon_coords(coords)
+    return poly.PayloadAsNumpy()
 
 
 def _buffer_word_reader(buf: bytes | mmap.mmap) -> Callable:
@@ -321,17 +273,21 @@ def _file_word_reader(coordinate_file: BinaryIO) -> Callable:
     return read
 
 
-def derive_coord_offset_table(
+def derive_payload_offset_table(
     poly_collection: PolygonCollection,
     coordinate_file: BinaryIO | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Locate every polygon's coordinate vector once, as plain integers.
+    """Locate every ring's payload once, as plain integers.
 
-    Returns ``(offsets, lengths)``: for polygon *i*, the byte offset of its first
-    coordinate into the underlying buffer and how many ``int32`` values follow. That is
-    everything :func:`read_polygon_array_at` needs, so fetching a candidate polygon
-    costs one ``np.frombuffer`` rather than a FlatBuffers vtable walk rebuilt in Python
-    per lookup - which on the memory-mapped path was the dominant cost of a query.
+    Returns ``(offsets, lengths)``: for polygon *i*, the offset of its first payload
+    word into the buffer *read as words* and how many words follow. That is everything
+    :func:`read_payload_at` needs, so fetching a candidate polygon costs one slice
+    rather than a FlatBuffers vtable walk rebuilt in Python per lookup - which on the
+    memory-mapped path was the dominant cost of a query.
+
+    Word offsets rather than byte ones because that is what every consumer wants: the
+    point-in-polygon kernels address the payload as ``uint32``, and a FlatBuffers vector
+    of them is aligned to its element, so the conversion is exact by construction.
 
     **Integers, not arrays, and that is the whole design.** Caching the polygon arrays
     would be shorter and just as fast, but each cached array is a live export of the
@@ -357,7 +313,7 @@ def derive_coord_offset_table(
     file that violates that - a misaligned position would read a neighbouring word and
     yield wrong coordinates silently, so what establishes it is
     ``scripts.data_integrity.validate_coordinate_offset_table``, comparing this table
-    against :func:`read_polygon_array_from_binary` for every polygon where the data is
+    against :func:`read_payload_from_binary` for every polygon where the data is
     produced and again over what the repository ships.
 
     :param poly_collection: A collection returned by :func:`get_polygon_collection`
@@ -365,7 +321,8 @@ def derive_coord_offset_table(
         the header words are read through it instead of out of the collection's buffer,
         so building the table does not make a memory map resident - see
         :func:`_file_word_reader`. Pass nothing when the buffer is already in memory.
-    :return: ``(offsets, lengths)``, both ``uint32`` and both owning their data
+    :return: ``(offsets, lengths)`` in payload words, both ``uint32`` and both owning
+        their data
     """
     root = poly_collection._tab
     read = (
@@ -386,7 +343,7 @@ def derive_coord_offset_table(
     # each field sits relative to the table. FlatBuffers shares one vtable between
     # identically shaped tables, so these positions repeat - harmlessly.
     vtable_pos = table_pos - read(table_pos, _SOFFSET)
-    field_offset = read(vtable_pos + COORDS_VTABLE_SLOT, _VOFFSET).astype(np.int64)
+    field_offset = read(vtable_pos + PAYLOAD_VTABLE_SLOT, _VOFFSET).astype(np.int64)
 
     # The field holds a reference to the coordinate vector, whose length prefix sits
     # immediately before its data.
@@ -394,24 +351,31 @@ def derive_coord_offset_table(
     length_pos = reference_pos + read(reference_pos, _UOFFSET)
 
     lengths = read(length_pos, _UOFFSET).astype(np.uint32)
-    offsets = (length_pos + _UOFFSET_BYTES).astype(np.uint32)
-    return offsets, lengths
+    byte_offsets = length_pos + _UOFFSET_BYTES
+    if np.any(byte_offsets % PAYLOAD_WORD_BYTES):
+        # Would mean the buffer is not what FlatBuffers wrote: a vector of `uint` is
+        # aligned to four bytes, and its data starts right after a four-byte length
+        # prefix. Checked rather than assumed, because a word view taken at an odd
+        # offset reads neighbouring bytes and answers with plausible nonsense.
+        raise ValueError(
+            "payload vector not aligned to a word; the coordinate file was not written "
+            "by this format"
+        )
+    return (byte_offsets // PAYLOAD_WORD_BYTES).astype(np.uint32), lengths
 
 
-def read_polygon_array_at(
-    buf: bytes | mmap.mmap, offset: IntegerLike, length: IntegerLike
+def read_payload_at(
+    words: np.ndarray, offset: IntegerLike, length: IntegerLike
 ) -> np.ndarray:
-    """Read a polygon's coordinates straight out of ``buf`` at a known position.
+    """Read a ring's payload straight out of ``words`` at a known position.
 
-    The fetch half of :func:`derive_coord_offset_table`. Returns the same ``(2, N)``
-    zero-copy view with contiguous rows that :func:`read_polygon_array_from_binary`
-    does, without consulting the FlatBuffers structure at all.
+    The fetch half of :func:`derive_payload_offset_table`. Returns a zero-copy view, so
+    it costs no allocation and nothing is decoded - the point-in-polygon kernels read
+    the collection's whole payload and address a ring by offset, and this is for the
+    callers that want one ring on its own.
 
-    :param buf: The buffer the offsets were derived against
-    :param offset: Byte offset of the polygon's first coordinate
-    :param length: Number of ``int32`` coordinate values
+    :param words: the coordinate buffer read as :data:`.block_payload.PAYLOAD_WORD_DTYPE`
+    :param offset: word offset of the ring's payload
+    :param length: how many words it occupies
     """
-    coords = np.frombuffer(
-        buf, dtype=COORD_DTYPE, count=int(length), offset=int(offset)
-    )
-    return reshape_to_polygon_coords(coords)
+    return words[int(offset) : int(offset) + int(length)]
