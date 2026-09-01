@@ -3,9 +3,6 @@ import sys
 from pathlib import Path
 import pytest
 
-# Scripts that require pytz to run
-PYTZ_REQUIRED_SCRIPTS = {"aware_datetime", "get_offset"}
-
 
 def get_example_scripts():
     examples_dir = Path(__file__).parent.parent / "examples"
@@ -20,26 +17,18 @@ def get_example_scripts():
     return scripts
 
 
-def has_pytz():
-    """Check if pytz is available."""
-    try:
-        import pytz  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
-
-
 @pytest.mark.examples
 @pytest.mark.parametrize(
     "script_name",
     get_example_scripts(),
 )
 def test_example_script_runs(script_name):
-    # Skip scripts that require pytz when pytz is not available
-    if script_name in PYTZ_REQUIRED_SCRIPTS and not has_pytz():
-        pytest.skip(f"Script {script_name} requires pytz, but pytz is not available")
+    """Every example runs to completion on a plain install.
 
+    No script is skipped for a missing optional dependency any more: the one that
+    still demonstrates ``pytz`` imports it inside the section that needs it and says
+    so when it is absent, rather than failing to run at all.
+    """
     module_name = f"examples.{script_name}"
     print(f"Running {module_name} script:")
     result = subprocess.run(

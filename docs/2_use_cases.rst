@@ -40,8 +40,10 @@ Windows does not ship a system timezone database, so install ``tzdata`` there
 (``pip install tzdata``) before resolving IANA names with ``zoneinfo``; without it these
 raise ``zoneinfo.ZoneInfoNotFoundError``.
 
-``examples/aware_datetime.py`` shows the same thing with ``pytz``, including the difference between
-attaching a timezone and localising a naive datetime.
+``examples/aware_datetime.py`` runs both of these, and closes with the same thing under the optional
+``pytz`` extra - where ``replace(tzinfo=...)`` attaches a historical offset instead of the current
+one, so a naive datetime has to go through ``tz.localize()``. ``zoneinfo`` has no such split, which
+is why ``localize()`` above can simply replace.
 
 
 Getting a location's time zone offset
@@ -71,10 +73,10 @@ the moment to read it at and defaults to now:
     save you from, since ``zoneinfo`` applies the convention correctly. Doing it by
     hand, always call ``utcoffset()`` on an aware datetime rather than reading the name.
 
-``examples/get_offset.py`` answers the same question with the optional ``pytz`` extra,
-returning the offset in minutes from ``certain_timezone_at()``. For new code, the stdlib
+``examples/get_offset.py`` runs this over a land coordinate on two dates and over one at sea, and
+wraps it as the offset in minutes. For new code, the stdlib
 `zoneinfo <https://docs.python.org/3/library/zoneinfo.html>`_ module is the
-recommended way to attach an IANA timezone to a datetime.
+recommended way to attach an IANA timezone to a datetime, and these helpers use it.
 
 
 Django
