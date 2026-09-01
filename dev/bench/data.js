@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788303291028,
+  "lastUpdate": 1788303293063,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8222,6 +8222,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2431 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39e5ea68702d5aa725de0dd7ce1042f5ae2ce745",
+          "message": "Make concurrent improvement passes merge-friendly (#577)\n\n* Make concurrent improvement passes merge-friendly\n\n* CHANGELOG-1: Record changelog fragments\n\n* Remove redundant GH-449 register item\n\n* Clarify redundant closed-item retention\n\n* Document int32 coordinate headroom\n\n* Address improvement workflow review findings\n\n* Restore payload decision reachability\n\n* Preserve FMT-2 script discovery deltas\n\n* Stop automatic Codex review retriggers\n\n* Align rejection cleanup paths\n\n* Park GH-522 until history shrink is needed",
+          "timestamp": "2026-09-02T00:53:49+02:00",
+          "tree_id": "d4eed6fa49357c3d3a83899c13c81f05ed6053f3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/39e5ea68702d5aa725de0dd7ce1042f5ae2ce745"
+        },
+        "date": 1788303292428,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0078973770141602,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0080757141113281,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.226825714111328,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2275924682617188,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58215808868408,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58283710479736,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
           }
         ]
       }
