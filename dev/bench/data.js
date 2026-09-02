@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788317562814,
+  "lastUpdate": 1788318159584,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3690,6 +3690,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0004417273821118896",
             "extra": "mean: 24.679235999997218 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "95741be1475714d516c1aab60ae760c0caf2e480",
+          "message": "PERF-1 and BATCH-1: the ocean check by prefix, and a batch timezone_at_land (#581)\n\nPERF-1: `is_ocean_timezone` compares a prefix instead of running a regular\nexpression. `OCEAN_TIMEZONE_PREFIX` holds no regex metacharacters and\n`re.match` anchors at the start, so `str.startswith` is exactly equivalent;\n`import re` goes with it. The ceiling is ~250 ns per `timezone_at_land`, about\n6 % of a mixed workload and inside the noise floor, so this ships as a\nsimplification rather than as a measurable speed-up - as decided.\n\nBATCH-1: `timezone_ids_at_land` and `timezone_names_at_land`, on both finder\nclasses and as global functions, matching the shape of the existing pair. The\nocean check costs nothing per point: `ZoneNames.ocean_flags()` is a boolean\narray indexed by zone id, built once per instance, so a batch is masked in one\nindexing operation rather than testing each answer's name. It carries a\ntrailing False so NO_ZONE_ID reads as \"not an ocean zone\" rather than picking\nup the last zone's flag.\n\nMeasured over 2,500 uniformly random points: ~0.94 µs per point against\n~1.49 µs for the scalar method in a loop, with the mask itself not\ndistinguishable from the plain batch.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T05:01:51+02:00",
+          "tree_id": "5dfba6a483fbccd11f3bf8215312bab72cbc68ad",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/95741be1475714d516c1aab60ae760c0caf2e480"
+        },
+        "date": 1788318158257,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 206.0297914961345,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016068252655412064",
+            "extra": "mean: 4.853666999991901 msec\nrounds: 167 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 294.72078447608095,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016874129347396478",
+            "extra": "mean: 3.3930419999990136 msec\nrounds: 255 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 57.44652604482293,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001188341742651224",
+            "extra": "mean: 17.407493000007435 msec\nrounds: 55 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
