@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788321286504,
+  "lastUpdate": 1788321624096,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3825,6 +3825,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00031476334424935246",
             "extra": "mean: 16.548600999982455 msec\nrounds: 56 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6b59c0a64dffee8a839ad600bc16fe0f3a5de7a",
+          "message": "Register BENCH-2 and BENCH-3 on how the benchmark pages are measured (#583)\n\n* Register BENCH-2 and BENCH-3 on how the benchmark pages are measured\n\nBENCH-2: `docs/benchmark_results_*.rst` are the package's published performance claims and are rendered only by whoever runs `make reports` locally. CI never renders them - the `measure` job records the tracked core subset and compares head against merge base. So the pages carry one unrepeatable local run. The shape proposed is the one the data pipeline already uses: a dispatchable job uploads the rendered pages as an artifact and the release consumes it, rather than CI committing to `master`, since the pull_request half of `benchmark.yml` deliberately holds no write permissions. It carries the one decision that is the maintainer's: whether the published pages should describe CI hardware instead of a desktop.\n\nBENCH-3: the tracked measurement and the published pages differ in selection, round count, estimator and environment, with nothing stating that they do. Inside that divergence is a defect confirmed on this checkout - `benchmarks-ci` runs under plain `uv run` while `benchmarks` runs isolated, and `timezonefinder.utils` binds numba at import time whenever it is importable, so a `--all-groups` environment measures the numba kernel while every page asserts clang. The item argues against unifying the two runs and for asserting their difference instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record the BENCH-2 hardware decision: the pages document CI hardware\n\nAnswered 2026-09-02 by the maintainer. The published benchmark pages move from the maintainer's machine to a Linux runner, on the ground that the pages exist to be checkable: a CI run's error is bounded, measured and printable, where a desktop's depends on whatever else that machine was doing and never appears in the page. Conditional on every page naming the CPU class it was measured on, since `ubuntu-latest` spread the tracked min 134-158 % across 11 runs of an identical lookup path purely on hardware.\n\nThe item returns to `open`, the ranking cell says decided, and the topic decision module records the refused alternatives - rendering locally behind the noise gate, and rendering both.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Do not claim BENCH-2 narrows BENCH-3's scope\n\nBoth entries said that rendering the pages in CI would remove the machine and environment rows from BENCH-3's table. It does not. The `measure` job syncs `--group test` without `compare` while `make reports` needs `--isolated --group test --group compare`, and two separately dispatched jobs draw independently from a pool that serves at least three CPU classes, so a CI-rendered page and the tracked run remain different experiments on different hardware.\n\nClosing those rows takes a deliberate same-runner arrangement, whose cost is that the full suite would ride the per-pull-request job it was deliberately kept out of. That is BENCH-3's call, and it is now stated there rather than assumed away here.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T05:59:36+02:00",
+          "tree_id": "7b3c4577cbf73f1749c17dd4ae9d9d553de7c4f9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c6b59c0a64dffee8a839ad600bc16fe0f3a5de7a"
+        },
+        "date": 1788321622890,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 159.41493443754533,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008848625323250596",
+            "extra": "mean: 6.272937999995065 msec\nrounds: 135 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 226.73531305059396,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006349354254494904",
+            "extra": "mean: 4.410428999989335 msec\nrounds: 205 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 44.75059620103161,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002188750857956283",
+            "extra": "mean: 22.346070999986978 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
           }
         ]
       }
