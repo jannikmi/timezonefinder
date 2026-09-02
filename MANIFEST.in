@@ -20,6 +20,9 @@ recursive-exclude .cursor *
 recursive-exclude .claude *
 recursive-exclude .agents *
 recursive-exclude contributing *
+# unreleased changelog fragments; the release folds them into CHANGELOG.rst and
+# deletes them, so nothing here is ever part of a published distribution
+prune changelog.d
 graft tests
 prune tests/.pytest_cache
 prune .git

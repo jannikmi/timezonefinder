@@ -42,6 +42,9 @@
 #   build      - build wheels for supported Python versions
 #   release    - tag the current commit with the version number and push it
 #   rmtag      - remove the current version tag locally and remotely
+#   changelog  - preview the unreleased changelog section assembled from changelog.d/
+#   changelog-assemble - fold changelog.d/ into CHANGELOG.rst and consume the fragments
+#                        (release preparation only)
 #   docs       - build Sphinx HTML documentation from docs/
 
 # https://stackoverflow.com/questions/38878088/activate-anaconda-python-environment-from-makefile
@@ -313,6 +316,19 @@ memory-noise:
 	uv run python -m scripts.benchmark_noise $(NOISE_MEMORY_RUNS_DIR)/run-*.json \
 		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS) --metric=memory
 
+# A change files one fragment under changelog.d/ rather than editing the shared
+# unreleased section, so two concurrent pull requests never touch the same lines.
+# This prints what the section will read as; tests/test_changelog_fragments.py
+# runs the same validation, so a malformed fragment fails CI rather than a release.
+changelog:
+	@uv run python -m scripts.changelog_fragments
+
+# Release preparation only: this rewrites CHANGELOG.rst and *deletes* the
+# fragments it consumed, which is why it is not what `changelog` runs. The
+# release's end-state rewrite happens afterwards, on the combined section.
+changelog-assemble:
+	@uv run python -m scripts.changelog_fragments --assemble
+
 tox:
 	@uv run tox
 
@@ -396,4 +412,5 @@ docs:
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
-	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json
+	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json \
+	changelog changelog-assemble
