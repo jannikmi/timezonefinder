@@ -138,9 +138,13 @@ jobs:
         with:
           output-dir: dist
         env:
-          # https://github.com/pypa/cibuildwheel/blob/v3.4.1/cibuildwheel/resources/pinned_docker_images.cfg
+          # All three images are pinned to the same dated build, so a refresh is one
+          # date. musllinux is 1_2: pypa stopped building musllinux_1_1 images in
+          # October 2024 (Alpine 3.12 is EOL), so that pin could never be refreshed
+          # and its blob is cold enough in the registry to fail a pull on its own.
+          # https://github.com/pypa/cibuildwheel/blob/v4.2.0/cibuildwheel/resources/pinned_docker_images.cfg
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
-          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_1_x86_64:2024.10.26-1
+          CIBW_MUSLLINUX_X86_64_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.04.25-0
           CIBW_BUILD: ${{ env.CIBW_BUILD_VERSIONS }}
           CIBW_ARCHS: ${{ matrix.cibw_arch }}
           CIBW_SKIP: ${{ matrix.cibw_skip }}
