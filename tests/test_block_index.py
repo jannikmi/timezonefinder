@@ -20,7 +20,7 @@ from scripts.block_index import (
     nr_blocks_for,
     rotate_ring,
 )
-from scripts.data_integrity import DataIntegrityError, validate_block_index
+from timezonefinder._data_integrity import DataIntegrityError, validate_block_index
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     ON_LAND_POINTS_FIXTURE,

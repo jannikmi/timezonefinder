@@ -132,6 +132,17 @@ Run it from the root of a ``timezonefinder`` repository checkout: the converter 
 helpers as ``scripts.<module>``, so invoking it by path fails to resolve them. ``make testparse``
 runs exactly this against the small ``tests/test_input.json`` fixture.
 
+The converter finishes by exhaustively validating the compiled directory. The same check ships
+with the package and can be repeated over this or any other compiled directory without the
+repository checkout:
+
+::
+
+    timezonefinder validate-data /path/to/output_folder
+
+Validation is explicit rather than part of ``TimezoneFinder`` construction, so a service does
+not pay for re-deriving build-established facts on every instance.
+
 
 
 Per default the script parses the timezone-boundary-builder release named by the

@@ -61,14 +61,7 @@ from scripts.configs import (
     resolve_zone_id_dtype,
 )
 from scripts.block_index import build_block_index, rotate_rings
-from scripts.data_integrity import (
-    validate_block_index,
-    validate_block_payload,
-    validate_hole_references,
-    validate_payload_offset_table,
-    validate_shipped_schemas,
-    validate_shortcut_index,
-)
+from timezonefinder._data_integrity import validate_block_payload, validate_data_dir
 from scripts.reporting import write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
@@ -349,17 +342,10 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
 
     write_numpy_binaries(data, output_path, boundary_rings, hole_rings)
     write_polygon_collections(output_path, boundary_rings, hole_rings)
-    # Check the artifact rather than the in-memory model it came from: the hole
-    # reference vector, the hole coordinate file and the hole bboxes are three separate
-    # files, and only reading them back proves they agree. This is where the coherence
-    # of a data directory is established - the runtime trusts it and does not re-derive it.
-    print("Verifying the integrity of the written data...")
-    validate_hole_references(output_path)
-    validate_payload_offset_table(output_path)
-    validate_block_index(output_path)
     # The rings are still here, which is the only moment the packed payload can be
     # checked against what it was made from: afterwards there is nothing left to
-    # compare a decode with but the decode itself.
+    # compare a decode with but the decode itself. The complete directory is checked
+    # through validate_data_dir after the shortcut index has also been written.
     validate_block_payload(output_path, boundary_rings, hole_rings)
     print("Binary files written successfully")
 
@@ -378,9 +364,8 @@ def compile_data_files(
 
     # ship the format's own definition next to the binaries it describes, and hold the
     # copy to the original right here - checked where it is produced, never on a
-    # lookup path (see scripts/data_integrity.py)
+    # lookup path (see timezonefinder/_data_integrity.py)
     write_schemas(output_path)
-    validate_shipped_schemas(output_path)
 
     # Stamp the boundary data release into the data directory so an installed
     # timezonefinder can state which one it answers from
@@ -418,9 +403,10 @@ def parse_data(
     compile_data_files(data, output_path_obj, resolved_data_version)
 
     _ = compile_shortcuts(output_path_obj, data)
-    # what the shortcut index assumes, checked over what was just written - never when a
-    # finder is constructed (see scripts/data_integrity.py)
-    validate_shortcut_index(output_path_obj)
+    # Re-open the complete directory through the same exhaustive entry point exposed by
+    # the CLI, establishing that every file produced by the converter agrees.
+    print("Verifying the integrity of the written data...")
+    validate_data_dir(output_path_obj)
 
     print(f"\n\nfinished parsing timezonefinder data to {output_path_obj}")
     print("Generating data report from binary files...")

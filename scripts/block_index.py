@@ -8,7 +8,7 @@ skip it - see ``timezonefinder/utils_numba.py``'s ``pt_in_poly_blocked`` for why
 is exact, and ``docs/data_format.rst`` for what it is worth.
 
 Nothing here runs at lookup time. It builds what the converter writes, and it is what
-``scripts/data_integrity.py`` re-derives to check the packaged binaries against.
+``timezonefinder/_data_integrity.py`` re-derives to check compiled binaries against.
 
 **A block's range includes its bridging vertex**, the first vertex of the next block,
 because the block owns the edge reaching it. On the last block that vertex is vertex 0.
@@ -18,48 +18,12 @@ also why the two intuitive ring rotations lose (see :func:`best_rotation_offset`
 
 import numpy as np
 
+from timezonefinder._block_index import block_latitude_ranges, nr_blocks_for
 from timezonefinder.configs import (
     BLOCK_OFFSET_DTYPE,
     BLOCK_RANGE_DTYPE,
     POLYGON_BLOCK_SIZE,
 )
-
-
-def nr_blocks_for(nr_vertices: int, block_size: int = POLYGON_BLOCK_SIZE) -> int:
-    """How many blocks a ring of ``nr_vertices`` vertices is split into."""
-    return -(-nr_vertices // block_size)
-
-
-def block_latitude_ranges(
-    y_coords: np.ndarray, block_size: int = POLYGON_BLOCK_SIZE
-) -> np.ndarray:
-    """The ``[min, max]`` latitude each block of ``y_coords`` spans, as ``(nr_blocks, 2)``.
-
-    ``y_coords`` is one ring's latitude row, in stored order. The returned ranges are
-    what the packaged index holds and what the kernels compare a query latitude against.
-
-    :param y_coords: the ring's latitudes, scaled ``int32`` as stored
-    :param block_size: vertices per block
-    :return: ``(nr_blocks, 2)`` array of ``[min, max]``, in :data:`BLOCK_RANGE_DTYPE`
-    """
-    y = np.asarray(y_coords, dtype=np.int64)
-    nr_vertices = y.shape[0]
-    nr_blocks = nr_blocks_for(nr_vertices, block_size)
-
-    # Pad the ragged final block with a value it already contains, so that a whole-array
-    # min/max over a rectangular view answers for every block including the short one.
-    padded = np.full(nr_blocks * block_size, y[-1], dtype=np.int64)
-    padded[:nr_vertices] = y
-    blocks = padded.reshape(nr_blocks, block_size)
-
-    # each block also reaches the first vertex of the next one; the last wraps to 0
-    bridging = np.roll(blocks[:, 0], -1)
-    bridging[-1] = y[0]
-
-    ranges = np.empty((nr_blocks, 2), dtype=BLOCK_RANGE_DTYPE)
-    ranges[:, 0] = np.minimum(blocks.min(axis=1), bridging)
-    ranges[:, 1] = np.maximum(blocks.max(axis=1), bridging)
-    return ranges
 
 
 def block_scan_cost(y_coords: np.ndarray, block_size: int = POLYGON_BLOCK_SIZE) -> int:

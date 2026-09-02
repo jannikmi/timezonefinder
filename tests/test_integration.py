@@ -35,9 +35,21 @@ BIN_DIR = "Scripts" if sys.platform == "win32" else "bin"
 
 
 def run_timezonefinder_test(python_bin: str) -> None:
-    """Test importing and instantiating TimezoneFinder."""
+    """Test lookup and data validation through an installed distribution."""
     code = "from timezonefinder import TimezoneFinder; tf = TimezoneFinder(); print(tf.timezone_at(lat=40.5, lng=11.7))"
     run_command([python_bin, "-c", code])
+    data_dir = run_command(
+        [
+            python_bin,
+            "-c",
+            "from timezonefinder.configs import DEFAULT_DATA_DIR; print(DEFAULT_DATA_DIR)",
+        ],
+        capture_output=True,
+    ).stdout.strip()
+    executable = Path(python_bin).with_name(
+        "timezonefinder.exe" if sys.platform == "win32" else "timezonefinder"
+    )
+    run_command([str(executable), "validate-data", data_dir])
 
 
 def setup_venv(tempdir: str, upgrade_pip: bool = False) -> tuple[str, str]:

@@ -3,6 +3,7 @@ import csv
 import os
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
 from timezonefinder import (
     TimezoneFinder,
@@ -11,6 +12,7 @@ from timezonefinder import (
     certain_timezone_at,
     timezone_at_land,
 )
+from timezonefinder._data_integrity import validate_data_dir
 from timezonefinder.utils import validate_coordinates
 
 # Header names recognised for each axis, lowercased. Auto-detection exists so the
@@ -93,44 +95,46 @@ def get_timezone_function(
     )
 
 
-def _parse_arguments() -> argparse.Namespace:
-    """
-    Parse and validate command-line arguments.
-
-    In stdin mode ``lng`` and ``lat`` become optional — coordinates are read
-    from stdin instead, as delimited rows.
-
-    :return: Parsed command-line arguments
-    """
-    parser = argparse.ArgumentParser(description="parse TimezoneFinder parameters")
-    parser.add_argument("lng", type=float, nargs="?", help="longitude to be queried")
-    parser.add_argument("lat", type=float, nargs="?", help="latitude to be queried")
-    parser.add_argument("-v", action="store_true", help="verbosity flag")
+def _add_lookup_options(parser: argparse.ArgumentParser) -> None:
+    """Add options shared by the single-query and row-stream lookup modes."""
     parser.add_argument(
-        "--stdin",
+        "--in-memory",
         action="store_true",
-        help="read delimited rows from stdin and write each back out with a "
-        "timezone column appended. Coordinate columns are taken from the header "
-        "row, or named with --lng-col/--lat-col. The TimezoneFinder instance is "
-        "constructed once, amortising initialisation across the whole input.",
+        help="read polygon coordinates into RAM instead of memory-mapping them. "
+        "This costs tens of MB and is useful across many lookups. Not available "
+        "for -f 3 and -f 4, which load no polygon data.",
     )
+    parser.add_argument(
+        "-f",
+        "--function",
+        type=int,
+        choices=[0, 1, 3, 4, 5],
+        default=0,
+        help="lookup function: 0 timezone_at, 1 certain_timezone_at, "
+        "3 TimezoneFinderL.timezone_at, 4 TimezoneFinderL.timezone_at_land, "
+        "or 5 timezone_at_land",
+    )
+
+
+def _add_row_format_options(parser: argparse.ArgumentParser) -> None:
+    """Add options for delimited rows read from standard input."""
     parser.add_argument(
         "-d",
         "--delimiter",
         default=",",
-        help="field delimiter for --stdin input and output (default: ','). "
+        help="field delimiter for rows input and output (default: ','). "
         "Spell tab as '\\t'.",
     )
     parser.add_argument(
         "--lng-col",
-        help="which --stdin column holds the longitude: a header name, or a "
-        "1-based column number for input without a header. Required when the "
-        "input has no header, since the column order is never guessed.",
+        help="which input column holds longitude: a header name, or a 1-based "
+        "column number for input without a header. Required when the input has no "
+        "header, since the column order is never guessed.",
     )
     parser.add_argument(
         "--lat-col",
-        help="which --stdin column holds the latitude: a header name, or a "
-        "1-based column number for input without a header.",
+        help="which input column holds latitude: a header name, or a 1-based "
+        "column number for input without a header.",
     )
     header_group = parser.add_mutually_exclusive_group()
     header_group.add_argument(
@@ -139,84 +143,55 @@ def _parse_arguments() -> argparse.Namespace:
         action="store_const",
         const=True,
         default=None,
-        help="treat the first --stdin row as a header naming the columns, "
-        "rather than probing it. Worth stating whenever the first row could "
-        "hold no recognisable number - a header of purely numeric names, or a "
-        "data row whose coordinates are placeholders.",
+        help="treat the first input row as a header rather than probing it",
     )
     header_group.add_argument(
         "--no-header",
         dest="header",
         action="store_const",
         const=False,
-        help="treat every --stdin row as data, including the first.",
+        help="treat every input row as data, including the first",
     )
-    parser.add_argument(
-        "--in-memory",
-        action="store_true",
-        help="read the polygon coordinate data into RAM instead of "
-        "memory-mapping it. Costs tens of MB for faster lookups once the page "
-        "cache is warm, so it only pays for itself over a long --stdin stream. "
-        "Not available for -f 3 and -f 4, which load no polygon data.",
-    )
-    parser.add_argument(
-        "-f",
-        "--function",
-        type=int,
-        choices=[0, 1, 3, 4, 5],
-        default=0,
-        help="function to be called:"
-        "0: TimezoneFinder.timezone_at(), "
-        "1: TimezoneFinder.certain_timezone_at(), "
-        "2: removed, "
-        "3: TimezoneFinderL.timezone_at(), "
-        "4: TimezoneFinderL.timezone_at_land(), "
-        "5: TimezoneFinder.timezone_at_land(), ",
-    )
-    args = parser.parse_args()  # takes input from sys.argv
 
-    # `nargs="?"` moved the required-argument check off argparse, which named
-    # only what was actually missing. Rebuild that: telling someone who forgot
-    # the latitude that the longitude is missing too sends them to check the
-    # half they got right.
-    missing = [
-        name for name, value in (("lng", args.lng), ("lat", args.lat)) if value is None
-    ]
-    if not args.stdin and missing:
-        parser.error(f"the following arguments are required: {', '.join(missing)}")
 
-    # len(missing) != 2 rather than `not missing`: a lone `--stdin 5` supplies
-    # one positional, which would otherwise still be discarded in silence.
-    if args.stdin and len(missing) != 2:
-        parser.error(
-            "--stdin reads the coordinates from stdin: do not pass lng and lat"
-        )
-
-    # TimezoneFinderL holds no polygon data, so there is nothing for the flag to
-    # read into memory. Accepting it there would promise a speedup it cannot
-    # deliver, which is worse than refusing it.
+def _validate_lookup_options(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """Reject a lookup option combination that has no effect."""
     if args.in_memory and args.function in TIMEZONE_FINDER_L_FUNCTIONS:
         parser.error(
             f"--in-memory does not apply to -f {args.function}: TimezoneFinderL "
             f"loads no polygon data"
         )
 
-    if args.stdin and args.v:
-        parser.error("--stdin and -v are mutually exclusive")
 
-    stdin_only = [
-        flag
-        for flag, value in (
-            ("-d/--delimiter", args.delimiter != ","),
-            ("--lng-col", args.lng_col is not None),
-            ("--lat-col", args.lat_col is not None),
-            ("--header/--no-header", args.header is not None),
-        )
-        if value
-    ]
-    if stdin_only and not args.stdin:
-        parser.error(f"{', '.join(stdin_only)} only apply to --stdin")
+def _parse_arguments() -> argparse.Namespace:
+    """Parse the installed CLI's explicit command surface."""
+    parser = argparse.ArgumentParser(
+        description="offline timezone lookup and compiled-data validation"
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
+    query = subparsers.add_parser("query", help="look up one longitude/latitude pair")
+    query.add_argument("lng", type=float, help="longitude to be queried")
+    query.add_argument("lat", type=float, help="latitude to be queried")
+    query.add_argument("-v", action="store_true", help="show lookup details")
+    _add_lookup_options(query)
+
+    rows = subparsers.add_parser(
+        "rows", help="append timezone answers to delimited rows read from stdin"
+    )
+    _add_row_format_options(rows)
+    _add_lookup_options(rows)
+
+    validation = subparsers.add_parser(
+        "validate-data", help="exhaustively check a compiled data directory"
+    )
+    validation.add_argument("data_dir", type=Path, metavar="DIR")
+
+    args = parser.parse_args()
+    if args.command in ("query", "rows"):
+        _validate_lookup_options(parser, args)
     return args
 
 
@@ -436,7 +411,7 @@ def _coordinates_from_row(
     return validate_coordinates(lng, lat)
 
 
-def _run_stdin(
+def _run_rows(
     timezone_function: Callable[..., str | None],
     delimiter: str,
     lng_spec: str | None,
@@ -558,11 +533,20 @@ def main() -> None:
     """Main entry point for the CLI."""
     args = _parse_arguments()
 
+    if args.command == "validate-data":
+        try:
+            validate_data_dir(args.data_dir)
+        except (EOFError, OSError, ValueError) as e:
+            sys.stderr.write(f"error: {e}\n")
+            raise SystemExit(1) from None
+        print(f"validated compiled data directory: {args.data_dir}")
+        return
+
     timezone_function = get_timezone_function(args.function, args.in_memory)
 
-    if args.stdin:
+    if args.command == "rows":
         try:
-            rejected = _run_stdin(
+            rejected = _run_rows(
                 timezone_function,
                 _resolve_delimiter(args.delimiter),
                 args.lng_col,

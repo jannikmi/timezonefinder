@@ -136,9 +136,9 @@ def test_wider_integer_input_is_stored_as_a_word(tmp_path):
 def test_offset_table_and_reader_address_the_same_words(tmp_path, payloads):
     """The two ways to reach a payload have to agree, which is what the lookup path assumes.
 
-    ``scripts.data_integrity.validate_payload_offset_table`` makes this statement over
-    real data directories; here it is made over a collection built by hand, so a
-    regression shows up without a regenerated 38 MB binary.
+    ``timezonefinder._data_integrity.validate_payload_offset_table`` makes this
+    statement over real data directories; here it is made over a collection built by
+    hand, so a regression shows up without a regenerated 38 MB binary.
     """
     output_file = tmp_path / "polygons.bin"
     write_polygon_collection_flatbuffer(output_file, payloads)

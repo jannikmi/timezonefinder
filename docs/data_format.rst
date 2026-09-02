@@ -82,6 +82,13 @@ The timezonefinder library uses highly optimized binary data structures to enabl
 5. **Hole Registry**: a mapping from polygon IDs to the amount and position of its holes
 6. **Schemas**: a copy of the FlatBuffers schema definitions the binaries above were written by, under ``schemas/``
 
+``hole_registry.json`` maps each boundary polygon ID to ``[hole count, first hole ID]``.
+Those half-open ranges form one exact partition of the dense hole-ID space: no hole is
+missing or owned twice, and every registered hole ring lies inside the boundary that
+names it. ``timezonefinder validate-data`` establishes these properties before a custom
+directory is used; lookups can then address the ranges directly without repeating the
+geometry work.
+
 
 Coordinate Representation
 -------------------------
@@ -208,7 +215,7 @@ Other Files
   directory, copied from ``timezonefinder/flatbuf/schemas/`` when the data is compiled.
   A data directory that carries the definition of its own format can be read back
   without the package that wrote it. Generated, never hand-edited:
-  ``scripts/data_integrity.validate_shipped_schemas`` holds the copy to the original
+  ``timezonefinder._data_integrity.validate_shipped_schemas`` holds the copy to the original
   both in the converter and over the committed data
 
 .. note::
@@ -263,7 +270,7 @@ larger blocks decide that in fewer comparisons.
 Nothing in the files records the size they were built at, so it is part of what the
 polygon layout version means - a directory blocked at another size is rejected by the
 layout marker in ``coordinates.bin``, and by
-``scripts.data_integrity.validate_block_index`` where the data is produced.
+``timezonefinder._data_integrity.validate_block_index`` where the data is produced.
 
 What it costs is one ``int32`` pair per block - about 0.5 MB against 38 MB of
 coordinates - and one comparison for the 30 % of polygons small enough to fit in a
@@ -405,7 +412,7 @@ The converter rounds onto the source's own grid now, so the packaged boundary *i
 published boundary. No vertex is dropped and no ring is redrawn - this is not
 simplification, it is the removal of a conversion error.
 
-``scripts.data_integrity.validate_block_payload`` re-derives every frame from its own
+``timezonefinder._data_integrity.validate_block_payload`` re-derives every frame from its own
 decode, in the converter against the rings it was given and in the test suite over what
 the repository ships, and ``tests/test_coordinate_precision.py`` holds the packaged
 coordinates to the source grid.
@@ -654,7 +661,7 @@ the digits, so the whole slot is one contiguous bit field and the lookup evaluat
 single shift and mask - ``(cell >> (45 - digit_bits)) & (2 ** (digit_bits + 7) - 1)``. No
 keys are stored and no search runs at lookup time. That h3-py does not promise its index
 encoding as API is handled by checking rather than by storing:
-``scripts/data_integrity.validate_shortcut_index``
+``timezonefinder._data_integrity.validate_shortcut_index``
 confirms the arithmetic against the public ``get_base_cell_number`` and
 ``cell_to_child_pos`` on every cell that exists, so an encoding change fails where the
 data is built instead of silently returning a neighbour's timezone.
@@ -692,7 +699,7 @@ it base-7 per query costs more than the padding is worth.
 
 **The two data-dependent widths are chosen by fit, not by headroom.** An overflow surfaces
 where the data is built rather than in a user's process - provided something checks, which
-is what ``scripts/data_integrity.py`` does, over what the converter just wrote and over
+is what ``timezonefinder/_data_integrity.py`` does, over what the converter just wrote and over
 what is committed, naming the value, the ceiling, the width to move to and the version
 bumps that follow.
 

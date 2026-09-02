@@ -98,7 +98,7 @@ class PolygonArray:
         # costs 217 ns against 117 ns with ``int`` ones, because each is unboxed through
         # ``__index__``. The file stores the narrow unsigned column - its width is
         # checked where the data is built and over what ships
-        # (``scripts.data_integrity.validate_block_index``), which is the only place a
+        # (``timezonefinder._data_integrity.validate_block_index``), the only place a
         # stored width can be checked at all.
         self.block_offsets: list[int] = block_offsets.tolist()
 
@@ -365,7 +365,7 @@ class HoleArray(PolygonArray):
 
     Nothing here checks that the reference vector agrees with the coordinate file. That
     the packaged data is coherent is established once, by the build - see
-    ``scripts/data_integrity.validate_hole_references``, which the converter runs over
+    ``timezonefinder._data_integrity.validate_hole_references``, which the converter runs over
     what it wrote and the test suite runs over the packaged binaries. Re-deriving it in
     every user's process would re-answer a settled question on a latency-sensitive path.
     """

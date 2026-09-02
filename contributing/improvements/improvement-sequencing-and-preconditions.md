@@ -7,8 +7,6 @@ Check these explicitly before taking an item, and name the blocking one when you
 
 GH-543 (cffi bump) ─→ GH-364's abi3t option
 
-GH-500 ←→ GH-428: one CLI design — SETTLED (subcommands), so neither waits on the other
-
 independent: GH-362, GH-524, PERF-2, GH-543
 ```
 
