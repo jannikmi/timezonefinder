@@ -24,6 +24,10 @@ repos:
             -   id: detect-private-key
 
 
+    # held at 0.15.x deliberately: 0.16 widens the default rule set, which rewrites
+    # ~145 sites and leaves ~97 findings needing real judgement (B023, F841, BLE001,
+    # DTZ001). That is a lint pass to take on its own; `ruff` is bounded to match in
+    # [dependency-groups] dev so a bare `uv run ruff` cannot disagree with this hook.
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.15.21
       hooks:
@@ -39,7 +43,7 @@ repos:
             -   id: blacken-docs
 
     -   repo: https://github.com/myint/rstcheck
-        rev: 'v6.2.5'
+        rev: 'v6.3.0'
         hooks:
             # Covers docs/ as well as README.rst and CHANGELOG.rst. Sphinx is installed into
             # the hook environment so that rstcheck recognises the directives it owns
@@ -52,7 +56,7 @@ repos:
                 additional_dependencies: ["sphinx"]
 
     -   repo: https://github.com/abravalheri/validate-pyproject
-        rev: v0.25
+        rev: '0.26'
         hooks:
             -   id: validate-pyproject
 
@@ -62,7 +66,7 @@ repos:
             -   id: pyupgrade
 
     -   repo: https://github.com/pre-commit/mirrors-mypy
-        rev: v2.2.0
+        rev: v2.3.1
         hooks:
             -   id: mypy
                 exclude: ^((prototypes|docs|benchmarks)/)
@@ -83,6 +87,6 @@ repos:
                 additional_dependencies: [ numpy, uv, cffi ]
 
     -   repo: https://github.com/pre-commit/mirrors-clang-format
-        rev: v22.1.5
+        rev: v23.1.0
         hooks:
             -   id: clang-format

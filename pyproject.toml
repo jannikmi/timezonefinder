@@ -80,7 +80,8 @@ dev = [
     "mypy",
     "rstcheck",
     "isort",
-    "ruff",
+    # see .pre-commit-config.yaml: held with the hook rev so the two agree
+    "ruff<0.16",
     "cibuildwheel",
 ]
 # data generation / parsing helpers

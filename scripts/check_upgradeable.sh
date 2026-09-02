@@ -29,8 +29,13 @@ if [ -z "$OUTDATED_OUTPUT" ] || echo "$OUTDATED_OUTPUT" | grep -q "No outdated p
     exit 0
 fi
 
-# Extract package names from outdated output
-OUTDATED_PACKAGES=$(echo "$OUTDATED_OUTPUT" | grep -E "^\w+ " | awk '{print $1}' | sort -u)
+# Extract package names from outdated output.
+# `uv tree` renders every dependency *indented* under a `|--`/`\--` prefix, and
+# leaves column 0 to the workspace roots and uv's own status banner - so anchoring
+# the match at the start of the line finds no third-party package at all and this
+# check silently reports "nothing to upgrade" for every tree. Select the lines uv
+# marks with `(latest: ...)` instead, and strip the tree drawing off the front.
+OUTDATED_PACKAGES=$(echo "$OUTDATED_OUTPUT" | grep "(latest:" | sed -E 's/^[^A-Za-z0-9]*//' | awk '{print $1}' | sort -u)
 
 if [ -z "$OUTDATED_PACKAGES" ]; then
     echo "No outdated packages found"
@@ -70,6 +75,6 @@ if [ ${#UPGRADEABLE_PACKAGES[@]} -eq 0 ]; then
 else
     echo "Upgradeable packages:"
     for package in "${UPGRADEABLE_PACKAGES[@]}"; do
-        echo "$OUTDATED_OUTPUT" | grep "^$package " || true
+        echo "$OUTDATED_OUTPUT" | grep -E "(^|[^A-Za-z0-9_.-])$package v.*\(latest:" | head -1 | sed -E 's/^[^A-Za-z0-9]*//' || true
     done
 fi
