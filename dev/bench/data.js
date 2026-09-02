@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788306156238,
+  "lastUpdate": 1788317561067,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3645,6 +3645,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002661633891028841",
             "extra": "mean: 24.647447999996075 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82703f26b2ee5d44741397d5e9c6d66623a0585a",
+          "message": "API major (1/2): lazy public surface, drop the inert in_memory, add the zoneinfo helpers (#580)\n\n* API major: lazy public surface, drop the inert in_memory, add the zoneinfo helpers\n\nThree decided items that had to land before 9.0.0 is tagged, in the order the\nregister records as a precondition.\n\nAPI-2: `timezonefinder/__init__.py` resolves its public names on first access\n(PEP 562) instead of importing them eagerly, so the package's attributes are\nwhat `__all__` declares. Importing the finder classes bound\n`timezonefinder.timezonefinder` and, through it, every module that one imports\n- roughly twenty internal modules as reachable as the seven documented names.\n`import timezonefinder.utils` is unaffected. The stdlib `PackageNotFoundError`\nthe version lookup catches is renamed `_PackageNotFoundError`.\n\nAPI-1: `in_memory` is gone from `AbstractTimezoneFinder.__init__` and from\n`TimezoneFinderL.__init__`, which was a pure pass-through. Neither loads\npolygon data, so there was no access mode to select; `TimezoneFinderL(\nin_memory=True)` now raises TypeError, which is what the CLI already answered\nfor `--in-memory` with `-f 3`/`-f 4`. The construction benchmark measures\n`TimezoneFinderL` once rather than twice as a consequence.\n\nGH-502: `zoneinfo_at`, `utc_offset_at` and `localize` on both finder classes\nand as global functions, resolving the name through `zoneinfo` so the inverted\n`Etc/GMT±X` sign convention is applied rather than parsed. The Windows\n`tzdata` requirement is documented at each call site that returns a ZoneInfo.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Regenerate the committed benchmark and memory reports\n\n`make reports` on the tracked configuration - Darwin arm64, Python 3.14.2,\nthe C extension without numba - against the format 3 data this branch is now\nbased on (fetched from the run in DATA_BUILD_RUN, since 3.2026.3 is not on\nPyPI yet).\n\nRequired because dropping `in_memory` from `TimezoneFinderL` collapses its two\nconstruction benchmarks into one node id, which the initialization report\nrenders. The five pages are written from one run, so the rest move by\nrun-to-run noise as well.\n\nOne figure is attributable rather than noise: what `import timezonefinder`\nalone costs falls from ~16.8 MiB resident to ~3.5 MiB, because the lazy public\nsurface no longer imports numpy, h3 and the polygon readers. The cost is\ndeferred, not removed - construction and steady-state figures are unchanged.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* GH-502: rewrite the aware-datetime and offset examples around the helpers\n\nBoth scripts hand-rolled with pytz exactly what `localize()`, `zoneinfo_at()`\nand `utc_offset_at()` now do - `get_offset.py` computed the offset by\nsubtracting two localised datetimes, which is the conversion GH-502 exists to\ntake off the caller.\n\n`get_offset.py` is now about `utc_offset_at()`: the same place on two dates so\nthe daylight-saving dependence is visible, and a coordinate at sea where the\nzone is named `Etc/GMT+2` and the offset is UTC-2 - the inverted convention\nthat reading the name gets backwards.\n\n`aware_datetime.py` leads with `localize()` and `zoneinfo_at()` and keeps a\npytz section at the end, which is now the point rather than the whole file:\nwith pytz `replace(tzinfo=...)` attaches a historical offset (+00:53 for\nBerlin) and a naive datetime has to go through `tz.localize()`. zoneinfo has\nno such split, which is why `localize()` can simply replace.\n\nNeither script needs an optional dependency to run now - the pytz import is\ninside the section that uses it - so `test_example_scripts.py` no longer\ncarries a skip list naming scripts that require it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T04:51:45+02:00",
+          "tree_id": "d6b8a5166079a89784cfd236676e62df2ed2d877",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/82703f26b2ee5d44741397d5e9c6d66623a0585a"
+        },
+        "date": 1788317560112,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 155.01282808655432,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019535140388695564",
+            "extra": "mean: 6.451079000001414 msec\nrounds: 130 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 236.56819042650682,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006163479138181255",
+            "extra": "mean: 4.227110999991623 msec\nrounds: 216 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 40.51989291727316,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004417273821118896",
+            "extra": "mean: 24.679235999997218 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
