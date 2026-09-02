@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788322344594,
+  "lastUpdate": 1788324903140,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3915,6 +3915,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00045749399593420507",
             "extra": "mean: 22.11688599999917 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4631df0a2320513c25155f7620d2e8c13b509295",
+          "message": "GH-543: drop the numba extra's stale numpy<2.4 cap, refresh every pinned dependency, fix `make outdated` (#584)\n\n* Drop the numba extra's stale numpy cap and lock cffi 2.1.1\n\n`[project.optional-dependencies] numba` is published wheel metadata, so the\nhand-written `numpy<2.4` beside `numba>=0.60,<1` is a constraint every\n`pip install timezonefinder[numba]` inherits. It matched the bound numba\ndeclared at 0.63.0; numba has raised its own ceiling twice since, and the\nlocked numba 0.65.1 already declares `numpy<2.5` — the cap was stricter than\nthe numba it shipped with. numba carries its own bound and the group exists\nonly to install numba, so the resolver needs no help. Deleted from the\npublished extra and from the local dependency group, along with the comment\nthat was duplicated verbatim across the two.\n\ncffi moves 2.0.0 -> 2.1.1 in the lock, the first release carrying `abi3t`.\nThat is the precondition for settling GH-364's free-threaded packaging\narithmetic; nothing about the built extension changes.\n\nVerified on both point-in-polygon backends against the rebuilt extension:\n`assert_acceleration_path` resolves clang and numba, the non-slow suite\npasses (2324), and the full-dataset slow sweeps pass under each backend.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Refresh every pinned dependency, and fix the check that was meant to catch them\n\nTakes the numpy/numba bump the previous commit deferred and refreshes the\nwhole lock: numpy 2.3.5 -> 2.4.6/2.5.2, numba 0.65.1 -> 0.67.0, llvmlite\n0.47.0 -> 0.49.0, h3 4.4.2 -> 4.5.0, mypy 1.20.2 -> 2.3.1, pytest 9.0.3 ->\n9.1.1, and ~50 more, plus the pre-commit hook revisions.\n\n`ruff` is the one hold, in the pre-commit rev and the `dev` group together so\na bare `uv run ruff` cannot disagree with the hook. 0.16 widens the default\nrule set: over this tree it rewrites ~145 sites across 92 files and leaves\n~97 findings needing judgement rather than a fixer (B023, F841, BLE001,\nDTZ001). That is a lint pass to review on its own, and TOOL-1 — the entry\nthat already wanted ruff's rule set widened — now carries the measurement\nand owns the hold.\n\n`make outdated` was reporting \"all outdated packages are constrained by\ndependencies\" for every tree, whatever was stale. Its package extraction\nanchored the match at the start of the line, but `uv tree` indents every\ndependency under its tree drawing and leaves column 0 to the workspace roots\nand uv's own status banner - so the list it filtered held no third-party\npackage at all. It printed that sentence while 39 packages were upgradeable,\nwhich is how a stale pin survived four numba releases. Underneath the parser\nbug the pin was also hiding itself exactly as issue #543 suspected: with the\nparser fixed and the pin in place numpy is filtered as \"constrained\", and\nremoving the pin makes it appear.\n\nThe class-scoped fixture in tests/main_test.py becomes a classmethod, the\nform pytest 9.1 deprecates the alternative to and pytest 10 removes.\n\nVerified on both point-in-polygon backends against the rebuilt extension:\n`assert_acceleration_path` resolves clang and numba, the full suite passes\n(3695) on numba, and the full slow sweeps pass on clang (1371).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Put GH-332 and GH-334 back on the status vocabulary\n\n#585 wrote the ranking table's eligibility-column wording into the entries'\n`**Status:**` field: `sequenced after GH-334` on GH-332 and `free` on\nGH-334, neither of which is in the eight-word set\ntests/test_improvement_ledger.py enforces, so master's ledger test fails.\n\nThe two vocabularies are deliberately different kinds — the status opening is\na fixed set a pass can filter on, the eligibility column is free prose — so\nthe fix is the entries, not the set. `blocked` already means what\n`sequenced` was reaching for: live work waiting on a blocker, ranked below\nit, which is where GH-332 already sits. Both keep their original sentence;\nonly the opening word changes.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Register DOC-1: convert the hard-wrapped docs to semantic line breaks\n\n628 continuation lines across 11 hand-written prose files end mid-clause, so\nchanging one word reflows its whole paragraph — a one-word diff is\nindistinguishable from a rewrite, blame collapses onto whoever last touched\nthe block, and two passes editing different sentences conflict on lines\nneither meant to change. That last cost is the one that lifts this above\ntidying, since concurrent sessions edit this tree.\n\nThe entry carries the per-file counts, notes that the convention has to be\nwritten into the documentation rules in the same pass or it re-accumulates,\nand rules out the generated report pages and the changelog's historical tail.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T06:54:16+02:00",
+          "tree_id": "02c557291945cc75400328e88568ca5b0c811b8c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4631df0a2320513c25155f7620d2e8c13b509295"
+        },
+        "date": 1788324901873,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 182.02092002853118,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000652232070893089",
+            "extra": "mean: 5.493873999995458 msec\nrounds: 152 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 289.4996172818363,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009241484731614871",
+            "extra": "mean: 3.454235999996058 msec\nrounds: 249 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 46.33633861557478,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000324509117670909",
+            "extra": "mean: 21.58133400000395 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
           }
         ]
       }
