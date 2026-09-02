@@ -29,8 +29,12 @@ Require a clean/accounted working tree; current `master` equal to `origin/master
 
 ```bash
 grep timezonefinder-data pyproject.toml
-curl -s https://pypi.org/pypi/timezonefinder-data/json | python3 -c 'import json,sys; print(sorted(json.load(sys.stdin)["releases"]))'
+uv run python -c 'from scripts.check_data_dependency import fetch_pypi_payload, released_versions
+from scripts.configs import DATA_DISTRIBUTION_NAME
+print([str(v) for v in released_versions(fetch_pypi_payload(DATA_DISTRIBUTION_NAME))])'
 ```
+
+Ask through `released_versions`, not through the raw `releases` map the index serves: a release whose files are all yanked, or which has no files at all, is listed there but cannot satisfy a range requirement. Reusing the guard's own predicate is what keeps this precheck and the tag-time guard from disagreeing — a hand-rolled listing that counts those as published would reintroduce here exactly the gap this check exists to close.
 
 If the declared version is absent, the data release goes first — publish the data, then the code requiring it, or `timezonefinder` is uninstallable for everyone between the two. Every format change is in this position by construction, because `DATA_FORMAT_VERSION` is the data distribution's major version and the root pins `<N+1`; the [data pipeline and release order](../development/data-pipeline-format-versioning-and-release-order.md) carries the rest.
 
@@ -77,6 +81,8 @@ uv run python -m scripts.assert_acceleration_path --expect "$(make -s print-benc
 That failure is about the *environment the gate runs in*, not about the machine, so it is not on its own a reason to declare the reports stale. `make reports` is unaffected — `benchmarks`, `latency` and `memory` all measure under `BENCHMARK_ENV` and assert the path themselves. Read the floor under that same environment instead of `make benchmark-noise`, so the gate describes the kernel the pages do:
 
 ```bash
+set -e
+rm -rf tmp/benchmark-noise && mkdir -p tmp/benchmark-noise
 uv run --isolated --group test --group compare python -m scripts.assert_acceleration_path \
   --expect "$(make -s print-benchmark-acceleration-path)"
 for i in 1 2 3 4 5; do
@@ -89,6 +95,8 @@ done
 uv run --isolated --group test --group compare python -m scripts.benchmark_noise \
   tmp/benchmark-noise/run-*.json --estimator=min --min-runs=5
 ```
+
+Both opening lines carry the gate's weight, which is why `make benchmark-noise` has their equivalents. Without `set -e` a failed `pytest` iteration leaves the previous iteration's `benchmark-core-raw.json` in place, and the normalize step happily writes it again under the next run number — five files, one of them a duplicate, and a floor that is narrow because a measurement failed rather than because the machine is quiet. Without the `rm -rf`, a `run-6.json` left by an earlier invocation joins the glob, mixing runs of different code into a gate that assumes the code did not change.
 
 Treat the reports as stale only when the floor itself cannot be brought under threshold. Where the environment resolves the asserted path directly, `make benchmark-noise` is the shorter route to the same number.
 
