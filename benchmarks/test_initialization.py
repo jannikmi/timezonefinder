@@ -13,11 +13,14 @@ import pytest
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
 
+# `TimezoneFinderL` appears once, not twice: it holds no `PolygonArray`, takes no
+# `in_memory` argument and has one construction. The two ids it used to have measured
+# the same thing and presented the duplicate as coverage - the same reasoning
+# `scripts/measure_memory.py` already applies to its own configs.
 CONFIGS = [
-    pytest.param(TimezoneFinder, True, id="TimezoneFinder-in_memory"),
-    pytest.param(TimezoneFinder, False, id="TimezoneFinder-file_based"),
-    pytest.param(TimezoneFinderL, True, id="TimezoneFinderL-in_memory"),
-    pytest.param(TimezoneFinderL, False, id="TimezoneFinderL-file_based"),
+    pytest.param(TimezoneFinder, {"in_memory": True}, id="TimezoneFinder-in_memory"),
+    pytest.param(TimezoneFinder, {"in_memory": False}, id="TimezoneFinder-file_based"),
+    pytest.param(TimezoneFinderL, {}, id="TimezoneFinderL"),
 ]
 
 # rounds, not iterations: each round must construct exactly one fresh instance
@@ -25,9 +28,9 @@ ROUNDS = 30
 
 
 @pytest.mark.benchmark
-@pytest.mark.parametrize("finder_cls, in_memory", CONFIGS)
-def test_initialization(benchmark, finder_cls, in_memory):
+@pytest.mark.parametrize("finder_cls, kwargs", CONFIGS)
+def test_initialization(benchmark, finder_cls, kwargs):
     def init():
-        finder_cls(in_memory=in_memory)
+        finder_cls(**kwargs)
 
     benchmark.pedantic(init, rounds=ROUNDS, warmup_rounds=0, iterations=1)

@@ -33,6 +33,8 @@ Example:
 """
 
 import threading
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
@@ -47,6 +49,9 @@ __all__ = [
     "unique_timezone_at",
     "certain_timezone_at",
     "get_geometry",
+    "zoneinfo_at",
+    "utc_offset_at",
+    "localize",
 ]
 
 # Global singleton instance and lock for thread-safe initialization
@@ -217,6 +222,61 @@ def certain_timezone_at(*, lng: float, lat: float) -> str | None:
         This is primarily useful with custom timezone data.
     """
     return _get_tf_instance().certain_timezone_at(lng=lng, lat=lat)
+
+
+def zoneinfo_at(*, lng: float, lat: float) -> ZoneInfo | None:
+    """
+    Look up the timezone for a coordinate as a ``zoneinfo.ZoneInfo``, using the global singleton.
+
+    Equivalent to :meth:`TimezoneFinder.zoneinfo_at`, which documents the arguments and
+    every error raised - including the ``tzdata`` a Windows machine needs installed
+    before any IANA name resolves.
+
+    :return: the zone covering the point, or None where :func:`timezone_at` answers None
+
+    Example:
+        >>> zoneinfo_at(lng=13.358, lat=52.5061)
+        zoneinfo.ZoneInfo(key='Europe/Berlin')
+    """
+    return _get_tf_instance().zoneinfo_at(lng=lng, lat=lat)
+
+
+def utc_offset_at(
+    *, lng: float, lat: float, when: datetime | None = None
+) -> timedelta | None:
+    """
+    Get the UTC offset in force at a coordinate, using the global singleton.
+
+    Equivalent to :meth:`TimezoneFinder.utc_offset_at`, which documents the arguments,
+    how a naive and an aware ``when`` differ, and every error raised - including the
+    ``tzdata`` a Windows machine needs installed.
+
+    :return: the offset as a ``timedelta``, or None where :func:`timezone_at` answers None
+
+    Example:
+        >>> from datetime import datetime
+        >>> utc_offset_at(lng=13.358, lat=52.5061, when=datetime(2026, 1, 1))
+        datetime.timedelta(seconds=3600)
+    """
+    return _get_tf_instance().utc_offset_at(lng=lng, lat=lat, when=when)
+
+
+def localize(dt: datetime, *, lng: float, lat: float) -> datetime | None:
+    """
+    Attach the timezone covering a coordinate to a naive datetime, using the global singleton.
+
+    Equivalent to :meth:`TimezoneFinder.localize`, which documents the arguments and
+    every error raised - including the ``tzdata`` a Windows machine needs installed.
+
+    :return: the same wall-clock time made aware, or None where :func:`timezone_at`
+        answers None
+
+    Example:
+        >>> from datetime import datetime
+        >>> localize(datetime(2026, 1, 1, 12), lng=13.358, lat=52.5061)
+        datetime.datetime(2026, 1, 1, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Berlin'))
+    """
+    return _get_tf_instance().localize(dt, lng=lng, lat=lat)
 
 
 def get_geometry(

@@ -390,7 +390,7 @@ The most probable zone in proximity can be retrieved with ``timezone_at()``:
 
     from timezonefinder import TimezoneFinderL
 
-    tf = TimezoneFinderL(in_memory=True)  # reuse
+    tf = TimezoneFinderL()  # reuse
 
     query_points = [(13.358, 52.5061), ...]
     for lng, lat in query_points:

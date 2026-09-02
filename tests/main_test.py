@@ -48,7 +48,8 @@ class TestBaseTimezoneFinderClass:
     # the base's choice to be the only allowed one - a subclass naming TimezoneFinder or
     # listing a third keyword-only method then contradicts a type nobody wrote down.
     class_under_test: type[AbstractTimezoneFinder] = TimezoneFinderL
-    # NOTE: setting memory mode does not make a difference for TimezoneFinderL (relevant only for polygon data)
+    # NOTE: only ``TimezoneFinder`` takes a memory mode - ``TimezoneFinderL`` loads no
+    # polygon data, so there is nothing for one to select and it accepts no such argument
     in_memory_mode: bool = False
     bin_file_dir: Path | None = None
     on_land_pt_fct_name: str = "timezone_at"
@@ -71,9 +72,7 @@ class TestBaseTimezoneFinderClass:
                 timezonefinder_in_memory if cls.in_memory_mode else timezonefinder_disk
             )
         else:
-            cls.test_instance = cls.class_under_test(
-                bin_file_location=cls.bin_file_dir, in_memory=cls.in_memory_mode
-            )
+            cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir)
 
     def test_using_numba(self):
         spec = find_spec("numba")
@@ -90,7 +89,8 @@ class TestBaseTimezoneFinderClass:
         print(
             f"using_numba()=={self.class_under_test.using_numba()} (JIT compiled functions {'NOT ' if not self.class_under_test.using_numba() else ''}in use)"
         )
-        print(f"in_memory={self.in_memory_mode}")
+        if self.class_under_test is TimezoneFinder:
+            print(f"in_memory={self.in_memory_mode}")
         print(f"file location={self.bin_file_dir}\n")
 
     def check_timezone_at_results(self, lng, lat, expected: str | None = ""):

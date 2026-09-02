@@ -132,10 +132,22 @@ def test_in_memory_selects_the_coordinate_access_mode(in_memory, expected_access
         assert isinstance(finder.holes.coordinates, expected_accessor)
 
 
+@pytest.mark.unit
+def test_the_lightweight_finder_refuses_in_memory():
+    """It loads no polygon data, so there is no access mode for the flag to select.
+
+    The CLI has always refused ``--in-memory`` with ``-f 3``/``-f 4`` for exactly this
+    reason; the Python API used to accept it in silence and promise a speedup it could
+    not deliver.
+    """
+    with pytest.raises(TypeError, match="in_memory"):
+        TimezoneFinderL(in_memory=True)  # type: ignore[call-arg]
+
+
 @pytest.fixture(scope="module")
 def tfl() -> TimezoneFinderL:
     """``TimezoneFinderL``, which the last two usage snippets are written against."""
-    return TimezoneFinderL(in_memory=True)
+    return TimezoneFinderL()
 
 
 @pytest.mark.unit

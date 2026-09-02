@@ -801,7 +801,7 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
     # "how much do I save by giving up the polygons" is the decision this page
     # informs
     default_init = by_name.get("test_initialization[TimezoneFinder-file_based]")
-    lite_init = by_name.get("test_initialization[TimezoneFinderL-file_based]")
+    lite_init = by_name.get("test_initialization[TimezoneFinderL]")
     headlines = []
     if default_init is not None:
         # RST inline markup does not nest: a ``literal`` inside **bold** renders
@@ -839,13 +839,14 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
     add_benchmark_table(reporter, benches, section_level=3)
 
     reporter.add_section("Performance Summary", level=2)
-    for cls in ("TimezoneFinder", "TimezoneFinderL"):
-        in_mem = by_name.get(f"test_initialization[{cls}-in_memory]")
-        file_b = by_name.get(f"test_initialization[{cls}-file_based]")
-        if in_mem and file_b:
-            add_comparison_bullet(
-                reporter, cls, in_mem, file_b, label_fn=_memory_mode_label
-            )
+    # only ``TimezoneFinder`` has two constructions to compare: ``TimezoneFinderL``
+    # takes no ``in_memory`` and is measured once
+    in_mem = by_name.get("test_initialization[TimezoneFinder-in_memory]")
+    file_b = by_name.get("test_initialization[TimezoneFinder-file_based]")
+    if in_mem and file_b:
+        add_comparison_bullet(
+            reporter, "TimezoneFinder", in_mem, file_b, label_fn=_memory_mode_label
+        )
     add_fastest_slowest_bullet(reporter, benches)
 
     reporter.write_report()
