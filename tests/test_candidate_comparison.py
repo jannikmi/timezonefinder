@@ -8,6 +8,7 @@ property is therefore asserted here against an injected clock, so no assertion
 depends on how fast the machine running the suite is.
 """
 
+import numpy as np
 import pytest
 
 from benchmarks.candidate_comparison import (
@@ -246,11 +247,33 @@ def test_the_rendered_block_names_both_estimators():
     assert f"of {DEFAULT_ROUNDS}" in rendered
 
 
+def test_a_numpy_input_pool_is_accepted():
+    """The natural pool here is a committed fixture loaded with numpy.
+
+    `not <array of 2+ elements>` raises the ambiguous truth-value ValueError, so
+    a truthiness guard would reject the very input form this harness is for.
+    """
+    seen, (baseline, challenger) = _record_calls()
+    points = np.array([[float(i), float(-i)] for i in range(50)])
+
+    result = compare_candidates(baseline, challenger, points, rounds=4, batch_size=6)
+
+    assert result.rounds == 4
+    assert len(seen) == 4 * 2 * 6 + 2 * 6  # timed batches plus the warm-up pair
+
+
 @pytest.mark.parametrize(
     "kwargs, message",
     [
         ({"rounds": 1}, "rounds must be at least 2"),
         ({"batch_size": 0}, "batch_size must be at least 1"),
+        # a bad estimator setting does not fail loudly - it reports confidently
+        # and wrongly, which is the one thing this module exists to prevent
+        ({"threshold": -0.05}, "threshold must be a finite fraction"),
+        ({"threshold": float("nan")}, "threshold must be a finite fraction"),
+        ({"win_margin": -0.1}, r"win_margin must be in \[0, 0.5\)"),
+        ({"win_margin": 0.5}, r"win_margin must be in \[0, 0.5\)"),
+        ({"win_margin": float("inf")}, r"win_margin must be in \[0, 0.5\)"),
     ],
 )
 def test_a_degenerate_configuration_is_refused(kwargs, message):

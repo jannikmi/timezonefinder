@@ -20,6 +20,7 @@ includes and what ships - so nothing downstream learns about fragments.
 """
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,6 +39,11 @@ FRAGMENT_SUFFIX: Final[str] = ".rst"
 ROOT_ALLOWLIST: Final[frozenset[str]] = frozenset({"README.md"})
 #: Kept in each category directory so an empty one survives a clone.
 KEEP_FILE: Final[str] = ".gitkeep"
+#: A fragment's name is a kebab-case slug: lowercase letters, digits and single
+#: hyphens. Enforced rather than merely documented, and not only for tidiness -
+#: two names differing solely in case are two fragments on Linux and one file on
+#: macOS and Windows, so a checkout there silently loses a changelog bullet.
+SLUG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 UNRELEASED_HEADING: Final[str] = "X.X.X (unreleased)"
 INTERNAL_MARKER: Final[str] = "Internal:"
@@ -125,6 +131,11 @@ def _read_fragment(path: Path) -> str:
         raise FragmentError(
             f"{_display(path)}: fragments are plain RST and must "
             f"end in {FRAGMENT_SUFFIX}"
+        )
+    if not SLUG_PATTERN.match(path.stem):
+        raise FragmentError(
+            f"{_display(path)}: a fragment is named by a kebab-case slug "
+            f"(lowercase letters, digits and single hyphens), got {path.stem!r}"
         )
 
     lines = [line.rstrip() for line in path.read_text(encoding="utf-8").splitlines()]

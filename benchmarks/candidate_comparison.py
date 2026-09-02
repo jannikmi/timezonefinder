@@ -35,6 +35,7 @@ Reporting only, like every other measurement here: nothing in this module
 fails a build. See ``docs/benchmarking_methodology.rst``.
 """
 
+import math
 import random
 import time
 from dataclasses import dataclass
@@ -172,12 +173,26 @@ def compare_candidates(
     systematically runs second on a warmed cache. ``seed`` makes the draws
     reproducible; ``timer`` exists so the harness itself can be tested.
     """
-    if not inputs:
+    # len(), not truthiness: the natural input pool here is a committed fixture
+    # loaded with numpy, and `not <array of 2+ elements>` raises the ambiguous
+    # truth-value ValueError before a single round runs. Anything `random.Random`
+    # can index works as a pool, which is wider than `Sequence`.
+    if len(inputs) == 0:
         raise ValueError("no inputs to sample from")
     if rounds < 2:
         raise ValueError(f"rounds must be at least 2, got {rounds}")
     if batch_size < 1:
         raise ValueError(f"batch_size must be at least 1, got {batch_size}")
+    # The estimator settings decide what the verdict is allowed to say, so a bad
+    # one does not fail - it reports confidently and wrongly, which is the single
+    # failure mode this module exists to prevent. A negative threshold calls an
+    # unchanged measurement `faster`; a win_margin at or above 0.5 puts the sign
+    # count beyond any reachable share, so it can never claim a direction and
+    # every verdict collapses to `unresolved`.
+    if not math.isfinite(threshold) or threshold < 0.0:
+        raise ValueError(f"threshold must be a finite fraction >= 0, got {threshold}")
+    if not math.isfinite(win_margin) or not 0.0 <= win_margin < 0.5:
+        raise ValueError(f"win_margin must be in [0, 0.5), got {win_margin}")
 
     baseline_name, run_baseline = baseline
     challenger_name, run_challenger = challenger

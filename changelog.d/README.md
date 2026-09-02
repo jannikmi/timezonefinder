@@ -7,7 +7,7 @@ Add exactly one file per user-visible change:
 - `changelog.d/user/<slug>.rst` — a bullet for the main list, read by users
 - `changelog.d/internal/<slug>.rst` — a bullet for the `Internal:` sub-list: dev tooling, refactors, CI, test infrastructure
 
-The directory decides the placement, so the text never says where it goes. `<slug>` is kebab-case and describes the change, not the branch or the issue; the same slug may not appear under both categories.
+The directory decides the placement, so the text never says where it goes. `<slug>` is kebab-case — lowercase letters, digits and single hyphens, enforced rather than merely asked for — and describes the change, not the branch or the issue; the same slug may not appear under both categories. Two names differing only in case would be two fragments on Linux and one file on macOS or Windows, which is how a bullet disappears on someone else's checkout.
 
 A fragment holds the bullet text only, on one line, without the leading `* `. One bullet per change — a feature delivered over several commits is still one fragment, amended in place rather than joined by a second one.
 

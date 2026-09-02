@@ -135,6 +135,30 @@ class TestLoading:
         with pytest.raises(FragmentError, match=message):
             load_fragments(fragment_dir)
 
+    @pytest.mark.parametrize(
+        "name",
+        ["Feature", "feature_name", "feature name", "feature--name", "-feature", "f."],
+    )
+    def test_a_name_that_is_not_a_kebab_case_slug_is_refused(self, fragment_dir, name):
+        """The contract promises kebab-case, so the loader has to require it.
+
+        Not only tidiness: two names differing solely in case are two fragments
+        on Linux and one file on macOS or Windows, so a checkout there silently
+        loses a bullet - a changelog entry disappearing on someone else's
+        filesystem is exactly the failure nothing downstream would report.
+        """
+        write(fragment_dir, "user", name, "a change")
+
+        with pytest.raises(FragmentError, match="kebab-case slug"):
+            load_fragments(fragment_dir)
+
+    def test_a_kebab_case_slug_is_accepted(self, fragment_dir):
+        write(fragment_dir, "user", "a-perfectly-fine-slug-2", "a change")
+
+        assert [f.path.stem for f in load_fragments(fragment_dir)] == [
+            "a-perfectly-fine-slug-2"
+        ]
+
     def test_a_fragment_that_is_not_rst_is_refused(self, fragment_dir):
         (fragment_dir / "user" / "notes.md").write_text("a change", encoding="utf-8")
 
