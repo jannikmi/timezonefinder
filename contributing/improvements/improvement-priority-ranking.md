@@ -22,7 +22,6 @@
 | [DUP-1](items/lookup-geometry-and-data-format/dup-1-the-coordinate-bounds-are-declared-three-times.md) | The coordinate bounds are declared three times | internal | ~8 | free — decided |
 | [BIG-2](items/data-pipeline-and-developer-tooling/big-2-calculate-shortcut-index-stats-computes-four-unrelated-things-in-one-pass.md) | `calculate_shortcut_index_stats` computes four unrelated things in one pass | internal | ~80 | free |
 | [TOOL-1](items/data-pipeline-and-developer-tooling/tool-1-ruff-runs-close-to-its-default-rule-set.md) | ruff runs close to its default rule set | tooling | M | free |
-| [GH-543](items/data-pipeline-and-developer-tooling/gh-543-the-numba-group-s-numpy-2-4-pin-is-stale-and-redundant.md) | The numba group's `numpy<2.4` pin is stale and redundant | tooling | ~4 | free |
 | [DEAD-5](items/data-pipeline-and-developer-tooling/dead-5-reduced-timezone-mapping-has-no-consumer.md) | `REDUCED_TIMEZONE_MAPPING` has no consumer | internal | ~20 | free — decided |
 | [DEAD-6](items/data-pipeline-and-developer-tooling/dead-6-iter-boundaries-in-shortcut-has-no-caller-outside-the-test-suite.md) | `_iter_boundaries_in_shortcut` has no caller outside the test suite | internal | ~20 | free |
 | [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | parked — resume only for a concrete repository-history size need |
