@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788320802454,
+  "lastUpdate": 1788321284454,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3780,6 +3780,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0016184644893590925",
             "extra": "mean: 24.458967000001053 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "15111305+jannikmi@users.noreply.github.com",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "distinct": true,
+          "id": "fb3ffef0e691bd51823da08fae0cb3a70dfcb92b",
+          "message": "Check the acceleration path before reading the noise gate\n\n`make benchmark-noise` runs `benchmarks-ci`, which measures this checkout's environment rather than the isolated one `make benchmarks` uses. `timezonefinder/utils.py` binds the point-in-polygon backend at import time and prefers numba whenever it is importable, so a `--all-groups` development environment characterises the numba kernel while the committed pages assert clang. The gate would then be read off a different implementation than the one it is gating.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T05:53:58+02:00",
+          "tree_id": "58d461030f4b5fdd5dfdbfada12c26afb86cc2c6",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fb3ffef0e691bd51823da08fae0cb3a70dfcb92b"
+        },
+        "date": 1788321283221,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 212.3515556454226,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000817107178567386",
+            "extra": "mean: 4.709171999991213 msec\nrounds: 167 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 306.4200516396969,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009785060164425356",
+            "extra": "mean: 3.2634939999809376 msec\nrounds: 270 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 60.42806881385685,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00031476334424935246",
+            "extra": "mean: 16.548600999982455 msec\nrounds: 56 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
           }
         ]
       }
