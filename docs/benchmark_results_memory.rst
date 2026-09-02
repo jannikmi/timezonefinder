@@ -22,7 +22,7 @@ Python Environment
 
 **Python Version**: 3.14.2 (CPython)
 
-**NumPy Version**: 2.3.5
+**NumPy Version**: 2.5.2
 
 **Platform**: Darwin arm64
 
@@ -91,13 +91,13 @@ Results
    * - TimezoneFinderL
      - 1.02 MiB
      - 1.02 MiB
-     - 1.67 MiB
-     - 1.73 MiB
+     - 1.66 MiB
+     - 1.77 MiB
    * - TimezoneFinder[file_based]
      - 2.27 MiB
      - 2.27 MiB
-     - 5.06 MiB
-     - 13.5 MiB
+     - 5.09 MiB
+     - 13.6 MiB
    * - TimezoneFinder[in_memory]
      - 32.6 MiB
      - 32.6 MiB
@@ -115,7 +115,7 @@ Summary
 
 * ``in_memory=True`` holds **32.6 MiB** on the heap against **2.27 MiB** for the default file-based mode (14.4x more). That is the price of the speedup documented in :doc:`benchmark_results_timezonefinding`.
 
-* The file-based mode's resident set grows from **5.06 MiB** at construction to **13.5 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
+* The file-based mode's resident set grows from **5.09 MiB** at construction to **13.6 MiB** once the workload has run, as the kernel faults in the mapped coordinate pages actually queried. Unlike the in-memory mode's allocation, these pages are reclaimable under memory pressure.
 
 * ``TimezoneFinderL`` holds **1.02 MiB**: it consults only the shortcut index and loads no polygon data at all, which is why it takes no ``in_memory`` variant here.
 
