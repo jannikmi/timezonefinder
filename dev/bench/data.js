@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788390143826,
+  "lastUpdate": 1788390145733,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9443,6 +9443,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a8239d89f058f5fcdf7a49fad53f9cd6dd7f8c72",
+          "message": "BENCH-1, CHANGELOG-1: a reusable candidate-comparison harness, and changelog fragments (#589)\n\n* CHANGELOG-1: file changelog bullets as fragments under changelog.d/\n\nEvery non-exempt change edited one section of CHANGELOG.rst, and internal\nchanges all appended at the same `Internal:` boundary, so independently\nauthored pull requests repeatedly contended on a release artifact whose\ncuration is needed once, at release time. That was the last routine\ncross-change merge hotspot.\n\nA change now drops one .rst file into changelog.d/user/ or\nchangelog.d/internal/ instead. The directory carries the placement, so no\nfragment says where it goes and no two of them touch the same lines.\n\nscripts/changelog_fragments.py validates (classification, one bullet on one\nline, no leading marker, unique slugs, deterministic order), previews the\nassembled section (`make changelog`), and folds the fragments into the\nunreleased section at release time (`make changelog-assemble`), deleting what\nit consumed. Assembly is additive: existing bullets are never rewritten or\nreordered, so a frozen baseline survives byte-identical and the release's\nend-state rewrite stays the deliberate act the policy describes.\nCHANGELOG.rst remains the published artifact.\n\n--require-consumed is the release check: a fragment left behind is a change\nthat ships with no entry and nothing to notice it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BENCH-1: a reusable paired A/B harness for two candidate implementations\n\nDeciding between two candidate implementations of one stage is the measurement\nevery remaining performance item needs, and nothing here performed it: each\nattempt wrote the harness again in prototypes/ and deleted it with the\nprototype, so the next one was free to repeat a design already known to give\nwrong answers.\n\nbenchmarks/candidate_comparison.py holds the four properties that were got\nwrong, each recorded in docs/benchmarking_methodology.rst with what it cost:\n\n- the order alternates round by round, so neither candidate runs second on a\n  cache the other warmed (13.3 % in a fixed order, 0.3 % once alternated)\n- the callables perform the whole public call for one input, so the boundary\n  falls where each candidate puts it rather than where the harness does\n  (~100 ns of artefact when the stage was measured in isolation)\n- inputs are sampled at random rather than walked in container order\n  (77 ns against 108 ns on the same lookup)\n- two estimators - the best-round ratio and the round-level win count - and the\n  verdict is `unresolved` where they disagree, which is the answer neither can\n  give alone\n\nReporting only, like every other measurement here.\n\nThe harness is a measurement instrument, so its own correctness cannot be read\noff a run: one that fails to alternate still prints a plausible number.\ntests/test_candidate_comparison.py therefore asserts every property against an\ninjected clock, so no assertion depends on the machine running the suite.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: delete the shipped BENCH-1 and CHANGELOG-1 items\n\nBoth landed in this pull request. PERF-4's rejection cited BENCH-1 as the\nrecord of the alternating design; it now names the lasting fact - the harness\nand the methodology page that documents it - instead of a dead item handle.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* CHANGELOG-1: enforce fragment consumption on both release paths\n\nCodex review of 473671f: --require-consumed existed only as a documented step\nand a manual invocation, so a release that skipped the assembly step could tag\nand publish with fragments still present. Because changelog.d/ is pruned from\nthe distribution, those bullets would be absent from CHANGELOG.rst *and* from\nthe package, and nothing would notice - the release would simply read as if\nthose changes never happened. The item's own acceptance criteria asked for this\ngate; it was not built.\n\n`make release` now runs the check before it tags, and build.yml's `release` job\nruns it beside the data-dependency check, ahead of the first irreversible step\n(the GitHub Release, which carries the wheels and creates the tag).\n\ntests/test_release_workflows.py asserts that ordering. Its data-dependency\nhelper is parameterised by the marker rather than copied: both are the same\nclaim about ordering, and a check that runs after publication checks nothing.\nVerified to fail with the workflow step removed.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BENCH-1, CHANGELOG-1: fix three Codex findings on 92b1472\n\nAll three confirmed against the code before fixing.\n\nA numpy input pool was rejected before a single round ran: `if not inputs`\nraises the ambiguous truth-value ValueError on an array of two or more\nelements, and a committed fixture loaded with numpy is the natural pool for\nthis harness. Checked with len() instead. Anything random.Random can index\nworks as a pool, which is wider than Sequence.\n\nthreshold and win_margin were unvalidated while rounds and batch_size were. A\nbad estimator setting does not fail loudly - it reports confidently and\nwrongly, which is the one failure this module exists to prevent: a negative\nthreshold calls an unchanged measurement `faster`, and a win_margin at or above\n0.5 puts the sign count beyond any reachable share, collapsing every verdict to\n`unresolved`. Both are now rejected, non-finite values included.\n\nFragment names were checked only for the .rst suffix while the contract\npromised kebab-case, so `Feature_Name.rst` passed. Worse than tidiness: two\nnames differing solely in case are two fragments on Linux and one file on macOS\nor Windows, so a checkout there silently loses a changelog bullet - reproduced\nwhile confirming the finding, where the second of such a pair simply did not\nexist. The complete basename is now validated.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* CHANGELOG-1: preview the real changelog, not a synthetic empty section\n\nCodex on 9d046a7: `_preview` assembled fragments into a freshly created empty\nsection, so `make changelog` omitted any bullet already sitting in the\nunreleased section and read as empty whenever no fragment was filed.\n\nThat defeats the two things the preview exists for: the changelog policy's\n\"re-read the section and merge bullets describing the same change\" step cannot\nsee a duplicate it does not print, and a release consults it to decide whether\nthere is anything to ship.\n\nIt now assembles into CHANGELOG.rst and extracts the unreleased section from\nthe result.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-03T01:01:30+02:00",
+          "tree_id": "6b0a896e6419cc60f772344890ef53e6922aa419",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a8239d89f058f5fcdf7a49fad53f9cd6dd7f8c72"
+        },
+        "date": 1788390145233,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008347511291504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085258483886719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2298593521118164,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2306251525878906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.583333015441895,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58414173126221,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
           }
         ]
       }
