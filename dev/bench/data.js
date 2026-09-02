@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788339990883,
+  "lastUpdate": 1788339993054,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9332,6 +9332,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.1336 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "536bbf6a85da38bebfa04ca0a43003e3cd17c10e",
+          "message": "Release 9.0.0 (#586)\n\n* Release 9.0.0\n\nCondense the unreleased changelog section to describe the release end\nstate, and cut the version to 9.0.0.\n\nThe section merged six bullets that described one change each in more\nthan one place: the batch land lookups into the batch-lookup bullet, the\nGH-536 coordinate-offset table into the geometry-path bullet that\nsuperseded it, the packaged-size, boundary-exactness and data-dependency\nbullets into the single data-format change they are, the latitude block\nindex's trailing paragraph into its own bullet, the two data-integrity\nvalidators into one, and the query-stage prototype with the re-measure of\nits FINDINGS block.\n\nThree bullets still named `timezonefinder-data` 2.x and polygon layout\nversion 2, which the format-3 work superseded; the release requires 3.x,\nnow stated once. Tuning history and review narration are dropped\nthroughout. 10,990 words to 8,176.\n\nmajor: three bullets are marked BREAKING - the lazy public surface, the\nremoval of `in_memory` from `TimezoneFinderL`, and the CLI's required\nsubcommands - each of which breaks documented behaviour.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Refresh the committed benchmark reports for 9.0.0\n\nThe release freezes these pages as the published performance of the\nversion, and they were last measured at #580 - before `validate-data`\n(#573) and the PERF-1/BATCH-1 work (#581) touched `timezonefinder/`.\n\nMeasured on an Apple M1 Pro on the clang point-in-polygon path, which\n`make benchmarks` and `make latency` assert before recording anything.\nThe noise floor was read on that same path over five runs of unchanged\ncode: worst spread 101.4%, under the derived 110% threshold.\n\nCI's paired same-runner comparison, not these pages, remains the\nauthority on whether a change moved anything.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Restore the musllinux bullet the master merge dropped\n\nMerging master into this branch kept #588's change to `build.yml` - the\nrelease does build its Alpine wheel on musllinux_1_2 - but resolved the\nchangelog hunk in favour of this branch, dropping the bullet describing\nit. The section would then have frozen 9.0.0's published performance and\nAPI while silently omitting a change to what `pip install` resolves on\nAlpine.\n\nIt belongs in the 9.0.0 section rather than the empty unreleased one:\nthe change is on master ahead of the release, so it ships in 9.0.0.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T11:05:41+02:00",
+          "tree_id": "19a35adbb873a46e276d41d29bbff075d2aa9001",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/536bbf6a85da38bebfa04ca0a43003e3cd17c10e"
+        },
+        "date": 1788339992572,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083513259887695,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085296630859375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.230259895324707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2310686111450195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58388710021973,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58455276489258,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2443 GHz"
           }
         ]
       }
