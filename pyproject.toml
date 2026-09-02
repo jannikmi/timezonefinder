@@ -80,16 +80,15 @@ dev = [
     "mypy",
     "rstcheck",
     "isort",
-    "ruff",
+    # see .pre-commit-config.yaml: held with the hook rev so the two agree
+    "ruff<0.16",
     "cibuildwheel",
 ]
 # data generation / parsing helpers
 data = [
     "pydantic>=2.11.7",
 ]
-# Numba requires NumPy 2.3.x or lower; pin here to avoid incompatible NumPy 2.4 installs
 numba = [
-  "numpy<2.4",
   "numba>=0.60,<1",
 ]
 pytz = [
@@ -120,9 +119,7 @@ proto = [
 
 # Package extras
 [project.optional-dependencies]
-# Numba requires NumPy 2.3.x or lower; pin here to avoid incompatible NumPy 2.4 installs
 numba = [
-  "numpy<2.4",
   "numba>=0.60,<1",
 ]
 pytz = [

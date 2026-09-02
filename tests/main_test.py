@@ -61,11 +61,12 @@ class TestBaseTimezoneFinderClass:
     # attribute the class does not admit to having
     test_instance: AbstractTimezoneFinder
 
+    # a class-scoped fixture runs once per class while each test gets a fresh
+    # instance, so it must be a classmethod to set attributes the tests can see;
+    # pytest deprecated the instance-method form in 9.1 and removes it in 10
     @pytest.fixture(scope="class", autouse=True)
-    def _init_test_instance(
-        self, request, timezonefinder_in_memory, timezonefinder_disk
-    ):
-        cls = request.cls
+    @classmethod
+    def _init_test_instance(cls, timezonefinder_in_memory, timezonefinder_disk):
         cls.print_tf_class_props(cls)
         if cls.class_under_test is TimezoneFinder:
             cls.test_instance = (
