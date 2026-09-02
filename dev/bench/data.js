@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788322342942,
+  "lastUpdate": 1788322344594,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8999,6 +8999,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c1a5435503cd043586c88261b4c92f1fc93849a",
+          "message": "Unpark GH-334 and re-file the two measurement-based rejections (#585)\n\nThe upstream blocker GH-334 was parked on, evansiroky/timezone-boundary-builder#195, closed on 2026-01-08 by commit f5e798b; the merge mapping has shipped in the release assets ever since (timezone-names-Now.json and its variants in 2026c). The park was recorded 2026-08-20, seven months later. GH-334 becomes free, GH-332 becomes sequenced behind it, and the settled \"upstream or not at all\" rule keeps its wording while its precondition is marked met.\n\nSeparately, the two closed performance items are moved to parked. Both were refused on a measurement rather than a proof — GH-301 on a 2.90 % enumeration bound over the packaged shortcut index, PERF-4 on an in-query ceiling below the machine's noise floor — so each has a condition under which it comes back, which is what parked means here and closed does not. GH-513 and GH-317 stay closed: a cyclic precedence relation and a superseded proposal have no such condition.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T06:11:41+02:00",
+          "tree_id": "714a53153a6e445b35a521110b945d3d70cfe40f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8c1a5435503cd043586c88261b4c92f1fc93849a"
+        },
+        "date": 1788322344271,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0081958770751953,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0083742141723633,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2280187606811523,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.228771209716797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58204936981201,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.582858085632324,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8733 GHz"
           }
         ]
       }
