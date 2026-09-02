@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788324905292,
+  "lastUpdate": 1788339082673,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3960,6 +3960,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.000324509117670909",
             "extra": "mean: 21.58133400000395 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ff3d671c695b2be3d4373add780722261a5d3d5",
+          "message": "Build the Alpine wheel on musllinux_1_2, not an abandoned image (#588)\n\n`quay.io/pypa/musllinux_1_1_x86_64:2024.10.26-1` failed to pull on #586\nwith a registry 502. Rerunning would have cleared it, but the pin is the\nreal problem: 2024.10.26-1 is the *last* musllinux_1_1 image pypa ever\nbuilt. They stopped in October 2024, when Alpine 3.12 went end of life,\nso `latest` on that repository is frozen at the same date and this pin\ncould never be refreshed. The image has taken no toolchain or security\nupdate in nearly two years, and being that cold in the registry is a\nplausible reason it is the one image in the matrix whose pull failed\nwhile the actively-served manylinux images did not.\n\n`musllinux_1_2_x86_64` is rebuilt continuously and publishes the same\ndated tag the two manylinux pins already use, so all three now refresh on\none date and the asymmetry that hid this is gone.\n\nThe published Alpine wheel changes platform tag accordingly. musl 1.2 is\nAlpine 3.13 and newer, and the tag needs pip 21.3; anything older falls\nback to the sdist, where `fallible_build_ext` keeps the install working\neven if the compile does not. The comment also stopped pointing at\ncibuildwheel v3.4.1's pinned image list, which is not the version the\naction runs.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T10:50:14+02:00",
+          "tree_id": "1a0634416a1cc33231c0b43fd2bcbe7e45f6d950",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3ff3d671c695b2be3d4373add780722261a5d3d5"
+        },
+        "date": 1788339081862,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 298.43761937581945,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000035329269269450595",
+            "extra": "mean: 3.350783999991336 msec\nrounds: 248 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 476.3528898432902,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025318508945113498",
+            "extra": "mean: 2.09928399999626 msec\nrounds: 396 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 74.97868356040624,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007220422083879552",
+            "extra": "mean: 13.337123999974665 msec\nrounds: 65 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
