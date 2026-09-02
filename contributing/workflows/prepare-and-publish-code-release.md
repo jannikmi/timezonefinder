@@ -45,7 +45,15 @@ The release freezes `docs/benchmark_results_*.rst` as the published performance 
 
 Check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and this step is required. If nothing did, skip it and say so in the pull request body.
 
-Establish the machine is quiet enough to measure on **before** measuring, since a report is only worth committing if it is reproducible:
+Establish the machine is quiet enough to measure on **before** measuring, since a report is only worth committing if it is reproducible. The gate is only readable if it measures the path the reports describe, so assert that first:
+
+```bash
+uv run python -m scripts.assert_acceleration_path --expect "$(make -s print-benchmark-acceleration-path)"
+```
+
+`benchmark-noise` runs `benchmarks-ci`, which uses this checkout's environment rather than `make benchmarks`' isolated one, and `timezonefinder/utils.py` binds the point-in-polygon backend at import time, preferring numba whenever it is importable. A development environment synced with `--all-groups` therefore has numba, so the noise floor would characterise a different implementation than the pages assert. A failing assertion means the gate cannot be read here: say so, and treat the reports as stale rather than committing against a threshold measured on the wrong kernel.
+
+On a passing assertion, measure the floor:
 
 ```bash
 make benchmark-noise
