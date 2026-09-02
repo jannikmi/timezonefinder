@@ -356,6 +356,16 @@ jobs:
       - name: Verify the required data version is published
         run: uv run --with packaging python -m scripts.check_data_dependency
 
+      # Sits beside the check above and for the same reason: the next step is the
+      # first irreversible one. A change files its changelog bullet as a fragment
+      # under changelog.d/ and the release consumes them (`make changelog-assemble`);
+      # a fragment surviving to the tag is a change published with no entry in
+      # CHANGELOG.rst and none in the distribution either, since changelog.d/ is
+      # pruned from it. Nothing else would notice - the release simply reads as if
+      # that change never happened.
+      - name: Verify every changelog fragment was consumed
+        run: uv run python -m scripts.changelog_fragments --check --require-consumed
+
       - name: Create GitHub Release
         id: create_gh_release
         uses: ncipollo/release-action@v1

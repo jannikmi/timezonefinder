@@ -290,6 +290,16 @@ is a more useful output than either number alone.
 back and hands it a cache-friendly access pattern no real query stream has. Worth 77 ns against
 108 ns on the same lookup - a third of the quantity being compared.
 
+All four are held by ``benchmarks/candidate_comparison.py`` rather than re-derived per attempt.
+``compare_candidates`` takes two named callables that each perform the whole public call for one
+input, draws a fresh random sample per round and hands the same draw to both, alternates which of
+them runs first, and reports the best-round ratio beside the round-level win count. Where the two
+estimators agree it says ``faster``, ``slower`` or ``no difference``; where they disagree it says
+``unresolved``, which is the answer neither estimator can give alone. The default 61 rounds is odd
+so the sign count cannot tie, and the default 3 % threshold is the bottom of a single machine's own
+jitter - an effect below it is not demonstrable by any number of rounds. Like every other
+measurement here it is reporting only: nothing in it fails a build.
+
 
 What a stage's share does and does not bound
 --------------------------------------------

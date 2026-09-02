@@ -96,6 +96,8 @@ UNWANTED_CODE_DIST_PATTERNS = {
     ".gitignore",
     ".pre-commit-config.yaml",
     "CHANGELOG*",
+    # unreleased changelog fragments, consumed into CHANGELOG.rst by the release
+    "changelog.d/",
     "CONTRIBUTING.*",
     # the agent instruction files MANIFEST.in excludes by name
     "AGENTS.md",

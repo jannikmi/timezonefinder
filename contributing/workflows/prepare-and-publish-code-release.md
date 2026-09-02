@@ -21,7 +21,7 @@ Fetch `origin` and tags, inspect `uv version --short`, the top changelog section
 
 ## Prepare
 
-Require a clean/accounted working tree; current `master` equal to `origin/master`; no open release pull request or release branch; a non-empty unreleased section; and a green latest `master` run.
+Require a clean/accounted working tree; current `master` equal to `origin/master`; no open release pull request or release branch; a non-empty unreleased section *after assembly* — `make changelog` shows what a release would carry; and a green latest `master` run.
 
 ### Publish the data distribution first
 
@@ -48,6 +48,20 @@ This tag publishes to PyPI irreversibly and is bound by the same rule as the cod
 
 ## Rewrite the changelog
 
+Assemble the fragments first. Every non-exempt change since the last release filed one under `changelog.d/`, and `make changelog` previews the section they make:
+
+```bash
+make changelog-assemble
+```
+
+That folds them into the `X.X.X (unreleased)` section and deletes the files it consumed, additively — existing bullets are never rewritten, so what it produces is the raw material for the rewrite below rather than the result of it. Confirm nothing is left behind before the version commit:
+
+```bash
+uv run python -m scripts.changelog_fragments --check --require-consumed
+```
+
+A fragment surviving the release is a change that ships with no changelog entry and no way to notice — `changelog.d/` is pruned from the distribution, so the bullet is absent from `CHANGELOG.rst` *and* from the package. It is therefore also *enforced*, not merely documented: `make release` runs the same check before it tags, and the `release` job runs it beside the data-dependency check, ahead of the first irreversible step. `tests/test_release_workflows.py` asserts that ordering. Running it here is what lets a release discover the problem while the version is still spendable.
+
 Rewrite the entire unreleased section to describe the release end state: merge bullets for one feature, remove tuning history and review narration, retain decision-relevant trade-offs, and keep internal work under `Internal:`. Compare every commit since the newest tag with the section and add missing non-exempt changes without inventing behavior. Show the resulting changelog diff before selecting the version level so the evidence and the decision are reviewed together.
 
 Compute patch, minor, and major candidates with `uv version --bump <level> --dry-run`. Select the strongest applicable rule:
@@ -60,9 +74,9 @@ Compute patch, minor, and major candidates with `uv version --bump <level> --dry
 
 Internal code and bundled formats are versioned together and are not major changes. A data-only boundary release is outside this workflow. If the invocation explicitly names a level, use it but state when the table requires a higher one.
 
-Create `release/<version>`, run `uv version --bump <level>`, and replace the top changelog heading with the version and shell-derived date. Recompute its RST underline and insert a fresh empty `X.X.X (unreleased)` section above it. Only `CHANGELOG.rst`, `pyproject.toml`, and `uv.lock` belong in the version commit.
+Create `release/<version>`, run `uv version --bump <level>`, and replace the top changelog heading with the version and shell-derived date. Recompute its RST underline and insert a fresh empty `X.X.X (unreleased)` section above it. Only `CHANGELOG.rst`, `pyproject.toml`, `uv.lock`, and the consumed fragment deletions under `changelog.d/` belong in the version commit.
 
-Run `make hook`, `make test`, and `make testint`. Confirm the diff against `origin/master` contains exactly those three files. Commit.
+Run `make hook`, `make test`, and `make testint`. Confirm the diff against `origin/master` contains exactly those files. Commit.
 
 ### Refresh the committed benchmark reports
 

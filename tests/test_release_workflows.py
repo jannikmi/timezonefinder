@@ -81,19 +81,19 @@ def _guarded_against_data_tags(workflow: dict, job_name: str) -> bool:
     )
 
 
-def _guarded_by_data_check(workflow: dict, job_name: str) -> bool:
-    """Whether the data-dependency check has run by the time ``job_name`` publishes.
+def _guarded_by_run_check(workflow: dict, job_name: str, marker: str) -> bool:
+    """Whether a ``run:`` step containing ``marker`` precedes ``job_name``'s publishing.
 
     Either in the job itself, ahead of its first publishing step and able to fail it,
     or in a job it depends on - a skipped dependency skips its dependents.
+
+    Parameterised by ``marker`` because more than one thing has to be established
+    before the first irreversible step, and they are all the same assertion about
+    ordering: a check that runs after the release is published checks nothing.
     """
     job = workflow["jobs"][job_name]
     steps = job["steps"]
-    guard = [
-        i
-        for i, step in enumerate(steps)
-        if "scripts.check_data_dependency" in str(step.get("run", ""))
-    ]
+    guard = [i for i, step in enumerate(steps) if marker in str(step.get("run", ""))]
     if guard:
         publishing = [
             i
@@ -105,7 +105,8 @@ def _guarded_by_data_check(workflow: dict, job_name: str) -> bool:
             return False
         return all("continue-on-error" not in steps[i] for i in guard)
     return any(
-        _guarded_by_data_check(workflow, dependency) for dependency in _needs(job)
+        _guarded_by_run_check(workflow, dependency, marker)
+        for dependency in _needs(job)
     )
 
 
@@ -176,12 +177,48 @@ def test_nothing_irreversible_runs_before_the_data_dependency_is_checked() -> No
     )
 
     unguarded = sorted(
-        name for name in publishing if not _guarded_by_data_check(workflow, name)
+        name
+        for name in publishing
+        if not _guarded_by_run_check(workflow, name, "scripts.check_data_dependency")
     )
     assert not unguarded, (
         f"jobs in {BUILD_WORKFLOW.name} that publish without the data-dependency check "
         f"having already run: {unguarded}. Put it in the job ahead of its first "
         "publishing step, or in a job it needs."
+    )
+
+
+@pytest.mark.unit
+def test_no_release_can_publish_with_a_changelog_fragment_left_behind() -> None:
+    """A fragment surviving the tag is a change released with no changelog entry.
+
+    Bullets are filed as fragments under `changelog.d/` and consumed by the release
+    (`make changelog-assemble`). Nothing downstream would notice one that was missed:
+    `changelog.d/` is pruned from the distribution, so the bullet is absent from
+    `CHANGELOG.rst` *and* from the package, and the release simply reads as if that
+    change never happened. The check therefore has to sit ahead of the first
+    irreversible step, exactly like the data-dependency one above.
+    """
+    workflow = _workflow(BUILD_WORKFLOW)
+    publishing = {
+        **_jobs_using(workflow, PYPI_PUBLISH_ACTION),
+        **_jobs_using(workflow, GITHUB_RELEASE_ACTION),
+    }
+    assert publishing, (
+        f"no publishing job found in {BUILD_WORKFLOW.name} - this check is vacuous, "
+        "so the action names above have gone stale"
+    )
+
+    unguarded = sorted(
+        name
+        for name in publishing
+        if not _guarded_by_run_check(workflow, name, "scripts.changelog_fragments")
+    )
+    assert not unguarded, (
+        f"jobs in {BUILD_WORKFLOW.name} that publish without checking that every "
+        f"changelog fragment was consumed: {unguarded}. Put "
+        "`--check --require-consumed` in the job ahead of its first publishing step, "
+        "or in a job it needs."
     )
 
 
