@@ -16,6 +16,7 @@ from scripts.changelog_fragments import (
     FRAGMENT_ROOT,
     Fragment,
     FragmentError,
+    _preview,
     assemble,
     load_fragments,
     render_bullets,
@@ -262,6 +263,34 @@ class TestAssembly:
         assert "* the first change" in twice
         assert "* the second change" in twice
         assert twice.index("the first change") < twice.index("the second change")
+
+
+class TestPreview:
+    """`make changelog` has to show what will ship, not only what is filed."""
+
+    def test_existing_unreleased_bullets_are_shown_beside_the_fragments(
+        self, fragment_dir
+    ):
+        write(fragment_dir, "user", "new-change", "a newly filed change")
+
+        preview = _preview(load_fragments(fragment_dir), FROZEN_CHANGELOG)
+
+        assert "* a bullet curated before the fragments arrived" in preview
+        assert "* a newly filed change" in preview
+
+    def test_the_preview_is_not_empty_when_no_fragment_is_filed(self):
+        """A release reads this to decide whether there is anything to ship."""
+        preview = _preview([], FROZEN_CHANGELOG)
+
+        assert "* a bullet curated before the fragments arrived" in preview
+        assert "* an internal bullet curated before the fragments arrived" in preview
+
+    def test_the_preview_stops_at_the_unreleased_section(self):
+        preview = _preview([], FROZEN_CHANGELOG)
+
+        assert preview.startswith("X.X.X (unreleased)\n------------------")
+        assert "9.0.0" not in preview
+        assert "the released text" not in preview
 
 
 def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():

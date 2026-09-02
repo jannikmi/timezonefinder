@@ -252,16 +252,23 @@ def _tidy(section: list[str]) -> list[str]:
     return ["", *section, "", ""] if section else ["", ""]
 
 
-def _preview(fragments: Sequence[Fragment]) -> str:
-    """The unreleased section as it would read once assembled."""
-    heading = [UNRELEASED_HEADING, "-" * len(UNRELEASED_HEADING)]
-    if not fragments:
-        return "\n".join([*heading, ""])
-    body = assemble(
-        "\n".join([*heading, "", ""]),
-        fragments,
-    ).splitlines()
-    return "\n".join(body)
+def _preview(fragments: Sequence[Fragment], changelog_text: str) -> str:
+    """The unreleased section as it would read once assembled.
+
+    Built from the real changelog rather than from a synthetic empty section:
+    the unreleased section can already hold curated or legacy bullets, and a
+    preview that omits them cannot answer the question the changelog policy
+    asks of it - whether two bullets now describe the same change and should be
+    merged. It would also read as empty whenever no fragment is filed, which is
+    exactly when a release is deciding whether there is anything to ship.
+    """
+    lines = assemble(changelog_text, fragments).splitlines()
+    start, end = _unreleased_bounds(lines)
+    heading = lines[start - 2 : start]
+    body = lines[start:end]
+    while body and not body[-1].strip():
+        body.pop()
+    return "\n".join([*heading, *body])
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -301,7 +308,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if not args.assemble:
-        print(_preview(fragments))
+        print(_preview(fragments, CHANGELOG_PATH.read_text(encoding="utf-8")))
         return 0
 
     if not fragments:
