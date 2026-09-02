@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788321624096,
+  "lastUpdate": 1788321626236,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8888,6 +8888,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6b59c0a64dffee8a839ad600bc16fe0f3a5de7a",
+          "message": "Register BENCH-2 and BENCH-3 on how the benchmark pages are measured (#583)\n\n* Register BENCH-2 and BENCH-3 on how the benchmark pages are measured\n\nBENCH-2: `docs/benchmark_results_*.rst` are the package's published performance claims and are rendered only by whoever runs `make reports` locally. CI never renders them - the `measure` job records the tracked core subset and compares head against merge base. So the pages carry one unrepeatable local run. The shape proposed is the one the data pipeline already uses: a dispatchable job uploads the rendered pages as an artifact and the release consumes it, rather than CI committing to `master`, since the pull_request half of `benchmark.yml` deliberately holds no write permissions. It carries the one decision that is the maintainer's: whether the published pages should describe CI hardware instead of a desktop.\n\nBENCH-3: the tracked measurement and the published pages differ in selection, round count, estimator and environment, with nothing stating that they do. Inside that divergence is a defect confirmed on this checkout - `benchmarks-ci` runs under plain `uv run` while `benchmarks` runs isolated, and `timezonefinder.utils` binds numba at import time whenever it is importable, so a `--all-groups` environment measures the numba kernel while every page asserts clang. The item argues against unifying the two runs and for asserting their difference instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record the BENCH-2 hardware decision: the pages document CI hardware\n\nAnswered 2026-09-02 by the maintainer. The published benchmark pages move from the maintainer's machine to a Linux runner, on the ground that the pages exist to be checkable: a CI run's error is bounded, measured and printable, where a desktop's depends on whatever else that machine was doing and never appears in the page. Conditional on every page naming the CPU class it was measured on, since `ubuntu-latest` spread the tracked min 134-158 % across 11 runs of an identical lookup path purely on hardware.\n\nThe item returns to `open`, the ranking cell says decided, and the topic decision module records the refused alternatives - rendering locally behind the noise gate, and rendering both.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Do not claim BENCH-2 narrows BENCH-3's scope\n\nBoth entries said that rendering the pages in CI would remove the machine and environment rows from BENCH-3's table. It does not. The `measure` job syncs `--group test` without `compare` while `make reports` needs `--isolated --group test --group compare`, and two separately dispatched jobs draw independently from a pool that serves at least three CPU classes, so a CI-rendered page and the tracked run remain different experiments on different hardware.\n\nClosing those rows takes a deliberate same-runner arrangement, whose cost is that the full suite would ride the per-pull-request job it was deliberately kept out of. That is BENCH-3's call, and it is now stated there rather than assumed away here.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T05:59:36+02:00",
+          "tree_id": "7b3c4577cbf73f1749c17dd4ae9d9d553de7c4f9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c6b59c0a64dffee8a839ad600bc16fe0f3a5de7a"
+        },
+        "date": 1788321625607,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0081396102905273,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0083179473876953,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.228199005126953,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2290077209472656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58225345611572,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.583062171936035,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8669 GHz"
           }
         ]
       }
