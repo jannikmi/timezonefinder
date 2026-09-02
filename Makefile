@@ -392,6 +392,7 @@ release:
 		echo "Error: releases can only be tagged from the master branch. Current branch: $$(git branch --show-current)"; \
 		exit 1; \
 	fi
+	@uv run python -m scripts.changelog_fragments --check --require-consumed
 	@echo "tagging the current commit with the version number: $(VERSION)"
 	@git tag -a "$(VERSION)" -m "Release $(VERSION)"
 	@echo "pushing the tag to the remote repository"

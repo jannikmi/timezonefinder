@@ -60,7 +60,7 @@ That folds them into the `X.X.X (unreleased)` section and deletes the files it c
 uv run python -m scripts.changelog_fragments --check --require-consumed
 ```
 
-A fragment surviving the release is a change that ships with no changelog entry and no way to notice, which is why this is checked rather than assumed.
+A fragment surviving the release is a change that ships with no changelog entry and no way to notice — `changelog.d/` is pruned from the distribution, so the bullet is absent from `CHANGELOG.rst` *and* from the package. It is therefore also *enforced*, not merely documented: `make release` runs the same check before it tags, and the `release` job runs it beside the data-dependency check, ahead of the first irreversible step. `tests/test_release_workflows.py` asserts that ordering. Running it here is what lets a release discover the problem while the version is still spendable.
 
 Rewrite the entire unreleased section to describe the release end state: merge bullets for one feature, remove tuning history and review narration, retain decision-relevant trade-offs, and keep internal work under `Internal:`. Compare every commit since the newest tag with the section and add missing non-exempt changes without inventing behavior. Show the resulting changelog diff before selecting the version level so the evidence and the decision are reviewed together.
 
