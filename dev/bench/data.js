@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788321626236,
+  "lastUpdate": 1788322342942,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -3870,6 +3870,51 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002188750857956283",
             "extra": "mean: 22.346070999986978 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c1a5435503cd043586c88261b4c92f1fc93849a",
+          "message": "Unpark GH-334 and re-file the two measurement-based rejections (#585)\n\nThe upstream blocker GH-334 was parked on, evansiroky/timezone-boundary-builder#195, closed on 2026-01-08 by commit f5e798b; the merge mapping has shipped in the release assets ever since (timezone-names-Now.json and its variants in 2026c). The park was recorded 2026-08-20, seven months later. GH-334 becomes free, GH-332 becomes sequenced behind it, and the settled \"upstream or not at all\" rule keeps its wording while its precondition is marked met.\n\nSeparately, the two closed performance items are moved to parked. Both were refused on a measurement rather than a proof — GH-301 on a 2.90 % enumeration bound over the packaged shortcut index, PERF-4 on an in-query ceiling below the machine's noise floor — so each has a condition under which it comes back, which is what parked means here and closed does not. GH-513 and GH-317 stay closed: a cyclic precedence relation and a superseded proposal have no such condition.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-02T06:11:41+02:00",
+          "tree_id": "714a53153a6e445b35a521110b945d3d70cfe40f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8c1a5435503cd043586c88261b4c92f1fc93849a"
+        },
+        "date": 1788322341968,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 159.97760313558118,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006036791824440496",
+            "extra": "mean: 6.250874999999212 msec\nrounds: 134 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 231.91949795904316,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00033090283191596",
+            "extra": "mean: 4.311841000003369 msec\nrounds: 203 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 45.21432176302024,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00045749399593420507",
+            "extra": "mean: 22.11688599999917 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
