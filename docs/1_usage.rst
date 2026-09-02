@@ -149,8 +149,8 @@ Using a TimezoneFinder instance:
 
 
 
-timezone_ids_at() and timezone_names_at()
------------------------------------------
+Batch lookups
+-------------
 
 To look up many coordinates, pass them as two arrays - one per axis - instead of calling ``timezone_at()`` in a loop.
 The validation, the coordinate scaling and the shortcut lookup then run once over the whole batch rather than once per point:
@@ -231,10 +231,21 @@ Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than 
     Points whose H3 cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time, and ``h3``'s cell lookup has no vectorised form.
     ``examples/batch_processing.py`` demonstrates the whole API.
 
+``timezone_at_land()`` batches too, as ``timezone_ids_at_land()`` and ``timezone_names_at_land()``, with the same arguments and the same ``on_invalid`` policies:
+
+.. code-block:: python
+
+    names = tf.timezone_names_at_land(lngs=[13.358, -30.0], lats=[52.5061, 0.0])
+    # ['Europe/Berlin', None] - the second point is at sea
+
+The ocean check costs nothing per point here: ocean-ness is a fixed property of a zone id, so the whole answer array is masked in one operation rather than testing each answer's name.
+That makes the batch form cheaper per point than the scalar method, not merely equal to it.
+An ocean match, an uncovered point and a skipped coordinate are all ``NO_ZONE_ID`` in the id array and ``None`` in the name list - one sentinel, as everywhere else in the batch API.
+
 .. note::
 
-    Only ``timezone_at()`` has a batch form so far.
-    ``timezone_at_land()`` and ``certain_timezone_at()`` do not.
+    ``certain_timezone_at()`` has no batch form.
+    It is a different loop: it tests every candidate polygon rather than stopping at the first match.
 
 
 timezone_at_land()

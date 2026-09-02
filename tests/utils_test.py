@@ -562,3 +562,36 @@ def test_load_binary_data_matches_its_typed_dict():
 
 if __name__ == "__main__":
     pytest.main([__file__])
+
+
+# The prefix comparison that replaced ``re.match(OCEAN_TIMEZONE_PREFIX, name)``. The
+# constant holds no regex metacharacters and ``re.match`` anchors at the start, so the
+# two are exactly equivalent - which is a claim about the *constant*, and therefore
+# worth pinning where a future prefix could quietly break it.
+OCEAN_NAME_CASES = [
+    ("Etc/GMT", True),
+    ("Etc/GMT+5", True),
+    ("Etc/GMT-14", True),
+    ("Europe/Berlin", False),
+    ("America/Etc/GMT", False),
+    ("", False),
+    ("Etc/GM", False),
+]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name, expected", OCEAN_NAME_CASES)
+def test_is_ocean_timezone_matches_the_anchored_pattern(name: str, expected: bool):
+    import re
+
+    from timezonefinder.configs import OCEAN_TIMEZONE_PREFIX
+
+    assert utils.is_ocean_timezone(name) is expected
+    # the pattern this replaced, evaluated here rather than trusted
+    assert (re.match(OCEAN_TIMEZONE_PREFIX, name) is not None) is expected
+
+
+@pytest.mark.unit
+def test_is_ocean_timezone_still_rejects_a_non_string():
+    with pytest.raises(TypeError):
+        utils.is_ocean_timezone(None)  # type: ignore[arg-type]

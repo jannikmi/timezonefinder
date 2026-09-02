@@ -46,6 +46,8 @@ __all__ = [
     "timezone_ids_at",
     "timezone_names_at",
     "timezone_at_land",
+    "timezone_ids_at_land",
+    "timezone_names_at_land",
     "unique_timezone_at",
     "certain_timezone_at",
     "get_geometry",
@@ -174,6 +176,55 @@ def timezone_at_land(*, lng: float, lat: float) -> str | None:
         instances per thread to avoid singleton overhead.
     """
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
+
+
+def timezone_ids_at_land(
+    *,
+    lngs: CoordArrayLike,
+    lats: CoordArrayLike,
+    on_invalid: OnInvalid = "raise",
+) -> np.ndarray:
+    """
+    Look up many coordinates at once using the global singleton, answering with land ids.
+
+    Equivalent to :meth:`TimezoneFinder.timezone_ids_at_land`, which documents the
+    arguments, the ``on_invalid`` policies and every error raised.
+
+    :return: one ``int16`` timezone id per input coordinate, or ``NO_ZONE_ID`` (``-1``)
+        where :func:`timezone_at_land` would answer ``None``
+
+    Example:
+        >>> ids = timezone_ids_at_land(lngs=[13.358, -30.0], lats=[52.5061, 0.0])
+        >>> ids[1]  # mid-Atlantic: an ocean zone, so no land answer
+        np.int16(-1)
+    """
+    return _get_tf_instance().timezone_ids_at_land(
+        lngs=lngs, lats=lats, on_invalid=on_invalid
+    )
+
+
+def timezone_names_at_land(
+    *,
+    lngs: CoordArrayLike,
+    lats: CoordArrayLike,
+    on_invalid: OnInvalid = "raise",
+) -> list[str | None]:
+    """
+    Look up many coordinates at once using the global singleton, answering with land names.
+
+    Equivalent to :meth:`TimezoneFinder.timezone_names_at_land`. Prefer
+    :func:`timezone_ids_at_land` whenever the names are not the end product.
+
+    :return: one timezone name per input coordinate, or ``None`` where an ocean zone
+        matched, no zone covers the point, or the coordinate was skipped
+
+    Example:
+        >>> timezone_names_at_land(lngs=[13.358, -30.0], lats=[52.5061, 0.0])
+        ['Europe/Berlin', None]
+    """
+    return _get_tf_instance().timezone_names_at_land(
+        lngs=lngs, lats=lats, on_invalid=on_invalid
+    )
 
 
 def unique_timezone_at(*, lng: float, lat: float) -> str | None:

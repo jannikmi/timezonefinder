@@ -1,4 +1,5 @@
-"""Tests for the batch lookups ``timezone_ids_at`` / ``timezone_names_at``.
+"""Tests for the batch lookups: ``timezone_ids_at`` / ``timezone_names_at`` and the
+``_at_land`` pair beside them.
 
 The seam that matters is **agreement with the scalar path**. A batch answer is not a new
 computation: it is the same lookup with its prologue hoisted out of the loop, so any
@@ -26,10 +27,13 @@ from timezonefinder import (
     TimezoneFinder,
     TimezoneFinderL,
     timezone_ids_at,
+    timezone_ids_at_land,
     timezone_names_at,
+    timezone_names_at_land,
 )
 from timezonefinder.configs import SHORTCUT_H3_RES, ZONE_ID_RESULT_DTYPE
 from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
+from timezonefinder.utils import is_ocean_timezone
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 # enough points to reach every branch without turning a unit test into a sweep; the
@@ -85,6 +89,115 @@ def test_batch_ids_and_names_describe_the_same_answers(finder):
         None if zone_id < 0 else finder.zone_name_from_id(int(zone_id))
         for zone_id in zone_ids
     ] == names
+
+
+# --- the land pair ---------------------------------------------------------------
+#
+# Same seam: agreement with ``timezone_at_land``. What only this pair has is the ocean
+# mask, which is applied over ids rather than over each answer's name - so the tests
+# below check that it selects exactly the answers the scalar method drops.
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("fixture_name", FIXTURES)
+def test_batch_land_names_agree_with_the_scalar_lookup(finder, fixture_name):
+    points = load_benchmark_points(fixture_name)[:SAMPLE_SIZE]
+    lngs, lats = _axes(points)
+
+    expected = [finder.timezone_at_land(lng=lng, lat=lat) for lng, lat in points]
+    assert finder.timezone_names_at_land(lngs=lngs, lats=lats) == expected
+
+
+@pytest.mark.unit
+def test_batch_land_ids_and_names_describe_the_same_answers(finder):
+    points = load_benchmark_points(RANDOM_POINTS_FIXTURE)[:SAMPLE_SIZE]
+    lngs, lats = _axes(points)
+
+    zone_ids = finder.timezone_ids_at_land(lngs=lngs, lats=lats)
+    names = finder.timezone_names_at_land(lngs=lngs, lats=lats)
+
+    assert [
+        None if zone_id < 0 else finder.zone_name_from_id(int(zone_id))
+        for zone_id in zone_ids
+    ] == names
+
+
+@pytest.mark.unit
+def test_the_land_batch_drops_exactly_the_ocean_answers(finder):
+    """The mask is not merely *a* subset: it is the ocean zones and nothing else.
+
+    A mask that dropped too much would still agree with the scalar method only if the
+    scalar method were wrong the same way, so the two answers are compared against the
+    zone names directly.
+    """
+    points = load_benchmark_points(RANDOM_POINTS_FIXTURE)[:SAMPLE_SIZE]
+    lngs, lats = _axes(points)
+
+    all_ids = finder.timezone_ids_at(lngs=lngs, lats=lats)
+    land_ids = finder.timezone_ids_at_land(lngs=lngs, lats=lats)
+
+    dropped = {
+        int(zone_id)
+        for zone_id, land in zip(all_ids.tolist(), land_ids.tolist(), strict=True)
+        if land == NO_ZONE_ID and zone_id != NO_ZONE_ID
+    }
+    kept = {int(zone_id) for zone_id in land_ids.tolist() if zone_id != NO_ZONE_ID}
+
+    assert dropped, "the random fixture is expected to contain ocean points"
+    assert all(is_ocean_timezone(finder.zone_name_from_id(i)) for i in dropped)
+    assert not any(is_ocean_timezone(finder.zone_name_from_id(i)) for i in kept)
+
+
+@pytest.mark.unit
+def test_the_ocean_mask_leaves_the_sentinel_alone(finder):
+    """``NO_ZONE_ID`` is ``-1``, which indexes a flag array from the end.
+
+    The trailing ``False`` on ``ZoneNames.ocean_flags()`` is what makes that read as
+    "not an ocean zone" instead of picking up the last zone's flag - and the last zone
+    of the packaged dataset being an ocean zone is exactly when that would bite.
+    """
+    flags = finder.zone_names.ocean_flags()
+    assert flags.shape[0] == finder.nr_of_zones + 1
+    assert not bool(flags[NO_ZONE_ID])
+
+
+@pytest.mark.unit
+def test_the_land_batch_honours_the_skip_policy(finder):
+    zone_ids = finder.timezone_ids_at_land(
+        lngs=[13.358, 999.0], lats=[52.5061, 0.0], on_invalid="skip"
+    )
+    assert zone_ids[0] != NO_ZONE_ID
+    assert zone_ids[1] == NO_ZONE_ID
+
+
+@pytest.mark.unit
+def test_the_land_batch_rejects_a_two_dimensional_input(finder):
+    """One keyword array per axis: an ``(N, 2)`` array is refused, not read by column."""
+    pairs = np.array([[13.358, 52.5061], [2.3522, 48.8566]])
+    with pytest.raises(ValueError, match="one-dimensional"):
+        finder.timezone_ids_at_land(lngs=pairs, lats=pairs)
+
+
+@pytest.mark.unit
+def test_the_land_batch_does_not_write_into_a_shared_array(finder):
+    """The mask is applied in place to a fresh array, so a second call is unaffected."""
+    lngs, lats = [13.358, -30.0], [52.5061, 0.0]
+    first = finder.timezone_ids_at_land(lngs=lngs, lats=lats)
+    plain = finder.timezone_ids_at(lngs=lngs, lats=lats)
+    assert first[1] == NO_ZONE_ID
+    assert plain[1] != NO_ZONE_ID
+
+
+@pytest.mark.unit
+def test_the_land_global_functions_answer_like_the_finder():
+    lngs, lats = [13.358, -30.0], [52.5061, 0.0]
+    with TimezoneFinder() as tf:
+        assert timezone_names_at_land(
+            lngs=lngs, lats=lats
+        ) == tf.timezone_names_at_land(lngs=lngs, lats=lats)
+        assert timezone_ids_at_land(lngs=lngs, lats=lats).tolist() == (
+            tf.timezone_ids_at_land(lngs=lngs, lats=lats).tolist()
+        )
 
 
 @pytest.mark.unit

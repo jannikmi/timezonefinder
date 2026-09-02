@@ -12,6 +12,7 @@ from typing import Final
 import numpy as np
 
 from timezonefinder.configs import DEFAULT_DATA_DIR, IdArrayLike, NO_ZONE_ID
+from timezonefinder.utils import is_ocean_timezone
 
 __all__ = [
     "get_zone_names_path",
@@ -105,7 +106,7 @@ class ZoneNames:
     Instances are per-thread by contract, as finders are.
     """
 
-    __slots__ = ("names", "_gather_lookup")
+    __slots__ = ("names", "_gather_lookup", "_ocean_flags")
 
     def __init__(self, names: list[str]):
         #: the names in zone id order - a plain list, because it is public API on the
@@ -116,6 +117,8 @@ class ZoneNames:
         # what `docs/benchmark_results_memory.rst` measures, and a lightweight finder's
         # whole footprint is small enough that ~450 object pointers would show
         self._gather_lookup: np.ndarray | None = None
+        # likewise built on first use - only the land lookups read it
+        self._ocean_flags: np.ndarray | None = None
 
     def __len__(self) -> int:
         return len(self.names)
@@ -154,6 +157,28 @@ class ZoneNames:
             lookup.flags.writeable = False
             self._gather_lookup = lookup
         return lookup
+
+    def ocean_flags(self) -> np.ndarray:
+        """Which zone ids name an ocean zone, as a boolean array built once per instance.
+
+        Ocean-ness is a fixed property of a zone id for a given dataset, so a batch of
+        answers can be masked in one vectorised indexing operation instead of testing
+        each answer's *name* per point - which is the per-point work a batch exists to
+        remove.
+
+        Indexed by zone id, with one trailing ``False`` so that
+        :data:`~timezonefinder.configs.NO_ZONE_ID` (``-1``) reads as "not an ocean zone"
+        by Python's own negative-index rule rather than needing a second mask - the same
+        construction, and the same race argument, as :meth:`_lookup_array`.
+        """
+        flags = self._ocean_flags
+        if flags is None:
+            flags = np.asarray(
+                [is_ocean_timezone(name) for name in self.names] + [False], dtype=bool
+            )
+            flags.flags.writeable = False
+            self._ocean_flags = flags
+        return flags
 
     def names_of(self, zone_ids: np.ndarray) -> list[str | None]:
         """Names for zone ids already known to be valid.

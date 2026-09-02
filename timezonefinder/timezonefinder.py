@@ -596,6 +596,85 @@ class AbstractTimezoneFinder(ABC):
             return None
         return tz_name
 
+    def timezone_ids_at_land(
+        self,
+        *,
+        lngs: CoordArrayLike,
+        lats: CoordArrayLike,
+        on_invalid: OnInvalid = "raise",
+    ) -> np.ndarray:
+        """Look up many coordinates at once, answering with **land** timezone ids.
+
+        The batch counterpart of :meth:`timezone_at_land`, and - as with
+        :meth:`timezone_ids_at`, whose arguments and errors this shares - the primary
+        one, with :meth:`timezone_names_at_land` the convenience on top.
+
+        The ocean check costs nothing per point here. Ocean-ness is a fixed property of
+        a *zone id* for a given dataset, so the whole answer array is masked in one
+        indexing operation rather than testing each answer's name - which makes this
+        cheaper per point than calling :meth:`timezone_at_land` in a loop, not merely
+        equal to it.
+
+        :param lngs: longitudes in degrees, as any 1-D array-like.
+        :param lats: latitudes in degrees, the same length as ``lngs``.
+        :param on_invalid: what to do with a coordinate outside the valid range - see
+            :meth:`timezone_ids_at`, which documents the policies.
+        :return: one ``int16`` per input coordinate - a land timezone id, or
+            :data:`~timezonefinder.configs.NO_ZONE_ID` (``-1``) where
+            :meth:`timezone_at_land` would answer ``None``: an ocean zone matched, no
+            zone covers the point, or it was skipped. The three are deliberately one
+            sentinel, exactly as in :meth:`timezone_ids_at`.
+        :raises TypeError: if either axis holds values that are not numbers.
+        :raises ValueError: if the two axes differ in length, either is not
+            one-dimensional, ``on_invalid`` is not a known policy, or - under
+            ``on_invalid="raise"`` - a coordinate is out of range.
+
+        .. note:: coordinates are passed one axis per argument, for the reason
+            :meth:`timezone_ids_at` gives: a single ``(N, 2)`` array would be read
+            positionally, and a swapped pair is still a valid coordinate for most of the
+            populated world - so the mistake would return a real but wrong answer
+            instead of raising. Such an array is rejected as not one-dimensional.
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> ids = tf.timezone_ids_at_land(lngs=[13.358, -30.0], lats=[52.5061, 0.0])
+            >>> ids[1] == NO_ZONE_ID  # mid-Atlantic: an ocean zone, so no land answer
+            True
+        """
+        zone_ids = self.timezone_ids_at(lngs=lngs, lats=lats, on_invalid=on_invalid)
+        # a fresh array from the call above, so masking it in place copies nothing
+        zone_ids[self.zone_names.ocean_flags()[zone_ids]] = NO_ZONE_ID
+        return zone_ids
+
+    def timezone_names_at_land(
+        self,
+        *,
+        lngs: CoordArrayLike,
+        lats: CoordArrayLike,
+        on_invalid: OnInvalid = "raise",
+    ) -> list[str | None]:
+        """Look up many coordinates at once, answering with **land** timezone names.
+
+        The convenience on top of :meth:`timezone_ids_at_land`, which documents the
+        arguments and every error raised. Each answer is what :meth:`timezone_at_land`
+        would return for that point, ``None`` included.
+
+        Prefer the id form whenever the names are not the end product, for the reason
+        :meth:`timezone_names_at` gives.
+
+        :return: one timezone name per input coordinate, or ``None`` where an ocean zone
+            matched, no zone covers the point, or the coordinate was skipped.
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.timezone_names_at_land(lngs=[13.358, -30.0], lats=[52.5061, 0.0])
+            ['Europe/Berlin', None]
+        """
+        zone_ids = self.timezone_ids_at_land(
+            lngs=lngs, lats=lats, on_invalid=on_invalid
+        )
+        return self.zone_names.names_of(zone_ids)
+
     def unique_timezone_at(self, *, lng: float, lat: float) -> str | None:
         """returns the name of a unique zone within the corresponding shortcut
 
