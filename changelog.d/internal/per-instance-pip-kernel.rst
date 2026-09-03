@@ -1,0 +1,1 @@
+``PolygonArray`` captures its point-in-polygon kernel beside the buffers it belongs to, so collections on different acceleration paths can coexist in one process instead of handing one backend's buffers to the other's kernel.
