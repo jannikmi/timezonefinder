@@ -36,10 +36,14 @@ Two signals come out of one run:
   on a guessed band is worse than no gate, because it is switched off after the
   second time it cries wolf.
 
-The gate compares against what is committed, so a legitimately large change is
-accepted by committing the rewritten baseline this run leaves behind and running the
-update again - there is no override flag, because "re-run once a human has looked at
-the diff" is the review this exists to force.
+A refusal exits :data:`GATE_TRIPPED_EXIT` rather than 1, and that distinction is the
+whole shape of the thing. What must not happen is a dataset publishing itself; what
+must happen is a human seeing which answers moved. So ``update_data.sh`` finishes
+preparing the release, the weekly job opens its pull request as a **draft**, and the
+diff of the rewritten baseline is read where every other diff is read. A draft cannot
+be merged by anything - the merge job skips it, and GitHub refuses it even if that
+check were removed - so accepting the change is a person marking it ready. There is no
+override flag, because that act is the review this exists to force.
 """
 
 import argparse
@@ -72,6 +76,12 @@ SAMPLE_SEED = 501
 
 # 13x the largest change a legitimate release produced; see the module docstring.
 CHANGED_ANSWER_GATE = 0.05
+
+# Its own exit code, kept apart from the 1 every error uses. A refused dataset is not a
+# broken run: `update_data.sh` finishes preparing it, so that the answers a human has to
+# look at arrive as a pull request diff rather than as a log line. Only an *error* means
+# there is nothing worth preparing.
+GATE_TRIPPED_EXIT = 3
 
 # The dataset variant the baseline describes, spelled as `update_data.sh` composes it.
 # `--dataset=same-since-now` merges ~440 zones into ~90, so the same points answer
@@ -292,11 +302,11 @@ def check(variant: str = RELEASED_VARIANT) -> int:
             f"{rate:.3%} of the sample changed answer, above the {CHANGED_ANSWER_GATE:.0%} "
             f"gate. A refinement release moves ~0 % and the largest legitimate change "
             f"measured was 0.380 %, so this is a dataset to look at rather than to "
-            f"publish. The rewritten baseline is in the working tree: review its diff, "
-            f"and re-run the update once committing it is the right answer.",
+            f"publish. The rewritten baseline is in the working tree; its diff against "
+            f"the committed one is what to review before deciding.",
             file=sys.stderr,
         )
-        return 1
+        return GATE_TRIPPED_EXIT
     return 0
 
 
@@ -308,7 +318,11 @@ def main(argv: list[str] | None = None) -> int:
         "check", help="re-answer the frozen sample, rewrite the baselines, gate"
     )
     # `update_data.sh` passes the variant it composed, so the decision to skip is made
-    # here - where it is covered by a test - rather than in a shell condition
+    # here - where it is covered by a test - rather than in a shell condition.
+    # A variant *starts with a hyphen* ("-with-oceans"), which argparse would read as
+    # an option however it is quoted, so the caller has to use --variant=<v> and this
+    # takes the value glued on. Nothing warns about it: the separate-word form fails
+    # as a usage error at the one moment the pipeline needs the answer.
     check_parser.add_argument("--variant", default=RELEASED_VARIANT)
     freeze_parser = subparsers.add_parser(
         "freeze", help="draw the frozen sample (once; it is committed)"

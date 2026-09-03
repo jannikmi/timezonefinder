@@ -17,6 +17,7 @@ from scripts.data_update_guard import (
     ANSWERS_PATH,
     CHANGED_ANSWER_GATE,
     FROZEN_SAMPLE_PATH,
+    GATE_TRIPPED_EXIT,
     GUARD_FIXTURES_DIR,
     N_SAMPLE_POINTS,
     NO_ZONE,
@@ -26,6 +27,7 @@ from scripts.data_update_guard import (
     changed_indices,
     check,
     load_frozen_sample,
+    main,
     parse_answers,
     payload_metrics,
     render_answers,
@@ -33,6 +35,7 @@ from scripts.data_update_guard import (
 from tests.auxiliaries import BENCHMARK_FIXTURES_DIR, WORKFLOW_DIR
 
 UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
+RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
 
 
 def _committed_answers() -> tuple[list[str], list[str]]:
@@ -122,14 +125,19 @@ def _isolated_baselines(monkeypatch, tmp_path, answers: list[str]):
 def test_the_gate_blocks_a_dataset_that_moved_too_many_answers(
     monkeypatch, tmp_path
 ) -> None:
-    """Above the threshold the run stops, and it still leaves the diff to review."""
+    """Above the threshold the dataset is refused - and still fully prepared.
+
+    The refusal has its own exit code because it is not a broken run: the release is
+    finished and opened as a draft, so the answers that moved are read as a pull
+    request diff. Only the publication is withheld.
+    """
     _, committed = _committed_answers()
     changed = int(len(committed) * CHANGED_ANSWER_GATE) + 1
     mangled = ["Etc/GMT+0"] * changed + committed[changed:]
     answers_path = _isolated_baselines(monkeypatch, tmp_path, mangled)
 
-    assert check() == 1
-    # the blocked run's own artifact: what a reviewer diffs before deciding
+    assert check() == GATE_TRIPPED_EXIT
+    # what a reviewer diffs before deciding, in the pull request the update opens
     rewritten, rewritten_answers = parse_answers(
         answers_path.read_text(encoding="utf-8")
     )
@@ -180,6 +188,18 @@ def test_another_dataset_variant_is_skipped_rather_than_measured(
 
 
 @pytest.mark.unit
+def test_the_command_line_takes_a_variant_that_starts_with_a_hyphen() -> None:
+    """Every real variant does: ``-with-oceans``, ``-now``, ``-with-oceans-now``.
+
+    Quoting does not help - argparse reads the value as an option unless it is glued
+    on with ``=`` - and the failure is a usage error at the one moment the pipeline
+    needs an answer. Driven through ``main`` because that is the half a call from the
+    shell exercises and a call to ``check`` does not.
+    """
+    assert main(["check", f"--variant={RELEASED_VARIANT}-now"]) == 0
+
+
+@pytest.mark.unit
 def test_the_update_script_hands_the_guard_its_dataset_variant() -> None:
     """The skip above only ever fires if the variant actually reaches the guard.
 
@@ -188,29 +208,55 @@ def test_the_update_script_hands_the_guard_its_dataset_variant() -> None:
     baseline again - the behaviour this pairing exists to prevent.
     """
     script = (PROJECT_ROOT / "update_data.sh").read_text(encoding="utf-8")
-    assert "scripts.data_update_guard check --variant" in script
+    assert 'scripts.data_update_guard check --variant="$VARIANT"' in script
     assert RELEASED_VARIANT in script
 
 
 @pytest.mark.unit
-def test_a_refused_dataset_leaves_its_diff_behind() -> None:
-    """A tripped gate ends the regeneration step, so every later step is skipped.
+def test_the_script_and_the_guard_agree_on_what_a_refusal_exits() -> None:
+    """The one number that has to mean the same thing in two languages.
 
-    The rewritten baseline then exists only on the runner, and the log carries just
-    the first ten changed answers - in exactly the case a maintainer has to review the
-    whole diff. Only a step that runs *on failure* can still carry it off the runner.
+    ``update_data.sh`` tells a refusal apart from a failure by this code alone. If the
+    two drift, a refused dataset becomes a failed run again: no release is prepared,
+    no draft is opened, and the answers nobody can see are exactly the ones somebody
+    had to look at.
     """
-    workflow = yaml.safe_load(UPDATE_WORKFLOW.read_text(encoding="utf-8"))
-    uploads = [
+    script = (PROJECT_ROOT / "update_data.sh").read_text(encoding="utf-8")
+    assert f"GUARD_REFUSED_EXIT={GATE_TRIPPED_EXIT}" in script
+
+
+@pytest.mark.unit
+def test_a_refused_update_is_opened_as_a_draft() -> None:
+    """Preparing the release is how the answer diff reaches a reviewer at all.
+
+    The pull request has to be opened, and it has to be opened in a state nothing
+    publishes. Both halves are asserted because either alone is a silent failure: no
+    draft flag auto-releases a dataset the guard refused, and no refusal plumbing
+    means the flag is never set.
+    """
+    steps = yaml.safe_load(UPDATE_WORKFLOW.read_text(encoding="utf-8"))["jobs"][
+        "open_update_pr"
+    ]["steps"]
+    create = next(step for step in steps if "gh pr create" in str(step.get("run", "")))
+    assert "--draft" in create["run"]
+    assert "GUARD_REFUSED" in str(create.get("env", {}))
+
+
+@pytest.mark.unit
+def test_a_draft_update_is_never_merged() -> None:
+    """Where the refusal actually withholds the release.
+
+    The merge job is triggered by a *green* pipeline, and green says the data is valid
+    - never that it is the data anybody meant to publish. Without this condition an
+    update the guard refused is merged and tagged on the strength of passing CI.
+    """
+    jobs = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    merge = next(
         step
-        for job in workflow["jobs"].values()
-        for step in job.get("steps", [])
-        if str(step.get("uses", "")).startswith("actions/upload-artifact")
-        and str(GUARD_FIXTURES_DIR.relative_to(PROJECT_ROOT))
-        in str(step["with"]["path"])
-    ]
-    assert len(uploads) == 1, "the guard's diff is uploaded by exactly one step"
-    assert "failure()" in uploads[0]["if"]
+        for step in jobs["merge_and_release"]["steps"]
+        if "gh pr merge" in str(step.get("run", ""))
+    )
+    assert "draft != 'true'" in merge["if"]
 
 
 @pytest.mark.unit

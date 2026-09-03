@@ -58,8 +58,6 @@ STAMP_NAME = DATA_BUILD_RUN_FILE.name
 # the one command that produces the wheel; every occurrence outside the update job and
 # the action's fallback is a second, unreconciled build
 BUILD_COMMAND = "uv build -v --package timezonefinder-data --wheel"
-# What makes an upload the wheel hand-off's, independently of the name it travels under.
-WHEEL_SUFFIX = ".whl"
 
 
 def _workflow(path):
@@ -112,19 +110,13 @@ def test_the_wheel_is_uploaded_under_the_name_the_action_downloads() -> None:
     """
     names = set()
     for workflow, job in PRODUCERS:
-        # Selected by what the artefact *holds*, never by what it is called: the name
-        # is the agreement under test below, so filtering on it would assert nothing.
-        # A producing job may upload other things - the update job hands off the data
-        # guard's rejected answer diff the same way - but exactly one of them is the
-        # wheel, or a consumer downloading one name gets whichever was uploaded.
         uploads = [
             step
             for step in _workflow(workflow)["jobs"][job]["steps"]
             if str(step.get("uses", "")).startswith("actions/upload-artifact")
-            and WHEEL_SUFFIX in str(step["with"]["path"])
         ]
         assert len(uploads) == 1, (
-            f"{workflow.name}'s {job} must upload exactly one wheel, got {uploads}"
+            f"{workflow.name}'s {job} must upload exactly one artefact, got {uploads}"
         )
         names.add(uploads[0]["with"]["name"])
 

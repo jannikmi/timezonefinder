@@ -17,6 +17,10 @@ DATA_PACKAGE=timezonefinder-data
 DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
 # The committed report the converter rewrites on every parse; see --binaries-only below.
 DATA_REPORT_PATH=docs/data_report.rst
+# scripts/data_update_guard.py's GATE_TRIPPED_EXIT: a dataset prepared but refused,
+# as opposed to a run that failed. This script exits the same code for the same
+# meaning, which is what .github/workflows/check_data_updates.yml keys the draft on.
+GUARD_REFUSED_EXIT=3
 
 usage() {
     cat <<EOF
@@ -206,17 +210,30 @@ echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 # what keeps "no stamp" and "a stamp for another release" from looking alike.
 rm -f DATA_BUILD_RUN
 
-# What the new dataset actually answers, before anything expensive is spent on it and
-# long before the pull request this run opens is auto-merged. A frozen sample of
-# 10,000 on-land points is re-answered and diffed against the committed baseline: the
-# rewritten file is the release's review artifact, and a changed-answer rate above the
-# calibrated gate stops the run here rather than publishing a dataset nobody read.
-# `set -e` is what makes it stop; the guard has already written the diff to review.
+# What the new dataset actually answers. A frozen sample of 10,000 on-land points is
+# re-answered and diffed against the committed baseline, and the rewritten file is the
+# release's review artifact.
+#
+# A refusal deliberately does *not* stop the run. Preparing the release is how those
+# answers reach a reviewer: the weekly job commits this output and opens a draft pull
+# request, where the diff is rendered beside the data report and the fixtures. Stopping
+# here instead would leave the log's first ten changed answers as the only trace of the
+# one release anybody needs to read. What a refusal stops is publication, and it stops
+# it at the merge - which is what the decision this implements asks for.
 # $VARIANT is handed over rather than acted on here: the baseline describes one
 # dataset, and the guard skips every other variant instead of measuring against it.
 echo "CHECKING WHAT THE NEW DATA ANSWERS DIFFERENTLY..."
-if ! uv run python -m scripts.data_update_guard check --variant "$VARIANT"; then
-    echo "the data-update guard refused this dataset!" >&2
+GUARD_REFUSED=0
+set +e
+uv run python -m scripts.data_update_guard check --variant="$VARIANT"
+GUARD_STATUS=$?
+set -e
+if [ "$GUARD_STATUS" -eq "$GUARD_REFUSED_EXIT" ]; then
+    GUARD_REFUSED=1
+elif [ "$GUARD_STATUS" -ne 0 ]; then
+    # not a refusal but a broken run - a missing sample, or a baseline that does not
+    # describe it. There is nothing to prepare and nothing to review.
+    echo "the data-update guard could not run!" >&2
     exit 1
 fi
 
@@ -274,6 +291,13 @@ uv run python -m scripts.bootstrap_data --mark-current
 if [ "$RM_TMP" -eq 1 ]; then
     echo "deleting temporary data files..."
     rm -r "$WORKING_FOLDER_NAME"
+fi
+
+if [ "$GUARD_REFUSED" -eq 1 ]; then
+    echo "PREPARED $DATA_PACKAGE $NEW_VERSION, BUT THE ANSWER GUARD REFUSED IT." >&2
+    echo "Everything is in the working tree, including the rewritten answer baseline." >&2
+    echo "Review its diff and decide; do not tag data-v$NEW_VERSION until you have." >&2
+    exit "$GUARD_REFUSED_EXIT"
 fi
 
 echo "SUCCESS! $DATA_PACKAGE $NEW_VERSION can now be released (tag data-v$NEW_VERSION)!"
