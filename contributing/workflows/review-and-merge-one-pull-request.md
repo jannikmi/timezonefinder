@@ -74,7 +74,7 @@ Merge without asking unless one of three triggers fires.
 2. **It escapes the repository.** Reverting the squash commit is not the whole undo: a release or tag, a data-distribution version or format marker, an upstream fetch, a workflow's permissions or secrets, a history rewrite, or work another merged pull request already builds on.
 3. **It is opinionated.** Reasonable maintainers would differ and everything after it pays: a layout move, a mass rename or formatting sweep, a new dependency or tool, an expanded lint rule set, a new abstraction or architectural seam, a change embedding a question at the maintainer bar, or one contradicting a [recorded decision](../improvements/improvement-register-rules.md).
 
-Regardless of triggers, never merge on incomplete evidence: every check the workflows should have produced for this head exists and passed, the gate ran after the last update rather than before it, and no review thread is open.
+Regardless of triggers, never merge on incomplete evidence: every check the workflows should have produced for this head exists and passed, the gate and the review both ran after the last update rather than before it, and no review thread is open. A review covers a commit, not a pull request, so compare the commit it names against the head — one whose fixes postdate every review of it has had its riskiest code read by nobody.
 
 Verify the checks against the head, not against the pull request:
 
