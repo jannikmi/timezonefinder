@@ -2,8 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [BENCH-2](items/packaging-distribution-and-release/bench-2-the-committed-benchmark-pages-are-measured-on-whichever-machine-happens-to-render-them.md) | The committed benchmark pages are measured on whichever machine happens to render them | benchmarking | M | free — decided: render in CI and publish the runner's numbers |
-| [BENCH-3](items/packaging-distribution-and-release/bench-3-the-tracked-measurement-and-the-published-pages-describe-different-experiments.md) | The tracked measurement and the published pages describe different experiments | benchmarking | S–M | free — the acceleration-path assertion is independent of BENCH-2's decision |
 | [GH-501](items/packaging-distribution-and-release/gh-501-guardrails-on-the-automated-data-update-pipeline.md) | Guardrails on the automated data update pipeline | release | M | free — decided |
 | [BIG-1](items/lookup-geometry-and-data-format/big-1-iter-boundary-ids-of-zone-re-opens-zone-positions-npy-on-every-call.md) | `_iter_boundary_ids_of_zone` re-opens `zone_positions.npy` on every call | performance | ~10 | free — decided |
 | [GH-364](items/lookup-geometry-and-data-format/gh-364-free-threaded-python-via-a-native-candidate-loop.md) | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
