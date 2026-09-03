@@ -1,1 +1,1 @@
-New ``docs/benchmark_results_acceleration_paths.rst`` measures all three point-in-polygon implementations against each other, correcting the performance documentation's claim that the Numba path is faster than the C extension - it is slower on every workload measured.
+New ``docs/benchmark_results_acceleration_paths.rst`` measures all three point-in-polygon implementations against each other, and the performance documentation now points there for the ranking instead of repeating a claim about which is fastest - the one it carried was contradicted by measurement.

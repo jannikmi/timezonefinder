@@ -295,7 +295,7 @@ def interpreted_kernel_labels(system_info: dict[str, Any]) -> Iterator[None]:
     ``benchmarks/test_inside_polygon.py``'s ``*_python`` benchmarks time
     ``timezonefinder/utils_numba.py``, which is the Numba-JIT'd kernel where Numba is
     installed and the plain Python one where it is not - the same node id carrying
-    numbers from two implementations that are 5x-200x apart. The node id has to stay
+    numbers from two implementations that are far apart. The node id has to stay
     put, since it is the trend chart's join key, so the *label* is what says which ran:
     a page rendered from the tracked configuration reads "pure Python", which is what a
     plain ``pip install`` runs and what those numbers have always described.
@@ -429,9 +429,10 @@ ANCHOR_AGREEMENT_THRESHOLD = 0.03
 #: :doc:`benchmark_results_acceleration_paths` exists to avoid - so they point at it
 #: rather than carrying its columns.
 ACCELERATION_PATHS_POINTER = (
-    "The other two point-in-polygon implementations are measured against this one in "
-    ":doc:`benchmark_results_acceleration_paths`: Numba is slower than the C extension "
-    "here, not faster, and pure Python is orders of magnitude behind both."
+    "This page describes one point-in-polygon implementation. The other two are "
+    "measured against it in :doc:`benchmark_results_acceleration_paths` - which is "
+    "where the ranking between them is stated, since it is a measurement that moves "
+    "and a claim repeated in prose would not."
 )
 
 ACCELERATION_PATH_LABELS = {
@@ -664,11 +665,11 @@ def render_acceleration_paths(
         "The second is specific to the Numba run: **installing Numba changes more than "
         "the point-in-polygon kernel**. ``utils.validate_coordinates`` calls two "
         "``njit``-compiled scalar helpers when Numba is importable and two plain "
-        "comparisons when it is not - 299 ns against 241 ns - and every query pays it "
-        "on the way in, before any geometry. So a C-extension lookup measured beside "
-        "Numba is not quite the C-extension lookup a plain install runs, and the effect "
-        "is largest on the unique-shortcut rows, where validation is most of the query "
-        "and no polygon is ever tested."
+        "comparisons when it is not, and every query pays that on the way in, before "
+        "any geometry. So a C-extension lookup measured beside Numba is not quite the "
+        "C-extension lookup a plain install runs - and the effect is largest on the "
+        "unique-shortcut rows, where validation is most of the query and no polygon is "
+        "ever tested."
     )
 
     reporter.write_report()

@@ -7,10 +7,12 @@ import time**, and there are three outcomes rather than two: the Numba-JIT'd
 Python function when ``numba`` is importable, the CFFI-backed clang C
 extension when it is not but the extension loaded, and the *undecorated*
 Python function when neither is available. These are completely different
-code paths with very different performance - the pure-Python kernel is
-5x-200x the clang one depending on polygon size - so a benchmark trend chart
-that silently switches between them is worse than no chart at all: the
-history would compare numbers that were never comparable.
+code paths with very different performance, so a benchmark trend chart that
+silently switches between them is worse than no chart at all: the history
+would compare numbers that were never comparable. How far apart they actually
+are is measured rather than asserted here - ``make acceleration-paths`` and
+``docs/benchmark_results_acceleration_paths.rst`` - because it depends on the
+workload and has moved as the kernels have.
 
 The benchmark CI workflow (``.github/workflows/benchmark.yml``) therefore
 asserts the expected path *before* running anything, rather than assuming
@@ -40,9 +42,9 @@ ACCELERATION_PATHS: tuple[str, ...] = get_args(AccelerationPath)
 # decorated or not. Which of the two a process holds is decided by whether ``numba``
 # imported, never by which name is asked for, so the tables below map both to the same
 # objects and :func:`check_acceleration_path` is what separates them. Naming them apart
-# matters because they are 5x-200x apart in speed: a numba-free install whose C
-# extension failed to build used to report ``clang`` while running the pure-Python
-# kernel, and a report page cannot label a column it cannot name.
+# matters because they are far apart in speed: a numba-free install whose C extension
+# failed to build used to report ``clang`` while running the pure-Python kernel, and a
+# report page cannot label a column it cannot name.
 NUMBA_SOURCED_PATHS: frozenset[str] = frozenset({"numba", "python"})
 
 # the concrete function object `utils.inside_polygon` is bound to per path -
@@ -99,9 +101,8 @@ def active_acceleration_path() -> AccelerationPath:
     Three answers, not two. ``utils.py`` chooses the C extension only when numba is
     absent *and* the extension loaded, so the remaining case - neither available - runs
     the undecorated ``utils_numba`` functions. Reporting that as ``clang`` was wrong in
-    the direction that matters: the pure-Python kernel is 5x-200x slower than the C one,
-    so an install whose extension silently failed to build looked like the fast path in
-    every report it produced.
+    the direction that matters: an install whose extension silently failed to build then
+    looked, in every report it produced, like the configuration a working one runs.
     """
     if utils.inside_polygon_packed is utils_clang.pt_in_poly_clang_packed:
         return "clang"

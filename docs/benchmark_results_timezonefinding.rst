@@ -6,7 +6,7 @@ Timezone Finding Performance Benchmark
 
 **~1.24µs per lookup, ~808k/s** - ``TimezoneFinder.timezone_at()`` over uniformly random query points in memory, the workload closest to a real query mix.
 
-The other two point-in-polygon implementations are measured against this one in :doc:`benchmark_results_acceleration_paths`: Numba is slower than the C extension here, not faster, and pure Python is orders of magnitude behind both.
+This page describes one point-in-polygon implementation. The other two are measured against it in :doc:`benchmark_results_acceleration_paths` - which is where the ranking between them is stated, since it is a measurement that moves and a claim repeated in prose would not.
 
 *Measured on Darwin arm64, Apple M1 Pro, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
 
