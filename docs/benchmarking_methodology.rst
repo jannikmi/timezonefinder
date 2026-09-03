@@ -158,12 +158,11 @@ What CI measures
 The core subset
 ~~~~~~~~~~~~~~~
 
-Only three benchmarks (``-m benchmark_core``), all ``in_memory``. The full report additionally
-compares ``timezone_ids_at`` and ``timezone_names_at`` with scalar lookup in the default file-based
-mode across the random, unique-shortcut and ambiguous-shortcut strata. Those six cases remain
-on-demand until the default-branch comparator can accept new IDs and a workflow-dispatch study has
-measured the expanded set's cross-runner noise. The rest of the suite is likewise for the docs; it
-is not run per PR.
+The nine ``-m benchmark_core`` cases comprise three scalar ``in_memory`` benchmarks and six batch
+benchmarks in the default file-based mode. The batch cases measure ``timezone_ids_at`` and
+``timezone_names_at`` across the same random, unique-shortcut and ambiguous-shortcut strata, so CI
+can detect regressions confined to vectorised validation, scaling, or result conversion. The rest
+of the suite is for the docs and is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
@@ -201,10 +200,14 @@ Thresholds derived from measured noise
 The trend chart alert: 180 %
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``ALERT_THRESHOLD`` is derived from a measurement, not chosen. Across eleven recorded runs whose
-lookup path was identical, the tracked ``min`` spread 134-158 % (unique 134.3 %, random 145.9 %,
-ambiguous 158.4 %) purely because of the hardware each run drew. Worst spread plus 20 % headroom
-rounds to the shipped **180 %**.
+``ALERT_THRESHOLD`` is derived from measurement, not chosen. Across eleven recorded scalar-core
+runs whose lookup path was identical, the tracked ``min`` spread 134-158 % (unique 134.3 %, random
+145.9 %, ambiguous 158.4 %) purely because of the hardware each run drew. After the six batch cases
+joined the core, five fresh runners measured a worst scalar spread of 138.9 % and a worst batch
+spread of 137.9 %. That sample drew AMD EPYC 9V74 and 7763 machines but not the Intel Xeon class in
+the earlier study, so it demonstrates that the batch cases do not widen the known bound; it does not
+erase the wider scalar observation. Worst known spread plus 20 % headroom rounds to the shipped
+**180 %**.
 
 Being honest about what that buys: at 180 % the chart catches only a catastrophic regression and is
 blind to the 10-30 % changes actually worth reviewing. That is not a gap to close by tightening the

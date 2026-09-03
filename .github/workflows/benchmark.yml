@@ -72,11 +72,14 @@ env:
   # Threshold for the *trend chart* only, which is inherently cross-machine:
   # `ubuntu-latest` does not pin the CPU (see the `measure` job), so
   # consecutive points on the chart routinely come from different hardware.
-  # DERIVED FROM MEASUREMENT: across 11 recorded runs whose lookup path was
-  # identical, the tracked min spread 134-158% (unique 134.3%, random 145.9%,
-  # ambiguous 158.4%) purely because the pool served AMD EPYC 9V74, AMD EPYC
-  # 7763 and Intel Xeon Platinum 8573C parts at 2.30-3.69 GHz. Worst spread
-  # + 20% headroom rounds to 180%, per scripts/benchmark_noise.py's own rule.
+  # DERIVED FROM MEASUREMENT: across 11 recorded scalar-core runs whose lookup
+  # path was identical, the tracked min spread 134-158% (unique 134.3%, random
+  # 145.9%, ambiguous 158.4%) because the pool served AMD EPYC 9V74, AMD EPYC
+  # 7763 and Intel Xeon Platinum 8573C parts at 2.30-3.69 GHz. A five-run study
+  # after adding the six batch cases drew the two AMD classes; its worst scalar
+  # spread was 138.9% and its worst batch spread was 137.9%, so the expanded
+  # set does not widen the known bound. The worst observed 158.4% spread + 20%
+  # headroom rounds to 180%, per scripts/benchmark_noise.py's own rule.
   #
   # Be clear about what this buys: at 180% the chart can only catch a
   # catastrophic regression, and it is blind to the 10-30% changes that are
