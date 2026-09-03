@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788472814596,
+  "lastUpdate": 1788472817678,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10166,6 +10166,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6936 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27a2a9fb6af0c1e486f051cac73a187d989d301c",
+          "message": "TOOL-6: report renderers return strings, so a parse stops rewriting the committed report (#596)\n\n* TOOL-6: report renderers return strings, so the destination is a parameter\n\n`parse_data` rewrote the checkout's committed `docs/data_report.rst` whatever\n`-out` it was given, because the destination was bound by a decorator at import\ntime. The decorator was a symptom: these functions used stdout as their return\nchannel, and redirection - decorator or context manager - was the workaround.\n\nEvery report renderer now returns the RST it produces. `write_data_report_from\n_binary` takes a `report_path`, `python -m scripts.reporting` gains the matching\n`--out`, and `parse_data` writes the report beside the binaries it compiled -\nonly a parse of the packaged data directory writes the committed page. Both\nredirectors lose their last caller and are deleted; `BenchmarkReporter` renders\nto a string too, since it only reached for one because the table helper printed.\n\nNeutrality: `docs/data_report.rst` regenerates byte-identically through both the\ndefault path and `--out`, and `BenchmarkReporter.render()` was diffed against the\ndeleted print-and-redirect body over all four content kinds. `make testparse` now\nleaves the checkout clean, which is the defect itself.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: TOOL-6 shipped\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-03T23:59:13+02:00",
+          "tree_id": "7ae8572a07f95c0468d2edd7a469dab2690d456c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/27a2a9fb6af0c1e486f051cac73a187d989d301c"
+        },
+        "date": 1788472816438,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083379745483398,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085163116455078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2304296493530273,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.23123836517334,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58456325531006,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58531188964844,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
           }
         ]
       }
