@@ -233,6 +233,14 @@ class AbstractTimezoneFinder(ABC):
         # (``PolygonArray.pip``). ``utils.inside_polygon`` is bound by the same rule but
         # serves callers holding a bare ring, so reading it here would answer about an
         # implementation this method's caller never runs.
+        #
+        # This reports the *import-time* binding, which is what every normally
+        # constructed finder runs. A collection built while the module attribute was
+        # deliberately rebound - what ``tests/test_acceleration_paths.py`` and
+        # ``scripts/measure_acceleration_paths.py`` do - keeps the kernel it captured,
+        # and this method does not see that. Deliberate: it stays a ``staticmethod``
+        # because it is public API called on the class, and nothing that rebinds the
+        # path asks it which path is bound - each of them names the path it bound.
         return utils.inside_polygon_packed == utils_clang.pt_in_poly_clang_packed
 
     # Validation happens at the public edge only. Every internal caller below obtains its

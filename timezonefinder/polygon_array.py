@@ -143,6 +143,16 @@ class PolygonArray:
         # What the backend needs to reach the payload, wrapped once. On the C backend
         # this is five ``ffi.from_buffer`` calls at ~0.30 us each - a fifth of a whole
         # point-in-polygon test, which is why they happen here and not per lookup.
+        #
+        # The kernel is captured here too, and deliberately in the same place: what
+        # ``packed_buffers`` returns is whatever the bound backend's factory made, so a
+        # kernel from the other path handed these buffers is a segfault rather than a
+        # wrong answer. Reading ``utils.inside_polygon_packed`` per call instead would
+        # let the two drift apart between construction and lookup - which is exactly
+        # what a benchmark or test that binds the other path does, and what
+        # ``scripts/assert_acceleration_path.py`` could previously only warn about in a
+        # comment. Holding both on the instance makes the pairing structural, and lets
+        # two collections on different backends coexist in one process.
         self.packed = utils.packed_buffers(
             self.coordinates.words,
             self.block_ranges,
@@ -150,6 +160,7 @@ class PolygonArray:
             self.block_widths,
             self.block_payload_offsets,
         )
+        self.pip_kernel = utils.inside_polygon_packed
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed.
@@ -291,9 +302,12 @@ class PolygonArray:
         Nothing is sliced and no ring is decoded: the kernel is handed this collection's
         whole payload and the four per-block columns, and finds the ring by where its
         blocks start. :class:`HoleArray` overrides which collection answers, not this.
+
+        ``self.pip_kernel`` rather than ``utils.inside_polygon_packed``: the kernel and
+        the buffers below it were captured together, and only the pair is safe.
         """
         start = self.block_offsets[idx]
-        return utils.inside_polygon_packed(
+        return self.pip_kernel(
             x,
             y,
             self.nr_vertices[idx],
