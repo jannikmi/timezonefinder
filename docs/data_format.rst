@@ -45,7 +45,7 @@ The script ``update_data.sh`` automates this process. It resolves the release ta
 Alternative Dataset Options
 ============================
 
-The ``update_data.sh`` script also supports downloading the reduced ``timezones-now`` dataset (via ``--dataset=same-since-now``), which merges timezones with identical behavior (as of now) into a single zone. This reduces the number of timezones from ~440 to ~90 and provides a smaller memory footprint. However, this dataset:
+The ``update_data.sh`` script also supports downloading the reduced ``timezones-now`` dataset (via ``--dataset=same-since-now``), which merges timezones with identical behavior (as of now) into a single zone. That leaves a few dozen zones instead of several hundred, and a correspondingly smaller memory footprint - upstream's own lookup of which zones it merges into which is vendored at ``tests/fixtures/reduced_zones/mapping.json``, and states the exact figures for the release this checkout declares. However, this dataset:
 
 * Provides incorrect data for observed timekeeping methods in the past at certain locations
 * Loses location-specific information (e.g., ``Europe/Berlin`` becomes ``Europe/Paris``)

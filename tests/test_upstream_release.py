@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from scripts.upstream_release import (
+    RELEASES_API,
     RETRY_ATTEMPTS,
     TOKEN_VARIABLES,
     UpstreamAsset,
@@ -63,13 +64,19 @@ def archive(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def api(monkeypatch: pytest.MonkeyPatch):
-    """Answer every release API call with a given payload, and count the calls."""
+    """Answer the release API with a given description, and asset downloads with bytes.
 
-    def serve(release: dict) -> None:
-        monkeypatch.setattr(
-            "scripts.upstream_release._read_url",
-            lambda url: json.dumps(release).encode("utf-8"),
-        )
+    Both go through the one function that touches the network, so they are told apart
+    by the URL: everything that is not the API is a download of an asset's bytes.
+    """
+
+    def serve(release: dict, *, payload: bytes = PAYLOAD) -> None:
+        def read(url: str) -> bytes:
+            if url.startswith(RELEASES_API):
+                return json.dumps(release).encode("utf-8")
+            return payload
+
+        monkeypatch.setattr("scripts.upstream_release._read_url", read)
 
     return serve
 
@@ -502,3 +509,84 @@ def test_an_answer_is_not_retried(
     with pytest.raises(urllib.error.HTTPError):
         _read_url("https://api.github.com/x")
     assert attempts == 1
+
+
+MAPPING_NAME = "timezone-names-with-oceans-Now.json"
+
+
+def _vendor_argv(tmp_path: Path, *, tag: str = "2026c") -> list[str]:
+    return [
+        "vendor-zone-mapping",
+        "--tag",
+        tag,
+        "--asset",
+        MAPPING_NAME,
+        "--out",
+        str(tmp_path / "mapping.json"),
+        "--record",
+        str(tmp_path / "source.txt"),
+    ]
+
+
+@pytest.mark.unit
+def test_vendoring_writes_the_bytes_and_their_provenance(api, tmp_path: Path) -> None:
+    """The committed pair tests/test_reduced_zone_mapping.py then checks offline."""
+    api(_release(name=MAPPING_NAME))
+    assert main(_vendor_argv(tmp_path)) == 0
+    assert (tmp_path / "mapping.json").read_bytes() == PAYLOAD
+    assert read_record(tmp_path / "source.txt") == UpstreamAsset(
+        tag="2026c", asset=MAPPING_NAME, size=PAYLOAD_SIZE, sha256=PAYLOAD_SHA256
+    )
+
+
+@pytest.mark.unit
+def test_a_download_that_does_not_verify_replaces_nothing(
+    api, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A vendored table is read by everything and re-fetched by nothing.
+
+    So a transfer that fails verification has to leave the copy that did verify in
+    place, rather than overwriting it with bytes no digest vouches for.
+    """
+    kept = tmp_path / "mapping.json"
+    kept.write_bytes(b"the copy that verified")
+    api(_release(name=MAPPING_NAME), payload=PAYLOAD[:-1])
+    assert main(_vendor_argv(tmp_path)) == 1
+    assert kept.read_bytes() == b"the copy that verified"
+    assert not (tmp_path / "source.txt").exists()
+    assert list(tmp_path.iterdir()) == [kept]
+    assert "bytes" in capsys.readouterr().err
+
+
+@pytest.mark.unit
+def test_a_mapping_replaced_under_a_tag_already_taken_is_refused(
+    api, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The vendored copy's own record is what makes this comparison possible.
+
+    Named after the file that holds it rather than after DATA_SOURCE, which is a
+    different record about a different asset.
+    """
+    record = tmp_path / "source.txt"
+    write_record(
+        record,
+        UpstreamAsset(tag="2026c", asset=MAPPING_NAME, size=1, sha256="ab" * 32),
+    )
+    api(_release(name=MAPPING_NAME))
+    assert main(_vendor_argv(tmp_path)) == 1
+    assert not (tmp_path / "mapping.json").exists()
+    assert "source.txt" in capsys.readouterr().err
+
+
+@pytest.mark.unit
+def test_a_new_release_replaces_the_vendored_mapping(api, tmp_path: Path) -> None:
+    """The ordinary case a data update takes: the tag moved, so the table follows."""
+    record = tmp_path / "source.txt"
+    write_record(
+        record,
+        UpstreamAsset(tag="2026b", asset=MAPPING_NAME, size=1, sha256="ab" * 32),
+    )
+    api(_release(name=MAPPING_NAME))
+    assert main(_vendor_argv(tmp_path)) == 0
+    recorded = read_record(record)
+    assert recorded is not None and recorded.tag == "2026c"

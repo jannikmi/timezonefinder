@@ -36,10 +36,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from scripts.configs import DATA_SOURCE_FILE, DATA_VERSION_TAG_PATTERN
+from scripts.configs import (
+    DATA_SOURCE_FILE,
+    DATA_VERSION_TAG_PATTERN,
+    REDUCED_ZONE_MAPPING_ASSET,
+    REDUCED_ZONE_MAPPING_FILE,
+    REDUCED_ZONE_SOURCE_FILE,
+)
 
 RELEASES_API = (
     "https://api.github.com/repos/evansiroky/timezone-boundary-builder/releases"
+)
+
+# Where an asset's bytes are fetched from. The release API also states a
+# ``browser_download_url`` per asset, but naming the tag and the asset directly is the
+# URL shape ``update_data.sh`` already builds for the boundary archive - one shape for
+# both, so the digest verified below is the digest of what the shell would have fetched.
+DOWNLOADS_URL = (
+    "https://github.com/evansiroky/timezone-boundary-builder/releases/download"
 )
 
 # The only digest algorithm the API is asked for. GitHub currently publishes SHA-256
@@ -331,15 +345,39 @@ def verify_archive(archive: Path, published: UpstreamAsset) -> None:
         )
 
 
+def download_asset(published: UpstreamAsset, out: Path) -> None:
+    """Fetch ``published`` to ``out``, keeping the bytes only once they verify.
+
+    Written through a sibling temporary file rather than in place: a download that
+    fails verification must not be able to replace a vendored copy that did verify,
+    because nothing downstream re-asks the API about a file that is already there.
+
+    :raises ValueError: if the bytes are not what the release publishes.
+    """
+    payload = _read_url(f"{DOWNLOADS_URL}/{published.tag}/{published.asset}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    staged = out.with_name(f"{out.name}.part")
+    staged.write_bytes(payload)
+    try:
+        verify_archive(staged, published)
+    except ValueError:
+        staged.unlink(missing_ok=True)
+        raise
+    staged.replace(out)
+
+
 def check_against_record(
-    record: UpstreamAsset | None, published: UpstreamAsset
+    record: UpstreamAsset | None,
+    published: UpstreamAsset,
+    record_name: str = DATA_SOURCE_FILE.name,
 ) -> None:
     """Refuse an asset upstream replaced under a tag this repository already used.
 
     The API digest travels with the asset, so it agrees with itself after a
-    re-upload and cannot report one. ``DATA_SOURCE`` is the only statement of what
-    the tag held when its data was built, which is what makes this comparison
-    possible at all.
+    re-upload and cannot report one. A record of what the tag held when this
+    repository last took the asset is the only statement that makes the comparison
+    possible - ``DATA_SOURCE`` for the boundary archive, and the vendored mapping's
+    own ``source.txt`` for that; ``record_name`` is what the failure calls it.
 
     :raises ValueError: if the recorded asset and the published one disagree.
     """
@@ -349,7 +387,7 @@ def check_against_record(
         return
     raise ValueError(
         f"release {published.tag} now publishes {published.asset} as "
-        f"{published.size} bytes / {published.sha256}, but {DATA_SOURCE_FILE.name} "
+        f"{published.size} bytes / {published.sha256}, but {record_name} "
         f"records {record.size} bytes / {record.sha256} for the same asset. Upstream "
         "replaced a released asset in place; the packaged data was built from the "
         "recorded one. Resolve this by hand before parsing anything."
@@ -391,6 +429,20 @@ def main(argv: list[str] | None = None) -> int:
     # different releases. Omitted, this verifies and writes nothing.
     verify_parser.add_argument("--stage", type=Path, default=None)
 
+    # The reduced-zone mapping the test suite converts its expectations through. It is
+    # ~9 KB of JSON rather than a 55 MB archive, so it is fetched here and committed,
+    # instead of being downloaded again by everything that reads it.
+    vendor_parser = subparsers.add_parser("vendor-zone-mapping")
+    # by tag for the reason `verify` is: the shell resolved one release before
+    # downloading anything, and the vendored copy has to describe that release
+    vendor_parser.add_argument("--tag", required=True)
+    vendor_parser.add_argument("--asset", default=REDUCED_ZONE_MAPPING_ASSET)
+    vendor_parser.add_argument("--out", type=Path, default=REDUCED_ZONE_MAPPING_FILE)
+    # Read *and* written, unlike `verify`'s --record: this is the vendored copy's own
+    # provenance, so the check below asks whether upstream replaced the asset the
+    # committed bytes came from, and the write installs the release just taken.
+    vendor_parser.add_argument("--record", type=Path, default=REDUCED_ZONE_SOURCE_FILE)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "resolve-tag":
@@ -398,7 +450,18 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         published = published_asset(fetch_release(args.tag), args.asset)
-        check_against_record(read_record(args.record), published)
+        check_against_record(
+            read_record(args.record), published, record_name=args.record.name
+        )
+        if args.command == "vendor-zone-mapping":
+            download_asset(published, args.out)
+            write_record(args.record, published)
+            print(
+                f"vendored {args.out} from {args.tag}/{args.asset} "
+                f"({published.size} bytes, sha256 {published.sha256})"
+            )
+            return 0
+
         verify_archive(args.archive, published)
         if args.stage is not None:
             write_record(args.stage, published)
