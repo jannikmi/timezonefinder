@@ -101,6 +101,7 @@ class AbstractTimezoneFinder(ABC):
         "shortcuts",
         "zone_names",
         "zone_ids",
+        "_zone_positions",
         "holes_dir",
         "boundaries_dir",
         "boundaries",
@@ -108,6 +109,9 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
+    #: where each zone's boundary polygons start, read on first use - see
+    #: ``_iter_boundary_ids_of_zone``, which is the only thing that reads it.
+    _zone_positions: np.ndarray | None
     #: which timezones can possibly cover a point. This class asks it what a cell resolves
     #: to and never how that is stored - see ``timezonefinder/shortcut_index.py``.
     shortcuts: ShortcutIndex
@@ -144,6 +148,11 @@ class AbstractTimezoneFinder(ABC):
             get_shortcut_file_path(self.data_location)
         )
 
+        # not read here: only ``certain_timezone_at`` and ``get_geometry`` address a
+        # zone's boundary range, and the ``timezone_at`` majority never calls either.
+        # See ``_iter_boundary_ids_of_zone`` for why the first caller reads it once.
+        self._zone_positions = None
+
     def _iter_boundary_ids_of_zone(self, zone_id: int) -> Iterable[int]:
         """
         Yield the boundary polygon IDs for a given zone ID.
@@ -151,9 +160,19 @@ class AbstractTimezoneFinder(ABC):
         :param zone_id: ID of the zone
         :yield: boundary polygon IDs
         """
-        # load only on demand. used when shortcuts contain zone IDs (hybrid optimization)
-        zone_positions_path = get_zone_positions_path(self.data_location)
-        zone_positions = np.load(zone_positions_path, mmap_mode="r")
+        # Read on first use and then kept, rather than per call: the file is 890
+        # immutable bytes and a per-call ``np.load`` paid a file open, a header parse
+        # and a mapping for every one of them. Reading it in ``__init__`` instead would
+        # charge every construction - itself a tracked benchmark, and multiplied by the
+        # thread count under the documented one-instance-per-thread pattern - for an
+        # array the majority of instances never touch. Two threads racing this both read
+        # the same immutable array, so the race costs a duplicated read and nothing else.
+        zone_positions = self._zone_positions
+        if zone_positions is None:
+            zone_positions = read_per_polygon_vector(
+                get_zone_positions_path(self.data_location)
+            )
+            self._zone_positions = zone_positions
         first_boundary_id_zone = zone_positions[zone_id]
         # read the id of the first boundary polygon of the consequent zone
         # NOTE: this has also been added for the last zone
