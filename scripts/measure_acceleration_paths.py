@@ -107,12 +107,14 @@ POINT_CLASSES = {
 #: 5 %). That is the regime the harness's defaults were chosen for.
 NUMBA_ROUNDS = DEFAULT_ROUNDS
 
-#: Rounds for a pair separated by orders of magnitude. Pure Python is 5x-200x the clang
-#: kernel depending on polygon size, so no number of rounds changes the verdict and the
-#: only thing more of them buys is wall clock - on the large stratum a single round is
-#: already a third of a second. Fifteen for the same reason and with the same value the
-#: ``Makefile``'s ``BENCHMARK_REPORT_ROUNDS`` uses, and odd, so the sign count still
-#: cannot tie.
+#: Rounds for the pure-Python pair, which the report has always measured as separated
+#: from clang by orders of magnitude rather than by percent. While that holds no number
+#: of rounds changes the verdict and more of them buy only wall clock - a single round
+#: on the large stratum is already a fraction of a second. Fifteen for the same reason
+#: and with the same value the ``Makefile``'s ``BENCHMARK_REPORT_ROUNDS`` uses, and odd,
+#: so the sign count still cannot tie. Revisit it if the rendered page ever reports
+#: these two within a few percent of each other - then this pair needs the statistical
+#: power the numba pair gets, not less of it.
 PYTHON_ROUNDS = 15
 
 

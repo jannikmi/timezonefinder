@@ -102,8 +102,8 @@ The ray-casting inner loop exists in three forms:
 - **clang C extension** - compiled by ``cffi`` at install time if a compiler is available.
 - **Numba JIT** - the Python implementation, compiled on first use when the optional ``numba``
   dependency is installed. Preferred over the C extension when both are present.
-- **pure Python** - the same source, uncompiled. Roughly **400x slower** than the alternatives, and
-  correct.
+- **pure Python** - the same source, uncompiled. Correct, and the slowest of the three by a wide
+  margin.
 
 ``utils.py`` picks one of them at **import time**, not per call. That has two implications that
 surface throughout this documentation:
@@ -111,7 +111,10 @@ surface throughout this documentation:
 - The three are entirely separate code paths, so **their timings are not comparable** and must never
   share a benchmark name. CI tracks one configuration (clang, no Numba - what a plain
   ``pip install timezonefinder`` gives you) and *asserts* the active path rather than assuming it;
-  see :doc:`benchmarking_methodology`.
+  see :doc:`benchmarking_methodology`. Which of the three is fastest is a measurement that has moved
+  as the kernels and the data format moved, so it is stated in one regenerated place -
+  :doc:`benchmark_results_acceleration_paths` - and nowhere else. In particular, Numba being
+  *preferred* by the dispatch above says nothing about it being *faster*.
 - The fallback contract is *correct but slower, never broken*. If the C extension fails to compile
   and Numba is absent, the package still works. Ask which path is live with
   ``TimezoneFinder.using_clang_pip()`` and ``TimezoneFinder.using_numba()``.
@@ -221,8 +224,8 @@ which is why every wheel goes through ``abi3audit --strict`` in the repair step:
 interpreter no CI job ever ran.
 
 **Three libc targets.** manylinux2014, manylinux_2_28 and musllinux are built separately, so an
-Alpine container and an old glibc host both get the compiled path rather than the ~400x pure-Python
-fallback. Platforms without a published wheel install from the sdist and compile locally; if that
+Alpine container and an old glibc host both get the compiled path rather than the far slower
+pure-Python fallback. Platforms without a published wheel install from the sdist and compile locally; if that
 fails, ``fallible_build_ext`` in ``setup.py`` swallows the error and the install still succeeds -
 slower, never broken.
 

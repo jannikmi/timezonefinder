@@ -60,7 +60,9 @@ C extension
 During installation ``timezonefinder`` automatically tries to compile a C extension implementing the
 time critical point in polygon check, which requires a Clang compiler. If that fails - no compiler,
 a broken ``cffi`` installation - the package falls back to the pure Python implementation, which is
-correct and roughly 400x slower.
+correct and substantially slower. How much slower depends on polygon size and on how often a query
+reaches the geometry at all, so it is measured rather than quoted here:
+:doc:`benchmark_results_acceleration_paths` carries the current figures.
 
 To check which implementation is active:
 
@@ -85,16 +87,19 @@ over the C extension** when both are available:
     TimezoneFinder.using_numba()  # returns True or False
 
 
-Taking precedence is a dispatch rule, not a speed claim, and the measurement does not support reading
-it as one: on this project's own workloads the Numba path is **slower than the C extension** at every
-level - the packed kernel by ~1.9x, and ``timezone_at()`` by ~3 % on uniformly random points and
-~6 % on ambiguous-shortcut ones. Installing it also changes more than the kernel, since
-``validate_coordinates`` then calls two JIT-compiled scalar helpers whose dispatch costs more than
-the plain comparisons they replace, and every query pays that.
+**Taking precedence is a dispatch rule, not a speed claim** - and the two have been confused here
+before, in this documentation. Which path is fastest is a measurement, it has changed as the kernels
+and the data format changed, and it is not the same answer for every workload: a query the H3
+shortcut index answers outright never reaches a point-in-polygon test at all, so no choice of kernel
+moves it.
 
-So install it if you need Numba for something else and want one accelerator rather than two, not
-because it is expected to be faster. :doc:`benchmark_results_acceleration_paths` measures all three
-paths against each other and is where these figures come from.
+Read the answer off :doc:`benchmark_results_acceleration_paths`, which measures all three paths
+against each other and is regenerated with the rest of the reports. Do not assume the accelerator you
+installed is the faster one - check the page, for the workload you actually run.
+
+Installing Numba also changes more than the point-in-polygon kernel: ``validate_coordinates`` then
+calls two JIT-compiled scalar helpers rather than two plain comparisons, and every query pays that
+before any geometry. That page measures it.
 
 All three implementations compute identical results; they only differ in speed. :doc:`architecture`
 explains why the choice is made once at import time and what follows from that - most importantly
