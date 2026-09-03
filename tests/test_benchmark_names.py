@@ -74,13 +74,18 @@ EXPECTED_BENCHMARK_NAMES = EXPECTED_COMPARISON_NAMES | {
 }
 
 # The benchmarks the CI workflow tracks on every PR: the globally
-# representative scalar `random` headline plus the two scalar diagnostics that
-# attribute a change to the unique- or ambiguous-shortcut path. The batch cases
-# remain full-report-only until their expanded noise floor has been measured.
+# representative scalar `random` headline, the two scalar diagnostics that
+# attribute a change to the unique- or ambiguous-shortcut path, and both batch
+# forms over those same three strata.
 EXPECTED_CORE_BENCHMARK_NAMES = {
     "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
     "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+    *(
+        f"benchmarks/test_timezone_finding.py::{function}[{point_class}-file_based]"
+        for function in ("test_timezone_ids_at", "test_timezone_names_at")
+        for point_class in ("random", "unique_shortcut", "ambiguous_shortcut")
+    ),
 }
 
 

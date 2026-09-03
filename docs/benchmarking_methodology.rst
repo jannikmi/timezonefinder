@@ -158,12 +158,11 @@ What CI measures
 The core subset
 ~~~~~~~~~~~~~~~
 
-Only three benchmarks (``-m benchmark_core``), all ``in_memory``. The full report additionally
-compares ``timezone_ids_at`` and ``timezone_names_at`` with scalar lookup in the default file-based
-mode across the random, unique-shortcut and ambiguous-shortcut strata. Those six cases remain
-on-demand until the default-branch comparator can accept new IDs and a workflow-dispatch study has
-measured the expanded set's cross-runner noise. The rest of the suite is likewise for the docs; it
-is not run per PR.
+The nine ``-m benchmark_core`` cases comprise three scalar ``in_memory`` benchmarks and six batch
+benchmarks in the default file-based mode. The batch cases measure ``timezone_ids_at`` and
+``timezone_names_at`` across the same random, unique-shortcut and ambiguous-shortcut strata, so CI
+can detect regressions confined to vectorised validation, scaling, or result conversion. The rest
+of the suite is for the docs and is not run per PR.
 
 ``test_timezone_at[random-in_memory]`` is the headline. Uniformly random points are the only
 globally representative workload: they contain unique- and ambiguous-shortcut queries in their real
