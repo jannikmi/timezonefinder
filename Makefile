@@ -27,10 +27,13 @@
 #   benchmarks-ci - the exact core-subset measurement the benchmark CI workflow records
 #   benchmark-noise - repeat benchmarks-ci on unchanged code and report the noise floor
 #   latency    - measure the per-query latency distribution (p50/p90/p99/p99.9)
+#   acceleration-paths - compare all three point-in-polygon paths (clang / numba /
+#                        pure Python), one environment per measurable pair
 #   memory     - measure the memory footprint of each finder configuration
 #   memory-ci  - the exact memory measurement the benchmark CI workflow records
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
-#   reports    - benchmarks + memory + render docs/benchmark_results_*.rst + the data report
+#   reports    - benchmarks + latency + memory + acceleration-paths + render
+#                docs/benchmark_results_*.rst + the data report
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
@@ -135,6 +138,11 @@ testall: check-data
 BENCHMARK_JSON := tmp/benchmark.json
 LATENCY_JSON := tmp/latency.json
 MEMORY_JSON := tmp/memory.json
+# One per environment, because numba and pure Python are the same source decorated or
+# not: no process holds both, so the two measurable pairs are taken separately and the
+# renderer composes them. Named by the path each run measured against clang.
+ACCELERATION_JSON_NUMBA := tmp/acceleration-numba.json
+ACCELERATION_JSON_PYTHON := tmp/acceleration-python.json
 # a footprint has no run-to-run variance worth averaging out the way a timing
 # does; these repetitions exist to catch a measurement that failed to settle,
 # not to build a distribution
@@ -159,6 +167,13 @@ speedtest:
 # --group compare installs the alternative that suite measures against. Its own
 # group so that the CI-tracked measurement below cannot pick it up.
 BENCHMARK_ENV := --isolated --group test --group compare
+
+# The same environment plus numba, which is the *only* way to reach the JIT path: it is
+# selected by being importable, never by a flag. `compare` is left out because nothing
+# in the acceleration-path comparison measures tzfpy, and the two environments should
+# differ in exactly one thing - whether numba is installed.
+BENCHMARK_ENV_NUMBA := --isolated --group test --group numba
+BENCHMARK_ENV_PLAIN := --isolated --group test
 
 # the full benchmark suite (all of benchmarks/), producing the JSON that
 # scripts/render_benchmark_reports.py turns into docs/benchmark_results_*.rst.
@@ -198,10 +213,32 @@ latency:
 		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_query_latency --output=$(LATENCY_JSON)
 
-reports: check-data benchmarks latency memory
+# All three point-in-polygon paths against each other, which no single environment can
+# measure: numba wins the import-time dispatch whenever it is installed and pure Python
+# is what the same source is without it, so the two pairs are taken in two environments
+# and anchored on clang, the one path both of them hold. Paired inside each process -
+# see scripts/measure_acceleration_paths.py for why a cross-process pair would not be.
+#
+# The path is asserted per environment for the reason `benchmarks` asserts it: the
+# whole page is about which implementation produced which column, so an environment
+# that quietly bound a different one would mislabel every row rather than fail.
+acceleration-paths:
+	@mkdir -p tmp
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
+	uv run $(BENCHMARK_ENV_PLAIN) python -m scripts.measure_acceleration_paths \
+		--output=$(ACCELERATION_JSON_PYTHON)
+	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.assert_acceleration_path \
+		--expect numba
+	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.measure_acceleration_paths \
+		--output=$(ACCELERATION_JSON_NUMBA)
+
+reports: check-data benchmarks latency memory acceleration-paths
 	uv run python -m scripts.render_benchmark_reports \
 		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
-		--memory-json=$(MEMORY_JSON)
+		--memory-json=$(MEMORY_JSON) \
+		--acceleration-json=$(ACCELERATION_JSON_PYTHON) \
+		--acceleration-json=$(ACCELERATION_JSON_NUMBA)
 	uv run python -m scripts.reporting
 
 # Correctness, not speed, so it is not part of `benchmarks` and writes no report
@@ -424,4 +461,4 @@ docs:
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json \
-	changelog changelog-assemble
+	changelog changelog-assemble acceleration-paths

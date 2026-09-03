@@ -25,6 +25,7 @@ POLYGON_REPORT_FILE = DOC_ROOT / "benchmark_results_polygon.rst"
 INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 MEMORY_REPORT_FILE = DOC_ROOT / "benchmark_results_memory.rst"
 COMPARISON_REPORT_FILE = DOC_ROOT / "benchmark_results_comparison.rst"
+ACCELERATION_REPORT_FILE = DOC_ROOT / "benchmark_results_acceleration_paths.rst"
 # The timezone-boundary-builder release the packaged binary data was built
 # from, written by update_data.sh once a parse has succeeded. Declared here
 # because three unrelated consumers stamp or validate against it - the

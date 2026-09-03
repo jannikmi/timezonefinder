@@ -205,6 +205,24 @@ def load_benchmark_json(json_path: Path) -> dict[str, Any]:
         return json.load(f)
 
 
+def cpu_info() -> dict[str, Any]:
+    """The ``machine_info["cpu"]`` block pytest-benchmark records, when available.
+
+    Read through ``py-cpuinfo``, which pytest-benchmark itself uses, so a report
+    written by one of the standalone measurement scripts names its machine in exactly
+    the form :func:`machine_label` and :func:`cpu_model` already know how to read. An
+    environment without it produces a report that says "not recorded" rather than
+    failing the measurement. Declared here, beside those two readers, because every
+    script that writes this shape needs it and three copies of a try/import is three
+    chances for one of them to drift.
+    """
+    try:
+        import cpuinfo  # noqa: PLC0415 - optional, and only needed here
+    except ImportError:
+        return {}
+    return cpuinfo.get_cpu_info()
+
+
 def cpu_model(data: dict[str, Any]) -> str | None:
     """The CPU model that produced ``data``, or ``None`` if not recorded.
 

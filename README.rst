@@ -55,11 +55,11 @@ It combines preprocessed polygon data, H3-based spatial shortcuts, and optional 
 Quick Guide
 -----------
 
-It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
-
 .. code-block:: console
 
-    pip install timezonefinder[numba]
+    pip install timezonefinder
+
+This compiles a small C extension for the point-in-polygon test, which is what makes the lookup fast. The optional `Numba <https://numba.pydata.org/>`__ extra (``pip install timezonefinder[numba]``) replaces that extension with a JIT-compiled kernel and is **not** the faster option - see the `performance documentation <https://timezonefinder.readthedocs.io/en/latest/7_performance.html>`__ before reaching for it.
 
 The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset - the `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the versions to choose from: ``pip install timezonefinder "timezonefinder-data==<version>"``.
 

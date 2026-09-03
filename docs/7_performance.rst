@@ -72,8 +72,8 @@ To check which implementation is active:
 Numba
 -----
 
-Installing the optional ``numba`` dependency JIT-compiles the same routine, which is faster still and
-takes precedence over the C extension when both are available:
+Installing the optional ``numba`` dependency JIT-compiles the same routine, and it **takes precedence
+over the C extension** when both are available:
 
 .. code-block:: console
 
@@ -85,9 +85,21 @@ takes precedence over the C extension when both are available:
     TimezoneFinder.using_numba()  # returns True or False
 
 
-Both backends compute identical results; they only differ in speed. :doc:`architecture` explains why
-the choice is made once at import time and what follows from that - most importantly that the three
-implementations are separate code paths whose timings must never be compared to each other.
+Taking precedence is a dispatch rule, not a speed claim, and the measurement does not support reading
+it as one: on this project's own workloads the Numba path is **slower than the C extension** at every
+level - the packed kernel by ~1.9x, and ``timezone_at()`` by ~3 % on uniformly random points and
+~6 % on ambiguous-shortcut ones. Installing it also changes more than the kernel, since
+``validate_coordinates`` then calls two JIT-compiled scalar helpers whose dispatch costs more than
+the plain comparisons they replace, and every query pays that.
+
+So install it if you need Numba for something else and want one accelerator rather than two, not
+because it is expected to be faster. :doc:`benchmark_results_acceleration_paths` measures all three
+paths against each other and is where these figures come from.
+
+All three implementations compute identical results; they only differ in speed. :doc:`architecture`
+explains why the choice is made once at import time and what follows from that - most importantly
+that they are separate code paths whose timings must never be compared to each other under one
+benchmark name.
 
 
 In memory mode

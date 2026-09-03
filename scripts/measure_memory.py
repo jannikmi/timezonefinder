@@ -39,7 +39,7 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable, NamedTuple
 
-from scripts.benchmark_utils import get_system_status
+from scripts.benchmark_utils import cpu_info, get_system_status
 from scripts.configs import DEBUG, PROJECT_ROOT
 from tests.auxiliaries import (
     BENCHMARK_FIXTURES_DIR,
@@ -187,22 +187,6 @@ def _stats(values: list[int]) -> dict[str, float | int]:
     }
 
 
-def _cpu_info() -> dict[str, Any]:
-    """The same ``machine_info["cpu"]`` block pytest-benchmark records.
-
-    Read through ``py-cpuinfo``, which pytest-benchmark itself uses, so a
-    memory report names its machine in exactly the form
-    ``scripts.benchmark_utils.machine_label`` already knows how to read. An
-    environment without it produces a report that says "not recorded" rather
-    than failing the measurement.
-    """
-    try:
-        import cpuinfo  # noqa: PLC0415 - optional, and only needed here
-    except ImportError:
-        return {}
-    return cpuinfo.get_cpu_info()
-
-
 def build_report(
     samples: dict[str, list[int | None]], workload_size: int
 ) -> dict[str, Any]:
@@ -227,7 +211,7 @@ def build_report(
         )
     return {
         "machine_info": {
-            "cpu": _cpu_info(),
+            "cpu": cpu_info(),
             "timezonefinder": {
                 **get_system_status(),
                 **benchmark_fixture_provenance(),

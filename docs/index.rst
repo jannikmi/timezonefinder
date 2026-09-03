@@ -74,6 +74,7 @@ References
    Benchmarking Methodology <benchmarking_methodology>
    Timezone Finding Benchmarks <benchmark_results_timezonefinding>
    Point-in-Polygon Benchmarks <benchmark_results_polygon>
+   Acceleration Paths <benchmark_results_acceleration_paths>
    Initialization Benchmarks <benchmark_results_initialization>
    Memory Benchmarks <benchmark_results_memory>
    Comparison against tzfpy <benchmark_results_comparison>
