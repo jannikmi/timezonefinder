@@ -132,6 +132,10 @@ Run it from the root of a ``timezonefinder`` repository checkout: the converter 
 helpers as ``scripts.<module>``, so invoking it by path fails to resolve them. ``make testparse``
 runs exactly this against the small ``tests/test_input.json`` fixture.
 
+A run finishes by writing a statistics report describing the binaries it just compiled. It
+lands in ``-out`` alongside them; only a parse of the packaged data directory writes the
+checkout's committed :doc:`data_report`.
+
 The converter finishes by exhaustively validating the compiled directory. The same check ships
 with the package and can be repeated over this or any other compiled directory without the
 repository checkout:

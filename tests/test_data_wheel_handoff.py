@@ -269,16 +269,15 @@ def test_the_update_script_still_prepares_a_release_by_default() -> None:
 def test_binaries_only_leaves_the_committed_data_report_alone() -> None:
     """The converter writes one committed file on its own, and the flag has to undo it.
 
-    ``parse_data`` calls ``write_data_report_from_binary`` unconditionally, and that
-    writes the checkout's ``docs/data_report.rst`` whatever ``-out`` it was given - the
-    behaviour TOOL-6 is about. So a ``--binaries-only`` run that did nothing about it
-    would leave a modified tracked file behind, which is precisely what the mode exists
-    not to do, and on a runner it leaves the dispatch's checkout dirty for whatever
-    step looks next.
+    ``parse_data`` calls ``write_data_report_from_binary``, and the parse this script
+    runs passes no ``-out`` - so it compiles the packaged data directory, which is the
+    one ``docs/data_report.rst`` describes and is written from. A ``--binaries-only``
+    run that did nothing about it would leave a modified tracked file behind, which is
+    precisely what the mode exists not to do, and on a runner it leaves the dispatch's
+    checkout dirty for whatever step looks next.
 
-    The premise is asserted alongside the fix. When TOOL-6 makes the converter respect
-    ``-out``, this restore becomes dead code, and a test that only checked for the
-    restore would keep it alive for ever.
+    The premise is asserted alongside the fix, so that a converter that stops writing
+    the report cannot leave the restore behind as dead code.
     """
     converter = (PROJECT_ROOT / "scripts" / "file_converter.py").read_text(
         encoding="utf-8"
