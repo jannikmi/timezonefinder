@@ -73,6 +73,13 @@ SAMPLE_SEED = 501
 # 13x the largest change a legitimate release produced; see the module docstring.
 CHANGED_ANSWER_GATE = 0.05
 
+# The dataset variant the baseline describes, spelled as `update_data.sh` composes it.
+# `--dataset=same-since-now` merges ~440 zones into ~90, so the same points answer
+# differently by construction - thousands of changed lines that say nothing about the
+# upstream release. The baseline is one dataset's, and the released distribution is
+# built from this one; every other variant is skipped rather than measured against it.
+RELEASED_VARIANT = "-with-oceans"
+
 # The scale the packaged coordinates are stored at (int32 at 1e-7 degrees), so a
 # coordinate printed here converts to the same integer the sample was answered with:
 # a point copied out of the diff reproduces the answer beside it.
@@ -212,8 +219,18 @@ def freeze(force: bool, n_points: int = N_SAMPLE_POINTS) -> None:
     print(f"wrote {n_points:,} frozen sample points to {FROZEN_SAMPLE_PATH}")
 
 
-def check() -> int:
+def check(variant: str = RELEASED_VARIANT) -> int:
     """Re-answer the frozen sample, rewrite both baselines, and gate on the diff."""
+    if variant != RELEASED_VARIANT:
+        # Not a failure and not a pass: there is no baseline for this dataset, so the
+        # only honest thing is to measure nothing and say so. Writing one here would
+        # overwrite the released variant's baseline with another dataset's answers.
+        print(
+            f"dataset variant {variant!r} is not {RELEASED_VARIANT!r}, which the "
+            f"committed baseline describes; nothing is compared or rewritten"
+        )
+        return 0
+
     points = load_frozen_sample()
     answers = answer_sample(points)
     rendered = render_answers(points, answers)
@@ -287,9 +304,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser(
+    check_parser = subparsers.add_parser(
         "check", help="re-answer the frozen sample, rewrite the baselines, gate"
     )
+    # `update_data.sh` passes the variant it composed, so the decision to skip is made
+    # here - where it is covered by a test - rather than in a shell condition
+    check_parser.add_argument("--variant", default=RELEASED_VARIANT)
     freeze_parser = subparsers.add_parser(
         "freeze", help="draw the frozen sample (once; it is committed)"
     )
@@ -300,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "freeze":
             freeze(force=args.force)
             return 0
-        return check()
+        return check(variant=args.variant)
     except (OSError, ValueError) as error:
         print(f"{parser.prog}: {error}", file=sys.stderr)
         return 1

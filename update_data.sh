@@ -212,8 +212,10 @@ rm -f DATA_BUILD_RUN
 # rewritten file is the release's review artifact, and a changed-answer rate above the
 # calibrated gate stops the run here rather than publishing a dataset nobody read.
 # `set -e` is what makes it stop; the guard has already written the diff to review.
+# $VARIANT is handed over rather than acted on here: the baseline describes one
+# dataset, and the guard skips every other variant instead of measuring against it.
 echo "CHECKING WHAT THE NEW DATA ANSWERS DIFFERENTLY..."
-if ! uv run python -m scripts.data_update_guard check; then
+if ! uv run python -m scripts.data_update_guard check --variant "$VARIANT"; then
     echo "the data-update guard refused this dataset!" >&2
     exit 1
 fi

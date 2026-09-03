@@ -20,6 +20,7 @@ from scripts.data_update_guard import (
     GUARD_FIXTURES_DIR,
     N_SAMPLE_POINTS,
     NO_ZONE,
+    RELEASED_VARIANT,
     PAYLOAD_PATH,
     answer_sample,
     changed_indices,
@@ -158,6 +159,58 @@ def test_a_sample_the_baseline_does_not_describe_is_refused(
     answers_path.write_text("\n".join(lines[:-1]) + "\n", encoding="utf-8")
 
     assert check() == 1
+
+
+@pytest.mark.unit
+def test_another_dataset_variant_is_skipped_rather_than_measured(
+    monkeypatch, tmp_path
+) -> None:
+    """``--dataset=same-since-now`` merges ~440 zones into ~90.
+
+    Those points answer differently by construction, so measuring them against this
+    baseline reports thousands of changed lines that say nothing about the upstream
+    release - and, before this skip, stopped every reduced-dataset run at the gate.
+    Nothing is written either: the baseline belongs to one dataset.
+    """
+    answers_path = _isolated_baselines(monkeypatch, tmp_path, ["Etc/GMT+0"] * 3)
+    before = answers_path.read_text(encoding="utf-8")
+
+    assert check(variant="-with-oceans-now") == 0
+    assert answers_path.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.unit
+def test_the_update_script_hands_the_guard_its_dataset_variant() -> None:
+    """The skip above only ever fires if the variant actually reaches the guard.
+
+    ``update_data.sh`` composes it and is the only caller, so a run that stopped
+    passing it would silently measure a reduced dataset against the full one's
+    baseline again - the behaviour this pairing exists to prevent.
+    """
+    script = (PROJECT_ROOT / "update_data.sh").read_text(encoding="utf-8")
+    assert "scripts.data_update_guard check --variant" in script
+    assert RELEASED_VARIANT in script
+
+
+@pytest.mark.unit
+def test_a_refused_dataset_leaves_its_diff_behind() -> None:
+    """A tripped gate ends the regeneration step, so every later step is skipped.
+
+    The rewritten baseline then exists only on the runner, and the log carries just
+    the first ten changed answers - in exactly the case a maintainer has to review the
+    whole diff. Only a step that runs *on failure* can still carry it off the runner.
+    """
+    workflow = yaml.safe_load(UPDATE_WORKFLOW.read_text(encoding="utf-8"))
+    uploads = [
+        step
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
+        if str(step.get("uses", "")).startswith("actions/upload-artifact")
+        and str(GUARD_FIXTURES_DIR.relative_to(PROJECT_ROOT))
+        in str(step["with"]["path"])
+    ]
+    assert len(uploads) == 1, "the guard's diff is uploaded by exactly one step"
+    assert "failure()" in uploads[0]["if"]
 
 
 @pytest.mark.unit

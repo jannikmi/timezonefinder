@@ -116,6 +116,20 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: bash update_data.sh --dataset=full --with-oceans --rm-tmp
 
+      # A tripped guard ends the step above, so nothing further in this job runs -
+      # no wheel, no commit, no pull request. That is the point, but it also strands
+      # the rewritten answer baseline on an ephemeral runner, and the log prints only
+      # the first ten changed answers. The full diff is exactly what the maintainer
+      # needs in the case the gate exists for, so it leaves as an artifact; without
+      # this the only way to see it is to regenerate the dataset by hand.
+      - name: Keep the guard's answer diff from a failed regeneration
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-data-update-guard
+          path: tests/fixtures/data_update
+          if-no-files-found: warn
+
       # The wheel is built here, from the data this job just compiled, and every later
       # consumer reads *this* artefact: build.yml on the pull request opened below, and
       # publish_data.yml on the tag that merges it. publish_data.yml states in its own
@@ -241,7 +255,7 @@ jobs:
           body=$(cat <<EOF
           A new timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) is available. The currently packaged data version is \`$CURRENT\`.
 
-          The automated update job failed to prepare an update PR, so the data needs to be regenerated manually with \`update_data.sh\` (see \`contributing/development/data-pipeline-format-versioning-and-release-order.md\`).
+          The automated update job failed to prepare an update PR, so the data needs to be regenerated manually with \`update_data.sh\` (see \`contributing/development/data-pipeline-format-versioning-and-release-order.md\`). If the data-update guard was what refused it, that run's \`artifact-data-update-guard\` artifact holds the rewritten answer baseline - its diff against the committed one is what to review before deciding.
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF
