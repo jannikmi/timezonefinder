@@ -6,6 +6,11 @@ name: Auto-release data update PRs
 # - on success: merge the PR and push the `data-v*` tag, which triggers the
 #   publishing pipeline in publish_data.yml
 # - on failure: label the PR and notify the maintainer
+# - on a draft: neither. A green pipeline says the data is *valid*, never that it is
+#   the data anybody meant to publish, and that second question belongs to the
+#   data-update answer guard. When it refuses, check_data_updates.yml still prepares
+#   the whole release and opens it as a draft, so the answers that moved are read as
+#   an ordinary pull request diff; this workflow leaves it alone and says why.
 #
 # NOTE: merging and tagging use the GitHub App token, since tags pushed with
 # the default GITHUB_TOKEN do not trigger other workflows.
@@ -56,8 +61,50 @@ jobs:
           repo: ${{ github.repository }}
           token: ${{ steps.app-token.outputs.token }}
 
-      - name: Merge the update PR
+      # The answer guard's refusal, read off the pull request rather than carried from
+      # the run that opened it: this job is triggered by a *later* workflow_run and
+      # shares no state with it. A draft is also the one refusal GitHub itself
+      # enforces - `gh pr merge` on a draft is rejected - so this step decides whether
+      # the maintainer is told politely, never whether the release is withheld.
+      - name: Check whether the update is withheld for review
         if: steps.resolve-merge.outputs.found == 'true'
+        id: withheld
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
+        run: |
+          set -euo pipefail
+          draft=$(gh pr view "$PR_NUMBER" --json isDraft --jq .isDraft)
+          echo "draft=$draft" >> "$GITHUB_OUTPUT"
+          if [[ "$draft" == "true" ]]; then
+            echo "PR #$PR_NUMBER is a draft; it is not merged and nothing is published"
+          fi
+
+      - name: Ask the maintainer to review a withheld update
+        if: >
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.withheld.outputs.draft == 'true'
+        uses: ./.github/actions/notify-update-pr
+        with:
+          pr-number: ${{ steps.resolve-merge.outputs.pr-number }}
+          marker: review-required
+          repo: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: >
+            @${{ github.repository_owner }} this automated data update passed CI but
+            is a draft, so it was not merged and nothing was published. The answer
+            guard refused it: more than 5 % of the frozen sample changed answer, where
+            an ordinary refinement release changes none. Review the diff of
+            `tests/fixtures/data_update/answers.txt` in this pull request - one line
+            per sampled point and the timezone it now resolves to. If the change is
+            real, mark this ready for review and merge it; the `data-v*` tag is then
+            pushed by hand from an up-to-date master.
+
+      - name: Merge the update PR
+        if: >
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.withheld.outputs.draft != 'true'
         id: merge
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

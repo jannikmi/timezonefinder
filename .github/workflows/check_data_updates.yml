@@ -109,12 +109,27 @@ jobs:
         run: uv sync --all-groups
 
       - name: Regenerate the data
+        id: regenerate
         # the script now asks the release API twice - once for the tag, once for the
         # digest it verifies the download against - and an unauthenticated runner
         # shares its rate limit with everything else on its address
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: bash update_data.sh --dataset=full --with-oceans --rm-tmp
+        # Exit 3 is update_data.sh's "prepared, but the answer guard refused it". The
+        # release is complete and gets committed and opened below exactly like any
+        # other - as a draft, because the whole reason for preparing it is that a
+        # person reads the answer diff. Every other non-zero exit produced nothing.
+        run: |
+          set +e
+          bash update_data.sh --dataset=full --with-oceans --rm-tmp
+          status=$?
+          set -e
+          if [[ "$status" -eq 3 ]]; then
+            echo "the answer guard refused this dataset; opening the update as a draft"
+            echo "guard_refused=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$status" -ne 0 ]]; then
+            exit "$status"
+          fi
 
       # The wheel is built here, from the data this job just compiled, and every later
       # consumer reads *this* artefact: build.yml on the pull request opened below, and
@@ -162,6 +177,7 @@ jobs:
             packages/timezonefinder-data/pyproject.toml \
             packages/timezonefinder-data/README.md \
             tests/fixtures/benchmarks \
+            tests/fixtures/data_update \
             docs/benchmark_results_comparison.rst \
             docs/benchmark_results_initialization.rst \
             docs/benchmark_results_memory.rst \
@@ -187,6 +203,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GUARD_REFUSED: ${{ steps.regenerate.outputs.guard_refused }}
         run: |
           set -euo pipefail
           # the data distribution's version - a data update bumps that one and
@@ -200,12 +217,28 @@ jobs:
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF
           )
+
+          # A draft is what withholds the release: release_data_update.yml skips one,
+          # and GitHub refuses to merge one even if that check were removed. The
+          # release itself is complete, so the answer diff is reviewed here rather
+          # than reconstructed from a log - which is the whole reason the guard lets
+          # the preparation finish.
+          draft=()
+          if [[ "${GUARD_REFUSED:-}" == "true" ]]; then
+            draft=(--draft)
+            body="$body
+
+          > [!WARNING]
+          > **The answer guard refused this dataset, so this is a draft and will not be released automatically.** More than 5 % of the frozen 10,000-point sample changed answer - an ordinary refinement release changes none, and the largest legitimate move measured was 0.380 %. Read the diff of \`tests/fixtures/data_update/answers.txt\`: one line per sampled point and the timezone it now resolves to, and a coordinate pastes straight back into \`timezone_at\`. Mark this ready for review only if the change is real."
+          fi
+
           gh pr create \
             --title "Data $LATEST" \
             --body "$body" \
             --head "data-update-$LATEST" \
             --base master \
-            --reviewer "${{ github.repository_owner }}"
+            --reviewer "${{ github.repository_owner }}" \
+            "${draft[@]}"
           echo "update PR created for $LATEST"
 
   open_notification_issue:
