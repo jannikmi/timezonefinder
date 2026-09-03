@@ -200,10 +200,14 @@ Thresholds derived from measured noise
 The trend chart alert: 180 %
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``ALERT_THRESHOLD`` is derived from a measurement, not chosen. Across eleven recorded runs whose
-lookup path was identical, the tracked ``min`` spread 134-158 % (unique 134.3 %, random 145.9 %,
-ambiguous 158.4 %) purely because of the hardware each run drew. Worst spread plus 20 % headroom
-rounds to the shipped **180 %**.
+``ALERT_THRESHOLD`` is derived from measurement, not chosen. Across eleven recorded scalar-core
+runs whose lookup path was identical, the tracked ``min`` spread 134-158 % (unique 134.3 %, random
+145.9 %, ambiguous 158.4 %) purely because of the hardware each run drew. After the six batch cases
+joined the core, five fresh runners measured a worst scalar spread of 138.9 % and a worst batch
+spread of 137.9 %. That sample drew AMD EPYC 9V74 and 7763 machines but not the Intel Xeon class in
+the earlier study, so it demonstrates that the batch cases do not widen the known bound; it does not
+erase the wider scalar observation. Worst known spread plus 20 % headroom rounds to the shipped
+**180 %**.
 
 Being honest about what that buys: at 180 % the chart catches only a catastrophic regression and is
 blind to the 10-30 % changes actually worth reviewing. That is not a gap to close by tightening the
