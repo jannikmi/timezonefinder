@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788393979251,
+  "lastUpdate": 1788393981415,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9554,6 +9554,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0.001",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6989 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "568f13549c6a94d69f52ae4e4309b61e90504532",
+          "message": "workflow: how the pass answers, resolves, and re-triggers a Codex review (#590)\n\n* workflow: answer a review finding in a sentence or two, then resolve the thread\n\nThe instruction said only \"reply briefly with concrete evidence\", which in\npractice produced multi-paragraph replies restating the finding and listing\nwhat the tests now cover - all of which the diff already carries - and left\nevery thread open for the maintainer to close by hand.\n\nContributor memory only, so no changelog entry.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: a blocked finding keeps its thread open\n\nThe resolve instruction offered only two dispositions - fixed or stale - and\nrequired resolving unconditionally, which contradicted the blocker sentence two\nclauses later and would have closed the one kind of finding the maintainer most\nneeds to see.\n\nResolution is now conditioned on the finding being settled, and the blocker\ncase says explicitly to leave its thread open.\n\nThe file is at its 2,000-word budget, so this reclaimed its words in the same\nparagraph rather than growing it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: re-trigger a review after substantial changes, stop on a usage limit\n\nThe pass was barred from re-triggering at all, so a review only ever saw the\ncommit the pull request opened with - and the fixes it prompted, which are the\ncode least likely to have been reviewed, went out unseen. On #589 three\nre-triggers found five defects, each round looking at code the previous round\nhad not.\n\nIt may now re-trigger once fixes settle, gated on materiality rather than on\nevery push: a new enforced gate, a changed seam, a fix no review has seen.\nDocumentation, test and conflict-resolution edits earn no round.\n\nA usage limit stops the pass rather than stalling it - report it and leave the\npull request unmerged, never wait it out or retry.\n\nWords reclaimed from the removed prohibition; the file stays at its budget.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: re-trigger only on the gated head\n\nCodex on 76c808a, P1 and correct. The re-trigger sat before the rebase-and-\nre-gate sentence, so a moved origin/master or a gate-revealed correction would\nproduce a new head after the review was spent - and since conflict-resolution\nedits earn no round, nothing would review it. That recreates the unreviewed-\nfinal-head gap the rule exists to close.\n\nObserved on #589 in this same shape: the review was requested on 9d046a7 and\n20a86be was pushed afterwards, so the review covered a head that was already\nstale.\n\nThe gate now runs first and the re-trigger names that gated head.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: scope the post-review re-gate, and condense the file\n\nRepeating the full gate after every review fix cost ~3:40 of `make testall`\nper round, four times on #589, to re-prove a suite that a documentation or\ntest-only fix cannot move. The re-gate is now scoped: full when code changed,\n`make hook` plus the affected tests when only documentation or tests did.\n\nThe file was at 1,999 of its 2,000-word budget, so the three preceding edits\neach had to be funded by trimming the same paragraph - and \"rather than\naccepting it mechanically\" was nearly cut for space, which is the wrong word to\nlose. Condensed to 1,860: padding and restatement only, verified rule by rule\nagainst the previous revision, with every heading and link intact. That leaves\n140 words for the next instruction change rather than one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: narrowing the re-gate never drops the subsystem's own gate\n\nCodex on a0b1d60. The narrowed re-gate named `make hook` and the affected\ntests outright, which silently drops `make docs` for a documentation fix - and\nthe routed documentation rules say plainly that rstcheck does not resolve\ncross-references, so a broken `:doc:`/`:ref:` or toctree entry would pass the\nhook and be declared complete.\n\nIt now narrows to `make hook` plus whatever gate the touched subsystem\nselects, and says explicitly that narrowing never drops it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-03T02:05:29+02:00",
+          "tree_id": "bd9ffbb2a6c79d30e3d5235193a5e0e86f4a4b03",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/568f13549c6a94d69f52ae4e4309b61e90504532"
+        },
+        "date": 1788393980698,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008347511291504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085163116455078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2301340103149414,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2308998107910156,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584519386291504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.585328102111816,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4935 GHz"
           }
         ]
       }
