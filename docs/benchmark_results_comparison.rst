@@ -4,9 +4,11 @@ Comparison against tzfpy
 ========================
 
 
-**~1.18µs per lookup here against ~305ns for tzfpy 1.3.3** - 3.86x slower, over uniformly random query points answered by both packages in the same process on the same machine. That gap is what full-resolution boundary polygons cost; :doc:`alternatives` is where the trade is argued rather than measured.
+**~1.19µs per lookup here against ~310ns for tzfpy 1.3.3** - 3.83x slower, over uniformly random query points answered by both packages in the same process on the same machine. That gap is what full-resolution boundary polygons cost; :doc:`alternatives` is where the trade is argued rather than measured.
 
-*Measured on Darwin arm64, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+*Measured on Darwin arm64, Apple M1 Pro, Python 3.14.2, using the C extension (clang) point-in-polygon path.* This is the configuration continuous integration tracks - what a plain ``pip install timezonefinder`` gives you. See :doc:`benchmarking_methodology`.
+
+Continuous integration tracks none of the rows on this page. This published table leads with ``Mean`` and belongs to the full on-demand suite, while the trend chart records the ``min`` estimator for the smaller ``benchmark_core`` subset.
 
 
 
@@ -97,25 +99,25 @@ Every figure in this section is the **min** over the measured rounds, not the me
      - TimezoneFinderL.timezone_at()
      - vs tzfpy.get_tz()
    * - random points
-     - 305ns
-     - 1.18µs
-     - 832ns
-     - 3.86x slower
+     - 310ns
+     - 1.19µs
+     - 834ns
+     - 3.83x slower
    * - on-land points
-     - 351ns
-     - 1.52µs
-     - 865ns
-     - 4.33x slower
+     - 358ns
+     - 1.53µs
+     - 869ns
+     - 4.28x slower
    * - unique-shortcut points
-     - 266ns
-     - 781ns
+     - 270ns
      - 782ns
-     - 2.94x slower
+     - 783ns
+     - 2.90x slower
    * - ambiguous-shortcut points
-     - 622ns
-     - 4.66µs
-     - 1.24µs
-     - 7.50x slower
+     - 628ns
+     - 4.76µs
+     - 1.23µs
+     - 7.58x slower
 
 
 
@@ -145,40 +147,40 @@ TimezoneFinder.timezone_at() (in-memory)
      - Time/Query (min)
      - Throughput (min)
    * - ambiguous-shortcut points
-     - 12.1ms
+     - 13.2ms
+     - 13.3ms
+     - 480µs
      - 11.9ms
-     - 484µs
-     - 11.7ms
-     - 14.0ms
+     - 14.2ms
      - 100
-     - 4.66µs
-     - 215k/s
+     - 4.76µs
+     - 210k/s
    * - on-land points
-     - 3.95ms
-     - 3.91ms
-     - 170µs
-     - 3.80ms
-     - 5.24ms
-     - 218
-     - 1.52µs
-     - 658k/s
+     - 4.30ms
+     - 4.27ms
+     - 286µs
+     - 3.83ms
+     - 4.94ms
+     - 100
+     - 1.53µs
+     - 653k/s
    * - random points
-     - 3.09ms
-     - 3.04ms
-     - 171µs
-     - 2.94ms
-     - 3.84ms
-     - 278
-     - 1.18µs
-     - 850k/s
+     - 3.29ms
+     - 3.19ms
+     - 265µs
+     - 2.97ms
+     - 3.96ms
+     - 100
+     - 1.19µs
+     - 843k/s
    * - unique-shortcut points
-     - 2.02ms
-     - 2.00ms
-     - 63.6µs
+     - 2.08ms
+     - 2.03ms
+     - 119µs
      - 1.95ms
-     - 2.45ms
-     - 452
-     - 781ns
+     - 2.46ms
+     - 100
+     - 782ns
      - 1.28M/s
 
 
@@ -203,40 +205,40 @@ TimezoneFinderL.timezone_at()
      - Time/Query (min)
      - Throughput (min)
    * - ambiguous-shortcut points
-     - 3.30ms
+     - 3.32ms
      - 3.21ms
-     - 215µs
-     - 3.10ms
-     - 4.01ms
-     - 295
-     - 1.24µs
-     - 806k/s
+     - 230µs
+     - 3.08ms
+     - 3.98ms
+     - 100
+     - 1.23µs
+     - 812k/s
    * - on-land points
-     - 2.24ms
-     - 2.22ms
-     - 74.0µs
-     - 2.16ms
-     - 2.71ms
-     - 414
-     - 865ns
-     - 1.16M/s
+     - 2.30ms
+     - 2.25ms
+     - 114µs
+     - 2.17ms
+     - 2.56ms
+     - 100
+     - 869ns
+     - 1.15M/s
    * - random points
-     - 2.16ms
-     - 2.14ms
-     - 80.0µs
+     - 2.30ms
+     - 2.27ms
+     - 163µs
      - 2.08ms
-     - 2.79ms
-     - 426
-     - 832ns
+     - 2.60ms
+     - 100
+     - 834ns
      - 1.20M/s
    * - unique-shortcut points
-     - 2.12ms
-     - 2.02ms
-     - 475µs
-     - 1.95ms
-     - 7.99ms
-     - 473
-     - 782ns
+     - 2.07ms
+     - 2.03ms
+     - 106µs
+     - 1.96ms
+     - 2.49ms
+     - 100
+     - 783ns
      - 1.28M/s
 
 
@@ -261,41 +263,41 @@ tzfpy.get_tz()
      - Time/Query (min)
      - Throughput (min)
    * - ambiguous-shortcut points
+     - 1.81ms
      - 1.71ms
-     - 1.62ms
-     - 183µs
-     - 1.55ms
-     - 2.47ms
-     - 260
-     - 622ns
-     - 1.61M/s
-   * - on-land points
-     - 920µs
-     - 898µs
-     - 66.2µs
-     - 877µs
-     - 1.43ms
-     - 581
-     - 351ns
-     - 2.85M/s
-   * - random points
-     - 801µs
-     - 782µs
-     - 48.4µs
-     - 763µs
-     - 983µs
+     - 253µs
+     - 1.57ms
+     - 2.91ms
      - 100
-     - 305ns
-     - 3.28M/s
+     - 628ns
+     - 1.59M/s
+   * - on-land points
+     - 946µs
+     - 920µs
+     - 65.7µs
+     - 895µs
+     - 1.21ms
+     - 100
+     - 358ns
+     - 2.79M/s
+   * - random points
+     - 843µs
+     - 803µs
+     - 90.0µs
+     - 775µs
+     - 1.31ms
+     - 100
+     - 310ns
+     - 3.22M/s
    * - unique-shortcut points
-     - 694µs
-     - 676µs
-     - 47.7µs
-     - 664µs
-     - 1.17ms
-     - 1011
-     - 266ns
-     - 3.76M/s
+     - 720µs
+     - 698µs
+     - 59.9µs
+     - 674µs
+     - 935µs
+     - 100
+     - 270ns
+     - 3.71M/s
 
 
 
@@ -321,51 +323,51 @@ Every row includes interpreter startup, which the baseline row measures on its o
      - Max
      - Rounds
    * - bare interpreter (baseline)
-     - 27.2ms
-     - 27.3ms
-     - 659µs
-     - 26.2ms
-     - 28.8ms
+     - 28.4ms
+     - 28.3ms
+     - 879µs
+     - 27.0ms
+     - 31.6ms
      - 20
    * - timezonefinder, file-based
-     - 136ms
-     - 135ms
-     - 4.13ms
-     - 128ms
-     - 145ms
+     - 140ms
+     - 140ms
+     - 2.38ms
+     - 137ms
+     - 146ms
      - 20
    * - timezonefinder, in-memory
-     - 129ms
-     - 127ms
-     - 7.90ms
-     - 123ms
-     - 159ms
+     - 136ms
+     - 136ms
+     - 1.24ms
+     - 134ms
+     - 138ms
      - 20
    * - TimezoneFinderL
-     - 119ms
-     - 119ms
-     - 3.84ms
-     - 114ms
+     - 126ms
      - 125ms
+     - 1.71ms
+     - 124ms
+     - 129ms
      - 20
    * - tzfpy
+     - 123ms
+     - 123ms
+     - 979µs
      - 122ms
-     - 121ms
-     - 3.79ms
-     - 118ms
-     - 136ms
+     - 126ms
      - 20
 
 
 Net of that baseline:
 
-* **TimezoneFinderL**: 87.5ms to a first answer
+* **tzfpy**: 94.8ms to a first answer
 
-* **tzfpy**: 92.0ms to a first answer
+* **TimezoneFinderL**: 96.5ms to a first answer
 
-* **timezonefinder, in-memory**: 96.8ms to a first answer
+* **timezonefinder, in-memory**: 107ms to a first answer
 
-* **timezonefinder, file-based**: 102ms to a first answer
+* **timezonefinder, file-based**: 110ms to a first answer
 
 
 

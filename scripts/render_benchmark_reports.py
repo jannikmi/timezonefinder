@@ -23,10 +23,12 @@ changed.
 
 import argparse
 import re
-from collections.abc import Sequence
+from contextlib import contextmanager
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any, Callable
 
+from benchmarks.candidate_comparison import CandidateComparison
 from scripts.benchmark_utils import (
     DEFAULT_BENCHMARK_ESTIMATOR,
     TZFPY_DISTRIBUTION,
@@ -38,6 +40,7 @@ from scripts.benchmark_utils import (
     machine_label,
 )
 from scripts.configs import (
+    ACCELERATION_REPORT_FILE,
     COMPARISON_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
     MEMORY_REPORT_FILE,
@@ -69,9 +72,11 @@ FUNCTION_LABELS = {
     "test_timezone_at_land": "TimezoneFinder.timezone_at_land()",
     "test_timezone_at_timezonefinderl": "TimezoneFinderL.timezone_at() (ambiguous-shortcut points)",
     "test_pt_in_poly_clang": "bare kernel (C/clang)",
-    "test_pt_in_poly_python": "bare kernel (Python, Numba if available)",
+    # The two rows below are relabelled per run - see `apply_interpreted_kernel_labels`.
+    # These defaults describe neither path and exist only so a lookup never misses.
+    "test_pt_in_poly_python": "bare kernel (interpreted)",
     "test_pt_in_poly_clang_packed": "packed kernel (C/clang)",
-    "test_pt_in_poly_python_packed": "packed kernel (Python, Numba if available)",
+    "test_pt_in_poly_python_packed": "packed kernel (interpreted)",
     "test_initialization": "Initialization",
     "test_lookup_timezonefinder": "TimezoneFinder.timezone_at() (in-memory)",
     "test_lookup_timezonefinderl": "TimezoneFinderL.timezone_at()",
@@ -283,6 +288,36 @@ def acceleration_path_label(system_info: dict[str, Any]) -> str:
     return "pure Python"
 
 
+@contextmanager
+def interpreted_kernel_labels(system_info: dict[str, Any]) -> Iterator[None]:
+    """Name the ``utils_numba`` kernel rows after the path that actually produced them.
+
+    ``benchmarks/test_inside_polygon.py``'s ``*_python`` benchmarks time
+    ``timezonefinder/utils_numba.py``, which is the Numba-JIT'd kernel where Numba is
+    installed and the plain Python one where it is not - the same node id carrying
+    numbers from two implementations that are 5x-200x apart. The node id has to stay
+    put, since it is the trend chart's join key, so the *label* is what says which ran:
+    a page rendered from the tracked configuration reads "pure Python", which is what a
+    plain ``pip install`` runs and what those numbers have always described.
+
+    Scoped rather than assigned, because ``FUNCTION_LABELS`` is shared by every
+    renderer and a label left behind would describe the wrong run - in a test session
+    it would describe the wrong *test*. See
+    :doc:`benchmark_results_acceleration_paths` for the two measured against each other.
+    """
+    path = "Numba" if system_info.get("using_numba") else "pure Python"
+    replacements = {
+        "test_pt_in_poly_python": f"bare kernel ({path})",
+        "test_pt_in_poly_python_packed": f"packed kernel ({path})",
+    }
+    previous = {name: FUNCTION_LABELS[name] for name in replacements}
+    FUNCTION_LABELS.update(replacements)
+    try:
+        yield
+    finally:
+        FUNCTION_LABELS.update(previous)
+
+
 def is_ci_tracked_configuration(system_info: dict[str, Any]) -> bool:
     """Whether these numbers come from the configuration CI tracks.
 
@@ -378,6 +413,265 @@ def add_ci_tracking_note(
         f"suite, while the trend chart records the ``{estimator}`` estimator for "
         "the smaller ``benchmark_core`` subset."
     )
+
+
+# --- the acceleration paths, which take three runs to describe and two to measure ----
+
+#: How far two runs' clang baselines may sit apart before the page says so. The same
+#: 3 % the candidate harness calls the bottom of one machine's own jitter: below it a
+#: difference is not demonstrable, above it the two processes were not doing the same
+#: thing and the reader needs to know before reading the columns beside each other.
+ANCHOR_AGREEMENT_THRESHOLD = 0.03
+
+#: What the one-configuration pages say about the other two implementations. They
+#: measure whichever path their environment bound and must keep doing so - three
+#: environments on a page whose header asserts one is what
+#: :doc:`benchmark_results_acceleration_paths` exists to avoid - so they point at it
+#: rather than carrying its columns.
+ACCELERATION_PATHS_POINTER = (
+    "The other two point-in-polygon implementations are measured against this one in "
+    ":doc:`benchmark_results_acceleration_paths`: Numba is slower than the C extension "
+    "here, not faster, and pure Python is orders of magnitude behind both."
+)
+
+ACCELERATION_PATH_LABELS = {
+    "clang": "C extension (clang)",
+    "numba": "Numba JIT",
+    "python": "pure Python",
+}
+
+KERNEL_STRATUM_LABELS = {
+    "small": "small polygons",
+    "medium": "medium polygons",
+    "large": "large polygons",
+}
+
+
+def _comparison_of(stored: dict[str, Any]) -> CandidateComparison:
+    """Rebuild the harness's dataclass from what the measurement stored.
+
+    The verdict rule - two estimators, believed only where they agree - lives in
+    ``benchmarks/candidate_comparison.py`` and is reconstructed here rather than
+    reimplemented, so a page can never disagree with the harness about what a
+    measurement was allowed to claim.
+    """
+    return CandidateComparison(**stored)
+
+
+def _acceleration_row(label: str, stored: dict[str, Any]) -> list[str]:
+    comparison = _comparison_of(stored)
+    # The challenger relative to clang, as a multiple rather than a signed percentage:
+    # these span 1.0x to ~190x, and "+18913 %" is unreadable where "190x" is not.
+    ratio = comparison.best_challenger / comparison.best_baseline
+    return [
+        label,
+        format_duration(comparison.best_baseline),
+        format_duration(comparison.best_challenger),
+        format_ratio(ratio),
+        f"{comparison.challenger_wins} of {comparison.rounds}",
+        comparison.verdict,
+    ]
+
+
+def _acceleration_table(
+    reporter: BenchmarkReporter,
+    run: dict[str, Any],
+    section: str,
+    labels: dict[str, str],
+) -> None:
+    path = run["machine_info"]["timezonefinder"]["acceleration_path"]
+    rows = [
+        _acceleration_row(labels.get(key, key), stored)
+        for key, stored in run[section].items()
+    ]
+    reporter.add_table(
+        [
+            "Workload",
+            "C extension (clang)",
+            ACCELERATION_PATH_LABELS.get(path, path),
+            "Relative to clang",
+            "Rounds won",
+            "Verdict",
+        ],
+        rows,
+    )
+
+
+def _anchor_agreement(runs: Sequence[dict[str, Any]], section: str) -> list[list[str]]:
+    """How far the runs' clang baselines sit apart, workload by workload.
+
+    Published rather than used as a gate. The two runs are separate experiments and
+    nothing on this page divides one into the other, so a divergence here does not
+    invalidate a column - it tells the reader how much of the difference between two
+    *environments* is not the point-in-polygon path at all.
+    """
+    keys = list(runs[0][section])
+    rows = []
+    for key in keys:
+        anchors = [_comparison_of(run[section][key]).best_baseline for run in runs]
+        spread = max(anchors) / min(anchors) - 1.0
+        rows.append(
+            [
+                key.replace("_", " "),
+                *(format_duration(a) for a in anchors),
+                f"{spread * 100:.1f} %",
+                "yes" if spread <= ANCHOR_AGREEMENT_THRESHOLD else "**no**",
+            ]
+        )
+    return rows
+
+
+def render_acceleration_paths(
+    runs: Sequence[dict[str, Any]], output_path: Path
+) -> None:
+    """Render the three-path comparison from one run per measurable pair."""
+    if len(runs) < 2:
+        raise ValueError(
+            "the acceleration-path page needs one run per environment - `make "
+            "acceleration-paths` produces both. Got "
+            f"{len(runs)}."
+        )
+    runs = sorted(
+        runs, key=lambda r: r["machine_info"]["timezonefinder"]["acceleration_path"]
+    )
+    machines = {machine_label(run) for run in runs}
+    if len(machines) != 1:
+        raise ValueError(
+            "the acceleration-path runs come from different machines "
+            f"({sorted(str(m) for m in machines)}), so their columns describe "
+            "different hardware and must not be published on one page. Re-measure "
+            "both with `make acceleration-paths` on one machine."
+        )
+
+    reporter = BenchmarkReporter(
+        title="Point-in-Polygon Acceleration Paths", output_path=output_path
+    )
+    system_info = get_system_info(runs[0])
+    paths = [run["machine_info"]["timezonefinder"]["acceleration_path"] for run in runs]
+
+    headlines = []
+    lookup_rows = {
+        run["machine_info"]["timezonefinder"]["acceleration_path"]: run["lookups"]
+        for run in runs
+    }
+    for path in paths:
+        random = _comparison_of(lookup_rows[path]["random"])
+        ratio = random.best_challenger / random.best_baseline
+        headlines.append(
+            f"**{ACCELERATION_PATH_LABELS[path]}: {format_ratio(ratio)} the C "
+            f"extension** on ``TimezoneFinder.timezone_at()`` over uniformly random "
+            f"points ({random.verdict})."
+        )
+    for headline in headlines:
+        reporter.add_text(headline)
+    # Not `add_headline_section`: its banner names *the* acceleration path the numbers
+    # came from, which is the right thing to say on a page describing one configuration
+    # and a false one here - this page's whole subject is that there are three.
+    platform = f"{system_info['platform_system']} {system_info['platform_machine']}"
+    reporter.add_text(
+        f"*Measured on {platform}, {machine_label(runs[0]) or 'CPU not recorded'}, "
+        f"Python {system_info['python_version']}, across "
+        f"{len(runs)} environments on one machine.*"
+    )
+
+    reporter.add_text(
+        "The three point-in-polygon implementations, measured against each other "
+        "rather than across commits. ``timezonefinder/utils.py`` binds one of them at "
+        "import time, so which one a process runs is decided by its environment: Numba "
+        "when it is importable, the C extension when it is not but the extension "
+        "loaded, and the plain Python function when neither is available. See "
+        ":doc:`benchmarking_methodology`."
+    )
+    reporter.add_note(
+        "Nothing on this page is on the continuous-integration trend chart, which "
+        "tracks the C extension alone - what a plain ``pip install timezonefinder`` "
+        "runs. These are on-demand measurements, taken by ``make acceleration-paths``."
+    )
+
+    reporter.add_section("How this is measured", level=1)
+    reporter.add_text(
+        "Numba and pure Python are one source decorated or not, so **no process holds "
+        "both**: what a process does hold is the C extension plus whichever of the two "
+        "its environment produced. Each row below is therefore a paired comparison "
+        "inside one process - the same random draw handed to both candidates, the "
+        "order alternating round by round, and two estimators reported so that a "
+        "difference neither can demonstrate reads as ``unresolved`` rather than as a "
+        "number (``benchmarks/candidate_comparison.py``)."
+    )
+    reporter.add_text(
+        "That also fixes what this page will **not** do: divide one environment's "
+        "column into the other's. Two runs in two processes can alternate nothing and "
+        "share no draw, so a Numba-against-pure-Python ratio taken that way would rest "
+        "on the single estimator this repository has already been misled by "
+        "(:doc:`benchmarking_methodology`). The two measured pairs are published; the "
+        "third ratio is not derived from them."
+    )
+
+    reporter.add_section("The kernel a lookup reaches", level=1)
+    reporter.add_text(
+        "``PolygonArray.pip`` over the packed payload, one pass over 2,500 committed "
+        "(point, ring) pairs per round, split by polygon size so the largest rings are "
+        "not hidden behind an average over a mostly-small population."
+    )
+    for run in runs:
+        path = run["machine_info"]["timezonefinder"]["acceleration_path"]
+        reporter.add_section(
+            f"{ACCELERATION_PATH_LABELS[path]} against the C extension", level=2
+        )
+        _acceleration_table(reporter, run, "kernels", KERNEL_STRATUM_LABELS)
+
+    reporter.add_section("What a caller actually pays", level=1)
+    reporter.add_text(
+        "``TimezoneFinder.timezone_at()`` in memory, over the same committed point "
+        "fixtures the other pages use. The kernel ratio above **bounds** these and "
+        "does not predict them: the H3 shortcut index answers a unique-shortcut query "
+        "outright, so no point-in-polygon test runs at all and the two paths are "
+        "measuring the same code."
+    )
+    for run in runs:
+        path = run["machine_info"]["timezonefinder"]["acceleration_path"]
+        reporter.add_section(
+            f"{ACCELERATION_PATH_LABELS[path]} against the C extension", level=2
+        )
+        _acceleration_table(reporter, run, "lookups", PARAM_LABELS)
+
+    reporter.add_section("How comparable the two runs are", level=1)
+    reporter.add_text(
+        "Both runs measure the C extension, so its two timings are the same quantity "
+        "measured twice and their spread says how much of the gap between the tables "
+        "above is the environment rather than the point-in-polygon path. Published "
+        "rather than used as a gate, because nothing here divides one run into the "
+        "other."
+    )
+    headers = [
+        "Workload",
+        *(f"clang, in the {ACCELERATION_PATH_LABELS[p]} run" for p in paths),
+        "Spread",
+        "Within 3 %",
+    ]
+    reporter.add_section("The kernel a lookup reaches", level=2)
+    reporter.add_table(headers, _anchor_agreement(runs, "kernels"))
+    reporter.add_section("What a caller actually pays", level=2)
+    reporter.add_table(headers, _anchor_agreement(runs, "lookups"))
+    reporter.add_text(
+        "Two things move these rows. The first is ordinary run-to-run variation: the C "
+        "kernel is the same compiled code in both runs, so wherever its two timings "
+        "differ that is the floor for comparing anything *across* the two processes - "
+        "and it is wider than the 3 % a paired comparison inside one process resolves, "
+        "which is the whole reason this page does not divide one run into the other."
+    )
+    reporter.add_text(
+        "The second is specific to the Numba run: **installing Numba changes more than "
+        "the point-in-polygon kernel**. ``utils.validate_coordinates`` calls two "
+        "``njit``-compiled scalar helpers when Numba is importable and two plain "
+        "comparisons when it is not - 299 ns against 241 ns - and every query pays it "
+        "on the way in, before any geometry. So a C-extension lookup measured beside "
+        "Numba is not quite the C-extension lookup a plain install runs, and the effect "
+        "is largest on the unique-shortcut rows, where validation is most of the query "
+        "and no polygon is ever tested."
+    )
+
+    reporter.write_report()
 
 
 def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str, Any]]:
@@ -606,6 +900,7 @@ def render_timezone_finding(
             "``TimezoneFinder.timezone_at()`` over uniformly random query points in "
             "memory, the workload closest to a real query mix."
         )
+    headlines.append(ACCELERATION_PATHS_POINTER)
     add_headline_section(reporter, system_info, headlines, machine_label(data))
     add_ci_tracking_note(reporter, system_info, benches)
 
@@ -718,118 +1013,129 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
         output_path=output_path,
     )
     system_info = get_system_info(data)
-    batch_size = get_batch_size(system_info)
-    benches = benchmarks_from_file(data, "test_inside_polygon")
-    by_name = {b["name"]: b for b in benches}
+    with interpreted_kernel_labels(system_info):
+        batch_size = get_batch_size(system_info)
+        benches = benchmarks_from_file(data, "test_inside_polygon")
+        by_name = {b["name"]: b for b in benches}
 
-    # per-check cost of the faster backend in each stratum. The spread between
-    # the smallest and largest stratum *is* the finding this suite exists to
-    # report, so it is the headline rather than any single number.
-    def fastest_per_check(stratum: str, suffix: str) -> float | None:
-        measured = [
-            by_name[name]["stats"]["mean"]
-            for name in (
-                f"test_pt_in_poly_clang{suffix}[{stratum}]",
-                f"test_pt_in_poly_python{suffix}[{stratum}]",
+        # per-check cost of the faster backend in each stratum. The spread between
+        # the smallest and largest stratum *is* the finding this suite exists to
+        # report, so it is the headline rather than any single number.
+        def fastest_per_check(stratum: str, suffix: str) -> float | None:
+            measured = [
+                by_name[name]["stats"]["mean"]
+                for name in (
+                    f"test_pt_in_poly_clang{suffix}[{stratum}]",
+                    f"test_pt_in_poly_python{suffix}[{stratum}]",
+                )
+                if name in by_name
+            ]
+            return min(measured) / batch_size if measured else None
+
+        packed = {s: fastest_per_check(s, "_packed") for s in ("small", "large")}
+        bare = {s: fastest_per_check(s, "") for s in ("small", "large")}
+        headlines = []
+        if packed["small"] and packed["large"]:
+            headlines.append(
+                f"**~{format_duration(packed['small'])} per check on a small polygon, "
+                f"~{format_duration(packed['large'])} on the largest** "
+                f"({format_ratio(packed['large'] / packed['small'])}) - the kernel a "
+                "lookup reaches, which skips the parts of a ring a horizontal ray cannot "
+                "cross and is therefore nearly flat in polygon size."
             )
-            if name in by_name
-        ]
-        return min(measured) / batch_size if measured else None
+        if bare["large"] and packed["large"]:
+            headlines.append(
+                f"The same check over an unindexed coordinate array is "
+                f"~{format_duration(bare['large'])} on the largest polygon "
+                f"({format_ratio(bare['large'] / packed['large'])} the packed cost) - "
+                "which is what the stratification below is for, and what the latitude "
+                "block index removed."
+            )
+        headlines.append(ACCELERATION_PATHS_POINTER)
+        add_headline_section(reporter, system_info, headlines, machine_label(data))
+        add_ci_tracking_note(reporter, system_info, benches)
 
-    packed = {s: fastest_per_check(s, "_packed") for s in ("small", "large")}
-    bare = {s: fastest_per_check(s, "") for s in ("small", "large")}
-    headlines = []
-    if packed["small"] and packed["large"]:
-        headlines.append(
-            f"**~{format_duration(packed['small'])} per check on a small polygon, "
-            f"~{format_duration(packed['large'])} on the largest** "
-            f"({format_ratio(packed['large'] / packed['small'])}) - the kernel a "
-            "lookup reaches, which skips the parts of a ring a horizontal ray cannot "
-            "cross and is therefore nearly flat in polygon size."
+        add_system_status_section(
+            reporter,
+            system_info,
+            {
+                "benchmark_source": "pytest-benchmark",
+                "batch_size": batch_size,
+                "polygon_strata": "small / medium / large (by vertex count percentile)",
+            },
+            provenance=get_fixture_provenance(system_info),
         )
-    if bare["large"] and packed["large"]:
-        headlines.append(
-            f"The same check over an unindexed coordinate array is "
-            f"~{format_duration(bare['large'])} on the largest polygon "
-            f"({format_ratio(bare['large'] / packed['large'])} the packed cost) - "
-            "which is what the stratification below is for, and what the latitude "
-            "block index removed."
+        reporter.add_text(
+            f"Each benchmark times one pass over {batch_size:,} fixed, committed (point, "
+            "polygon) pairs drawn from a single polygon-size stratum, so the cost of the "
+            "largest polygons isn't hidden behind an unweighted average. Mean/Median/"
+            f"StdDev/Min/Max are for the full {batch_size:,}-pair batch; Throughput is "
+            "queries/second for that batch."
         )
-    add_headline_section(reporter, system_info, headlines, machine_label(data))
-    add_ci_tracking_note(reporter, system_info, benches)
+        reporter.add_note(
+            "The point and the polygon in each pair are drawn independently, so many pairs "
+            "put the point nowhere near the polygon. That does not matter for the bare "
+            "kernel, which scans the whole ring either way, but it means a share of the "
+            "block-filtered checks are rejections rather than scans - cheapest on the small "
+            "stratum, where a rejection is most of what is left. A real lookup reaches this "
+            "stage only after a bounding-box check has passed, so read the block-filtered "
+            "figures as a floor and :doc:`benchmark_results_timezonefinding` for what a "
+            "query actually pays."
+        )
 
-    add_system_status_section(
-        reporter,
-        system_info,
-        {
-            "benchmark_source": "pytest-benchmark",
-            "batch_size": batch_size,
-            "polygon_strata": "small / medium / large (by vertex count percentile)",
-        },
-        provenance=get_fixture_provenance(system_info),
-    )
-    reporter.add_text(
-        f"Each benchmark times one pass over {batch_size:,} fixed, committed (point, "
-        "polygon) pairs drawn from a single polygon-size stratum, so the cost of the "
-        "largest polygons isn't hidden behind an unweighted average. Mean/Median/"
-        f"StdDev/Min/Max are for the full {batch_size:,}-pair batch; Throughput is "
-        "queries/second for that batch."
-    )
-    reporter.add_note(
-        "The point and the polygon in each pair are drawn independently, so many pairs "
-        "put the point nowhere near the polygon. That does not matter for the bare "
-        "kernel, which scans the whole ring either way, but it means a share of the "
-        "block-filtered checks are rejections rather than scans - cheapest on the small "
-        "stratum, where a rejection is most of what is left. A real lookup reaches this "
-        "stage only after a bounding-box check has passed, so read the block-filtered "
-        "figures as a floor and :doc:`benchmark_results_timezonefinding` for what a "
-        "query actually pays."
-    )
+        extra_columns: tuple[ExtraColumn, ...] = (
+            ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
+        )
 
-    extra_columns: tuple[ExtraColumn, ...] = (
-        ("Throughput", lambda b: format_rate(batch_size / b["stats"]["mean"])),
-    )
+        reporter.add_section("Results", level=2)
+        add_benchmark_table(
+            reporter, benches, section_level=3, extra_columns=extra_columns
+        )
 
-    reporter.add_section("Results", level=2)
-    add_benchmark_table(reporter, benches, section_level=3, extra_columns=extra_columns)
+        reporter.add_section("Performance Summary", level=2)
+        reporter.add_text(
+            "**What the stored index and payload buy**, per polygon-size stratum - the "
+            "same C predicate over the same pairs, reading the packed collection against "
+            "reading a plain coordinate array with nothing in front of it:"
+        )
+        for stratum in ("small", "medium", "large"):
+            bare_bench = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
+            packed_bench = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
+            if bare_bench and packed_bench:
+                add_comparison_bullet(
+                    reporter,
+                    PARAM_LABELS[stratum].capitalize(),
+                    packed_bench,
+                    bare_bench,
+                    label_fn=_function_label,
+                )
+        interpreted = "Numba" if system_info.get("using_numba") else "pure Python"
+        reporter.add_text(
+            f"**The C extension against {interpreted}**, on the kernel a lookup reaches. "
+            "Which of the two interpreted implementations these rows describe is decided "
+            "by the measuring environment, not by the benchmark - see "
+            ":doc:`benchmark_results_acceleration_paths`, which measures all three against "
+            "each other:"
+        )
+        for stratum in ("small", "medium", "large"):
+            clang = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
+            python = by_name.get(f"test_pt_in_poly_python_packed[{stratum}]")
+            if clang and python:
+                add_comparison_bullet(
+                    reporter,
+                    PARAM_LABELS[stratum].capitalize(),
+                    clang,
+                    python,
+                    label_fn=_function_label,
+                )
+        # scoped to one kernel: a spread taken across both forms would be comparing the
+        # cheapest rejection against the most expensive full scan, which is not a range
+        # anything experiences
+        add_fastest_slowest_bullet(
+            reporter, [b for b in benches if "_packed[" in b["name"]]
+        )
 
-    reporter.add_section("Performance Summary", level=2)
-    reporter.add_text(
-        "**What the stored index and payload buy**, per polygon-size stratum - the "
-        "same C predicate over the same pairs, reading the packed collection against "
-        "reading a plain coordinate array with nothing in front of it:"
-    )
-    for stratum in ("small", "medium", "large"):
-        bare_bench = by_name.get(f"test_pt_in_poly_clang[{stratum}]")
-        packed_bench = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
-        if bare_bench and packed_bench:
-            add_comparison_bullet(
-                reporter,
-                PARAM_LABELS[stratum].capitalize(),
-                packed_bench,
-                bare_bench,
-                label_fn=_function_label,
-            )
-    reporter.add_text("**C against Python/Numba**, on the kernel a lookup reaches:")
-    for stratum in ("small", "medium", "large"):
-        clang = by_name.get(f"test_pt_in_poly_clang_packed[{stratum}]")
-        python = by_name.get(f"test_pt_in_poly_python_packed[{stratum}]")
-        if clang and python:
-            add_comparison_bullet(
-                reporter,
-                PARAM_LABELS[stratum].capitalize(),
-                clang,
-                python,
-                label_fn=_function_label,
-            )
-    # scoped to one kernel: a spread taken across both forms would be comparing the
-    # cheapest rejection against the most expensive full scan, which is not a range
-    # anything experiences
-    add_fastest_slowest_bullet(
-        reporter, [b for b in benches if "_packed[" in b["name"]]
-    )
-
-    reporter.write_report()
+        reporter.write_report()
 
 
 def render_initialization(data: dict[str, Any], output_path: Path) -> None:
@@ -1374,6 +1680,19 @@ def main() -> None:
             "(`make memory`). Omit to leave the memory report untouched."
         ),
     )
+    parser.add_argument(
+        "--acceleration-json",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Repeatable. Paths to the JSON files produced by "
+            "`scripts.measure_acceleration_paths` (`make acceleration-paths`) - one "
+            "per environment, since no process holds both the Numba and the "
+            "pure-Python kernel. Pass all of them or none; omit to leave the "
+            "acceleration-path report untouched."
+        ),
+    )
     args = parser.parse_args()
 
     data = load_benchmark_json(args.benchmark_json)
@@ -1391,6 +1710,10 @@ def main() -> None:
     if args.memory_json is not None:
         render_memory(load_benchmark_json(args.memory_json), MEMORY_REPORT_FILE)
         written.append(MEMORY_REPORT_FILE)
+    if args.acceleration_json:
+        runs = [load_benchmark_json(path) for path in args.acceleration_json]
+        render_acceleration_paths(runs, ACCELERATION_REPORT_FILE)
+        written.append(ACCELERATION_REPORT_FILE)
     print(f"Wrote {', '.join(str(path) for path in written)}")
 
 

@@ -46,7 +46,7 @@ from typing import Any
 
 import numpy as np
 
-from scripts.benchmark_utils import get_system_status
+from scripts.benchmark_utils import cpu_info, get_system_status
 from scripts.configs import DEBUG
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -166,7 +166,7 @@ def build_report(
             )
     return {
         "machine_info": {
-            "cpu": _cpu_info(),
+            "cpu": cpu_info(),
             "timezonefinder": {
                 **get_system_status(),
                 **benchmark_fixture_provenance(),
@@ -176,15 +176,6 @@ def build_report(
         },
         "benchmarks": benchmarks,
     }
-
-
-def _cpu_info() -> dict[str, Any]:
-    """The ``machine_info["cpu"]`` block pytest-benchmark records, when available."""
-    try:
-        import cpuinfo  # noqa: PLC0415 - optional, and only needed here
-    except ImportError:
-        return {}
-    return cpuinfo.get_cpu_info()
 
 
 def measure(nr_points: int, repetitions: int) -> dict[str, dict[str, float]]:
