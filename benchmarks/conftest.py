@@ -7,7 +7,11 @@ Not collected by `make test` / `make testall` (see `testpaths` in
 import numpy as np
 import pytest
 
-from scripts.benchmark_utils import get_system_status, tzfpy_version
+from scripts.benchmark_utils import (
+    DEFAULT_BENCHMARK_ESTIMATOR,
+    get_system_status,
+    tzfpy_version,
+)
 from scripts.configs import DEBUG
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -46,6 +50,17 @@ from tests.auxiliaries import (
 # scripts/generate_benchmark_fixtures.py and regenerating.
 BATCH_SIZE = 2_500
 
+CI_TRACKED_BENCHMARKS_KEY = pytest.StashKey[tuple[str, ...]]()
+
+
+def pytest_collection_modifyitems(config, items) -> None:
+    """Remember the core node ids in the JSON produced by this exact run."""
+    config.stash[CI_TRACKED_BENCHMARKS_KEY] = tuple(
+        sorted(
+            item.nodeid for item in items if item.get_closest_marker("benchmark_core")
+        )
+    )
+
 
 def pytest_benchmark_update_machine_info(config, machine_info) -> None:
     """Record numba/clang availability, BATCH_SIZE and the fixture/data
@@ -62,6 +77,8 @@ def pytest_benchmark_update_machine_info(config, machine_info) -> None:
         **get_system_status(),
         **benchmark_fixture_provenance(),
         "batch_size": BATCH_SIZE,
+        "ci_tracked_benchmarks": config.stash.get(CI_TRACKED_BENCHMARKS_KEY, ()),
+        "ci_benchmark_estimator": DEFAULT_BENCHMARK_ESTIMATOR,
         # None unless the `compare` dependency group is installed - see
         # `scripts.benchmark_utils.tzfpy_version` and benchmarks/test_comparison.py
         "tzfpy_version": tzfpy_version(),

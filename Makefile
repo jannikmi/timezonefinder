@@ -173,7 +173,9 @@ benchmarks:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
 		--expect $(BENCHMARK_ACCELERATION_PATH)
-	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
+	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark \
+		--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS) --benchmark-max-time=0 \
+		--benchmark-json=$(BENCHMARK_JSON)
 
 # the memory counterpart of `benchmarks`. Separate because pytest-benchmark
 # measures wall clock only, and running tracemalloc across its rounds would
@@ -224,6 +226,11 @@ RAW_CORE_BENCHMARK_JSON := tmp/benchmark-core-raw.json
 CI_BENCHMARK_JSON := tmp/benchmark-core-tracked.json
 # min is the least noise-sensitive estimator here - see scripts/benchmark_utils.py
 BENCHMARK_ESTIMATOR := min
+# Ordinary published rows use a fixed number of rounds instead of inheriting
+# different sample counts from pytest-benchmark's time budget. Fifteen keeps
+# the slow pure-Python polygon strata practical; suites that explicitly require
+# more samples keep their own pinned marker or pedantic count.
+BENCHMARK_REPORT_ROUNDS := 15
 # enough rounds that pytest-benchmark's calibration has something to work with
 # and the tracked min is drawn from a decent sample. The core subset is a few
 # milliseconds per round, so this stays far below the CI time budget.
@@ -264,6 +271,8 @@ print-benchmark-acceleration-path:
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
+	uv run python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run pytest benchmarks -m benchmark_core \
 		--benchmark-min-rounds=$(BENCHMARK_MIN_ROUNDS) \
 		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON)
