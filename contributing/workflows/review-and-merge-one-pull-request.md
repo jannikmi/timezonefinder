@@ -1,6 +1,6 @@
 # Review and merge one pull request
 
-Drain the open pull-request queue one pull request at a time, keeping the maintainer in the loop for the judgements that are theirs and out of it for the ones that are not. One round is: survey, order the queue, pick the next pull request, bring it up to date, judge it, then merge it or hand it over with a brief. Then stop the round and start the next one from a fresh survey — pull requests are opened, pushed to, reviewed, and closed while a round runs, so an ordering computed one round ago is evidence about that round only.
+Drain the open pull-request queue, keeping the maintainer in the loop for the judgements that are theirs and out of it for the ones that are not. One round is: survey, order the queue, pick the next pull request, bring it up to date, judge it, then merge it or hand it over with a brief. A run is rounds until the queue is empty, each starting from a fresh survey — pull requests are opened, pushed to, reviewed, and closed while a round runs, so an ordering computed one round ago is evidence about that round only, and a merge can make a pull request that was not eligible last round the obvious pick this one.
 
 Read the [pull-request and CI workflow](../development/pull-request-and-ci-workflow.md) and the [testing strategy](../development/testing-strategy-and-change-scope.md), which decides what a merged change still has to be gated on.
 
@@ -10,8 +10,7 @@ Read the [pull-request and CI workflow](../development/pull-request-and-ci-workf
 - Never merge a release pull request, push a tag, publish a distribution, or push to `master`. The [release workflow](prepare-and-publish-code-release.md) owns those and requires its own authorization.
 - Never force-push. `master` refuses force pushes and a sandbox may deny them outright; bring a head branch up to date by merging the base into it, which the squash merge flattens anyway.
 - Never fix substance during a round. Conflict resolution, a stale register reference, and a malformed changelog fragment are in scope; a behavioural change, a new test for a gap the review found, or a redesign is a register item and a separate pass.
-- Never hand-merge a generated or measured file. Regenerate it through its generator, per the [generated-file rules](../development/generated-file-regeneration-rules.md).
-- Never read a thin check list as success. `master` requires no status check, so nothing on GitHub's side stands between a matrix that never ran and a merge.
+- Never read a thin check list as success. Branch protection requires one aggregate check, which reports only on the jobs it aggregates: a job outside its `needs` list, or a workflow a `paths:` filter skipped, is silence rather than a pass.
 
 ## Survey, every round
 
@@ -42,7 +41,7 @@ For a clean update, `gh pr update-branch <n>` merges the base in server-side, wi
 
 - **Ranking table and item files.** Both sides delete what they shipped, so the union of the deletions is the resolution. Never resurrect a row or item file the other side removed, grep the id across `contributing/improvements/` afterwards, and re-run the ledger and contributor-memory tests, which is what catches a row without an entry.
 - **Changelog fragments.** One file per change means they cannot conflict; a conflict there is a change that edited `CHANGELOG.rst` directly, against the [changelog policy](../development/changelog-and-release-note-policy.md).
-- **Generated and measured files.** Regenerate, or take the base and let the pull request that owns the artifact regenerate it. A hand-merged report is a number nobody measured.
+- **Generated and measured files.** Regenerate through the [generator that owns them](../development/generated-file-regeneration-rules.md), or take the base and let the pull request that owns the artifact regenerate it. A hand-merged report is a number nobody measured.
 - **Semantic conflicts git cannot see.** Two branches that each pass alone can fail together: a symbol one renamed and the other calls, a fixture both add, a constant that moved. After every update, run the gate the merged-in change selects, not the one this branch selected when it was opened, and re-read the diff of the merge itself rather than only the resolved files.
 
 ## Judge it
@@ -84,7 +83,7 @@ gh pr view <n> --json headRefOid --jq .headRefOid
 gh api repos/<owner>/<repo>/commits/<sha>/check-runs --jq '.check_runs[] | "\(.name) \(.conclusion)"'
 ```
 
-Compare those names with the workflows that trigger on `pull_request` and the `paths:` filters that legitimately skip some. A healthy list carries the pre-commit job, the four-interpreter tox matrix, the end-to-end jobs, and the wheel and sdist builds; a list without the matrix is a run that never happened, and no branch protection will say so. Then:
+Compare those names with the workflows that trigger on `pull_request` and the `paths:` filters that legitimately skip some. A healthy list carries the pre-commit job, the four-interpreter tox matrix, the end-to-end jobs, and the wheel and sdist builds; a list without the matrix is a run that never happened. Then:
 
 ```bash
 gh pr merge <n> --squash --delete-branch
@@ -98,6 +97,10 @@ After merging, fast-forward local `master`, confirm the head is the squash commi
 
 For `triage`, `status`, `what is next`, or `why is this stuck`, survey, order, and brief only. Create no worktree, resolve no conflict, push nothing, and merge nothing.
 
-## Round report
+## When the run ends
 
-Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; what changed for the rest of the queue; and the next pick with what would change it.
+The run ends when no open pull request is left, or when every one that remains is waiting on somebody else: an unanswered brief, a red or missing check list, an unresolved review thread, a blocked or draft pull request, or a release the maintainer has not authorized. Waiting is not a round — do not poll a running matrix or an unanswered question in a loop. Say what each remaining pull request is waiting for and what would restart it, and stop. A round that merges nothing and changes nothing about the queue is also the end: repeating the survey cannot produce a different answer until something outside the run moves.
+
+## Reporting
+
+Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; and what changed for the rest of the queue. Close the run with the pull requests merged in order and the command that reverts each, what remains open and what each one waits for, and the pick the next run would start from.
