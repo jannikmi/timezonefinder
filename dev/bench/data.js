@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788444296189,
+  "lastUpdate": 1788471964369,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4314,6 +4314,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002732079640209621",
             "extra": "mean: 15.57143199998734 msec\nrounds: 56 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "36cf626ccd2d8317faf0f1730842b678016b2ac4",
+          "message": "A merge-round workflow: review and merge the open pull requests one at a time (#597)\n\n* workflow: review and merge the open pull requests one round at a time\n\nAdds a provider-neutral merge-round workflow and its paired skill adapters.\nA round re-surveys the open queue, orders it, brings one pull request up to\ndate, and either merges it under stated risk-free criteria or briefs the\nmaintainer on what needs their judgement. The survey is repeated every round\nbecause pull requests land while one runs.\n\nThe merge criteria are tight on purpose: `master` requires no status check and\nrepository auto-merge is disabled, so the workflow's own reading of the head's\ncheck runs is the only gate between a matrix that never ran and a merge.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: merge by default, and escalate on a named trigger\n\nThe path-based table read as \"anything near the query path is the\nmaintainer's\", which sends a behaviour-preserving refactor to a human for no\ngain — the revert costs one command. Invert it: merge unless the change is\nobservable to a user, escapes the repository so a revert is not the whole undo,\nor is opinionated enough that everything after it pays for the taste. The\nper-path rows now say what makes that path escalate rather than who owns it,\nand every unasked merge is reported with the command that undoes it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* workflow: a run is rounds until the queue is empty\n\nWith merging as the default, stopping after one round leaves the queue in a\nstate only another invocation can move. A run now repeats the round until no\nopen pull request is left or every remaining one waits on somebody else, with\nan explicit end condition so waiting is not mistaken for work, and closes with\nthe merge order and the revert command for each.\n\nAlso drops the claim that nothing on GitHub's side gates a merge: a required\naggregate check is being added, and what it cannot see is the jobs outside its\nneeds list.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-03T23:45:14+02:00",
+          "tree_id": "b253cad45caa6c6cf1e0b77f5c3a8856b6b76485",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/36cf626ccd2d8317faf0f1730842b678016b2ac4"
+        },
+        "date": 1788471963538,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 232.89301803050233,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003785209540085898",
+            "extra": "mean: 4.293816999997091 msec\nrounds: 197 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 361.39401235168646,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004356508388678049",
+            "extra": "mean: 2.7670630000002916 msec\nrounds: 313 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 59.202824495709415,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004965740471222362",
+            "extra": "mean: 16.89108600000111 msec\nrounds: 57 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 368.61304182478847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007058973529970754",
+            "extra": "mean: 2.71287199999648 msec\nrounds: 296 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 759.057068946793,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008339285940665157",
+            "extra": "mean: 1.3174239999997894 msec\nrounds: 663 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 76.1777885984187,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007399204260418775",
+            "extra": "mean: 13.127185999998403 msec\nrounds: 68 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 362.97825106923824,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000038553709973628595",
+            "extra": "mean: 2.7549859999993487 msec\nrounds: 307 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 735.4520235251815,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003629155587136705",
+            "extra": "mean: 1.3597079999954076 msec\nrounds: 625 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 75.25788619866681,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002350810541586928",
+            "extra": "mean: 13.287643999994714 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           }
         ]
       }
