@@ -669,3 +669,45 @@ def test_render_comparison_names_the_measured_version_of_the_other_package(tmp_p
     )
 
     assert "1.2.3" in output_path.read_text(encoding="utf-8")
+
+
+def test_reporter_renders_every_content_kind_without_touching_stdout(capsys):
+    """The page is what ``render`` returns, not what the call printed.
+
+    ``write_report`` used to point ``sys.stdout`` at the output file and print
+    into it, because the table renderer it called printed. Both redirectors are
+    gone; a renderer that starts printing again would silently drop its content
+    on the floor here, and put back the destination-bound-at-redirection-time
+    behaviour ``scripts/reporting.py`` was rid of.
+    """
+    reporter = BenchmarkReporter(title="Results", output_path="/dev/null")
+    reporter.add_text("intro")
+    reporter.add_text("")  # a spacer, which adds no second blank line
+    reporter.add_section("Timing", 1)
+    reporter.add_table(["Benchmark", "Rounds"], [["lookup", 100]])
+    reporter.add_note("measured on one machine")
+
+    page = reporter.render()
+
+    assert capsys.readouterr().out == ""
+    assert page.startswith("\n\nResults\n=======\n")
+    assert "\n\nTiming\n------\n" in page
+    assert "intro\n\n\n" in page  # text, its blank line, then the spacer's
+    assert "   * - lookup\n     - 100\n" in page
+    assert ".. note::\n\n   measured on one machine\n" in page
+
+
+def test_write_report_writes_exactly_what_render_returned(tmp_path):
+    """Minus the trailing blank line every section leaves behind, which
+    ``end-of-file-fixer`` strips - the normalisation that keeps a freshly
+    rendered page comparable with the committed one before the hook has run.
+    """
+    output_path = tmp_path / "report.rst"
+    reporter = BenchmarkReporter(title="Results", output_path=output_path)
+    reporter.add_table(["Benchmark"], [["lookup"]])
+
+    reporter.write_report()
+
+    assert (
+        output_path.read_text(encoding="utf-8") == reporter.render().rstrip("\n") + "\n"
+    )
