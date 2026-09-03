@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788471966109,
+  "lastUpdate": 1788472814596,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4401,6 +4401,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.002350810541586928",
             "extra": "mean: 13.287643999994714 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27a2a9fb6af0c1e486f051cac73a187d989d301c",
+          "message": "TOOL-6: report renderers return strings, so a parse stops rewriting the committed report (#596)\n\n* TOOL-6: report renderers return strings, so the destination is a parameter\n\n`parse_data` rewrote the checkout's committed `docs/data_report.rst` whatever\n`-out` it was given, because the destination was bound by a decorator at import\ntime. The decorator was a symptom: these functions used stdout as their return\nchannel, and redirection - decorator or context manager - was the workaround.\n\nEvery report renderer now returns the RST it produces. `write_data_report_from\n_binary` takes a `report_path`, `python -m scripts.reporting` gains the matching\n`--out`, and `parse_data` writes the report beside the binaries it compiled -\nonly a parse of the packaged data directory writes the committed page. Both\nredirectors lose their last caller and are deleted; `BenchmarkReporter` renders\nto a string too, since it only reached for one because the table helper printed.\n\nNeutrality: `docs/data_report.rst` regenerates byte-identically through both the\ndefault path and `--out`, and `BenchmarkReporter.render()` was diffed against the\ndeleted print-and-redirect body over all four content kinds. `make testparse` now\nleaves the checkout clean, which is the defect itself.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: TOOL-6 shipped\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-03T23:59:13+02:00",
+          "tree_id": "7ae8572a07f95c0468d2edd7a469dab2690d456c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/27a2a9fb6af0c1e486f051cac73a187d989d301c"
+        },
+        "date": 1788472812284,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 238.12143145300305,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000058320011141210544",
+            "extra": "mean: 4.199537999994618 msec\nrounds: 194 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 370.62129471621404,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026522284676573355",
+            "extra": "mean: 2.698171999981014 msec\nrounds: 312 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 60.72940017760542,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022282857612401417",
+            "extra": "mean: 16.466488999981266 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 366.2766186968329,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000291815446163458",
+            "extra": "mean: 2.730176999989453 msec\nrounds: 295 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 771.5954123867434,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000021548644553862084",
+            "extra": "mean: 1.2960160000261567 msec\nrounds: 668 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 75.39379498500706,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013894753991925896",
+            "extra": "mean: 13.263691000020117 msec\nrounds: 66 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 363.5468650088634,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000032895596478622567",
+            "extra": "mean: 2.750676999994539 msec\nrounds: 293 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 744.3200933568446,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025093746258925242",
+            "extra": "mean: 1.3435080000192556 msec\nrounds: 606 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 75.07248811771923,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002585269938607895",
+            "extra": "mean: 13.320458999999119 msec\nrounds: 63 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           }
         ]
       }
