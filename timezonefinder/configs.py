@@ -29,6 +29,8 @@ __all__ = [
     "COORD2INT_FACTOR",
     "INT2COORD_FACTOR",
     "SOURCE_COORD_STEP",
+    "MIN_LNG_VAL",
+    "MIN_LAT_VAL",
     "MAX_LNG_VAL",
     "MAX_LAT_VAL",
     "MAX_LNG_VAL_INT",
@@ -239,6 +241,17 @@ SOURCE_COORD_STEP: Final[int] = 10
 
 MAX_LNG_VAL = 180.0
 MAX_LAT_VAL = 90.0
+# Declared negative rather than derived with a `-` where they are read, because the
+# negation is what costs. `validate_coordinates` with the pure-Python validators the
+# tracked no-numba configuration runs, three forms rotated round by round, min/median
+# ns per call: literals 244/249, `MIN_LAT_VAL <= lat <= MAX_LAT_VAL` 250/253, and
+# `-MAX_LAT_VAL <= lat <= MAX_LAT_VAL` 295/299. The global load is a few nanoseconds on
+# a specialising interpreter - ~0.5 % of a unique-shortcut query, which no benchmark
+# here can resolve - while the `UNARY_NEGATIVE` costs ten times that. So do not
+# "simplify" these into negations at the call sites: `validate_coordinates` runs on
+# every query.
+MIN_LNG_VAL = -180.0
+MIN_LAT_VAL = -90.0
 MAX_LNG_VAL_INT = int(MAX_LNG_VAL * COORD2INT_FACTOR)
 MAX_LAT_VAL_INT = int(MAX_LAT_VAL * COORD2INT_FACTOR)
 MAX_INT_VAL = MAX_LNG_VAL_INT
