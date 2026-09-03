@@ -6,7 +6,7 @@ Read the [pull-request and CI workflow](../development/pull-request-and-ci-workf
 
 ## Hard boundaries
 
-- Merging is the one irreversible step here. Merge without asking only under the standing criteria below; everything else is briefed and waits for an answer in the same session.
+- Merging is the one step this workflow cannot take back cheaply. The default is to merge; the three triggers below are what buys a maintainer's reading, and everything they catch waits for an answer in the same session.
 - Never merge a release pull request, push a tag, publish a distribution, or push to `master`. The [release workflow](prepare-and-publish-code-release.md) owns those and requires its own authorization.
 - Never force-push. `master` refuses force pushes and a sandbox may deny them outright; bring a head branch up to date by merging the base into it, which the squash merge flattens anyway.
 - Never fix substance during a round. Conflict resolution, a stale register reference, and a malformed changelog fragment are in scope; a behavioural change, a new test for a gap the review found, or a redesign is a register item and a separate pass.
@@ -47,16 +47,18 @@ For a clean update, `gh pr update-branch <n>` merges the base in server-side, wi
 
 ## Judge it
 
-| Touched | Read it for | Whose call |
-|---|---|---|
-| Query path — `timezonefinder.py`, `utils*.py`, `polygon_array.py`, `coord_accessors.py`, `shortcut_index.py`, `_block_index.py` | correctness at borders, parity across the numba, clang, and pure-Python backends, behaviour under the memory-mapped mode | maintainer |
-| `global_functions.py`, `command_line.py`, exported names | the [compatibility contract](../project/public-api-and-compatibility-contract.md) | maintainer |
-| Binary format, `DATA_VERSION`, `DATA_BUILD_RUN`, `packages/timezonefinder-data`, `scripts/file_converter.py` | the [ordered two-distribution release](../development/data-pipeline-format-versioning-and-release-order.md) it commits the next release to | maintainer |
-| `.github/workflows/`, release targets in the `Makefile`, `pyproject.toml`, `uv.lock` | what publishes, what every install inherits, which job is load-bearing for the trusted publisher | maintainer |
-| `docs/benchmark_results_*.rst`, `docs/data_report.rst`, tracked benchmark JSON | the machine, the backend, and the noise floor behind the numbers | maintainer |
-| `contributing/`, provider adapters, `changelog.d/`, prose documentation, added tests | invariants and links only | this workflow |
+The default is to merge. A change is escalated because a listed trigger below fires, not because it touched an important file: a behaviour-preserving refactor of the query path, with the matrix green, is merged without a maintainer reading it, and if the maintainer would have written it differently the revert costs one command. Doubt about *whether a trigger fired* escalates; doubt about whether the maintainer would have made the same call does not.
 
-Then brief what a diff does not show, in six bullets:
+| Touched | Read it for | Escalates when |
+|---|---|---|
+| Query path — `timezonefinder.py`, `utils*.py`, `polygon_array.py`, `coord_accessors.py`, `shortcut_index.py`, `_block_index.py` | correctness at borders, parity across the numba, clang, and pure-Python backends, behaviour under the memory-mapped mode | an answer, an error, or a backend's behaviour changes; a rename, an extraction, or a dead-branch removal does not |
+| `global_functions.py`, `command_line.py`, exported names | the [compatibility contract](../project/public-api-and-compatibility-contract.md) | always — an exported name, signature, or documented semantic is a promise |
+| Binary format, `DATA_VERSION`, `DATA_BUILD_RUN`, `packages/timezonefinder-data`, `scripts/file_converter.py` | the [ordered two-distribution release](../development/data-pipeline-format-versioning-and-release-order.md) it commits the next release to | always — the next release inherits the ordering, and a published distribution cannot be recalled |
+| `.github/workflows/`, release targets in the `Makefile`, `pyproject.toml`, `uv.lock` | what publishes, what every install inherits, which job is load-bearing for the trusted publisher | publishing, permissions, secrets, or shipped dependency metadata change; a lock refresh or a CI-internal step does not |
+| `docs/benchmark_results_*.rst`, `docs/data_report.rst`, tracked benchmark JSON | the machine, the backend, and the noise floor behind the numbers | a performance claim rests on them; a regeneration that only restates the current tree does not |
+| `contributing/`, provider adapters, `changelog.d/`, prose documentation, tests | invariants and links only | never, once the structural tests pass |
+
+Brief what a diff does not show, whether the outcome is a merge or a question:
 
 - **Claim against evidence.** What the body claims, what was measured, on which machine and backend, and which claims were only argued — including the side that was traded away, per the [trade-off rules](../development/trade-off-surfacing-and-validation.md).
 - **The two or three hunks to read**, named by file and symbol, each with the question it answers.
@@ -67,13 +69,13 @@ Then brief what a diff does not show, in six bullets:
 
 ## Merge
 
-Merge without asking only when every one of these holds:
+Merge without asking unless one of three triggers fires.
 
-- The diff stays inside the last row of the table above, and the installed package behaves identically.
-- No version, dependency, supported-interpreter, data-format, or generated-artifact change, and no `CHANGELOG.rst` heading.
-- Reverting the squash commit is the whole undo: nothing was published, tagged, fetched, or built on by another open pull request.
-- Every check the workflows should have produced for this head exists and passed, and no review thread is open.
-- Nothing in the diff adds a `**Decision needed:**` bullet or a question for the maintainer.
+1. **It is observable.** A user can see the difference: an exported name, signature, or documented semantic; a lookup answer, an error, or CLI output; dependency metadata or supported interpreters that every install inherits.
+2. **It escapes the repository.** Reverting the squash commit is not the whole undo: a release or tag, a data-distribution version or format marker, an upstream fetch, a workflow's permissions or secrets, a history rewrite, or work another merged pull request already builds on.
+3. **It is opinionated.** Reasonable maintainers would differ and everything after it pays: a layout move, a mass rename or formatting sweep, a new dependency or tool, an expanded lint rule set, a new abstraction or architectural seam, a change embedding a question at the maintainer bar, or one contradicting a [recorded decision](../improvements/improvement-register-rules.md).
+
+Regardless of triggers, never merge on incomplete evidence: every check the workflows should have produced for this head exists and passed, the gate ran after the last update rather than before it, and no review thread is open.
 
 Verify the checks against the head, not against the pull request:
 
@@ -82,13 +84,13 @@ gh pr view <n> --json headRefOid --jq .headRefOid
 gh api repos/<owner>/<repo>/commits/<sha>/check-runs --jq '.check_runs[] | "\(.name) \(.conclusion)"'
 ```
 
-Compare those names with the workflows that trigger on `pull_request` and the `paths:` filters that legitimately skip some. A healthy list carries the pre-commit job, the four-interpreter tox matrix, the end-to-end jobs, and the wheel and sdist builds; a list without the matrix is a run that never happened. Then:
+Compare those names with the workflows that trigger on `pull_request` and the `paths:` filters that legitimately skip some. A healthy list carries the pre-commit job, the four-interpreter tox matrix, the end-to-end jobs, and the wheel and sdist builds; a list without the matrix is a run that never happened, and no branch protection will say so. Then:
 
 ```bash
 gh pr merge <n> --squash --delete-branch
 ```
 
-Repository auto-merge is disabled and no status check is required, so there is nothing to enable and no server-side gate — the reading above is the gate. Everything outside the criteria is briefed, and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first.
+An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge with the command that undoes it, so a merge the maintainer disagrees with costs a revert rather than a review.
 
 After merging, fast-forward local `master`, confirm the head is the squash commit, and re-check every remaining pull request before the next round begins.
 
