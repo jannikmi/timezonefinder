@@ -162,6 +162,7 @@ jobs:
             packages/timezonefinder-data/pyproject.toml \
             packages/timezonefinder-data/README.md \
             tests/fixtures/benchmarks \
+            tests/fixtures/data_update \
             docs/benchmark_results_comparison.rst \
             docs/benchmark_results_initialization.rst \
             docs/benchmark_results_memory.rst \

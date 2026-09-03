@@ -206,6 +206,18 @@ echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 # what keeps "no stamp" and "a stamp for another release" from looking alike.
 rm -f DATA_BUILD_RUN
 
+# What the new dataset actually answers, before anything expensive is spent on it and
+# long before the pull request this run opens is auto-merged. A frozen sample of
+# 10,000 on-land points is re-answered and diffed against the committed baseline: the
+# rewritten file is the release's review artifact, and a changed-answer rate above the
+# calibrated gate stops the run here rather than publishing a dataset nobody read.
+# `set -e` is what makes it stop; the guard has already written the diff to review.
+echo "CHECKING WHAT THE NEW DATA ANSWERS DIFFERENTLY..."
+if ! uv run python -m scripts.data_update_guard check; then
+    echo "the data-update guard refused this dataset!" >&2
+    exit 1
+fi
+
 # the committed benchmark fixtures (tests/fixtures/benchmarks/) are pinned to
 # DATA_VERSION (see tests/auxiliaries.py's BenchmarkFixtureError) and derived
 # from the boundary data just regenerated above (on-land/shortcut
