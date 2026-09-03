@@ -378,6 +378,12 @@ class AbstractTimezoneFinder(ABC):
         """
         Iterate over boundary polygon IDs in the shortcut corresponding to the given coordinates.
 
+        Every candidate the shortcut index offers for a point, in the order they are
+        stored - what ``certain_timezone_at`` tests, and what a test asking "which
+        zones could this point have matched" walks. ``timezone_at`` deliberately does
+        not call it: a cell resolving to a single zone is answered by name there,
+        without addressing that zone's boundary polygons at all.
+
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
         :yield: Boundary polygon IDs.
@@ -1298,11 +1304,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
-        if entry == ABSENT:
-            return None
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -1311,15 +1312,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
-        boundary_ids: Iterable[int]
-        if entry >= 0:
-            # a zone id: every boundary polygon of that zone is a candidate.
-            # Most are quickly ruled out by the bounding box check.
-            boundary_ids = self._iter_boundary_ids_of_zone(entry)
-        else:
-            boundary_ids = self.shortcuts.candidates_of(entry)
-
-        for boundary_id in boundary_ids:
+        for boundary_id in self._iter_boundaries_in_shortcut(lng=lng, lat=lat):
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = self._zone_id_of(boundary_id)
                 return self.zone_names.name_of(zone_id)
