@@ -240,9 +240,10 @@ BENCHMARK_MIN_ROUNDS := 50
 # path are not comparable (see
 # contributing/development/benchmarking-and-performance-validation.md).
 # $(BENCHMARK_ENV) above is what
-# holds `benchmarks`/`memory` to it; the -ci targets below inherit whichever
-# environment they are invoked in, because CI syncs its own and asserts this
-# same value before measuring anything.
+# holds `benchmarks`/`memory` to it; `benchmarks-ci` inherits whichever
+# environment it is invoked in and therefore asserts this value itself, so a
+# development environment with numba importable refuses to measure rather than
+# reporting the wrong kernel's numbers.
 BENCHMARK_ACCELERATION_PATH := clang
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
