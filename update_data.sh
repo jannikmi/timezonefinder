@@ -15,7 +15,7 @@ URL_PREFIX=https://github.com/evansiroky/timezone-boundary-builder/releases/down
 URL_SUFFIX=.geojson.zip
 DATA_PACKAGE=timezonefinder-data
 DATA_REPO_URL=https://github.com/evansiroky/timezone-boundary-builder
-# The committed report the converter rewrites on every parse; see --binaries-only below.
+# The committed report a parse of the packaged data rewrites; see --binaries-only below.
 DATA_REPORT_PATH=docs/data_report.rst
 
 usage() {
@@ -165,8 +165,9 @@ fi
 # those in its tree already and would be overwriting them with a runner's numbers.
 if [ "$BINARIES_ONLY" -eq 1 ]; then
     # One committed file the converter writes on its own: `parse_data` calls
-    # `write_data_report_from_binary` unconditionally, and that writes the checkout's
-    # docs/data_report.rst whatever -out it was given (the behaviour TOOL-6 is about).
+    # `write_data_report_from_binary`, and the parse above passes no -out, so it
+    # compiles the packaged data directory - the one the committed
+    # docs/data_report.rst describes and is therefore written from.
     # So "leaves every committed report as it was" is only true if this one is put back,
     # and without it a `--binaries-only` run leaves a modified tracked file behind -
     # exactly what this mode exists not to do. A converter run dirties nothing else.

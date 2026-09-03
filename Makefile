@@ -107,10 +107,9 @@ data:
 parse:
 	uv run python -m scripts.file_converter
 
-# NOTE: parse_data() always writes its report to the checkout's committed
-# docs/data_report.rst, whatever -out it was given, so this target leaves that
-# file describing the 3-zone fixture. Restore it afterwards:
-#   git checkout -- docs/data_report.rst
+# The report lands in ./tmp/parsed_data/ alongside the binaries it describes:
+# parse_data() writes the committed docs/data_report.rst only for the packaged
+# data directory, so this target leaves the checkout clean.
 testparse:
 	uv run python -m scripts.file_converter -inp ./tests/test_input.json -out ./tmp/parsed_data
 
