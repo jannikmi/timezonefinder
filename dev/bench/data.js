@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788555727198,
+  "lastUpdate": 1788555729448,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12002,6 +12002,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7937 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5fb74fe69cd2eb501e8caa35f801aca579fff73f",
+          "message": "Gate the data update on a measured payload-size band (#606)\n\n* GH-501: gate the data update on a measured payload-size band\n\nThe payload sizes the data-update guard records shipped report-only,\nbecause the only calibrated band was the asymmetric one the maintainer\noverruled, and every band the old figures supported fired on ordinary\nrefinement. Measured the symmetric replacement the way the changed-answer\nrate was measured: 2025c, 2026a, 2026b and 2026c each converted from its\nupstream GeoJSON with the code in this tree, so one reader opens all four.\nThe 2026c conversion reproduces the committed payload.json byte for byte,\nwhich is what makes the other three comparable with it.\n\n    2025c   31,034,584 B boundary          97,452 B hole\n    2026a   31,116,264 B (+0.26 %)         94,936 B (-2.58 %)\n    2026b   31,304,936 B (+0.61 %)         94,936 B (+0.00 %)\n    2026c   31,735,692 B (+1.38 %)         95,168 B (+0.24 %)\n\nBanded per file rather than on one shared number: the boundary payload is\n~31 MB and moved at most 1.38 %, while the hole payload is ~95 KB, so the\n26 holes that vanished in 2026a moved it by 2.58 %. One band sized for the\nholes would leave the file carrying the data effectively ungated. Each band\nis ~3.6x its file's largest measured move, which the tests assert rather\nthan the comment merely claiming it. The polygon counts stay report-only:\na zone rename is a removal plus an addition.\n\nThe earlier hole figures (-0.07 %, +0.09 %, -0.31 %) did not survive\nre-measurement under the current binary format, so the recorded decision\nnow says a band is never carried over from an older one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: delete GH-501, whose payload-size band has shipped\n\nThe measured band and the reasoning that survives it are in the guard, its\ntests and the distribution decisions; nothing is left for a pass to take.\nRe-verified the other GH-* entries against their issues in the same pass:\nGH-301's issue is closed as not planned and its entry already says so.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* GH-501: state a refusal without asserting which gate produced it\n\nReview found the serious half of this change: one exit code now carries two\ngates, and every text a human reads still told the changed-answer story. A\ndataset refused on payload size would have arrived as a draft whose warning\nasserted that more than 5 % of the sample moved, over an answer diff showing\nthat it had not - which reads as a misfiring guard and argues the reviewer\ninto releasing it. The reason channel is widened once, at the notices rather\nthan at each gate: update_data.sh and both workflow texts now name the\nrefusal without naming a signal, and point at both baselines the guard\nrewrites, whichever moved. A test takes those paths from the guard's own\nconstants, so a third baseline no notice mentions fails there.\n\nAlso from the review:\n\n- a first run with no answer baseline returns before the rate is computed,\n  which is right for the answers and was silently ungating the sizes; the\n  path was covered by no test and now is.\n- the band suffix was printed on lines where no band was evaluated, so a\n  first run read as a band that had passed.\n- the just-inside-the-band case tested only growth, leaving the decision's\n  own \"small reductions pass\" covered nowhere inside the band.\n- the headroom is 3.6x for the boundaries and 3.9x for the holes, not 3.6x\n  for both, in the code comment and in the recorded decision.\n- the boundary figures in the benchmarking decisions were the pre-format\n  ones (+0.29 %, +0.65 %); re-measured they are +0.26 % and +0.61 %.\n- the oversized-payload paragraph repeated both files' calibration in full\n  once per moved key.\n\nDeclined: a payload refusal is still discarded when the committed baseline\ndoes not describe the frozen sample. That path exits 1, which stops\nupdate_data.sh before it prepares anything, and the payload paragraph is\nprinted before it returns - so the anomaly is reported and nothing can be\npublished. An error outranks a refusal there.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:01:12+02:00",
+          "tree_id": "bd168337a8d13ffb1ecbabf89f2136ffd8e23bcf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5fb74fe69cd2eb501e8caa35f801aca579fff73f"
+        },
+        "date": 1788555728748,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2302417755126953,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.231050491333008,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58432102203369,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.585129737854004,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
           }
         ]
       }
