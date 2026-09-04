@@ -17,11 +17,12 @@ deployment environment each publishing identity is bound to.
 """
 
 import re
+from pathlib import Path
 
 import pytest
 import yaml
 
-from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
+from tests.auxiliaries import ACTION_DIR, PROJECT_ROOT, WORKFLOW_DIR
 
 BUILD_WORKFLOW = WORKFLOW_DIR / "build.yml"
 PUBLISH_DATA_WORKFLOW = WORKFLOW_DIR / "publish_data.yml"
@@ -38,6 +39,90 @@ STAGE_ACTION = ACTION_DIR / "stage-artifacts" / "action.yml"
 STAGE_ACTION_REF = "./.github/actions/stage-artifacts"
 DATA_WHEEL_INPUT = "include-data-wheel"
 DATA_WHEEL_PREFIX = "timezonefinder_data-"
+
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+# a module is a command when it has an entry point; a gate is always one, because a
+# gate is only useful where a pipeline can invoke it
+SCRIPT_ENTRY_POINT = '__name__ == "__main__"'
+
+# What a gate must run before. `None` is the answer for a command that refuses nothing
+# a release depends on - which most of them are, and which is fine to say out loud.
+NOT_A_GATE = None
+# the first irreversible step of the code stream: `release` publishes a GitHub Release
+# with the wheels attached and creates the tag, before `publish-pypi` uploads anything
+RELEASE_GATE = "build.yml's first publishing step"
+# the weekly data update's own boundary, pinned by tests/test_data_update_guard.py
+DATA_UPDATE_GATE = "the weekly data update's merge"
+
+# Every command under `scripts/`, and the irreversible step it has to precede.
+#
+# Exhaustive on purpose. A gate that nothing invokes is indistinguishable from a gate
+# that passed, so "nobody wired it up" must not be a state this repository can reach by
+# omission: adding a command fails `test_every_script_command_says_what_it_gates` until
+# it is classified here, and classifying it as a release gate then forces the ordering
+# assertion below. `scripts/changelog_fragments.py` shipped reachable only from a manual
+# `make` target and no test noticed, which is what this table exists to prevent.
+SCRIPT_GATES: dict[str, str | None] = {
+    "_memory_probe": NOT_A_GATE,
+    "assert_acceleration_path": NOT_A_GATE,
+    "benchmark_noise": NOT_A_GATE,
+    # refuses, but over a report's binding to the commit that measured it, and
+    # `benchmark.yml` publishes nothing a release depends on
+    "benchmark_report_artifact": NOT_A_GATE,
+    "bootstrap_data": NOT_A_GATE,
+    "changelog_fragments": RELEASE_GATE,
+    "check_data_dependency": RELEASE_GATE,
+    "compare_benchmark_runs": NOT_A_GATE,
+    "data_releases": NOT_A_GATE,
+    "data_update_guard": DATA_UPDATE_GATE,
+    "describe_benchmark_machine": NOT_A_GATE,
+    "export_memory_chart_json": NOT_A_GATE,
+    "file_converter": NOT_A_GATE,
+    "generate_benchmark_fixtures": NOT_A_GATE,
+    "measure_memory": NOT_A_GATE,
+    "measure_query_latency": NOT_A_GATE,
+    "measure_tzfpy_agreement": NOT_A_GATE,
+    "normalize_benchmark_json": NOT_A_GATE,
+    "render_benchmark_reports": NOT_A_GATE,
+    "reporting": NOT_A_GATE,
+    "shortcuts": NOT_A_GATE,
+    "tune_block_size": NOT_A_GATE,
+    "upstream_release": NOT_A_GATE,
+}
+
+# What each release gate costs if it does not run. Carried here rather than in a
+# docstring because the parametrised assertion below reports it.
+RELEASE_GATE_CONSEQUENCE = {
+    "check_data_dependency": (
+        "on a data format change the data distribution must be published first; "
+        "releasing the code first puts a wheel on PyPI that nobody can install, and "
+        "the version number is spent, so the only fix is a whole new release"
+    ),
+    "changelog_fragments": (
+        "a fragment surviving the tag is a change released with no entry anywhere: "
+        "changelog.d/ is pruned from the distribution, so the bullet is absent from "
+        "CHANGELOG.rst and from the package, and the release reads as if that change "
+        "never happened"
+    ),
+}
+
+# A gate whose boundary is not build.yml's, and the test that pins its ordering there.
+# The pointer is asserted to resolve, so it cannot rot into a claim nothing checks.
+GATE_ELSEWHERE_PROOF = {
+    "data_update_guard": (
+        Path("tests") / "test_data_update_guard.py",
+        "test_a_draft_update_is_never_merged",
+    ),
+}
+
+
+def _script_commands() -> set[str]:
+    """The `scripts/` modules that can be invoked, by module name."""
+    return {
+        path.stem
+        for path in SCRIPTS_DIR.glob("*.py")
+        if SCRIPT_ENTRY_POINT in path.read_text(encoding="utf-8")
+    }
 
 
 def _workflow(path):
@@ -154,50 +239,67 @@ def test_nothing_publishing_the_code_is_reachable_from_a_data_tag() -> None:
 
 
 @pytest.mark.unit
-def test_nothing_irreversible_runs_before_the_data_dependency_is_checked() -> None:
-    """Ordering is the whole invariant: a check after the fact checks nothing.
+def test_every_script_command_says_what_it_gates() -> None:
+    """No command may be silent about whether a release has to wait for it.
 
-    On a data format change the data distribution must be published first, and
-    releasing the code first puts a wheel on PyPI that nobody can install - which
-    cannot be undone, because the version number is spent. The upload is not the first
-    step that cannot be taken back, though: the `release` job publishes a GitHub
-    Release with the wheels attached and creates the tag, before `publish-pypi` runs at
-    all. So the guard is asserted against *both* kinds of publishing step, and a job
-    may satisfy it through a dependency - a skipped `needs` skips its dependents, which
-    is why the upload job carries no copy of its own.
+    The failure this closes is not a wrong answer but a missing one. A gate nothing
+    invokes never speaks, and a pipeline that never consulted it looks exactly like a
+    pipeline it approved - so the default has to be a stated `NOT_A_GATE`, never an
+    absent row. Answering the question is the whole cost; answering it wrongly is
+    caught by the ordering assertion the answer selects.
     """
-    workflow = _workflow(BUILD_WORKFLOW)
-    publishing = {
-        **_jobs_using(workflow, PYPI_PUBLISH_ACTION),
-        **_jobs_using(workflow, GITHUB_RELEASE_ACTION),
-    }
-    assert publishing, (
-        f"no publishing job found in {BUILD_WORKFLOW.name} - this check is vacuous, "
-        "so the action names above have gone stale"
+    commands = _script_commands()
+    unclassified = sorted(commands - set(SCRIPT_GATES))
+    assert not unclassified, (
+        f"new `scripts/` commands with no row in SCRIPT_GATES: {unclassified}. State "
+        "the irreversible step each must precede, or NOT_A_GATE if a release depends "
+        "on nothing it refuses."
     )
-
-    unguarded = sorted(
-        name
-        for name in publishing
-        if not _guarded_by_run_check(workflow, name, "scripts.check_data_dependency")
-    )
-    assert not unguarded, (
-        f"jobs in {BUILD_WORKFLOW.name} that publish without the data-dependency check "
-        f"having already run: {unguarded}. Put it in the job ahead of its first "
-        "publishing step, or in a job it needs."
+    stale = sorted(set(SCRIPT_GATES) - commands)
+    assert not stale, (
+        f"SCRIPT_GATES rows for commands that no longer exist: {stale}. Every row here "
+        "is asserted against the workflows, so a stale one asserts nothing."
     )
 
 
 @pytest.mark.unit
-def test_no_release_can_publish_with_a_changelog_fragment_left_behind() -> None:
-    """A fragment surviving the tag is a change released with no changelog entry.
+def test_a_gate_guarding_another_boundary_names_the_test_that_pins_it() -> None:
+    """A gate not asserted here has to be asserted somewhere, provably.
 
-    Bullets are filed as fragments under `changelog.d/` and consumed by the release
-    (`make changelog-assemble`). Nothing downstream would notice one that was missed:
-    `changelog.d/` is pruned from the distribution, so the bullet is absent from
-    `CHANGELOG.rst` *and* from the package, and the release simply reads as if that
-    change never happened. The check therefore has to sit ahead of the first
-    irreversible step, exactly like the data-dependency one above.
+    Otherwise the classification becomes the only record that it is a gate, which is
+    the exact shape of a check nobody runs.
+    """
+    for module, boundary in SCRIPT_GATES.items():
+        if boundary in (NOT_A_GATE, RELEASE_GATE):
+            continue
+        assert module in GATE_ELSEWHERE_PROOF, (
+            f"scripts/{module}.py gates {boundary} but names no test pinning it"
+        )
+        relative, test_name = GATE_ELSEWHERE_PROOF[module]
+        path = PROJECT_ROOT / relative
+        assert path.is_file(), f"{relative} does not exist"
+        assert f"def {test_name}(" in path.read_text(encoding="utf-8"), (
+            f"{relative} no longer defines {test_name}, so scripts/{module}.py's "
+            f"ordering against {boundary} is pinned by nothing"
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "module", sorted(m for m, b in SCRIPT_GATES.items() if b == RELEASE_GATE)
+)
+def test_nothing_irreversible_runs_before_a_release_gate(module: str) -> None:
+    """Ordering is the whole invariant: a check after the fact checks nothing.
+
+    The upload is not the first step that cannot be taken back: the `release` job
+    publishes a GitHub Release with the wheels attached and creates the tag, before
+    `publish-pypi` runs at all. So each gate is asserted against *both* kinds of
+    publishing step, and a job may satisfy it through a dependency - a skipped `needs`
+    skips its dependents, which is why the upload job carries no copy of its own.
+
+    Parametrised over the table rather than written once per gate, so that classifying
+    a new command as a release gate creates its ordering assertion instead of leaving
+    one to be remembered.
     """
     workflow = _workflow(BUILD_WORKFLOW)
     publishing = {
@@ -209,16 +311,15 @@ def test_no_release_can_publish_with_a_changelog_fragment_left_behind() -> None:
         "so the action names above have gone stale"
     )
 
+    marker = f"scripts.{module}"
     unguarded = sorted(
-        name
-        for name in publishing
-        if not _guarded_by_run_check(workflow, name, "scripts.changelog_fragments")
+        name for name in publishing if not _guarded_by_run_check(workflow, name, marker)
     )
     assert not unguarded, (
-        f"jobs in {BUILD_WORKFLOW.name} that publish without checking that every "
-        f"changelog fragment was consumed: {unguarded}. Put "
-        "`--check --require-consumed` in the job ahead of its first publishing step, "
-        "or in a job it needs."
+        f"jobs in {BUILD_WORKFLOW.name} that publish without `{marker}` having "
+        f"already run: {unguarded}. Put it in the job ahead of its first publishing "
+        f"step, or in a job it needs. If it does not run: "
+        f"{RELEASE_GATE_CONSEQUENCE[module]}."
     )
 
 
