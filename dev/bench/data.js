@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788519982647,
+  "lastUpdate": 1788519985023,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11696,6 +11696,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4840 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cac02a1700bc0c2b87012e41b15968e3990565df",
+          "message": "Compare all three point-in-polygon paths, and stop the docs claiming which is fastest (#603)\n\n* Pair the point-in-polygon kernel with the buffers it belongs to\n\n`PolygonArray` wrapped its payload for the bound backend at construction but\nread `utils.inside_polygon_packed` as a module global on every lookup, so the\ntwo could drift apart between the two moments. Only a comment held them\ntogether - `scripts/assert_acceleration_path.py` says in prose that a kernel\nhanded the other path's buffers is a segfault rather than a wrong answer.\n\nCapturing the kernel beside the buffers makes that structural, and makes two\ncollections on different acceleration paths able to coexist in one process.\nThat is what a paired A/B of the paths through the public API needs, and it\nwas previously impossible: `tests/test_acceleration_paths.py` could build one\nfinder under a patch, never two. The new test builds both and queries them\ninterleaved; on the previous code it fails, numba's eager signature refusing\nfive `pyobject` arguments where it declared arrays.\n\nMeasured on the query path it touches, since `_pip_at` is the hottest inner\ncall: `benchmark_core` on Apple M1 Pro, min estimator, head-base-head\nsandwich. Every row unchanged - `timezone_at[random-in_memory]` 2.984 ms base\nagainst 2.987/2.982 ms head, `[ambiguous_shortcut-in_memory]` 11.440 ms\nagainst 11.485/11.498 ms - with the two head passes agreeing to within 0.2 %,\nfar inside the 3-9 % same-machine floor.\n\nAlso names the third acceleration path. `utils.py` has three outcomes, not\ntwo: numba when importable, clang when not but the extension loaded, and the\nundecorated Python function when neither is. `active_acceleration_path()`\nreported the last of those as `clang`, so an install whose C extension\nsilently failed to build looked like the fast path in every report it\nproduced - while being 5x-200x slower. The two numba-sourced names share\ntheir function objects, so `check_acceleration_path` separates them on the\nimport-time flag, which is the only thing that can.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Measure and publish all three point-in-polygon paths\n\nThe published pages describe one configuration - clang without numba, what a\nplain `pip install` gives you - which is right for a trend chart and leaves a\nreader unable to ask what installing numba buys them. Worse, the answer the\ndocs gave was wrong: `docs/7_performance.rst` said the numba path is \"faster\nstill\" than the C extension, while `contributing/improvements/decisions/`\nalready recorded the opposite from #497, and the README and getting-started\npage both recommended the extra \"for increased performance\".\n\nMeasured, both estimators agreeing: numba is slower at every level. The\npacked kernel by ~1.9x, `timezone_at()` by ~3 % on uniformly random points\nand ~6 % on ambiguous-shortcut ones. Losing the C extension costs far more -\npure Python is ~4x the packed kernel on small rings, ~196x on the largest,\nand ~122x on an ambiguous lookup.\n\n`make acceleration-paths` takes it in two environments, because numba and\npure Python are one source decorated or not and no process holds both. Each\npair is therefore compared *in its own process* against the C extension both\nenvironments hold, which keeps the alternating order, the shared per-round\ndraw and the round-level win count that `benchmarks/candidate_comparison.py`\nexists to hold. The numba-against-pure-Python ratio would have to cross that\nboundary, so it is not computed at all - across processes only the best-round\nratio survives, and that is the estimator on its own this repository has\nalready been misled by.\n\nThe two runs' shared clang baseline is published beside the tables as the\nreader's comparability check rather than used as a gate. It shows something\nworth publishing: installing numba changes more than the kernel.\n`validate_coordinates` then calls two `njit`'d scalar helpers, 299 ns against\n241 ns, which every query pays before any geometry - so the divergence is\nlargest on the unique-shortcut rows, where validation is most of the query.\n\nThe new page joins `REPORT_FILES`, so the release installs it with the rest;\nwithout that its absence would fail the artifact's completeness check. The\npolygon page's `*_python` rows are relabelled after the path that produced\nthem - the node id has to stay put as the chart's join key, so the label is\nwhat says whether \"Python\" meant numba or not.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Point the docs at the generated ranking instead of quoting one\n\nThe previous commit replaced one stale speed claim with another. Which\nacceleration path is fastest is a measurement: it has moved as the kernels and\nthe data format moved, and it is not one answer across workloads, since a query\nthe H3 shortcut index answers outright reaches no point-in-polygon test at all.\nProse that names a winner goes stale silently, and this repository had already\nproved that - the `~400x` figure for pure Python appeared in `README.rst`,\n`docs/7_performance.rst` and twice in `docs/architecture.rst`, and matched\nnothing measurable: the packed kernel puts the gap at 4x on small rings.\n\nSo the ranking is now stated in exactly one place, `make acceleration-paths`\nregenerates it, and everything else points there. What the hand-maintained docs\nkeep is what does not rot: the dispatch rule (Numba takes precedence when\nimportable), the contract (all three return identical answers, so a missing\ncompiler costs speed and never results), and the caution that being *preferred*\nby the dispatch says nothing about being *faster*.\n\nThe same applies to generated prose and to source comments, which are no more\nself-updating than a docs page: the cross-link the polygon and timezone-finding\npages carry no longer names a direction, the acceleration page no longer hard-codes\nthe validator timings behind its own explanation, and the ratios in\n`scripts/assert_acceleration_path.py` are gone.\n\n`decisions/query-performance-and-shortcut-index-decisions.md` recorded the two\nkernels as \"the same speed\" from #497. Its evidence stands - it measured the\n*bare* kernel, before polygon layout 3 - so the entry keeps it and is extended\nrather than rewritten, noting that the packed kernel a lookup actually runs does\nnot behave that way and that the figure belongs to the generated page now.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Record what a squash merge does to a pull request stacked on it\n\n#600 was stacked on #593 and closed one second after it merged. The timeline\nreads `base_ref_deleted` then `closed`, both attributed to the merging\nmaintainer, so a pull request nobody judged looked from the outside like one\nthat had been rejected.\n\nTwo rules come out of it, and neither was written down.\n\nThe merge round now says that `--delete-branch` closes anything based on the\nbranch it removes, that the post-merge re-check is what catches it, and that\nthe round's report has to name it - the author cannot tell the difference.\nIt also says not to reopen: the squash means the base's commits never become\nancestors of `master`, so retargeting shows the base's work as a second,\nduplicated diff. The recovery is the rebase, with the detached-HEAD form that\nleaves the pushed branch alone.\n\nThe authoring side now says not to stack in the first place. The merge round\ntakes one pull request at a time, so stacking buys no parallelism and costs a\nrecovery, and the rebase onto `master` is owed whether or not the closure\nhappens.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Take the rendered pages out; CI renders them\n\nEvery committed page in the previous commits was measured on my laptop, which\n`benchmarking-and-performance-validation.md` forbids: committed benchmark pages\ncome from the dispatchable `render_reports` job, not from a contributor machine.\nIt moved the published headline from ~1.37us/730k/s to ~1.24us/808k/s for no\nreason but the hardware under it.\n\nThe five existing pages go back to master's content and the new one is dropped;\nall six are replaced in the next commit by the `benchmark-pages` artifact of a\n`render_reports` run against this branch, which is the first use of the\nmechanism BENCH-2 shipped. Until then `docs/index.rst` names a page that is not\nthere yet and the docs build fails - deliberately, and for one commit.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Identify the measuring machine by CPU model, not by its clock reading\n\nThe first CI render failed on my own guard, and the guard was wrong. Both\nacceleration-path runs came off one AMD EPYC 7763 in one job; they reported\n2.4454 GHz and 3.2435 GHz, base and boost, so comparing `machine_label` -\nwhose docstring says in as many words that it is for display and that\n`cpu_model` is what compares two reports - rejected a pair measured on the\nsame machine.\n\nIdentity is the model. Whether two runs are *comparable* is a different\nquestion, and the shared clang baseline already answers it in the quantity at\nstake rather than in a proxy: a clock that moved enough to matter shows up\nthere as a baseline spread, which the page prints and refuses to derive across.\n\nAlso fixes two tests that arrived with master in the merge: `measure_acceleration_paths`\nneeded its `SCRIPT_GATES` row (NOT_A_GATE - no release waits on a measurement),\nand `review-and-merge-one-pull-request.md` was 1,997 of its 2,000 words before\nmy paragraph, so the stacked-pull-request rule moves to the authoring document,\nwhich has the room, and the merge round keeps a one-clause cue.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Publish the pages CI measured, from the render_reports artifact\n\nThe `benchmark-pages` artifact of run 33853698696, dispatched against this\nbranch and stamped with the commit it measured, installed through\n`scripts.benchmark_report_artifact` so the expected-commit check ran before any\npage was copied. This is the first use of the mechanism BENCH-2 shipped; no\nnumber here came from a contributor machine.\n\nThe published figures move because the hardware under them does - an AMD EPYC\n9V74 runner rather than a laptop - not because this branch changed anything they\nmeasure. `timezone_at()` over random points reads ~2.18us/458k/s against the\n~1.37us/730k/s master carried from Darwin arm64. Each page names the CPU it was\nmeasured on, which is what makes the two distinguishable rather than merely\ndifferent.\n\nThe new acceleration-path page reports what it can and refuses what it cannot.\nBoth pairs are paired in-process: the Numba kernel is 1.60-1.66x the C extension\nacross the size strata, pure Python 3.57x to 149x. At the public call the Numba\ndifference mostly does not resolve - 1.02x unresolved on random points, no\ndifference on unique-shortcut ones, 1.06x slower on ambiguous - while pure\nPython is 40.9x and 126x on the two strata that reach geometry.\n\nThe comparability section is why the third ratio stays underived. Both runs\nmeasure the same C extension, and their two timings of it differ by 6.3 % to\n26.2 % - far outside the 3 % a paired comparison inside one process resolves.\nThe widest is the unique-shortcut row, which is where the mechanism predicts it:\nthat workload is mostly `validate_coordinates`, whose scalar helpers are\n`njit`-compiled in the Numba environment and plain comparisons in the other.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T13:05:27+02:00",
+          "tree_id": "6535c489ba8f3cc3891a2b2c6449663e3d2a4060",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/cac02a1700bc0c2b87012e41b15968e3990565df"
+        },
+        "date": 1788519984378,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2305049896240234,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2312965393066406,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58377170562744,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58453559875488,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6917 GHz"
           }
         ]
       }
