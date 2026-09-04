@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788506647673,
+  "lastUpdate": 1788507649148,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4923,6 +4923,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00028098908201822873",
             "extra": "mean: 17.13208700000024 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d64d38ae30b84234867e2ca95c760886ec7aa5d3",
+          "message": "Read the zone position table once per finder, and three small register items (#594)\n\n* BIG-1: read the zone position table once per finder\n\n`_iter_boundary_ids_of_zone` called `np.load(..., mmap_mode=\"r\")` on every\ninvocation, under a comment reading \"load only on demand\" - a file open, a\nheader parse and a mapping for 890 immutable bytes, paid by every\n`certain_timezone_at` and `get_geometry` call.\n\nThe first caller that needs it now reads it once and the finder keeps it.\nConstruction deliberately does not: only those two methods address a zone's\nboundary range, the `timezone_at` majority never calls either, and\nconstruction is itself a tracked benchmark that the documented\none-instance-per-thread pattern multiplies by the thread count.\n\nMeasured with `benchmarks/candidate_comparison.py` against the previous\nimplementation, 21 rounds of 500 points from the committed fixtures:\n48.1 ms -> 2.90 ms (on land) and 55.2 ms -> 3.57 ms (random), 21 of 21\nrounds to the cached form.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-6: enumerate certain_timezone_at's candidates through the shared method\n\n`certain_timezone_at` held its own copy of the shortcut dispatch - the\n`ABSENT` case, the single-zone case and the candidate-list case - identical\nto `_iter_boundaries_in_shortcut`, whose only callers were two tests. A copy\nnothing in the package executed could drift from the one that answers\nqueries without any test noticing.\n\nIt now calls that method, which gives it a production caller and leaves one\nstatement of the dispatch. Deleting the method instead would have duplicated\nit into the two tests that walk a point's candidates.\n\n`timezone_at` still does not use it, and its docstring now says why: a cell\nresolving to a single zone is answered by name there, without addressing\nthat zone's boundary polygons at all.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DUP-1: declare the coordinate bounds once\n\n+-90 / +-180 appeared as literals in three places: the canonical constants in\n`configs.py`, the validators in `utils_numba.py`, and a second pair passed to\n`_validate_coordinate` purely to build the error message - compared against\nnothing, so the check and the message describing it could disagree with\nnothing to catch it.\n\n`MIN_LNG_VAL` / `MIN_LAT_VAL` join the existing maxima and both validators\nand the message read them. The minima are declared negative rather than\nnegated where they are read, because the negation is the part that costs:\n`validate_coordinates` with the pure-Python validators the tracked\nconfiguration runs, three forms rotated round by round, min/median ns per\ncall - literals 244/249, the constants 250/253, `-MAX_LAT_VAL <= lat <=\nMAX_LAT_VAL` 295/299. That is ~5 ns per query, ~0.5 % of a unique-shortcut\nquery and an order of magnitude below what the benchmark suite can resolve;\nthe register entry predicted the constants would be free outright, so the\nnumber and the reason it is not are recorded in the classification log and\nbeside the constants.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DEAD-5: delete the unused reduced-timezone mapping\n\n`REDUCED_TIMEZONE_MAPPING` lost its only reader when\n`convert_to_reduced_timezone` was deleted, and its own comment said it was\nkept for future reference. It is a hand-derived 18-pair fragment of the\n444 -> 92 `timezones-now` mapping; the settled rule is that a reduced-zone\nmapping comes from upstream or not at all, so nothing will grow from it.\n`git log -S REDUCED_TIMEZONE_MAPPING` retains the table.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Register: retire BIG-1, DEAD-6, DUP-1 and DEAD-5\n\nThe four items shipped, so their files and ranking rows go. The references\nthat outlive them are rewritten to the lasting fact rather than left as\ndangling handles: PERF-6's sequencing now says the bounds are declared once\nand that an inline form must keep reading those constants, with the ~5 ns\nthey cost set against the ~94 ns of dispatch that item is about; the lazy\nloading and reduced-mapping decisions name what was done instead of the item\nthat did it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:39:21+02:00",
+          "tree_id": "400e1fb11d93779582f6ab35b2034b496ba669ba",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d64d38ae30b84234867e2ca95c760886ec7aa5d3"
+        },
+        "date": 1788507647635,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 178.25658287991737,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000573670120021492",
+            "extra": "mean: 5.609891000062817 msec\nrounds: 148 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 273.476523817681,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002696859006877683",
+            "extra": "mean: 3.656621000004634 msec\nrounds: 238 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 43.49575183525256,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003206069218624715",
+            "extra": "mean: 22.99075099995207 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 284.37900441603887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006937816680979985",
+            "extra": "mean: 3.5164339999482763 msec\nrounds: 222 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 596.0317398506597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006428914467080436",
+            "extra": "mean: 1.6777630000888166 msec\nrounds: 500 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 57.8583199018319,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004451932901164453",
+            "extra": "mean: 17.283599000052163 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 282.8844711191897,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000505122685746666",
+            "extra": "mean: 3.5350119999293383 msec\nrounds: 223 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 579.0401367453993,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002902303694386222",
+            "extra": "mean: 1.7269960000021456 msec\nrounds: 464 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 57.365569953469624,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025163054695887264",
+            "extra": "mean: 17.43205900004341 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           }
         ]
       }
