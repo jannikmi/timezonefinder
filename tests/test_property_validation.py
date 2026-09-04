@@ -105,3 +105,59 @@ def test_validate_lng_rejects_invalid(lng):
     """validate_lng rejects out-of-range, NaN, and infinity longitude."""
     with pytest.raises(ValueError):
         utils.validate_lng(lng=lng)
+
+
+# The ``njit`` scalar validators are no longer on the query path - ``_validate_coordinate``
+# writes the same comparison out, because the dispatch cost more than the comparison. They
+# still exist, and ``scripts/utils_numba.py`` builds the converter's vector validators on
+# them, so the two forms have to keep agreeing: a bound corrected in one and not the other
+# would let the converter store a coordinate a query then refuses, or the reverse.
+#
+# These three compare a written-out expression against a function whose body is that same
+# expression, so **without numba they are identities** - ``njit`` is a no-op decorator
+# there (``_numba_replacements.py``) and both sides are one Python comparison. They bite on
+# the ``pyXXX-numba`` tox environments, where the right-hand side is a compiled function
+# with its own copy of the bounds and its own float semantics, and not in the no-numba
+# configuration the benchmark workflow tracks.
+
+
+@pytest.mark.unit
+@given(lat=st.one_of(_VALID_LAT, _OUT_OF_RANGE_LAT, _NAN, _INF))
+def test_validate_lat_agrees_with_the_njit_validator(lat):
+    from timezonefinder import utils_numba
+
+    valid = utils_numba.is_valid_lat(lat)
+    if valid:
+        utils.validate_lat(lat=lat)
+    else:
+        with pytest.raises(ValueError):
+            utils.validate_lat(lat=lat)
+
+
+@pytest.mark.unit
+@given(lng=st.one_of(_VALID_LNG, _OUT_OF_RANGE_LNG, _NAN, _INF))
+def test_validate_lng_agrees_with_the_njit_validator(lng):
+    from timezonefinder import utils_numba
+
+    valid = utils_numba.is_valid_lng(lng)
+    if valid:
+        utils.validate_lng(lng=lng)
+    else:
+        with pytest.raises(ValueError):
+            utils.validate_lng(lng=lng)
+
+
+@pytest.mark.unit
+@given(lng=_VALID_LNG, lat=_VALID_LAT)
+def test_inline_coordinate_scaling_matches_coord2int(lng, lat):
+    """The lookup path scales its two coordinates inline instead of calling ``coord2int``.
+
+    Same truncation toward zero, and the same result for every coordinate
+    ``validate_coordinates`` lets through - which is the whole domain the query path ever
+    scales. A divergence would not raise: it would shift a query by up to one 10^-7 degree
+    step against the stored boundary, which only shows on a point within ~1 cm of a border.
+    """
+    from timezonefinder.configs import COORD2INT_FACTOR
+
+    assert int(lng * COORD2INT_FACTOR) == utils.coord2int(lng)
+    assert int(lat * COORD2INT_FACTOR) == utils.coord2int(lat)

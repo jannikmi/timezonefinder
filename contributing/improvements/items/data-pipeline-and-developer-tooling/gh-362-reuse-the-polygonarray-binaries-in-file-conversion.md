@@ -1,6 +1,14 @@
 # GH-362 — reuse the `PolygonArray` binaries in file conversion
 
-- **Tracks:** issue #362.
-- **What it is:** well-specified and self-contained, with no dependencies on anything else here. Correctly labelled `good-first-issue`.
-- **Status:** open.
-- **Last touched:** 2026-08-20 — migrated from the roadmap issue.
+- **Tracks:** issue #362, still open on the tracker. Closing it is the maintainer's, not a pass's; this entry records why no pass should take it.
+- **Rejected 2026-09-04, and kept rather than deleted** because the idea reads as obviously right — one reader class instead of two representations of the same polygons — and will otherwise be re-proposed on its merits.
+- **The premise has already been satisfied everywhere it applies.** The issue was written when `scripts/` read the compiled binaries with code of its own. It no longer does: `scripts/reporting.py`, `scripts/data_integrity.py`, `scripts/data_update_guard.py` and `scripts/tune_block_size.py` all construct `PolygonArray` / `HoleArray`, as do `timezonefinder/_data_integrity.py` and the test suite. Grepping the tree for a second reader of `coordinates.bin` finds none. What is left of the item is the converter, and there the direction is backwards.
+- **The converter is the producer, not a reader.** `TimezoneData` is the parse output that the writers consume; it has to exist whatever the readers do, because the zone ids, the hole registry, hole membership and the H3 caches all live on it. `compile_bboxes` and `polygon_lengths` are what *produce* the vectors `PolygonArray` later reads back, so nothing is deduplicated by adding the reader — the model stays, and a second copy of the same rings appears beside it.
+- **And the access cost is the wrong way round by three orders of magnitude.** Measured 2026-09-04 over the packaged boundaries (1,322 rings, 7,925,313 vertices, `in_memory=True`): **`PolygonArray.coords_of` is 193 µs per call against 0.04 µs for indexing the in-memory list** — the packed payload has to be decoded, which is exactly what polygon layout 3 exists to have already paid for on the lookup path and to charge for on `get_geometry()`. `Hex.lies_in_cell` reads `data.polygons[poly_nr]` once per (cell, candidate) pair while compiling the shortcut index, which is where a data compilation already spends most of its time; routing that through a decode would add hours. Materialising the collection once into a list instead costs ~0.26 s and ~63 MB held beside the model — cheap, and it removes nothing, since the producers above still have to run.
+- **What would revive it:** a converter stage that reads the binaries *few* times — a validation or reporting pass — which is the shape the four scripts above already have and already use `PolygonArray` for. Not the shortcut compilation.
+- **Status:** rejected. Issue #362 stays open on the tracker; closing it is the maintainer's call.
+- **Last touched:** 2026-09-04 — re-verified against the current tree and rejected. This entry is the whole record: the decode measurement above is not repeated in the decision files, because what it settles is this item rather than a choice binding other work.
+
+## Related memory
+
+- [Geometry, data format and validation decisions](../../decisions/geometry-data-format-and-validation-decisions.md)
