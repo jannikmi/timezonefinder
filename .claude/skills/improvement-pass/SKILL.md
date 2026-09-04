@@ -1,6 +1,6 @@
 ---
 name: improvement-pass
-description: "Runs one ranked timezonefinder improvement pass and delivers a reviewable pull request, or records why no work can proceed."
+description: "Runs one ranked timezonefinder improvement pass and delivers a reviewable pull request per item, or records why no work can proceed."
 ---
 
 # Improvement pass
