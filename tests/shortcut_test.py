@@ -336,3 +336,31 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
         "the shortcut index does not list the polygon covering "
         f"{len(uncovered)} of {n} sampled coordinates, e.g. {uncovered[:5]}"
     )
+
+
+@pytest.mark.unit
+def test_a_candidate_s_zone_id_read_one_at_a_time_matches_the_narrowed_array(
+    tf, hybrid_shortcuts
+):
+    """Every ambiguous cell's candidates answer the same read one at a time as in bulk.
+
+    ``_zone_id_among`` reads the zone id of the *one* candidate that answers, where it
+    used to narrow the whole candidate list with ``zone_ids[candidates]`` before any
+    point was tested. The two are the same lookup at two arities, and the loop's index
+    ``i`` is what tied them together - a candidate's position in the list, used to index
+    an array built from that same list. Nothing about a wrong pairing is visible in a
+    lookup's answer unless the mismatched zones differ, so a silent off-by-one here
+    would return a neighbouring zone for a fraction of ambiguous points and fail no
+    existing test.
+    """
+    for hex_id, hybrid_value in hybrid_shortcuts.items():
+        if isinstance(hybrid_value, int):
+            # a unique-zone cell holds no candidate list to narrow
+            continue
+        candidates = np.asarray(hybrid_value)
+        narrowed = tf.zone_ids[candidates]
+        one_at_a_time = [tf._zone_id_of(candidate) for candidate in candidates]
+        assert one_at_a_time == narrowed.tolist(), (
+            f"cell {hex_id}: per-candidate zone ids {one_at_a_time} disagree with the "
+            f"narrowed array {narrowed.tolist()}"
+        )
