@@ -109,9 +109,17 @@ def _make_recipe(target: str) -> str:
     return match["recipe"]
 
 
+# Every target that produces a published or CI-tracked measurement, timing and
+# footprint alike. The footprint ones belong here for the same reason as the
+# timings: importing numba costs resident memory, so a `memory-ci` run in a
+# development environment - which has numba, because `make install` syncs
+# --all-groups - records a footprint the plain install never has.
+MEASUREMENT_TARGETS = ("benchmarks", "benchmarks-ci", "latency", "memory", "memory-ci")
+
+
 @pytest.mark.unit
-@pytest.mark.parametrize("target", ["benchmarks", "benchmarks-ci", "latency"])
-def test_every_timing_target_asserts_its_acceleration_path(target: str) -> None:
+@pytest.mark.parametrize("target", MEASUREMENT_TARGETS)
+def test_every_measurement_target_asserts_its_acceleration_path(target: str) -> None:
     assert "scripts.assert_acceleration_path" in _make_recipe(target), (
         f"make {target} can measure whichever backend the caller's environment "
         "happens to bind instead of refusing a report for the wrong implementation"
