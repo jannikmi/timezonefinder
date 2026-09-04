@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788502688505,
+  "lastUpdate": 1788502690851,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10472,6 +10472,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a4d313e61de0f6ed0646c42f418b3956d692c5dd",
+          "message": "CI: one aggregate check for branch protection to require (#598)\n\nRequiring the gate jobs directly does not survive a matrix edit: `test`'s check\nname carries its matrix values, so renaming an interpreter renames a required\ncontext, and the branch is then gated on a name nothing produces - or, once\nprotection is edited to match, on whatever the new list happens to name.\n\n`ci-ok` is a fixed name in front of that. It runs on every ref except a tag,\nneeds every non-publishing job, and fails when any of them failed, was\ncancelled, or was skipped - skipped included because branch protection counts a\nskipped required check as satisfied, so a gate that steps aside on a red matrix\nwould report the one state that lets the merge through.\n\nIts weak point is the `needs` list, where an omission is silence rather than a\nfailure, so `tests/test_build_gate.py` asserts it holds every job that does not\npublish. The release-stream simulator learns `always()`, which the new\ncondition is the first to use.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:17:12+02:00",
+          "tree_id": "4a10408386e49bc1695be5215ba6e3f45d1e5aae",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a4d313e61de0f6ed0646c42f418b3956d692c5dd"
+        },
+        "date": 1788502690088,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083942413330078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085725784301758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.23038387298584,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2311134338378906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58417224884033,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58493423461914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
           }
         ]
       }
