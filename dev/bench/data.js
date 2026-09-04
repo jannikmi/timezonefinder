@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788556529211,
+  "lastUpdate": 1788557242657,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5619,6 +5619,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00018695486915008992",
             "extra": "mean: 18.15313400000207 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96c803700f80f1459d3f8c4857a01a1d73a579a0",
+          "message": "merge-round: park an unreviewed improvement pass, and split out the conflict rules (#611)\n\n* merge-round: park a pull request whose independent review never ran\n\nThe improvement pass has required an independent review before opening a\npull request since #599, but nothing enforced it downstream, so a pass\nwhose review terminated could still be picked up and merged by a round\nthat only checked the CI list.\n\n#609 is the case: both its rounds died on usage limits and its own body\nsays \"it still needs both\". #606 is the contrast - its review found that\nthe guard's single exit code had come to carry two gates while every\nhuman-facing text still asserted the changed-answer story, which no test\nwould have failed on.\n\nA review that terminated on a usage limit is silence, and the pass rules\nalready say silence is reported as silence rather than treated as\npermission. The park list now says the same thing where the merge\ndecision is actually made.\n\nPaid for within the file's word budget by trimming the rationale on the\nsquash-commit reporting rule, which is settled and no longer needs\nre-arguing on every read.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* merge-round: park an unreviewed improvement pass, and split out the conflict rules\n\nThe improvement pass has required an independent review before opening a\npull request since #599, but nothing enforced it downstream, so a pass\nwhose review terminated could still be picked up and merged by a round\nthat only checked the CI list. #609 is the case: both its rounds died on\nusage limits and its own body says \"it still needs both\". #606 is the\ncontrast - its review found that the guard's single exit code had come to\ncarry two gates while every human-facing text still asserted the\nchanged-answer story, which no test would have failed on.\n\nScoped to improvement passes, per the maintainer: a manual pull request\nneeds no such review.\n\nMaking room by trimming a settled rule's rationale was the wrong move and\nis reverted; the file is split instead. `Bring it up to date` becomes\n`development/branch-updates-and-conflict-resolution.md`, routed from\nCONTRIBUTING.md, because the knowledge is not the merge round's - an\nimprovement pass rebasing before its final gate needs the same rules. The\nmerge round keeps a one-paragraph pointer, and drops to 1,847 words.\n\nTwo resolutions learned in this run join the extracted module: a decision\nfile that two branches edit in different bullets merges cleanly and lands\nover its word budget, so the count is what to check rather than the\nconflict markers; and an exhaustiveness table on the base is a semantic\nconflict a new `scripts/` command walks straight into.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:26:22+02:00",
+          "tree_id": "7754e4b88068c2988a83b74b9c3c2cc52155aebf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/96c803700f80f1459d3f8c4857a01a1d73a579a0"
+        },
+        "date": 1788557241831,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 187.11702991320962,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006628363467053113",
+            "extra": "mean: 5.344249000017953 msec\nrounds: 163 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 289.13474980346024,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024693319012664113",
+            "extra": "mean: 3.45859500001211 msec\nrounds: 266 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 46.90161813397154,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00024098693465438338",
+            "extra": "mean: 21.32122599999775 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 283.58207262151257,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003173500585667898",
+            "extra": "mean: 3.526316000005636 msec\nrounds: 231 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 577.9484909156411,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000020211281075047297",
+            "extra": "mean: 1.7302580000091439 msec\nrounds: 522 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 58.92963742357095,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002412129893996821",
+            "extra": "mean: 16.969390000014073 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 278.6287564373563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003849734884907554",
+            "extra": "mean: 3.589005000009138 msec\nrounds: 236 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 569.2874001854926,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000018929805440565634",
+            "extra": "mean: 1.7565820000129406 msec\nrounds: 510 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 58.42297462450518,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001348795590741239",
+            "extra": "mean: 17.116553999983353 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           }
         ]
       }
