@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788505869333,
+  "lastUpdate": 1788506645824,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4836,6 +4836,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00025573413686958503",
             "extra": "mean: 17.19766499999764 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6895e6974a18b55da08417bd74a1f6094656f559",
+          "message": "guard the memory measurement with the acceleration path, like the timings (#604)\n\n`make memory-ci` inherits whichever environment it is invoked in and, unlike\nits timing counterpart `benchmarks-ci`, asserted nothing about the\npoint-in-polygon backend bound at import time. `make install` syncs\n--all-groups, so the development environment has numba and\ntimezonefinder/utils.py prefers it whenever it is importable: a local\n`make memory-ci` / `make memory-noise` therefore recorded a footprint from the\nnumba path while every committed page and the tracked chart say clang. On this\ncheckout the charted `TimezoneFinder[file_based]::steady_heap` reads 2.27 MiB\non the clang path and 3.38 MiB on the numba one - a 1.49x difference on a\nmetric whose run-to-run coefficient of variation is 0.0%.\n\nCI was never exposed (the benchmark workflow syncs `uv sync --group test` and\nasserts the path itself), so this closes a local-measurement trap rather than a\nCI defect.\n\n`make memory` gets the same step for the same reason `benchmarks` has one\ndespite $(BENCHMARK_ENV): the isolated environment is asserted rather than\nassumed, so a lockfile change that made numba importable there cannot rewrite\nthe committed footprint page with numbers from a different implementation.\n\ntests/test_benchmark_workflows.py now pins all five measurement targets rather\nthan the three timing ones.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:23:12+02:00",
+          "tree_id": "b03d6f2108cec1c99fe0ae68415c12653edbd560",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6895e6974a18b55da08417bd74a1f6094656f559"
+        },
+        "date": 1788506644563,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 197.51330745925856,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010374098676356877",
+            "extra": "mean: 5.062949999995681 msec\nrounds: 169 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 319.7865360915076,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008042769117332718",
+            "extra": "mean: 3.127085999999224 msec\nrounds: 265 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 46.428367807009046,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001945083619865468",
+            "extra": "mean: 21.538556000002984 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 286.11410974541127,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009713189814701228",
+            "extra": "mean: 3.49510900000638 msec\nrounds: 241 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 584.8100273857098,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026402590767644367",
+            "extra": "mean: 1.7099570000027597 msec\nrounds: 510 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 57.8522747948253,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021567181545739347",
+            "extra": "mean: 17.28540500000264 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 283.2512943163641,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005164774429477045",
+            "extra": "mean: 3.5304340000053003 msec\nrounds: 242 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 573.2554546672519,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002616620967191581",
+            "extra": "mean: 1.744423000005213 msec\nrounds: 499 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 58.37000477524927,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00028098908201822873",
+            "extra": "mean: 17.13208700000024 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           }
         ]
       }
