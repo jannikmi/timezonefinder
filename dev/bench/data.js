@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788504879456,
+  "lastUpdate": 1788504881093,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10625,6 +10625,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2352 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b837bb947837e6b7a4a823c264711a919bf8ae6f",
+          "message": "say when the development environment is stale instead of failing as a code regression (#601)\n\n`uv run` syncs inexactly: it refreshes the default dependency groups and neither\nremoves nor updates anything outside them. An optional group therefore keeps\nwhatever version `uv sync --all-groups` last installed, and a lockfile bump that\nmoves a shared dependency past that version's ceiling breaks its import while\n`find_spec` still finds it. For numba - whose ImportError `utils_numba.py`\nswallows by design, falling back to the pure-Python replacements - the only\nsymptom was `test_using_numba` asserting `False == True`, which reads as a\nregression in this package rather than as a checkout needing `make install`.\nMeasured on this repository: the dev venv carries numba 0.65.1 (`numpy<2.5`)\nwhile the lock resolves numpy 2.5.2, so the next plain `uv run` upgrades numpy,\nleaves numba behind, and `import numba` raises \"Numba needs NumPy 2.4 or less\".\n\nThe test now reports that ImportError and names the recovery.\n\n`make force_update` was also the one target that can empty the environment: a\nbare `uv sync` is exact, and pruned numba, pytest and tzfpy (53 packages in a\nmeasured run), leaving a checkout whose next `make test` cannot spawn pytest.\nIt now syncs `--all-groups`, matching `make install`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:53:46+02:00",
+          "tree_id": "b7dd4ae39ad2d16d5b9a2e09b83f120b17fe1ff8",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b837bb947837e6b7a4a823c264711a919bf8ae6f"
+        },
+        "date": 1788504880772,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083942413330078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085296630859375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2301034927368164,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.230912208557129,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.583871841430664,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58468055725098,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
           }
         ]
       }
