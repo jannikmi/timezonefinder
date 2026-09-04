@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788501675991,
+  "lastUpdate": 1788502688505,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4575,6 +4575,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00010310804354908388",
             "extra": "mean: 17.309500000010303 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a4d313e61de0f6ed0646c42f418b3956d692c5dd",
+          "message": "CI: one aggregate check for branch protection to require (#598)\n\nRequiring the gate jobs directly does not survive a matrix edit: `test`'s check\nname carries its matrix values, so renaming an interpreter renames a required\ncontext, and the branch is then gated on a name nothing produces - or, once\nprotection is edited to match, on whatever the new list happens to name.\n\n`ci-ok` is a fixed name in front of that. It runs on every ref except a tag,\nneeds every non-publishing job, and fails when any of them failed, was\ncancelled, or was skipped - skipped included because branch protection counts a\nskipped required check as satisfied, so a gate that steps aside on a red matrix\nwould report the one state that lets the merge through.\n\nIts weak point is the `needs` list, where an omission is silence rather than a\nfailure, so `tests/test_build_gate.py` asserts it holds every job that does not\npublish. The release-stream simulator learns `always()`, which the new\ncondition is the first to use.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:17:12+02:00",
+          "tree_id": "4a10408386e49bc1695be5215ba6e3f45d1e5aae",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a4d313e61de0f6ed0646c42f418b3956d692c5dd"
+        },
+        "date": 1788502687024,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 182.93933384088712,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002793258060934316",
+            "extra": "mean: 5.466293000004896 msec\nrounds: 149 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 291.20737197282733,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020165120896611043",
+            "extra": "mean: 3.43397900000042 msec\nrounds: 172 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 42.998363611274314,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009516702915359741",
+            "extra": "mean: 23.256699000000935 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 271.085064053185,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000044484973770928336",
+            "extra": "mean: 3.688879000002032 msec\nrounds: 225 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 558.4926061159862,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023870687277184054",
+            "extra": "mean: 1.790534000001287 msec\nrounds: 477 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 55.108533501296925,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00039660540826001647",
+            "extra": "mean: 18.146010000002377 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 267.34143645237214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004109547829914658",
+            "extra": "mean: 3.7405349999986015 msec\nrounds: 226 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 550.7727065688368,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000020257875001425786",
+            "extra": "mean: 1.8156309999994846 msec\nrounds: 494 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 54.12992079547605,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014663342399509824",
+            "extra": "mean: 18.47407099999998 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           }
         ]
       }
