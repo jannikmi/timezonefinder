@@ -80,9 +80,9 @@ Run `make hook`, `make test`, and `make testint`. Confirm the diff against `orig
 
 ### Refresh the committed benchmark reports
 
-The release freezes `docs/benchmark_results_*.rst` as the published performance of the version, so a page measured before the code it describes ships as the release's own claim. The benchmark workflow renders the full pages on a named CI runner; the release consumes that artifact and remains the only place that commits it.
+The release freezes `docs/benchmark_results_*.rst` as the published performance of the version, so a page measured before the code it describes ships as the release's own claim. The benchmark workflow renders the full pages on a named CI runner, and only that artifact may be committed — the stamp is what enforces it, since `benchmark_report_artifact install` refuses a report measured for any other tree. **A pull request may publish its own render**, and one that changes what the pages measure should: dispatch `render_reports=true` against its head and install the result, so the numbers ship with the change that moved them rather than waiting for a release to notice. The release remains the last word, because it is the step that freezes the version's claim.
 
-Check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and this step is required. If nothing did, skip it and say so in the pull request body.
+Check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and this step is required. A page that a pull request already rendered on a runner is not stale for having been committed there — read the CPU it names, since a set of pages measured on two different runners is what this step exists to replace with one. If nothing did, skip it and say so in the pull request body.
 
 When they are stale, dispatch the report job against the release commit. Record the release SHA before dispatch: the artifact carries that SHA, and the installer refuses to copy a report measured for any other tree.
 
