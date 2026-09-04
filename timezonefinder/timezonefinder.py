@@ -1189,9 +1189,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """Everything a cell's candidate list costs before any point is tested.
 
         A property of the *cell*, not of the query point, which is what lets a batch pay
-        it once per distinct cell. Measured at 898 ns against 10,228 ns for resolving a
-        whole ambiguous point on the C-extension backend in mapped mode - so this is the
-        8.8 % ceiling on what sharing it can win, and the geometry below is the rest.
+        it once per distinct cell. What is left of it is two reads - the candidate slice
+        at 256 ns and the stop index at 97 ns - against ~3,800 ns for resolving a whole
+        ambiguous point on the C-extension backend in mapped mode, so sharing it can win
+        at most ~9 %, and the geometry below is the rest. It used to be ~898 ns of 10,228,
+        the same ~9 %: the zone-id narrowing was two thirds of this method and the
+        geometry got cheaper by about as much.
 
         NOTE: neither the empty nor the single-candidate case can occur here; both are
         unambiguous and are stored in the shortcut table itself.
@@ -1325,7 +1328,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # convert the query coordinates in the same fashion in order to make the data
         # formats match. Written out rather than calling ``utils.coord2int``: that is an
         # ``njit`` function over one scalar, and on a numba install the dispatch costs
-        # 94.7 ns against 46.4 ns for this expression, twice per ambiguous query. The
+        # 94.7 ns against 46.4 ns for this expression, twice per call - this method tests
+        # every candidate rather than stopping at the shortcut's answer, so it pays this
+        # on every call and not only on an ambiguous one. The
         # truncation is the same one - ``int()`` rounds toward zero either way - and the
         # product cannot leave int32, because ``validate_coordinates`` has already bound
         # both coordinates to +-180 deg, i.e. +-1.8e9.

@@ -77,7 +77,8 @@ the end.
 These are one machine's, and the three kinds of figure below do not travel equally.
 A *hit count* is a property of the code rather than the hardware and survives any
 move - 1.05 candidates per ambiguous query, zero FFI crossings per candidate on clang
-since layout 3, zero numpy calls per ambiguous query since the narrowing was removed
+since layout 3, one numpy call per ambiguous query - the candidate slice - since the
+zone-id narrowing was removed, where there were two
 - so state what a change removes as a count first. A *share* travels as an order of
 magnitude only: the stages are bound by different resources (memory latency for the
 mapped fetch, interpreter dispatch for the Python prologue, FP throughput for the
