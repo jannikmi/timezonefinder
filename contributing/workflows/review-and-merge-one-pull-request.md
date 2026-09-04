@@ -33,7 +33,7 @@ Apply in order, and take the first pull request that discriminates:
 5. **Then cheap and green**, to shrink the queue without spending maintainer attention.
 6. **Tie-breaks:** smaller diff, then the older pull request, which has already been rebased the most times.
 
-Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
+Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, one whose required independent review never ran — a review that terminated on a usage limit is silence, not a pass — one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
 
 ## Bring it up to date
 
@@ -89,7 +89,7 @@ Compare those names with the workflows that trigger on `pull_request` and the `p
 gh pr merge <n> --squash --delete-branch
 ```
 
-An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
+An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit, which is what a revert needs.
 
 After merging, fast-forward `master`, confirm the head is the squash commit, and re-check every remaining pull request: `--delete-branch` closes any based on that branch.
 
