@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788519985023,
+  "lastUpdate": 1788555055859,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5358,6 +5358,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00018861428691474582",
             "extra": "mean: 13.283577999999352 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f5d3ed709a0d9752ca1f717efe58e0ad6ce4d10a",
+          "message": "A release branch push renders the benchmark report pages (#607)\n\n* BENCH-4: a release branch push renders the benchmark report pages\n\n`benchmark.yml`'s `render-reports` job was reachable only through a\n`workflow_dispatch` that nothing invoked, so the pages a release commits\nexisted only if a person had pressed the button first, against the right\ncommit. Forgetting it failed in the right direction but at the wrong\ntime: `benchmark_report_artifact install` refuses a report stamped for\nanother tree, so the release stopped at a step whose prerequisite had run\nnowhere.\n\nEvery push to a `release/**` branch now starts the render for the pushed\ncommit. That leaves the 2026-09-02 decision intact - CI still never\ncommits the pages, the job still holds no write permission, and the\nrelease remains the only place that commits - because what moved is the\ndispatch, not the commit. A release branch is a base-repository branch,\nso unlike the `pull_request` half this trigger runs no untrusted code.\n\nThe measurement half is skipped on a release push and `track` is narrowed\nto `master`, so a release branch adds no point to a cross-machine trend\nseries whose threshold was derived from runner spread alone. The guard is\non the event *and* the ref, so a noise dispatch aimed at a release branch\nstill measures.\n\nThe two routes not taken. Dispatching from the release path needs\n`actions: write` in a workflow that has none today, which is a permissions\nchange to buy what a push trigger gives for free. Adding the release\nbranch's paths to the `pull_request` filter spends the same 60-minute\nrender on every push to every pull request touching them, rather than on\nrelease branches only.\n\n`tests/test_benchmark_workflows.py` pins this as an evaluated table of\nevent to job set rather than as assertions about the text of an `if:`.\nReview found the substring version could not fail on the mistake it\nexisted to catch: dropping one `!` from the release guard inverts the\nmeasurement half so it runs only on release branches, which silently ends\nthe master trend series and every pull request comparison. The table\nfails on that edit, on a `track` that accepts a non-master ref, and on a\nrender that escapes to master pushes - each verified by making the edit.\n\nAlso from that review: the runbook pushes the branch before the render\nstep, which can strand a `release/**` branch on `origin` if the attempt is\nabandoned, so the *Prepare* preconditions now say to delete one rather\nthan resume it; and a later push to a release branch *cancels* the render\nfor the recorded SHA rather than racing it, because the workflow's\nconcurrency group sets `cancel-in-progress`, which the runbook now states\nalong with how to recover.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: BENCH-4 shipped; GH-332 needs a decision\n\nBENCH-4's item file and ranking row go with the change that implemented\nit. Its \"a release pull request touches none of the benchmark paths\" was\nstale on arrival: `pyproject.toml` and `uv.lock` are in that filter and\nthe version commit touches both, so a release pull request does measure -\nit just never rendered.\n\nGH-332 re-verified: the mapping, the converter switch and the test-suite\nconversion all exist, so nothing technical is in front of it any more and\nwhat is left is the packaging commitment nobody has taken - whether the\nreduced dataset is published at all, and as what. Briefed as a decision\nrather than guessed at, because a PyPI project name is claimed\npermanently and its releases cannot be deleted.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T22:50:05+02:00",
+          "tree_id": "190a1670d2e9cc5e3356a04b48157c273abf6765",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f5d3ed709a0d9752ca1f717efe58e0ad6ce4d10a"
+        },
+        "date": 1788555054977,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 188.02431756098005,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016682386509513732",
+            "extra": "mean: 5.318461000001662 msec\nrounds: 164 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 292.38312715464525,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008557076970360226",
+            "extra": "mean: 3.4201699999982793 msec\nrounds: 263 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 44.8657518001373,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017989194854877062",
+            "extra": "mean: 22.288716000005593 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 284.5376007903909,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000052800939009975186",
+            "extra": "mean: 3.514473999999268 msec\nrounds: 242 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 583.4785708771069,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002055181197437392",
+            "extra": "mean: 1.7138589999916576 msec\nrounds: 525 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 57.63968487692001,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021975275794509276",
+            "extra": "mean: 17.349158000001808 msec\nrounds: 55 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 281.22307289007244,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005701769842255563",
+            "extra": "mean: 3.555896000008829 msec\nrounds: 232 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 573.2570977823466,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025327765981618347",
+            "extra": "mean: 1.7444180000012466 msec\nrounds: 488 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 56.77016909278582,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017998770603711733",
+            "extra": "mean: 17.614885000000413 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           }
         ]
       }
