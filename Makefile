@@ -183,11 +183,14 @@ benchmarks:
 # the memory counterpart of `benchmarks`. Separate because pytest-benchmark
 # measures wall clock only, and running tracemalloc across its rounds would
 # distort the very timings above (see scripts/measure_memory.py).
-# Same $(BENCHMARK_ENV) as `benchmarks`, so the pages `reports` writes all
-# describe one configuration: importing numba costs resident memory too, and a
-# footprint page measured with it sits beside timing pages measured without it.
+# Same $(BENCHMARK_ENV) and the same asserted acceleration path as `benchmarks`,
+# so the pages `reports` writes all describe one configuration: importing numba
+# costs resident memory too, and a footprint page measured with it sits beside
+# timing pages measured without it.
 memory:
 	@mkdir -p tmp
+	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
@@ -243,10 +246,11 @@ BENCHMARK_MIN_ROUNDS := 50
 # path are not comparable (see
 # contributing/development/benchmarking-and-performance-validation.md).
 # $(BENCHMARK_ENV) above is what
-# holds `benchmarks`/`memory` to it; `benchmarks-ci` inherits whichever
-# environment it is invoked in and therefore asserts this value itself, so a
-# development environment with numba importable refuses to measure rather than
-# reporting the wrong kernel's numbers.
+# holds `benchmarks`/`latency`/`memory` to it; `benchmarks-ci` and `memory-ci`
+# inherit whichever environment they are invoked in and therefore assert this
+# value themselves, so a development environment with numba importable refuses
+# to measure rather than reporting the wrong kernel's numbers - which is the
+# ordinary case here, since `make install` syncs --all-groups.
 BENCHMARK_ACCELERATION_PATH := clang
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
@@ -304,6 +308,8 @@ benchmark-noise:
 # the exact memory measurement CI records, plus the chart-shaped export
 memory-ci:
 	@mkdir -p $(dir $(CI_MEMORY_JSON))
+	uv run python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run python -m scripts.measure_memory \
 		--output=$(RAW_MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)

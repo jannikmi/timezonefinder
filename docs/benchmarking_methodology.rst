@@ -191,8 +191,10 @@ Only the **no-Numba / clang C extension** path, because that is what a plain
 ``timezonefinder/utils.py`` selects the point-in-polygon implementation **at import time**, so
 Numba and clang are completely different code paths whose numbers must never share a benchmark
 name. The workflow *asserts* the active path (``scripts/assert_acceleration_path.py``) rather than
-assuming it: a Numba install sneaking into the environment would otherwise silently corrupt the
-entire trend history rather than fail.
+assuming it, and so does every ``make`` target that measures - the memory ones included, because
+importing Numba costs resident memory as well as changing the timings. A Numba install sneaking
+into the environment would otherwise silently corrupt the entire trend history rather than fail,
+and locally it is the *normal* state: ``make install`` syncs every dependency group.
 
 For the same reason, **local numbers are not comparable to CI numbers** - different CPU, different
 memory bandwidth, different background load, and often a different acceleration path. The
