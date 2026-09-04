@@ -79,6 +79,7 @@ SCRIPT_GATES: dict[str, str | None] = {
     "export_memory_chart_json": NOT_A_GATE,
     "file_converter": NOT_A_GATE,
     "generate_benchmark_fixtures": NOT_A_GATE,
+    "measure_acceleration_paths": NOT_A_GATE,
     "measure_memory": NOT_A_GATE,
     "measure_query_latency": NOT_A_GATE,
     "measure_tzfpy_agreement": NOT_A_GATE,

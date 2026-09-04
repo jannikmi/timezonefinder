@@ -310,7 +310,11 @@ def test_interpreted_kernel_labels_name_the_measuring_environment_and_restore():
 
 
 def _fake_acceleration_run(
-    path: str, *, cpu: str = "Apple M1 Pro", baseline: float = 1.0
+    path: str,
+    *,
+    cpu: str = "Apple M1 Pro",
+    baseline: float = 1.0,
+    clock: str = "3.2 GHz",
 ) -> dict:
     """One `scripts.measure_acceleration_paths` report, with one row per section."""
     comparison = {
@@ -326,7 +330,7 @@ def _fake_acceleration_run(
     }
     return {
         "machine_info": {
-            "cpu": {"brand_raw": cpu, "hz_actual_friendly": "3.2 GHz"},
+            "cpu": {"brand_raw": cpu, "hz_actual_friendly": clock},
             "timezonefinder": {
                 **_FAKE_SYSTEM_INFO,
                 "acceleration_path": path,
@@ -360,8 +364,24 @@ def test_acceleration_page_refuses_runs_from_two_machines(tmp_path):
         _fake_acceleration_run("python", cpu="AMD EPYC 7763"),
     ]
 
-    with pytest.raises(ValueError, match="different machines"):
+    with pytest.raises(ValueError, match="different CPUs"):
         render_acceleration_paths(runs, tmp_path / "acceleration.rst")
+
+
+def test_acceleration_page_accepts_one_cpu_reporting_two_clock_speeds(tmp_path):
+    """Identity is the model, not the clock the core happened to be boosted to.
+
+    Both runs of the first CI render came off one EPYC 7763 and reported 2.4454 GHz
+    and 3.2435 GHz, which rejected a pair measured on the same machine. Whether two
+    runs are *comparable* is what the shared clang baseline answers; this check only
+    establishes that they ran on the same hardware.
+    """
+    runs = [
+        _fake_acceleration_run("numba", cpu="AMD EPYC 7763", clock="2.4454 GHz"),
+        _fake_acceleration_run("python", cpu="AMD EPYC 7763", clock="3.2435 GHz"),
+    ]
+
+    render_acceleration_paths(runs, tmp_path / "acceleration.rst")
 
 
 def test_acceleration_page_needs_one_run_per_environment(tmp_path):

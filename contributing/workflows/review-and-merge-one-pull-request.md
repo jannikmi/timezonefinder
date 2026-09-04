@@ -91,11 +91,7 @@ gh pr merge <n> --squash --delete-branch
 
 An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
 
-After merging, fast-forward local `master`, confirm the head is the squash commit, and re-check every remaining pull request before the next round begins.
-
-`--delete-branch` closes every open pull request based on the branch it deletes, and the timeline attributes both the deletion and the closure to you, one second apart — so a pull request nobody judged reads afterwards as one you rejected. The re-check above is what catches it. Say so in the round's report, because the author cannot tell the difference from the outside.
-
-Do not reopen it. The merge was a squash, so the base's commits are not ancestors of `master` and only the squash commit is; retargeting the closed pull request to `master` would show its base's work as a second, duplicated diff. It is recovered by rebasing onto `master` — `git rebase --onto origin/master <base-branch-tip> HEAD`, passing `HEAD` so the rebase lands detached and the pushed branch is never rewritten — and opening a fresh pull request from a new branch that references the closed one.
+After merging, fast-forward `master`, confirm the head is the squash commit, and re-check every remaining pull request: `--delete-branch` closes any based on that branch.
 
 ## Triage-only mode
 

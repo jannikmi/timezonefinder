@@ -20,4 +20,6 @@ Never open a pull request against another open pull request's branch, even when 
 
 Wait for the base to land and cut from `master`. When that is genuinely impractical, say in the description that the branch carries another pull request's commits and which ones, so a reviewer reads the right diff and knows the rebase is coming.
 
+If it happens anyway, do not reopen the closed pull request: the squash means the base's commits never become ancestors of `master`, so retargeting it there shows the base's work as a second, duplicated diff. Rebase onto `master` instead - `git rebase --onto origin/master <base-branch-tip> HEAD`, passing `HEAD` so the rebase lands detached and the pushed branch is never rewritten - and open a fresh pull request from a new branch that references the closed one.
+
 Thank you for helping to keep timezonefinder robust and high-performance!

@@ -37,6 +37,7 @@ from scripts.benchmark_utils import (
     decimals_for_magnitude,
     format_bytes,
     load_benchmark_json,
+    cpu_model,
     machine_label,
 )
 from scripts.configs import (
@@ -535,10 +536,17 @@ def render_acceleration_paths(
     runs = sorted(
         runs, key=lambda r: r["machine_info"]["timezonefinder"]["acceleration_path"]
     )
-    machines = {machine_label(run) for run in runs}
+    # `cpu_model`, not `machine_label`: the label carries the *measured* clock, which
+    # a runner reports as whatever the core happened to be boosted to. Both runs of
+    # the first CI render came off one EPYC 7763 and read 2.4454 GHz and 3.2435 GHz,
+    # so comparing the display form rejected a pair measured on the same machine.
+    # Identity is the model; whether the two runs are actually comparable is what the
+    # shared clang baseline below answers, and it answers it in the quantity at stake
+    # rather than in a proxy for it.
+    machines = {cpu_model(run) for run in runs}
     if len(machines) != 1:
         raise ValueError(
-            "the acceleration-path runs come from different machines "
+            "the acceleration-path runs come from different CPUs "
             f"({sorted(str(m) for m in machines)}), so their columns describe "
             "different hardware and must not be published on one page. Re-measure "
             "both with `make acceleration-paths` on one machine."
