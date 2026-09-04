@@ -6,11 +6,13 @@ Test script to verify that the resource management improvements work correctly.
 import gc
 import sys
 import weakref
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from timezonefinder import TimezoneFinder, TimezoneFinderL
+from timezonefinder import timezonefinder as timezonefinder_module
 from timezonefinder.block_payload import PAYLOAD_WORD_DTYPE
 from timezonefinder.coord_accessors import FileCoordAccessor
 from timezonefinder.flatbuf.io.polygons import get_coordinate_path
@@ -280,7 +282,41 @@ def test_loaded_dataset_arrays_are_read_only(in_memory):
         assert finder.zone_names._gather_lookup is not None
         arrays["zone-name gather"] = finder.zone_names._gather_lookup
 
+        # the zone start positions are read by the first caller that needs them
+        list(finder._iter_boundary_ids_of_zone(0))
+        assert finder._zone_positions is not None
+        arrays["zone positions"] = finder._zone_positions
+
         for name, array in arrays.items():
             assert not array.flags.writeable, name
             with pytest.raises(ValueError, match="read-only"):
                 array.flat[0] = array.flat[0]
+
+
+@pytest.mark.unit
+def test_zone_positions_are_read_once_and_not_at_construction(monkeypatch):
+    """The zone start positions are dataset state, read on first use and then kept.
+
+    Both halves matter and neither is visible in an answer. Reading them in
+    ``__init__`` would charge every construction for an array only
+    ``certain_timezone_at`` and ``get_geometry`` address, which the ``timezone_at``
+    majority never calls; re-reading them per call - which is what the lazy comment
+    used to mean - paid a file open, a header parse and a mapping for 890 immutable
+    bytes on every one of those calls.
+    """
+    reads = []
+    original = timezonefinder_module.read_per_polygon_vector
+
+    def counting_read(file_path):
+        reads.append(Path(file_path).name)
+        return original(file_path)
+
+    monkeypatch.setattr(timezonefinder_module, "read_per_polygon_vector", counting_read)
+
+    with TimezoneFinder() as finder:
+        assert "zone_positions.npy" not in reads, (
+            "construction must not read an array most instances never use"
+        )
+        for _ in range(3):
+            assert list(finder._iter_boundary_ids_of_zone(0))
+        assert reads.count("zone_positions.npy") == 1

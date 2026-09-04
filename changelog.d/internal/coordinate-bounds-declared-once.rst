@@ -1,0 +1,1 @@
+The coordinate bounds are declared once, as ``MIN_LNG_VAL`` / ``MIN_LAT_VAL`` beside the existing maxima in ``timezonefinder.configs``, and imported by the validators and by the error message describing them, which were previously three independent statements of the same fact.

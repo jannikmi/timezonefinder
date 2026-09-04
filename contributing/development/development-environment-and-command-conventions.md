@@ -1,6 +1,7 @@
 # Development environment and command conventions
 
 - Use `uv` for all dependency management; run every Python command via `uv run`
+- `uv run` syncs *inexactly*: it refreshes the default dependency groups and neither removes nor updates anything outside them, so the optional groups keep whatever version `uv sync --all-groups` last installed. A lockfile bump that moves a shared dependency past a stale optional package's ceiling therefore breaks that package's import while `find_spec` still finds it — for `numba` (whose import failure `utils_numba.py` swallows by design) the only symptom is `tests/main_test.py::*::test_using_numba` failing, which reads as a code regression. Recovery is `make install`. No `uv run` form prunes; only an exact `uv sync` does, which is why both of the `Makefile`'s syncs pass `--all-groups` (the benchmark workflow's deliberate `uv sync --group test` is the one place a pruned, numba-free environment is the point)
 - Run `make hook` after code changes; failures must be fixed before committing. Also run it after regenerating anything, *before* reading the diff — see *Generated Files*
 - The `Makefile` header comment documents every target. Where the *choice* between targets is the non-obvious part, it is covered by the [testing strategy](testing-strategy-and-change-scope.md)
 - Don't prefix suggested commands with a redundant `cd` into the project root

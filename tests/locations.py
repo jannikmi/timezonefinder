@@ -1,30 +1,6 @@
 from timezonefinder.configs import INT2COORD_FACTOR
 from timezonefinder.utils import is_ocean_timezone
 
-# mapping from original timezone to reduced timezone of the timezones-now dataset
-# unused, but kept for future reference
-REDUCED_TIMEZONE_MAPPING: dict[str, str] = {
-    "Europe/Berlin": "Europe/Paris",
-    "Europe/Kyiv": "Europe/Athens",
-    "Asia/Yakutsk": "Asia/Tokyo",
-    "Asia/Macau": "Asia/Manila",
-    "Asia/Yekaterinburg": "Asia/Karachi",
-    "Europe/Helsinki": "Europe/Athens",
-    "Asia/Brunei": "Asia/Manila",
-    "Asia/Nicosia": "Europe/Athens",
-    "Asia/Seoul": "Asia/Tokyo",
-    "Asia/Vladivostok": "Australia/Brisbane",
-    "America/Inuvik": "America/Denver",
-    "Asia/Anadyr": "Pacific/Fiji",
-    "Asia/Yerevan": "Asia/Dubai",
-    "Asia/Dushanbe": "Asia/Karachi",
-    "Europe/Busingen": "Europe/Paris",
-    "Europe/Zurich": "Europe/Paris",
-    "Africa/Maseru": "Africa/Johannesburg",
-    "Asia/Tashkent": "Asia/Karachi",
-}
-
-
 # for TimezoneFinderL:
 BASIC_TEST_LOCATIONS = [
     # lat, lng, description, expected

@@ -1,4 +1,5 @@
 import json
+import math
 from collections import Counter
 from pathlib import Path
 from typing import Callable
@@ -29,7 +30,13 @@ from tests.auxiliaries import (
 )
 from tests.locations import OUT_OF_RANGE_COORDINATES
 from timezonefinder import utils_clang, utils_numba, utils
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    MIN_LAT_VAL,
+    MIN_LNG_VAL,
+)
 
 POINT_IN_POLYGON_TESTCASES = [
     # (polygon, list of test points, expected results)
@@ -342,6 +349,47 @@ def test_convert_polygon_is_c_contiguous():
 def test_validate_coordinates_rejects_out_of_range(lng, lat):
     with pytest.raises(ValueError):
         utils.validate_coordinates(lng=lng, lat=lat)
+
+
+@pytest.mark.parametrize(
+    "name, minimum, maximum, coordinates_at",
+    [
+        (
+            "latitude",
+            MIN_LAT_VAL,
+            MAX_LAT_VAL,
+            lambda value: {"lng": 0.0, "lat": value},
+        ),
+        (
+            "longitude",
+            MIN_LNG_VAL,
+            MAX_LNG_VAL,
+            lambda value: {"lng": value, "lat": 0.0},
+        ),
+    ],
+)
+def test_the_rejection_message_states_the_bounds_the_validator_enforces(
+    name, minimum, maximum, coordinates_at
+):
+    """The bound that is checked and the bound that is reported are one statement.
+
+    They used to be two: the validator held its own literals and the message was built
+    from a second pair passed at the call site, compared against nothing. Either could
+    have moved without the other, and the resulting error would have named a range the
+    code does not enforce.
+    """
+    for accepted in (minimum, maximum):
+        utils.validate_coordinates(**coordinates_at(accepted))
+
+    for rejected in (
+        math.nextafter(minimum, -math.inf),
+        math.nextafter(maximum, math.inf),
+    ):
+        with pytest.raises(
+            ValueError,
+            match=rf"Invalid {name} .*: must be in range \[{minimum}, {maximum}\]",
+        ):
+            utils.validate_coordinates(**coordinates_at(rejected))
 
 
 @pytest.mark.parametrize(

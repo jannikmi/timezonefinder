@@ -17,6 +17,8 @@ from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
     MAX_LNG_VAL,
+    MIN_LAT_VAL,
+    MIN_LNG_VAL,
     NO_ZONE_ID,
     OCEAN_TIMEZONE_PREFIX,
     CoordArrayLike,
@@ -116,7 +118,7 @@ def validate_lat(lat: float) -> None:
     :param lat: Latitude value to validate (must be in range [-90.0, 90.0])
     :raises ValueError: If latitude is outside valid bounds (-90 to 90)
     """
-    _validate_coordinate(lat, is_valid_lat, "latitude", -90.0, 90.0)
+    _validate_coordinate(lat, is_valid_lat, "latitude", MIN_LAT_VAL, MAX_LAT_VAL)
 
 
 def validate_lng(lng: float) -> None:
@@ -126,7 +128,7 @@ def validate_lng(lng: float) -> None:
     :param lng: Longitude value to validate (must be in range [-180.0, 180.0])
     :raises ValueError: If longitude is outside valid bounds (-180 to 180)
     """
-    _validate_coordinate(lng, is_valid_lng, "longitude", -180.0, 180.0)
+    _validate_coordinate(lng, is_valid_lng, "longitude", MIN_LNG_VAL, MAX_LNG_VAL)
 
 
 def validate_coordinates(lng: float, lat: float) -> tuple[float, float]:
