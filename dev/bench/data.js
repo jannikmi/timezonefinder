@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788557244187,
+  "lastUpdate": 1788557936874,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5706,6 +5706,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0001348795590741239",
             "extra": "mean: 17.116553999983353 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c1a748f0598f4a774fc1fe6ae898b1a37af2171",
+          "message": "improvement-pass: one pull request per item, several items per session (#610)\n\n* improvement-pass: one pull request per item, several items per session\n\nThe pass batched eligible small items into one pull request. That made the\ndiff the unit of work, so an item's review, gate and merge were coupled to\nwhatever else happened to fit beside it.\n\nEach item now leaves the session as its own pull request, gated and reviewed\non its own branch off `origin/master`, never stacked — `master` squash-merges,\nand deleting a merged base branch closes the pull request built on it. A\nsession may still implement several small, similar or related items, because\nthe context the first one established is already loaded; that is now a\nquestion about what one session carries, not about what one diff holds.\n\nAn item too large for one reviewable pull request is refined into slices first,\nrecorded as ordinary register items with fresh IDs in their family — the ledger\ntest reads `<prefix>-<number>`, so a suffixed handle is not an item ID.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Fix CI: pair the .agents adapter, and keep the workflow inside its word budget\n\n`test_provider_skill_sets_are_paired` compares the two provider adapters byte\nfor byte; only the `.claude` copy carried the new description. And\n`test_memory_names_depth_and_size_budgets` caps a canonical memory file at\n2000 words: the workflow was 27 words under it, so the rewrite pushed it to\n2354.\n\nThe review round is a self-contained topic and the largest block in the file,\nso it moves to `contributing/workflows/settle-pull-request-review.md` and is\nlinked from the section it left, with the per-pull-request framing stated\nthere. The workflow is 1794 words.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:37:58+02:00",
+          "tree_id": "165b35a4230c2a978489f54fca3864804e95cb15",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0c1a748f0598f4a774fc1fe6ae898b1a37af2171"
+        },
+        "date": 1788557935325,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 183.80521646548686,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005295479832535046",
+            "extra": "mean: 5.440542000002324 msec\nrounds: 153 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 285.2134508962951,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004695502593582894",
+            "extra": "mean: 3.5061459999781164 msec\nrounds: 241 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 46.76437521694464,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012951681957102876",
+            "extra": "mean: 21.383799000005865 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 288.8046606127661,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005375099699517148",
+            "extra": "mean: 3.462548000015886 msec\nrounds: 231 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 596.8884206619202,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012470650030270162",
+            "extra": "mean: 1.6753550000032646 msec\nrounds: 516 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 59.5016416204692,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015465694016606455",
+            "extra": "mean: 16.806259000020418 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 283.97893103548773,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006637807634574362",
+            "extra": "mean: 3.5213879999957953 msec\nrounds: 229 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 587.3728925035919,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026240104062272775",
+            "extra": "mean: 1.7024960000071587 msec\nrounds: 504 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 58.80256802575105,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041882899528472724",
+            "extra": "mean: 17.006059999999934 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           }
         ]
       }
