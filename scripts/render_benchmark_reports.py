@@ -35,6 +35,7 @@ from scripts.benchmark_utils import (
     decimals_for_magnitude,
     format_bytes,
     load_benchmark_json,
+    machine_label,
 )
 from scripts.configs import (
     COMPARISON_REPORT_FILE,
@@ -300,6 +301,7 @@ def add_headline_section(
     reporter: BenchmarkReporter,
     system_info: dict[str, Any],
     headlines: Sequence[str],
+    machine: str | None = None,
 ) -> None:
     """Put the report's answer, and the configuration behind it, above the fold.
 
@@ -318,8 +320,11 @@ def add_headline_section(
         reporter.add_text(headline)
 
     platform = f"{system_info['platform_system']} {system_info['platform_machine']}"
+    measured_on = (
+        f"{platform}, {machine}" if machine else f"{platform}, CPU not recorded"
+    )
     banner = (
-        f"*Measured on {platform}, Python {system_info['python_version']}, "
+        f"*Measured on {measured_on}, Python {system_info['python_version']}, "
         f"using the {acceleration_path_label(system_info)} point-in-polygon path.*"
     )
     if is_ci_tracked_configuration(system_info):
@@ -335,6 +340,44 @@ def add_headline_section(
         )
     banner += " See :doc:`benchmarking_methodology`."
     reporter.add_text(banner)
+
+
+def add_ci_tracking_note(
+    reporter: BenchmarkReporter,
+    system_info: dict[str, Any],
+    benches: Sequence[dict[str, Any]],
+) -> None:
+    """State how this full report differs from the CI trend measurement."""
+    tracked = system_info.get("ci_tracked_benchmarks")
+    estimator = system_info.get("ci_benchmark_estimator")
+    if tracked is None or estimator is None:
+        raise ValueError(
+            "benchmark JSON is missing the recorded CI subset or estimator; "
+            "re-measure it with `make reports` before rendering"
+        )
+
+    tracked_names = set(tracked)
+    tracked_here = [
+        humanize_benchmark_name(bench["name"])
+        for bench in benches
+        if bench.get("fullname") in tracked_names
+    ]
+    if tracked_here:
+        rows = ", ".join(f"``{name}``" for name in tracked_here)
+        reporter.add_text(
+            f"Continuous integration records the ``{estimator}`` estimator for "
+            f"these rows: {rows}. This published table leads with ``Mean`` and "
+            "includes the full suite, so its values answer a different question "
+            "from the trend chart."
+        )
+        return
+
+    reporter.add_text(
+        "Continuous integration tracks none of the rows on this page. This "
+        "published table leads with ``Mean`` and belongs to the full on-demand "
+        f"suite, while the trend chart records the ``{estimator}`` estimator for "
+        "the smaller ``benchmark_core`` subset."
+    )
 
 
 def benchmarks_from_file(data: dict[str, Any], file_stem: str) -> list[dict[str, Any]]:
@@ -563,7 +606,8 @@ def render_timezone_finding(
             "``TimezoneFinder.timezone_at()`` over uniformly random query points in "
             "memory, the workload closest to a real query mix."
         )
-    add_headline_section(reporter, system_info, headlines)
+    add_headline_section(reporter, system_info, headlines, machine_label(data))
+    add_ci_tracking_note(reporter, system_info, benches)
 
     add_system_status_section(
         reporter,
@@ -711,7 +755,8 @@ def render_polygon(data: dict[str, Any], output_path: Path) -> None:
             "which is what the stratification below is for, and what the latitude "
             "block index removed."
         )
-    add_headline_section(reporter, system_info, headlines)
+    add_headline_section(reporter, system_info, headlines, machine_label(data))
+    add_ci_tracking_note(reporter, system_info, benches)
 
     add_system_status_section(
         reporter,
@@ -820,7 +865,8 @@ def render_initialization(data: dict[str, Any], output_path: Path) -> None:
             "rather than constructing per lookup."
         )
         headlines.append(headline)
-    add_headline_section(reporter, system_info, headlines)
+    add_headline_section(reporter, system_info, headlines, machine_label(data))
+    add_ci_tracking_note(reporter, system_info, benches)
 
     add_system_status_section(
         reporter,
@@ -964,7 +1010,8 @@ def render_comparison(data: dict[str, Any], output_path: Path) -> None:
             "boundary polygons cost; :doc:`alternatives` is where the trade is "
             "argued rather than measured."
         )
-    add_headline_section(reporter, system_info, headlines)
+    add_headline_section(reporter, system_info, headlines, machine_label(data))
+    add_ci_tracking_note(reporter, system_info, benches)
 
     add_system_status_section(
         reporter,
@@ -1203,7 +1250,7 @@ def render_memory(data: dict[str, Any], output_path: Path) -> None:
             "``in_memory=True`` - the default maps the coordinate data instead of "
             "reading it, which is what keeps it viable in a constrained container."
         )
-    add_headline_section(reporter, system_info, headlines)
+    add_headline_section(reporter, system_info, headlines, machine_label(data))
 
     add_system_status_section(
         reporter,

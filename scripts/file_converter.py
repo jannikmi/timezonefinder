@@ -62,7 +62,7 @@ from scripts.configs import (
 )
 from scripts.block_index import build_block_index, rotate_rings
 from timezonefinder._data_integrity import validate_block_payload, validate_data_dir
-from scripts.reporting import write_data_report_from_binary
+from scripts.reporting import report_path_for, write_data_report_from_binary
 from scripts.utils import time_execution, write_json
 from timezonefinder.flatbuf.io.polygons import (
     get_coordinate_path,
@@ -416,7 +416,13 @@ def parse_data(
     # update_data.sh re-runs this generator via `make reports` afterwards, and
     # why a standalone `make parse` of a newer dataset leaves a report stamped
     # with the old version until DATA_VERSION is updated and it is re-run.
-    write_data_report_from_binary(output_path_obj)
+    #
+    # Only a parse of the *packaged* data directory describes the committed
+    # page, so only that one writes it. Any other `-out` gets its report beside
+    # its own binaries: the destination used to be fixed, so `make testparse`
+    # and every user compiling custom data left docs/data_report.rst describing
+    # their input, with nothing to warn them.
+    write_data_report_from_binary(output_path_obj, report_path_for(output_path_obj))
 
     # the pytest-benchmark reports (docs/benchmark_results_*.rst) are NOT
     # regenerated here: they need the committed benchmark fixtures pinned to

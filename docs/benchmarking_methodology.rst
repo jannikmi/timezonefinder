@@ -108,6 +108,11 @@ into the one field that survives into the trend chart. Hovering a data point the
 it to a CPU long after the artifact has expired - which is the first thing to check when the chart
 shows a step change.
 
+The published report pages are also measured in CI, but by an explicit full-suite job rather than
+the per-pull-request job. That job uploads commit-bound pages for the release workflow to consume;
+it never commits to ``master``. Every page prints the runner CPU from its measurement JSON, so an
+absolute figure remains attributable after the artifact expires.
+
 
 The tracked estimator: ``min``, not ``mean``
 --------------------------------------------
@@ -190,8 +195,11 @@ assuming it: a Numba install sneaking into the environment would otherwise silen
 entire trend history rather than fail.
 
 For the same reason, **local numbers are not comparable to CI numbers** - different CPU, different
-memory bandwidth, different background load, and a deliberately different acceleration path.
-Compare local-to-local and CI-to-CI only.
+memory bandwidth, different background load, and often a different acceleration path. The
+published pages and the trend chart both use the clang path, but are still separate experiments on
+independently drawn runners: the pages lead with ``mean`` over the full, fixed-round suite, while
+the chart records ``min`` over ``benchmark_core``. Each published page states which of its rows, if
+any, belongs to that tracked subset. Compare local-to-local and paired CI-to-CI only.
 
 
 Thresholds derived from measured noise
