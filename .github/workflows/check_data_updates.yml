@@ -115,7 +115,7 @@ jobs:
         # shares its rate limit with everything else on its address
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        # Exit 3 is update_data.sh's "prepared, but the answer guard refused it". The
+        # Exit 3 is update_data.sh's "prepared, but the data-update guard refused it". The
         # release is complete and gets committed and opened below exactly like any
         # other - as a draft, because the whole reason for preparing it is that a
         # person reads the answer diff. Every other non-zero exit produced nothing.
@@ -125,7 +125,7 @@ jobs:
           status=$?
           set -e
           if [[ "$status" -eq 3 ]]; then
-            echo "the answer guard refused this dataset; opening the update as a draft"
+            echo "the data-update guard refused this dataset; opening the update as a draft"
             echo "guard_refused=true" >> "$GITHUB_OUTPUT"
           elif [[ "$status" -ne 0 ]]; then
             exit "$status"
@@ -229,7 +229,7 @@ jobs:
             body="$body
 
           > [!WARNING]
-          > **The answer guard refused this dataset, so this is a draft and will not be released automatically.** More than 5 % of the frozen 10,000-point sample changed answer - an ordinary refinement release changes none, and the largest legitimate move measured was 0.380 %. Read the diff of \`tests/fixtures/data_update/answers.txt\`: one line per sampled point and the timezone it now resolves to, and a coordinate pastes straight back into \`timezone_at\`. Mark this ready for review only if the change is real."
+          > **The data-update guard refused this dataset, so this is a draft and will not be released automatically.** It gates on two signals, and which one tripped is visible in this pull request's own diff rather than asserted here - naming the wrong one would argue you out of a real refusal. \`tests/fixtures/data_update/answers.txt\` is one line per sampled point and the timezone it now resolves to, and a coordinate pastes straight back into \`timezone_at\`: more than 5 % of those 10,000 points moving is a refusal, where an ordinary refinement release moves none and the largest legitimate change measured was 0.380 %. \`tests/fixtures/data_update/payload.json\` is the compiled boundary and hole payload sizes: either moving outside its band is the other refusal, where four consecutive releases moved at most 1.38 % and 2.58 %. Mark this ready for review only if the change is real."
           fi
 
           gh pr create \
