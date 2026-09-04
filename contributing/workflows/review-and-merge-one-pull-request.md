@@ -33,16 +33,11 @@ Apply in order, and take the first pull request that discriminates:
 5. **Then cheap and green**, to shrink the queue without spending maintainer attention.
 6. **Tie-breaks:** smaller diff, then the older pull request, which has already been rebased the most times.
 
-Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, one whose required independent review never ran — a review that terminated on a usage limit is silence, not a pass — one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
+Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, an improvement-pass pull request whose independent review never ran — a review that terminated on a usage limit is silence, not a pass, and a manual pull request needs no such review — one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
 
 ## Bring it up to date
 
-For a clean update, `gh pr update-branch <n>` merges the base in server-side, with no checkout and no force push. For a conflict, work in a dedicated worktree on the head branch, `git merge origin/master`, resolve, and push — a fast-forward, so no force push arises.
-
-- **Ranking table and item files.** Both sides delete what they shipped, so the union of the deletions is the resolution. Never resurrect a row or item file the other side removed, grep the id across `contributing/improvements/` afterwards, and re-run the ledger and contributor-memory tests, which is what catches a row without an entry.
-- **Changelog fragments.** One file per change means they cannot conflict; a conflict there is a change that edited `CHANGELOG.rst` directly, against the [changelog policy](../development/changelog-and-release-note-policy.md).
-- **Generated and measured files.** Regenerate through the [generator that owns them](../development/generated-file-regeneration-rules.md), or take the base and let the pull request that owns the artifact regenerate it. A hand-merged report is a number nobody measured.
-- **Semantic conflicts git cannot see.** Two branches that each pass alone can fail together: a symbol one renamed and the other calls, a fixture both add, a constant that moved. After every update, run the gate the merged-in change selects, not the one this branch selected when it was opened, and re-read the diff of the merge itself rather than only the resolved files.
+Follow the [branch-update rules](../development/branch-updates-and-conflict-resolution.md): `gh pr update-branch <n>` for a clean update, a dedicated worktree and `git merge origin/master` for a conflict, and the resolutions for ranking rows, decision files, changelog fragments, generated artifacts, and the semantic conflicts git cannot see.
 
 ## Judge it
 
@@ -89,7 +84,7 @@ Compare those names with the workflows that trigger on `pull_request` and the `p
 gh pr merge <n> --squash --delete-branch
 ```
 
-An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit, which is what a revert needs.
+An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
 
 After merging, fast-forward `master`, confirm the head is the squash commit, and re-check every remaining pull request: `--delete-branch` closes any based on that branch.
 
