@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788557242657,
+  "lastUpdate": 1788557244187,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12308,6 +12308,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96c803700f80f1459d3f8c4857a01a1d73a579a0",
+          "message": "merge-round: park an unreviewed improvement pass, and split out the conflict rules (#611)\n\n* merge-round: park a pull request whose independent review never ran\n\nThe improvement pass has required an independent review before opening a\npull request since #599, but nothing enforced it downstream, so a pass\nwhose review terminated could still be picked up and merged by a round\nthat only checked the CI list.\n\n#609 is the case: both its rounds died on usage limits and its own body\nsays \"it still needs both\". #606 is the contrast - its review found that\nthe guard's single exit code had come to carry two gates while every\nhuman-facing text still asserted the changed-answer story, which no test\nwould have failed on.\n\nA review that terminated on a usage limit is silence, and the pass rules\nalready say silence is reported as silence rather than treated as\npermission. The park list now says the same thing where the merge\ndecision is actually made.\n\nPaid for within the file's word budget by trimming the rationale on the\nsquash-commit reporting rule, which is settled and no longer needs\nre-arguing on every read.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* merge-round: park an unreviewed improvement pass, and split out the conflict rules\n\nThe improvement pass has required an independent review before opening a\npull request since #599, but nothing enforced it downstream, so a pass\nwhose review terminated could still be picked up and merged by a round\nthat only checked the CI list. #609 is the case: both its rounds died on\nusage limits and its own body says \"it still needs both\". #606 is the\ncontrast - its review found that the guard's single exit code had come to\ncarry two gates while every human-facing text still asserted the\nchanged-answer story, which no test would have failed on.\n\nScoped to improvement passes, per the maintainer: a manual pull request\nneeds no such review.\n\nMaking room by trimming a settled rule's rationale was the wrong move and\nis reverted; the file is split instead. `Bring it up to date` becomes\n`development/branch-updates-and-conflict-resolution.md`, routed from\nCONTRIBUTING.md, because the knowledge is not the merge round's - an\nimprovement pass rebasing before its final gate needs the same rules. The\nmerge round keeps a one-paragraph pointer, and drops to 1,847 words.\n\nTwo resolutions learned in this run join the extracted module: a decision\nfile that two branches edit in different bullets merges cleanly and lands\nover its word budget, so the count is what to check rather than the\nconflict markers; and an exhaustiveness table on the base is a semantic\nconflict a new `scripts/` command walks straight into.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:26:22+02:00",
+          "tree_id": "7754e4b88068c2988a83b74b9c3c2cc52155aebf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/96c803700f80f1459d3f8c4857a01a1d73a579a0"
+        },
+        "date": 1788557243856,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008345603942871,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008523941040039,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2301483154296875,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.23085880279541,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58417987823486,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.584988594055176,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
           }
         ]
       }
