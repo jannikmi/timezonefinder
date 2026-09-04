@@ -89,7 +89,7 @@ Compare those names with the workflows that trigger on `pull_request` and the `p
 gh pr merge <n> --squash --delete-branch
 ```
 
-An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge with the command that undoes it, so a merge the maintainer disagrees with costs a revert rather than a review.
+An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
 
 After merging, fast-forward local `master`, confirm the head is the squash commit, and re-check every remaining pull request before the next round begins.
 
@@ -103,4 +103,4 @@ The run ends when no open pull request is left, or when every one that remains i
 
 ## Reporting
 
-Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; and what changed for the rest of the queue. Close the run with the pull requests merged in order and the command that reverts each, what remains open and what each one waits for, and the pick the next run would start from.
+Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; and what changed for the rest of the queue. Close the run with the pull requests merged in order, each with its squash commit, what remains open and what each one waits for, and the pick the next run would start from.
