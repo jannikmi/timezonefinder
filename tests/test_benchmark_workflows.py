@@ -24,6 +24,7 @@ artifacts, so the counts pinned below cover both.
 
 from pathlib import Path
 import re
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -53,6 +54,16 @@ SHARED_ENV_KEYS = (
 
 def _load(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text())
+
+
+def _push_branches(workflow: dict[Any, Any]) -> list[str]:
+    """The branches a push starts the workflow on.
+
+    YAML 1.1 reads a bare ``on:`` key as the boolean ``True``, which is why this
+    is a lookup rather than ``workflow["on"]``: the key is not a string.
+    """
+    branches: list[str] = workflow[True]["push"]["branches"]
+    return branches
 
 
 @pytest.fixture(scope="module")
@@ -150,10 +161,153 @@ def test_the_report_job_uploads_read_only_commit_bound_pages(
 @pytest.mark.unit
 def test_the_release_installs_only_reports_for_its_exact_commit() -> None:
     instructions = RELEASE_WORKFLOW.read_text(encoding="utf-8")
-    dispatch = instructions.index("-f render_reports=true")
-    download = instructions.index("gh run download", dispatch)
+    push = instructions.index('git push -u origin "$release_branch"')
+    listing = instructions.index("gh run list --workflow benchmark.yml", push)
+    download = instructions.index("gh run download", listing)
     validation = instructions.index('--expected-commit "$release_sha"', download)
-    assert dispatch < download < validation
+    assert push < listing < download < validation
+    # The run the release consumes is the one its own push started, so the
+    # listing must select `push` runs; `--event workflow_dispatch` would find
+    # nothing and send the reader back to pressing a button.
+    assert "--event push" in instructions[listing:download]
+
+
+# Every event `benchmark.yml` can receive, and the jobs that must run on it.
+# Written as an evaluated table rather than as assertions about the text of an
+# `if:`, because what this workflow gets wrong is *polarity*: dropping one `!`
+# from the release-branch guard inverts the measurement half so that it runs
+# only on release branches - the master trend chart silently stops gaining
+# points and every pull request's base/head artifacts stop being produced, with
+# nothing red anywhere. A substring assertion passes on that edit. Evaluating
+# the expression does not.
+#
+# `inputs` is null on every event but `workflow_dispatch`, which is why the
+# dispatch-only jobs can guard on `inputs.render_reports` alone.
+TRIGGER_TABLE: tuple[tuple[str, dict[str, Any], set[str]], ...] = (
+    (
+        "push to master",
+        {"event_name": "push", "ref": "refs/heads/master", "inputs": None},
+        {"plan", "measure", "track"},
+    ),
+    (
+        "push to a release branch",
+        {"event_name": "push", "ref": "refs/heads/release/8.4.0", "inputs": None},
+        {"render-reports"},
+    ),
+    (
+        "pull request",
+        {"event_name": "pull_request", "ref": "refs/pull/7/merge", "inputs": None},
+        {"plan", "measure"},
+    ),
+    (
+        "noise dispatch",
+        {
+            "event_name": "workflow_dispatch",
+            "ref": "refs/heads/master",
+            "inputs": {"render_reports": False},
+        },
+        {"plan", "measure", "noise"},
+    ),
+    (
+        "noise dispatch from a release branch",
+        {
+            "event_name": "workflow_dispatch",
+            "ref": "refs/heads/release/8.4.0",
+            "inputs": {"render_reports": False},
+        },
+        {"plan", "measure", "noise"},
+    ),
+    (
+        "report dispatch",
+        {
+            "event_name": "workflow_dispatch",
+            "ref": "refs/heads/master",
+            "inputs": {"render_reports": True},
+        },
+        {"render-reports"},
+    ),
+)
+
+GATED_JOBS = ("plan", "measure", "track", "noise", "render-reports")
+
+_EXPRESSION_TOKENS = (("&&", " and "), ("||", " or "), ("!", " not "))
+
+
+def _evaluate(expression: str, context: dict[str, Any]) -> bool:
+    """Evaluate one GitHub Actions `if:` against a synthetic event context.
+
+    Only the operators these five conditions use are supported; anything else
+    raises rather than quietly evaluating to something. `!=` is deliberately
+    absent from the rewrite table - none of them use it, and rewriting `!`
+    before `=` would corrupt it.
+    """
+    assert "!=" not in expression, f"unsupported operator in {expression!r}"
+    body = expression.strip()
+    if body.startswith("${{"):
+        body = body.removeprefix("${{").removesuffix("}}")
+    for token, python in _EXPRESSION_TOKENS:
+        body = body.replace(token, python)
+    namespace = {
+        "github": SimpleNamespace(event_name=context["event_name"], ref=context["ref"]),
+        "inputs": SimpleNamespace(**(context["inputs"] or {}))
+        if context["inputs"]
+        else SimpleNamespace(render_reports=None),
+        "startsWith": lambda value, prefix: str(value).startswith(prefix),
+    }
+    return bool(eval(body, {"__builtins__": {}}, namespace))  # noqa: S307
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("event", "context", "expected"),
+    TRIGGER_TABLE,
+    ids=[row[0] for row in TRIGGER_TABLE],
+)
+def test_each_event_runs_exactly_the_jobs_it_should(
+    benchmark_workflow: dict[Any, Any],
+    event: str,
+    context: dict[str, Any],
+    expected: set[str],
+) -> None:
+    """The whole gated job graph, per event.
+
+    Three properties this pins that no single job's condition states. A release
+    branch renders the report pages, so a release never depends on somebody
+    having remembered a manual dispatch - the previous arrangement failed late,
+    at `benchmark_report_artifact install`, on a stamp check with no run to
+    install from. A release branch contributes no point to the `gh-pages` trend
+    series, whose alert threshold was derived from `ubuntu-latest` hardware
+    spread and would be meaningless with a second confound in it. And a
+    *noise* dispatch aimed at a release branch still measures: guarding the
+    measurement half on `github.ref` alone would have disabled it there.
+    """
+    if event == "push to a release branch":
+        assert "release/**" in _push_branches(benchmark_workflow), (
+            "a release branch push no longer starts the workflow at all"
+        )
+    jobs = benchmark_workflow["jobs"]
+    running = {name for name in GATED_JOBS if _evaluate(str(jobs[name]["if"]), context)}
+    # `track` needs `measure`, so a skipped measurement half skips it anyway;
+    # the table states the end result rather than the condition in isolation.
+    if "measure" not in running:
+        running.discard("track")
+    assert running == expected, f"wrong job set on {event}"
+
+
+@pytest.mark.unit
+def test_the_manual_report_dispatch_survives(
+    benchmark_workflow: dict[Any, Any],
+) -> None:
+    """It is the only way to re-render for a commit that has stopped moving.
+
+    A push trigger renders the head it was given. When that artifact expires
+    against an unchanged release commit, or a pull request outside a release
+    moves a measured path, there is no push left to make - so the dispatch
+    input stays.
+    """
+    condition = str(benchmark_workflow["jobs"]["render-reports"]["if"])
+    assert "inputs.render_reports" in condition
+    assert "render_reports" in benchmark_workflow[True]["workflow_dispatch"]["inputs"]
 
 
 @pytest.mark.unit

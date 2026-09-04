@@ -21,7 +21,7 @@ Fetch `origin` and tags, inspect `uv version --short`, the top changelog section
 
 ## Prepare
 
-Require a clean/accounted working tree; current `master` equal to `origin/master`; no open release pull request or release branch; a non-empty unreleased section *after assembly* — `make changelog` shows what a release would carry; and a green latest `master` run.
+Require a clean/accounted working tree; current `master` equal to `origin/master`; no open release pull request or release branch; a non-empty unreleased section *after assembly* — `make changelog` shows what a release would carry; and a green latest `master` run. A `release/**` branch on `origin` with no pull request is an abandoned attempt, not work in progress: the branch is pushed early so the report render can start (see *Refresh the committed benchmark reports*), so an attempt given up between that push and the pull request leaves one behind. Delete it and start over rather than resuming it; nothing has been published at that point.
 
 ### Publish the data distribution first
 
@@ -82,15 +82,20 @@ Run `make hook`, `make test`, and `make testint`. Confirm the diff against `orig
 
 The release freezes `docs/benchmark_results_*.rst` as the published performance of the version, so a page measured before the code it describes ships as the release's own claim. The benchmark workflow renders the full pages on a named CI runner; the release consumes that artifact and remains the only place that commits it.
 
-Check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and this step is required. If nothing did, skip it and say so in the pull request body.
-
-When they are stale, dispatch the report job against the release commit. Record the release SHA before dispatch: the artifact carries that SHA, and the installer refuses to copy a report measured for any other tree.
+Push the branch as soon as the version commit exists. `benchmark.yml` runs on every push to `release/**` and renders the pages for the pushed commit, so the run this step consumes is already under way before the step is read, and nothing has to be dispatched by hand. From here until the pull request is open, an abandoned attempt leaves a branch on `origin`; the *Prepare* preconditions say to delete it.
 
 ```bash
 release_sha=$(git rev-parse HEAD)
 release_branch=$(git branch --show-current)
-gh workflow run benchmark.yml --ref "$release_branch" -f render_reports=true
-gh run list --workflow benchmark.yml --commit "$release_sha" --event workflow_dispatch
+git push -u origin "$release_branch"
+```
+
+Then check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and must be installed. If nothing did, skip the install and say so in the pull request body — the render still ran, because a push trigger cannot read that check. That costs one otherwise idle 60-minute runner on a release that moved no measured path, and buys a release that can never reach the install step with nothing to install.
+
+`$release_sha` is what makes the install safe: the artifact carries that SHA and the installer refuses to copy a report measured for any other tree.
+
+```bash
+gh run list --workflow benchmark.yml --commit "$release_sha" --event push
 gh run watch <run-id> --exit-status
 rm -rf tmp/benchmark-pages
 gh run download <run-id> --name benchmark-pages --dir tmp/benchmark-pages
@@ -98,11 +103,13 @@ uv run python -m scripts.benchmark_report_artifact install \
   --artifact-dir tmp/benchmark-pages --expected-commit "$release_sha"
 ```
 
-Use the run whose displayed head SHA is exactly `$release_sha`; never take the newest run on branch name alone. The workflow pins the plain-install clang path, fixes the report round count, and prints the runner's CPU on every page. A failed job yields no report to commit. If the artifact has expired, dispatch a replacement against the unchanged release commit.
+Use the run whose displayed head SHA is exactly `$release_sha`; never take the newest run on branch name alone. The workflow pins the plain-install clang path, fixes the report round count, and prints the runner's CPU on every page. A failed job yields no report to commit.
+
+**Any further push to the release branch invalidates this step, and does it by cancelling.** `benchmark.yml`'s concurrency group is the workflow plus the ref with `cancel-in-progress: true`, so pushing a fixup while the render is running kills the run for `$release_sha` rather than adding a second one beside it — `gh run watch --exit-status` then exits non-zero on a *cancelled* run, which reads like a failure and is not one. Recover by re-capturing `release_sha` from the new head and re-running the block, which the branch's own push has already restarted. `gh workflow run benchmark.yml --ref "$release_branch" -f render_reports=true` renders against the branch head for the one case no push covers: an artifact that expired while the release commit stood still. That manual dispatch is now the exception rather than the prerequisite.
 
 Commit the refreshed pages **in their own commit**, so the version commit stays exact and the measurement diff is reviewable on its own. Stage only `docs/benchmark_results_*.rst` and `docs/data_report.rst`. The pull request body names the workflow run and runner CPU, and states that CI's paired same-runner comparison — not these cross-runner absolute pages — is the authority on whether code moved performance.
 
-Push and open the release pull request. Its body names the old and new versions, level, the single bullet driving the level and matching rule, the level not taken and why, changelog edits, verification, whether the reports were refreshed or skipped as current, and that tagging happens separately. Stop.
+Push the remaining commits and open the release pull request. Its body names the old and new versions, level, the single bullet driving the level and matching rule, the level not taken and why, changelog edits, verification, whether the reports were refreshed or skipped as current, and that tagging happens separately. Stop.
 
 ## Tag
 
