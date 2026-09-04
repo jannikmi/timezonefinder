@@ -20,6 +20,10 @@ DATA_REPORT_PATH=docs/data_report.rst
 # scripts/data_update_guard.py's GATE_TRIPPED_EXIT: a dataset prepared but refused,
 # as opposed to a run that failed. This script exits the same code for the same
 # meaning, which is what .github/workflows/check_data_updates.yml keys the draft on.
+# One code for either gate, deliberately: what the code decides is whether a person
+# has to look, and both baselines the guard rewrites are in the pull request either
+# way. Naming a gate here would mean asserting one, and asserting the wrong one is
+# what argues a reviewer out of a real refusal.
 GUARD_REFUSED_EXIT=3
 
 usage() {
@@ -306,9 +310,11 @@ if [ "$RM_TMP" -eq 1 ]; then
 fi
 
 if [ "$GUARD_REFUSED" -eq 1 ]; then
-    echo "PREPARED $DATA_PACKAGE $NEW_VERSION, BUT THE ANSWER GUARD REFUSED IT." >&2
-    echo "Everything is in the working tree, including the rewritten answer baseline." >&2
-    echo "Review its diff and decide; do not tag data-v$NEW_VERSION until you have." >&2
+    echo "PREPARED $DATA_PACKAGE $NEW_VERSION, BUT THE DATA-UPDATE GUARD REFUSED IT." >&2
+    echo "The guard's own output above says which signal tripped." >&2
+    echo "Everything is in the working tree, including the rewritten baselines under" >&2
+    echo "tests/fixtures/data_update/. Review their diffs and decide; do not tag" >&2
+    echo "data-v$NEW_VERSION until you have." >&2
     exit "$GUARD_REFUSED_EXIT"
 fi
 
