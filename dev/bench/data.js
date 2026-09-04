@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788555057472,
+  "lastUpdate": 1788555727198,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5445,6 +5445,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00017998770603711733",
             "extra": "mean: 17.614885000000413 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5fb74fe69cd2eb501e8caa35f801aca579fff73f",
+          "message": "Gate the data update on a measured payload-size band (#606)\n\n* GH-501: gate the data update on a measured payload-size band\n\nThe payload sizes the data-update guard records shipped report-only,\nbecause the only calibrated band was the asymmetric one the maintainer\noverruled, and every band the old figures supported fired on ordinary\nrefinement. Measured the symmetric replacement the way the changed-answer\nrate was measured: 2025c, 2026a, 2026b and 2026c each converted from its\nupstream GeoJSON with the code in this tree, so one reader opens all four.\nThe 2026c conversion reproduces the committed payload.json byte for byte,\nwhich is what makes the other three comparable with it.\n\n    2025c   31,034,584 B boundary          97,452 B hole\n    2026a   31,116,264 B (+0.26 %)         94,936 B (-2.58 %)\n    2026b   31,304,936 B (+0.61 %)         94,936 B (+0.00 %)\n    2026c   31,735,692 B (+1.38 %)         95,168 B (+0.24 %)\n\nBanded per file rather than on one shared number: the boundary payload is\n~31 MB and moved at most 1.38 %, while the hole payload is ~95 KB, so the\n26 holes that vanished in 2026a moved it by 2.58 %. One band sized for the\nholes would leave the file carrying the data effectively ungated. Each band\nis ~3.6x its file's largest measured move, which the tests assert rather\nthan the comment merely claiming it. The polygon counts stay report-only:\na zone rename is a removal plus an addition.\n\nThe earlier hole figures (-0.07 %, +0.09 %, -0.31 %) did not survive\nre-measurement under the current binary format, so the recorded decision\nnow says a band is never carried over from an older one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: delete GH-501, whose payload-size band has shipped\n\nThe measured band and the reasoning that survives it are in the guard, its\ntests and the distribution decisions; nothing is left for a pass to take.\nRe-verified the other GH-* entries against their issues in the same pass:\nGH-301's issue is closed as not planned and its entry already says so.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* GH-501: state a refusal without asserting which gate produced it\n\nReview found the serious half of this change: one exit code now carries two\ngates, and every text a human reads still told the changed-answer story. A\ndataset refused on payload size would have arrived as a draft whose warning\nasserted that more than 5 % of the sample moved, over an answer diff showing\nthat it had not - which reads as a misfiring guard and argues the reviewer\ninto releasing it. The reason channel is widened once, at the notices rather\nthan at each gate: update_data.sh and both workflow texts now name the\nrefusal without naming a signal, and point at both baselines the guard\nrewrites, whichever moved. A test takes those paths from the guard's own\nconstants, so a third baseline no notice mentions fails there.\n\nAlso from the review:\n\n- a first run with no answer baseline returns before the rate is computed,\n  which is right for the answers and was silently ungating the sizes; the\n  path was covered by no test and now is.\n- the band suffix was printed on lines where no band was evaluated, so a\n  first run read as a band that had passed.\n- the just-inside-the-band case tested only growth, leaving the decision's\n  own \"small reductions pass\" covered nowhere inside the band.\n- the headroom is 3.6x for the boundaries and 3.9x for the holes, not 3.6x\n  for both, in the code comment and in the recorded decision.\n- the boundary figures in the benchmarking decisions were the pre-format\n  ones (+0.29 %, +0.65 %); re-measured they are +0.26 % and +0.61 %.\n- the oversized-payload paragraph repeated both files' calibration in full\n  once per moved key.\n\nDeclined: a payload refusal is still discarded when the committed baseline\ndoes not describe the frozen sample. That path exits 1, which stops\nupdate_data.sh before it prepares anything, and the payload paragraph is\nprinted before it returns - so the anomaly is reported and nothing can be\npublished. An error outranks a refusal there.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:01:12+02:00",
+          "tree_id": "bd168337a8d13ffb1ecbabf89f2136ffd8e23bcf",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5fb74fe69cd2eb501e8caa35f801aca579fff73f"
+        },
+        "date": 1788555725618,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 247.3612124274115,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021051510595851612",
+            "extra": "mean: 4.0426709999792365 msec\nrounds: 195 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 386.3447230273642,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008924139860433232",
+            "extra": "mean: 2.5883620000399787 msec\nrounds: 339 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 60.991936256041484,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005588034670503376",
+            "extra": "mean: 16.39561000001777 msec\nrounds: 55 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 355.9842555268162,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017739314912049715",
+            "extra": "mean: 2.8091130000120756 msec\nrounds: 290 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 678.1398893877417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008254569905922464",
+            "extra": "mean: 1.4746220000461108 msec\nrounds: 622 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 76.9214319878822,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00040748319195575786",
+            "extra": "mean: 13.000277999992704 msec\nrounds: 64 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 359.7441931030222,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020543416760718258",
+            "extra": "mean: 2.779752999970242 msec\nrounds: 288 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 667.5308966758031,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005542738973757207",
+            "extra": "mean: 1.4980579999814836 msec\nrounds: 589 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 76.8085022711346,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023062212049466938",
+            "extra": "mean: 13.019391999989693 msec\nrounds: 67 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           }
         ]
       }
