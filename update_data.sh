@@ -211,6 +211,17 @@ echo "DATA_SOURCE records $(grep '^sha256' DATA_SOURCE)"
 # what keeps "no stamp" and "a stamp for another release" from looking alike.
 rm -f DATA_BUILD_RUN
 
+# The reduced-zone mapping the test suite converts its expectations through is
+# upstream's own file, so it is a property of the release just parsed rather than of
+# the variant this run built: the same table is what tells the suite how zones merge
+# whichever dataset a checkout compiled. Re-taken here so it advances with
+# DATA_VERSION, which tests/test_reduced_zone_mapping.py requires it to.
+echo "VENDORING THE REDUCED-ZONE MAPPING..."
+if ! uv run python -m scripts.upstream_release vendor-zone-mapping --tag "$DOWNLOADED_TAG"; then
+    echo "could not vendor the reduced-zone mapping for $DOWNLOADED_TAG!" >&2
+    exit 1
+fi
+
 # What the new dataset actually answers. A frozen sample of 10,000 on-land points is
 # re-answered and diffed against the committed baseline, and the rewritten file is the
 # release's review artifact.

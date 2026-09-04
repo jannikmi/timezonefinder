@@ -5,7 +5,14 @@ repos:
             -   id: check-ast  # Is it valid Python?
             -   id: debug-statements # no debbuging statements used
             -   id: trailing-whitespace
+                # The vendored upstream reduced-zone mapping is kept byte-for-byte as
+                # released: tests/test_reduced_zone_mapping.py re-hashes it against the
+                # digest tests/fixtures/reduced_zones/source.txt records. Reformatting
+                # it, or appending the newline upstream does not write, turns that
+                # proof of provenance into a failure on a file nobody edited.
+                exclude: &vendored_upstream_json ^tests/fixtures/reduced_zones/mapping\.json$
             -   id: end-of-file-fixer
+                exclude: *vendored_upstream_json
             -   id: check-yaml
             -   id: check-added-large-files
                 # The packaged dataset is git-ignored and normally never staged at all.
@@ -18,6 +25,7 @@ repos:
             -   id: check-json
             -   id: pretty-format-json
                 args: [ "--autofix" ]
+                exclude: *vendored_upstream_json
             -   id: check-merge-conflict
             -   id: check-docstring-first
             -   id: requirements-txt-fixer
@@ -89,4 +97,7 @@ repos:
     -   repo: https://github.com/pre-commit/mirrors-clang-format
         rev: v23.1.0
         hooks:
+            # this hook's file types include JSON, so the byte-for-byte upstream table
+            # is exempt here for the same reason it is exempt from the JSON hooks above
             -   id: clang-format
+                exclude: *vendored_upstream_json
