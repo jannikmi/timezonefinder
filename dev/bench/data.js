@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788502690851,
+  "lastUpdate": 1788504879456,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4662,6 +4662,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00014663342399509824",
             "extra": "mean: 18.47407099999998 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b837bb947837e6b7a4a823c264711a919bf8ae6f",
+          "message": "say when the development environment is stale instead of failing as a code regression (#601)\n\n`uv run` syncs inexactly: it refreshes the default dependency groups and neither\nremoves nor updates anything outside them. An optional group therefore keeps\nwhatever version `uv sync --all-groups` last installed, and a lockfile bump that\nmoves a shared dependency past that version's ceiling breaks its import while\n`find_spec` still finds it. For numba - whose ImportError `utils_numba.py`\nswallows by design, falling back to the pure-Python replacements - the only\nsymptom was `test_using_numba` asserting `False == True`, which reads as a\nregression in this package rather than as a checkout needing `make install`.\nMeasured on this repository: the dev venv carries numba 0.65.1 (`numpy<2.5`)\nwhile the lock resolves numpy 2.5.2, so the next plain `uv run` upgrades numpy,\nleaves numba behind, and `import numba` raises \"Numba needs NumPy 2.4 or less\".\n\nThe test now reports that ImportError and names the recovery.\n\n`make force_update` was also the one target that can empty the environment: a\nbare `uv sync` is exact, and pruned numba, pytest and tzfpy (53 packages in a\nmeasured run), leaving a checkout whose next `make test` cannot spawn pytest.\nIt now syncs `--all-groups`, matching `make install`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:53:46+02:00",
+          "tree_id": "b7dd4ae39ad2d16d5b9a2e09b83f120b17fe1ff8",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b837bb947837e6b7a4a823c264711a919bf8ae6f"
+        },
+        "date": 1788504878680,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 180.72584197000114,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000705774041517483",
+            "extra": "mean: 5.53324300000213 msec\nrounds: 154 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 297.5423596179124,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023163390467596023",
+            "extra": "mean: 3.3608660000012947 msec\nrounds: 268 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 44.01133379868695,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013881589329623404",
+            "extra": "mean: 22.72141999999633 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 276.08796604371497,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004035303100167619",
+            "extra": "mean: 3.622033999995722 msec\nrounds: 237 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 589.7384333127073,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005077819654703798",
+            "extra": "mean: 1.6956669999999008 msec\nrounds: 540 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 56.45226847796441,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004810794407306661",
+            "extra": "mean: 17.714079999997523 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 272.7321571123391,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000368062559718227",
+            "extra": "mean: 3.666600999999048 msec\nrounds: 242 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 573.8166323049231,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002619809031593286",
+            "extra": "mean: 1.742716999999061 msec\nrounds: 506 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 56.00002464001129,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001247499938748622",
+            "extra": "mean: 17.857134999999857 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           }
         ]
       }
