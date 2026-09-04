@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788556527567,
+  "lastUpdate": 1788556529211,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12155,6 +12155,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5007 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e5aa8e8bc3c5c705fec4f90ffe729f1f5749afb",
+          "message": "Record what a decision holds now, and let a pull request publish its own render (#608)\n\nThree corrections, all raised by the maintainer after #603 merged without\nthem being put to him.\n\nThe #497 entry still opened \"The two point-in-polygon kernels are the same\nspeed\" with a later clause saying that half no longer holds - so a reader\nwho skims one line got the retired answer. The claim is rewritten to what\nholds now and #497's measurement is kept beneath it, dated and marked\nsuperseded: its evidence is sound for the bare kernel it measured, and\ndropping it would invite the re-proposal.\n\nThe rules that should have prevented that are sharpened where each is\nowned. The core contract already says to amend rather than append; it now\nnames the shape that slips past it, an amendment that leaves the original\nclaim standing above it. The register's decision-retention rule says what\nto keep when the claim is rewritten, rather than only \"correct the\nreasoning\".\n\nThe release runbook said the release \"remains the only place that commits\"\nthe benchmark pages. That was written when the pages could only come from a\ncontributor machine, so restricting the commit point was the safeguard;\nthe artifact stamp is that safeguard now, and the rule as written meant a\npull request could never publish the numbers for what it changed. It now\npermits a pull request to install its own render, with the release still\nthe step that freezes the version's claim.\n\nRequested by the maintainer.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:14:40+02:00",
+          "tree_id": "3617a834b4bee5f70f6bad7b30b7ba4ccfbdac94",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7e5aa8e8bc3c5c705fec4f90ffe729f1f5749afb"
+        },
+        "date": 1788556528869,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2301836013793945,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.230992317199707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58395767211914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58476638793945,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
           }
         ]
       }
