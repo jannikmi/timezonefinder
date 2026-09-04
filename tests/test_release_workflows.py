@@ -66,6 +66,9 @@ SCRIPT_GATES: dict[str, str | None] = {
     "_memory_probe": NOT_A_GATE,
     "assert_acceleration_path": NOT_A_GATE,
     "benchmark_noise": NOT_A_GATE,
+    # refuses, but over a report's binding to the commit that measured it, and
+    # `benchmark.yml` publishes nothing a release depends on
+    "benchmark_report_artifact": NOT_A_GATE,
     "bootstrap_data": NOT_A_GATE,
     "changelog_fragments": RELEASE_GATE,
     "check_data_dependency": RELEASE_GATE,
