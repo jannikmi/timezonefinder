@@ -29,10 +29,14 @@ from typing import Any
 import pytest
 import yaml
 
-from tests.auxiliaries import WORKFLOW_DIR
+from tests.auxiliaries import PROJECT_ROOT, WORKFLOW_DIR
 
 BENCHMARK_WORKFLOW = WORKFLOW_DIR / "benchmark.yml"
 BENCHMARK_COMMENT_WORKFLOW = WORKFLOW_DIR / "benchmark-comment.yml"
+MAKEFILE = PROJECT_ROOT / "Makefile"
+RELEASE_WORKFLOW = (
+    PROJECT_ROOT / "contributing/workflows/prepare-and-publish-code-release.md"
+)
 
 # workflow-level `env:` entries that both files declare and that must be
 # identical - see the "must match" comments in benchmark-comment.yml.
@@ -94,6 +98,62 @@ def _steps_using(
         for step in workflow["jobs"][job]["steps"]
         if str(step.get("uses", "")).startswith(action)
     ]
+
+
+def _make_recipe(target: str) -> str:
+    text = MAKEFILE.read_text(encoding="utf-8")
+    match = re.search(
+        rf"(?m)^{re.escape(target)}:[^\n]*\n(?P<recipe>(?:\t[^\n]*\n)+)", text
+    )
+    assert match is not None, f"the Makefile no longer defines {target!r}"
+    return match["recipe"]
+
+
+# Every target that produces a published or CI-tracked measurement, timing and
+# footprint alike. The footprint ones belong here for the same reason as the
+# timings: importing numba costs resident memory, so a `memory-ci` run in a
+# development environment - which has numba, because `make install` syncs
+# --all-groups - records a footprint the plain install never has.
+MEASUREMENT_TARGETS = ("benchmarks", "benchmarks-ci", "latency", "memory", "memory-ci")
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("target", MEASUREMENT_TARGETS)
+def test_every_measurement_target_asserts_its_acceleration_path(target: str) -> None:
+    assert "scripts.assert_acceleration_path" in _make_recipe(target), (
+        f"make {target} can measure whichever backend the caller's environment "
+        "happens to bind instead of refusing a report for the wrong implementation"
+    )
+
+
+@pytest.mark.unit
+def test_the_published_suite_uses_one_fixed_round_count() -> None:
+    recipe = _make_recipe("benchmarks")
+    assert "--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS)" in recipe
+    assert "--benchmark-max-time=0" in recipe
+
+
+@pytest.mark.unit
+def test_the_report_job_uploads_read_only_commit_bound_pages(
+    benchmark_workflow: dict[str, Any],
+) -> None:
+    report_job = benchmark_workflow["jobs"]["render-reports"]
+    assert report_job["permissions"] == {"contents": "read", "actions": "read"}
+    scripts = "\n".join(str(step.get("run", "")) for step in report_job["steps"])
+    assert "make reports" in scripts
+    assert "scripts.benchmark_report_artifact stage" in scripts
+    assert '--commit "$GITHUB_SHA"' in scripts
+    uploads = _steps_using(benchmark_workflow, "render-reports", UPLOAD_ACTION)
+    assert [step["with"]["name"] for step in uploads] == ["benchmark-pages"]
+
+
+@pytest.mark.unit
+def test_the_release_installs_only_reports_for_its_exact_commit() -> None:
+    instructions = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    dispatch = instructions.index("-f render_reports=true")
+    download = instructions.index("gh run download", dispatch)
+    validation = instructions.index('--expected-commit "$release_sha"', download)
+    assert dispatch < download < validation
 
 
 @pytest.mark.unit

@@ -253,6 +253,28 @@ jobs:
               --only-binary :all: --no-index --find-links ./dist --no-deps -d /tmp/platform_test timezonefinder
             ls /tmp/platform_test/timezonefinder*manylinux_2_28*.whl
 
+  # The one context branch protection requires. Requiring the gate jobs directly does
+  # not work: the tox matrix's check names carry their matrix values, so every matrix
+  # edit renames a required check and silently un-gates the branch until protection is
+  # edited to match. This job's name is fixed, and what it aggregates is a list a test
+  # keeps complete - a job added to this workflow and not listed below would otherwise
+  # produce no required signal at all, which reads exactly like passing.
+  ci-ok:
+    name: ci-ok
+    # `test` skips on tag refs, and a skipped dependency fails this job; tags are
+    # published from a commit whose own master run already produced this check.
+    if: always() && !startsWith(github.ref, 'refs/tags/')
+    needs: [pre-commit-hooks, test, make-wheels, make-sdist, make-data-wheel, end-to-end-test]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # skipped counts as failure: a gate that did not run has not passed
+      - name: Require every gate job to have succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: |
+          echo "gate results: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+
   release:
     name: Create release and publish to TestPyPI
     runs-on: ubuntu-latest

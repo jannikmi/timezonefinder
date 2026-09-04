@@ -82,12 +82,16 @@ lock:
 
 
 # when dependency resolving gets stuck:
+# --all-groups, matching `install`: `uv sync` is *exact*, so a bare one prunes every
+# package outside the default groups - numba, pytest, tzfpy - and leaves a checkout
+# whose next `make test` cannot even spawn pytest. `uv run` never prunes, so this
+# target is the only one here that can empty the development environment.
 force_update:
 	@echo "force updating the requirements. removing lock file"
 	@uv cache clean
 	@rm -f uv.lock
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@uv sync --refresh
+	@uv sync --all-groups --refresh
 
 outdated:
 	@echo "Checking for outdated packages (excluding those constrained by dependencies)..."
@@ -107,10 +111,9 @@ data:
 parse:
 	uv run python -m scripts.file_converter
 
-# NOTE: parse_data() always writes its report to the checkout's committed
-# docs/data_report.rst, whatever -out it was given, so this target leaves that
-# file describing the 3-zone fixture. Restore it afterwards:
-#   git checkout -- docs/data_report.rst
+# The report lands in ./tmp/parsed_data/ alongside the binaries it describes:
+# parse_data() writes the committed docs/data_report.rst only for the packaged
+# data directory, so this target leaves the checkout clean.
 testparse:
 	uv run python -m scripts.file_converter -inp ./tests/test_input.json -out ./tmp/parsed_data
 
@@ -173,16 +176,21 @@ benchmarks:
 	@mkdir -p tmp
 	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
 		--expect $(BENCHMARK_ACCELERATION_PATH)
-	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark --benchmark-json=$(BENCHMARK_JSON)
+	uv run $(BENCHMARK_ENV) pytest benchmarks -m benchmark \
+		--benchmark-min-rounds=$(BENCHMARK_REPORT_ROUNDS) --benchmark-max-time=0 \
+		--benchmark-json=$(BENCHMARK_JSON)
 
 # the memory counterpart of `benchmarks`. Separate because pytest-benchmark
 # measures wall clock only, and running tracemalloc across its rounds would
 # distort the very timings above (see scripts/measure_memory.py).
-# Same $(BENCHMARK_ENV) as `benchmarks`, so the pages `reports` writes all
-# describe one configuration: importing numba costs resident memory too, and a
-# footprint page measured with it sits beside timing pages measured without it.
+# Same $(BENCHMARK_ENV) and the same asserted acceleration path as `benchmarks`,
+# so the pages `reports` writes all describe one configuration: importing numba
+# costs resident memory too, and a footprint page measured with it sits beside
+# timing pages measured without it.
 memory:
 	@mkdir -p tmp
+	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run $(BENCHMARK_ENV) python -m scripts.measure_memory --output=$(MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)
 
@@ -224,6 +232,11 @@ RAW_CORE_BENCHMARK_JSON := tmp/benchmark-core-raw.json
 CI_BENCHMARK_JSON := tmp/benchmark-core-tracked.json
 # min is the least noise-sensitive estimator here - see scripts/benchmark_utils.py
 BENCHMARK_ESTIMATOR := min
+# Ordinary published rows use a fixed number of rounds instead of inheriting
+# different sample counts from pytest-benchmark's time budget. Fifteen keeps
+# the slow pure-Python polygon strata practical; suites that explicitly require
+# more samples keep their own pinned marker or pedantic count.
+BENCHMARK_REPORT_ROUNDS := 15
 # enough rounds that pytest-benchmark's calibration has something to work with
 # and the tracked min is drawn from a decent sample. The core subset is a few
 # milliseconds per round, so this stays far below the CI time budget.
@@ -233,9 +246,11 @@ BENCHMARK_MIN_ROUNDS := 50
 # path are not comparable (see
 # contributing/development/benchmarking-and-performance-validation.md).
 # $(BENCHMARK_ENV) above is what
-# holds `benchmarks`/`memory` to it; the -ci targets below inherit whichever
-# environment they are invoked in, because CI syncs its own and asserts this
-# same value before measuring anything.
+# holds `benchmarks`/`latency`/`memory` to it; `benchmarks-ci` and `memory-ci`
+# inherit whichever environment they are invoked in and therefore assert this
+# value themselves, so a development environment with numba importable refuses
+# to measure rather than reporting the wrong kernel's numbers - which is the
+# ordinary case here, since `make install` syncs --all-groups.
 BENCHMARK_ACCELERATION_PATH := clang
 NOISE_RUNS_DIR := tmp/benchmark-noise
 NOISE_RUNS := 5
@@ -264,6 +279,8 @@ print-benchmark-acceleration-path:
 # the exact measurement CI records: core subset only, tracked estimator applied
 benchmarks-ci:
 	@mkdir -p $(dir $(CI_BENCHMARK_JSON))
+	uv run python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run pytest benchmarks -m benchmark_core \
 		--benchmark-min-rounds=$(BENCHMARK_MIN_ROUNDS) \
 		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON)
@@ -291,6 +308,8 @@ benchmark-noise:
 # the exact memory measurement CI records, plus the chart-shaped export
 memory-ci:
 	@mkdir -p $(dir $(CI_MEMORY_JSON))
+	uv run python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
 	uv run python -m scripts.measure_memory \
 		--output=$(RAW_MEMORY_JSON) \
 		--repetitions=$(MEMORY_REPETITIONS)

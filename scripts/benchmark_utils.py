@@ -18,8 +18,8 @@ import numpy as np
 from scripts.reporting import (
     DATA_VERSION_LABEL,
     FIXTURE_VERSION_LABEL,
-    redirect_output_to_file_contextmanager,
-    print_rst_table,
+    join_lines,
+    render_rst_table,
     rst_title,
 )
 from timezonefinder import TimezoneFinder, __version__ as timezonefinder_version
@@ -277,43 +277,37 @@ class BenchmarkReporter:
         self.content.append(("note", text))
         return self
 
+    def render(self) -> str:
+        """Render the accumulated content as one RST page."""
+        parts = [join_lines(rst_title(self.title, 0), "")]
+
+        for item in self.content:
+            if item[0] == "section":
+                _, title, level = item
+                parts.append(join_lines(rst_title(title, level), ""))
+            elif item[0] == "text":
+                _, text = item
+                # Only add a blank line if the text is not the empty string
+                parts.append(join_lines(text, "") if text else join_lines(text))
+            elif item[0] == "table":
+                _, headers, rows = item
+                parts.append(render_rst_table(headers, rows) + join_lines(""))
+            elif item[0] == "note":
+                _, text = item
+                parts.append(join_lines(".. note::", "", f"   {text}", ""))
+
+        return "".join(parts)
+
     def write_report(self):
         """Write the complete report to the output file."""
         print(f"Writing {self.title.lower()} report to: {self.output_path}")
-
-        with redirect_output_to_file_contextmanager(self.output_path):
-            print(rst_title(self.title, 0))
-            print()
-
-            for item in self.content:
-                if item[0] == "section":
-                    _, title, level = item
-                    print(rst_title(title, level))
-                    print()
-                elif item[0] == "text":
-                    _, text = item
-                    print(text)
-                    if text:  # Only add newline if not empty string
-                        print()
-                elif item[0] == "table":
-                    _, headers, rows = item
-                    print_rst_table(headers, rows)
-                    print()
-                elif item[0] == "note":
-                    _, text = item
-                    print(".. note::")
-                    print()
-                    print(f"   {text}")
-                    print()
 
         # Every section ends with a blank line, so the last one leaves the file
         # with a trailing one that end-of-file-fixer then strips - which made
         # every freshly rendered report differ from the committed one until the
         # hook had run, hiding real changes behind a repair nobody sees. Same
         # normalisation as scripts/reporting.py applies to the data report.
-        self.output_path.write_text(
-            self.output_path.read_text().rstrip("\n") + "\n", encoding="utf-8"
-        )
+        self.output_path.write_text(self.render().rstrip("\n") + "\n", encoding="utf-8")
 
 
 def get_system_status() -> dict[str, Any]:

@@ -80,49 +80,27 @@ Run `make hook`, `make test`, and `make testint`. Confirm the diff against `orig
 
 ### Refresh the committed benchmark reports
 
-The release freezes `docs/benchmark_results_*.rst` as the published performance of the version, so a page measured before the code it describes ships as the release's own claim. Nothing else regenerates them: the benchmark workflow records only the tracked core subset, never the rendered pages, so a merged performance change that skipped its regeneration leaves them stale until a release notices.
+The release freezes `docs/benchmark_results_*.rst` as the published performance of the version, so a page measured before the code it describes ships as the release's own claim. The benchmark workflow renders the full pages on a named CI runner; the release consumes that artifact and remains the only place that commits it.
 
 Check staleness rather than assuming it: if any commit since the newest tag touched `timezonefinder/`, `packages/`, `DATA_VERSION`, or `benchmarks/` without a matching change to `docs/benchmark_results_*.rst`, the pages are stale and this step is required. If nothing did, skip it and say so in the pull request body.
 
-Establish the machine is quiet enough to measure on **before** measuring, since a report is only worth committing if it is reproducible. The gate is only readable if it measures the path the reports describe, so assert that first:
+When they are stale, dispatch the report job against the release commit. Record the release SHA before dispatch: the artifact carries that SHA, and the installer refuses to copy a report measured for any other tree.
 
 ```bash
-uv run python -m scripts.assert_acceleration_path --expect "$(make -s print-benchmark-acceleration-path)"
+release_sha=$(git rev-parse HEAD)
+release_branch=$(git branch --show-current)
+gh workflow run benchmark.yml --ref "$release_branch" -f render_reports=true
+gh run list --workflow benchmark.yml --commit "$release_sha" --event workflow_dispatch
+gh run watch <run-id> --exit-status
+rm -rf tmp/benchmark-pages
+gh run download <run-id> --name benchmark-pages --dir tmp/benchmark-pages
+uv run python -m scripts.benchmark_report_artifact install \
+  --artifact-dir tmp/benchmark-pages --expected-commit "$release_sha"
 ```
 
-`benchmark-noise` runs `benchmarks-ci`, which uses this checkout's environment rather than `make benchmarks`' isolated one, and `timezonefinder/utils.py` binds the point-in-polygon backend at import time, preferring numba whenever it is importable. A development environment synced with `--all-groups` therefore has numba, so `make benchmark-noise` would characterise a different implementation than the pages assert, and the assertion above fails in exactly that environment.
+Use the run whose displayed head SHA is exactly `$release_sha`; never take the newest run on branch name alone. The workflow pins the plain-install clang path, fixes the report round count, and prints the runner's CPU on every page. A failed job yields no report to commit. If the artifact has expired, dispatch a replacement against the unchanged release commit.
 
-That failure is about the *environment the gate runs in*, not about the machine, so it is not on its own a reason to declare the reports stale. `make reports` is unaffected — `benchmarks`, `latency` and `memory` all measure under `BENCHMARK_ENV` and assert the path themselves. Read the floor under that same environment instead of `make benchmark-noise`, so the gate describes the kernel the pages do:
-
-```bash
-set -e
-rm -rf tmp/benchmark-noise && mkdir -p tmp/benchmark-noise
-uv run --isolated --group test --group compare python -m scripts.assert_acceleration_path \
-  --expect "$(make -s print-benchmark-acceleration-path)"
-for i in 1 2 3 4 5; do
-  uv run --isolated --group test --group compare pytest benchmarks -m benchmark_core \
-    --benchmark-min-rounds=50 --benchmark-json=tmp/benchmark-core-raw.json
-  uv run --isolated --group test --group compare python -m scripts.normalize_benchmark_json \
-    --benchmark-json=tmp/benchmark-core-raw.json \
-    --output=tmp/benchmark-noise/run-$i.json --estimator=min
-done
-uv run --isolated --group test --group compare python -m scripts.benchmark_noise \
-  tmp/benchmark-noise/run-*.json --estimator=min --min-runs=5
-```
-
-Both opening lines carry the gate's weight, which is why `make benchmark-noise` has their equivalents. Without `set -e` a failed `pytest` iteration leaves the previous iteration's `benchmark-core-raw.json` in place, and the normalize step happily writes it again under the next run number — five files, one of them a duplicate, and a floor that is narrow because a measurement failed rather than because the machine is quiet. Without the `rm -rf`, a `run-6.json` left by an earlier invocation joins the glob, mixing runs of different code into a gate that assumes the code did not change.
-
-Treat the reports as stale only when the floor itself cannot be brought under threshold. Where the environment resolves the asserted path directly, `make benchmark-noise` is the shorter route to the same number.
-
-It repeats the CI core subset five times on unchanged code and prints the observed spread against a threshold derived from it. Over threshold means the machine is too busy — other agent sessions, a build, a sync — and the run must not be committed. Do not treat waiting for an idle machine as a plan: this checkout is worked concurrently, so re-check rather than assume quiet arrives, and if it does not, stop and report the reports as stale rather than committing numbers the threshold rejects.
-
-On a passing noise check, regenerate and commit the pages **in their own commit**, so the version commit stays exactly three files and the measurement diff is reviewable on its own:
-
-```bash
-make reports
-```
-
-Stage only `docs/benchmark_results_*.rst` and `docs/data_report.rst`. The pages record their own environment, and dispersion columns move with the host even when means do not, so the pull request body states the machine, the observed noise spread, and that CI's paired same-runner comparison — not these pages — is the authority on whether a change moved anything.
+Commit the refreshed pages **in their own commit**, so the version commit stays exact and the measurement diff is reviewable on its own. Stage only `docs/benchmark_results_*.rst` and `docs/data_report.rst`. The pull request body names the workflow run and runner CPU, and states that CI's paired same-runner comparison — not these cross-runner absolute pages — is the authority on whether code moved performance.
 
 Push and open the release pull request. Its body names the old and new versions, level, the single bullet driving the level and matching rule, the level not taken and why, changelog edits, verification, whether the reports were refreshed or skipped as current, and that tagging happens separately. Stop.
 

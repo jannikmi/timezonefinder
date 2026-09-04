@@ -1,6 +1,7 @@
 import json
 import math
 from collections import Counter
+from pathlib import Path
 from typing import Callable
 
 import h3.api.numpy_int as h3
@@ -8,7 +9,12 @@ import numpy as np
 import pytest
 
 from scripts import reporting
-from scripts.configs import BinaryData, ShortcutIndexStats
+from scripts.configs import (
+    DATA_REPORT_FILE,
+    SOURCE_DATA_DIR,
+    BinaryData,
+    ShortcutIndexStats,
+)
 from scripts.utils import (
     convert2ints,
     convert_polygon,
@@ -499,16 +505,17 @@ def test_format_table_row_has_no_trailing_whitespace(cells, expected):
 
 
 @pytest.mark.unit
-def test_print_frequencies_labels_the_zero_bucket(capsys):
+def test_render_frequencies_labels_the_zero_bucket():
     """A zero bucket can mean something other than "zero of them".
 
     In the shortcut distribution it counts H3 cells needing no
     point-in-polygon test at all, which the bare "0" reported as cells holding
     no polygons - impossible for data whose ocean zones cover the globe.
     """
-    reporting.print_frequencies([0, 0, 2, 3], "Polygons to test", "none (unique zone)")
+    table = reporting.render_frequencies(
+        [0, 0, 2, 3], "Polygons to test", "none (unique zone)"
+    )
 
-    table = capsys.readouterr().out
     assert "- none (unique zone)" in table
     assert "\n   * - 0\n" not in table
     # only the zero row is relabelled
@@ -516,10 +523,8 @@ def test_print_frequencies_labels_the_zero_bucket(capsys):
 
 
 @pytest.mark.unit
-def test_print_frequencies_keeps_the_bare_zero_without_a_label(capsys):
-    reporting.print_frequencies([0, 2], "Polygons to test")
-
-    assert "   * - 0\n" in capsys.readouterr().out
+def test_render_frequencies_keeps_the_bare_zero_without_a_label():
+    assert "   * - 0\n" in reporting.render_frequencies([0, 2], "Polygons to test")
 
 
 @pytest.mark.unit
@@ -565,7 +570,7 @@ def test_shortcut_index_stats_classifies_each_entry_kind():
 
 
 @pytest.mark.unit
-def test_polygon_distribution_table_pairs_each_count_with_an_example(capsys):
+def test_polygon_distribution_table_pairs_each_count_with_an_example():
     """The polygon count labels a row and keys the example lookup.
 
     It used to be formatted into the label and parsed back out of it, so the
@@ -574,11 +579,9 @@ def test_polygon_distribution_table_pairs_each_count_with_an_example(capsys):
     # zone 0 has one polygon, zones 1 and 2 have two each
     polygons_per_timezone = Counter({0: 1, 1: 2, 2: 2})
 
-    reporting.print_polygon_distribution_table(
+    table = reporting.render_polygon_distribution_table(
         polygons_per_timezone, ["Europe/Berlin", "Etc/GMT", "Etc/GMT+1"]
     )
-
-    table = capsys.readouterr().out
 
     # whole rows, so label, count, percentage and example are pinned together
     # rather than merely all being present somewhere in the table
@@ -586,6 +589,65 @@ def test_polygon_distribution_table_pairs_each_count_with_an_example(capsys):
     assert "   * - 2 polygons\n     - 2\n     - 66.67%\n     - Etc/GMT\n" in table
     # zone 1 is the first zone with two polygons, so zone 2 never exemplifies it
     assert "Etc/GMT+1" not in table
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "render, args",
+    [
+        (reporting.render_rst_table, (["H"], [["v"]])),
+        (reporting.render_frequencies, ([0, 2], "Polygons to test")),
+        (reporting.render_polygon_statistics_table, ("Hole", 0, [])),
+        (reporting.render_polygon_distribution_table, (Counter({0: 1}), ["Etc/GMT"])),
+        (reporting.render_shortcut_statistics, ({0: 1, 1: np.array([0, 1])}, [7, 8])),
+    ],
+)
+def test_renderers_return_their_page_and_print_nothing(render, args, capsys):
+    """Report text is a return value, never something written to stdout.
+
+    Using stdout as the return channel is what forced every caller to redirect
+    it, and a redirected destination is bound where the redirection is set up -
+    which is why ``docs/data_report.rst`` was rewritten by parses that were
+    given another output directory entirely. A renderer that starts printing
+    again puts that back, so assert the absence of output rather than only the
+    presence of the return value.
+    """
+    rendered = render(*args)
+
+    assert rendered.endswith("\n")
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("data_dir", [SOURCE_DATA_DIR, DEFAULT_DATA_DIR])
+def test_report_path_for_keeps_the_committed_page_for_the_packaged_data(data_dir):
+    """``make reports`` and ``make parse`` must still write the committed page.
+
+    ``SOURCE_DATA_DIR`` is where the generators write and ``DEFAULT_DATA_DIR``
+    where the installed data package sits - the same directory under an
+    editable install, different ones otherwise, and both the packaged data.
+    """
+    assert reporting.report_path_for(Path(data_dir)) == DATA_REPORT_FILE
+
+
+@pytest.mark.unit
+def test_report_path_for_puts_another_parse_beside_its_own_binaries(tmp_path):
+    """The defect: the destination used to be fixed, so every parse of another
+    directory - ``make testparse``, or a user compiling custom data - rewrote
+    the checkout's committed report to describe their input, silently.
+    """
+    assert reporting.report_path_for(tmp_path) == tmp_path / DATA_REPORT_FILE.name
+
+
+@pytest.mark.integration
+def test_write_data_report_writes_only_the_path_it_was_given(tmp_path):
+    report_path = tmp_path / "data_report.rst"
+    before = DATA_REPORT_FILE.read_bytes()
+
+    reporting.write_data_report_from_binary(DEFAULT_DATA_DIR, report_path)
+
+    assert report_path.read_text(encoding="utf-8").startswith(".. _data_report:")
+    assert DATA_REPORT_FILE.read_bytes() == before
 
 
 # The two TypedDicts below describe dicts assembled by hand in scripts/reporting.py.

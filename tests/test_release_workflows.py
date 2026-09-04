@@ -323,6 +323,7 @@ def _as_python(condition: str) -> str:
     expression = re.sub(r"needs\['([^']+)'\]\.result", r"needs['\1']", expression)
     expression = re.sub(r"needs\.([A-Za-z0-9_-]+)\.result", r"needs['\1']", expression)
     expression = expression.replace("cancelled()", "cancelled")
+    expression = expression.replace("always()", "True")
     expression = expression.replace("github.ref", "ref")
     expression = re.sub(
         r"startsWith\(\s*([^,]+?)\s*,\s*('[^']*')\s*\)",
