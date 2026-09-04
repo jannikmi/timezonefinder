@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788506645824,
+  "lastUpdate": 1788506647673,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10931,6 +10931,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6895e6974a18b55da08417bd74a1f6094656f559",
+          "message": "guard the memory measurement with the acceleration path, like the timings (#604)\n\n`make memory-ci` inherits whichever environment it is invoked in and, unlike\nits timing counterpart `benchmarks-ci`, asserted nothing about the\npoint-in-polygon backend bound at import time. `make install` syncs\n--all-groups, so the development environment has numba and\ntimezonefinder/utils.py prefers it whenever it is importable: a local\n`make memory-ci` / `make memory-noise` therefore recorded a footprint from the\nnumba path while every committed page and the tracked chart say clang. On this\ncheckout the charted `TimezoneFinder[file_based]::steady_heap` reads 2.27 MiB\non the clang path and 3.38 MiB on the numba one - a 1.49x difference on a\nmetric whose run-to-run coefficient of variation is 0.0%.\n\nCI was never exposed (the benchmark workflow syncs `uv sync --group test` and\nasserts the path itself), so this closes a local-measurement trap rather than a\nCI defect.\n\n`make memory` gets the same step for the same reason `benchmarks` has one\ndespite $(BENCHMARK_ENV): the isolated environment is asserted rather than\nassumed, so a lockfile change that made numba importable there cannot rewrite\nthe committed footprint page with numbers from a different implementation.\n\ntests/test_benchmark_workflows.py now pins all five measurement targets rather\nthan the three timing ones.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:23:12+02:00",
+          "tree_id": "b03d6f2108cec1c99fe0ae68415c12653edbd560",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/6895e6974a18b55da08417bd74a1f6094656f559"
+        },
+        "date": 1788506647215,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083942413330078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085725784301758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2302350997924805,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.231043815612793,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58426856994629,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58499240875244,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7813 GHz"
           }
         ]
       }
