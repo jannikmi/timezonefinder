@@ -7,6 +7,7 @@ Those are the properties asserted here, plus the gate's own arithmetic.
 """
 
 import json
+import math
 
 import numpy as np
 import pytest
@@ -21,6 +22,7 @@ from scripts.data_update_guard import (
     GUARD_FIXTURES_DIR,
     N_SAMPLE_POINTS,
     NO_ZONE,
+    PAYLOAD_SIZE_GATES,
     RELEASED_VARIANT,
     PAYLOAD_PATH,
     answer_sample,
@@ -28,6 +30,7 @@ from scripts.data_update_guard import (
     check,
     load_frozen_sample,
     main,
+    oversized_payload_moves,
     parse_answers,
     payload_metrics,
     render_answers,
@@ -108,7 +111,9 @@ def test_the_changed_rate_counts_answers_rather_than_lines() -> None:
     ) == [1, 2]
 
 
-def _isolated_baselines(monkeypatch, tmp_path, answers: list[str]):
+def _isolated_baselines(
+    monkeypatch, tmp_path, answers: list[str], metrics: dict | None = None
+):
     """Point the guard at throwaway copies of the two files an update rewrites."""
     for name, path in (("ANSWERS_PATH", ANSWERS_PATH), ("PAYLOAD_PATH", PAYLOAD_PATH)):
         copy = tmp_path / path.name
@@ -118,7 +123,20 @@ def _isolated_baselines(monkeypatch, tmp_path, answers: list[str]):
     monkeypatch.setattr(
         "scripts.data_update_guard.answer_sample", lambda *args, **kwargs: answers
     )
+    # Compiling a dataset per case is not affordable here, and what is under test is
+    # the arithmetic on the record rather than the parse that produced it.
+    committed = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
+    monkeypatch.setattr(
+        "scripts.data_update_guard.payload_metrics",
+        lambda *args, **kwargs: {**committed, **(metrics or {})},
+    )
     return tmp_path / ANSWERS_PATH.name
+
+
+def _scaled_payload(key: str, factor: float) -> dict[str, int]:
+    """The committed record with one payload size moved by ``factor``."""
+    committed = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
+    return {key: round(committed[key] * (1 + factor))}
 
 
 @pytest.mark.unit
@@ -152,6 +170,119 @@ def test_a_change_at_the_gate_still_passes(monkeypatch, tmp_path) -> None:
     changed = int(len(committed) * CHANGED_ANSWER_GATE)
     moved = ["Etc/GMT+0"] * changed + committed[changed:]
     _isolated_baselines(monkeypatch, tmp_path, moved)
+
+    assert check() == 0
+
+
+# The four releases the payload bands were calibrated over, each converted from its
+# upstream GeoJSON with the code in this tree. The 2026c row is the committed record -
+# asserted below rather than trusted - which is what makes the other three comparable
+# with it and with whatever the band is set to.
+CALIBRATION_PAYLOADS = {
+    "2025c": {"boundary_payload_bytes": 31_034_584, "hole_payload_bytes": 97_452},
+    "2026a": {"boundary_payload_bytes": 31_116_264, "hole_payload_bytes": 94_936},
+    "2026b": {"boundary_payload_bytes": 31_304_936, "hole_payload_bytes": 94_936},
+    "2026c": {"boundary_payload_bytes": 31_735_692, "hole_payload_bytes": 95_168},
+}
+
+
+@pytest.mark.unit
+def test_the_calibration_ends_at_the_data_this_checkout_packages() -> None:
+    """Otherwise the table is four numbers from somewhere, and the band means nothing.
+
+    The last row has to be the record the packaged data produces, because that is the
+    only one this checkout can check - and a format change that moved the bytes would
+    invalidate every earlier row with it.
+    """
+    committed = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
+    assert CALIBRATION_PAYLOADS["2026c"] == {
+        key: committed[key] for key in CALIBRATION_PAYLOADS["2026c"]
+    }
+
+
+@pytest.mark.unit
+def test_the_band_clears_every_release_it_was_calibrated_over() -> None:
+    """A band that fires on ordinary refinement is switched off the first time it does.
+
+    Three transitions, both files, with the headroom asserted rather than described:
+    tightening a band below 3x its own calibration fails here instead of in the weekly
+    pipeline, where the failure is a refused release nobody can distinguish from a real
+    one.
+    """
+    releases = list(CALIBRATION_PAYLOADS.values())
+    for previous, current in zip(releases, releases[1:]):
+        assert oversized_payload_moves(previous, current) == {}
+        for key, band in PAYLOAD_SIZE_GATES.items():
+            move = (current[key] - previous[key]) / previous[key]
+            assert abs(move) * 3 <= band
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("key", sorted(PAYLOAD_SIZE_GATES))
+@pytest.mark.parametrize("direction", (1, -1))
+def test_a_payload_outside_its_band_is_refused(
+    monkeypatch, tmp_path, key: str, direction: int
+) -> None:
+    """Symmetric on purpose: a dataset that lost a landmass is as suspect as one that
+
+    gained one. Four releases of growth do not make a decrease anomalous, so the band
+    is a threshold on magnitude rather than a floor at zero.
+    """
+    _, committed = _committed_answers()
+    moved = direction * (PAYLOAD_SIZE_GATES[key] + 0.01)
+    answers_path = _isolated_baselines(
+        monkeypatch, tmp_path, committed, _scaled_payload(key, moved)
+    )
+
+    assert check() == GATE_TRIPPED_EXIT
+    # the answer baseline is still rewritten: a refusal has to leave the diff it is
+    # refusing, or the release it blocks cannot be reviewed
+    assert parse_answers(answers_path.read_text(encoding="utf-8"))[1] == committed
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("key", sorted(PAYLOAD_SIZE_GATES))
+def test_a_payload_just_inside_its_band_passes(monkeypatch, tmp_path, key: str) -> None:
+    """The largest release the band is meant to accept, rather than a comfortable one."""
+    _, committed = _committed_answers()
+    recorded = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))[key]
+    largest_accepted = math.floor(recorded * (1 + PAYLOAD_SIZE_GATES[key]))
+    _isolated_baselines(monkeypatch, tmp_path, committed, {key: largest_accepted})
+
+    assert check() == 0
+
+
+@pytest.mark.unit
+def test_the_band_is_what_is_refused_above() -> None:
+    """Matching the changed-answer gate, and unreachable through a real record.
+
+    Payload sizes are whole bytes, so no release lands exactly on the band; the
+    comparison that decides which way the edge falls is therefore pinned here rather
+    than through a dataset.
+    """
+    exact = {key: round(1000 * (1 + band)) for key, band in PAYLOAD_SIZE_GATES.items()}
+    previous = dict.fromkeys(PAYLOAD_SIZE_GATES, 1000)
+    assert oversized_payload_moves(previous, exact) == {}
+    assert oversized_payload_moves(
+        previous, {key: value + 1 for key, value in exact.items()}
+    ) == pytest.approx({key: (value + 1 - 1000) / 1000 for key, value in exact.items()})
+
+
+@pytest.mark.unit
+def test_the_polygon_counts_never_gate(monkeypatch, tmp_path) -> None:
+    """A zone rename reaches the data as one removal plus one addition.
+
+    So a count gate refuses a routine release, which is why the counts are recorded
+    and read by nobody. Asserted because adding them to the band is a one-line change
+    that looks like an improvement.
+    """
+    _, committed = _committed_answers()
+    _isolated_baselines(
+        monkeypatch,
+        tmp_path,
+        committed,
+        {"boundary_polygons": 1, "hole_polygons": 1},
+    )
 
     assert check() == 0
 

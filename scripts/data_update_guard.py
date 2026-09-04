@@ -29,12 +29,15 @@ Two signals come out of one run:
   largest legitimate move was 0.380 %, so 5 % is 13x a real release and far below
   what a truncated or mangled dataset produces. Ordinary refinement changes no
   answers at all - added vertices do not move a border past a sampled point.
-* **the payload sizes, which only report.** A symmetric band on them is wanted, and
-  the four calibrated releases give no symmetric number: they moved +0.29 %, +0.65 %
-  and +1.47 %, so any band they support fires on ordinary refinement. Until the band
-  is measured this signal is printed and recorded, never enforced - a blocking gate
-  on a guessed band is worse than no gate, because it is switched off after the
-  second time it cries wolf.
+* **the payload sizes, which gate on a band of their own.** Either coordinate file
+  moving further than :data:`PAYLOAD_SIZE_GATES` allows refuses the dataset the same
+  way. The band is symmetric because monotone growth over four releases does not make
+  a decrease anomalous - upstream may legitimately simplify a boundary - and it is
+  measured rather than guessed, which is what took it this long: a blocking gate on a
+  guessed band is worse than no gate, because it is switched off after the second time
+  it cries wolf. The polygon counts printed beside the sizes are recorded and never
+  gate: a zone rename is a removal plus an addition, so a count gate fires on a
+  routine event.
 
 A refusal exits :data:`GATE_TRIPPED_EXIT` rather than 1, and that distinction is the
 whole shape of the thing. What must not happen is a dataset publishing itself; what
@@ -50,6 +53,7 @@ import argparse
 import json
 import random
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import numpy as np
@@ -76,6 +80,36 @@ SAMPLE_SEED = 501
 
 # 13x the largest change a legitimate release produced; see the module docstring.
 CHANGED_ANSWER_GATE = 0.05
+
+# What each payload size may move in one release, in either direction. Measured over
+# 2025c -> 2026a -> 2026b -> 2026c, each converted from its upstream GeoJSON with the
+# current code so that one reader opens all four - the same method that calibrated the
+# answer rate, and the only one that yields numbers this binary format produces. The
+# 2026c conversion reproduces the committed `payload.json` byte for byte, which is what
+# says the four are comparable:
+#
+#   2025c   31,034,584 B boundary               97,452 B hole
+#   2026a   31,116,264 B (+0.26 %)              94,936 B (-2.58 %)
+#   2026b   31,304,936 B (+0.61 %)              94,936 B (+0.00 %)
+#   2026c   31,735,692 B (+1.38 %)              95,168 B (+0.24 %)
+#
+# Banded per file because they are not one instrument. The boundary payload is ~31 MB
+# and its largest legitimate move was 1.38 %; the hole payload is ~95 KB, so the 26
+# holes that vanished in 2026a moved it by 2.58 %. One band sized for the holes would
+# leave the file carrying the data effectively ungated, and one sized for the
+# boundaries would refuse an ordinary hole revision.
+#
+# Each band is ~3.6x its file's largest measured move - far less headroom than the
+# answer gate's 13x, and stated rather than dressed up: payload size moves on every
+# refinement while answers do not move at all, so no honest band buys more. What these
+# catch is a dataset that lost or gained a *part* of itself, a converter that dropped a
+# zone or a release missing a landmass. A truncated download is caught earlier, by the
+# digest check in `scripts/upstream_release.py`; borders that moved are caught by the
+# answer baseline. This is the third instrument, not a replacement for either.
+PAYLOAD_SIZE_GATES = {
+    "boundary_payload_bytes": 0.05,
+    "hole_payload_bytes": 0.10,
+}
 
 # Its own exit code, kept apart from the 1 every error uses. A refused dataset is not a
 # broken run: `update_data.sh` finishes preparing it, so that the answers a human has to
@@ -203,11 +237,43 @@ def _relative_move(before: object, after: object) -> str:
     return f"{before:,} -> {after:,} ({(after - before) / before:+.2%})"
 
 
+def payload_moves(
+    previous: Mapping[str, object], current: Mapping[str, object]
+) -> dict[str, float]:
+    """The relative move of each *banded* size, for the keys both records state.
+
+    The polygon counts are deliberately not among them: a zone rename reaches the data
+    as one removal plus one addition, so a count gate refuses a routine event. They are
+    printed beside the sizes and nothing reads them.
+    """
+    moves: dict[str, float] = {}
+    for key in PAYLOAD_SIZE_GATES:
+        before, after = previous.get(key), current.get(key)
+        # A first run has no previous record, and a zero would make the ratio
+        # meaningless rather than large; neither is a refusal.
+        if isinstance(before, int) and isinstance(after, int) and before:
+            moves[key] = (after - before) / before
+    return moves
+
+
+def oversized_payload_moves(
+    previous: Mapping[str, object], current: Mapping[str, object]
+) -> dict[str, float]:
+    """The moves outside their band, which is what refuses the dataset."""
+    return {
+        key: move
+        for key, move in payload_moves(previous, current).items()
+        if abs(move) > PAYLOAD_SIZE_GATES[key]
+    }
+
+
 def report_payload(previous: dict[str, object], current: dict[str, int | str]) -> None:
-    """Print the size signal. It never gates - see the module docstring."""
-    print("payload signal (report-only, no threshold is calibrated yet):")
+    """Print the size signal, naming the band on the two sizes that carry one."""
+    print("payload signal:")
     for key in sorted(current):
-        print(f"  {key}: {_relative_move(previous.get(key), current[key])}")
+        band = PAYLOAD_SIZE_GATES.get(key)
+        suffix = "" if band is None else f", band +-{band:.0%}"
+        print(f"  {key}: {_relative_move(previous.get(key), current[key])}{suffix}")
 
 
 def freeze(force: bool, n_points: int = N_SAMPLE_POINTS) -> None:
@@ -230,7 +296,7 @@ def freeze(force: bool, n_points: int = N_SAMPLE_POINTS) -> None:
 
 
 def check(variant: str = RELEASED_VARIANT) -> int:
-    """Re-answer the frozen sample, rewrite both baselines, and gate on the diff."""
+    """Re-answer the frozen sample, rewrite both baselines, and gate on what moved."""
     if variant != RELEASED_VARIANT:
         # Not a failure and not a pass: there is no baseline for this dataset, so the
         # only honest thing is to measure nothing and say so. Writing one here would
@@ -267,12 +333,26 @@ def check(variant: str = RELEASED_VARIANT) -> int:
     PAYLOAD_PATH.write_text(render_payload(metrics), encoding="utf-8")
 
     report_payload(previous_metrics, metrics)
+    oversized = oversized_payload_moves(previous_metrics, metrics)
+    for key, move in sorted(oversized.items()):
+        print(
+            f"{key} moved {move:+.2%}, outside the "
+            f"+-{PAYLOAD_SIZE_GATES[key]:.0%} band. The largest move four consecutive "
+            f"releases produced was 1.38 % of the boundary payload and 2.58 % of the "
+            f"hole payload, so a dataset this far out has gained or lost a part of "
+            f"itself rather than been refined. The rewritten record is in the working "
+            f"tree; review it beside the answer diff before deciding.",
+            file=sys.stderr,
+        )
+    # Both signals are evaluated and reported before either decides, so a refused
+    # update states everything that is wrong with it in one run.
+    refusal = GATE_TRIPPED_EXIT if oversized else 0
 
     if not previous_answers:
         print(
             f"no answer baseline was committed; wrote one from {len(points):,} points"
         )
-        return 0
+        return refusal
 
     current_coordinates, _ = parse_answers(rendered)
     if previous_coordinates != current_coordinates:
@@ -307,7 +387,7 @@ def check(variant: str = RELEASED_VARIANT) -> int:
             file=sys.stderr,
         )
         return GATE_TRIPPED_EXIT
-    return 0
+    return refusal
 
 
 def main(argv: list[str] | None = None) -> int:
