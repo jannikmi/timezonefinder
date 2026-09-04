@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788505867615,
+  "lastUpdate": 1788505869333,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10778,6 +10778,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2935 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a0748f7d5453de084e3aed6c44f34b6d1292670",
+          "message": "GH-334: convert test expectations through upstream's merged-zone lookup (#595)\n\n* GH-334: convert test expectations through upstream's merged-zone lookup\n\nThe reduced `timezones-now` dataset `update_data.sh --dataset=same-since-now`\ncompiles merges every group of zones that keeps the same time from now on into\none zone under one representative name, so every expectation in\n`tests/locations.py` - all of which name full-dataset zones - is wrong against\nit by construction. The helper that was to convert them (`convert_to_reduced_\ntimezone`) read a hand-derived 18-pair fragment, was never called, and was\ndeleted by DEAD-1. Upstream has published the real table since 2026-01-08\n(evansiroky/timezone-boundary-builder#195), and the settled decision is that\nsuch a mapping comes from upstream or not at all.\n\n- `timezone-names-with-oceans-Now.json` is vendored verbatim at\n  `tests/fixtures/reduced_zones/mapping.json`, with the release, byte size and\n  SHA-256 it was verified against in `source.txt` beside it. The with-oceans\n  variant is a strict superset of the land-only one and names the same\n  representative for every land zone, so one copy serves every reduced variant.\n- `scripts/upstream_release.py` gains `vendor-zone-mapping`, which fetches the\n  asset, verifies it against the digest the release API publishes, refuses one\n  upstream replaced under a tag already taken, and writes through a temporary\n  file so a failed download cannot replace a copy that did verify.\n  `update_data.sh` re-takes it, so the table advances with DATA_VERSION.\n- `tests/test_reduced_zone_mapping.py` re-hashes the committed bytes against\n  that record offline. That is what makes \"from upstream\" a check rather than\n  an intention: a table extended by hand fails it. `.pre-commit-config.yaml`\n  therefore exempts the file from the JSON, newline and clang-format hooks,\n  which all rewrite JSON.\n- `tests/auxiliaries.py` inverts the table once and applies it in\n  `single_location_test`, gated on the packaged data actually being the reduced\n  variant - detected from the packaged zone names, since nothing records which\n  variant was compiled. Applying it unconditionally would rewrite\n  `Europe/Berlin` to `Europe/Paris` against data that answers `Europe/Berlin`,\n  which is why the original call was left commented out.\n\nCounting the vendored table also settles a figure the docs had wrong: the\nreduced dataset holds 63 zones on 2026c, not the ~90 `docs/data_format.rst`\nclaimed, so that page now states a magnitude and points at the table.\n\nSolves issue #334\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: GH-334 shipped\n\nDelete the item and its ranking row, and rewrite what pointed at it: GH-332 is\nno longer sequenced behind anything, the distribution decision now records that\n\"upstream or not at all\" is enforced by a digest rather than intended, and\nDEAD-5 names the vendored table instead of the item that was to obtain it.\n\nThe 444 -> 92 figure carried by three of those entries was wrong: the vendored\ntable has 63 representatives. GH-332's own note now says which half the mapping\ndoes not cover - an ocean zone merges into a *land* representative under the\nreduced data, so `TEST_LOCATIONS_AT_LAND` needs that item's work rather than a\nlarger mapping.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:10:17+02:00",
+          "tree_id": "0d6c0fb359eea03646e5eda8d5b36f192018641e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3a0748f7d5453de084e3aed6c44f34b6d1292670"
+        },
+        "date": 1788505869001,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083942413330078,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085725784301758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.230269432067871,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.231034278869629,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58418846130371,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58496952056885,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           }
         ]
       }
