@@ -6,6 +6,19 @@ name: benchmark
 #
 # Triggers:
 # - push to master:   record the result and update the gh-pages trend chart
+# - push to release/**:
+#                     render the published report suite for the pushed commit
+#                     and upload it as `benchmark-pages`, so the release the
+#                     branch is preparing finds an artifact stamped with its own
+#                     SHA without anybody having pressed a button first. This is
+#                     the *dispatch* only - CI still never commits the pages; the
+#                     release consumes the artifact, exactly as it does for the
+#                     data wheel and `DATA_BUILD_RUN`. A release branch is a base
+#                     repository branch, so unlike the `pull_request` trigger this
+#                     runs no untrusted code; it still holds no write permission,
+#                     because the render job needs none. The measurement half is
+#                     skipped here: a release branch's numbers must not enter the
+#                     cross-machine trend chart, whose points are master commits.
 # - pull_request:     measure the head *and* the merge base on the same runner
 #                     and upload both as artifacts. This job runs untrusted PR
 #                     code and therefore holds NO write permissions and no
@@ -33,6 +46,8 @@ on:
   push:
     branches:
       - master
+      # every release branch renders the pages the release will commit
+      - "release/**"
   pull_request:
     paths:
       - "timezonefinder/**"
@@ -136,7 +151,7 @@ env:
 jobs:
   plan:
     name: plan repetitions
-    if: ${{ !inputs.render_reports }}
+    if: ${{ !inputs.render_reports && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: ubuntu-latest
     permissions: {}
     outputs:
@@ -169,7 +184,7 @@ jobs:
   measure:
     name: measure (run ${{ matrix.repetition }})
     needs: [plan]
-    if: ${{ !inputs.render_reports }}
+    if: ${{ !inputs.render_reports && !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     # One runner *image* - and that is all `ubuntu-latest` guarantees. It does
     # NOT pin the CPU: this pool has served AMD EPYC 9V74, AMD EPYC 7763 and
     # Intel Xeon Platinum 8573C parts between 2.30 and 3.69 GHz, and the clock
@@ -435,7 +450,9 @@ jobs:
   track:
     name: record trend
     needs: [measure]
-    if: github.event_name == 'push'
+    # master only: a trend point is a master commit, and a release branch's
+    # rendering run produces no measurement for this job to record anyway.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       # push the updated benchmark data to the gh-pages branch
@@ -538,7 +555,14 @@ jobs:
 
   render-reports:
     name: render published benchmark reports
-    if: github.event_name == 'workflow_dispatch' && inputs.render_reports
+    # Two ways in. A push to a release branch is the ordinary one and needs no
+    # human step; the manual dispatch stays for the two cases a push cannot
+    # serve - re-rendering after the artifact of an unchanged release commit has
+    # expired, and rendering the pages for a pull request that moves a measured
+    # path outside a release.
+    if: >-
+      ${{ (github.event_name == 'workflow_dispatch' && inputs.render_reports)
+      || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
