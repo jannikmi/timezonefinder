@@ -16,6 +16,10 @@ import numpy as np
 from timezonefinder.configs import (
     COORD2INT_FACTOR,
     INT2COORD_FACTOR,
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    MIN_LAT_VAL,
+    MIN_LNG_VAL,
     SOURCE_COORD_STEP,
     CoordLists,
     CoordPairs,
@@ -362,9 +366,9 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
 
 @njit(boolean(f8), cache=True)
 def is_valid_lat(lat: float) -> bool:
-    return -90.0 <= lat <= 90.0
+    return MIN_LAT_VAL <= lat <= MAX_LAT_VAL
 
 
 @njit(boolean(f8), cache=True)
 def is_valid_lng(lng: float) -> bool:
-    return -180.0 <= lng <= 180.0
+    return MIN_LNG_VAL <= lng <= MAX_LNG_VAL

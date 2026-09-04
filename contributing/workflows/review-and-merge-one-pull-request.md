@@ -74,7 +74,7 @@ Merge without asking unless one of three triggers fires.
 2. **It escapes the repository.** Reverting the squash commit is not the whole undo: a release or tag, a data-distribution version or format marker, an upstream fetch, a workflow's permissions or secrets, a history rewrite, or work another merged pull request already builds on.
 3. **It is opinionated.** Reasonable maintainers would differ and everything after it pays: a layout move, a mass rename or formatting sweep, a new dependency or tool, an expanded lint rule set, a new abstraction or architectural seam, a change embedding a question at the maintainer bar, or one contradicting a [recorded decision](../improvements/improvement-register-rules.md).
 
-Regardless of triggers, never merge on incomplete evidence: every check the workflows should have produced for this head exists and passed, the gate ran after the last update rather than before it, and no review thread is open.
+Regardless of triggers, never merge on incomplete evidence: every check the workflows should have produced for this head exists and passed, the gate and the review both ran after the last update rather than before it, and no review thread is open. A review covers a commit, not a pull request, so compare the commit it names against the head — one whose fixes postdate every review of it has had its riskiest code read by nobody.
 
 Verify the checks against the head, not against the pull request:
 
@@ -89,7 +89,7 @@ Compare those names with the workflows that trigger on `pull_request` and the `p
 gh pr merge <n> --squash --delete-branch
 ```
 
-An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge with the command that undoes it, so a merge the maintainer disagrees with costs a revert rather than a review.
+An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
 
 After merging, fast-forward local `master`, confirm the head is the squash commit, and re-check every remaining pull request before the next round begins.
 
@@ -107,4 +107,4 @@ The run ends when no open pull request is left, or when every one that remains i
 
 ## Reporting
 
-Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; and what changed for the rest of the queue. Close the run with the pull requests merged in order and the command that reverts each, what remains open and what each one waits for, and the pick the next run would start from.
+Per round: the pick and one clause for each pull request that waited; what the update did and which conflicts were resolved how; the gate that ran and its result; merged, briefed, or parked, with the reason; and what changed for the rest of the queue. Close the run with the pull requests merged in order, each with its squash commit, what remains open and what each one waits for, and the pick the next run would start from.

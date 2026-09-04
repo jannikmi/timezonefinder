@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import warnings
+from functools import lru_cache
 from math import asin, degrees, log10
 from typing import Any, Iterator
 
@@ -18,16 +19,23 @@ import numpy as np
 import pytest
 
 from scripts.bootstrap_data import require_bootstrapped_data
-from scripts.configs import DEBUG, PROJECT_ROOT, read_data_version
+from scripts.configs import (
+    DEBUG,
+    PROJECT_ROOT,
+    REDUCED_ZONE_MAPPING_FILE,
+    read_data_version,
+)
 from scripts.utils import validate_coord_array_shape
 from timezonefinder import utils
 from timezonefinder.configs import (
+    DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
     MAX_LAT_VAL_INT,
     MAX_LNG_VAL,
     MAX_LNG_VAL_INT,
 )
 from timezonefinder.polygon_array import PolygonArray
+from timezonefinder.zone_names import read_zone_names
 from timezonefinder.utils_numba import convert2coords
 
 
@@ -788,9 +796,70 @@ def packed_buffers_by_backend() -> dict[str, tuple]:
     }
 
 
+#######################
+# THE REDUCED DATASET
+#######################
+
+# ``update_data.sh --dataset=same-since-now`` compiles the reduced "timezones-now"
+# data, where every group of zones that keeps the same time from now on is one zone
+# under one representative name. Every expectation in tests/locations.py names a zone
+# of the *full* dataset, so against reduced data a third of them are wrong by
+# construction - and upstream's own lookup, vendored at REDUCED_ZONE_MAPPING_FILE, is
+# what converts them. Deriving that table by hand was refused; see the distribution
+# decisions under contributing/improvements/decisions/.
+
+
+@lru_cache(maxsize=1)
+def reduced_zone_representatives() -> dict[str, str]:
+    """Each full-dataset zone name, mapped to the reduced dataset's name for it.
+
+    Upstream publishes the inverse - representative to the zones merged into it - so
+    the direction an expectation needs is inverted here, once.
+    """
+    merged: dict[str, list[str]] = json.loads(
+        REDUCED_ZONE_MAPPING_FILE.read_text(encoding="utf-8")
+    )
+    return {
+        original: representative
+        for representative, originals in merged.items()
+        for original in originals
+    }
+
+
+@lru_cache(maxsize=1)
+def packaged_dataset_is_reduced() -> bool:
+    """Whether the data this checkout carries is the reduced ``timezones-now`` one.
+
+    Asked of the packaged zone names rather than of a flag, because nothing records
+    which variant ``update_data.sh`` was last run with - and a flag that says "reduced"
+    over full data would convert every expectation into a name the data does not hold.
+    The reduced dataset's names are exactly the representatives; the full dataset's 444
+    are not a subset of those 63. Read from timezone_names.txt so that asking costs a
+    text file rather than a finder.
+    """
+    packaged = set(read_zone_names(DEFAULT_DATA_DIR))
+    return packaged <= set(reduced_zone_representatives().values())
+
+
+def convert_to_reduced_timezone(timezone: str) -> str:
+    """The name the packaged dataset answers with, for an expectation naming ``timezone``.
+
+    The identity while the full dataset is packaged, which is the default and what CI
+    runs. A zone the mapping does not name is returned unchanged: upstream's table
+    omits one (``Etc/GMT+12``), and an expectation that then fails on the name it
+    always held is a better report than a ``KeyError`` inside the assertion.
+    """
+    if not packaged_dataset_is_reduced():
+        return timezone
+    return reduced_zone_representatives().get(timezone, timezone)
+
+
 def single_location_test(func, lat, lng, description, expected_orig):
+    expected = convert_to_reduced_timezone(expected_orig)
     result = func(lng=lng, lat=lat)
     func_name = func.__name__
-    assert result == expected_orig, (
-        f"{func_name}({lng}, {lat}) [{description}] should return {expected_orig}, got {result}"
+    merged_from = "" if expected == expected_orig else f" ({expected_orig} merged)"
+    assert result == expected, (
+        f"{func_name}({lng}, {lat}) [{description}] should return "
+        f"{expected}{merged_from}, got {result}"
     )

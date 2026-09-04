@@ -101,6 +101,7 @@ class AbstractTimezoneFinder(ABC):
         "shortcuts",
         "zone_names",
         "zone_ids",
+        "_zone_positions",
         "holes_dir",
         "boundaries_dir",
         "boundaries",
@@ -108,6 +109,9 @@ class AbstractTimezoneFinder(ABC):
     ]
 
     zone_ids: np.ndarray
+    #: where each zone's boundary polygons start, read on first use - see
+    #: ``_iter_boundary_ids_of_zone``, which is the only thing that reads it.
+    _zone_positions: np.ndarray | None
     #: which timezones can possibly cover a point. This class asks it what a cell resolves
     #: to and never how that is stored - see ``timezonefinder/shortcut_index.py``.
     shortcuts: ShortcutIndex
@@ -144,6 +148,11 @@ class AbstractTimezoneFinder(ABC):
             get_shortcut_file_path(self.data_location)
         )
 
+        # not read here: only ``certain_timezone_at`` and ``get_geometry`` address a
+        # zone's boundary range, and the ``timezone_at`` majority never calls either.
+        # See ``_iter_boundary_ids_of_zone`` for why the first caller reads it once.
+        self._zone_positions = None
+
     def _iter_boundary_ids_of_zone(self, zone_id: int) -> Iterable[int]:
         """
         Yield the boundary polygon IDs for a given zone ID.
@@ -151,9 +160,19 @@ class AbstractTimezoneFinder(ABC):
         :param zone_id: ID of the zone
         :yield: boundary polygon IDs
         """
-        # load only on demand. used when shortcuts contain zone IDs (hybrid optimization)
-        zone_positions_path = get_zone_positions_path(self.data_location)
-        zone_positions = np.load(zone_positions_path, mmap_mode="r")
+        # Read on first use and then kept, rather than per call: the file is 890
+        # immutable bytes and a per-call ``np.load`` paid a file open, a header parse
+        # and a mapping for every one of them. Reading it in ``__init__`` instead would
+        # charge every construction - itself a tracked benchmark, and multiplied by the
+        # thread count under the documented one-instance-per-thread pattern - for an
+        # array the majority of instances never touch. Two threads racing this both read
+        # the same immutable array, so the race costs a duplicated read and nothing else.
+        zone_positions = self._zone_positions
+        if zone_positions is None:
+            zone_positions = read_per_polygon_vector(
+                get_zone_positions_path(self.data_location)
+            )
+            self._zone_positions = zone_positions
         first_boundary_id_zone = zone_positions[zone_id]
         # read the id of the first boundary polygon of the consequent zone
         # NOTE: this has also been added for the last zone
@@ -366,6 +385,12 @@ class AbstractTimezoneFinder(ABC):
     def _iter_boundaries_in_shortcut(self, *, lng: float, lat: float) -> Iterable[int]:
         """
         Iterate over boundary polygon IDs in the shortcut corresponding to the given coordinates.
+
+        Every candidate the shortcut index offers for a point, in the order they are
+        stored - what ``certain_timezone_at`` tests, and what a test asking "which
+        zones could this point have matched" walks. ``timezone_at`` deliberately does
+        not call it: a cell resolving to a single zone is answered by name there,
+        without addressing that zone's boundary polygons at all.
 
         :param lng: The longitude of the point in degrees (-180.0 to 180.0).
         :param lat: The latitude of the point in degrees (90.0 to -90.0).
@@ -1287,11 +1312,6 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :return: the timezone name of the polygon the point is included in or `None`
         """
         lng, lat = utils.validate_coordinates(lng, lat)
-        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
-
-        entry = self.shortcuts.entry_of(hex_id)
-        if entry == ABSENT:
-            return None
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data formats match
@@ -1300,15 +1320,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
-        boundary_ids: Iterable[int]
-        if entry >= 0:
-            # a zone id: every boundary polygon of that zone is a candidate.
-            # Most are quickly ruled out by the bounding box check.
-            boundary_ids = self._iter_boundary_ids_of_zone(entry)
-        else:
-            boundary_ids = self.shortcuts.candidates_of(entry)
-
-        for boundary_id in boundary_ids:
+        for boundary_id in self._iter_boundaries_in_shortcut(lng=lng, lat=lat):
             if self.inside_of_polygon(boundary_id, x, y):
                 zone_id = self._zone_id_of(boundary_id)
                 return self.zone_names.name_of(zone_id)

@@ -52,6 +52,21 @@ DATA_SOURCE_FILE = PROJECT_ROOT / "DATA_SOURCE"
 # than asserting it exists.
 DATA_BUILD_RUN_FILE = PROJECT_ROOT / "DATA_BUILD_RUN"
 
+# Upstream's lookup of which IANA zones the reduced "timezones-now" dataset merges
+# into one, vendored under tests/ for the expectations there to be converted through.
+# The name of the asset is the with-oceans variant on purpose: it is a strict superset
+# of the land-only one and names the same representative for every land zone, so one
+# copy serves every reduced variant update_data.sh can build.
+# The bytes are upstream's own, unreformatted, and REDUCED_ZONE_SOURCE_FILE states the
+# release, size and SHA-256 they were verified against - which is what makes
+# tests/test_reduced_zone_mapping.py able to prove offline that the table was obtained
+# rather than curated. The decision that a reduced-zone mapping comes from upstream or
+# not at all is recorded in contributing/improvements/decisions/.
+REDUCED_ZONE_MAPPING_ASSET = "timezone-names-with-oceans-Now.json"
+REDUCED_ZONES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "reduced_zones"
+REDUCED_ZONE_MAPPING_FILE = REDUCED_ZONES_DIR / "mapping.json"
+REDUCED_ZONE_SOURCE_FILE = REDUCED_ZONES_DIR / "source.txt"
+
 # The package metadata. Read by tests that hold a second statement of something it
 # declares to it - the supported Python versions, and the version the installed
 # distribution reports as ``timezonefinder.__version__``. Under a workspace "the"

@@ -1,0 +1,1 @@
+``make memory`` and ``make memory-ci`` now assert the tracked point-in-polygon acceleration path before measuring, as their timing counterparts already did, so a footprint recorded in a development environment - where ``make install`` puts Numba on the import path - fails instead of quietly reporting resident memory a plain install never holds
