@@ -48,7 +48,7 @@ Every entry has exactly one row in the ranking and every row has exactly one ent
 
 ## Recorded decision retention
 
-**Kept, never deleted** — including the rejected options, which is most of their value. The next pass re-proposes whatever is not written down as already refused. Correct the reasoning when a premise moves; do not reverse a decision silently.
+**Kept, never deleted** — including the rejected options, which is most of their value. The next pass re-proposes whatever is not written down as already refused. When a premise moves, rewrite the claim and keep the superseded measurement beneath it, dated. A reversal is still never silent.
 
 # Scope notes
 
