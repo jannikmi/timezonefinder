@@ -93,13 +93,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: >
             @${{ github.repository_owner }} this automated data update passed CI but
-            is a draft, so it was not merged and nothing was published. The answer
-            guard refused it: more than 5 % of the frozen sample changed answer, where
-            an ordinary refinement release changes none. Review the diff of
-            `tests/fixtures/data_update/answers.txt` in this pull request - one line
-            per sampled point and the timezone it now resolves to. If the change is
-            real, mark this ready for review and merge it; the `data-v*` tag is then
-            pushed by hand from an up-to-date master.
+            is a draft, so it was not merged and nothing was published. The data-update
+            guard refused it, on the answers or on the payload sizes - which one is in
+            this pull request's diff, not in this comment, because asserting the wrong
+            signal is what talks a reviewer past a real refusal. Review
+            `tests/fixtures/data_update/answers.txt`, one line per sampled point and
+            the timezone it now resolves to, and `tests/fixtures/data_update/payload.json`,
+            the compiled boundary and hole payload sizes. If the change is real, mark
+            this ready for review and merge it; the `data-v*` tag is then pushed by hand
+            from an up-to-date master.
 
       - name: Merge the update PR
         if: >

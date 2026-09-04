@@ -2,7 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [GH-501](items/packaging-distribution-and-release/gh-501-the-data-update-s-payload-size-signal-has-no-calibrated-band.md) | The data update's payload-size signal has no calibrated band | release | S–M | free — decided; the band is one measurement over four releases |
 | [GH-364](items/lookup-geometry-and-data-format/gh-364-free-threaded-python-via-a-native-candidate-loop.md) | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
 | [GH-332](items/packaging-distribution-and-release/gh-332-reduced-timezone-dataset-as-a-second-distribution.md) | Reduced timezone dataset as a second distribution | packaging | M | needs a decision — publish it as a second distribution, document the converter route, or neither |
 | [GH-524](items/packaging-distribution-and-release/gh-524-move-timezonefinder-under-packages-for-a-symmetric-workspace-layout.md) | Move `timezonefinder` under `packages/` | repo layout | M | free |
