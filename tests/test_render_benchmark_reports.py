@@ -14,6 +14,7 @@ from scripts.configs import (
 )
 from scripts.reporting import DATA_VERSION_LABEL, FIXTURE_VERSION_LABEL
 from scripts.render_benchmark_reports import (
+    FUNCTION_LABELS,
     PROVENANCE_FIELDS,
     acceleration_path_label,
     add_benchmark_table,
@@ -27,9 +28,11 @@ from scripts.render_benchmark_reports import (
     get_batch_size,
     get_fixture_provenance,
     humanize_benchmark_name,
+    interpreted_kernel_labels,
     is_ci_tracked_configuration,
     percent_faster,
     relative_speed_label,
+    render_acceleration_paths,
     render_comparison,
     render_initialization,
     render_memory,
@@ -286,6 +289,129 @@ def test_add_benchmark_table_extra_columns_are_appended():
     assert rows[0][-2] == "42"  # Rounds column untouched by the extra column
 
 
+def test_interpreted_kernel_labels_name_the_measuring_environment_and_restore():
+    """The `*_python` node ids carry two implementations; only the label says which.
+
+    Restoring matters as much as replacing: `FUNCTION_LABELS` is shared by every
+    renderer, so a label left behind would describe the previous run.
+    """
+    before = FUNCTION_LABELS["test_pt_in_poly_python_packed"]
+
+    with interpreted_kernel_labels({"using_numba": False}):
+        assert FUNCTION_LABELS["test_pt_in_poly_python_packed"] == (
+            "packed kernel (pure Python)"
+        )
+    with interpreted_kernel_labels({"using_numba": True}):
+        assert FUNCTION_LABELS["test_pt_in_poly_python_packed"] == (
+            "packed kernel (Numba)"
+        )
+
+    assert FUNCTION_LABELS["test_pt_in_poly_python_packed"] == before
+
+
+def _fake_acceleration_run(
+    path: str,
+    *,
+    cpu: str = "Apple M1 Pro",
+    baseline: float = 1.0,
+    clock: str = "3.2 GHz",
+) -> dict:
+    """One `scripts.measure_acceleration_paths` report, with one row per section."""
+    comparison = {
+        "baseline_name": "clang",
+        "challenger_name": path,
+        "rounds": 15,
+        "batch_size": 2500,
+        "threshold": 0.03,
+        "win_margin": 0.10,
+        "best_baseline": baseline,
+        "best_challenger": baseline * 2,
+        "challenger_wins": 0,
+    }
+    return {
+        "machine_info": {
+            "cpu": {"brand_raw": cpu, "hz_actual_friendly": clock},
+            "timezonefinder": {
+                **_FAKE_SYSTEM_INFO,
+                "acceleration_path": path,
+                "baseline_path": "clang",
+            },
+        },
+        "kernels": {"small": comparison},
+        "lookups": {"random": comparison},
+    }
+
+
+def test_acceleration_page_reports_each_pair_against_its_own_clang_baseline(tmp_path):
+    output = tmp_path / "acceleration.rst"
+
+    render_acceleration_paths(
+        [_fake_acceleration_run("numba"), _fake_acceleration_run("python")], output
+    )
+
+    page = output.read_text(encoding="utf-8")
+    assert "Numba JIT" in page and "pure Python" in page
+    # both challengers are 2x their baseline in the fixture
+    assert page.count("2.00x") >= 2
+    # and the page must say, in so many words, that it does not cross the two runs
+    assert "third ratio is not derived" in page
+
+
+def test_acceleration_page_refuses_runs_from_two_machines(tmp_path):
+    """Two CPUs cannot share a page: `ubuntu-latest` alone spans a ~1.6x spread."""
+    runs = [
+        _fake_acceleration_run("numba", cpu="Apple M1 Pro"),
+        _fake_acceleration_run("python", cpu="AMD EPYC 7763"),
+    ]
+
+    with pytest.raises(ValueError, match="different CPUs"):
+        render_acceleration_paths(runs, tmp_path / "acceleration.rst")
+
+
+def test_acceleration_page_accepts_one_cpu_reporting_two_clock_speeds(tmp_path):
+    """Identity is the model, not the clock the core happened to be boosted to.
+
+    Both runs of the first CI render came off one EPYC 7763 and reported 2.4454 GHz
+    and 3.2435 GHz, which rejected a pair measured on the same machine. Whether two
+    runs are *comparable* is what the shared clang baseline answers; this check only
+    establishes that they ran on the same hardware.
+    """
+    runs = [
+        _fake_acceleration_run("numba", cpu="AMD EPYC 7763", clock="2.4454 GHz"),
+        _fake_acceleration_run("python", cpu="AMD EPYC 7763", clock="3.2435 GHz"),
+    ]
+
+    render_acceleration_paths(runs, tmp_path / "acceleration.rst")
+
+
+def test_acceleration_page_needs_one_run_per_environment(tmp_path):
+    with pytest.raises(ValueError, match="one run per environment"):
+        render_acceleration_paths(
+            [_fake_acceleration_run("numba")], tmp_path / "acceleration.rst"
+        )
+
+
+def test_acceleration_page_publishes_the_shared_baselines_spread(tmp_path):
+    """The two runs' clang timings are the reader's comparability check.
+
+    Published, not enforced: nothing on the page divides one run into the other, so a
+    divergence is information about the environments rather than a reason to fail.
+    """
+    output = tmp_path / "acceleration.rst"
+
+    render_acceleration_paths(
+        [
+            _fake_acceleration_run("numba", baseline=1.0),
+            _fake_acceleration_run("python", baseline=1.2),
+        ],
+        output,
+    )
+
+    page = output.read_text(encoding="utf-8")
+    assert "20.0 %" in page
+    assert "**no**" in page
+
+
 def test_add_comparison_bullet_picks_the_actually_faster_bench():
     # bench_a is passed first but is the *slower* one - the bullet must not
     # assume argument order, it must compare the JSON's mean values
@@ -296,7 +422,7 @@ def test_add_comparison_bullet_picks_the_actually_faster_bench():
     add_comparison_bullet(reporter, "Small polygons", slow, fast)
 
     (text,) = _texts(reporter)
-    assert "bare kernel (Python, Numba if available)" in text
+    assert "bare kernel (interpreted)" in text
     # fast=0.001s took half the time of slow=0.002s -> twice as fast -> 100% faster, 2x
     assert "100% faster" in text
     assert "2.00x" in text

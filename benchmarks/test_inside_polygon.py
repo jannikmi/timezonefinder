@@ -21,6 +21,7 @@ from typing import Callable, Iterable
 import numpy as np
 import pytest
 
+from scripts.assert_acceleration_path import interpreted_path_name
 from timezonefinder import utils_clang, utils_numba
 from timezonefinder.configs import POLYGON_BLOCK_SIZE
 
@@ -79,5 +80,8 @@ def test_pt_in_poly_python_packed(
     benchmark, packed_pip_inputs_by_stratum, packed_buffers_by_backend, stratum
 ):
     inputs = packed_pip_inputs_by_stratum[stratum]
-    buffers = packed_buffers_by_backend["numba"]
+    # keyed by whichever name this environment's `utils_numba` goes by - `numba` with
+    # the JIT installed, `python` without it. The buffers are identical either way;
+    # asking by name is what keeps the fixture from claiming a backend it has not got.
+    buffers = packed_buffers_by_backend[interpreted_path_name()]
     benchmark(_run_over_packed, utils_numba.pt_in_poly_packed, buffers, inputs)

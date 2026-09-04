@@ -303,6 +303,18 @@ is a more useful output than either number alone.
 back and hands it a cache-friendly access pattern no real query stream has. Worth 77 ns against
 108 ns on the same lookup - a third of the quantity being compared.
 
+**Two processes cannot hold a pair.** Three of the four properties above are properties of one
+loop holding both candidates: the order cannot alternate across processes, the two cannot be handed
+the same draw, and the round-level win count is not even defined. What survives is the best-round
+ratio alone - the single estimator this list exists to stop anyone believing on its own. So where a
+comparison genuinely spans two environments, as comparing the three point-in-polygon acceleration
+paths does (Numba and pure Python are one source decorated or not, so no process holds both), each
+*pair* is still measured inside one process against the implementation both environments hold, and
+the ratio that would have to cross the boundary is not computed at all. The two runs' shared
+baseline is published beside the results as the reader's own comparability check - see
+:doc:`benchmark_results_acceleration_paths`, where it shows that installing Numba moves the
+coordinate validators too, not only the kernel.
+
 All four are held by ``benchmarks/candidate_comparison.py`` rather than re-derived per attempt.
 ``compare_candidates`` takes two named callables that each perform the whole public call for one
 input, draws a fresh random sample per round and hands the same draw to both, alternates which of

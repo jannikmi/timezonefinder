@@ -33,6 +33,7 @@ from scripts.assert_acceleration_path import (
     ACCELERATION_PATHS,
     PACKED_ACCELERATION_IMPLEMENTATIONS,
     PACKED_BUFFER_FACTORIES,
+    interpreted_path_name,
 )
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
@@ -62,6 +63,13 @@ NR_AGREEMENT_POINTS = 1_000
 LOOKUP_METHOD_NAMES = ["timezone_at", "timezone_at_land"]
 
 FINDER_FIXTURE_NAMES = ["timezonefinder_in_memory", "timezonefinder_disk"]
+
+# The two *distinct* implementations this process holds. Not `ACCELERATION_PATHS`,
+# which names three: `numba` and `python` are one source decorated or not, so whichever
+# of them this environment did not produce is not a second implementation to compare
+# against - it is the same object under another name, and running it would double the
+# suite's cost to re-measure agreement with itself.
+COMPARED_PATHS = ("clang", interpreted_path_name())
 
 
 def _ambiguous_points() -> list[tuple[float, float]]:
@@ -127,7 +135,7 @@ def test_lookups_agree_across_acceleration_paths(
 
     results = {
         path: _lookup_all(method_name, points, path, in_memory)
-        for path in ACCELERATION_PATHS
+        for path in COMPARED_PATHS
     }
 
     for path, (_, calls) in results.items():
@@ -137,16 +145,75 @@ def test_lookups_agree_across_acceleration_paths(
             "test proves nothing about it"
         )
 
+    other = interpreted_path_name()
     clang_results, _ = results["clang"]
-    numba_results, _ = results["numba"]
+    other_results, _ = results[other]
     mismatches = [
-        (point, clang, numba)
-        for point, clang, numba in zip(points, clang_results, numba_results)
-        if clang != numba
+        (point, clang, interpreted)
+        for point, clang, interpreted in zip(points, clang_results, other_results)
+        if clang != interpreted
     ]
     assert not mismatches, (
         f"{len(mismatches)} of {len(points)} {method_name} lookups disagree between "
-        f"the acceleration paths (clang vs numba), first: {mismatches[0]}"
+        f"the acceleration paths (clang vs {other}), first: {mismatches[0]}"
+    )
+
+
+@pytest.mark.unit
+def test_finders_on_different_paths_coexist_and_agree() -> None:
+    """Two finders, two backends, one process - which is what a comparison needs.
+
+    A collection wraps its payload for the bound backend when it is loaded, so before
+    the kernel was captured beside those buffers the second finder's lookups ran
+    whichever kernel the *module* happened to hold: one backend's buffers through the
+    other's kernel. Numba's eager signature refuses those - it sees five ``pyobject``
+    arguments where it declared arrays - and the C kernel, which has no such guard, is
+    handed numpy arrays where it expects cffi handles. Nothing could hold both alive,
+    so no paired A/B of the two paths through the public API was possible -
+    and a paired A/B is the only design ``docs/benchmarking_methodology.rst`` accepts
+    for two candidates in one working tree.
+
+    Both finders are therefore built here, under their own patch, and then used
+    *interleaved* - alternating point by point, as the harness alternates round by
+    round. Building them in sequence and querying them in sequence would pass even with
+    the kernel read per call, since the module would happen to hold the right one at
+    each moment.
+    """
+    points = _ambiguous_points()
+    other = interpreted_path_name()
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        clang_calls = _bind_path(monkeypatch, "clang")
+        clang_finder = TimezoneFinder(in_memory=False)
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        other_calls = _bind_path(monkeypatch, other)
+        other_finder = TimezoneFinder(in_memory=False)
+
+    # Neither patch is in force any more: whatever `utils.inside_polygon_packed` holds
+    # now, each finder has to run the kernel it was built with. That is the property.
+    try:
+        mismatches = [
+            (point, clang_answer, other_answer)
+            for point in points
+            for clang_answer, other_answer in [
+                (
+                    clang_finder.timezone_at(lng=point[0], lat=point[1]),
+                    other_finder.timezone_at(lng=point[0], lat=point[1]),
+                )
+            ]
+            if clang_answer != other_answer
+        ]
+    finally:
+        clang_finder.cleanup()
+        other_finder.cleanup()
+
+    assert clang_calls() > 0 and other_calls() > 0, (
+        "one of the two finders never reached its point-in-polygon kernel, so this "
+        f"proves nothing: clang={clang_calls()}, {other}={other_calls()}"
+    )
+    assert not mismatches, (
+        f"{len(mismatches)} of {len(points)} interleaved lookups disagree between "
+        f"coexisting clang and {other} finders, first: {mismatches[0]}"
     )
 
 

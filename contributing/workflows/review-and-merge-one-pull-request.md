@@ -91,7 +91,7 @@ gh pr merge <n> --squash --delete-branch
 
 An escalated pull request is briefed and merged only on an answer in the same session; use the provider's structured question interface for that one question when it has one, recommendation first. Report every unasked merge by number and squash commit; a merge the maintainer disagrees with is reverted from that, and spelling out the command for a case this rare costs a line in every report to save a lookup in almost none.
 
-After merging, fast-forward local `master`, confirm the head is the squash commit, and re-check every remaining pull request before the next round begins.
+After merging, fast-forward `master`, confirm the head is the squash commit, and re-check every remaining pull request: `--delete-branch` closes any based on that branch.
 
 ## Triage-only mode
 

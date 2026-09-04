@@ -770,10 +770,17 @@ def packed_buffers_by_backend() -> dict[str, tuple]:
     """The boundary collection's packed arrays, wrapped for each acceleration path.
 
     Both, rather than whichever is bound: the two kernels are benchmarked side by side
-    and each needs its own handles - the C one cffi buffers, the numba one the arrays
-    themselves. A kernel handed the other path's buffers is a segfault rather than a
-    wrong answer, which is why they are built by the same factories the runtime uses.
+    and each needs its own handles - the C one cffi buffers, the interpreted one the
+    arrays themselves. A kernel handed the other path's buffers is a segfault rather
+    than a wrong answer, which is why they are built by the same factories the runtime
+    uses.
+
+    The second key is whichever name the ``utils_numba`` source goes by *here* - the
+    same functions are ``numba`` with the JIT installed and ``python`` without it, and
+    a fixture that always said ``numba`` would label an interpreted measurement as a
+    compiled one.
     """
+    from scripts.assert_acceleration_path import interpreted_path_name
     from timezonefinder import utils_clang, utils_numba
 
     args = (
@@ -785,7 +792,7 @@ def packed_buffers_by_backend() -> dict[str, tuple]:
     )
     return {
         "clang": utils_clang.packed_buffers_clang(*args),
-        "numba": utils_numba.packed_buffers_numba(*args),
+        interpreted_path_name(): utils_numba.packed_buffers_numba(*args),
     }
 
 

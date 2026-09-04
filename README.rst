@@ -55,11 +55,11 @@ It combines preprocessed polygon data, H3-based spatial shortcuts, and optional 
 Quick Guide
 -----------
 
-It is recommended to install it together with the optional `Numba <https://numba.pydata.org/>`__ package for increased performance:
-
 .. code-block:: console
 
-    pip install timezonefinder[numba]
+    pip install timezonefinder
+
+This compiles a small C extension for the point-in-polygon test. The optional `Numba <https://numba.pydata.org/>`__ extra (``pip install timezonefinder[numba]``) replaces that extension with a JIT-compiled kernel and takes precedence over it - a dispatch rule, not a promise of more speed. The `acceleration path comparison <https://timezonefinder.readthedocs.io/en/latest/benchmark_results_acceleration_paths.html>`__ measures all three against each other and is regenerated with every report; check it before adding the extra.
 
 The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset - the `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the versions to choose from: ``pip install timezonefinder "timezonefinder-data==<version>"``.
 
@@ -117,8 +117,10 @@ this page, which would go stale.
 
 The point-in-polygon routine has three interchangeable backends, selected at import time: a
 clang-compiled C extension (built automatically when a compiler is available), Numba JIT
-compilation (preferred when the optional dependency is installed), and pure Python. The pure-Python
-fallback is ~400x slower and always correct - a missing compiler costs speed, never results.
+compilation (preferred when the optional dependency is installed), and pure Python. All three return
+identical answers - a missing compiler costs speed, never results. Which is fastest is measured, not
+assumed: see the `acceleration path comparison
+<https://timezonefinder.readthedocs.io/en/latest/benchmark_results_acceleration_paths.html>`__.
 
 * `benchmark trend chart <https://jannikmi.github.io/timezonefinder/dev/bench/>`__ - appended to on every push to ``master``
 * `benchmark reports <https://timezonefinder.readthedocs.io/en/latest/7_performance.html>`__ - lookup, point-in-polygon, initialization and memory

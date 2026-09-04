@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from scripts.configs import (
+    ACCELERATION_REPORT_FILE,
     COMPARISON_REPORT_FILE,
     DATA_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
@@ -23,6 +24,7 @@ REPORT_FILES = (
     POLYGON_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
     COMPARISON_REPORT_FILE,
+    ACCELERATION_REPORT_FILE,
     MEMORY_REPORT_FILE,
     DATA_REPORT_FILE,
 )

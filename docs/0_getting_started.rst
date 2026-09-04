@@ -13,7 +13,7 @@ Installation
     pip install timezonefinder
 
 
-for improved speed also install the optional dependency ``numba`` via its extra (also check the :ref:`performance chapter <performance>`):
+This builds a C extension for the point-in-polygon test. The optional ``numba`` extra swaps that extension for a JIT-compiled kernel, and takes precedence over it whenever it is installed - which is a dispatch rule and not a promise that it is faster. Check :doc:`benchmark_results_acceleration_paths` for how the three compare on the workload you run before adding it (see also the :ref:`performance chapter <performance>`):
 
 .. code-block:: console
 
