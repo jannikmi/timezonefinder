@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788557936874,
+  "lastUpdate": 1788557939020,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12461,6 +12461,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4913 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c1a748f0598f4a774fc1fe6ae898b1a37af2171",
+          "message": "improvement-pass: one pull request per item, several items per session (#610)\n\n* improvement-pass: one pull request per item, several items per session\n\nThe pass batched eligible small items into one pull request. That made the\ndiff the unit of work, so an item's review, gate and merge were coupled to\nwhatever else happened to fit beside it.\n\nEach item now leaves the session as its own pull request, gated and reviewed\non its own branch off `origin/master`, never stacked — `master` squash-merges,\nand deleting a merged base branch closes the pull request built on it. A\nsession may still implement several small, similar or related items, because\nthe context the first one established is already loaded; that is now a\nquestion about what one session carries, not about what one diff holds.\n\nAn item too large for one reviewable pull request is refined into slices first,\nrecorded as ordinary register items with fresh IDs in their family — the ledger\ntest reads `<prefix>-<number>`, so a suffixed handle is not an item ID.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Fix CI: pair the .agents adapter, and keep the workflow inside its word budget\n\n`test_provider_skill_sets_are_paired` compares the two provider adapters byte\nfor byte; only the `.claude` copy carried the new description. And\n`test_memory_names_depth_and_size_budgets` caps a canonical memory file at\n2000 words: the workflow was 27 words under it, so the rewrite pushed it to\n2354.\n\nThe review round is a self-contained topic and the largest block in the file,\nso it moves to `contributing/workflows/settle-pull-request-review.md` and is\nlinked from the section it left, with the per-pull-request framing stated\nthere. The workflow is 1794 words.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T23:37:58+02:00",
+          "tree_id": "165b35a4230c2a978489f54fca3864804e95cb15",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0c1a748f0598f4a774fc1fe6ae898b1a37af2171"
+        },
+        "date": 1788557938299,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085334777832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.230266571044922,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2310333251953125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58420372009277,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.585012435913086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
           }
         ]
       }
