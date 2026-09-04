@@ -224,7 +224,7 @@ HexIdSet: TypeAlias = set[int]
 PolyIdSet: TypeAlias = set[int]
 ZoneIdSet: TypeAlias = set[int]
 
-# ``scripts.reporting.print_rst_table`` renders every cell through ``str()``,
+# ``scripts.reporting.render_rst_table`` renders every cell through ``str()``,
 # so a row is not a list of strings - counts and percentages are passed through
 # as numbers and formatted by the renderer.
 TableCell: TypeAlias = str | int | float
@@ -259,7 +259,7 @@ class ShortcutIndexStats(TypedDict):
 
     The last two members are distributions, one entry per shortcut cell. The
     ``dict[str, int | float]`` this replaces could not describe them, so the
-    two ``print_frequencies`` calls consuming them were passing a ``list`` to a
+    two ``render_frequencies`` calls consuming them were passing a ``list`` to a
     parameter the annotation said was a scalar.
     """
 

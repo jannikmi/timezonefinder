@@ -18,6 +18,7 @@ from scripts.render_benchmark_reports import (
     acceleration_path_label,
     add_benchmark_table,
     add_comparison_bullet,
+    add_ci_tracking_note,
     add_fastest_slowest_bullet,
     add_headline_section,
     format_duration,
@@ -68,6 +69,8 @@ _FAKE_SYSTEM_INFO = {
     "numpy_version": "2.0.0",
     "using_clang_pip": True,
     "using_numba": False,
+    "ci_tracked_benchmarks": (),
+    "ci_benchmark_estimator": "min",
 }
 
 
@@ -452,14 +455,55 @@ def test_headline_section_says_so_when_the_run_is_the_ci_tracked_one():
 def test_headline_section_describes_the_measured_environment():
     reporter = BenchmarkReporter(title="t", output_path="/dev/null")
 
-    add_headline_section(reporter, _FAKE_SYSTEM_INFO, ["**~1.00ms** per thing"])
+    add_headline_section(
+        reporter,
+        _FAKE_SYSTEM_INFO,
+        ["**~1.00ms** per thing"],
+        "AMD EPYC 7763 @ 3.2 GHz",
+    )
 
     headline, banner = _texts(reporter)
     assert headline == "**~1.00ms** per thing"
     # the environment named is the one recorded in the JSON, not the one
     # rendering the report
     assert "Linux x86_64" in banner
+    assert "AMD EPYC 7763 @ 3.2 GHz" in banner
     assert "Python 3.13.0" in banner
+
+
+def test_ci_tracking_note_names_the_rows_and_estimator_from_the_measured_run():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+    tracked = "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]"
+    benches = [
+        {
+            **_fake_bench("test_timezone_at[random-in_memory]"),
+            "fullname": tracked,
+        },
+        {
+            **_fake_bench("test_timezone_at[random-file_based]"),
+            "fullname": "benchmarks/test_timezone_finding.py::test_timezone_at[random-file_based]",
+        },
+    ]
+
+    add_ci_tracking_note(
+        reporter,
+        _FAKE_SYSTEM_INFO
+        | {"ci_tracked_benchmarks": [tracked], "ci_benchmark_estimator": "min"},
+        benches,
+    )
+
+    (note,) = _texts(reporter)
+    assert "``min`` estimator" in note
+    assert "random points, in-memory" in note
+    assert "random points, file-based" not in note
+    assert "leads with ``Mean``" in note
+
+
+def test_ci_tracking_note_refuses_measurements_without_recorded_provenance():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    with pytest.raises(ValueError, match="missing the recorded CI subset"):
+        add_ci_tracking_note(reporter, {}, [])
 
 
 # one benchmark per renderer, enough to exercise the full render path: the
@@ -669,3 +713,45 @@ def test_render_comparison_names_the_measured_version_of_the_other_package(tmp_p
     )
 
     assert "1.2.3" in output_path.read_text(encoding="utf-8")
+
+
+def test_reporter_renders_every_content_kind_without_touching_stdout(capsys):
+    """The page is what ``render`` returns, not what the call printed.
+
+    ``write_report`` used to point ``sys.stdout`` at the output file and print
+    into it, because the table renderer it called printed. Both redirectors are
+    gone; a renderer that starts printing again would silently drop its content
+    on the floor here, and put back the destination-bound-at-redirection-time
+    behaviour ``scripts/reporting.py`` was rid of.
+    """
+    reporter = BenchmarkReporter(title="Results", output_path="/dev/null")
+    reporter.add_text("intro")
+    reporter.add_text("")  # a spacer, which adds no second blank line
+    reporter.add_section("Timing", 1)
+    reporter.add_table(["Benchmark", "Rounds"], [["lookup", 100]])
+    reporter.add_note("measured on one machine")
+
+    page = reporter.render()
+
+    assert capsys.readouterr().out == ""
+    assert page.startswith("\n\nResults\n=======\n")
+    assert "\n\nTiming\n------\n" in page
+    assert "intro\n\n\n" in page  # text, its blank line, then the spacer's
+    assert "   * - lookup\n     - 100\n" in page
+    assert ".. note::\n\n   measured on one machine\n" in page
+
+
+def test_write_report_writes_exactly_what_render_returned(tmp_path):
+    """Minus the trailing blank line every section leaves behind, which
+    ``end-of-file-fixer`` strips - the normalisation that keeps a freshly
+    rendered page comparable with the committed one before the hook has run.
+    """
+    output_path = tmp_path / "report.rst"
+    reporter = BenchmarkReporter(title="Results", output_path=output_path)
+    reporter.add_table(["Benchmark"], [["lookup"]])
+
+    reporter.write_report()
+
+    assert (
+        output_path.read_text(encoding="utf-8") == reporter.render().rstrip("\n") + "\n"
+    )

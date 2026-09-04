@@ -7,9 +7,7 @@ import argparse
 import json
 from collections import Counter
 from collections.abc import Iterable, Mapping
-from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Callable
 
 import h3.api.numpy_int as h3
 import numpy as np
@@ -17,6 +15,7 @@ import numpy as np
 from scripts.configs import (
     DATA_REPORT_FILE,
     SHORTCUT_H3_RES,
+    SOURCE_DATA_DIR,
     BinaryData,
     ShortcutIndexStats,
     TableRow,
@@ -59,39 +58,16 @@ SHORTCUT_ZONE_ID_SIZE_BYTES = 1  # uint8 zone ID
 SHORTCUT_POLYGON_ID_SIZE_BYTES = 2  # uint16 polygon ID
 
 
-# decorator to reroute the output of a function to a file
-def redirect_output_to_file(file_path: str | Path) -> Callable:
-    """Decorator to redirect the output of a function to a file."""
+def join_lines(*lines: str) -> str:
+    """Return ``lines`` as text, each one terminated by a newline.
 
-    def decorator(func: Callable) -> Callable:
-        def wrapper(*args, **kwargs):
-            # NOTE: append to the file, do not overwrite it
-            with open(file_path, "a") as f:
-                with redirect_stdout(f):
-                    return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-# context manager version for direct output redirection
-def redirect_output_to_file_contextmanager(file_path: str | Path):
-    """Context manager to redirect stdout to a file."""
-    import sys
-    from contextlib import contextmanager
-
-    @contextmanager
-    def _redirect():
-        original_stdout = sys.stdout
-        try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                sys.stdout = f
-                yield
-        finally:
-            sys.stdout = original_stdout
-
-    return _redirect()
+    Every renderer in this module returns the RST it produces instead of
+    printing it, so the destination is an ordinary argument rather than
+    something a caller has to redirect ``sys.stdout`` to reach. This is the
+    one place that turns a sequence of blocks into text; the report writers
+    concatenate what the renderers return.
+    """
+    return "".join(f"{line}\n" for line in lines)
 
 
 def load_binary_data(data_path: Path = DEFAULT_DATA_DIR) -> BinaryData:
@@ -221,9 +197,9 @@ def _format_table_row(cells: Iterable[str]) -> str:
     )
 
 
-def print_rst_table(headers: list[str], rows: TableRows) -> None:
+def render_rst_table(headers: list[str], rows: TableRows) -> str:
     """
-    Print a table in restructured text (.rst) format using list-table directive
+    Render a table in restructured text (.rst) format using list-table directive
 
     Column widths are proportional to content (see
     :func:`compute_column_widths`) rather than split evenly, so the rendered
@@ -234,29 +210,27 @@ def print_rst_table(headers: list[str], rows: TableRows) -> None:
     """
     widths = compute_column_widths(headers, rows)
 
-    # Start the list-table directive
-    print("\n.. list-table::")
-    print("   :header-rows: 1")
-    print(f"   :widths: {' '.join(str(w) for w in widths)}")
-    print("")
-
-    # Print headers
-    print(_format_table_row(str(h) for h in headers))
-
-    # Print rows
-    for row in rows:
-        # Convert all cells to strings
-        print(_format_table_row(str(cell) for cell in row))
-
-    print("")
+    return join_lines(
+        # a leading blank line separates the directive from whatever precedes it
+        "",
+        ".. list-table::",
+        "   :header-rows: 1",
+        f"   :widths: {' '.join(str(w) for w in widths)}",
+        "",
+        _format_table_row(str(h) for h in headers),
+        *(_format_table_row(str(cell) for cell in row) for row in rows),
+        "",
+    )
 
 
-def print_frequencies(counts: list[int], label: str, zero_label: str | None = None):
-    """Print how often each value in ``counts`` occurs, as an RST table.
+def render_frequencies(
+    counts: list[int], label: str, zero_label: str | None = None
+) -> str:
+    """Render how often each value in ``counts`` occurs, as an RST table.
 
     ``zero_label`` replaces the literal ``0`` in the first row's label. A zero
     can carry a meaning the bare digit misreports - see the caller in
-    :func:`print_shortcut_statistics`, where it counts cells that need no
+    :func:`render_shortcut_statistics`, where it counts cells that need no
     polygon test at all rather than cells holding no polygons.
     """
     max_val = max(*counts)
@@ -282,7 +256,7 @@ def print_frequencies(counts: list[int], label: str, zero_label: str | None = No
             ]
             combined_rows.append(row)
 
-    print_rst_table(combined_headers, combined_rows)
+    return render_rst_table(combined_headers, combined_rows)
 
 
 def get_file_size_in_mb(file_path: Path) -> float:
@@ -427,17 +401,10 @@ def calculate_shortcut_index_stats(
     }
 
 
-@redirect_output_to_file(DATA_REPORT_FILE)
-def print_shortcut_statistics(
+def render_shortcut_statistics(
     mapping: dict[int, int | np.ndarray], poly_zone_ids: list[int]
-):
-    print(rst_title("Shortcut Mapping Statistics", level=1))
-
-    # Calculate comprehensive statistics
+) -> str:
     stats = calculate_shortcut_index_stats(mapping, poly_zone_ids)
-
-    # Print detailed statistics table
-    print(rst_title("Shortcut Index Overview", level=2))
 
     shortcut_headers = ["Shortcut Index Metric", "Value"]
     shortcut_rows = [
@@ -467,29 +434,30 @@ def print_shortcut_statistics(
         ["Storage compression ratio", f"{stats['compression_ratio']:.2f}x"],
     ]
 
-    print_rst_table(shortcut_headers, shortcut_rows)
-
-    # Print frequency distributions
-    print(rst_title("Shortcut Entry Distributions", level=2))
-
-    print(
-        "How much work a lookup in one H3 cell costs. A cell covered by a single "
-        "timezone stores that zone id directly and needs no point-in-polygon test "
-        "at all; the rest store the candidate polygons a lookup has to test."
-    )
-    print(
-        "\nNo cell needs exactly one test: a single candidate is unambiguous, so "
-        "it is stored as a direct zone id instead.\n"
-    )
-
     # a direct-zone cell is recorded as 0 candidates, which read as a cell
     # containing no polygons - impossible for the packaged data, whose ocean
     # zones cover the globe. Compiled without them a cell genuinely can be
     # empty, and the bucket then holds both kinds, so say which applies rather
     # than asserting the packaged case for every dataset this script runs on.
     zero_label = "none (unique zone)" if not stats["empty_entries"] else "none"
-    print_frequencies(stats["polygons_per_shortcut"], "Polygons to test", zero_label)
-    print_frequencies(stats["zones_per_shortcut"], "Timezones in cell")
+
+    return (
+        join_lines(rst_title("Shortcut Mapping Statistics", level=1))
+        + join_lines(rst_title("Shortcut Index Overview", level=2))
+        + render_rst_table(shortcut_headers, shortcut_rows)
+        + join_lines(
+            rst_title("Shortcut Entry Distributions", level=2),
+            "How much work a lookup in one H3 cell costs. A cell covered by a single "
+            "timezone stores that zone id directly and needs no point-in-polygon test "
+            "at all; the rest store the candidate polygons a lookup has to test.",
+            "\nNo cell needs exactly one test: a single candidate is unambiguous, so "
+            "it is stored as a direct zone id instead.\n",
+        )
+        + render_frequencies(
+            stats["polygons_per_shortcut"], "Polygons to test", zero_label
+        )
+        + render_frequencies(stats["zones_per_shortcut"], "Timezones in cell")
+    )
 
 
 def generate_metrics_rows(metrics_dict: Mapping[str, object]) -> list[TableRow]:
@@ -517,14 +485,14 @@ def generate_metrics_rows(metrics_dict: Mapping[str, object]) -> list[TableRow]:
     return rows
 
 
-def generate_polygon_statistics_table(
+def render_polygon_statistics_table(
     polygon_type: str,
     count: int,
     length_list: list[int],
     additional_rows: list[TableRow] | None = None,
-) -> None:
+) -> str:
     """
-    Generate and print a table with statistics for a polygon collection.
+    Render a table with statistics for a polygon collection.
 
     Args:
         polygon_type: Type of polygon ("Boundary" or "Hole")
@@ -537,8 +505,7 @@ def generate_polygon_statistics_table(
     polygon_type_lower = polygon_type.lower()
 
     if count == 0 or not length_list:
-        print(f"No {polygon_type_lower} polygons found.")
-        # Still print a table with zeros for consistency
+        # Still render a table with zeros for consistency
         headers = [f"{polygon_type} Metric", "Value"]
         rows: list[TableRow] = [
             [f"Total {polygon_type_lower} polygons", "0"],
@@ -547,8 +514,9 @@ def generate_polygon_statistics_table(
         ]
         if additional_rows:
             rows.extend(additional_rows)
-        print_rst_table(headers, rows)
-        return
+        return join_lines(
+            f"No {polygon_type_lower} polygons found."
+        ) + render_rst_table(headers, rows)
 
     # Calculate statistics
     total_coord_pairs = sum(length_list)
@@ -575,7 +543,7 @@ def generate_polygon_statistics_table(
     if additional_rows:
         rows.extend(additional_rows)
 
-    print_rst_table(headers, rows)
+    return render_rst_table(headers, rows)
 
 
 def calculate_general_statistics(
@@ -665,19 +633,17 @@ def calculate_timezone_metrics(
     }
 
 
-def print_polygon_distribution_table(
+def render_polygon_distribution_table(
     polygons_per_timezone: Counter,
     all_tz_names: list[str],
-) -> None:
+) -> str:
     """
-    Print a table showing the distribution of polygon counts across timezones.
+    Render a table showing the distribution of polygon counts across timezones.
 
     Args:
         polygons_per_timezone: Counter mapping zone IDs to polygon counts
         all_tz_names: List of timezone names
     """
-    print(rst_title("Polygons per Timezone Distribution", level=3))
-
     # Create distribution of polygon counts
     distribution = Counter(polygons_per_timezone.values())
 
@@ -711,11 +677,12 @@ def print_polygon_distribution_table(
         "Percentage",
         "Example Timezone",
     ]
-    print_rst_table(cols, distribution_rows)
+    return join_lines(
+        rst_title("Polygons per Timezone Distribution", level=3)
+    ) + render_rst_table(cols, distribution_rows)
 
 
-@redirect_output_to_file(DATA_REPORT_FILE)
-def report_data_statistics(
+def render_data_statistics(
     nr_of_polygons: int,
     nr_of_zones: int,
     polygon_lengths: list[int],
@@ -723,9 +690,9 @@ def report_data_statistics(
     polynrs_of_holes: list[int],
     poly_zone_ids: list[int],
     all_tz_names: list[str],
-) -> None:
+) -> str:
     """
-    Prints a report of the statistics of the timezone data.
+    Renders a report of the statistics of the timezone data.
 
     Args:
         nr_of_polygons: Number of boundary polygons
@@ -736,64 +703,68 @@ def report_data_statistics(
         poly_zone_ids: List mapping polygons to zone IDs
         all_tz_names: List of timezone names
     """
-    print(".. _data_report:\n")
-    print(rst_title("Data Report", level=0))
-
-    # Which upstream boundary release every figure below describes. Without the
-    # stamp a report regenerated from new data is indistinguishable from a stale
-    # one: the counts all shift, but each remains plausible on its own, so
-    # nothing flags the page as out of date. Same wording as the benchmark
-    # reports' provenance section, for the same reason.
-    print(f"{DATA_VERSION_LABEL}: {read_data_version()}\n")
-
-    print(rst_title("Data Statistics", level=1))
-
     # General statistics section
     general_metrics = calculate_general_statistics(polygon_lengths, all_hole_lengths)
-    print_rst_table(["General Metric", "Value"], generate_metrics_rows(general_metrics))
 
-    # Boundary polygon statistics section
-    print(rst_title("Boundary Polygon Statistics", level=2))
     # Could add more boundary-specific metrics here if needed
     boundary_metrics: dict[str, float] = {}
     boundary_rows = generate_metrics_rows(boundary_metrics)
-    generate_polygon_statistics_table(
-        "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
-    )
 
-    # Hole polygon statistics section
-    print(rst_title("Hole Polygon Statistics", level=2))
     hole_metrics = calculate_hole_metrics(
         nr_of_polygons, all_hole_lengths, polynrs_of_holes
     )
     hole_rows = generate_metrics_rows(hole_metrics)
     nr_of_holes = len(all_hole_lengths) if all_hole_lengths else 0
-    generate_polygon_statistics_table("Hole", nr_of_holes, all_hole_lengths, hole_rows)
 
-    # Timezone statistics section
-    print(rst_title("Timezone Statistics", level=2))
     polygons_per_timezone = Counter(poly_zone_ids)
     timezone_metrics = calculate_timezone_metrics(
         nr_of_zones, nr_of_polygons, polygons_per_timezone
     )
     timezone_rows = generate_metrics_rows(timezone_metrics)
-    print_rst_table(["Timezone Metric", "Value"], timezone_rows)
 
-    # Polygon distribution section
-    print_polygon_distribution_table(polygons_per_timezone, all_tz_names)
+    return (
+        join_lines(
+            ".. _data_report:\n",
+            rst_title("Data Report", level=0),
+            # Which upstream boundary release every figure below describes.
+            # Without the stamp a report regenerated from new data is
+            # indistinguishable from a stale one: the counts all shift, but each
+            # remains plausible on its own, so nothing flags the page as out of
+            # date. Same wording as the benchmark reports' provenance section,
+            # for the same reason.
+            f"{DATA_VERSION_LABEL}: {read_data_version()}\n",
+            rst_title("Data Statistics", level=1),
+        )
+        + render_rst_table(
+            ["General Metric", "Value"], generate_metrics_rows(general_metrics)
+        )
+        # Boundary polygon statistics section
+        + join_lines(rst_title("Boundary Polygon Statistics", level=2))
+        + render_polygon_statistics_table(
+            "Boundary", nr_of_polygons, polygon_lengths, boundary_rows
+        )
+        # Hole polygon statistics section
+        + join_lines(rst_title("Hole Polygon Statistics", level=2))
+        + render_polygon_statistics_table(
+            "Hole", nr_of_holes, all_hole_lengths, hole_rows
+        )
+        # Timezone statistics section
+        + join_lines(rst_title("Timezone Statistics", level=2))
+        + render_rst_table(["Timezone Metric", "Value"], timezone_rows)
+        # Polygon distribution section
+        + render_polygon_distribution_table(polygons_per_timezone, all_tz_names)
+    )
 
 
-@redirect_output_to_file(DATA_REPORT_FILE)
-def report_file_sizes(output_path: Path) -> None:
+def render_file_sizes(output_path: Path) -> str:
     """
-    Reports the sizes of the biggest generated binary files.
+    Renders the sizes of the biggest generated binary files.
 
     NOTE: smaller .npy files are not reported here, since their size is negligible
 
     Args:
         output_path: Path to the output directory containing the binary files
     """
-    print(rst_title("Binary File Sizes", level=1))
     holes_dir = get_holes_dir(output_path)
     boundaries_dir = get_boundaries_dir(output_path)
 
@@ -820,41 +791,65 @@ def report_file_sizes(output_path: Path) -> None:
     # Add total row
     rows.append(["Total", f"{total_space:.2f}", "100.00%"])
 
-    # Print the table
-    print_rst_table(headers, rows)
+    return join_lines(rst_title("Binary File Sizes", level=1)) + render_rst_table(
+        headers, rows
+    )
 
 
-def write_data_report_from_binary(data_path: Path = DEFAULT_DATA_DIR) -> None:
+def report_path_for(data_path: Path) -> Path:
+    """Where the report describing the binaries in ``data_path`` belongs.
+
+    The committed ``docs/data_report.rst`` describes the packaged data and
+    nothing else, so only the packaged directory maps to it. ``SOURCE_DATA_DIR``
+    is where the generators write and ``DEFAULT_DATA_DIR`` is where the
+    installed data package sits; the two are the same path under an editable
+    install and different ones otherwise, and both mean "the packaged data".
+    Anything else - ``make testparse``'s fixture output, a user's own dataset -
+    gets its report beside its own binaries.
     """
-    Writes a complete data report to the report file by loading data from binary files.
+    packaged = {SOURCE_DATA_DIR.resolve(), Path(DEFAULT_DATA_DIR).resolve()}
+    if data_path.resolve() in packaged:
+        return DATA_REPORT_FILE
+    return data_path / DATA_REPORT_FILE.name
+
+
+def render_data_report(data: BinaryData) -> str:
+    """Render the complete data report page from already-loaded binary data."""
+    return (
+        render_data_statistics(
+            data["nr_of_polygons"],
+            data["nr_of_zones"],
+            data["polygon_lengths"],
+            data["all_hole_lengths"],
+            data["polynrs_of_holes"],
+            data["poly_zone_ids"],
+            data["all_tz_names"],
+        )
+        + render_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
+        + render_file_sizes(data["output_path"])
+    )
+
+
+def write_data_report_from_binary(
+    data_path: Path = DEFAULT_DATA_DIR, report_path: Path = DATA_REPORT_FILE
+) -> None:
+    """
+    Writes a complete data report by loading data from binary files.
 
     Args:
         data_path: Path to binary data files directory
+        report_path: Where to write the rendered report. Defaults to the
+            checkout's committed page, which is what ``make reports``
+            regenerates; a caller parsing data elsewhere passes its own.
     """
     data = load_binary_data(data_path)
 
-    if DATA_REPORT_FILE.exists():
-        print(f"Removing old data report file: {DATA_REPORT_FILE}")
-        DATA_REPORT_FILE.unlink()
-
-    print("Writing data report to:", DATA_REPORT_FILE)
-    report_data_statistics(
-        data["nr_of_polygons"],
-        data["nr_of_zones"],
-        data["polygon_lengths"],
-        data["all_hole_lengths"],
-        data["polynrs_of_holes"],
-        data["poly_zone_ids"],
-        data["all_tz_names"],
-    )
-    print_shortcut_statistics(data["shortcuts"], data["poly_zone_ids"])
-    report_file_sizes(data["output_path"])
-
-    # Each table ends with a blank line, so the last one leaves the file with a
+    print("Writing data report to:", report_path)
+    # Each table ends with a blank line, so the last one leaves the page with a
     # trailing one. end-of-file-fixer strips it, which used to make every freshly
     # generated report differ from the committed one until the hook had run.
-    DATA_REPORT_FILE.write_text(
-        DATA_REPORT_FILE.read_text().rstrip("\n") + "\n", encoding="utf-8"
+    report_path.write_text(
+        render_data_report(data).rstrip("\n") + "\n", encoding="utf-8"
     )
 
 
@@ -872,7 +867,7 @@ Examples:
   python -m scripts.reporting
 
   # Generate report using custom data directory
-  python -m scripts.reporting --data-path /path/to/data
+  python -m scripts.reporting --data-path /path/to/data --out /path/to/report.rst
         """.strip(),
     )
 
@@ -881,6 +876,12 @@ Examples:
         type=Path,
         default=DEFAULT_DATA_DIR,
         help=f"Path to directory containing binary data files (default: {DEFAULT_DATA_DIR})",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=DATA_REPORT_FILE,
+        help=f"Where to write the rendered report (default: {DATA_REPORT_FILE})",
     )
 
     args = parser.parse_args()
@@ -896,8 +897,8 @@ Examples:
 
     try:
         print(f"Generating data report from: {args.data_path}")
-        write_data_report_from_binary(args.data_path)
-        print(f"Data report successfully generated at: {DATA_REPORT_FILE}")
+        write_data_report_from_binary(args.data_path, args.out)
+        print(f"Data report successfully generated at: {args.out}")
         return 0
     except Exception as e:
         print(f"Error generating data report: {e}")

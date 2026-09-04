@@ -1,0 +1,1 @@
+Render the published benchmark pages on a named CI runner, bind their artifact to the measured commit, and distinguish their fixed-round full-suite means from the ``min``-based core subset tracked on every pull request.
