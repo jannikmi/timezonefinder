@@ -5,7 +5,7 @@ Check these explicitly before taking an item, and name the blocking one when you
 ```
 [format 3, pending and unreleased] ─→ unclaimed; promote a format item into it while it lasts
 
-independent: GH-362, GH-524, PERF-2
+independent: GH-524, BIG-2
 ```
 
 - **Regenerating the packaged data is a normal thing for an item to do**, and no item is parked for needing it. Two things it has to respect: it must not collide with the weekly data-update pipeline, which opens *and auto-merges* its own pull requests, so rebase before the final gate; and it must not be incidental — `diff -rq` against a copy of the data directory taken before the regeneration should list only binaries the change had a reason to move, since a file left byte-identical costs the release nothing and git no longer holds a baseline to compare against.
