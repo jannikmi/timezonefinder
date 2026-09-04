@@ -2,6 +2,7 @@ from importlib.util import find_spec
 from pathlib import Path
 import warnings
 
+import h3.api.numpy_int as h3
 import pytest
 
 from scripts.configs import THRES_DTYPE_H
@@ -20,7 +21,9 @@ from tests.locations import (
 )
 from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
+    SHORTCUT_H3_RES,
 )
+from timezonefinder.shortcut_index import ABSENT, ShortcutIndex, slot_of
 from timezonefinder.zone_names import read_zone_names
 from timezonefinder.timezonefinder import (
     AbstractTimezoneFinder,
@@ -452,3 +455,40 @@ class TestTimezonefinderCleanup:
                 f"__del__ raised {type(e).__name__} when cleanup raised "
                 f"{error_type.__name__}: {e}"
             )
+
+
+@pytest.mark.unit
+def test_certain_timezone_at_tests_exactly_the_shortcut_candidates():
+    """``certain_timezone_at`` enumerates candidates through one shared method.
+
+    It used to hold its own copy of the shortcut dispatch - the ``ABSENT`` case, the
+    single-zone case and the candidate-list case - which could drift from
+    ``_iter_boundaries_in_shortcut`` without any test noticing, since only tests called
+    that. Both ends are pinned here: the answer comes from the shared enumeration, and
+    an uncovered cell yields nothing and is therefore unanswered. The packaged ocean
+    zones cover every cell, so the second half is a branch only custom data reaches and
+    one slot is blanked to get to it.
+    """
+    lng, lat = 13.358, 52.5061
+    with TimezoneFinder() as tf:
+        candidate_zones = {
+            tf.zone_name_from_boundary_id(boundary_id)
+            for boundary_id in tf._iter_boundaries_in_shortcut(lng=lng, lat=lat)
+        }
+        assert tf.certain_timezone_at(lng=lng, lat=lat) in candidate_zones
+
+        slot = slot_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        assert tf.shortcuts.table[slot] != ABSENT, "the cell is covered to begin with"
+        # loaded index state is immutable: replace it rather than mutate the dataset
+        table = tf.shortcuts.table.copy()
+        table[slot] = ABSENT
+        tf.shortcuts = ShortcutIndex(
+            table,
+            tf.shortcuts.starts,
+            tf.shortcuts.ends,
+            tf.shortcuts.last_change,
+            tf.shortcuts.payload,
+        )
+
+        assert list(tf._iter_boundaries_in_shortcut(lng=lng, lat=lat)) == []
+        assert tf.certain_timezone_at(lng=lng, lat=lat) is None

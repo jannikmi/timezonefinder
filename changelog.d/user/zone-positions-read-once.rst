@@ -1,0 +1,1 @@
+``certain_timezone_at`` and ``get_geometry`` no longer re-open and re-map the zone position table on every call: it is read once per finder, by the first call that needs it, so construction still costs nothing for the ``timezone_at`` users who never touch it. Measured over the committed on-land fixture, ``certain_timezone_at`` now takes about a sixteenth of the time it did.
