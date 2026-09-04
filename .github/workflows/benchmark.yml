@@ -25,12 +25,10 @@ name: benchmark
 #                     shells out to, the build inputs (`setup.py`,
 #                     `pyproject.toml`, `uv.lock`), `Makefile` (owns the
 #                     `benchmarks-ci`/`memory-ci` targets), and this file.
-# - workflow_dispatch: repeat the identical measurement N times to characterise
-#                     the machine-to-machine spread of the runner pool, from
-#                     which the trend chart's alert threshold is derived
-#                     (never guessed). Not path-filtered: an explicit dispatch
-#                     is already an opt-in, and it runs the noise job below,
-#                     not the pull_request comparison path.
+# - workflow_dispatch: either repeat the identical core measurement N times to
+#                     characterise the runner pool's spread, or render the full
+#                     published report suite on one named CI machine for a
+#                     release. Both are explicit because both are expensive.
 on:
   push:
     branches:
@@ -54,6 +52,11 @@ on:
           fresh runner, to measure the noise floor. Minimum 5.
         required: false
         default: "5"
+      render_reports:
+        description: Render the published benchmark pages instead of measuring noise
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -133,6 +136,7 @@ env:
 jobs:
   plan:
     name: plan repetitions
+    if: ${{ !inputs.render_reports }}
     runs-on: ubuntu-latest
     permissions: {}
     outputs:
@@ -165,6 +169,7 @@ jobs:
   measure:
     name: measure (run ${{ matrix.repetition }})
     needs: [plan]
+    if: ${{ !inputs.render_reports }}
     # One runner *image* - and that is all `ubuntu-latest` guarantees. It does
     # NOT pin the CPU: this pool has served AMD EPYC 9V74, AMD EPYC 7763 and
     # Intel Xeon Platinum 8573C parts between 2.30 and 3.69 GHz, and the clock
@@ -494,7 +499,7 @@ jobs:
   noise:
     name: report noise floor
     needs: [measure]
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && !inputs.render_reports
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -530,3 +535,48 @@ jobs:
             "noise-runs"/*/"$MEMORY_REPORT_FILENAME" \
             --metric memory \
             --markdown-out "$GITHUB_STEP_SUMMARY"
+
+  render-reports:
+    name: render published benchmark reports
+    if: github.event_name == 'workflow_dispatch' && inputs.render_reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install report dependencies
+        run: uv sync --group test --group compare
+
+      - name: Obtain the packaged boundary data
+        uses: ./.github/actions/obtain-data
+        with:
+          token: ${{ github.token }}
+
+      - name: Measure and render the published pages
+        run: make reports
+
+      - name: Stage reports bound to this commit
+        run: |
+          set -euo pipefail
+          uv run python -m scripts.benchmark_report_artifact stage \
+            --output-dir tmp/benchmark-pages \
+            --commit "$GITHUB_SHA"
+
+      - name: Upload the rendered pages
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-pages
+          path: tmp/benchmark-pages/
+          if-no-files-found: error
+          retention-days: 90

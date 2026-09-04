@@ -18,6 +18,7 @@ from scripts.render_benchmark_reports import (
     acceleration_path_label,
     add_benchmark_table,
     add_comparison_bullet,
+    add_ci_tracking_note,
     add_fastest_slowest_bullet,
     add_headline_section,
     format_duration,
@@ -68,6 +69,8 @@ _FAKE_SYSTEM_INFO = {
     "numpy_version": "2.0.0",
     "using_clang_pip": True,
     "using_numba": False,
+    "ci_tracked_benchmarks": (),
+    "ci_benchmark_estimator": "min",
 }
 
 
@@ -452,14 +455,55 @@ def test_headline_section_says_so_when_the_run_is_the_ci_tracked_one():
 def test_headline_section_describes_the_measured_environment():
     reporter = BenchmarkReporter(title="t", output_path="/dev/null")
 
-    add_headline_section(reporter, _FAKE_SYSTEM_INFO, ["**~1.00ms** per thing"])
+    add_headline_section(
+        reporter,
+        _FAKE_SYSTEM_INFO,
+        ["**~1.00ms** per thing"],
+        "AMD EPYC 7763 @ 3.2 GHz",
+    )
 
     headline, banner = _texts(reporter)
     assert headline == "**~1.00ms** per thing"
     # the environment named is the one recorded in the JSON, not the one
     # rendering the report
     assert "Linux x86_64" in banner
+    assert "AMD EPYC 7763 @ 3.2 GHz" in banner
     assert "Python 3.13.0" in banner
+
+
+def test_ci_tracking_note_names_the_rows_and_estimator_from_the_measured_run():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+    tracked = "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]"
+    benches = [
+        {
+            **_fake_bench("test_timezone_at[random-in_memory]"),
+            "fullname": tracked,
+        },
+        {
+            **_fake_bench("test_timezone_at[random-file_based]"),
+            "fullname": "benchmarks/test_timezone_finding.py::test_timezone_at[random-file_based]",
+        },
+    ]
+
+    add_ci_tracking_note(
+        reporter,
+        _FAKE_SYSTEM_INFO
+        | {"ci_tracked_benchmarks": [tracked], "ci_benchmark_estimator": "min"},
+        benches,
+    )
+
+    (note,) = _texts(reporter)
+    assert "``min`` estimator" in note
+    assert "random points, in-memory" in note
+    assert "random points, file-based" not in note
+    assert "leads with ``Mean``" in note
+
+
+def test_ci_tracking_note_refuses_measurements_without_recorded_provenance():
+    reporter = BenchmarkReporter(title="t", output_path="/dev/null")
+
+    with pytest.raises(ValueError, match="missing the recorded CI subset"):
+        add_ci_tracking_note(reporter, {}, [])
 
 
 # one benchmark per renderer, enough to exercise the full render path: the
