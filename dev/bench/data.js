@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788472817678,
+  "lastUpdate": 1788501674164,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4488,6 +4488,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0002585269938607895",
             "extra": "mean: 13.320458999999119 msec\nrounds: 63 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb2861375cca50d1459cb1c2d2f4a9a636f04f76",
+          "message": "Render the published benchmark pages in CI, bound to the commit they measure (#593)\n\n* BENCH-2, BENCH-3: render commit-bound benchmark pages in CI\n\n* BENCH-2, BENCH-3: let the report job read the recorded data run\n\n`render-reports` obtains the packaged boundary data through the same\ncomposite action as every other consumer, so it joins the pinned set in\n`test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts`;\nit already declares the `actions: read` that set exists to enforce.\n\n`benchmarks-ci` now asserts the acceleration path itself, so the comment\nclaiming the -ci targets rely on their caller to do it no longer holds.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Register: BENCH-2 and BENCH-3 shipped\n\nDelete both items and their ranking rows, and rewrite the benchmarking\ndecision's references to the lasting fact: the pages are rendered by the\ndispatchable `render-reports` job, and each states the runner CPU it was\nmeasured on and which of its rows the trend chart tracks.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:00:26+02:00",
+          "tree_id": "d34f23d12ed0d5abbbf938d812c804e97159a50c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bb2861375cca50d1459cb1c2d2f4a9a636f04f76"
+        },
+        "date": 1788501673064,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 186.6703552745114,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005682089407961457",
+            "extra": "mean: 5.35703699995338 msec\nrounds: 159 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 288.68226936517374,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024797099832894315",
+            "extra": "mean: 3.464016000009451 msec\nrounds: 256 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 47.1177262305337,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015454848265393723",
+            "extra": "mean: 21.223434999967594 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 286.0671290860513,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008900978435972761",
+            "extra": "mean: 3.4956829999828187 msec\nrounds: 234 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 595.8271838921828,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000026624785121793975",
+            "extra": "mean: 1.6783390000227882 msec\nrounds: 517 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 57.883307021512344,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001910203648330196",
+            "extra": "mean: 17.27613799999972 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 282.97861021032986,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000039631931191352346",
+            "extra": "mean: 3.5338360000309876 msec\nrounds: 238 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 581.9241554895736,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024514686554568872",
+            "extra": "mean: 1.718437000022277 msec\nrounds: 497 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 57.771743840053425,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010310804354908388",
+            "extra": "mean: 17.309500000010303 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           }
         ]
       }
