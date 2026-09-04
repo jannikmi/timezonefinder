@@ -7,7 +7,7 @@
 - **And the access cost is the wrong way round by three orders of magnitude.** Measured 2026-09-04 over the packaged boundaries (1,322 rings, 7,925,313 vertices, `in_memory=True`): **`PolygonArray.coords_of` is 193 µs per call against 0.04 µs for indexing the in-memory list** — the packed payload has to be decoded, which is exactly what polygon layout 3 exists to have already paid for on the lookup path and to charge for on `get_geometry()`. `Hex.lies_in_cell` reads `data.polygons[poly_nr]` once per (cell, candidate) pair while compiling the shortcut index, which is where a data compilation already spends most of its time; routing that through a decode would add hours. Materialising the collection once into a list instead costs ~0.26 s and ~63 MB held beside the model — cheap, and it removes nothing, since the producers above still have to run.
 - **What would revive it:** a converter stage that reads the binaries *few* times — a validation or reporting pass — which is the shape the four scripts above already have and already use `PolygonArray` for. Not the shortcut compilation.
 - **Status:** rejected. Issue #362 stays open on the tracker; closing it is the maintainer's call.
-- **Last touched:** 2026-09-04 — re-verified against the current tree and rejected; the decode measurement is recorded in the [data-format decisions](../../decisions/geometry-data-format-and-validation-decisions.md).
+- **Last touched:** 2026-09-04 — re-verified against the current tree and rejected. This entry is the whole record: the decode measurement above is not repeated in the decision files, because what it settles is this item rather than a choice binding other work.
 
 ## Related memory
 

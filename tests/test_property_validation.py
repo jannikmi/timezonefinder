@@ -112,6 +112,13 @@ def test_validate_lng_rejects_invalid(lng):
 # still exist, and ``scripts/utils_numba.py`` builds the converter's vector validators on
 # them, so the two forms have to keep agreeing: a bound corrected in one and not the other
 # would let the converter store a coordinate a query then refuses, or the reverse.
+#
+# These three compare a written-out expression against a function whose body is that same
+# expression, so **without numba they are identities** - ``njit`` is a no-op decorator
+# there (``_numba_replacements.py``) and both sides are one Python comparison. They bite on
+# the ``pyXXX-numba`` tox environments, where the right-hand side is a compiled function
+# with its own copy of the bounds and its own float semantics, and not in the no-numba
+# configuration the benchmark workflow tracks.
 
 
 @pytest.mark.unit

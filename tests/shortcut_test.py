@@ -9,8 +9,12 @@ import pytest
 
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
 from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
+from tests.auxiliaries import (
+    AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
+    load_benchmark_points,
+)
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
-from timezonefinder.utils_numba import int2coord
+from timezonefinder.utils_numba import coord2int, int2coord
 
 # Tests now work directly with hybrid_shortcuts format
 
@@ -339,28 +343,41 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
 
 
 @pytest.mark.unit
-def test_a_candidate_s_zone_id_read_one_at_a_time_matches_the_narrowed_array(
-    tf, hybrid_shortcuts
-):
-    """Every ambiguous cell's candidates answer the same read one at a time as in bulk.
+def test_the_candidate_loop_answers_what_the_narrowed_array_answered(tf):
+    """``_zone_id_among`` agrees with the form that narrowed the whole list up front.
 
-    ``_zone_id_among`` reads the zone id of the *one* candidate that answers, where it
-    used to narrow the whole candidate list with ``zone_ids[candidates]`` before any
-    point was tested. The two are the same lookup at two arities, and the loop's index
-    ``i`` is what tied them together - a candidate's position in the list, used to index
-    an array built from that same list. Nothing about a wrong pairing is visible in a
-    lookup's answer unless the mismatched zones differ, so a silent off-by-one here
-    would return a neighbouring zone for a fraction of ambiguous points and fail no
-    existing test.
+    It now reads the zone id of the *one* candidate that answers, where it used to index
+    an array built from the same candidate list by position. The loop's ``i`` is what
+    tied those two together, so the failure mode is a pairing that has slipped: a
+    neighbouring zone returned for a fraction of ambiguous points, with no exception and
+    no empty answer.
+
+    The reference below is that earlier form, so this compares the two implementations
+    rather than comparing numpy indexing to itself - which is what an assertion over the
+    candidate lists alone would do, and it cannot fail. Injecting
+    ``possible_boundaries[(i + 1) % len(possible_boundaries)]`` into the real loop turns
+    1,003 of these 2,000 points red.
     """
-    for hex_id, hybrid_value in hybrid_shortcuts.items():
-        if isinstance(hybrid_value, int):
-            # a unique-zone cell holds no candidate list to narrow
+
+    def reference(possible_boundaries, last_zone_change_idx, lng, lat):
+        """The pre-change body: narrow every candidate's zone id before testing a point."""
+        zone_ids = tf.zone_ids[possible_boundaries]
+        x, y = coord2int(lng), coord2int(lat)
+        for i, boundary_id in enumerate(possible_boundaries):
+            if i >= last_zone_change_idx:
+                break
+            if tf.inside_of_polygon(boundary_id, x, y):
+                return int(zone_ids[i])
+        return int(zone_ids[-1])
+
+    points = load_benchmark_points(AMBIGUOUS_SHORTCUT_POINTS_FIXTURE)[:2000]
+    for lng, lat in points:
+        entry = tf.shortcuts.entry_of(latlng_to_cell(lng, lat))
+        if entry >= 0:
+            # a unique-zone cell is answered by the table and reaches no candidate loop
             continue
-        candidates = np.asarray(hybrid_value)
-        narrowed = tf.zone_ids[candidates]
-        one_at_a_time = [tf._zone_id_of(candidate) for candidate in candidates]
-        assert one_at_a_time == narrowed.tolist(), (
-            f"cell {hex_id}: per-candidate zone ids {one_at_a_time} disagree with the "
-            f"narrowed array {narrowed.tolist()}"
-        )
+        candidates = tf.shortcuts.candidates_of(entry)
+        last = tf.shortcuts.stop_index_of(entry)
+        assert tf._zone_id_among(candidates, last, lng, lat) == reference(
+            candidates, last, lng, lat
+        ), f"({lng}, {lat}) in cell entry {entry} over candidates {candidates.tolist()}"
