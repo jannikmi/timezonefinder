@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788508456990,
+  "lastUpdate": 1788509007681,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5097,6 +5097,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00008440101751779056",
             "extra": "mean: 17.356079999984786 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dce5f84d658ca4eaf50e81c332c59e17fb0a42ea",
+          "message": "merge-round: report a merge by its squash commit, not a revert command (#605)\n\nThe workflow told every round to print `git revert -m 1 <sha>` beside\neach merge. The command is fixed, the sha is already in the report, and\na maintainer reverting a merge is rare enough that fetching it on demand\ncosts less than a line in every report that does not.\n\nThe Reversibility bullet in the brief stays: what a revert restores and\nwhat it cannot reach is a judgement about the change, not a command to\npaste.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T10:02:26+02:00",
+          "tree_id": "e3cc9ec1c245b1cea37c4c60c77f044d8942047e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dce5f84d658ca4eaf50e81c332c59e17fb0a42ea"
+        },
+        "date": 1788509006199,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 212.97961678591935,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008206260192523129",
+            "extra": "mean: 4.695284999996829 msec\nrounds: 180 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 338.1617190791455,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000055954479394996946",
+            "extra": "mean: 2.9571649999979854 msec\nrounds: 294 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 52.98559523011906,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000401719140521207",
+            "extra": "mean: 18.873053999996614 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 314.00378374559705,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000056775033215169436",
+            "extra": "mean: 3.18467499999997 msec\nrounds: 250 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 596.8755950081345,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005816237468497715",
+            "extra": "mean: 1.6753910000062433 msec\nrounds: 483 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 68.05718382366896,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00030805922595317616",
+            "extra": "mean: 14.693526000002066 msec\nrounds: 58 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 312.0486995676669,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000064702898598962",
+            "extra": "mean: 3.2046280000059824 msec\nrounds: 261 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 589.4537296505267,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000027245079762210594",
+            "extra": "mean: 1.6964860000001636 msec\nrounds: 521 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 67.57712425141399,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022912568712862757",
+            "extra": "mean: 14.797907000001942 msec\nrounds: 58 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           }
         ]
       }
