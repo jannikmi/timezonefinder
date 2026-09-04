@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788501674164,
+  "lastUpdate": 1788501675991,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10319,6 +10319,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6257 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb2861375cca50d1459cb1c2d2f4a9a636f04f76",
+          "message": "Render the published benchmark pages in CI, bound to the commit they measure (#593)\n\n* BENCH-2, BENCH-3: render commit-bound benchmark pages in CI\n\n* BENCH-2, BENCH-3: let the report job read the recorded data run\n\n`render-reports` obtains the packaged boundary data through the same\ncomposite action as every other consumer, so it joins the pinned set in\n`test_every_job_reaching_for_the_recorded_run_may_read_its_artefacts`;\nit already declares the `actions: read` that set exists to enforce.\n\n`benchmarks-ci` now asserts the acceleration path itself, so the comment\nclaiming the -ci targets rely on their caller to do it no longer holds.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Register: BENCH-2 and BENCH-3 shipped\n\nDelete both items and their ranking rows, and rewrite the benchmarking\ndecision's references to the lasting fact: the pages are rendered by the\ndispatchable `render-reports` job, and each states the runner CPU it was\nmeasured on and which of its rows the trend chart tracks.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T08:00:26+02:00",
+          "tree_id": "d34f23d12ed0d5abbbf938d812c804e97159a50c",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bb2861375cca50d1459cb1c2d2f4a9a636f04f76"
+        },
+        "date": 1788501675509,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083503723144531,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008528709411621,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.229983329772949,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.230745315551758,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584482192993164,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58529090881348,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8720 GHz"
           }
         ]
       }
