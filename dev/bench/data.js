@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788509009932,
+  "lastUpdate": 1788509154524,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5184,6 +5184,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00022912568712862757",
             "extra": "mean: 14.797907000001942 msec\nrounds: 58 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2c8f841293d2d36b0717b04c9e06a347fcce290c",
+          "message": "register: BENCH-4, nothing dispatches the benchmark report render (#602)\n\nBENCH-2/BENCH-3 moved the published benchmark pages onto a CI runner, but\nleft the render job reachable only by an explicit workflow_dispatch. The\nworkflow's pull_request trigger is path-filtered to paths a release pull\nrequest does not touch, so a release that needs fresh pages depends on a\nperson having pressed the button against the right commit first.\n\nOnly the trigger is open. The 2026-09-02 decision settles that CI must\nnever commit the pages, and the entry records that as the constraint on\nthe routes rather than as a blocker.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T10:05:01+02:00",
+          "tree_id": "5091bce9700fceafb98694a8b5084b74d87443f3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2c8f841293d2d36b0717b04c9e06a347fcce290c"
+        },
+        "date": 1788509153319,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 193.55493050213877,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001975390649575752",
+            "extra": "mean: 5.166492000000744 msec\nrounds: 165 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 320.0876784200517,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011647580098941114",
+            "extra": "mean: 3.1241439999689646 msec\nrounds: 257 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 44.70258898166715,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011181098241753589",
+            "extra": "mean: 22.3700690000328 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 283.59502064067436,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000051980672042958725",
+            "extra": "mean: 3.526154999974551 msec\nrounds: 240 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 583.5824257683636,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000046012751249769274",
+            "extra": "mean: 1.7135539999912908 msec\nrounds: 515 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 56.29023379646667,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012976671776100516",
+            "extra": "mean: 17.765070999985255 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 281.19911174809357,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005867881391131126",
+            "extra": "mean: 3.556199000001925 msec\nrounds: 232 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 575.437231606929,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00002687235048496607",
+            "extra": "mean: 1.7378089999624535 msec\nrounds: 486 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 55.74245070226757,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015947591291323252",
+            "extra": "mean: 17.939649000027202 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           }
         ]
       }
