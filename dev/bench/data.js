@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788508455411,
+  "lastUpdate": 1788508456990,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11237,6 +11237,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9373 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "302de6a7d85f9d610a79c4e636c8f101f06f67e0",
+          "message": "A release gate that nothing invokes now fails a test (#599)\n\n* Classify every scripts/ command by the release step it must precede\n\nThe recent review findings were dominated by one shape: a check that\ncannot run, or runs where it no longer matters. `scripts/changelog_fragments.py`\nshipped reachable only from a manual `make` target, so a release could\npublish with a fragment left behind and no entry anywhere. That was green,\nbecause the suite exercised the check itself and nothing asserted that the\nrelease path reaches it.\n\n`tests/test_release_workflows.py` now holds a table mapping every command\nunder `scripts/` to the irreversible step it must precede, and fails on a\ncommand with no row. \"Nobody wired it up\" therefore stops being a state\nreachable by forgetting: adding a command forces the question, and answering\nit with a release gate creates the ordering assertion, which was previously\nwritten by hand once per gate. The two hand-written ordering tests collapse\ninto one parametrised over the table; each gate carries what a silent pass\nwould cost, reported in the assertion. A gate whose boundary is not\nbuild.yml's names the test that pins it, and that pointer is asserted to\nresolve.\n\nContributor memory: the fail-open class and the independent review that\ncatches it are stated in the routed testing rules, since a pass's own final\ngate runs only the tests its author wrote. The improvement-pass workflow\nroutes to them before the pull request is opened.\n\nVerified by mutation: removing the changelog gate step from build.yml,\nadding an unclassified command, and renaming the pinned data-update test\neach fail the corresponding assertion.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Route the recorded decision to the reviewer, and the review to the head\n\nAnalysing what the maintainer asked for after each pull request opened, as\ndistinct from what the automated review asked for: three of the four\ninterventions were not about code correctness.\n\n- #592's design correction. The pass built the data-update guardrail as an\n  exit from update_data.sh, stopping the preparation. The recorded decision\n  says a tripped guardrail blocks the *auto-merge*, and names the mechanism -\n  a job in build.yml, no new blocking machinery. Two Codex rounds passed it;\n  only the maintainer had read the decision. So the independent review is now\n  handed any recorded decision the change is bound by. That is the one kind of\n  intent worth giving a reviewer: no test fails on correct code implementing\n  the wrong decision, and no reader who has not seen the decision can tell.\n\n- #589's three maintainer-requested re-triggers, which found five defects\n  because each round read code the previous round had not. The workflow rule\n  landed in #590; what was missing is the merge-side check. A review covers a\n  commit, so the merge round now compares the commit a review names against\n  the head - a pull request whose fixes postdate every review of it has had\n  its riskiest code read by nobody.\n\n- The false justification in #590's own body: `--no-verify` was excused with\n  \"check-manifest takes minutes\", which is wrong by two orders of magnitude.\n  A wrong reason costs more than a missing one because it retires the\n  question, so an empirical claim in a body or a commit message is stated\n  where it was measured and marked where it was not.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Ask what a review finding is a symptom of before fixing it in place\n\nOn #592 a review reported that a refused data update's diff died with the\nephemeral runner. Fixing that where it was reported produced an artifact\nupload, which broke the wheel hand-off test, which was then narrowed to keep\nit passing - and the design correction that followed deleted all three. The\nfinding was true; it was a symptom of the guardrail sitting in the wrong file,\nand the seam was the fix.\n\nThe testing rules now carry the question next to the observability ranking\nthey already state, and the pass asks it before fixing a finding where it was\nreported. The routed sentence also names the recorded decisions the reviewer\nis handed, matching the rule it routes to.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Never retire a review finding by moving the rule it cites\n\nFive older merged pull requests, read for what changed after they opened.\n\nTwo of them answer a finding by amending the rule the finding cites, inside\nthe pull request the finding landed on. On #577 Codex asked for a withdrawn\nregister item to be restored; the reply says \"the user explicitly requested\nremoval of the redundant item, so I clarified the register rule instead of\nrestoring it\", and four further commits threaded that exception through the\nregister rules, the pass workflow and a discovery surface - three of them\nprompted by findings that the rule now disagreed with itself. On #564 a P1\nasking for the batch to be split was answered by making batching the policy.\nThe diff then passes because the standard moved, and no reader can see it. So\na rule change is its own deliverable, argued on its own merits, or the finding\nis fixed.\n\n#577 also banned re-triggering a review. Five days later that was the whole of\n#589's gap: every review saw only the commit the pull request opened with, and\nthree maintainer-requested re-triggers found five defects. A rule that removes\na check is code that removes a check - the core contract now asks it to state\nwhat passes unexamined, because the cost lands on a change nobody connects\nback to it.\n\n#569 is the older, clearer instance of symptom-chasing: four rounds widening\none boundary, \"closing the gap from the download side last round left it open\nfrom this one\", ending in a commit named for the boundary it should have drawn\nonce. The second finding on one mechanism is the signal, not the fourth.\n\nAttribution was the hard part: the maintainer's feedback arrives in\nconversation and leaves no trace on the pull request, so only the cases where\na body or a reply volunteered it could be attributed at all. A change made\nbecause the maintainer asked now says so in its commit.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Classify the benchmark report artifact command\n\n#593 merged while this branch was open, adding\n`scripts/benchmark_report_artifact.py`, and the classification test failed on\nit as intended - a command arriving with no row is the state this table exists\nto refuse.\n\nNot a release gate. It does refuse, but over a report's binding to the commit\nthat measured it, and `benchmark.yml` publishes nothing a release depends on.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:53:25+02:00",
+          "tree_id": "503e99aa2f83d177eed5a05d5fc413ecbffb677e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/302de6a7d85f9d610a79c4e636c8f101f06f67e0"
+        },
+        "date": 1788508456657,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2292184829711914,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.229970932006836,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58404731750488,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58481407165527,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8615 GHz"
           }
         ]
       }
