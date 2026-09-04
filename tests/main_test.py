@@ -41,6 +41,30 @@ all_timezone_names = read_zone_names(DEFAULT_DATA_DIR)
 RESULT_TEMPLATE = "{0:25s} | {1:20s} | {2:20s} | {3:2s}"
 
 
+def numba_binding_mismatch(numba_installed: bool) -> str:
+    """Explain a bound acceleration path that disagrees with what is installed.
+
+    ``timezonefinder/utils_numba.py`` falls back to the pure-Python replacements on
+    *any* ``ImportError``, so a numba that is installed but refuses to import reads
+    here as a bare ``False != True`` - indistinguishable from a regression in this
+    package. That is the shape a stale development environment takes: ``uv run``
+    syncs only the default dependency groups and leaves the ``numba`` group at
+    whatever version ``uv sync --all-groups`` last installed, so a lockfile bump
+    that moves NumPy past that numba's ceiling breaks the import while
+    ``find_spec`` still finds it.
+    """
+    if not numba_installed:
+        return "numba is not installed, yet the numba backend is bound"
+    try:
+        import numba  # noqa: F401
+    except ImportError as exc:
+        return (
+            f"numba is installed but does not import ({exc}) - the environment is "
+            "stale, not the code broken: re-run `make install` (`uv sync --all-groups`)"
+        )
+    return "numba imports, yet the pure-Python fallback is bound"
+
+
 # tests for both classes: TimezoneFinderL and TimezoneFinder
 class TestBaseTimezoneFinderClass:
     # Annotated rather than left to inference: every one of these is a knob the
@@ -76,9 +100,10 @@ class TestBaseTimezoneFinderClass:
             cls.test_instance = cls.class_under_test(bin_file_location=cls.bin_file_dir)
 
     def test_using_numba(self):
-        spec = find_spec("numba")
-        numba_installed = spec is not None
-        assert self.test_instance.using_numba() == numba_installed
+        numba_installed = find_spec("numba") is not None
+        assert self.test_instance.using_numba() == numba_installed, (
+            numba_binding_mismatch(numba_installed)
+        )
 
     def test_using_clang_pip(self):
         res = self.test_instance.using_clang_pip()
