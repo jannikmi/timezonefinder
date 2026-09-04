@@ -112,7 +112,7 @@ def test_the_changed_rate_counts_answers_rather_than_lines() -> None:
 
 
 def _isolated_baselines(
-    monkeypatch, tmp_path, answers: list[str], metrics: dict | None = None
+    monkeypatch, tmp_path, answers: list[str], metrics: dict[str, int] | None = None
 ):
     """Point the guard at throwaway copies of the two files an update rewrites."""
     for name, path in (("ANSWERS_PATH", ANSWERS_PATH), ("PAYLOAD_PATH", PAYLOAD_PATH)):
@@ -242,14 +242,47 @@ def test_a_payload_outside_its_band_is_refused(
 
 @pytest.mark.unit
 @pytest.mark.parametrize("key", sorted(PAYLOAD_SIZE_GATES))
-def test_a_payload_just_inside_its_band_passes(monkeypatch, tmp_path, key: str) -> None:
-    """The largest release the band is meant to accept, rather than a comfortable one."""
-    _, committed = _committed_answers()
+@pytest.mark.parametrize("direction", (1, -1))
+def test_a_payload_just_inside_its_band_passes(
+    monkeypatch, tmp_path, key: str, direction: int
+) -> None:
+    """The largest release the band accepts, in both directions.
+
+    The shrinking half is the decision's own wording - *small reductions pass* - and
+    it is the half an asymmetric band would have refused.
+    """
     recorded = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))[key]
-    largest_accepted = math.floor(recorded * (1 + PAYLOAD_SIZE_GATES[key]))
-    _isolated_baselines(monkeypatch, tmp_path, committed, {key: largest_accepted})
+    edge = recorded * (1 + direction * PAYLOAD_SIZE_GATES[key])
+    accepted = math.floor(edge) if direction > 0 else math.ceil(edge)
+    _, committed = _committed_answers()
+    _isolated_baselines(monkeypatch, tmp_path, committed, {key: accepted})
 
     assert check() == 0
+
+
+@pytest.mark.unit
+def test_a_first_run_still_refuses_a_payload_outside_its_band(
+    monkeypatch, tmp_path
+) -> None:
+    """A checkout with the size record but no answer baseline is not an ungated one.
+
+    That path returns before the changed-answer rate is computed, because there is
+    nothing to compare answers against - which is not true of the sizes, and reading
+    it as a pass is how the one signal that *could* speak stays silent.
+    """
+    _, committed = _committed_answers()
+    answers_path = _isolated_baselines(
+        monkeypatch,
+        tmp_path,
+        committed,
+        _scaled_payload(
+            "boundary_payload_bytes",
+            PAYLOAD_SIZE_GATES["boundary_payload_bytes"] + 0.01,
+        ),
+    )
+    answers_path.unlink()
+
+    assert check() == GATE_TRIPPED_EXIT
 
 
 @pytest.mark.unit
@@ -371,6 +404,42 @@ def test_a_refused_update_is_opened_as_a_draft() -> None:
     create = next(step for step in steps if "gh pr create" in str(step.get("run", "")))
     assert "--draft" in create["run"]
     assert "GUARD_REFUSED" in str(create.get("env", {}))
+
+
+@pytest.mark.unit
+def test_a_refusal_points_at_every_baseline_it_could_have_refused_on() -> None:
+    """One exit code carries two gates, so neither notice may assert which one tripped.
+
+    Before this, both texts stated the changed-answer rate as the reason. A dataset
+    refused on its payload size would have arrived with a warning asserting that more
+    than 5 % of the sample moved, over an answer diff showing that it had not - which
+    reads as a misfiring guard and argues the reviewer into releasing it. What the
+    notices can promise instead is that every baseline the guard rewrites is named, so
+    whichever one moved is one click away. Taken from the guard's own paths: a third
+    baseline that no notice mentions fails here rather than in a release nobody can
+    review.
+    """
+    rewritten = [
+        str(path.relative_to(PROJECT_ROOT)) for path in (ANSWERS_PATH, PAYLOAD_PATH)
+    ]
+    update_steps = yaml.safe_load(UPDATE_WORKFLOW.read_text(encoding="utf-8"))["jobs"][
+        "open_update_pr"
+    ]["steps"]
+    warning = next(
+        step for step in update_steps if "gh pr create" in str(step.get("run", ""))
+    )["run"]
+    release_steps = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))[
+        "jobs"
+    ]["merge_and_release"]["steps"]
+    mention = next(
+        step
+        for step in release_steps
+        if str(step.get("with", {}).get("marker", "")) == "review-required"
+    )["with"]["body"]
+
+    for notice in (warning, mention):
+        for path in rewritten:
+            assert path in notice
 
 
 @pytest.mark.unit

@@ -99,8 +99,9 @@ CHANGED_ANSWER_GATE = 0.05
 # leave the file carrying the data effectively ungated, and one sized for the
 # boundaries would refuse an ordinary hole revision.
 #
-# Each band is ~3.6x its file's largest measured move - far less headroom than the
-# answer gate's 13x, and stated rather than dressed up: payload size moves on every
+# Each band is a little under 4x its own file's largest measured move - 3.6x for the
+# boundaries, 3.9x for the holes. Far less headroom than the answer gate's 13x, and
+# stated rather than dressed up: payload size moves on every
 # refinement while answers do not move at all, so no honest band buys more. What these
 # catch is a dataset that lost or gained a *part* of itself, a converter that dropped a
 # zone or a release missing a landmass. A truncated download is caught earlier, by the
@@ -268,11 +269,15 @@ def oversized_payload_moves(
 
 
 def report_payload(previous: dict[str, object], current: dict[str, int | str]) -> None:
-    """Print the size signal, naming the band on the two sizes that carry one."""
+    """Print the size signal, naming the band on the sizes a band was applied to.
+
+    Only on those: a first run compares nothing, and a line reading "None -> 31,735,692,
+    band +-5 %" claims a band was cleared when none was evaluated.
+    """
+    compared = payload_moves(previous, current)
     print("payload signal:")
     for key in sorted(current):
-        band = PAYLOAD_SIZE_GATES.get(key)
-        suffix = "" if band is None else f", band +-{band:.0%}"
+        suffix = f", band +-{PAYLOAD_SIZE_GATES[key]:.0%}" if key in compared else ""
         print(f"  {key}: {_relative_move(previous.get(key), current[key])}{suffix}")
 
 
@@ -334,14 +339,18 @@ def check(variant: str = RELEASED_VARIANT) -> int:
 
     report_payload(previous_metrics, metrics)
     oversized = oversized_payload_moves(previous_metrics, metrics)
-    for key, move in sorted(oversized.items()):
+    if oversized:
+        moved = ", ".join(
+            f"{key} {move:+.2%} against a +-{PAYLOAD_SIZE_GATES[key]:.0%} band"
+            for key, move in sorted(oversized.items())
+        )
         print(
-            f"{key} moved {move:+.2%}, outside the "
-            f"+-{PAYLOAD_SIZE_GATES[key]:.0%} band. The largest move four consecutive "
-            f"releases produced was 1.38 % of the boundary payload and 2.58 % of the "
-            f"hole payload, so a dataset this far out has gained or lost a part of "
-            f"itself rather than been refined. The rewritten record is in the working "
-            f"tree; review it beside the answer diff before deciding.",
+            f"the payload moved outside its band: {moved}. The largest move four "
+            f"consecutive releases produced was 1.38 % of the boundary payload and "
+            f"2.58 % of the hole payload, so a dataset this far out has gained or lost "
+            f"a part of itself rather than been refined. The rewritten {PAYLOAD_PATH} "
+            f"is in the working tree; review its diff beside the answer baseline's "
+            f"before deciding.",
             file=sys.stderr,
         )
     # Both signals are evaluated and reported before either decides, so a refused
