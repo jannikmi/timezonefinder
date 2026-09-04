@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788504881093,
+  "lastUpdate": 1788505867615,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -4749,6 +4749,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0001247499938748622",
             "extra": "mean: 17.857134999999857 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a0748f7d5453de084e3aed6c44f34b6d1292670",
+          "message": "GH-334: convert test expectations through upstream's merged-zone lookup (#595)\n\n* GH-334: convert test expectations through upstream's merged-zone lookup\n\nThe reduced `timezones-now` dataset `update_data.sh --dataset=same-since-now`\ncompiles merges every group of zones that keeps the same time from now on into\none zone under one representative name, so every expectation in\n`tests/locations.py` - all of which name full-dataset zones - is wrong against\nit by construction. The helper that was to convert them (`convert_to_reduced_\ntimezone`) read a hand-derived 18-pair fragment, was never called, and was\ndeleted by DEAD-1. Upstream has published the real table since 2026-01-08\n(evansiroky/timezone-boundary-builder#195), and the settled decision is that\nsuch a mapping comes from upstream or not at all.\n\n- `timezone-names-with-oceans-Now.json` is vendored verbatim at\n  `tests/fixtures/reduced_zones/mapping.json`, with the release, byte size and\n  SHA-256 it was verified against in `source.txt` beside it. The with-oceans\n  variant is a strict superset of the land-only one and names the same\n  representative for every land zone, so one copy serves every reduced variant.\n- `scripts/upstream_release.py` gains `vendor-zone-mapping`, which fetches the\n  asset, verifies it against the digest the release API publishes, refuses one\n  upstream replaced under a tag already taken, and writes through a temporary\n  file so a failed download cannot replace a copy that did verify.\n  `update_data.sh` re-takes it, so the table advances with DATA_VERSION.\n- `tests/test_reduced_zone_mapping.py` re-hashes the committed bytes against\n  that record offline. That is what makes \"from upstream\" a check rather than\n  an intention: a table extended by hand fails it. `.pre-commit-config.yaml`\n  therefore exempts the file from the JSON, newline and clang-format hooks,\n  which all rewrite JSON.\n- `tests/auxiliaries.py` inverts the table once and applies it in\n  `single_location_test`, gated on the packaged data actually being the reduced\n  variant - detected from the packaged zone names, since nothing records which\n  variant was compiled. Applying it unconditionally would rewrite\n  `Europe/Berlin` to `Europe/Paris` against data that answers `Europe/Berlin`,\n  which is why the original call was left commented out.\n\nCounting the vendored table also settles a figure the docs had wrong: the\nreduced dataset holds 63 zones on 2026c, not the ~90 `docs/data_format.rst`\nclaimed, so that page now states a magnitude and points at the table.\n\nSolves issue #334\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: GH-334 shipped\n\nDelete the item and its ranking row, and rewrite what pointed at it: GH-332 is\nno longer sequenced behind anything, the distribution decision now records that\n\"upstream or not at all\" is enforced by a digest rather than intended, and\nDEAD-5 names the vendored table instead of the item that was to obtain it.\n\nThe 444 -> 92 figure carried by three of those entries was wrong: the vendored\ntable has 63 representatives. GH-332's own note now says which half the mapping\ndoes not cover - an ocean zone merges into a *land* representative under the\nreduced data, so `TEST_LOCATIONS_AT_LAND` needs that item's work rather than a\nlarger mapping.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-04T09:10:17+02:00",
+          "tree_id": "0d6c0fb359eea03646e5eda8d5b36f192018641e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3a0748f7d5453de084e3aed6c44f34b6d1292670"
+        },
+        "date": 1788505866835,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 185.27991812095763,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002598107725613984",
+            "extra": "mean: 5.397239000004106 msec\nrounds: 149 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 284.5669119250103,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003724948020520082",
+            "extra": "mean: 3.514112000004843 msec\nrounds: 243 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 46.359033375227355,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008404366631651014",
+            "extra": "mean: 21.570768999993106 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 284.5524985133545,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006618475867815013",
+            "extra": "mean: 3.5142899999982546 msec\nrounds: 230 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 591.1552533315555,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003011424367297112",
+            "extra": "mean: 1.691602999997599 msec\nrounds: 501 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 59.253072360647636,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002803090832453577",
+            "extra": "mean: 16.87676200000965 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 280.76172903136336,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003458090001188124",
+            "extra": "mean: 3.5617390000055593 msec\nrounds: 235 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 575.1483019864206,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000030125650565723976",
+            "extra": "mean: 1.7386820000098169 msec\nrounds: 461 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 58.14742873524616,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025573413686958503",
+            "extra": "mean: 17.19766499999764 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           }
         ]
       }
