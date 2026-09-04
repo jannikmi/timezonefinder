@@ -82,12 +82,16 @@ lock:
 
 
 # when dependency resolving gets stuck:
+# --all-groups, matching `install`: `uv sync` is *exact*, so a bare one prunes every
+# package outside the default groups - numba, pytest, tzfpy - and leaves a checkout
+# whose next `make test` cannot even spawn pytest. `uv run` never prunes, so this
+# target is the only one here that can empty the development environment.
 force_update:
 	@echo "force updating the requirements. removing lock file"
 	@uv cache clean
 	@rm -f uv.lock
 	@echo "pinning the dependencies specified in 'pyproject.toml':"
-	@uv sync --refresh
+	@uv sync --all-groups --refresh
 
 outdated:
 	@echo "Checking for outdated packages (excluding those constrained by dependencies)..."
