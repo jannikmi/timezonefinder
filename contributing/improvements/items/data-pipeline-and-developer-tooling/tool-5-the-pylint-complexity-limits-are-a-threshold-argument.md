@@ -11,4 +11,4 @@
   - **Reversibility:** cheap either way — selecting or unselecting a rule is one line — except that (3)'s refactors are not undone by unselecting it.
   - **Unpriced uncertainty:** whether any of the 15 functions is actually hard to change, which nobody has been asked; the counts above are ruff's, not a reading of the code.
 - **Status:** needs a decision on whether complexity limits are adopted, and at what thresholds.
-- **Last touched:** 2026-09-06 — split out of TOOL-1, which was refined into TOOL-2 to TOOL-6.
+- **Last touched:** 2026-09-06 — split out of the single lint item that used to hold every unenforced ruff family, refined into these slices because 73 sites across disjoint rules plus a dependency pin is not one reviewable change.

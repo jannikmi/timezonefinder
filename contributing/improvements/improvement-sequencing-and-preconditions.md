@@ -9,10 +9,10 @@ DOC-2, DOC-3, DOC-4, DOC-5 (disjoint files, any order) ─→ DOC-6
 
 independent: GH-362, GH-524, PERF-2
 
-TOOL-2, TOOL-3 (disjoint rule families, any order) ─→ TOOL-6
+TOOL-3, TOOL-4 (disjoint rule families, any order); TOOL-6 is cheaper after both
 ```
 
-- **The `TOOL-*` lint families are independent of each other and only TOOL-6 is ordered.** TOOL-2 (`B023`), TOOL-3 (`B905`) and TOOL-4 (`A001`/`A002`/`PLW2901`) touch disjoint rules and disjoint sites. TOOL-6 — raising ruff off the 0.15 line — is easier after TOOL-2, which clears `B023` and with it about a quarter of the ~97 findings 0.16 leaves; that is a cost reduction rather than a precondition, and TOOL-3 reduces nothing there because `B905` already fires on 0.15. **TOOL-6 also states a boundary rather than a blocker:** it is a dependency pin plus the lockfile, which an improvement pass may not change, so it carries a decision about who runs it. TOOL-5 is a threshold argument and is a decision for the same reason no measurement settles it.
+- **The `TOOL-*` lint families are independent of each other, and nothing among them is a hard precondition.** TOOL-3 (`B905`) and TOOL-4 (`A001`/`A002`/`PLW2901`) touch disjoint rules and disjoint sites. TOOL-6 — raising ruff off the 0.15 line — got about a quarter cheaper when `B023` was enforced, since those 24 findings were a quarter of the ~97 that 0.16 leaves; TOOL-3 reduces nothing there, because `B905` already fires on 0.15. **TOOL-6 also states a boundary rather than a blocker:** it is a dependency pin plus the lockfile, which an improvement pass may not change, so it carries a decision about who runs it. TOOL-5 is a threshold argument and is a decision for the same reason no measurement settles it.
 
 - **The `DOC-*` conversions are not ordered at all; only DOC-6 is blocked.** DOC-2 to DOC-5 convert disjoint files and none needs another's output. What DOC-2 additionally does is record the semantic-line-break rule in the [documentation maintenance rules](../development/documentation-maintenance-rules.md), which currently state no wrapping convention — so whichever of the four is taken first carries the rule, and DOC-2 says so rather than claiming a precondition it does not have. DOC-6 is the real block: a check that rejects a hard-wrapped paragraph fails on every page not yet converted.
 

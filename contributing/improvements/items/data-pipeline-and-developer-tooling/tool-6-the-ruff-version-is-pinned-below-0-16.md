@@ -2,7 +2,7 @@
 
 - **Location:** `pyproject.toml`, the `dev` group's `ruff<0.16`; `.pre-commit-config.yaml`, the `ruff-pre-commit` rev. The two are bound deliberately, so a bare `uv run ruff` cannot disagree with the hook.
 - **What the pin costs.** Measured 2026-09-02: on ruff 0.16.5 the widened default set rewrites ~145 sites across 92 files and leaves **~97 findings** needing judgement rather than a fixer — `B023` (24), `EXE001`/`EXE002` (23), `ISC004` (13), `F841` (10), `DTZ001` (7), `BLE001` (7). The hold is recorded in the [dependency decisions](../../decisions/benchmarking-tooling-and-dependency-decisions.md).
-- **TOOL-2 has since cleared the largest single block.** `B023` was 24 of those ~97 and is now enforced on 0.15, so the wall on 0.16 is roughly a quarter shorter. TOOL-3 clears no part of it — `B905` is already reported on 0.15 — so it is not a precondition, only a tidier starting point.
+- **The largest single block has since been cleared.** `B023` was 24 of those ~97 and is now enforced on the 0.15 line, so the wall on 0.16 is roughly a quarter shorter. TOOL-3 clears no part of it — `B905` is already reported on 0.15 — so it is not a precondition, only a tidier starting point.
 - **An improvement pass may not deliver this**, whoever ranks it: the change is a dependency pin plus the lockfile, which the [improvement-pass workflow](../../../workflows/run-one-improvement-pass.md) forbids a pass from touching. That is a boundary, not a blocker on the work, and it is why the item carries a decision rather than sitting `open` for a pass that can never take it.
 - **Decision needed:** who raises the ruff pin, and does it happen in one change or two?
   - **Consequences.** While the pin stands, every ruff rule added after 0.15 is invisible to this repository, and the gap grows with each release. Whoever takes it pays the ~97 judgements in one sitting, because the pin and the hook rev move together and a half-fixed tree fails `make hook`.
@@ -10,6 +10,6 @@
   - **Trade-offs.** (1) is the honest reading of the current boundary and costs the maintainer a session. (2) is the cheapest recurring answer — this will happen again at 0.17 — but a boundary with an exception is a boundary a later pass will read wrongly, and a lockfile change is exactly the kind of thing the boundary exists to keep out of unattended work. (3) costs nothing now and defers a growing bill.
   - **Recommendation:** (1) for this bump, and reconsider (2) only if the same question returns at 0.17.
   - **Reversibility:** the pin itself is one line either way; the ~97 fixes are ordinary code changes and would survive a rollback of the pin.
-  - **Unpriced uncertainty:** the ~97 figure is from 0.16.5 and was taken before TOOL-2; the current number is unmeasured, and 0.16 has released further since.
+  - **Unpriced uncertainty:** the ~97 figure is from 0.16.5 and was taken before `B023` was cleared; the current number is unmeasured, and 0.16 has released further since.
 - **Status:** needs a decision on who raises the pin, since an improvement pass may not change a dependency or the lockfile.
-- **Last touched:** 2026-09-06 — split out of TOOL-1, which was refined into TOOL-2 to TOOL-6.
+- **Last touched:** 2026-09-06 — split out of the single lint item that used to hold every unenforced ruff family, refined into these slices because 73 sites across disjoint rules plus a dependency pin is not one reviewable change.
