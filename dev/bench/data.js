@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788598573852,
+  "lastUpdate": 1788599794153,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5880,6 +5880,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00007376210502875193",
             "extra": "mean: 18.033501000005003 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82704cdd7c1d05db610ed241b7fc5459ebd880f5",
+          "message": "maintainer-decision: GH-332 publishes nothing, and parks on demand (#618)\n\n* maintainer-decision: GH-332 publishes nothing, and parks on demand\n\nThe reduced 63-zone `timezones-now` dataset does not become a published\nartifact. The converter route stays the answer, and it needs no work:\n`docs/data_format.rst` already documents `--dataset=same-since-now` with\nits caveats and the vendored mapping, and `README.rst` links there.\n\nParked rather than closed, because the objection is missing demand rather\nthan a dead end. A second `timezonefinder-data-reduced` distribution is\nrefused on absent demand only and stays the shape to build if a user asks\nfor it on issue #332. Shipping the reduced data inside the existing wheel\nis refused on merit and is not to be re-proposed: it enlarges the download\nfor every user in order to serve the users whose stated want was a smaller\nfootprint.\n\nThe decision is recorded on the item rather than in the distribution\ndecision module: it constrains no other item, and a parked entry is not\ndeleted the way a shipped one is, so the item file keeps it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Refuse resolving the data bound from PyPI in tox, and split the module to hold it\n\nThe release-ordering bullet carried an open question: whether tox should\ninstall `timezonefinder-data` from PyPI so the version bound is checked by\nresolution as well. It cannot. On the one case it would protect, a format\nbump, the bound moves to `<N+1` and nothing published satisfies it until the\ndata-update pull request producing that data goes green - and that pull\nrequest's own matrix would be resolving the version it has not published.\nIt would also test the previous release's bytes while the guard's diff looked\nclean. `tox.ini` installs the workspace member deliberately.\n\nRecording it needed room the module did not have, so the unattended weekly\ndata update's guardrails, gating and trigger authorization move to their own\nfile. The register rules' enumeration of decision modules is dropped rather\nthan extended: it had already gone stale twice, missing the payload-compression\nand format-version-marker modules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T11:15:27+02:00",
+          "tree_id": "0e4aa1300eeec75e941af138e5e65371f628c00a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/82704cdd7c1d05db610ed241b7fc5459ebd880f5"
+        },
+        "date": 1788599792573,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 182.91156061367934,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016351548672670347",
+            "extra": "mean: 5.467123000016727 msec\nrounds: 154 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 289.9930923633461,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000028491685159390485",
+            "extra": "mean: 3.4483580000141956 msec\nrounds: 252 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 43.28558918420315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00034867653127885285",
+            "extra": "mean: 23.102376999986518 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 275.14055555085145,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006614633710919971",
+            "extra": "mean: 3.6345060000257945 msec\nrounds: 234 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 584.3169334739432,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000038235941038507015",
+            "extra": "mean: 1.7114000000901797 msec\nrounds: 531 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 56.32603310386979,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019213749092895446",
+            "extra": "mean: 17.753780000020924 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 273.0237517016683,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015360342170760364",
+            "extra": "mean: 3.662684999994781 msec\nrounds: 226 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 570.8863924463745,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000021211228175016093",
+            "extra": "mean: 1.7516620000606054 msec\nrounds: 511 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 55.98936426050828,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021998168414146294",
+            "extra": "mean: 17.860534999954325 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
