@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788637781927,
+  "lastUpdate": 1788638593842,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6228,6 +6228,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00031316044870940876",
             "extra": "mean: 18.07284599999548 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2327c852143ddab9d89e64433f9dabcf8954e017",
+          "message": "Refine DOC-1 into five documentation slices (#614)\n\n* DOC-1: refine the documentation reflow into five slices\n\nDOC-1 was one L-sized item covering 897 continuation lines across fourteen\nhand-written pages, which is not one reviewable pull request. It becomes DOC-2\nto DOC-6, each standing under its own changelog sentence:\n\n  DOC-2  docs/data_format.rst (249), plus the convention itself\n  DOC-3  docs/benchmarking_methodology.rst (215)\n  DOC-4  docs/architecture.rst (195)\n  DOC-5  the remaining ten pages, including README.rst (238)\n  DOC-6  price a check that rejects a newly hard-wrapped paragraph\n\nThe rule lands with the first conversion rather than in a slice of its own,\nbecause a conversion that does not record the convention re-accumulates. That\nis the only thing ordering DOC-3 to DOC-5 behind DOC-2; they touch disjoint\nfiles. DOC-6 is genuinely blocked - it fails on any page not yet converted -\nand is a pricing item rather than a build one: a heuristic that fires on\ncorrect prose is worse than no check.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DOC-1: correct the slice counts, sequencing and carried-over reasoning\n\nReview findings, all four confirmed.\n\nThe line counts were taken with a heuristic that counted indented directive and\nliteral-block lines as prose. Re-counted strictly - unindented prose line whose\nunindented prose predecessor does not end a sentence - `docs/architecture.rst`\nfalls from 195 to 135, and the family totals 718 across eleven files rather than\n897 across thirteen. The method is now stated in DOC-2, and DOC-1's superseded\n628-across-11 is kept beside it, dated, since a later recount disagreeing with\nboth should not read as a regression.\n\nThe sequencing diagram drew DOC-2 -> DOC-3/4/5 as a hard arrow while the prose\nbeneath it admitted the arrow was a preference. Nothing blocks those three:\nwhichever slice runs first records the convention, and DOC-2 now says that\ninstead of claiming a precondition. DOC-6 remains the only real block.\n\nTwo pieces of DOC-1 were lost and are restored: why this ranks where it does -\nreadability, which the ranking puts below drift-prone duplication, earning its\nplace only through the concurrent-conflict cost - and its \"take it when nothing\nelse is queued\" judgement, which five eligibility cells reading plain \"free\" had\nquietly overstated.\n\nAlso: what \"remaining\" excludes moves from DOC-6 into DOC-5, where a pass taking\nit will actually look, and the four already-conformant stub pages are named\nrather than silently absent. DOC-6 states that it may close with a measurement\nand no check, which is why it carries no changelog sentence.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:02:25+02:00",
+          "tree_id": "4ef0da59720e0aaec2bea17785fc64414676742e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2327c852143ddab9d89e64433f9dabcf8954e017"
+        },
+        "date": 1788638592955,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 177.63046291384492,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000923356402350223",
+            "extra": "mean: 5.629665000000728 msec\nrounds: 153 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 293.26897838874214,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007922973911832448",
+            "extra": "mean: 3.4098389999996925 msec\nrounds: 257 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 41.32906503280656,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004439661460370036",
+            "extra": "mean: 24.196047000003773 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 274.96647471261116,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00028806390278438715",
+            "extra": "mean: 3.6368069999994646 msec\nrounds: 223 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 589.234219425276,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002293577363643571",
+            "extra": "mean: 1.697117999995612 msec\nrounds: 528 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 55.56149446194843,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001335628786106552",
+            "extra": "mean: 17.998076000004914 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 271.6135091866725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003977618215380808",
+            "extra": "mean: 3.6817020000015077 msec\nrounds: 224 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 573.5474194658539,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000255428995956416",
+            "extra": "mean: 1.7435350000027938 msec\nrounds: 522 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 55.97958223108612,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00044620250988173924",
+            "extra": "mean: 17.863656000002948 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
