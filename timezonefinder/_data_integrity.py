@@ -42,6 +42,7 @@ from timezonefinder.flatbuf.io.polygons import (
 from timezonefinder.configs import (
     BLOCK_BASE_DTYPE,
     BLOCK_OFFSET_DTYPE,
+    BLOCK_PAYLOAD_OFFSET_DTYPE,
     BLOCK_RANGE_DTYPE,
     BLOCK_WIDTH_DTYPE,
     POLYGON_BLOCK_SIZE,
@@ -359,6 +360,41 @@ def validate_payload_offset_table(data_dir: Path) -> None:
                             "lookups against it would return wrong coordinates "
                             "silently."
                         )
+
+
+def validate_payload_offset_width(data_dir: Path) -> None:
+    """Check that a collection's payload still fits the width its offsets are held in.
+
+    ``PolygonArray`` hands the point-in-polygon kernels one word offset per block,
+    absolute into the whole coordinate buffer, in
+    :data:`~timezonefinder.configs.BLOCK_PAYLOAD_OFFSET_DTYPE`. It builds them by adding
+    each ring's start to a ring-relative offset, which is unsigned arithmetic: a
+    collection that outgrew the width would **wrap** rather than raise, and a wrapped
+    offset addresses some other ring's residuals - a wrong timezone for the points whose
+    ray crosses that block, with nothing to notice it.
+
+    The check is exact and costs one file size, because the whole buffer's word count
+    bounds every offset into it. It belongs here, where the data is produced, rather than
+    in the construction a lookup waits on.
+
+    :param data_dir: A compiled data directory
+    :raises DataIntegrityError: if a coordinate file holds more words than the offset
+        dtype can address
+    """
+    limit = int(np.iinfo(BLOCK_PAYLOAD_OFFSET_DTYPE).max)
+    for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
+        coordinate_path = get_coordinate_path(polygon_dir)
+        nr_words = coordinate_path.stat().st_size // PAYLOAD_WORD_DTYPE.itemsize
+        if nr_words > limit:
+            raise DataIntegrityError(
+                f"{coordinate_path} holds {nr_words:,} payload words, but a block's "
+                f"payload offset is stored as {BLOCK_PAYLOAD_OFFSET_DTYPE.name}, which "
+                f"addresses at most {limit:,}. PolygonArray makes those offsets "
+                f"absolute against this buffer with unsigned arithmetic, so the excess "
+                f"would wrap and point the kernels at another ring's residuals instead "
+                f"of failing. Widen BLOCK_PAYLOAD_OFFSET_DTYPE and move "
+                f"POLYGON_LAYOUT_VERSION with it."
+            )
 
 
 def validate_block_index(data_dir: Path) -> None:
@@ -936,6 +972,7 @@ def validate_data_dir(data_dir: Path) -> None:
     validate_zone_data(data_dir)
     validate_hole_references(data_dir)
     validate_payload_offset_table(data_dir)
+    validate_payload_offset_width(data_dir)
     validate_block_index(data_dir)
     validate_block_payload(data_dir)
     validate_hole_registry(data_dir)

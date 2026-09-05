@@ -10,6 +10,7 @@ that a ``TimezoneFinder`` built on it answers identically.
 """
 
 import mmap
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -17,9 +18,10 @@ import pytest
 from timezonefinder._data_integrity import (
     DataIntegrityError,
     validate_payload_offset_table,
+    validate_payload_offset_width,
 )
 from timezonefinder import TimezoneFinder
-from timezonefinder.configs import DEFAULT_DATA_DIR
+from timezonefinder.configs import BLOCK_PAYLOAD_OFFSET_DTYPE, DEFAULT_DATA_DIR
 from timezonefinder.coord_accessors import FileCoordAccessor, MemoryCoordAccessor
 from timezonefinder.block_payload import PAYLOAD_WORD_DTYPE
 from timezonefinder.flatbuf.io.polygons import (
@@ -324,3 +326,55 @@ def test_lookups_agree_across_memory_modes():
     finally:
         mapped.cleanup()
         loaded.cleanup()
+
+
+@pytest.mark.unit
+def test_the_payload_offset_width_bounds_the_whole_buffer_not_one_ring(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A collection larger than the offset dtype must be refused, not wrapped.
+
+    ``PolygonArray`` makes the per-block offsets absolute against the coordinate buffer
+    with unsigned arithmetic, so a buffer past the dtype's reach would address another
+    ring's residuals rather than raise. The guard is stated against the buffer because
+    that - not the largest single ring - is the quantity at risk.
+
+    The real dtype addresses 4.29 billion words, so the *width* is narrowed here rather
+    than the file grown to 17 GB: what is under test is the comparison and the message,
+    both of which read the dtype rather than a literal.
+    """
+    import timezonefinder._data_integrity as integrity
+
+    monkeypatch.setattr(integrity, "BLOCK_PAYLOAD_OFFSET_DTYPE", np.dtype("<u1"))
+    limit = int(np.iinfo(np.uint8).max)
+
+    data_dir = tmp_path / "data"
+    boundaries = data_dir / "boundaries"
+    holes = data_dir / "holes"
+    boundaries.mkdir(parents=True)
+    holes.mkdir(parents=True)
+    get_coordinate_path(holes).write_bytes(b"")
+    path = get_coordinate_path(boundaries)
+
+    # exactly at the limit: allowed
+    path.write_bytes(b"\0" * (limit * PAYLOAD_WORD_DTYPE.itemsize))
+    validate_payload_offset_width(data_dir)
+
+    # one word past it: refused, naming the wrap it prevents
+    path.write_bytes(b"\0" * ((limit + 1) * PAYLOAD_WORD_DTYPE.itemsize))
+    with pytest.raises(DataIntegrityError, match="payload words"):
+        validate_payload_offset_width(data_dir)
+
+
+@pytest.mark.unit
+def test_the_packaged_payload_offsets_are_inside_the_stored_width() -> None:
+    """What the packaged data actually needs, against what the dtype addresses."""
+    finder = TimezoneFinder()
+    limit = int(np.iinfo(BLOCK_PAYLOAD_OFFSET_DTYPE).max)
+    for collection in (finder.boundaries, finder.holes):
+        assert collection.block_payload_offsets.dtype == BLOCK_PAYLOAD_OFFSET_DTYPE
+        assert int(collection.block_payload_offsets.max()) <= limit
+        # the offsets are absolute into the buffer, which is the bound the guard states
+        assert int(collection.block_payload_offsets.max()) < len(
+            collection.coordinates.words
+        )
