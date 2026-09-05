@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788600576393,
+  "lastUpdate": 1788600578008,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12920,6 +12920,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c2ccde7dcd35ec5aef550e40c989020cba3788f",
+          "message": "GH-524: brief the packages/ move for a decision (#622)\n\nRe-verification found the premise intact — `timezonefinder/` at the root,\n`packages/` holding one member, the root manifest doubling as the workspace\nroot — and the move's stated trigger unfired: its justification on issue #524\nis that a third distribution stops being a special case, and there is none.\nAbsent one the issue itself calls the move close to cosmetic, and it rewires\n`setup.py`'s cffi module path, `[tool.setuptools] packages`, `MANIFEST.in`\n(which prunes `packages`), the check-manifest ignore list, the cibuildwheel\nbuild root, `scripts/configs.py`, `tox.ini` and `docs/conf.py` at once.\n\nWhether to pay that now, park it on a third distribution, or refuse it is the\nmaintainer's: the answers produce materially different work and (a) is\nexpensive to reverse. Recorded as one Decision-needed bullet, with the\n`tests/` split answered as the contributor's own choice — one root suite,\nsince `tests/auxiliaries.py` imports from `scripts/`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T11:28:40+02:00",
+          "tree_id": "e1ee1b96e7513595b361427b824da86d7907be58",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9c2ccde7dcd35ec5aef550e40c989020cba3788f"
+        },
+        "date": 1788600577637,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2301712036132812,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2309799194335938,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58262920379639,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.583394050598145,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
           }
         ]
       }
