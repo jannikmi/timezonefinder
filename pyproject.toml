@@ -201,9 +201,9 @@ ignore = [
     # over a loop variable. Every site has to be read individually, because the rule
     # cannot see whether the closure outlives the iteration.
     "B023",
-    # B905 (22 sites) wants an explicit `strict=` on `zip`. Each site needs the
-    # judgement of whether unequal lengths are possible; TOOL-1 records the analysis of
-    # the one that looked dangerous and was not.
+    # B905 (27 sites across 18 files) wants an explicit `strict=` on `zip`. Each site
+    # needs the judgement of whether unequal lengths are possible; TOOL-1 records the
+    # analysis of the one that looked dangerous and was not.
     "B905",
 ]
 
