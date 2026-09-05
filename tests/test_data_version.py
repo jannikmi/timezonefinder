@@ -220,7 +220,7 @@ def test_a_data_directory_without_a_stamp_says_how_to_fix_it(tmp_path):
 
     with TimezoneFinder(bin_file_location=data_dir) as tf:
         with pytest.raises(FileNotFoundError, match="no dataset version stamp"):
-            tf.data_version
+            tf.data_version  # noqa: B018 - the access is what must raise
 
 
 @pytest.mark.parametrize(

@@ -40,9 +40,9 @@ repos:
       rev: v0.15.21
       hooks:
           - id: ruff
-            # linter.
+            # linter. What it checks, and why `prototypes/` is left out of it, is
+            # stated once in [tool.ruff.lint] in pyproject.toml.
             args: [ --fix ]
-            exclude: ^(prototypes/)
           - id: ruff-format
 
     -   repo: https://github.com/asottile/blacken-docs
