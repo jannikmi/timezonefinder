@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788639449030,
+  "lastUpdate": 1788639450607,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13532,6 +13532,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c52037a258542fb4fc8c81595a0addb2f56d79f",
+          "message": "Thread one accumulator through the GeoJSON parse (#612)\n\n* BIG-3: thread one accumulator through the GeoJSON parse\n\n`TimezoneData.from_geojson` declared eight lists and two counters and passed\nthem down two call levels for the callees to append to, with `poly_id` and\n`nr_of_holes` additionally returned and reassigned at each level. Which\narguments were inputs and which were outputs was visible only by reading the\nbodies, and the parameter order had to match at three call sites with nothing\nchecking it: `PolygonList` appeared twice and `list[int]` three times, so a\ntransposition type-checked and wrote into the wrong list.\n\n`ParseAccumulator` holds that state and owns the three steps, so the call sites\npass an object and the thing being parsed. No logic moves: the converter's\noutput over the packaged boundaries (2026c, with oceans) is byte-identical,\n`diff -rq` against a directory compiled before the change reporting nothing.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-3: retire the item the accumulator refactor ships\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-3: make the parse tests bite, and correct two overclaims\n\nThe pre-review found two of the four new tests unfalsifiable: every ring in\nthe fixture had the same size, so a length assertion read back off the arrays\nit described could not disagree, and a shape comparison passed under any\npermutation of `original_polygons`. The fixture now builds rings of 4-9\nvertices at distinct offsets, and the assertions spell out the expected sizes\nand offsets. Verified by injecting four mutations - swapped length lists, the\n`poly_id` increment moved before the holes, a permuted `original_polygons`,\nand an off-by-one zone id - each of which turns the suite red.\n\nAlso: the accumulator docstring said the collections are handed over\n\"unchanged\", which `poly_zone_ids` is not (it is converted to an array), and\nthe changelog fragment said eleven threaded parameters where the count is ten.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:16:39+02:00",
+          "tree_id": "8fe149deeedf6cbfdbad7eeb039634cf19186078",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8c52037a258542fb4fc8c81595a0addb2f56d79f"
+        },
+        "date": 1788639450248,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083599090576172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085382461547852,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2304391860961914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.231198310852051,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584439277648926,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58524799346924,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
           }
         ]
       }
