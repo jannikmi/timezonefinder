@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788641243546,
+  "lastUpdate": 1788641245072,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13991,6 +13991,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4981 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "664ec43e2644deecf0363669aef2bda3ca48843e",
+          "message": "improvement-pass: one item at a time, and a refinement that ships its first slice (#620)\n\n* improvement-pass: one item at a time, and a refinement that ships its first slice\n\nThe pass finalized a whole item list up front and claimed every ID in one\natomic push. That reserved work the session had not started, blocked\nconcurrent passes on items it might never reach, and made the batch, not the\nitem, the unit of commitment.\n\nAn item is now selected, claimed, implemented, opened and released before the\nnext one is looked at, against a re-verified ranking — merged work and\nconcurrent passes change what ranks first. The session continues item by item\nwhile the loaded context still pays, and stops when a fresh pass would rank\nbetter; the stop reason goes in the final report.\n\nOversize is also handled differently. The item is no longer narrowed in place\nunder its own ID, which let a shipped pull request read as if it retired the\nitem that was ranked. The original item and its ranking row are deleted, the\nslices are recorded with fresh IDs in the same family, and the refinement\nimplements the first of them — including when the oversize is discovered\nmid-implementation — so the pass leaves working code rather than register\nchurn. Only a first slice blocked on a maintainer decision falls back to a\nregister-only deliverable.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Trim the improvement-pass workflow back under its word budget\n\nThe file stood at 2089 words against the 2000-word cap\ntests/test_contributor_memory.py enforces, so every check on this\nbranch was red. No rule is removed: each compressed passage restated\none already stated elsewhere in the same file - the intro's\n\"continues item by item\" clause, the claim section's\nimplement/open/release sequence, the refinement paragraph's \"ships the\nslice items and implements the first\", and \"its own claim, branch, and\npull request\".\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:45:59+02:00",
+          "tree_id": "d657128f83c34346a1c1707c8de3ce89aa7e27bb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/664ec43e2644deecf0363669aef2bda3ca48843e"
+        },
+        "date": 1788641244742,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083599090576172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085382461547852,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2303295135498047,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2310543060302734,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58390522003174,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.584670066833496,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
           }
         ]
       }
