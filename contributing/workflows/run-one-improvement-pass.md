@@ -73,11 +73,11 @@ Each pull request is gated on its own: a sibling passing is not evidence about t
 
 Confirm packaged data is untouched unless regeneration was the item's subject; if it was, the data diff must list only intended binaries. Confirm the diff contains only intended paths, the register invariants pass, all discoveries are recorded, and no shipped ID remains. If a required gate cannot be fixed, push the findings but open no pull request.
 
-Open the pull request without merging or adding automation. Its body states what changed, why this item outranked or skipped higher work, which sibling items share the session and where their pull requests are, recorded decisions, behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item.
+Open the pull request without merging or adding automation. Its body states what changed, why this item outranked or skipped higher work, which sibling items share the session and where their pull requests are, recorded decisions, behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item. One retiring an entry without an independent review carries the sentence the testing rules require of it.
 
 ## Independent review
 
-Each pull request is reviewed and settled per the [review-settlement rules](settle-pull-request-review.md), before it is opened and after: the pass is not over while a finding is unanswered. A pull request that only retires an entry is exempt from the pre-open review under the [testing rules](../development/testing-strategy-and-change-scope.md), and pays for it with the self-check they name; a refinement into slices is not exempt, and neither is anything carrying code.
+Each pull request is reviewed and settled per the [review-settlement rules](settle-pull-request-review.md), before it is opened and after: the pass is not over while a finding is unanswered. The [testing rules](../development/testing-strategy-and-change-scope.md) exempt one narrow case, and say what it costs.
 
 ## Triage-only mode
 
