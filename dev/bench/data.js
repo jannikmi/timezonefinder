@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788638595506,
+  "lastUpdate": 1788639449030,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6315,6 +6315,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00044620250988173924",
             "extra": "mean: 17.863656000002948 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c52037a258542fb4fc8c81595a0addb2f56d79f",
+          "message": "Thread one accumulator through the GeoJSON parse (#612)\n\n* BIG-3: thread one accumulator through the GeoJSON parse\n\n`TimezoneData.from_geojson` declared eight lists and two counters and passed\nthem down two call levels for the callees to append to, with `poly_id` and\n`nr_of_holes` additionally returned and reassigned at each level. Which\narguments were inputs and which were outputs was visible only by reading the\nbodies, and the parameter order had to match at three call sites with nothing\nchecking it: `PolygonList` appeared twice and `list[int]` three times, so a\ntransposition type-checked and wrote into the wrong list.\n\n`ParseAccumulator` holds that state and owns the three steps, so the call sites\npass an object and the thing being parsed. No logic moves: the converter's\noutput over the packaged boundaries (2026c, with oceans) is byte-identical,\n`diff -rq` against a directory compiled before the change reporting nothing.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-3: retire the item the accumulator refactor ships\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-3: make the parse tests bite, and correct two overclaims\n\nThe pre-review found two of the four new tests unfalsifiable: every ring in\nthe fixture had the same size, so a length assertion read back off the arrays\nit described could not disagree, and a shape comparison passed under any\npermutation of `original_polygons`. The fixture now builds rings of 4-9\nvertices at distinct offsets, and the assertions spell out the expected sizes\nand offsets. Verified by injecting four mutations - swapped length lists, the\n`poly_id` increment moved before the holes, a permuted `original_polygons`,\nand an off-by-one zone id - each of which turns the suite red.\n\nAlso: the accumulator docstring said the collections are handed over\n\"unchanged\", which `poly_zone_ids` is not (it is converted to an array), and\nthe changelog fragment said eleven threaded parameters where the count is ten.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:16:39+02:00",
+          "tree_id": "8fe149deeedf6cbfdbad7eeb039634cf19186078",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/8c52037a258542fb4fc8c81595a0addb2f56d79f"
+        },
+        "date": 1788639448070,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 293.2523800383303,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003873798248669944",
+            "extra": "mean: 3.4100319999765816 msec\nrounds: 243 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 466.4076860251932,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000150239152421313",
+            "extra": "mean: 2.144047000001592 msec\nrounds: 378 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 73.80992203167834,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017638287600557027",
+            "extra": "mean: 13.548313999990569 msec\nrounds: 64 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 440.27998285036404,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000024769512889987543",
+            "extra": "mean: 2.2712819999810563 msec\nrounds: 340 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 850.7691378353143,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000017013408280007616",
+            "extra": "mean: 1.1754070000051797 msec\nrounds: 745 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 94.64776361527505,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016566944377787387",
+            "extra": "mean: 10.56549000000473 msec\nrounds: 78 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 432.6599414003459,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00013712650907317056",
+            "extra": "mean: 2.3112840000010237 msec\nrounds: 357 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 839.0035993246003,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000017711295078224442",
+            "extra": "mean: 1.1918900000011945 msec\nrounds: 748 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 94.11236790848658,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018365600936768006",
+            "extra": "mean: 10.625596000011228 msec\nrounds: 79 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       }
