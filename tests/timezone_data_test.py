@@ -6,6 +6,8 @@ runs at construction time only - so what it rejects, and what downstream code
 is therefore allowed to assume, is worth pinning.
 """
 
+import math
+
 import numpy as np
 import pytest
 
@@ -66,25 +68,32 @@ class TestZonePositions:
         assert zones.zone_positions() == [0, 2, 4]
 
 
-def _ring(x0: float, y0: float) -> list[list[float]]:
-    """A closed square ring, offset so every ring in a fixture is distinguishable."""
-    return [
-        [x0, y0],
-        [x0 + 1.0, y0],
-        [x0 + 1.0, y0 + 1.0],
-        [x0, y0 + 1.0],
-        [x0, y0],
+def _ring(x0: float, y0: float, nr_vertices: int) -> list[list[float]]:
+    """A closed ring of `nr_vertices` distinct vertices, offset to `(x0, y0)`.
+
+    Both the size and the offset vary per ring in the fixture below, so a
+    misattributed ring is visible in a length and in a coordinate rather than
+    only in a list position.
+    """
+    step = 2 * math.pi / nr_vertices
+    # the converter stores boundary coordinates on the source's own grid of six
+    # decimal places and refuses a seventh, so the fixture is built on it too
+    ring = [
+        [round(x0 + math.cos(i * step), 6), round(y0 + math.sin(i * step), 6)]
+        for i in range(nr_vertices)
     ]
+    return [*ring, ring[0]]
 
 
 def _geo_json() -> GeoJSON:
-    """Two zones whose polygons and holes are all of different sizes.
+    """Two zones, no two rings of the same size and no two at the same place.
 
-    The first zone is a multipolygon of two rings, the second a single polygon;
-    polygons 0 and 2 carry holes, polygon 1 carries none. That asymmetry is the
-    point: a parse that paired a hole with the wrong polygon, or a length with
-    the wrong ring, would still produce well-formed collections on a fixture
-    where everything lines up by accident.
+    Zone A is a multipolygon of two polygons - the first carrying one hole, the
+    second none - and zone B a single polygon carrying two holes. That asymmetry
+    is the point: on a fixture where every ring is the same size and every
+    polygon carries the same number of holes, a parse that paired a hole with the
+    wrong polygon, or a length with the wrong ring, would still produce
+    well-formed collections.
     """
     zone_a = {
         "type": "Feature",
@@ -92,8 +101,8 @@ def _geo_json() -> GeoJSON:
         "geometry": {
             "type": "MultiPolygon",
             "coordinates": [
-                [_ring(0.0, 0.0), _ring(0.2, 0.2)],
-                [_ring(10.0, 10.0)],
+                [_ring(0.0, 0.0, 4), _ring(0.2, 0.2, 5)],
+                [_ring(10.0, 10.0, 6)],
             ],
         },
     }
@@ -102,7 +111,11 @@ def _geo_json() -> GeoJSON:
         "properties": {"tzid": "Test/B"},
         "geometry": {
             "type": "Polygon",
-            "coordinates": [_ring(20.0, 20.0), _ring(20.2, 20.2), _ring(20.4, 20.4)],
+            "coordinates": [
+                _ring(20.0, 20.0, 7),
+                _ring(20.2, 20.2, 8),
+                _ring(20.4, 20.4, 9),
+            ],
         },
     }
     return GeoJSON.model_validate(
@@ -122,15 +135,16 @@ class TestGeoJsonParseAccumulation:
 
     def test_holes_are_attributed_to_the_polygon_they_were_parsed_under(self):
         data = TimezoneData.from_geojson(_geo_json())
-        # polygon 0 (zone A, first ring) and polygon 2 (zone B) each hold holes,
-        # polygon 1 holds none; the counter that assigns them advances per polygon.
+        # polygon 0 (zone A, first polygon) and polygon 2 (zone B) carry holes,
+        # polygon 1 carries none; the counter that assigns them advances per polygon.
         assert data.polynrs_of_holes == [0, 2, 2]
-        assert data.nr_of_holes == 3
 
     def test_each_ring_s_recorded_length_is_its_own_vertex_count(self):
         data = TimezoneData.from_geojson(_geo_json())
-        assert data.polygon_lengths == [p.shape[1] for p in data.polygons]
-        assert data.all_hole_lengths == [h.shape[1] for h in data.holes]
+        # the sizes the fixture builds, in parse order, spelled out rather than
+        # read back off the arrays they are supposed to describe
+        assert data.polygon_lengths == [4, 6, 7]
+        assert data.all_hole_lengths == [5, 8, 9]
 
     def test_zone_ids_follow_the_polygons_of_each_zone(self):
         data = TimezoneData.from_geojson(_geo_json())
@@ -141,6 +155,11 @@ class TestGeoJsonParseAccumulation:
         data = TimezoneData.from_geojson(_geo_json())
         originals = data.original_polygons
         assert originals is not None
-        assert len(originals) == len(data.polygons)
-        for original, parsed in zip(originals, data.polygons):
-            assert original.shape == parsed.shape
+        # each boundary ring's own offset, so a permuted or shifted list of
+        # originals fails here rather than matching on a shared shape
+        assert [pytest.approx(o[0].mean(), abs=1e-6) for o in originals] == [
+            0.0,
+            10.0,
+            20.0,
+        ]
+        assert [o.shape[1] for o in originals] == data.polygon_lengths

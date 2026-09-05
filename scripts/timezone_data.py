@@ -431,10 +431,11 @@ class ParseAccumulator:
     """The state a GeoJSON parse builds up, passed down the parse as one object.
 
     Every field is append-only apart from the two counters, and the collections
-    below are handed to `ZoneCollection`, `PolygonCollection` and `HoleCollection`
-    unchanged once the parse ends. Threading them as separate parameters is what
-    this replaces: several were of the same type, so a transposed pair at any of
-    the three call sites type-checked and silently wrote into the wrong list.
+    below are what `from_geojson` builds `ZoneCollection`, `PolygonCollection`
+    and `HoleCollection` out of once the parse ends. Threading them as separate
+    parameters is what this replaces: several were of the same type, so a
+    transposed pair at any of the three call sites type-checked and silently
+    wrote into the wrong list.
     """
 
     all_tz_names: list[str] = field(default_factory=list)
