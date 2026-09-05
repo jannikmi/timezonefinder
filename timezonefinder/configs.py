@@ -188,9 +188,19 @@ BLOCK_BASE_DTYPE: Final[np.dtype] = np.dtype("<i4")
 # the blocks of rings that straddle the antimeridian.
 BLOCK_WIDTH_DTYPE: Final[np.dtype] = np.dtype("u1")
 
-# Where a block's residuals begin inside its own ring's payload. Derived when a
-# collection is loaded rather than stored - the widths and the vertex counts already
-# say it - and unsigned 32 bit because the largest packaged ring's payload is ~1.2 MB.
+# Where a block's residuals begin. Derived when a collection is loaded rather than
+# stored - the widths and the vertex counts already say it.
+#
+# **The bound is the whole collection's payload, not one ring's.** The derivation
+# (``timezonefinder.block_payload.derive_payload_offsets``) produces ring-relative
+# offsets, and ``PolygonArray.__init__`` then adds each ring's own start so the kernels
+# take one array and no per-ring rebasing - so what this width has to hold is a word
+# index into the entire coordinate buffer. For the packaged 2026c boundaries that is
+# 7,933,908 of the 4,294,967,295 this dtype addresses; the largest single ring's payload,
+# ~1.2 MB, is the wrong quantity to check it against and was what this comment used to
+# name. ``timezonefinder._data_integrity.validate_payload_offset_width`` is what checks
+# the right one, over the data as it is produced - the addition in ``PolygonArray`` is
+# unsigned arithmetic that would wrap rather than raise.
 BLOCK_PAYLOAD_OFFSET_DTYPE: Final[np.dtype] = np.dtype("<u4")
 
 # How many vertices a ring holds. Stored per ring because a packed payload's length no
