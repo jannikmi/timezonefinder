@@ -20,6 +20,7 @@ from scripts.configs import (
     SOURCE_DATA_DIR,
     BinaryData,
     ShortcutEfficiencyMetrics,
+    ShortcutEntryCountStats,
     ShortcutH3Coverage,
     ShortcutIndexStats,
     ShortcutStorageMetrics,
@@ -282,8 +283,10 @@ def get_file_size_in_mb(file_path: Path) -> float:
 class ShortcutEntryCounts:
     """One pass over the shortcut mapping, and nothing derived from it.
 
-    The three metric families below each read these counts; separating them is
-    what lets one be read, changed or checked without the other three.
+    `shortcut_efficiency_metrics` and `shortcut_storage_metrics` read these
+    counts and `shortcut_h3_coverage` takes only the stored-cell total from
+    them; separating the four is what lets one be read, changed or checked
+    without the others.
     """
 
     total_entries: int
@@ -427,23 +430,24 @@ def calculate_shortcut_index_stats(
     """
     counts = count_shortcut_entries(mapping, poly_zone_ids)
     coverage = shortcut_h3_coverage(counts.total_entries)
-    stats: dict = {
-        # Basic counts
+    entries: ShortcutEntryCountStats = {
         "total_entries": counts.total_entries,
         "zone_entries": counts.zone_entries,
         "polygon_entries": counts.polygon_entries,
         "empty_entries": counts.empty_entries,
         "polygon_id_count": counts.polygon_id_count,
-        # Data for frequency analysis
         "polygons_per_shortcut": counts.polygons_per_shortcut,
         "zones_per_shortcut": counts.zones_per_shortcut,
     }
+    stats: dict = {**entries}
     stats.update(coverage)
     stats.update(shortcut_efficiency_metrics(counts, coverage["possible_cells"]))
     stats.update(shortcut_storage_metrics(counts))
-    # mypy checks each family against its own TypedDict where it is built, but
-    # cannot follow the merge; ``test_shortcut_index_stats_matches_its_typed_dict``
-    # is what holds the assembled key set to the declaration.
+    # Every key above is checked against one of the four TypedDicts where it is
+    # written, which is what the annotations on ``entries`` and on the three
+    # functions buy; mypy cannot follow the merge itself, and
+    # ``test_shortcut_index_stats_matches_its_typed_dict`` is what holds the
+    # assembled key set to the declaration.
     return cast(ShortcutIndexStats, stats)
 
 

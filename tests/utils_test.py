@@ -605,7 +605,14 @@ def test_shortcut_efficiency_metrics_answer_zero_on_an_empty_index():
 
     metrics = reporting.shortcut_efficiency_metrics(counts, possible_cells=0)
 
-    assert set(metrics.values()) == {0.0}
+    # the keys as well as the values: every value on this path is 0.0, so a
+    # dropped or misnamed key is invisible to a comparison of values alone
+    assert metrics == {
+        "unique_entry_fraction": 0.0,
+        "unique_surface_fraction": 0.0,
+        "zone_distribution_efficiency": 0.0,
+        "avg_polygons_per_entry": 0.0,
+    }
 
 
 @pytest.mark.unit
@@ -623,6 +630,9 @@ def test_shortcut_storage_metrics_price_each_entry_kind_by_what_it_stores():
 
     metrics = reporting.shortcut_storage_metrics(counts)
 
+    # the field widths are spelled out rather than imported: what is pinned here
+    # is which of them each entry kind is charged, so a changed width should
+    # fail this and be re-read rather than following the code silently
     assert metrics["zone_storage_bytes"] == 1 * (8 + 1)
     assert metrics["polygon_storage_bytes"] == 2 * 8 + 5 * 2
     assert metrics["total_storage_bytes"] == 9 + 26

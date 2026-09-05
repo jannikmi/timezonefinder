@@ -283,14 +283,8 @@ class ShortcutStorageMetrics(TypedDict):
     compression_ratio: float
 
 
-class ShortcutIndexStats(
-    ShortcutH3Coverage, ShortcutEfficiencyMetrics, ShortcutStorageMetrics
-):
-    """What ``scripts.reporting.calculate_shortcut_index_stats`` measures.
-
-    The three bases above are the metric families the report states separately,
-    each computed by its own function; what is declared here is the entry counts
-    every one of them reads, and the two distributions.
+class ShortcutEntryCountStats(TypedDict):
+    """One pass over the shortcut mapping: how many cells of each kind, and how wide.
 
     The last two members are distributions, one entry per shortcut cell. The
     ``dict[str, int | float]`` this replaces could not describe them, so the
@@ -298,15 +292,27 @@ class ShortcutIndexStats(
     parameter the annotation said was a scalar.
     """
 
-    # basic counts
     total_entries: int
     zone_entries: int
     polygon_entries: int
     empty_entries: int
     polygon_id_count: int
-    # frequency distributions
     polygons_per_shortcut: list[int]
     zones_per_shortcut: list[int]
+
+
+class ShortcutIndexStats(
+    ShortcutEntryCountStats,
+    ShortcutH3Coverage,
+    ShortcutEfficiencyMetrics,
+    ShortcutStorageMetrics,
+):
+    """What ``scripts.reporting.calculate_shortcut_index_stats`` measures.
+
+    The four bases above are the parts the report states separately, each built
+    by its own function and checked against its own declaration there. This
+    declares nothing of its own: it is the assembled whole.
+    """
 
 
 # BINARY DATA TYPES
