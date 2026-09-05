@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788637779835,
+  "lastUpdate": 1788637781927,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13226,6 +13226,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb6383291b41c3c6e7dde6f811d7c51ea49864bc",
+          "message": "Delete PERF-7: polygon layout 3 already removed both of its halves (#613)\n\n* PERF-7: withdraw the blocked-kernel overhead item, re-verified against layout 3\n\nBoth halves are gone, and neither was removed by this item.\n\nThe per-call half asked `PolygonArray.pip` to call the unblocked kernel for a\nsingle-block ring. Layout 3 has no unblocked kernel reachable from a packed\nring: `inside_polygon_int` and `pt_in_poly_python` read an unpacked int32\ncoordinate array, so taking that route means decoding the ring per test.\n\nThe per-edge half — the larger one, measured at ~48 % clang / ~96 % numba\nagainst the layout 2 kernel — is implemented in both layout 3 kernels. There is\nno wrap-around case to hoist, because a block stores its bridging vertex, and\nthe latitude comparison is already carried across edges.\n\nThe entry moves to Closed and keeps its evidence, plus what generalises: an\noverhead is a property of a kernel, so a format change invalidates it, and such\nan item has to be re-read against the current kernel before it is ranked.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-7: correct the bounding-box precondition the entry keeps\n\nReview finding. The bullet named `pip_with_bbox_check` as the only route to\n`pip`. It is not the one that carries most lookups:\n`TimezoneFinder.inside_of_polygon` calls `outside_bbox` itself and then\n`PolygonArray.pip` directly, and is reached from `timezone_at` as well as\n`certain_timezone_at`. Only the hole loop uses `pip_with_bbox_check`.\n\nThe precondition itself is unchanged - every route rejects on the bounding box\nbefore the kernel runs - but this bullet is what the entry keeps for a later\nreader, so it has to name the real mechanism. The error predates the withdrawal.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-7: delete the entry, keeping its evidence as a checked finding\n\nWithdrawing left a Closed row and an item file for work that is done, which\nreads as a live dead end and costs every later pass the reading it takes to\nfind there is nothing there. The register's redundant-route exception removes\nsuch an entry once its evidence lives in the narrow canonical record, so the\nevidence moves first and the entry goes entirely.\n\nThe lasting facts are a durable non-finding rather than a refused option, so\nthey go to checked-and-found-sound/runtime-geometry-and-data-checks.md, whose\nwhole purpose is \"do not re-raise without new evidence\": that a single-block\nring has no unblocked kernel to skip to under layout 3, that the bounding-box\nprecondition making the filter redundant holds on two different routes - the\none a future caller could break - that the per-edge overhead is implemented and\nits ~48 %/~96 % figures were taken on the layout 2 kernel, and that an overhead\nis a property of a kernel, so such a finding is re-read before it is ranked.\n\nNot the query-performance decision record: it stands at 1,951 of its 2,000-word\nbudget, and this is a finding that was checked rather than an option refused.\n\nNothing anywhere still references PERF-7.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T21:48:51+02:00",
+          "tree_id": "f42a0665c399ce54b27a2d4a31d260e5cf94daac",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/bb6383291b41c3c6e7dde6f811d7c51ea49864bc"
+        },
+        "date": 1788637781250,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008315086364746,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008493423461914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.229844093322754,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2306060791015625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584004402160645,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58481311798096,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
           }
         ]
       }
