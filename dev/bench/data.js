@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788640717029,
+  "lastUpdate": 1788641243546,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6576,6 +6576,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0003724543198123701",
             "extra": "mean: 12.84541399999739 msec\nrounds: 67 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "664ec43e2644deecf0363669aef2bda3ca48843e",
+          "message": "improvement-pass: one item at a time, and a refinement that ships its first slice (#620)\n\n* improvement-pass: one item at a time, and a refinement that ships its first slice\n\nThe pass finalized a whole item list up front and claimed every ID in one\natomic push. That reserved work the session had not started, blocked\nconcurrent passes on items it might never reach, and made the batch, not the\nitem, the unit of commitment.\n\nAn item is now selected, claimed, implemented, opened and released before the\nnext one is looked at, against a re-verified ranking — merged work and\nconcurrent passes change what ranks first. The session continues item by item\nwhile the loaded context still pays, and stops when a fresh pass would rank\nbetter; the stop reason goes in the final report.\n\nOversize is also handled differently. The item is no longer narrowed in place\nunder its own ID, which let a shipped pull request read as if it retired the\nitem that was ranked. The original item and its ranking row are deleted, the\nslices are recorded with fresh IDs in the same family, and the refinement\nimplements the first of them — including when the oversize is discovered\nmid-implementation — so the pass leaves working code rather than register\nchurn. Only a first slice blocked on a maintainer decision falls back to a\nregister-only deliverable.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Trim the improvement-pass workflow back under its word budget\n\nThe file stood at 2089 words against the 2000-word cap\ntests/test_contributor_memory.py enforces, so every check on this\nbranch was red. No rule is removed: each compressed passage restated\none already stated elsewhere in the same file - the intro's\n\"continues item by item\" clause, the claim section's\nimplement/open/release sequence, the refinement paragraph's \"ships the\nslice items and implements the first\", and \"its own claim, branch, and\npull request\".\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:45:59+02:00",
+          "tree_id": "d657128f83c34346a1c1707c8de3ce89aa7e27bb",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/664ec43e2644deecf0363669aef2bda3ca48843e"
+        },
+        "date": 1788641242773,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 346.11213964040894,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021219691566521872",
+            "extra": "mean: 2.889237000005096 msec\nrounds: 257 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 513.7164870628079,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00001798910730829718",
+            "extra": "mean: 1.9465990000000488 msec\nrounds: 418 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 87.10492580968203,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00044919957916994275",
+            "extra": "mean: 11.480407000000525 msec\nrounds: 78 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 518.8282782180563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000018058008817188444",
+            "extra": "mean: 1.9274199999941288 msec\nrounds: 386 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 1063.178307754737,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023365815122646048",
+            "extra": "mean: 940.5760000049668 usec\nrounds: 799 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 110.45098240622704,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023383935815270488",
+            "extra": "mean: 9.053790000002948 msec\nrounds: 90 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 511.32351489903334,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000480413872275178",
+            "extra": "mean: 1.9557090000006383 msec\nrounds: 362 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 1031.1925432409928,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006042500602101158",
+            "extra": "mean: 969.7509999995191 usec\nrounds: 823 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 110.50186521620196,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005963069649439133",
+            "extra": "mean: 9.049621000002617 msec\nrounds: 85 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           }
         ]
       }
