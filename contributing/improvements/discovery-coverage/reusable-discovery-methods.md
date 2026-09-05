@@ -47,3 +47,11 @@ These methods are reusable audits, not a schedule. Repeat one when its trigger i
 - After checking every packaged polygon's longitude span and frame, the clean rerun found no answer from a cell lacking a containing polygon.
 - `tests/shortcut_test.py::test_the_index_lists_the_polygon_covering_each_sampled_coordinate` is the affordable sampled guard.
 - The cells corrected by the exhaustive sweep are covered by committed benchmark fixtures.
+
+## Boxed-value audit of a hot Python loop
+
+- Ask of every value the loop touches whether it is still a numpy scalar or a Python `int`, and whether the common branch raises.
+- The two costs are invisible to a correctness reading and each sits below what the benchmark suite resolves, so they are found this way or not at all.
+- Run over the candidate loop 2026-09-05 it found three in twenty lines - a `KeyError` per hole-less candidate, four bbox scalar extractions per candidate, and a whole zone id array gathered to read one element - together **-30 % of an ambiguous query** and **-12 % of a uniformly random workload**.
+- Settle each on a paired whole-query A/B over the committed fixtures, never on the microbenchmark that found it; `memoryview` over an already-loaded array is the form that buys the Python `int` without a second copy.
+- Repeat on any per-candidate or per-point Python loop that is added or materially changed.
