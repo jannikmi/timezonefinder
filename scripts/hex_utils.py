@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 try:
-    profile  # type: ignore[used-before-def]
+    profile  # type: ignore[used-before-def]  # noqa: B018 - probing for the name
 except NameError:  # pragma: no cover - used only during profiling
 
     def profile(func):  # type: ignore[misc]
