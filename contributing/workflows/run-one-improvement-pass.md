@@ -2,7 +2,7 @@
 
 Deliver one pull request per item, against `master`. A pass starts with the highest-ranked eligible item and may implement further eligible items in the same session; each leaves it as its own pull request. An item too large for one reviewable pull request is refined into slices — each its own item and pull request — before any of it is implemented.
 
-Read the [register rules](../improvements/improvement-register-rules.md), the [priority ranking](../improvements/improvement-priority-ranking.md), and only the selected items. Follow each item's links when sequencing, measurements, or recorded decisions apply.
+Read the [register rules](../improvements/improvement-register-rules.md), the [ranking and eligibility rules](../improvements/improvement-ranking-and-eligibility.md), the [priority ranking](../improvements/improvement-priority-ranking.md), and only the selected items. Follow each item's links when sequencing, measurements, or recorded decisions apply.
 
 ## Hard boundaries
 

@@ -32,6 +32,6 @@ Each surface record owns its own delta anchor. The anchor identifies the tree th
 
 ## Where discovery starts
 
-Start with the [priority ranking](improvement-priority-ranking.md), because known work normally outranks another broad sweep. For fresh discovery, compare the surface records' `Next useful gap` sections. The coverage map does not maintain a second global ordering that can drift from the ranking.
+Start with the [priority ranking](improvement-priority-ranking.md), because known work normally outranks another broad sweep. A pass that does look for new candidates follows the [discovery-pass workflow](../workflows/run-one-discovery-pass.md), which selects one lane and states the bar a candidate must clear to be recorded. For fresh discovery, compare the surface records' `Next useful gap` sections. The coverage map does not maintain a second global ordering that can drift from the ranking.
 
 ---
