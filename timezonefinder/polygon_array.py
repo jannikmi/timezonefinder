@@ -31,6 +31,13 @@ class PolygonArray:
     xmax: np.ndarray
     ymin: np.ndarray
     ymax: np.ndarray
+    #: the same four columns and the vertex count, read through a buffer view so that
+    #: indexing yields a Python ``int`` - see ``__init__`` for what that is worth
+    _xmin_ints: memoryview
+    _xmax_ints: memoryview
+    _ymin_ints: memoryview
+    _ymax_ints: memoryview
+    _nr_vertices_ints: memoryview
     block_ranges: np.ndarray
     block_offsets: list[int]
     block_bases: np.ndarray
@@ -120,6 +127,30 @@ class PolygonArray:
         self.nr_vertices = read_per_polygon_vector(
             get_nr_vertices_path(self.data_location)
         )
+
+        # The columns a candidate is read from, as buffer views. Indexing a numpy array
+        # yields a 0-d numpy scalar; indexing a memoryview over the same bytes yields a
+        # Python ``int`` - which is the ~100 ns per read the ``block_offsets``
+        # conversion above is about, paid four times in ``outside_bbox`` and once in
+        # ``_pip_at`` for every candidate polygon a query tests.
+        #
+        # A view rather than the ``.tolist()`` that conversion used, because this is 1.3k
+        # entries per column rather than a header: measured over the packaged
+        # boundaries, five lists cost **+333 KiB** of construction heap where five views
+        # cost **+1.5 KiB**, on the mode whose purpose is to stay small and whose
+        # ``init_heap`` is a tracked benchmark. It also keeps one statement of each
+        # column instead of two that can disagree.
+        #
+        # A numpy integer indexes a memoryview fine, so no caller converts anything;
+        # what it requires is native byte order, which ``np.load`` gives on the
+        # little-endian platforms the packaged ``<i4`` files and the C kernel reading the
+        # payload as native ``unsigned int`` already assume throughout. On a big-endian
+        # one this raises here rather than answering wrongly.
+        self._xmin_ints = memoryview(self.xmin)
+        self._xmax_ints = memoryview(self.xmax)
+        self._ymin_ints = memoryview(self.ymin)
+        self._ymax_ints = memoryview(self.ymax)
+        self._nr_vertices_ints = memoryview(self.nr_vertices)
         # Where each block's residuals start, derived rather than stored - the widths
         # and the vertex counts already say it. Made absolute against the coordinate
         # buffer here, so the kernels take one array and no per-ring rebasing.
@@ -182,6 +213,11 @@ class PolygonArray:
             "xmax",
             "ymin",
             "ymax",
+            "_xmin_ints",
+            "_xmax_ints",
+            "_ymin_ints",
+            "_ymax_ints",
+            "_nr_vertices_ints",
             "block_ranges",
             "block_offsets",
             "block_bases",
@@ -208,13 +244,15 @@ class PolygonArray:
         :param y: Y-coordinate of the point
         :return: True if the point is outside the boundaries, False otherwise
         """
-        if x > self.xmax[poly_id]:
+        # the buffer views, not the arrays: this runs once per candidate polygon and
+        # each read here would otherwise build a numpy scalar (see ``__init__``)
+        if x > self._xmax_ints[poly_id]:
             return True
-        if x < self.xmin[poly_id]:
+        if x < self._xmin_ints[poly_id]:
             return True
-        if y > self.ymax[poly_id]:
+        if y > self._ymax_ints[poly_id]:
             return True
-        if y < self.ymin[poly_id]:
+        if y < self._ymin_ints[poly_id]:
             return True
         return False
 
@@ -248,7 +286,7 @@ class PolygonArray:
             self.block_bases[start:stop],
             self.block_ranges[start:stop],
             self.block_widths[start:stop],
-            int(self.nr_vertices[idx]),
+            self._nr_vertices_ints[idx],
             POLYGON_BLOCK_SIZE,
         )
         # Read-only although this array is freshly allocated and owned by the caller,
@@ -310,7 +348,10 @@ class PolygonArray:
         return self.pip_kernel(
             x,
             y,
-            self.nr_vertices[idx],
+            # the view, so the kernel is handed a Python ``int`` rather than a
+            # ``numpy.uint32`` it would unbox through ``__index__`` - the same reason
+            # ``block_offsets`` above is a list of ``int``
+            self._nr_vertices_ints[idx],
             POLYGON_BLOCK_SIZE,
             start,
             self.block_offsets[idx + 1] - start,
@@ -404,6 +445,9 @@ class HoleArray(PolygonArray):
         # means a missing file raises naming itself, rather than costing an
         # `exists()` on every construction to say the same thing.
         self.poly_ref = read_per_polygon_vector(get_poly_ref_path(self.data_location))
+        # read through a buffer view for the reason the base class's bbox columns are:
+        # ``_resolve`` runs on every hole a candidate owns and this is its one read
+        self._poly_ref_ints = memoryview(self.poly_ref)
 
     def _resolve(self, idx: IntegerLike) -> tuple[PolygonArray, int]:
         """Which collection holds this hole id's ring, and where.
@@ -420,7 +464,7 @@ class HoleArray(PolygonArray):
         :param idx: The hole id
         :return: the collection that stores the ring, and its index inside it
         """
-        ref = int(self.poly_ref[idx])
+        ref = self._poly_ref_ints[idx]
         if ref >= 0:
             return self.boundaries, ref
         return self, -(ref + 1)
@@ -463,6 +507,8 @@ class HoleArray(PolygonArray):
         ``coords_of`` raises ``AttributeError`` instead of reading through a boundaries
         array whose own accessor may already be gone.
         """
+        if hasattr(self, "_poly_ref_ints"):
+            del self._poly_ref_ints
         if hasattr(self, "poly_ref"):
             del self.poly_ref
         if hasattr(self, "boundaries"):
