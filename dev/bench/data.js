@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788557939020,
+  "lastUpdate": 1788598571772,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5793,6 +5793,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00041882899528472724",
             "extra": "mean: 17.006059999999934 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e163d9b38fd3329283a85b1e360940939484871b",
+          "message": "Give discovery its own workflow, and split the register rules it filled (#617)\n\nA pass that looks for new improvement candidates had no workflow: the\ncoverage map, the surface records and the reusable methods were all\nmaintained as a side effect of implementing something else, and nothing\nsaid how a sweep chooses where to look or what is worth writing down.\n\nAdd `run-one-discovery-pass.md` and the paired `discovery-pass` adapters.\nIt selects one lane rather than the whole map, spends the budget on the\ncore and reaches periphery only through a signal, and prices the record\nas well as the work: a finding cheaper to forget than to carry is not an\nentry, and a preference is nothing. The write-back — anchor, uncovered\ndeltas, next gap, method trigger — is treated as the deliverable that\nkeeps the next run bounded by a diff rather than the tree.\n\n`improvement-register-rules.md` was at 1999 words against a 2000-word cap\nand carried two subjects, so the ordering rules move to\n`improvement-ranking-and-eligibility.md` and the mechanics stay. The\nsplit also retires wording inherited from the single-file register: the\nranking table and the entries have not been \"below\" since they became\n`improvement-priority-ranking.md` and `items/`, and the maintenance note\ncounted two workflows where there are now three.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T10:54:38+02:00",
+          "tree_id": "9d02ef2092ccb6bc394f15e48c1923b4efd39b64",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e163d9b38fd3329283a85b1e360940939484871b"
+        },
+        "date": 1788598570474,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 178.8079339940306,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001794991257405308",
+            "extra": "mean: 5.592593000002921 msec\nrounds: 153 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 295.13664974470805,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004863398682987911",
+            "extra": "mean: 3.388260999997783 msec\nrounds: 258 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 42.92916880329184,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018430388058875946",
+            "extra": "mean: 23.29418499999747 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 272.1119533879528,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000037733093661338416",
+            "extra": "mean: 3.6749580000048354 msec\nrounds: 227 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 575.9224117287603,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000019591648916577976",
+            "extra": "mean: 1.7363450000118519 msec\nrounds: 527 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 56.35316256484391,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007801244856129871",
+            "extra": "mean: 17.745232999999416 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 270.70207666414024,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00035391471471033046",
+            "extra": "mean: 3.6940979999968704 msec\nrounds: 230 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 561.4854659486145,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003430307701703668",
+            "extra": "mean: 1.7809900000003154 msec\nrounds: 503 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 55.452349491079,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007376210502875193",
+            "extra": "mean: 18.033501000005003 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
