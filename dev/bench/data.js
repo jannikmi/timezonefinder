@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788641245072,
+  "lastUpdate": 1788641900168,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6663,6 +6663,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0005963069649439133",
             "extra": "mean: 9.049621000002617 msec\nrounds: 85 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dceaff6762b8f806b5e2611c0f459ff2eb82375a",
+          "message": "PERF-9: read a candidate's bbox and vertex count through a buffer view (#624)\n\n* PERF-9: read a candidate's bbox and vertex count through a buffer view\n\nIndexing a numpy array yields a 0-d numpy scalar; indexing a memoryview over\nthe same bytes yields a Python int. `outside_bbox` pays that four times per\ncandidate polygon, `_pip_at` once per point-in-polygon call, and\n`HoleArray._resolve` once per hole - the same ~100 ns per read the\n`block_offsets` conversion beside them was already measured for.\n\nA view rather than the `.tolist()` that conversion used: five lists over these\ncolumns cost +233 KiB of construction heap where five views cost +4.4 KiB, on\nthe mode whose purpose is to stay small and whose `init_heap` is a tracked\nbenchmark. A numpy integer indexes a memoryview, so no caller converts\nanything.\n\nPaired inside one process, arms alternated round by round, 25 rounds a side,\n2,000 committed fixture points, answers asserted equal every round:\n\n  stratum              clang     numba\n  ambiguous_shortcut  -11.3 %   -11.0 %\n  on_land              -5.6 %    -5.9 %\n  random               -4.8 %    -4.7 %\n  unique_shortcut      -0.2 %    +1.0 %   (never enters the loop)\n\nThe profiler's committed FINDINGS are re-taken on both backends in the tracked\nmapped mode, and the classification log records what generalises.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-9: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the three references\nthat would otherwise be dangling handles: the coverage record now names the\nlasting fact, PERF-2 names the shipped change rather than an item id, and\nPERF-8's sequencing bullet is corrected - it claimed the two shared a method,\nwhere in fact one touches polygon_array.py and the other timezonefinder.py,\nso PERF-8 was never sequenced behind this at all. What did move for PERF-8 is\nits denominator, and the bullet now says to re-measure rather than quote.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:57:31+02:00",
+          "tree_id": "9937e997353cb9cd8a4afd9ed1461056156caf9a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dceaff6762b8f806b5e2611c0f459ff2eb82375a"
+        },
+        "date": 1788641898911,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 191.0021193594665,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003989824003344817",
+            "extra": "mean: 5.235544000001369 msec\nrounds: 163 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 281.63056209808536,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003626325570627258",
+            "extra": "mean: 3.5507509999987974 msec\nrounds: 248 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 50.66081973258139,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009692333248771292",
+            "extra": "mean: 19.739120000004107 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 302.53066904665195,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011765647233761847",
+            "extra": "mean: 3.305449999999155 msec\nrounds: 248 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 589.3432594460805,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000060457908755758775",
+            "extra": "mean: 1.6968039999980533 msec\nrounds: 514 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 67.19060557076929,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009369489994024666",
+            "extra": "mean: 14.88303300000382 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 300.1427478908248,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000421264856283705",
+            "extra": "mean: 3.3317480000008004 msec\nrounds: 244 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 567.2481148930284,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023470336952732013",
+            "extra": "mean: 1.7628969999989863 msec\nrounds: 495 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 66.5821295561624,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017147594609173548",
+            "extra": "mean: 15.019045000002507 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           }
         ]
       }
