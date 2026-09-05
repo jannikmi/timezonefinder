@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788638593842,
+  "lastUpdate": 1788638595506,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13379,6 +13379,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2419 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2327c852143ddab9d89e64433f9dabcf8954e017",
+          "message": "Refine DOC-1 into five documentation slices (#614)\n\n* DOC-1: refine the documentation reflow into five slices\n\nDOC-1 was one L-sized item covering 897 continuation lines across fourteen\nhand-written pages, which is not one reviewable pull request. It becomes DOC-2\nto DOC-6, each standing under its own changelog sentence:\n\n  DOC-2  docs/data_format.rst (249), plus the convention itself\n  DOC-3  docs/benchmarking_methodology.rst (215)\n  DOC-4  docs/architecture.rst (195)\n  DOC-5  the remaining ten pages, including README.rst (238)\n  DOC-6  price a check that rejects a newly hard-wrapped paragraph\n\nThe rule lands with the first conversion rather than in a slice of its own,\nbecause a conversion that does not record the convention re-accumulates. That\nis the only thing ordering DOC-3 to DOC-5 behind DOC-2; they touch disjoint\nfiles. DOC-6 is genuinely blocked - it fails on any page not yet converted -\nand is a pricing item rather than a build one: a heuristic that fires on\ncorrect prose is worse than no check.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* DOC-1: correct the slice counts, sequencing and carried-over reasoning\n\nReview findings, all four confirmed.\n\nThe line counts were taken with a heuristic that counted indented directive and\nliteral-block lines as prose. Re-counted strictly - unindented prose line whose\nunindented prose predecessor does not end a sentence - `docs/architecture.rst`\nfalls from 195 to 135, and the family totals 718 across eleven files rather than\n897 across thirteen. The method is now stated in DOC-2, and DOC-1's superseded\n628-across-11 is kept beside it, dated, since a later recount disagreeing with\nboth should not read as a regression.\n\nThe sequencing diagram drew DOC-2 -> DOC-3/4/5 as a hard arrow while the prose\nbeneath it admitted the arrow was a preference. Nothing blocks those three:\nwhichever slice runs first records the convention, and DOC-2 now says that\ninstead of claiming a precondition. DOC-6 remains the only real block.\n\nTwo pieces of DOC-1 were lost and are restored: why this ranks where it does -\nreadability, which the ranking puts below drift-prone duplication, earning its\nplace only through the concurrent-conflict cost - and its \"take it when nothing\nelse is queued\" judgement, which five eligibility cells reading plain \"free\" had\nquietly overstated.\n\nAlso: what \"remaining\" excludes moves from DOC-6 into DOC-5, where a pass taking\nit will actually look, and the four already-conformant stub pages are named\nrather than silently absent. DOC-6 states that it may close with a measurement\nand no check, which is why it carries no changelog sentence.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:02:25+02:00",
+          "tree_id": "4ef0da59720e0aaec2bea17785fc64414676742e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2327c852143ddab9d89e64433f9dabcf8954e017"
+        },
+        "date": 1788638595113,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083599090576172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085382461547852,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2294445037841797,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.230168342590332,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584001541137695,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58481025695801,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2342 GHz"
           }
         ]
       }
