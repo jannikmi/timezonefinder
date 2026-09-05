@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788640138125,
+  "lastUpdate": 1788640139651,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13685,6 +13685,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on Intel(R) Xeon(R) 6973P-C @ 4.0898 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "461da1fca3fec2cfc47aa232e76109d75deac7b3",
+          "message": "Split the shortcut-index statistics along their four seams (#615)\n\n* BIG-2: split the shortcut-index statistics along their four seams\n\n`calculate_shortcut_index_stats` computed coverage, uniqueness, storage and\nfrequency metrics in one pass of forty-odd locals, so every ratio's denominator\nwas chosen among names that were all in scope and none of the four families\ncould be read or tested without the others.\n\nIt now assembles what `count_shortcut_entries`, `shortcut_h3_coverage`,\n`shortcut_efficiency_metrics` and `shortcut_storage_metrics` return. The three\nmetric families each get their own `TypedDict` in `scripts/configs.py`, which\n`ShortcutIndexStats` inherits, so mypy checks each family against its\ndeclaration where it is built; the merge is cast once, guarded by the existing\nkey-set test.\n\nNo number moves: `uv run python -m scripts.reporting` leaves the committed\n`docs/data_report.rst` unchanged.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-2: retire the item the statistics split ships\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* BIG-2: restore the type check the cast dropped, and correct three claims\n\nThe pre-review found the seven-key literal in `calculate_shortcut_index_stats`\nchecked by nothing after the split: the three metric families kept their own\nTypedDicts, but the entry counts and distributions went straight into a bare\ndict behind the cast, where mypy used to check the whole literal against\n`ShortcutIndexStats`. They now have a fourth TypedDict of their own, which\n`ShortcutIndexStats` inherits like the other three, so every key is checked\nwhere it is written and the cast only covers the merge. Verified by writing an\n`int` into `polygons_per_shortcut`, which the mypy hook now rejects.\n\nAlso: the empty-index efficiency test compared only values, all of which are\n0.0 on that path, so a dropped key passed it; `ShortcutEntryCounts`' docstring\nsaid all three families read the counts where `shortcut_h3_coverage` takes only\na total; and the changelog fragment said forty locals where forty was the old\nfunction's statement count.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:28:03+02:00",
+          "tree_id": "477e939ebfd310f08fde56247d452b5fcec2ebff",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/461da1fca3fec2cfc47aa232e76109d75deac7b3"
+        },
+        "date": 1788640139290,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2302141189575195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2310056686401367,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.584038734436035,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.584800720214844,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2309 GHz"
           }
         ]
       }
