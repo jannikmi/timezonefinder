@@ -3,10 +3,10 @@
 Covers the pieces the `benchmark`/`benchmark-comment` workflows depend on
 (see `.github/workflows/benchmark.yml`):
 
-* `scripts.normalize_benchmark_json` - rewrites the single value
-  `benchmark-action/github-action-benchmark` tracks from the noise-sensitive
-  mean to a chosen estimator, and stamps the CPU into the one field that
-  reaches the trend chart
+* `scripts.normalize_benchmark_json` - rewrites the tracked value from the
+  noise-sensitive mean to a chosen estimator, and records which one
+* `scripts.export_timing_chart_json` - restates that measurement as the
+  lookups/sec the trend chart plots, under the labels the docs use
 * `scripts.compare_benchmark_runs` - compares a pull request's head against
   its merge base, both measured on the same runner
 * `scripts.describe_benchmark_machine` - says which machine a report came from
@@ -46,11 +46,10 @@ from scripts.compare_benchmark_runs import (
 from scripts.compare_benchmark_runs import render_markdown as render_comparison
 from scripts.describe_benchmark_machine import acceleration_label
 from scripts.describe_benchmark_machine import render_markdown as render_description
-from scripts.normalize_benchmark_json import (
-    ESTIMATOR_KEY,
-    annotate_machine_identity,
-    normalize_benchmark_data,
+from scripts.export_timing_chart_json import (
+    to_chart_entries as to_timing_chart_entries,
 )
+from scripts.normalize_benchmark_json import ESTIMATOR_KEY, normalize_benchmark_data
 
 CPU_7763 = "AMD EPYC 7763 64-Core Processor"
 CPU_9V74 = "AMD EPYC 9V74 80-Core Processor"
@@ -109,8 +108,8 @@ def test_normalize_tracks_the_requested_estimator():
     normalized = normalize_benchmark_data(data, "min")
 
     stats = normalized["benchmarks"][0]["stats"]
-    # `ops` is the only number the action reads; `mean` is what it renders
-    # next to it, so the two must agree
+    # `ops` is derived from `mean`, so a reader of the stored report - or
+    # pytest-benchmark's own `--benchmark-compare` - sees the two agree
     assert stats["ops"] == pytest.approx(1.0)
     assert stats["mean"] == pytest.approx(1.0)
     # the untouched statistics survive for anyone debugging the run
@@ -164,33 +163,87 @@ def test_normalized_report_round_trips_through_json(tmp_path):
 
 
 @pytest.mark.unit
-def test_normalize_stamps_the_cpu_into_the_rounds_field():
-    # `rounds` is the only pytest-benchmark field the action's extractor
-    # copies through verbatim, so it is how the CPU reaches the trend chart's
-    # tooltip - without it a stored data point can never be attributed to a
-    # machine once its artifact has expired
-    data = _measured_on(_run(test_a=_stats(1.0, 2.0, 4.0)))
+def test_the_chart_export_states_lookups_per_second():
+    # one round is one pass over `batch_size` points, so the extractor's
+    # "iterations per second" is batches per second - a unit nothing else in
+    # this project quotes. The chart states what a reader can compare against
+    # the µs/query figures in the docs.
+    data = _measured_on(_run(test_a=_stats(minimum=0.005, median=2.0, mean=4.0)))
 
-    annotated = annotate_machine_identity(data)
+    entry = to_timing_chart_entries(data, "min")[0]
 
-    rounds = annotated["benchmarks"][0]["stats"]["rounds"]
-    assert rounds == f"50 on {CPU_7763} @ 3.2449 GHz"
-
-
-@pytest.mark.unit
-def test_normalize_leaves_rounds_alone_without_a_recorded_cpu():
-    data = _run(test_a=_stats(1.0, 2.0, 4.0))
-
-    assert annotate_machine_identity(data)["benchmarks"][0]["stats"]["rounds"] == 50
+    assert entry["unit"] == "lookups/sec"
+    assert entry["value"] == pytest.approx(2500 / 0.005)
 
 
 @pytest.mark.unit
-def test_annotating_does_not_mutate_the_input():
-    data = _measured_on(_run(test_a=_stats(1.0, 2.0, 4.0)))
+def test_the_chart_export_names_the_workload_not_the_node_id():
+    data = _measured_on(
+        _run(**{"test_timezone_at[random-in_memory]": _stats(0.005, 2.0, 4.0)})
+    )
 
-    annotate_machine_identity(data)
+    entry = to_timing_chart_entries(data, "min")[0]
 
-    assert data["benchmarks"][0]["stats"]["rounds"] == 50
+    assert entry["name"] == "TimezoneFinder.timezone_at() - random points, in-memory"
+
+
+@pytest.mark.unit
+def test_the_chart_export_names_the_machine_and_the_estimator():
+    # the chart outlives the artifact holding `machine_info`, so a point that
+    # does not name its own CPU can never be attributed to one afterwards -
+    # and this pool's CPUs differ by more than any plausible code change
+    data = _measured_on(_run(test_a=_stats(0.005, 2.0, 4.0)))
+
+    entry = to_timing_chart_entries(data, "min")[0]
+
+    assert entry["extra"] == f"min of 50 round(s) on {CPU_7763} @ 3.2449 GHz"
+
+
+@pytest.mark.unit
+def test_the_chart_export_carries_the_spread_as_a_throughput_band():
+    # `stddev` is measured in seconds; a throughput band is its first-order
+    # propagation, not the number itself
+    data = _measured_on(_run(test_a=_stats(minimum=0.005, median=2.0, mean=4.0)))
+    stddev = data["benchmarks"][0]["stats"]["stddev"]
+
+    entry = to_timing_chart_entries(data, "min")[0]
+
+    expected = entry["value"] * stddev / 0.005
+    assert entry["range"] == f"± {expected:.0f}"
+
+
+@pytest.mark.unit
+def test_the_chart_export_refuses_a_report_without_a_batch_size():
+    # dividing by a guessed batch size would put a wrong-by-a-constant-factor
+    # point on a chart that keeps it forever
+    data = _run(test_a=_stats(0.005, 2.0, 4.0))
+
+    with pytest.raises(ValueError, match="batch_size"):
+        to_timing_chart_entries(data, "min")
+
+
+@pytest.mark.unit
+def test_the_chart_export_refuses_two_benchmarks_with_one_label():
+    # the label is the chart's join key now, so a collision would interleave
+    # two metrics into a single, meaningless series
+    data = _measured_on(
+        _run(
+            **{
+                "test_unmapped[a]": _stats(0.005, 2.0, 4.0),
+                "test_unmapped[b]": _stats(0.005, 2.0, 4.0),
+            }
+        )
+    )
+    data["benchmarks"][1]["name"] = data["benchmarks"][0]["name"]
+
+    with pytest.raises(ValueError, match="same chart label"):
+        to_timing_chart_entries(data, "min")
+
+
+@pytest.mark.unit
+def test_the_chart_export_refuses_an_empty_report():
+    with pytest.raises(ValueError, match="no 'benchmarks' entries"):
+        to_timing_chart_entries(_measured_on({"benchmarks": []}), "min")
 
 
 @pytest.mark.unit
