@@ -5,12 +5,12 @@ Check these explicitly before taking an item, and name the blocking one when you
 ```
 [format 3, pending and unreleased] ─→ unclaimed; promote a format item into it while it lasts
 
-DOC-2 ─→ DOC-3, DOC-4, DOC-5 (disjoint files, any order) ─→ DOC-6
+DOC-2, DOC-3, DOC-4, DOC-5 (disjoint files, any order) ─→ DOC-6
 
 independent: GH-362, GH-524, PERF-2
 ```
 
-- **The `DOC-*` conversions are ordered only by where the convention is written down.** DOC-2 records the semantic-line-break rule in the [documentation maintenance rules](../development/documentation-maintenance-rules.md) alongside the first conversion, so DOC-3 to DOC-5 convert against a stated rule rather than each restating it; they touch disjoint files and are independent of each other. DOC-6 is the only real block: a check that rejects a hard-wrapped paragraph fails on every page not yet converted.
+- **The `DOC-*` conversions are not ordered at all; only DOC-6 is blocked.** DOC-2 to DOC-5 convert disjoint files and none needs another's output. What DOC-2 additionally does is record the semantic-line-break rule in the [documentation maintenance rules](../development/documentation-maintenance-rules.md), which currently state no wrapping convention — so whichever of the four is taken first carries the rule, and DOC-2 says so rather than claiming a precondition it does not have. DOC-6 is the real block: a check that rejects a hard-wrapped paragraph fails on every page not yet converted.
 
 - **Regenerating the packaged data is a normal thing for an item to do**, and no item is parked for needing it. Two things it has to respect: it must not collide with the weekly data-update pipeline, which opens *and auto-merges* its own pull requests, so rebase before the final gate; and it must not be incidental — `diff -rq` against a copy of the data directory taken before the regeneration should list only binaries the change had a reason to move, since a file left byte-identical costs the release nothing and git no longer holds a baseline to compare against.
 - **Format changes are cheaper in a row than spread out, so rank them together once one lands.** A `DATA_FORMAT_VERSION` bump numbers a release, not a change: while one sits unreleased on `master`, the next format change rides the same number and the ordered two-distribution release is paid once for both. The ranking prices each format item as if it paid that release alone, which is right for the first one and wrong for every one after it — so when a bump is pending, promote the other format items rather than reading their entries literally. **Format 3 is pending now** — the frame-of-reference payload took it — and nothing claims it: GH-513, the item the rule pointed at, was refused rather than deferred, so the promotion above currently has nothing to promote.
