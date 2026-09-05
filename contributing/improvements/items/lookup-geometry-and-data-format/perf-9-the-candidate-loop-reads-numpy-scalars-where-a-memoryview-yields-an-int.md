@@ -16,7 +16,7 @@
 - **The fix.** Hold `memoryview`s of `xmin`, `xmax`, `ymin`, `ymax` and `nr_vertices` beside the arrays, built in `PolygonArray.__init__` next to the `block_offsets` conversion that already does this, and read them in `outside_bbox` and `_pip_at`. ~25 lines, no data-format change, no behaviour change. `HoleArray` inherits both methods unchanged.
 - **The one caveat to record with it.** `memoryview` over a numpy array requires the array's dtype to be in native byte order; `np.load` gives native order on a little-endian machine, which is what the packaged `<i4` files and the C kernel reading the payload as native `unsigned int` already assume throughout. On a big-endian platform the construction would raise rather than answer wrongly, but the item should say so where the views are built.
 - **Sequencing:** shares `inside_of_polygon` with [PERF-8](perf-8-the-hole-registry-is-probed-with-an-exception-per-candidate.md); whichever lands second re-measures its own increment against the tree it finds. Independent of [PERF-2](perf-2-the-candidate-loop-builds-a-zone-id-array-to-read-one-element.md).
-- **Do not confuse it with [PERF-7](perf-7-a-single-block-ring-pays-for-an-index-it-cannot-use.md)**, which is about the kernel's per-edge work; this is about what reaching the kernel costs.
+- **Do not confuse it with the kernel's own per-edge work**, which polygon layout 3 already closed and which is retained as a [checked finding](../../checked-and-found-sound/runtime-geometry-and-data-checks.md); this is about what reaching the kernel costs.
 - **Status:** open — free, small, measured.
 - **Last touched:** 2026-09-05 — found and measured in the query-flow discovery round.
 
