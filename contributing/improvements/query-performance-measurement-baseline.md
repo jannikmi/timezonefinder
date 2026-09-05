@@ -7,12 +7,14 @@ Every timing quoted in this file comes from one run of `prototypes/query_stage_p
 - **Freshness check**, before ranking anything on one of them:
 
   ```
-  git diff --stat e1c3e15..HEAD -- timezonefinder/ DATA_VERSION packages/timezonefinder-data/pyproject.toml
+  git diff --stat 6adf161..HEAD -- timezonefinder/ DATA_VERSION packages/timezonefinder-data/pyproject.toml
   ```
 
 Empty ⇒ the numbers describe the current tree. Non-empty ⇒ classify what changed. A docstring, an `__all__` list or a rename leaves them standing and is worth recording here so the next pass does not re-derive it; a change to the lookup flow, the polygon math, the coordinate accessors, the shortcut reader or the packaged data does not. The packaged binaries are not in the diff because they are not committed — the two stamps that stand in for them are, and no regeneration reaches `master` without moving one.
 
-Read the [query-path change-classification log](query-path-change-classification-log.md) only when the freshness diff is non-empty or when adding a new classification.
+**It is non-empty today, and this anchor has not been re-measured since the frame-of-reference payload landed on top of it.** The command named a superseded anchor until 2026-09-05, so it never reported empty and nobody read what it meant; the [classification log](query-path-change-classification-log.md) now holds what the six intervening commits are. Read that log whenever the diff is non-empty or when adding a new classification.
+
+- **Two rungs of the stage ladder are not measuring the query path, so do not quote a rung.** Found 2026-09-05: `prototypes/query_stage_profile.py` binds the *checked public* `zone_ids_of` and `zone_name_from_id`, where `timezone_at` calls `_zone_ids_of` and `zone_names.name_of` — 1,685 ns against 564 ns and 58.8 against 33.9. That inflates the ambiguous ladder by ~1,146 ns and the `zone_ids_of` rung roughly threefold, which is most of the overshoot the script's own `FINDINGS` block records as unexplained. The whole-query rows, the denominators and the counts above are unaffected — none of them comes from a rung. [PROF-1](items/data-pipeline-and-developer-tooling/prof-1-the-stage-ladder-measures-the-checked-public-accessors.md) is the repair, and it has to be taken before this file is re-anchored.
 - **One machine took these, so rank on what survives leaving it.** In descending order of how well a figure travels:
 
   1. **Counts, which are exact and machine-independent** — a line's hit count does not depend on the hardware, only on the code. 1.05 candidate polygons per ambiguous query, 0.11 per uniformly random one; **zero** FFI crossings and zero buffer acquisitions per candidate since the frame-of-reference payload, where there were one of each on the clang/mapped path; two numpy calls per ambiguous query. State what a change removes as a count first, and use time only to size it.
