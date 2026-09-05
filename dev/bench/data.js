@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788641900168,
+  "lastUpdate": 1788641901897,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14144,6 +14144,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4433 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dceaff6762b8f806b5e2611c0f459ff2eb82375a",
+          "message": "PERF-9: read a candidate's bbox and vertex count through a buffer view (#624)\n\n* PERF-9: read a candidate's bbox and vertex count through a buffer view\n\nIndexing a numpy array yields a 0-d numpy scalar; indexing a memoryview over\nthe same bytes yields a Python int. `outside_bbox` pays that four times per\ncandidate polygon, `_pip_at` once per point-in-polygon call, and\n`HoleArray._resolve` once per hole - the same ~100 ns per read the\n`block_offsets` conversion beside them was already measured for.\n\nA view rather than the `.tolist()` that conversion used: five lists over these\ncolumns cost +233 KiB of construction heap where five views cost +4.4 KiB, on\nthe mode whose purpose is to stay small and whose `init_heap` is a tracked\nbenchmark. A numpy integer indexes a memoryview, so no caller converts\nanything.\n\nPaired inside one process, arms alternated round by round, 25 rounds a side,\n2,000 committed fixture points, answers asserted equal every round:\n\n  stratum              clang     numba\n  ambiguous_shortcut  -11.3 %   -11.0 %\n  on_land              -5.6 %    -5.9 %\n  random               -4.8 %    -4.7 %\n  unique_shortcut      -0.2 %    +1.0 %   (never enters the loop)\n\nThe profiler's committed FINDINGS are re-taken on both backends in the tracked\nmapped mode, and the classification log records what generalises.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-9: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the three references\nthat would otherwise be dangling handles: the coverage record now names the\nlasting fact, PERF-2 names the shipped change rather than an item id, and\nPERF-8's sequencing bullet is corrected - it claimed the two shared a method,\nwhere in fact one touches polygon_array.py and the other timezonefinder.py,\nso PERF-8 was never sequenced behind this at all. What did move for PERF-8 is\nits denominator, and the bullet now says to re-measure rather than quote.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T22:57:31+02:00",
+          "tree_id": "9937e997353cb9cd8a4afd9ed1461056156caf9a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/dceaff6762b8f806b5e2611c0f459ff2eb82375a"
+        },
+        "date": 1788641901425,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083599090576172,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085382461547852,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234365463256836,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2351741790771484,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58839416503906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58915901184082,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
           }
         ]
       }
