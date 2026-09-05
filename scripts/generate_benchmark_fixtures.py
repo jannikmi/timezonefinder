@@ -204,7 +204,8 @@ def generate(
         warnings.warn(
             "scripts.configs.DEBUG is True: SHORTCUT_H3_RES is overridden for data "
             "generation scripts and the fixtures produced now are not valid for "
-            "normal (non-debug) benchmark runs."
+            "normal (non-debug) benchmark runs.",
+            stacklevel=2,
         )
 
     output_dir.mkdir(parents=True, exist_ok=True)

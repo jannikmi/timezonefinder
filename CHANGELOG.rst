@@ -7,6 +7,9 @@ Changelog
 X.X.X (unreleased)
 ------------------
 
+Internal:
+
+* ruff enforces the ``flake8-bugbear`` family and ``RUF013`` beside its default rules, so the findings the register previously collected through ad-hoc ``ruff check --select`` runs are caught by ``make hook`` and by CI. ``B023`` and ``B905`` are ignored with their reason recorded: both have sites that need individual judgement, which is a lint pass of its own. Two ``warnings.warn`` calls gained ``stacklevel=2``, so they point at the caller rather than at the line inside the package, and four deliberate bare-name expressions - two probing for a profiler injection, two asserting that an attribute access raises - carry a ``noqa`` naming the intent. What ``prototypes/`` is exempted from is now stated once, in ``[tool.ruff.lint]``, so a bare ``uv run ruff check`` and the pre-commit hook cannot disagree
 
 9.0.0 (2026-09-02)
 ------------------

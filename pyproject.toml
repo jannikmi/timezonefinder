@@ -175,6 +175,38 @@ timezonefinder = ["inside_polygon_ext.c"]
 target-version = "py311"
 src = ["timezonefinder", "tests", "build.py"]
 
+[tool.ruff.lint]
+# `lint.exclude` rather than the top-level `exclude`, and stated here rather than on
+# the pre-commit hook: `prototypes/` is exploratory code that is deliberately not held
+# to the lint rules, but `ruff format` still formats it, which a top-level exclude
+# would stop. Stating it once is what keeps a bare `uv run ruff check` from disagreeing
+# with the hook.
+#
+# ATTENTION: the glob is required. A bare `"prototypes"` is accepted here and excludes
+# nothing - it fails silently, leaving the directory linted - where the top-level
+# `exclude` does honour a bare directory name. `tests/test_lint_configuration.py`
+# asserts the exclusion actually excludes, because a no-op one is invisible until the
+# next pass wonders why the rules it enabled are firing in exploratory code.
+exclude = ["prototypes/*"]
+# ruff's default set is E4, E7, E9, F; those four are repeated here because naming any
+# `select` replaces the default rather than adding to it.
+select = ["E4", "E7", "E9", "F", "B", "RUF013"]
+ignore = [
+    # The two flake8-bugbear rules the tree does not satisfy yet. Both are real rule
+    # families rather than noise, and clearing them is what remains of TOOL-1 in
+    # contributing/improvements/ - they are ignored so the rest of `B` can be enforced
+    # now instead of waiting for that pass.
+    #
+    # B023 (24 sites, nearly all in timezonefinder/_data_integrity.py) flags a closure
+    # over a loop variable. Every site has to be read individually, because the rule
+    # cannot see whether the closure outlives the iteration.
+    "B023",
+    # B905 (22 sites) wants an explicit `strict=` on `zip`. Each site needs the
+    # judgement of whether unequal lengths are possible; TOOL-1 records the analysis of
+    # the one that looked dangerous and was not.
+    "B905",
+]
+
 [tool.ruff.lint.isort]
 known-local-folder = ["timezonefinder"]
 
