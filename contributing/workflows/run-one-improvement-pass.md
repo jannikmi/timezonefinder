@@ -1,6 +1,6 @@
 # Run one improvement pass
 
-Deliver one pull request per item, against `master`. A pass starts with the highest-ranked eligible item and may implement further eligible items in the same session; each leaves it as its own pull request. An item too large for one reviewable pull request is refined into slices — each its own item and pull request — before any of it is implemented.
+Deliver one pull request per item, against `master`. A pass takes the highest-ranked eligible item, finishes it completely, and only then looks for the next one; it continues item by item for as long as carrying on beats leaving the rest to a freshly ranked session. An item too large for one reviewable pull request is refined into slices — each its own item and pull request — and the refinement itself delivers the first slice.
 
 Read the [register rules](../improvements/improvement-register-rules.md), the [priority ranking](../improvements/improvement-priority-ranking.md), and only the selected items. Follow each item's links when sequencing, measurements, or recorded decisions apply.
 
@@ -23,11 +23,15 @@ Rank expected value first: likely defects, then unblockers, drift-prone duplicat
 
 An item is eligible only when it is unclaimed, its [preconditions](../improvements/improvement-sequencing-and-preconditions.md) hold, and every maintainer-owned choice is recorded. Resume existing work instead of racing it.
 
-Take the first eligible item, then ask which further eligible items are worth implementing in the same session: small items, items of the same shape, and items reading the same code, tests, documentation, or release context — the context the first established is already loaded, and re-establishing it costs another session most of its budget. Each still leaves the session as its own pull request, so the question is what one session can carry, not what one diff can hold. Leave out an item that needs a maintainer decision, depends on a sibling's unmerged work, or whose verification cannot run beside the others' without confusing which change a result covers.
+Take the first eligible item and only that one. Do not plan a session's item list in advance: the next item is selected after the current one is finished, against a re-verified ranking, because merged work and concurrent passes change what ranks first.
+
+Once its pull request is open and its review is settled, ask whether to continue in this session or stop and let a new pass rank from scratch. Continue while the loaded context still pays: another small item, an item of the same shape, or one reading the same code, tests, documentation, or release context. Stop — and say so in the final report — when the next eligible item needs a maintainer decision, depends on unmerged work, reads an unrelated part of the codebase, or when this session's remaining budget cannot carry it through its own final gate; a half-verified second item is worse than a fresh pass. Each item still leaves the session as its own claim, branch, and pull request.
 
 One pull request holds two items only when a single cohesive change implements both and neither can be described without the other; touching the same file is not that.
 
-An item that cannot be delivered as one focused, releasable pull request is refined rather than implemented: slices that each stand alone under one true standalone changelog sentence, recorded as ordinary register items with fresh IDs in the same family (`DOC-1`, `DOC-2`, ...) and the sequencing that orders them. `tests/test_improvement_ledger.py` reads `<prefix>-<number>`, so `DOC-1-2` is not an item ID. The original is deleted or rewritten to hold only what the slices do not. That refinement is a valid register-only deliverable; the first slice may then be implemented.
+An item that cannot be delivered as one focused, releasable pull request is refined rather than rewritten in place: slices that each stand alone under one true standalone changelog sentence, recorded as ordinary register items with fresh IDs in the same family (`DOC-1`, `DOC-2`, ...) and the sequencing that orders them. `tests/test_improvement_ledger.py` reads `<prefix>-<number>`, so `DOC-1-2` is not an item ID. The original item is deleted with its ranking row; never keep its ID alive by narrowing it into one of the slices, so that a reader of the shipped pull request cannot mistake a slice for the whole item that was ranked.
+
+Discovering the oversize mid-implementation does not change this. Abandon the in-place edit, record the slices, and deliver the first slice: a refinement pull request ships the new slice items and implements the first of them, so the pass leaves working code rather than register churn. The later slices stay live, unclaimed, and ranked for a following item or pass. Only when the first slice itself needs a maintainer decision is the refinement a register-only deliverable.
 
 ## Decisions
 
@@ -47,21 +51,23 @@ git branch -r
 gh pr list --state open
 ```
 
-Finalize the session's item list before creating a worktree, installing, or running baselines. Atomically claim every selected item through its canonical remote ref, `refs/heads/improvement-claims/<ITEM-ID>`:
+Claim one item at a time — never a batch, and never ahead of need. Claim the selected item, implement it, open its pull request, release the claim, and only then survey and claim the next. A claim held while another item is worked on blocks a concurrent pass for no reason. Claim through the item's canonical remote ref, `refs/heads/improvement-claims/<ITEM-ID>`:
 
-1. Create one unique claim commit on the `origin/master` tree and parent, without adding it to the implementation branch. Its message records the selected item IDs, a unique run token, the planned feature branch, the base commit, and the creation time. Never point a claim ref straight at `origin/master`: concurrent pushes of one commit can both report success.
-2. Push all claim refs in one `git push --atomic`, guarding each with `--force-with-lease=<claim-ref>:` so it succeeds only when every ref is absent. A rejected push acquires nothing: fetch again, inspect the winning claims and concurrent work, then re-rank rather than retrying blindly.
-3. Fetch the refs immediately afterwards and verify each points at this run's claim commit. Until that succeeds nothing is claimed and no implementation may begin.
+1. Create one unique claim commit on the `origin/master` tree and parent, without adding it to the implementation branch. Its message records the claimed item ID, a unique run token, the planned feature branch, the base commit, and the creation time. Never point a claim ref straight at `origin/master`: concurrent pushes of one commit can both report success.
+2. Push the claim ref with `git push --atomic`, guarding it with `--force-with-lease=<claim-ref>:` so it succeeds only when the ref is absent. A rejected push acquires nothing: fetch again, inspect the winning claim and concurrent work, then re-rank rather than retrying blindly.
+3. Fetch the ref immediately afterwards and verify it points at this run's claim commit. Until that succeeds nothing is claimed and no implementation may begin.
+
+A refinement claims the oversized item's ID before it starts. Once the slices are recorded, claim the first slice's new ID the same way and push it with the same guards; the original ID's claim is released with the refinement's pull request, alongside the item it retires.
 
 Never overwrite, delete, or steal another run's claim. Treat a foreign or orphaned claim as blocking, report its recorded metadata, and continue down the ranking. A maintainer may remove a confirmed orphan separately.
 
-After ownership is verified, create a uniquely named worktree and, inside it, one feature branch per item, each named after its item ID and started from the same recorded `origin/master` commit: never stack one item's branch on another's, because `master` squash-merges and deleting a merged base branch closes the pull request built on it. Push each branch as its work begins, the first immediately, so the work behind the claim is inspectable. Do not base a pass on another open pull request merely to absorb its contributor-memory edits; an item that truly depends on unmerged work is ineligible until that lands. Then install and record untouched `make test` and `make hook` baselines, which the session shares. Do not add an item after implementation begins: finish what is claimed, release the rest, and leave it to a newly ranked session.
+After ownership is verified, create a uniquely named worktree and, inside it, a feature branch named after the item ID and started from a recorded `origin/master` commit. A later item in the same session reuses the worktree but branches from `origin/master` afresh: never stack one item's branch on another's, because `master` squash-merges and deleting a merged base branch closes the pull request built on it. Push the branch as its work begins, immediately, so the work behind the claim is inspectable. Do not base a pass on another open pull request merely to absorb its contributor-memory edits; an item that truly depends on unmerged work is ineligible until that lands. Then install and record untouched `make test` and `make hook` baselines, which the session shares. Do not widen an item after implementation begins: finish what is claimed, and leave anything discovered beside it to the register.
 
-Keep each claim until its pull request is open and visible, then delete only this run's refs, guarding each deletion with a force-with-lease expecting this run's claim commit; the open pull request becomes the durable claim. Release claims the same way when abandoning or yielding work. If verification fails and findings are pushed without a pull request, retain the claims so another pass resumes rather than races that branch. Stage explicit paths, never `git add -A`.
+Keep the claim until its pull request is open and visible, then delete only this run's ref, guarding the deletion with a force-with-lease expecting this run's claim commit; the open pull request becomes the durable claim. Release claims the same way when abandoning or yielding work. If verification fails and findings are pushed without a pull request, retain the claims so another pass resumes rather than races that branch. Stage explicit paths, never `git add -A`.
 
 ## Deliverable
 
-Valid outcomes are one or more implemented items, each in its own pull request; briefed questions only; an oversized item refined into recorded slices; or triage proving nothing is eligible. The latter three still produce a register-only pull request. Never manufacture cosmetic code to make a pass look productive.
+Valid outcomes are one or more implemented items, each in its own pull request; an oversized item refined into recorded slices with the first slice implemented; briefed questions only; or triage proving nothing is eligible. The last two still produce a register-only pull request, as does a refinement whose first slice is itself blocked on a decision. Never manufacture cosmetic code to make a pass look productive.
 
 A slice is releasable when one true standalone changelog sentence describes it without promising a follow-up. Prefer additive before subtractive changes. An atomic data-format migration is prototyped and measured rather than half-landed. While an unreleased `DATA_FORMAT_VERSION` bump is pending, take compatible format changes consecutively so they share one ordered data/code release.
 
@@ -73,7 +79,7 @@ Each pull request is gated on its own: a sibling passing is not evidence about t
 
 Confirm packaged data is untouched unless regeneration was the item's subject; if it was, the data diff must list only intended binaries. Confirm the diff contains only intended paths, the register invariants pass, all discoveries are recorded, and no shipped ID remains. If a required gate cannot be fixed, push the findings but open no pull request.
 
-Open the pull request without merging or adding automation. Its body states what changed, why this item outranked or skipped higher work, which sibling items share the session and where their pull requests are, recorded decisions, behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item.
+Open the pull request without merging or adding automation. Its body states what changed, why this item outranked or skipped higher work, which items this session already delivered and where their pull requests are, the slices a refinement recorded and which one this ships, recorded decisions, behavior impact, real verification, judgment calls, concurrent work yielded to, and the next eligible item.
 
 ## Independent review
 
@@ -85,4 +91,4 @@ For `triage`, `status`, `dry-run`, “what is next,” or “what blocks this,�
 
 ## Final report
 
-Report the selected items, and why higher rows were ineligible or eligible items left to a later session; each item's pull request URL, or the slices an oversized item was refined into; decisions used or questions recorded; claims acquired, released, or left for resumable work; why no code was correct where none was written; findings fixed or declined with evidence, the reviewed commit and whether the final head differs; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
+Report the items taken in order, why higher rows were ineligible, and why the session stopped where it did rather than taking one more item; each item's pull request URL, and the slices an oversized item was refined into with the one that shipped; decisions used or questions recorded; claims acquired, released, or left for resumable work; why no code was correct where none was written; findings fixed or declined with evidence, the reviewed commit and whether the final head differs; deferred work; register changes; exact verification results; concurrent passes; and any worktree left behind.
