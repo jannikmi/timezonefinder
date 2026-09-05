@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788599794153,
+  "lastUpdate": 1788599796380,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12767,6 +12767,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82704cdd7c1d05db610ed241b7fc5459ebd880f5",
+          "message": "maintainer-decision: GH-332 publishes nothing, and parks on demand (#618)\n\n* maintainer-decision: GH-332 publishes nothing, and parks on demand\n\nThe reduced 63-zone `timezones-now` dataset does not become a published\nartifact. The converter route stays the answer, and it needs no work:\n`docs/data_format.rst` already documents `--dataset=same-since-now` with\nits caveats and the vendored mapping, and `README.rst` links there.\n\nParked rather than closed, because the objection is missing demand rather\nthan a dead end. A second `timezonefinder-data-reduced` distribution is\nrefused on absent demand only and stays the shape to build if a user asks\nfor it on issue #332. Shipping the reduced data inside the existing wheel\nis refused on merit and is not to be re-proposed: it enlarges the download\nfor every user in order to serve the users whose stated want was a smaller\nfootprint.\n\nThe decision is recorded on the item rather than in the distribution\ndecision module: it constrains no other item, and a parked entry is not\ndeleted the way a shipped one is, so the item file keeps it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Refuse resolving the data bound from PyPI in tox, and split the module to hold it\n\nThe release-ordering bullet carried an open question: whether tox should\ninstall `timezonefinder-data` from PyPI so the version bound is checked by\nresolution as well. It cannot. On the one case it would protect, a format\nbump, the bound moves to `<N+1` and nothing published satisfies it until the\ndata-update pull request producing that data goes green - and that pull\nrequest's own matrix would be resolving the version it has not published.\nIt would also test the previous release's bytes while the guard's diff looked\nclean. `tox.ini` installs the workspace member deliberately.\n\nRecording it needed room the module did not have, so the unattended weekly\ndata update's guardrails, gating and trigger authorization move to their own\nfile. The register rules' enumeration of decision modules is dropped rather\nthan extended: it had already gone stale twice, missing the payload-compression\nand format-version-marker modules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T11:15:27+02:00",
+          "tree_id": "0e4aa1300eeec75e941af138e5e65371f628c00a",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/82704cdd7c1d05db610ed241b7fc5459ebd880f5"
+        },
+        "date": 1788599795612,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085334777832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.230278968811035,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2310876846313477,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58402156829834,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58483028411865,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2450 GHz"
           }
         ]
       }
