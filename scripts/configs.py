@@ -255,8 +255,42 @@ class BinaryData(TypedDict):
     output_path: Path
 
 
-class ShortcutIndexStats(TypedDict):
+class ShortcutH3Coverage(TypedDict):
+    """How much of the H3 grid at this resolution the index stores a cell for."""
+
+    h3_resolution: int
+    stored_cells: int
+    possible_cells: int
+    missing_cells: int
+    coverage_ratio: float
+
+
+class ShortcutEfficiencyMetrics(TypedDict):
+    """What fraction of cells the index answers outright, and how wide the rest are."""
+
+    unique_entry_fraction: float
+    unique_surface_fraction: float
+    zone_distribution_efficiency: float
+    avg_polygons_per_entry: float
+
+
+class ShortcutStorageMetrics(TypedDict):
+    """The index's estimated on-disk size, against storing every cell naively."""
+
+    zone_storage_bytes: int
+    polygon_storage_bytes: int
+    total_storage_bytes: int
+    compression_ratio: float
+
+
+class ShortcutIndexStats(
+    ShortcutH3Coverage, ShortcutEfficiencyMetrics, ShortcutStorageMetrics
+):
     """What ``scripts.reporting.calculate_shortcut_index_stats`` measures.
+
+    The three bases above are the metric families the report states separately,
+    each computed by its own function; what is declared here is the entry counts
+    every one of them reads, and the two distributions.
 
     The last two members are distributions, one entry per shortcut cell. The
     ``dict[str, int | float]`` this replaces could not describe them, so the
@@ -270,22 +304,6 @@ class ShortcutIndexStats(TypedDict):
     polygon_entries: int
     empty_entries: int
     polygon_id_count: int
-    # H3 coverage
-    h3_resolution: int
-    stored_cells: int
-    possible_cells: int
-    missing_cells: int
-    coverage_ratio: float
-    # efficiency metrics
-    unique_entry_fraction: float
-    unique_surface_fraction: float
-    zone_distribution_efficiency: float
-    avg_polygons_per_entry: float
-    # storage efficiency
-    zone_storage_bytes: int
-    polygon_storage_bytes: int
-    total_storage_bytes: int
-    compression_ratio: float
     # frequency distributions
     polygons_per_shortcut: list[int]
     zones_per_shortcut: list[int]
