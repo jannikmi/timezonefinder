@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788599796380,
+  "lastUpdate": 1788600576393,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -5967,6 +5967,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00021998168414146294",
             "extra": "mean: 17.860534999954325 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c2ccde7dcd35ec5aef550e40c989020cba3788f",
+          "message": "GH-524: brief the packages/ move for a decision (#622)\n\nRe-verification found the premise intact — `timezonefinder/` at the root,\n`packages/` holding one member, the root manifest doubling as the workspace\nroot — and the move's stated trigger unfired: its justification on issue #524\nis that a third distribution stops being a special case, and there is none.\nAbsent one the issue itself calls the move close to cosmetic, and it rewires\n`setup.py`'s cffi module path, `[tool.setuptools] packages`, `MANIFEST.in`\n(which prunes `packages`), the check-manifest ignore list, the cibuildwheel\nbuild root, `scripts/configs.py`, `tox.ini` and `docs/conf.py` at once.\n\nWhether to pay that now, park it on a third distribution, or refuse it is the\nmaintainer's: the answers produce materially different work and (a) is\nexpensive to reverse. Recorded as one Decision-needed bullet, with the\n`tests/` split answered as the contributor's own choice — one root suite,\nsince `tests/auxiliaries.py` imports from `scripts/`.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T11:28:40+02:00",
+          "tree_id": "e1ee1b96e7513595b361427b824da86d7907be58",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9c2ccde7dcd35ec5aef550e40c989020cba3788f"
+        },
+        "date": 1788600575460,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 174.7193352282263,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018395466513100836",
+            "extra": "mean: 5.723464999988437 msec\nrounds: 147 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 290.99238880361895,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000505216566638909",
+            "extra": "mean: 3.436515999993617 msec\nrounds: 255 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 41.0070427545446,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025464831094212194",
+            "extra": "mean: 24.3860550000079 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 267.7224927861557,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006831018853435102",
+            "extra": "mean: 3.735210999991523 msec\nrounds: 216 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 589.4790950113907,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025022417912233457",
+            "extra": "mean: 1.6964129999905708 msec\nrounds: 494 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 51.30863441710417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003556412932568289",
+            "extra": "mean: 19.4898969999997 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 268.80903886624634,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020000435176228376",
+            "extra": "mean: 3.7201129999857585 msec\nrounds: 214 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 574.5855083772218,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00018659463751115232",
+            "extra": "mean: 1.7403850000050625 msec\nrounds: 454 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 51.0141693385766,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027443427333469656",
+            "extra": "mean: 19.602396999999883 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           }
         ]
       }
