@@ -1,0 +1,1 @@
+the published benchmark trend chart now plots timezone lookups per second under the human-readable benchmark labels the reports use, instead of iter/sec (batches per second) under raw pytest node ids; scripts/migrate_benchmark_chart_history.py restates the stored history so it continues across the change
