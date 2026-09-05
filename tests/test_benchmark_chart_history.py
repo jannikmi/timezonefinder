@@ -136,3 +136,20 @@ def test_the_file_round_trips_through_the_action_s_own_shape():
     data = _data(STORED_BENCH)
 
     assert load_data_js(dump_data_js(data)) == data
+
+
+@pytest.mark.unit
+def test_the_file_is_written_the_way_the_action_writes_it():
+    # `JSON.stringify(data, null, 2)` emits literal UTF-8; Python escapes
+    # non-ASCII unless told not to. The stored file holds 600-odd `±`
+    # characters in the memory suite this migration does not even touch, so
+    # getting this wrong turns a nine-benchmark restatement into a whole-file
+    # diff that the next CI push reverts - and a parse-and-compare assertion
+    # cannot see it, which is why this compares text.
+    data = _data({**STORED_BENCH, "range": "± 3", "extra": "on a Ryzen™ CPU"})
+
+    rendered = dump_data_js(data)
+
+    assert "±" in rendered and "™" in rendered
+    assert "\\u" not in rendered
+    assert not rendered.endswith("\n")

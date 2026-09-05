@@ -627,3 +627,14 @@ def test_acceleration_path_check_rejects_the_inactive_path():
 
     with pytest.raises(RuntimeError, match="acceleration path"):
         check_acceleration_path(inactive)
+
+
+@pytest.mark.unit
+def test_the_chart_export_names_the_statistics_it_did_not_find():
+    # a report from another measurement script carries a different set of
+    # statistics; a bare KeyError three frames down says nothing about which
+    # benchmark or which estimator
+    data = _measured_on(_run(test_a={"min": 0.005, "stddev": 0.0, "rounds": 1}))
+
+    with pytest.raises(ValueError, match="no 'median' statistic; available:"):
+        to_timing_chart_entries(data, "median")

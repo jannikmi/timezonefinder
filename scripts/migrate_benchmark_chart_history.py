@@ -36,11 +36,17 @@ Idempotent: an entry already carrying the new unit is left alone, so a partial
 run can be repeated.
 
 Usage - the file lives on the ``gh-pages`` branch, which CI owns and nothing
-else may write casually::
+else may write casually. That branch is an orphan holding the published pages
+and nothing else, so check it out *beside* this one rather than over it: this
+module does not exist there::
 
-    git fetch origin gh-pages && git checkout gh-pages
-    uv run python -m scripts.migrate_benchmark_chart_history dev/bench/data.js
-    git commit -am "restate the timing trend history in lookups/sec"
+    git fetch origin gh-pages
+    git worktree add ../tzf-gh-pages gh-pages
+    uv run python -m scripts.migrate_benchmark_chart_history \\
+        ../tzf-gh-pages/dev/bench/data.js
+    git -C ../tzf-gh-pages commit -am "restate the timing trend history in lookups/sec"
+    git -C ../tzf-gh-pages push origin gh-pages
+    git worktree remove ../tzf-gh-pages
 
 Run it once, before the first push that stores a lookups/sec point; running it
 afterwards is still safe, but until it has run the chart shows the new series
@@ -79,12 +85,19 @@ def load_data_js(text: str) -> dict[str, Any]:
 
 
 def dump_data_js(data: dict[str, Any]) -> str:
-    """Render ``data`` the way the action itself writes the file.
+    """Render ``data`` byte-for-byte the way the action itself writes the file.
 
-    Two spaces of indentation and a trailing newline, so a migrated file
-    differs from the next action-written one only in the points it restates.
+    ``JSON.stringify(data, null, 2)``: two spaces of indentation, no trailing
+    newline, and literal UTF-8 rather than ``\\uXXXX`` escapes - hence
+    ``ensure_ascii=False``, which Python does not default to. Without it every
+    one of the 600-odd ``±`` characters in the stored file (and any non-ASCII
+    in a commit message or author name) is re-encoded, so a migration that
+    restates nine benchmarks would land as a whole-file diff that the next CI
+    push silently reverts. The point of matching exactly is that the migrated
+    file differs from the next action-written one *only* in the points it
+    restates.
     """
-    return f"{ASSIGNMENT_PREFIX}{json.dumps(data, indent=2)}"
+    return f"{ASSIGNMENT_PREFIX}{json.dumps(data, indent=2, ensure_ascii=False)}"
 
 
 def migrate_bench(

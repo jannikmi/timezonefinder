@@ -138,8 +138,10 @@ quotes, under a name that says nothing about the workload.
 
 Both suites are therefore exported explicitly instead.
 ``scripts/export_timing_chart_json.py`` divides the tracked duration by the batch size the
-measuring run recorded and stores **lookups/sec** - the reciprocal of the Time/Query column of the
-published reports - under the same human-readable labels those reports use
+measuring run recorded and stores **lookups/sec** - the same quantity the published reports state
+as Time/Query, though not the same number, since the chart tracks the core subset's ``min`` per
+commit and that column is a fixed-round full-suite mean from another job - under the same
+human-readable labels those reports use
 (*TimezoneFinder.timezone_at() - random points, in-memory*). ``tool: customBiggerIsBetter`` takes
 that shape; ``scripts/export_memory_chart_json.py`` is its mirror for the footprint, where a rise
 is the regression.

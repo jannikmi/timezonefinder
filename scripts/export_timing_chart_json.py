@@ -28,10 +28,13 @@ giving **lookups/sec**, and the name is the human-readable label
 the timing counterpart of :mod:`scripts.export_memory_chart_json`; the
 measurement is untouched, only the shape and the unit the action reads change.
 
-Note that lookups/sec is the batch throughput, i.e. exactly the reciprocal of
-the "Time/Query" column of ``docs/benchmark_results_timezonefinding.rst`` - it
-is not a per-call latency, and the same batch-hides-the-tail caveat applies
-(see ``docs/benchmarking_methodology.rst``).
+Note what the unit is and is not. It is a batch throughput - the same quantity
+the "Time/Query" column of ``docs/benchmark_results_timezonefinding.rst``
+states as a duration, not the same *number*: the chart tracks the ``min`` of
+the core subset measured per commit, while that column is a fixed-round
+full-suite mean from the rendering job on another machine. And it is not a
+per-call latency, so the batch-hides-the-tail caveat applies unchanged (see
+``docs/benchmarking_methodology.rst``).
 
 Usage::
 
@@ -102,6 +105,15 @@ def to_chart_entries(
     entries: list[dict[str, Any]] = []
     for bench in data.get("benchmarks", []):
         stats = bench["stats"]
+        if estimator not in stats:
+            # the same refusal scripts/normalize_benchmark_json.py makes, for
+            # the same reason: a report shaped by another measurement script
+            # may carry a different set of statistics, and naming them beats a
+            # bare KeyError from three frames down
+            raise ValueError(
+                f"benchmark {bench.get('fullname', bench.get('name'))!r} has no "
+                f"'{estimator}' statistic; available: {sorted(stats)}"
+            )
         seconds = stats[estimator]
         if seconds <= 0:
             raise ValueError(
