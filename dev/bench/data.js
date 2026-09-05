@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788601294687,
+  "lastUpdate": 1788601297324,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -13073,6 +13073,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0.001",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2123 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c74e3f6c989f0c92876940d6400729aa1e3d03b3",
+          "message": "discovery round: what the binary-data-to-timezone_at flow still costs (#623)\n\nReads the packed payload, both coordinate accessors, both point-in-polygon\nkernels and the candidate loop end to end, and measures every finding as a\npaired whole-query A/B over the committed fixtures on the tracked\nclang / in_memory=False configuration.\n\nFour new entries and one re-scoped:\n\n- PERF-9, the candidate loop reads numpy scalars where a memoryview yields a\n  Python int. -12.7 % of an ambiguous query, -5.2 % of a random workload,\n  15/15 rounds; memoryview rather than list, so it costs 1.5 KiB of heap\n  instead of 333.\n- PERF-2, re-scoped: the zone id array is read at exactly one index, so the\n  fix is deleting it rather than narrowing it. -10.1 % of an ambiguous query.\n  Its recorded share was half the truth, because the denominator halved when\n  the frame-of-reference payload landed and the entry was never re-read.\n- PERF-8, the hole check raises and catches a KeyError on 92.7 % of boundary\n  polygons. -4.9 % of an ambiguous query.\n- PROF-1, the stage ladder binds the checked public accessors where\n  timezone_at calls the internal ones - 1,685 ns against 564 - which is most\n  of the overshoot the profiler's own FINDINGS block records as unexplained.\n  It is the instrument every performance rank is read off.\n- FMT-3, the payload-offset dtype is justified by the largest ring's payload\n  where the array holds file-absolute offsets, a bound 26x larger.\n\nThe three query-path items together measured -30 % of an ambiguous query and\n-12 % of a uniformly random workload, above the 3-9 % noise floor.\n\nAlso records that the measurement baseline's freshness command named a\nsuperseded anchor, so it could never report empty, and that the declared\nanchor has not been re-measured since the frame-of-reference payload.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T11:40:44+02:00",
+          "tree_id": "202e93a5ae33ab8c362150dd3e81c15dc585aea4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c74e3f6c989f0c92876940d6400729aa1e3d03b3"
+        },
+        "date": 1788601296680,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2302846908569336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.231048583984375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.583892822265625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.584656715393066,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7678 GHz"
           }
         ]
       }
