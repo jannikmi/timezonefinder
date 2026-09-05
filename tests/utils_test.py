@@ -570,6 +570,87 @@ def test_shortcut_index_stats_classifies_each_entry_kind():
 
 
 @pytest.mark.unit
+def test_shortcut_efficiency_metrics_read_the_counts_they_are_given():
+    """The four ratios, each against a denominator only this seam chooses.
+
+    They used to be computed inline beside the counts, so a wrong denominator
+    was invisible: every figure was derived from locals in the same scope, and
+    the report states them as percentages nobody recomputes.
+    """
+    counts = reporting.ShortcutEntryCounts(
+        total_entries=4,
+        zone_entries=1,
+        polygon_entries=2,
+        empty_entries=1,
+        polygon_id_count=6,
+        polygons_per_shortcut=[0, 2, 4, 0],
+        zones_per_shortcut=[1, 2, 3, 0],
+    )
+
+    metrics = reporting.shortcut_efficiency_metrics(counts, possible_cells=8)
+
+    # one of four cells answers outright, of eight cells the grid could hold
+    assert metrics["unique_entry_fraction"] == 0.25
+    assert metrics["unique_surface_fraction"] == 0.125
+    # the two cells spanning at most one zone, over every cell - including the
+    # empty one, which spans none
+    assert metrics["zone_distribution_efficiency"] == 0.5
+    # six polygon ids over the two entries listing polygons, never over all four
+    assert metrics["avg_polygons_per_entry"] == 3.0
+
+
+@pytest.mark.unit
+def test_shortcut_efficiency_metrics_answer_zero_on_an_empty_index():
+    counts = reporting.ShortcutEntryCounts(0, 0, 0, 0, 0, [], [])
+
+    metrics = reporting.shortcut_efficiency_metrics(counts, possible_cells=0)
+
+    # the keys as well as the values: every value on this path is 0.0, so a
+    # dropped or misnamed key is invisible to a comparison of values alone
+    assert metrics == {
+        "unique_entry_fraction": 0.0,
+        "unique_surface_fraction": 0.0,
+        "zone_distribution_efficiency": 0.0,
+        "avg_polygons_per_entry": 0.0,
+    }
+
+
+@pytest.mark.unit
+def test_shortcut_storage_metrics_price_each_entry_kind_by_what_it_stores():
+    """A direct-zone cell stores a key and a zone id; a polygon cell, ids."""
+    counts = reporting.ShortcutEntryCounts(
+        total_entries=3,
+        zone_entries=1,
+        polygon_entries=2,
+        empty_entries=0,
+        polygon_id_count=5,
+        polygons_per_shortcut=[0, 2, 3],
+        zones_per_shortcut=[1, 2, 2],
+    )
+
+    metrics = reporting.shortcut_storage_metrics(counts)
+
+    # the field widths are spelled out rather than imported: what is pinned here
+    # is which of them each entry kind is charged, so a changed width should
+    # fail this and be re-read rather than following the code silently
+    assert metrics["zone_storage_bytes"] == 1 * (8 + 1)
+    assert metrics["polygon_storage_bytes"] == 2 * 8 + 5 * 2
+    assert metrics["total_storage_bytes"] == 9 + 26
+    # naive storage gives every cell a key plus the average id payload
+    assert metrics["compression_ratio"] == pytest.approx((3 * (8 + 5 * 2 / 3)) / 35)
+
+
+@pytest.mark.unit
+def test_shortcut_storage_metrics_answer_a_ratio_of_one_on_an_empty_index():
+    metrics = reporting.shortcut_storage_metrics(
+        reporting.ShortcutEntryCounts(0, 0, 0, 0, 0, [], [])
+    )
+
+    assert metrics["total_storage_bytes"] == 0
+    assert metrics["compression_ratio"] == 1.0
+
+
+@pytest.mark.unit
 def test_polygon_distribution_table_pairs_each_count_with_an_example():
     """The polygon count labels a row and keys the example lookup.
 
