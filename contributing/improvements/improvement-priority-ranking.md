@@ -27,6 +27,5 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 |---|---|---|---|
 | [GH-513](items/lookup-geometry-and-data-format/gh-513-drop-hole-polygons-entirely.md) | Drop hole polygons entirely | data format | rejected — the zone precedence relation it needs is cyclic, so no candidate ordering satisfies it |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
-| [PERF-7](items/lookup-geometry-and-data-format/perf-7-a-single-block-ring-pays-for-an-index-it-cannot-use.md) | The blocked point-in-polygon kernel's per-call and per-edge overheads | performance | withdrawn — polygon layout 3 removed the per-call half's opportunity and implemented the per-edge half |
 
 ---
