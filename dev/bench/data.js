@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788598571772,
+  "lastUpdate": 1788598573852,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12614,6 +12614,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.7956 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e163d9b38fd3329283a85b1e360940939484871b",
+          "message": "Give discovery its own workflow, and split the register rules it filled (#617)\n\nA pass that looks for new improvement candidates had no workflow: the\ncoverage map, the surface records and the reusable methods were all\nmaintained as a side effect of implementing something else, and nothing\nsaid how a sweep chooses where to look or what is worth writing down.\n\nAdd `run-one-discovery-pass.md` and the paired `discovery-pass` adapters.\nIt selects one lane rather than the whole map, spends the budget on the\ncore and reaches periphery only through a signal, and prices the record\nas well as the work: a finding cheaper to forget than to carry is not an\nentry, and a preference is nothing. The write-back — anchor, uncovered\ndeltas, next gap, method trigger — is treated as the deliverable that\nkeeps the next run bounded by a diff rather than the tree.\n\n`improvement-register-rules.md` was at 1999 words against a 2000-word cap\nand carried two subjects, so the ordering rules move to\n`improvement-ranking-and-eligibility.md` and the mechanics stay. The\nsplit also retires wording inherited from the single-file register: the\nranking table and the entries have not been \"below\" since they became\n`improvement-priority-ranking.md` and `items/`, and the maintenance note\ncounted two workflows where there are now three.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-05T10:54:38+02:00",
+          "tree_id": "9d02ef2092ccb6bc394f15e48c1923b4efd39b64",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e163d9b38fd3329283a85b1e360940939484871b"
+        },
+        "date": 1788598573273,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.230340003967285,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2311487197875977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58455181121826,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.585360527038574,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2299 GHz"
           }
         ]
       }
