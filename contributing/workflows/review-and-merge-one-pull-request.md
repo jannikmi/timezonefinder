@@ -33,7 +33,7 @@ Apply in order, and take the first pull request that discriminates:
 5. **Then cheap and green**, to shrink the queue without spending maintainer attention.
 6. **Tie-breaks:** smaller diff, then the older pull request, which has already been rebased the most times.
 
-Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, an improvement-pass pull request whose independent review never ran — a review that terminated on a usage limit is silence, not a pass, and a manual pull request needs no such review — one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
+Park, but never let block: a pull request that needs a maintainer decision, a draft, one whose checks are red or absent, an improvement-pass pull request whose independent review never ran — a review that terminated on a usage limit is silence, not a pass; a manual pull request needs no such review, and neither does one whose whole diff retires a register entry, which the [testing rules](../development/testing-strategy-and-change-scope.md) exempt — one with unresolved review threads, and one from a fork whose head you cannot push to. Announce the pick with one clause per waiting pull request saying why it waits — the ordering is the cheapest thing for the maintainer to overrule.
 
 ## Bring it up to date
 

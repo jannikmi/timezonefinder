@@ -77,7 +77,7 @@ Open the pull request without merging or adding automation. Its body states what
 
 ## Independent review
 
-Each pull request is reviewed and settled per the [review-settlement rules](settle-pull-request-review.md), before it is opened and after: the pass is not over while a finding is unanswered.
+Each pull request is reviewed and settled per the [review-settlement rules](settle-pull-request-review.md), before it is opened and after: the pass is not over while a finding is unanswered. A pull request that only retires an entry is exempt from the pre-open review under the [testing rules](../development/testing-strategy-and-change-scope.md), and pays for it with the self-check they name; a refinement into slices is not exempt, and neither is anything carrying code.
 
 ## Triage-only mode
 
