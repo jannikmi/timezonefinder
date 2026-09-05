@@ -1,0 +1,9 @@
+# TOOL-2 — `B023` is ignored over 24 loop-closure sites
+
+- **Location:** `pyproject.toml`, `[tool.ruff.lint] ignore` — `"B023"`; 22 of the sites are in `timezonefinder/_data_integrity.py` and the other two in `tests/test_border_sampling.py`.
+- **Defect:** the rule is selected as part of `B` and then ignored again, so nothing in the tree is held to it. It flags a function defined inside a loop that closes over a name the loop rebinds, which is wrong exactly when the closure outlives the iteration — and the failure mode where it is wrong is a validator silently checking the last collection instead of its own, which raises nothing.
+- **Every site was read, and all 24 are false positives.** Each closure is defined and fully consumed inside the same iteration: `compare`, `block_ranges_of` and `check` in `_data_integrity.py` are each called by the `for idx in range(...)` loop directly beneath them, and `at_target` in `tests/test_border_sampling.py` is called twice on the next statement. The rule cannot see that, and neither can a reader who does not check.
+- **Detection widened at 0.16 rather than the code changing:** the 2026-08-14 reading of this family as "clean repo-wide" was taken on 0.15 and is not true even there, measured 2026-09-06 at 0.15.22.
+- **The fix.** The three closures in `_data_integrity.py` are nested inside `for polygon_dir in (...)` only because the loop body was never extracted; lifting each body into a module-level `_validate_*_of(polygon_dir, ...)` removes the loop from around the closure without touching what any of them does, and leaves each check independently readable. `at_target` becomes a module-level helper taking the distance explicitly. Then delete `"B023"` from `ignore`, and add a probe to `tests/test_lint_configuration.py` so it cannot be re-ignored silently.
+- **Status:** open.
+- **Last touched:** 2026-09-06 — split out of TOOL-1, which was refined into TOOL-2 to TOOL-6.
