@@ -109,72 +109,72 @@ call, so the breakdown is two blocks rather than five:
 
     stratum      in_memory=False
                  numba    clang
-    unique         796      797
-    ambiguous    3,764    3,309
-    random       1,106    1,057
-    on_land      1,414    1,302
+    unique         801      799
+    ambiguous    3,691    3,297
+    random       1,089    1,053
+    on_land      1,384    1,297
 
   Paired against the same tree with the three helpers rebound to their ``njit`` forms
   and the gather restored, 25 rounds a side alternated round by round, 2,500 fixture
   points, answers asserted equal every round:
 
     stratum            clang            numba
-    random           -4.7 % (25/25)   -11.2 % (25/25)
-    on_land          -8.3 % (25/25)   -13.0 % (25/25)
-    ambiguous       -15.2 % (25/25)   -16.3 % (25/25)
-    unique          +2.0 % ( 5/25)     -7.4 % (25/25)
+    random           -4.8 % (20/25)   -12.3 % (23/25)
+    on_land          -7.7 % (24/25)   -13.0 % (23/25)
+    ambiguous       -15.7 % (25/25)   -16.6 % (25/25)
+    unique          +0.8 % (12/25)     -8.0 % (23/25)
 
   Both estimators agree in sign wherever the round count does. **The two backends differ
   on the unique stratum, and that is the result rather than noise in it:** without numba
   the decorator was already transparent, so nothing on a unique query changed and the
-  column reads neutral - a null A/B of this harness against itself put clang's unique at
-  -0.8 % min / +0.2 % median, 13/25, so ±1 % is the band and +2.0 % sits at its edge with
-  no code difference behind it. On numba the same column is -7.4 % at 25/25, which is the
-  dispatch coming out. Read the pair together: a change that removes *dispatch* helps only
+  column reads neutral - +0.8 % min against -0.8 % median at 12/25 rounds, the estimators
+  straddling, and a null A/B of this harness against itself puts its band at ±1 %. On
+  numba the same column is -8.0 % at 23/25, which is the dispatch coming out. Read the pair together: a change that removes *dispatch* helps only
   where the dispatch existed.
 
-  The batch path gains 5.5-7.5 % (clang) on the three strata that reach a candidate list,
-  and its unique stratum - which hoists validation out of the loop and reaches no
-  candidate list - reads +1.4 % min / -3.6 % median, 2/5 rounds, estimators straddling.
+  The batch path gains 2.0-8.8 % (clang) on the three strata that reach a candidate list
+  - the ambiguous one straddles, -2.0 % min against -7.9 % median, so read it as the
+  range rather than either end - and its unique stratum, which hoists validation out of
+  the loop and reaches no candidate list, reads +1.2 % min / -0.2 % median at 3/5.
 
   The `prologue` block - coordinate validation plus the H3 cell computation, before any
-  lookup logic - is 93.4 % of a unique query (clang), 70.0 % of a random one, 56.6 % of
-  `on_land` and 22.4 % of an ambiguous one. Its *absolute* cost is flat across strata at
-  ~737-744 ns on clang, which is the useful way to read it: what changes between strata
+  lookup logic - is 91.4 % of a unique query (clang), 71.7 % of a random one, 56.5 % of
+  `on_land` and 23.1 % of an ambiguous one. Its *absolute* cost is flat across strata at
+  ~730-760 ns on clang, which is the useful way to read it: what changes between strata
   is everything else.
 
 Unique-shortcut stratum - the common case, and the one with no geometry in it at all
 (``in_memory=False``):
 
     stage                       numba      clang
-    validate_coordinates          213        212
-    h3.latlng_to_cell             367        367
-    shortcut table read           113        111
-    zone_name_from_id              63         61
+    validate_coordinates          212        211
+    h3.latlng_to_cell             365        371
+    shortcut table read           114        110
+    zone_name_from_id              58         64
     ------------------------------------------------
-    ladder total                  753        739
-    real timezone_at()            803        793   (+50 / +54 call overhead)
+    ladder total                  742        745
+    real timezone_at()            791        792   (+49 / +47 call overhead)
 
   ``validate_coordinates`` reads the same ~212 ns on both backends now, against 270
   numba / 212 clang before. The clang figure did not move and the numba one fell to meet
   it: the whole backend gap that stage carried was the ``njit`` dispatch, not the
   comparison, and removing the decorator removed the difference rather than making the
   stage cheaper than it was on the backend that never paid for it. ``coord2int x2``
-  reads the same way - 106/107 ns against 229 numba / 104 clang.
+  reads the same way - 92/119 ns against 229 numba / 104 clang.
 
 Ambiguous-shortcut stratum, ``in_memory=False``:
 
     stage                       numba      clang
-    validate + h3 + table         685        685
-    candidate list slice          257        256
-    last_change read              101         92
-    coord2int x2                  106        107
-    bbox rejection                543        550
-    hole checks                   725        705
-    boundary PIP                1,213        781
+    validate + h3 + table         684        688
+    candidate list slice          252        243
+    last_change read              114         98
+    coord2int x2                   92        119
+    bbox rejection                557        584
+    hole checks                   582        594
+    boundary PIP                1,208        731
     ------------------------------------------------
-    ladder total                3,634      3,181
-    real timezone_at()          3,783      3,312
+    ladder total                3,492      3,069
+    real timezone_at()          3,663      3,225
 
   **The ladder no longer overshoots**: it reads -4 % of the real function, in the
   direction it should, where it was +28-30 % before. That gap was mostly one rung - the
@@ -287,9 +287,9 @@ CONCLUSIONS
    function from nopython mode.
 
    **This only helps where the dispatch existed.** ``validate_coordinates`` fell from 270
-   ns to 212 on numba and did not move on clang, where it already read 212 - so the numba
+   ns to 212 on numba and did not move on clang, where it already read 211 - so the numba
    figure fell to meet the clang one rather than going below it, and the unique stratum
-   gains 7.4 % on numba and nothing on clang. A change that removes dispatch is worth
+   gains 8.0 % on numba and nothing on clang. A change that removes dispatch is worth
    nothing on the configuration that never paid for it, which is the tracked one.
 
    Half of ``PROF-1`` went with it, by deletion rather than repair: the ``zone_ids_of``
@@ -386,7 +386,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
     coord2int = utils.coord2int
     outside_bbox = tf.boundaries.outside_bbox
     holes_in_any = tf.holes.in_any_polygon
-    hole_ids_of = tf._iter_hole_ids_of
+    hole_ids_of = tf._hole_ids_of
     boundary_pip = tf.boundaries.pip
 
     def s0_loop(points: Points) -> int:
@@ -512,7 +512,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
                     break
                 if outside_bbox(boundary_id, x, y):
                     continue
-                holes_in_any(hole_ids_of(boundary_id), x, y)
+                hole_ids = hole_ids_of(boundary_id)
+                if hole_ids:
+                    holes_in_any(hole_ids, x, y)
             zone_name_from_id(zone_id_of(candidates[-1]))
             n += 1
         return n
@@ -537,7 +539,8 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
                     break
                 if outside_bbox(boundary_id, x, y):
                     continue
-                if holes_in_any(hole_ids_of(boundary_id), x, y):
+                hole_ids = hole_ids_of(boundary_id)
+                if hole_ids and holes_in_any(hole_ids, x, y):
                     continue
                 if boundary_pip(boundary_id, x, y):
                     zone_name_from_id(zone_id_of(boundary_id))
