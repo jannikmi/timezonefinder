@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788686284998,
+  "lastUpdate": 1788687238213,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7446,6 +7446,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3661",
             "unit": "lookups/sec",
             "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ccf2b6fbe3a7659061550f648da74feba7f419b1",
+          "message": "PROF-1: state what #609 retires and what it leaves standing (#628)\n\nThe entry was written before #609 was read. That pull request is open, rewrites\n`make_ladder`, and implements PERF-2 - so the `zone_ids_of` rung this item led\nwith stops existing. Taking the item first would race #609 in one file and\nre-measure a ladder about to change, so the pass yielded it and corrected it\ninstead.\n\nWhat survives #609, verified in its diff rather than assumed:\n\n- `zone_name_from_id` is still bound to the checked public accessor there,\n  against the `zone_names.name_of` the query path calls - and on the unique\n  stratum, ~89 % of a random workload, that is the only rung below h3 and\n  validate_coordinates.\n- `s8_bbox` and `s9_holes` still omit the match `break` the real loop has, so\n  both geometry rungs test more candidates per query than a lookup does.\n\n#609 did bind `zone_id_of = tf._zone_id_of` correctly for the stage it added,\nwhich is what makes this a per-rung slip rather than a policy - so the entry now\ncarries the rule as well as the two remaining instances.\n\nStatus moves to blocked on #609; the 1,685-vs-564 ns measurement stays as the\nevidence for the rule rather than as a live finding.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T11:33:11+02:00",
+          "tree_id": "fc98044c2fcf940084eb90fd1e321f3891e176cc",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ccf2b6fbe3a7659061550f648da74feba7f419b1"
+        },
+        "date": 1788687237123,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 513169.15204734757,
+            "range": "± 5425",
+            "unit": "lookups/sec",
+            "extra": "min of 172 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 732391.6924505399,
+            "range": "± 91713",
+            "unit": "lookups/sec",
+            "extra": "min of 254 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 162201.4341980901,
+            "range": "± 11595",
+            "unit": "lookups/sec",
+            "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 843671.4014621585,
+            "range": "± 25446",
+            "unit": "lookups/sec",
+            "extra": "min of 266 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1486618.353552435,
+            "range": "± 24603",
+            "unit": "lookups/sec",
+            "extra": "min of 517 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 189742.24578466645,
+            "range": "± 2710",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 833148.374394669,
+            "range": "± 9146",
+            "unit": "lookups/sec",
+            "extra": "min of 269 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1437391.2613561552,
+            "range": "± 28681",
+            "unit": "lookups/sec",
+            "extra": "min of 495 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 188345.56801027854,
+            "range": "± 1303",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
           }
         ]
       }
