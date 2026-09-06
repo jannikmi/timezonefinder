@@ -72,8 +72,10 @@ def packed_buffers_clang(
     ``ffi.from_buffer`` costs ~0.30 us, a fifth of a whole point-in-polygon test, so
     these are built when a collection is loaded rather than per call - which is what
     the kernel taking collection-wide arrays and a ``block_start`` is for. Wrapping
-    copies nothing and faults no mapping in, but it does keep the buffers alive, which
-    is why ``FileCoordAccessor.cleanup`` drops them before closing the mapping.
+    copies nothing and faults no mapping in, but it does keep the buffers alive - and
+    the coordinate one is an export of the memory map, which ``mmap.close()`` refuses
+    to unmap under. That is why ``PolygonArray.__del__`` drops ``packed`` before
+    ``coordinates``, and why holding these anywhere else keeps the mapping open.
 
     ATTENTION: every array must be C-contiguous, as for :func:`pt_in_poly_clang`. Here
     that holds by construction - each is one array per collection, never a slice.

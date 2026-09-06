@@ -167,9 +167,10 @@ class FileCoordAccessor(AbstractCoordAccessor):
         # `words` is this accessor's own zero-copy view onto the mapping, and it is
         # dropped *before* the close is attempted rather than in the loop below.
         # mmap.close() refuses to unmap while any export is alive, so leaving our own
-        # view in place would make close_resource swallow a BufferError on every
-        # cleanup and defer the unmapping to whenever the accessor is collected - on
-        # the one mode whose reason for existing is that the data need not be resident.
+        # view in place would make close_resource swallow a BufferError even when
+        # nothing else holds one, deferring the unmapping to whenever the accessor is
+        # collected - on the one mode whose reason for existing is that the data need
+        # not be resident.
         # A view a *caller* still holds refuses the close after this too, and must:
         # unmapping underneath it would leave it dangling. That is the case
         # close_resource's suppression exists for, and the only one left here.
