@@ -59,6 +59,16 @@ choosing the version from its `release history <https://pypi.org/project/timezon
 
 ``pyproject.toml`` remains the authoritative source for the supported version ranges.
 
+Which ``numpy`` generations are supported follows the `NumPy deprecation policy <https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule>`__: a generation leaves this package's floor once it leaves that schedule, and NumPy 1 did so in release 8.2.1.
+
+An environment that has to keep NumPy 1 can constrain it and let the resolver fall back to the last release that accepts it. That is a stopgap rather than a destination, because the fallback carries the code and the boundary data of its own release:
+
+.. code-block:: console
+
+    pip install timezonefinder "numpy<2"
+
+Where the clash is with a ``numpy`` installed by the system package manager, a virtual environment is the better answer: it leaves that installation untouched, and needs no fallback.
+
 
 Basic Usage
 -----------
