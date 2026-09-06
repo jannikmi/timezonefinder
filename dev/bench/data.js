@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788641901897,
+  "lastUpdate": 1788661127550,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6750,6 +6750,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00017147594609173548",
             "extra": "mean: 15.019045000002507 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3750c96ce73d55f60a27579c00763c8557262593",
+          "message": "Let a merge round review what nothing else did, and collect finished refs (#629)\n\nFive changes to the merge-round workflow, all from a run that parked six\nof nine pull requests on a reviewer outage.\n\nA missing independent review no longer parks a pull request: the round\nperforms the review itself, against the tree rather than against the\nbody. Silence now explicitly includes a review whose commit predates the\nhead, which three pull requests in that run had - the body names the\nreviewed commit, so it is checkable against headRefOid.\n\nStale branch and worktree cleanup becomes a duty of the run, recorded in\nthe branch-update rules rather than the workflow, which had no room and\nalready routes there. The shared checkout had accumulated 51 local\nbranches whose pull requests were merged. A MERGED pull request is the\ndeletion proof, because a squash merge never makes the branch an\nancestor of master and `git branch -d` therefore refuses it.\n\nA contributor-memory file over its word budget joins conflict resolution\nas in-scope repair, cut from restatement only, never a rule. One pull\nrequest in the run was red on nothing else.\n\nBranch protection requires an up-to-date head, so merges serialize: the\nworkflow now says to update one pull request at a time rather than\nspending a full matrix on every remaining head after each merge.\n\nRequested by the maintainer during the run.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:17:55+02:00",
+          "tree_id": "ab4fb2f55e17fcb7d5da231c71f261424e40efda",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3750c96ce73d55f60a27579c00763c8557262593"
+        },
+        "date": 1788661126702,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 244.87818901360768,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000030312305362858016",
+            "extra": "mean: 4.0836630000740115 msec\nrounds: 201 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 363.5088051046266,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023133891583961652",
+            "extra": "mean: 2.7509649999046815 msec\nrounds: 311 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 65.66994142924716,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001975158555079392",
+            "extra": "mean: 15.22766700009015 msec\nrounds: 61 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 397.10983462466845,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000034064219092703355",
+            "extra": "mean: 2.518194999993284 msec\nrounds: 314 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 772.8817437931284,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023135134004413104",
+            "extra": "mean: 1.2938589998157113 msec\nrounds: 658 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 87.29353551335097,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023238291303129312",
+            "extra": "mean: 11.455601999841747 msec\nrounds: 75 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 390.23293777783704,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003991776841463836",
+            "extra": "mean: 2.562572000442742 msec\nrounds: 311 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 749.9236951508839,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008530072156747698",
+            "extra": "mean: 1.3334690002011484 msec\nrounds: 624 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 86.27937867031562,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003370747640264241",
+            "extra": "mean: 11.590254999646277 msec\nrounds: 70 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
