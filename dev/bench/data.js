@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788683137572,
+  "lastUpdate": 1788683139278,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15062,6 +15062,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.0848 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d2d8e8465535968e5c4020ae242e849bb7f64081",
+          "message": "Chart the lookup trend in lookups/sec, under the labels the docs use (#621)\n\n* Chart the lookup trend in lookups/sec, under the labels the docs use\n\nThe gh-pages timing chart was written by\nbenchmark-action/github-action-benchmark's `pytest` extractor, which stores\n`stats.ops` as `iter/sec` under the raw pytest node id. One \"iteration\" of\nthese benchmarks is a whole batch of 2,500 points, so the published chart read\n\"183 iter/sec\" for `test_timezone_at[random-in_memory]`: batches per second - a\nunit nothing else in this project quotes, and unrelatable to the µs/query\nfigures the reports and the README carry - under a name that says nothing about\nthe workload it measures.\n\nThe timing suite now goes through an explicit export, as the memory suite\nalready did. `scripts/export_timing_chart_json.py` divides the tracked duration\nby the batch size the measuring run recorded and stores lookups/sec (the\nreciprocal of the reports' Time/Query column) under the same human-readable\nlabels `scripts/render_benchmark_reports.py` renders in the docs, shaped for\n`tool: customBiggerIsBetter`. The batch size is read from the report rather than\nimported, so a stored report is never divided by a batch size that has changed\nsince; a report without one is refused instead of guessed at.\n\nThe chart joins a series by name, so the relabelling moves the join key from the\nnode id to the rendered label. Both are pinned:\n`tests/test_benchmark_names.py` now also fixes the nine chart labels and asserts\nthey stay distinct, which makes a wording change in the docs mapping a visible,\ndeliberate act rather than a silent history reset. And\n`scripts/migrate_benchmark_chart_history.py` restates the 111 points already\nstored on gh-pages - same measurements, x2,500 into the new unit, renamed and\nre-tooltipped - so the history continues across the switch instead of being\norphaned beside an empty new series. It is idempotent and hand-run against a\ngh-pages checkout, since CI owns that branch.\n\nWith neither suite reaching the `pytest` extractor any more, the CPU stamp\n`scripts/normalize_benchmark_json.py` hid inside `stats.rounds` has no reader\nleft: that field was only ever a smuggling route into the extractor's `extra`\nstring, and both exports name their machine themselves. It goes, and\n`stats.rounds` stays an integer in every report.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Address review: make the history migration actually runnable, and faithful\n\nThree fixes from an independent review of the previous commit, all in the\none-off gh-pages migration and its exporter:\n\n- The documented recipe checked out `gh-pages` and then ran `python -m\n  scripts.migrate_benchmark_chart_history` - but that branch is an orphan\n  holding only `dev/bench/data.js` and two `index.html`s, so the checkout\n  removes the very module the next line invokes. It now adds `gh-pages` as a\n  worktree beside this one and points the script at the file there.\n\n- `dump_data_js` used `json.dumps`'s default `ensure_ascii=True`, while the\n  action writes with `JSON.stringify`. The stored file holds 622 literal `±`\n  characters - most of them in the memory suite this migration does not touch -\n  so a nine-benchmark restatement would have landed as a churned 1.1 MB\n  whole-file diff that the next CI push silently reverted. With\n  `ensure_ascii=False` the dump is byte-identical to the action's own output,\n  and the migration diff is confined to the points it restates.\n\n  The round-trip test could not have caught it: parse-then-serialise equality\n  holds under either encoding, and the fixture was pure ASCII. It is now\n  joined by one that compares the rendered text.\n\n- `to_chart_entries` let a missing statistic surface as a bare `KeyError`;\n  it now refuses the way `normalize_benchmark_json` does, naming the benchmark\n  and the statistics the report does carry.\n\nAlso softened a docstring and a docs sentence that called lookups/sec \"exactly\nthe reciprocal\" of the reports' Time/Query column: same quantity, different\nnumber - the chart tracks the core subset's `min` per commit, that column is a\nfixed-round full-suite mean from another job on another machine.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T10:24:41+02:00",
+          "tree_id": "653f0c1f84c9209465d3ee242250fe6dff5bc938",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d2d8e8465535968e5c4020ae242e849bb7f64081"
+        },
+        "date": 1788683138827,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2344627380371094,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.235187530517578,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58822250366211,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58903121948242,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
           }
         ]
       }
