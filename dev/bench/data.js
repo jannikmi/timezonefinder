@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788661866889,
+  "lastUpdate": 1788662932291,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6924,6 +6924,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00008976671730998434",
             "extra": "mean: 15.458574999968278 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "201362ade0827ebc06d28b39093c8e8be05bd731",
+          "message": "PERF-8: look up a candidate's holes without raising (#625)\n\n* PERF-8: look up a candidate's holes without raising\n\n`_iter_hole_ids_of` was a generator whose body indexed `hole_registry` inside a\n`try`/`except KeyError`. 1,225 of the 1,322 packaged boundary polygons own no\nhole, so for the majority of candidates that survive the bounding-box test the\nstep built a generator object, entered it, raised, caught and returned - to\nestablish that there was nothing to check, after which `in_any_polygon`\niterated the exhausted generator and answered False.\n\nIt is now a `dict.get` returning a `range`, named `_hole_ids_of` since it no\nlonger iterates, and `inside_of_polygon` skips the hole call entirely when that\nrange is empty.\n\nCounts removed per ambiguous query, over the committed fixtures: 0.498 raised\nand caught KeyErrors, 0.779 generator objects, and 0.498 calls that iterated\nnothing. Per hole-less candidate, 160 ns -> 88 ns.\n\nPaired inside one process, arms alternated round by round, 41 rounds a side,\n2,000 fixture points, answers asserted equal every round:\n\n  stratum              clang min/median   numba min/median\n  ambiguous_shortcut    -4.0 % / -0.8 %    -4.7 % / -4.1 %\n  on_land               -2.0 % / -5.3 %    -1.7 % / -1.5 %\n  random                -1.1 % / -1.1 %    -1.7 % / -0.2 %\n  unique_shortcut       +0.2 % / +1.1 %    +0.4 % / +0.2 %\n\nOrder 2-4 % of an ambiguous query; the clang estimators straddle on the median,\nso it ships on being the simpler code, as its register entry always said.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-8: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the three references\nthat would otherwise be dangling handles. Two corrections travel with them:\nthe entry claimed this shared a method with PERF-9, where in fact one touches\ntimezonefinder.py and the other polygon_array.py; and the -30 % figure the\nthree siblings were prototyped at came from comparing separate finder\ninstances, which over-reads each part - the references now say to price\nagainst the current tree instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Merge the two shortcut-compiler entries the log records twice\n\nTaking both this round's classification entries put the file at 2038\nwords against the 2000-word cap tests/test_contributor_memory.py\nenforces. The 2026-08-25 antimeridian entry stated it was \"the same\nshape as the entry above and the same reasoning\" as the hole-side\noverlap entry beside it, so the two become one bullet carrying both\ncell counts and both fixture checks. No classification is dropped.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:48:06+02:00",
+          "tree_id": "13bf045809199466d9760bf41ea0cd87e7fcf17b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/201362ade0827ebc06d28b39093c8e8be05bd731"
+        },
+        "date": 1788662931241,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 194.1211572262037,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002940592916420987",
+            "extra": "mean: 5.1514219999972966 msec\nrounds: 168 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 303.36170270860515,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003354114740592114",
+            "extra": "mean: 3.2963949999995634 msec\nrounds: 190 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 50.8267995482521,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003640962572936939",
+            "extra": "mean: 19.674659999999733 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 301.77309801501315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008129119146739633",
+            "extra": "mean: 3.313747999996508 msec\nrounds: 251 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 591.1307918244221,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006996454244693971",
+            "extra": "mean: 1.6916730000033908 msec\nrounds: 537 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 68.45137190583573,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002698006176623225",
+            "extra": "mean: 14.608910999996283 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 300.00930028807227,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009536913453697564",
+            "extra": "mean: 3.3332300000026294 msec\nrounds: 249 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 574.1681738559141,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003645533582502509",
+            "extra": "mean: 1.7416500000067003 msec\nrounds: 508 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 68.27586508251203,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017577670050045676",
+            "extra": "mean: 14.646464000001913 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           }
         ]
       }
