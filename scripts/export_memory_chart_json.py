@@ -15,9 +15,10 @@ durations::
 Bigger is better there, and the unit is fixed - both wrong for a footprint. The
 action's ``customSmallerIsBetter`` tool takes a plain list of
 ``{name, unit, value}`` objects instead and treats a *rise* as the regression,
-which is what a memory chart needs. This is the memory counterpart of the
-``stats.ops`` rewrite in :mod:`scripts.normalize_benchmark_json`: the
-measurement stays untouched, only the shape the action reads changes.
+which is what a memory chart needs. This is the memory counterpart of
+:mod:`scripts.export_timing_chart_json`, which does the same for the timing
+suite: the measurement stays untouched, only the shape and the unit the action
+reads change.
 
 Only the ``*_heap`` metrics are charted. The ``*_rss`` ones are reported in
 ``docs/benchmark_results_memory.rst`` and in the pull request comment, but they
@@ -55,16 +56,6 @@ def is_charted(name: str) -> bool:
     return name.endswith(HEAP_METRICS)
 
 
-def _round_count(stats: dict[str, Any]) -> str:
-    """The plain round count, whether or not the report has been annotated.
-
-    ``scripts.normalize_benchmark_json.annotate_machine_identity`` turns
-    ``rounds`` into ``"3 on <cpu>"``; a raw report leaves it an integer. Both
-    start with the count.
-    """
-    return str(stats["rounds"]).split()[0]
-
-
 def to_chart_entries(
     data: dict[str, Any], estimator: BenchmarkEstimator
 ) -> list[dict[str, Any]]:
@@ -87,12 +78,9 @@ def to_chart_entries(
                 "value": stats[estimator] / BYTES_PER_UNIT,
                 "range": f"± {stats['stddev'] / BYTES_PER_UNIT:.3f}",
                 # the chart outlives the artifact that records `machine_info`,
-                # so every point has to name its own machine - the same reason
-                # scripts/normalize_benchmark_json.py stamps it into `rounds`.
-                # That stamp is for the pytest extractor, which has nowhere else
-                # to put it; here `extra` is free-form, so take the round count
-                # back off the front of it and name the machine exactly once.
-                "extra": f"{estimator} of {_round_count(stats)} run(s) on {machine}",
+                # so every point has to name its own machine, exactly as
+                # scripts/export_timing_chart_json.py does for the timing one.
+                "extra": f"{estimator} of {stats['rounds']} run(s) on {machine}",
             }
         )
     if not entries:

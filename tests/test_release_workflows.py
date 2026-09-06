@@ -77,9 +77,12 @@ SCRIPT_GATES: dict[str, str | None] = {
     "data_update_guard": DATA_UPDATE_GATE,
     "describe_benchmark_machine": NOT_A_GATE,
     "export_memory_chart_json": NOT_A_GATE,
+    "export_timing_chart_json": NOT_A_GATE,
     "file_converter": NOT_A_GATE,
     "generate_benchmark_fixtures": NOT_A_GATE,
     "measure_acceleration_paths": NOT_A_GATE,
+    # a one-off, hand-run restatement of the stored gh-pages history
+    "migrate_benchmark_chart_history": NOT_A_GATE,
     "measure_memory": NOT_A_GATE,
     "measure_query_latency": NOT_A_GATE,
     "measure_tzfpy_agreement": NOT_A_GATE,

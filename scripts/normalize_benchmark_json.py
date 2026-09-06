@@ -1,33 +1,38 @@
 #!/usr/bin/env python3
 
-"""Make a pytest-benchmark JSON report a chosen estimator instead of the mean.
+"""Make a pytest-benchmark JSON report track a chosen estimator, not the mean.
 
 Why this exists
 ---------------
 
-``benchmark-action/github-action-benchmark``'s ``tool: pytest`` extractor
-takes **one** number per benchmark as the tracked value::
-
-    const value = stats.ops;   // = 1 / stats.mean
-    const unit  = 'iter/sec';
-
-i.e. it tracks the *mean*. On shared GitHub-hosted runners the mean is the
-most noise-sensitive of pytest-benchmark's estimators: a single descheduled
-round drags it up, while the fastest round is essentially unaffected. Since
-every round of these benchmarks performs the exact same fixed batch of work
+pytest-benchmark's own headline number is the mean, and so is what every tool
+that reads its JSON reaches for by default. On shared GitHub-hosted runners the
+mean is the most noise-sensitive of its estimators: a single descheduled round
+drags it up, while the fastest round is essentially unaffected. Since every
+round of these benchmarks performs the exact same fixed batch of work
 (``benchmarks/conftest.py``'s ``BATCH_SIZE``), ``min`` is the estimator that
 best isolates the code's cost from the machine's mood.
 
-Rather than hand-rolling storage/comparison (which is exactly what the action
-exists to avoid), this rewrites ``stats.ops`` - and ``stats.mean``, which the
-action renders alongside it, so the two stay consistent - from the chosen
-estimator, leaving the file a perfectly ordinary pytest-benchmark JSON that
-the action still parses natively. ``stats.stddev`` is deliberately left
-untouched: the action shows it as the ``range: ±`` annotation, where the
-*observed* within-run spread is exactly the useful thing to see.
+This rewrites ``stats.ops`` - and ``stats.mean``, from which it is derived, so
+the two stay consistent - from the chosen estimator, and records which one
+under :data:`ESTIMATOR_KEY`. The result is still a perfectly ordinary
+pytest-benchmark JSON, so ``--benchmark-compare`` and anything else pointed at
+the stored report reads the tracked number rather than the mean, and this
+project's own consumers (``scripts.compare_benchmark_runs``,
+``scripts.describe_benchmark_machine``, both chart exports) resolve the
+estimator from that key instead of hardcoding one.
 
-It also stamps the CPU into ``stats.rounds`` - see
-:func:`annotate_machine_identity` for why that is the only place it can go.
+``stats.stddev`` is deliberately left untouched: the *observed* within-run
+spread is exactly the useful thing to see beside a min, and it is what both
+chart exports render as their ``range`` annotation.
+
+Nothing here shapes the trend chart itself. Neither suite is handed to
+``benchmark-action/github-action-benchmark``'s ``pytest`` extractor any more -
+that one reads ``stats.ops`` as ``iter/sec``, i.e. batches per second under a
+raw node id, which is neither an interpretable unit nor a readable name. Both
+charts are exported explicitly instead, by
+:mod:`scripts.export_timing_chart_json` and
+:mod:`scripts.export_memory_chart_json`.
 
 Usage::
 
@@ -96,45 +101,6 @@ def normalize_benchmark_data(
     return normalized
 
 
-def annotate_machine_identity(data: dict[str, Any]) -> dict[str, Any]:
-    """Return a copy of ``data`` whose ``stats.rounds`` also names the CPU.
-
-    A trend chart that spans machines is only readable if every point says
-    which machine it came from, and ``runs-on: ubuntu-latest`` pins the runner
-    image rather than the CPU: the pool's spread on *unchanged* code reaches
-    ~1.58x, enough to invent regressions that never happened. pytest-benchmark
-    already captures the CPU under ``machine_info``, but that never leaves the
-    build artifact - and artifacts expire after two weeks while the chart is
-    forever.
-
-    The extractor the action uses builds each stored point from five fields
-    only::
-
-        const range = `stddev: ${stats.stddev}`;
-        const extra = `mean: ${mean} ${meanUnit}\\nrounds: ${stats.rounds}`;
-
-    ``name`` is the trend history's join key and must never move,
-    ``value``/``mean`` are the measurement and ``range`` carries the observed
-    within-run spread, which leaves ``rounds`` as the one field that is
-    interpolated verbatim and whose meaning nothing downstream depends on. So
-    the round count keeps its leading position and gains the machine after it,
-    which is what surfaces in the chart's tooltip.
-
-    Only the rewritten report is annotated; the raw pytest-benchmark JSON
-    keeps a plain integer ``rounds``. A report without a recorded CPU is
-    returned unchanged rather than annotated with a placeholder.
-    """
-    machine = machine_label(data)
-    if machine is None:
-        return data
-    annotated = copy.deepcopy(data)
-    for bench in annotated.get("benchmarks", []):
-        stats = bench["stats"]
-        if "rounds" in stats:
-            stats["rounds"] = f"{stats['rounds']} on {machine}"
-    return annotated
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
@@ -170,9 +136,7 @@ def main() -> None:
         )
 
     data = load_benchmark_json(args.benchmark_json)
-    normalized = annotate_machine_identity(
-        normalize_benchmark_data(data, args.estimator)
-    )
+    normalized = normalize_benchmark_data(data, args.estimator)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(normalized))
     print(
