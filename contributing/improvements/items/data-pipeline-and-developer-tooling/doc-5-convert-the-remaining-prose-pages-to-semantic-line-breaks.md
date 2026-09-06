@@ -7,8 +7,9 @@
 - **Fix:** one line per sentence, and per clause where a sentence's clauses are edited independently. Nothing blocks this on DOC-2; whichever slice runs first records the convention.
 - **Not in the same pull request as a content change to these files.**
 - **Changelog sentence it stands under:** the remaining hand-written documentation pages use semantic line breaks. Development-only, so `Internal:`.
-- **Status:** open.
-- **Last touched:** 2026-09-05 — sliced out of DOC-1 and re-counted per file, then narrowed by handing `README.rst` to DOC-7.
+- **Withdrawn 2026-09-06, superseded by [DOC-9](doc-9-migrate-the-documentation-from-sphinx-to-mkdocs.md).** The maintainer chose to move `docs/` off Sphinx to MkDocs, which rewrites these seven pages wholesale into Markdown — so the line breaks are set while the new file is written and cost nothing extra, exactly as this slice's own rule against mixing a reflow with a content change would demand. The counts and the method above are kept because DOC-9 checks its converted output against them. **Reopen this entry if DOC-9 is abandoned**; the hard wrap and its merge-conflict cost are unchanged until one of the two lands.
+- **Status:** withdrawn — superseded by DOC-9.
+- **Last touched:** 2026-09-06 — withdrawn into DOC-9. Filed 2026-09-05 — sliced out of DOC-1 and re-counted per file, then narrowed by handing `README.rst` to DOC-7.
 
 ## Related memory
 
