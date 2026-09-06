@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788687238213,
+  "lastUpdate": 1788687239818,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15521,6 +15521,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9524 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ccf2b6fbe3a7659061550f648da74feba7f419b1",
+          "message": "PROF-1: state what #609 retires and what it leaves standing (#628)\n\nThe entry was written before #609 was read. That pull request is open, rewrites\n`make_ladder`, and implements PERF-2 - so the `zone_ids_of` rung this item led\nwith stops existing. Taking the item first would race #609 in one file and\nre-measure a ladder about to change, so the pass yielded it and corrected it\ninstead.\n\nWhat survives #609, verified in its diff rather than assumed:\n\n- `zone_name_from_id` is still bound to the checked public accessor there,\n  against the `zone_names.name_of` the query path calls - and on the unique\n  stratum, ~89 % of a random workload, that is the only rung below h3 and\n  validate_coordinates.\n- `s8_bbox` and `s9_holes` still omit the match `break` the real loop has, so\n  both geometry rungs test more candidates per query than a lookup does.\n\n#609 did bind `zone_id_of = tf._zone_id_of` correctly for the stage it added,\nwhich is what makes this a per-rung slip rather than a policy - so the entry now\ncarries the rule as well as the two remaining instances.\n\nStatus moves to blocked on #609; the 1,685-vs-564 ns measurement stays as the\nevidence for the rule rather than as a live finding.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T11:33:11+02:00",
+          "tree_id": "fc98044c2fcf940084eb90fd1e321f3891e176cc",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ccf2b6fbe3a7659061550f648da74feba7f419b1"
+        },
+        "date": 1788687239421,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234405517578125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2352142333984375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58815383911133,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.5889196395874,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           }
         ]
       }
