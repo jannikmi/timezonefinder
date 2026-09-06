@@ -1203,11 +1203,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         A property of the *cell*, not of the query point, which is what lets a batch pay
         it once per distinct cell. What is left of it is two reads - the candidate slice
-        at 256 ns and the stop index at 97 ns - against ~3,800 ns for resolving a whole
+        at 243 ns and the stop index at 98 ns - against ~3,300 ns for resolving a whole
         ambiguous point on the C-extension backend in mapped mode, so sharing it can win
-        at most ~9 %, and the geometry below is the rest. It used to be ~898 ns of 10,228,
-        the same ~9 %: the zone-id narrowing was two thirds of this method and the
-        geometry got cheaper by about as much.
+        at most ~10 %, and the geometry below is the rest. Both figures are from the
+        profiler's `FINDINGS`; re-read them there rather than trusting this comment, since
+        the denominator has moved with every change to the candidate loop.
 
         NOTE: neither the empty nor the single-candidate case can occur here; both are
         unambiguous and are stored in the shortcut table itself.

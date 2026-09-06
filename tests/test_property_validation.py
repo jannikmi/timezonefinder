@@ -151,3 +151,38 @@ def test_coord2int_matches_the_scaling_it_performs(lng, lat):
     assert utils.coord2int(lng) == int(lng * COORD2INT_FACTOR)
     assert utils.coord2int(lat) == int(lat * COORD2INT_FACTOR)
     assert utils.coord2int(-abs(lng)) == -utils.coord2int(abs(lng))
+
+
+# The value range below the validated one is deliberate: `coord2int` used to be an
+# ``njit`` function with an ``i4`` return signature, so under numba an out-of-range
+# product wrapped into int32 while the no-numba configuration a plain ``pip install``
+# gives returned the exact value. That is a wrong answer that reports success -
+# ``coord2int(300.0)`` came back as -1,294,967,296, a *negative* longitude for a
+# positive input - and it differed by backend, so no single-backend run could see it.
+# Nothing on the query path could reach it, because `validate_coordinates` runs first;
+# `scripts/hex_utils.py` and `scripts/generate_benchmark_fixtures.py` call it without
+# that guard. The decorator is gone and both backends are exact now, which is what this
+# pins - the property tests above cannot, because they are bounded to the validated
+# domain, i.e. exactly the range where the two forms agreed.
+_OUT_OF_DOMAIN = st.floats(
+    min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False
+).filter(lambda x: abs(x) > 180.0)
+
+
+@pytest.mark.unit
+@given(value=_OUT_OF_DOMAIN)
+def test_coord2int_does_not_wrap_outside_the_valid_coordinate_range(value):
+    from timezonefinder.configs import COORD2INT_FACTOR
+
+    scaled = utils.coord2int(value)
+    assert scaled == int(value * COORD2INT_FACTOR)
+    # the wrap this replaced always changed the magnitude, and could flip the sign
+    assert abs(scaled) >= abs(int(180.0 * COORD2INT_FACTOR))
+    assert (scaled < 0) == (value < 0)
+
+
+@pytest.mark.unit
+def test_coord2int_is_exact_where_the_int32_form_wrapped():
+    """The two values that made the old backend divergence visible."""
+    assert utils.coord2int(300.0) == 3_000_000_000
+    assert utils.coord2int(1e6) == 10_000_000_000_000
