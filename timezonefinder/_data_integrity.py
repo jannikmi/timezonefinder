@@ -309,6 +309,47 @@ def validate_shipped_schemas(data_dir: Path) -> None:
         )
 
 
+def _validate_payload_offset_table_of(polygon_dir: Path) -> None:
+    """One coordinate file's rings, so the per-ring closure below is not defined
+    inside a loop - see :func:`validate_payload_offset_table`."""
+    coordinate_path = get_coordinate_path(polygon_dir)
+    with open(coordinate_path, "rb") as coord_file:
+        with mmap.mmap(coord_file.fileno(), 0, access=mmap.ACCESS_READ) as coord_buf:
+            collection = get_polygon_collection(coord_buf, coordinate_path)
+            offsets, lengths = derive_payload_offset_table(collection)
+
+            nr_polygons = collection.PolygonsLength()
+            if len(offsets) != nr_polygons:
+                raise DataIntegrityError(
+                    f"the offset table derived from {coordinate_path} has "
+                    f"{len(offsets)} entries but the file holds {nr_polygons} "
+                    f"polygons."
+                )
+
+            # Views onto the mapping must not outlive this scope, including on a
+            # raising path, so the word view is rebuilt per ring.
+            def compare(idx: int) -> tuple[bool, int, int]:
+                words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                expected = read_payload_from_binary(collection, idx)
+                actual = read_payload_at(words, offsets[idx], lengths[idx])
+                agree = actual.shape == expected.shape and np.array_equal(
+                    actual, expected
+                )
+                return agree, actual.size, expected.size
+
+            for idx in range(nr_polygons):
+                agree, actual_size, expected_size = compare(idx)
+                if not agree:
+                    raise DataIntegrityError(
+                        f"ring {idx} of {coordinate_path} reads as {actual_size} "
+                        f"payload words at word offset {int(offsets[idx])} but as "
+                        f"{expected_size} through the FlatBuffers reader. The "
+                        "offset table does not address this file's layout, so "
+                        "lookups against it would return wrong coordinates "
+                        "silently."
+                    )
+
+
 def validate_payload_offset_table(data_dir: Path) -> None:
     """Check that the offset table addresses the same words the reader does.
 
@@ -321,44 +362,89 @@ def validate_payload_offset_table(data_dir: Path) -> None:
     :raises DataIntegrityError: if the table disagrees with the reader for any ring
     """
     for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
-        coordinate_path = get_coordinate_path(polygon_dir)
-        with open(coordinate_path, "rb") as coord_file:
-            with mmap.mmap(
-                coord_file.fileno(), 0, access=mmap.ACCESS_READ
-            ) as coord_buf:
-                collection = get_polygon_collection(coord_buf, coordinate_path)
-                offsets, lengths = derive_payload_offset_table(collection)
+        _validate_payload_offset_table_of(polygon_dir)
 
-                nr_polygons = collection.PolygonsLength()
-                if len(offsets) != nr_polygons:
+
+def _validate_block_index_of(polygon_dir: Path) -> None:
+    """One coordinate file's block index - see :func:`validate_block_index`."""
+    coordinate_path = get_coordinate_path(polygon_dir)
+    ranges_path = get_block_ranges_path(polygon_dir)
+    offsets_path = get_block_offsets_path(polygon_dir)
+    ranges = read_per_polygon_vector(ranges_path)
+    offsets = read_per_polygon_vector(offsets_path)
+
+    if ranges.dtype != BLOCK_RANGE_DTYPE or ranges.ndim != 2 or ranges.shape[1] != 2:
+        raise DataIntegrityError(
+            f"{ranges_path} holds {ranges.dtype} data of shape {ranges.shape}, but "
+            f"the block index is one {BLOCK_RANGE_DTYPE.name} [min, max] latitude "
+            f"pair per block. The kernels read it by position without checking it."
+        )
+    if offsets.dtype != BLOCK_OFFSET_DTYPE:
+        raise DataIntegrityError(
+            f"{offsets_path} holds {offsets.dtype} data, but the block offset "
+            f"column is {BLOCK_OFFSET_DTYPE.name}."
+        )
+
+    with open(coordinate_path, "rb") as coord_file:
+        with mmap.mmap(coord_file.fileno(), 0, access=mmap.ACCESS_READ) as coord_buf:
+            collection = get_polygon_collection(coord_buf, coordinate_path)
+            payload_offsets, lengths = derive_payload_offset_table(collection)
+            bases = read_per_polygon_vector(get_block_bases_path(polygon_dir))
+            widths = read_per_polygon_vector(get_block_widths_path(polygon_dir))
+            ring_sizes = read_per_polygon_vector(get_nr_vertices_path(polygon_dir))
+
+            nr_rings = len(payload_offsets)
+            if len(offsets) != nr_rings + 1:
+                raise DataIntegrityError(
+                    f"{offsets_path} has {len(offsets)} entries but {coordinate_path} "
+                    f"holds {nr_rings} rings, which needs {nr_rings + 1} - one "
+                    f"boundary per ring plus the end of the last."
+                )
+            if int(offsets[0]) != 0 or int(offsets[-1]) != len(ranges):
+                raise DataIntegrityError(
+                    f"{offsets_path} spans [{int(offsets[0])}, {int(offsets[-1])}) "
+                    f"but {ranges_path} holds {len(ranges)} block ranges."
+                )
+
+            # A payload view must not outlive the mapping, including on a raising
+            # path, so the word view and decode live in a per-ring function.
+            def block_ranges_of(idx: int, start: int, stop: int) -> np.ndarray:
+                words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                ring = decode_ring(
+                    read_payload_at(words, payload_offsets[idx], lengths[idx]),
+                    bases[start:stop],
+                    ranges[start:stop],
+                    widths[start:stop],
+                    int(ring_sizes[idx]),
+                    POLYGON_BLOCK_SIZE,
+                )
+                return block_latitude_ranges(ring[1], POLYGON_BLOCK_SIZE)
+
+            for idx in range(nr_rings):
+                start, stop = int(offsets[idx]), int(offsets[idx + 1])
+                nr_vertices = int(ring_sizes[idx])
+                expected_count = nr_blocks_for(nr_vertices, POLYGON_BLOCK_SIZE)
+                if stop - start != expected_count:
                     raise DataIntegrityError(
-                        f"the offset table derived from {coordinate_path} has "
-                        f"{len(offsets)} entries but the file holds {nr_polygons} "
-                        f"polygons."
+                        f"ring {idx} of {coordinate_path} has {nr_vertices} "
+                        f"vertices, which is {expected_count} blocks at "
+                        f"POLYGON_BLOCK_SIZE={POLYGON_BLOCK_SIZE}, but "
+                        f"{ranges_path} gives it {stop - start}. This data "
+                        f"directory was blocked at a different size; regenerate it "
+                        f"with scripts/file_converter.py from the current checkout."
                     )
-
-                # Views onto the mapping must not outlive this scope, including on a
-                # raising path, so the word view is rebuilt per ring.
-                def compare(idx: int) -> tuple[bool, int, int]:
-                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
-                    expected = read_payload_from_binary(collection, idx)
-                    actual = read_payload_at(words, offsets[idx], lengths[idx])
-                    agree = actual.shape == expected.shape and np.array_equal(
-                        actual, expected
+                expected = block_ranges_of(idx, start, stop)
+                if not np.array_equal(ranges[start:stop], expected):
+                    offender = int(
+                        np.argmax(np.any(ranges[start:stop] != expected, axis=1))
                     )
-                    return agree, actual.size, expected.size
-
-                for idx in range(nr_polygons):
-                    agree, actual_size, expected_size = compare(idx)
-                    if not agree:
-                        raise DataIntegrityError(
-                            f"ring {idx} of {coordinate_path} reads as {actual_size} "
-                            f"payload words at word offset {int(offsets[idx])} but as "
-                            f"{expected_size} through the FlatBuffers reader. The "
-                            "offset table does not address this file's layout, so "
-                            "lookups against it would return wrong coordinates "
-                            "silently."
-                        )
+                    raise DataIntegrityError(
+                        f"block {offender} of ring {idx} in {coordinate_path} is "
+                        f"recorded as {ranges[start + offender].tolist()} but its "
+                        f"edges span {expected[offender].tolist()}. A range that "
+                        f"does not cover its own edges makes the kernels skip "
+                        f"crossings, which changes answers rather than raising."
+                    )
 
 
 def validate_block_index(data_dir: Path) -> None:
@@ -380,90 +466,141 @@ def validate_block_index(data_dir: Path) -> None:
     :raises DataIntegrityError: if the index does not describe the stored rings
     """
     for polygon_dir in (get_boundaries_dir(data_dir), get_holes_dir(data_dir)):
-        coordinate_path = get_coordinate_path(polygon_dir)
-        ranges_path = get_block_ranges_path(polygon_dir)
-        offsets_path = get_block_offsets_path(polygon_dir)
-        ranges = read_per_polygon_vector(ranges_path)
-        offsets = read_per_polygon_vector(offsets_path)
+        _validate_block_index_of(polygon_dir)
 
-        if (
-            ranges.dtype != BLOCK_RANGE_DTYPE
-            or ranges.ndim != 2
-            or ranges.shape[1] != 2
-        ):
+
+def _validate_block_payload_of(
+    polygon_dir: Path, rings: list[np.ndarray] | None
+) -> None:
+    """One coordinate file's payload - see :func:`validate_block_payload`."""
+    coordinate_path = get_coordinate_path(polygon_dir)
+    bases_path = get_block_bases_path(polygon_dir)
+    widths_path = get_block_widths_path(polygon_dir)
+    vertices_path = get_nr_vertices_path(polygon_dir)
+    bases = read_per_polygon_vector(bases_path)
+    widths = read_per_polygon_vector(widths_path)
+    nr_vertices = read_per_polygon_vector(vertices_path)
+    block_offsets = read_per_polygon_vector(get_block_offsets_path(polygon_dir))
+    block_ranges = read_per_polygon_vector(get_block_ranges_path(polygon_dir))
+
+    for path, array, dtype in (
+        (bases_path, bases, BLOCK_BASE_DTYPE),
+        (widths_path, widths, BLOCK_WIDTH_DTYPE),
+        (vertices_path, nr_vertices, VERTEX_COUNT_DTYPE),
+    ):
+        if array.dtype != dtype:
             raise DataIntegrityError(
-                f"{ranges_path} holds {ranges.dtype} data of shape {ranges.shape}, but "
-                f"the block index is one {BLOCK_RANGE_DTYPE.name} [min, max] latitude "
-                f"pair per block. The kernels read it by position without checking it."
+                f"{path} holds {array.dtype} data, but the column is {dtype.name}. "
+                "The kernels read it by position without checking it."
             )
-        if offsets.dtype != BLOCK_OFFSET_DTYPE:
-            raise DataIntegrityError(
-                f"{offsets_path} holds {offsets.dtype} data, but the block offset "
-                f"column is {BLOCK_OFFSET_DTYPE.name}."
-            )
+    if bases.ndim != 1:
+        raise DataIntegrityError(
+            f"{bases_path} has shape {bases.shape}, but it is one x frame origin "
+            "per block - the y origin is the latitude index's own lower bound and "
+            "is not stored again."
+        )
+    if widths.ndim != 2 or widths.shape[1] != 2:
+        raise DataIntegrityError(
+            f"{widths_path} has shape {widths.shape}, but it is one x and one y "
+            "entry per block."
+        )
+    if len(bases) != len(widths):
+        raise DataIntegrityError(
+            f"{bases_path} has {len(bases)} entries and {widths_path} "
+            f"{len(widths)}; both are one per block."
+        )
+    if len(nr_vertices) != len(block_offsets) - 1:
+        raise DataIntegrityError(
+            f"{vertices_path} has {len(nr_vertices)} entries but "
+            f"{coordinate_path} holds {len(block_offsets) - 1} rings."
+        )
+    if int(widths.max(initial=0)) > MAX_RESIDUAL_BITS:
+        raise DataIntegrityError(
+            f"{widths_path} holds a width of {int(widths.max())} bits, above the "
+            f"{MAX_RESIDUAL_BITS} a residual may occupy."
+        )
 
-        with open(coordinate_path, "rb") as coord_file:
-            with mmap.mmap(
-                coord_file.fileno(), 0, access=mmap.ACCESS_READ
-            ) as coord_buf:
-                collection = get_polygon_collection(coord_buf, coordinate_path)
-                payload_offsets, lengths = derive_payload_offset_table(collection)
-                bases = read_per_polygon_vector(get_block_bases_path(polygon_dir))
-                widths = read_per_polygon_vector(get_block_widths_path(polygon_dir))
-                ring_sizes = read_per_polygon_vector(get_nr_vertices_path(polygon_dir))
+    with open(coordinate_path, "rb") as coord_file:
+        with mmap.mmap(coord_file.fileno(), 0, access=mmap.ACCESS_READ) as coord_buf:
+            collection = get_polygon_collection(coord_buf, coordinate_path)
+            offsets, lengths = derive_payload_offset_table(collection)
 
-                nr_rings = len(payload_offsets)
-                if len(offsets) != nr_rings + 1:
+            # Views onto the mapping must not outlive the iteration that made them,
+            # including on a raising path, hence a function per ring.
+            def check(idx: int) -> str | None:
+                words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
+                start = int(block_offsets[idx])
+                stop = int(block_offsets[idx + 1])
+                ring_bases = bases[start:stop]
+                ring_widths = widths[start:stop]
+                vertices = int(nr_vertices[idx])
+                counts = block_vertex_counts(vertices, POLYGON_BLOCK_SIZE)
+                if len(counts) != stop - start:
+                    return (
+                        f"has {vertices} vertices, which is {len(counts)} blocks, "
+                        f"but the frames give it {stop - start}"
+                    )
+                expected_words = ring_payload_length(counts, ring_widths)
+                if int(lengths[idx]) != expected_words:
+                    return (
+                        f"occupies {int(lengths[idx])} payload words where its "
+                        f"frames describe {expected_words}"
+                    )
+                ring = decode_ring(
+                    read_payload_at(words, offsets[idx], lengths[idx]),
+                    ring_bases,
+                    block_ranges[start:stop],
+                    ring_widths,
+                    vertices,
+                    POLYGON_BLOCK_SIZE,
+                )
+                if rings is not None and not np.array_equal(ring, rings[idx]):
+                    return "does not decode to the ring it was encoded from"
+
+                for block in range(len(counts)):
+                    first = block * POLYGON_BLOCK_SIZE
+                    index = np.arange(first, first + counts[block]) % vertices
+                    origins = (
+                        int(ring_bases[block]),
+                        int(block_ranges[start + block, 0]),
+                    )
+                    for axis in (0, 1):
+                        values = ring[axis][index].astype(np.int64)
+                        base = int(values.min())
+                        span = int(values.max()) - base
+                        if base != origins[axis]:
+                            return (
+                                f"block {block} axis {axis} is framed at "
+                                f"{origins[axis]} but its values start at {base}"
+                            )
+                        if span % SOURCE_COORD_STEP:
+                            return (
+                                f"block {block} axis {axis} spans {span}, which is "
+                                "not a whole number of source grid steps - the ring "
+                                "is not on the grid the payload assumes"
+                            )
+                        width = (span // SOURCE_COORD_STEP).bit_length()
+                        if width != int(ring_widths[block, axis]):
+                            return (
+                                f"block {block} axis {axis} is stored at "
+                                f"{int(ring_widths[block, axis])} bits but its "
+                                f"residuals span {width}"
+                            )
+                return None
+
+            if rings is not None and len(rings) != len(offsets):
+                raise DataIntegrityError(
+                    f"{coordinate_path} holds {len(offsets)} rings but "
+                    f"{len(rings)} were encoded into it."
+                )
+            for idx in range(len(offsets)):
+                complaint = check(idx)
+                if complaint is not None:
                     raise DataIntegrityError(
-                        f"{offsets_path} has {len(offsets)} entries but {coordinate_path} "
-                        f"holds {nr_rings} rings, which needs {nr_rings + 1} - one "
-                        f"boundary per ring plus the end of the last."
+                        f"ring {idx} of {coordinate_path} {complaint}. A payload "
+                        "its frames do not describe decodes to plausible wrong "
+                        "coordinates rather than raising."
                     )
-                if int(offsets[0]) != 0 or int(offsets[-1]) != len(ranges):
-                    raise DataIntegrityError(
-                        f"{offsets_path} spans [{int(offsets[0])}, {int(offsets[-1])}) "
-                        f"but {ranges_path} holds {len(ranges)} block ranges."
-                    )
-
-                # A payload view must not outlive the mapping, including on a raising
-                # path, so the word view and decode live in a per-ring function.
-                def block_ranges_of(idx: int, start: int, stop: int) -> np.ndarray:
-                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
-                    ring = decode_ring(
-                        read_payload_at(words, payload_offsets[idx], lengths[idx]),
-                        bases[start:stop],
-                        ranges[start:stop],
-                        widths[start:stop],
-                        int(ring_sizes[idx]),
-                        POLYGON_BLOCK_SIZE,
-                    )
-                    return block_latitude_ranges(ring[1], POLYGON_BLOCK_SIZE)
-
-                for idx in range(nr_rings):
-                    start, stop = int(offsets[idx]), int(offsets[idx + 1])
-                    nr_vertices = int(ring_sizes[idx])
-                    expected_count = nr_blocks_for(nr_vertices, POLYGON_BLOCK_SIZE)
-                    if stop - start != expected_count:
-                        raise DataIntegrityError(
-                            f"ring {idx} of {coordinate_path} has {nr_vertices} "
-                            f"vertices, which is {expected_count} blocks at "
-                            f"POLYGON_BLOCK_SIZE={POLYGON_BLOCK_SIZE}, but "
-                            f"{ranges_path} gives it {stop - start}. This data "
-                            f"directory was blocked at a different size; regenerate it "
-                            f"with scripts/file_converter.py from the current checkout."
-                        )
-                    expected = block_ranges_of(idx, start, stop)
-                    if not np.array_equal(ranges[start:stop], expected):
-                        offender = int(
-                            np.argmax(np.any(ranges[start:stop] != expected, axis=1))
-                        )
-                        raise DataIntegrityError(
-                            f"block {offender} of ring {idx} in {coordinate_path} is "
-                            f"recorded as {ranges[start + offender].tolist()} but its "
-                            f"edges span {expected[offender].tolist()}. A range that "
-                            f"does not cover its own edges makes the kernels skip "
-                            f"crossings, which changes answers rather than raising."
-                        )
 
 
 def validate_block_payload(
@@ -488,136 +625,7 @@ def validate_block_payload(
         (get_holes_dir(data_dir), hole_rings),
     )
     for polygon_dir, rings in sources:
-        coordinate_path = get_coordinate_path(polygon_dir)
-        bases_path = get_block_bases_path(polygon_dir)
-        widths_path = get_block_widths_path(polygon_dir)
-        vertices_path = get_nr_vertices_path(polygon_dir)
-        bases = read_per_polygon_vector(bases_path)
-        widths = read_per_polygon_vector(widths_path)
-        nr_vertices = read_per_polygon_vector(vertices_path)
-        block_offsets = read_per_polygon_vector(get_block_offsets_path(polygon_dir))
-        block_ranges = read_per_polygon_vector(get_block_ranges_path(polygon_dir))
-
-        for path, array, dtype in (
-            (bases_path, bases, BLOCK_BASE_DTYPE),
-            (widths_path, widths, BLOCK_WIDTH_DTYPE),
-            (vertices_path, nr_vertices, VERTEX_COUNT_DTYPE),
-        ):
-            if array.dtype != dtype:
-                raise DataIntegrityError(
-                    f"{path} holds {array.dtype} data, but the column is {dtype.name}. "
-                    "The kernels read it by position without checking it."
-                )
-        if bases.ndim != 1:
-            raise DataIntegrityError(
-                f"{bases_path} has shape {bases.shape}, but it is one x frame origin "
-                "per block - the y origin is the latitude index's own lower bound and "
-                "is not stored again."
-            )
-        if widths.ndim != 2 or widths.shape[1] != 2:
-            raise DataIntegrityError(
-                f"{widths_path} has shape {widths.shape}, but it is one x and one y "
-                "entry per block."
-            )
-        if len(bases) != len(widths):
-            raise DataIntegrityError(
-                f"{bases_path} has {len(bases)} entries and {widths_path} "
-                f"{len(widths)}; both are one per block."
-            )
-        if len(nr_vertices) != len(block_offsets) - 1:
-            raise DataIntegrityError(
-                f"{vertices_path} has {len(nr_vertices)} entries but "
-                f"{coordinate_path} holds {len(block_offsets) - 1} rings."
-            )
-        if int(widths.max(initial=0)) > MAX_RESIDUAL_BITS:
-            raise DataIntegrityError(
-                f"{widths_path} holds a width of {int(widths.max())} bits, above the "
-                f"{MAX_RESIDUAL_BITS} a residual may occupy."
-            )
-
-        with open(coordinate_path, "rb") as coord_file:
-            with mmap.mmap(
-                coord_file.fileno(), 0, access=mmap.ACCESS_READ
-            ) as coord_buf:
-                collection = get_polygon_collection(coord_buf, coordinate_path)
-                offsets, lengths = derive_payload_offset_table(collection)
-
-                # Views onto the mapping must not outlive the iteration that made them,
-                # including on a raising path, hence a function per ring.
-                def check(idx: int) -> str | None:
-                    words = np.frombuffer(coord_buf, dtype=PAYLOAD_WORD_DTYPE)
-                    start = int(block_offsets[idx])
-                    stop = int(block_offsets[idx + 1])
-                    ring_bases = bases[start:stop]
-                    ring_widths = widths[start:stop]
-                    vertices = int(nr_vertices[idx])
-                    counts = block_vertex_counts(vertices, POLYGON_BLOCK_SIZE)
-                    if len(counts) != stop - start:
-                        return (
-                            f"has {vertices} vertices, which is {len(counts)} blocks, "
-                            f"but the frames give it {stop - start}"
-                        )
-                    expected_words = ring_payload_length(counts, ring_widths)
-                    if int(lengths[idx]) != expected_words:
-                        return (
-                            f"occupies {int(lengths[idx])} payload words where its "
-                            f"frames describe {expected_words}"
-                        )
-                    ring = decode_ring(
-                        read_payload_at(words, offsets[idx], lengths[idx]),
-                        ring_bases,
-                        block_ranges[start:stop],
-                        ring_widths,
-                        vertices,
-                        POLYGON_BLOCK_SIZE,
-                    )
-                    if rings is not None and not np.array_equal(ring, rings[idx]):
-                        return "does not decode to the ring it was encoded from"
-
-                    for block in range(len(counts)):
-                        first = block * POLYGON_BLOCK_SIZE
-                        index = np.arange(first, first + counts[block]) % vertices
-                        origins = (
-                            int(ring_bases[block]),
-                            int(block_ranges[start + block, 0]),
-                        )
-                        for axis in (0, 1):
-                            values = ring[axis][index].astype(np.int64)
-                            base = int(values.min())
-                            span = int(values.max()) - base
-                            if base != origins[axis]:
-                                return (
-                                    f"block {block} axis {axis} is framed at "
-                                    f"{origins[axis]} but its values start at {base}"
-                                )
-                            if span % SOURCE_COORD_STEP:
-                                return (
-                                    f"block {block} axis {axis} spans {span}, which is "
-                                    "not a whole number of source grid steps - the ring "
-                                    "is not on the grid the payload assumes"
-                                )
-                            width = (span // SOURCE_COORD_STEP).bit_length()
-                            if width != int(ring_widths[block, axis]):
-                                return (
-                                    f"block {block} axis {axis} is stored at "
-                                    f"{int(ring_widths[block, axis])} bits but its "
-                                    f"residuals span {width}"
-                                )
-                    return None
-
-                if rings is not None and len(rings) != len(offsets):
-                    raise DataIntegrityError(
-                        f"{coordinate_path} holds {len(offsets)} rings but "
-                        f"{len(rings)} were encoded into it."
-                    )
-                for idx in range(len(offsets)):
-                    complaint = check(idx)
-                    if complaint is not None:
-                        raise DataIntegrityError(
-                            f"ring {idx} of {coordinate_path} {complaint}. A payload "
-                            "its frames do not describe decodes to plausible wrong "
-                            "coordinates rather than raising."
-                        )
+        _validate_block_payload_of(polygon_dir, rings)
 
 
 def validate_zone_data(data_dir: Path) -> None:
