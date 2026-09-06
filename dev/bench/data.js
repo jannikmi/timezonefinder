@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788684158171,
+  "lastUpdate": 1788686282733,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7359,6 +7359,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1252",
             "unit": "lookups/sec",
             "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "52eacf369068d7ac64dca22e6a98d6aded502f88",
+          "message": "PERF-2 and PERF-6: take three scalar stages off the query path (#609)\n\n* PERF-2, PERF-6: take three scalar stages off the query path\n\nCoordinate validation reached two `njit` functions taking one float each, and\n`_zone_id_among` scaled its two coordinates through a third. Both now compare\nand truncate inline, reading the `MIN_*` / `MAX_*` constants rather than\nrestating them, as PERF-6 requires.\n\nPERF-2 is a deletion, not a rewrite, which is what its 2026-09-05 re-scope\nestablished: `_zone_id_among` read `zone_ids` at exactly one index - the\nmatched candidate, or the fall-through - so the gather over every candidate\nexisted to produce one number. `zone_ids` leaves both `_zone_id_among` and\nwhat `_prepare_ambiguous_cell` returns, and the answer comes from\n`self.zone_ids[boundary_id]` on the one candidate that gives it. Both paths\nshrink: the memoised per-cell preparation loses a third of what it holds, and\na cell prepared for a batch stops paying for candidates the loop never\nreaches.\n\n`_zone_id_in_ambiguous_cell` and `_resolve_ambiguous_cells` change together,\nwhich is what `test_batch_and_scalar_agree_over_every_committed_point` exists\nto enforce.\n\nMeasured in the commit that re-measures this branch on top of #624; the\nfigures that were here were taken in the candidate loop that pull request\nrewrote.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: PERF-2 and PERF-6 shipped, GH-362 re-scoped\n\nPERF-2 and PERF-6 landed in the previous commit, so their item files and\nranking rows go. PERF-2's file is the one the 2026-09-05 re-scope renamed -\ndeleting the pre-re-scope path instead would leave the rename behind with no\nranking row, which `tests/test_improvement_ledger.py` fails on.\n\nGH-362 stays open and is re-scoped onto the converter's own structure.\n`TimezoneData` holds a polygon collection as six parallel per-polygon lists\nthat callers index in step by hand, which is the grouping `PolygonArray`\nalready names; one collection object with the runtime's vocabulary is the\nclean-up, and it is worth taking on clarity alone. What the entry now rules\nout is the issue's first two TODOs - writing the binaries early and reading\nthem back per access - because `PolygonArray.coords_of` is 193 us against\n0.04 us for indexing the in-memory list, on a path the shortcut compilation\nwalks once per (cell, candidate) pair. That is hours, which is past what\n\"converter time is secondary\" covers; the evidence is kept in the entry so a\nlater pass does not re-derive it.\n\nThe measurement baseline is left at master's: re-anchoring waits on PROF-1,\nper the classification log and the precedent #624 set.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Answer the independent review: a test that could not fail, and four stale claims\n\nThe test added for the candidate-loop seam asserted `zone_ids[c] == zone_ids[c]`\n- a numpy indexing identity that never reached `_zone_id_among`, so the\noff-by-one it named would not have failed it. It now compares the real loop\nagainst the pre-change form that narrowed the whole list up front, over 2,000\ncommitted ambiguous points; injecting `possible_boundaries[(i + 1) % len(...)]`\nturns 1,003 of them red. Its docstring also claimed such a bug would fail no\nexisting test, which is false - `test_certain_timezone_at_implies_timezone_at`\ncatches it from an independent oracle - so the claim is gone rather than\nrepeated.\n\n`_prepare_ambiguous_cell` still quoted 898 ns of 10,228 for a method this\nchange took the zone-id narrowing out of, against a query that is now ~3,800\nns; the profiler said \"zero numpy calls per ambiguous query\" where the\nbaseline correctly says one, the candidate slice; the GH-362 entry pointed at\na decisions record that was never written; and the inlining comment copied\ninto `certain_timezone_at` said \"twice per ambiguous query\", where that method\npays it on every call.\n\nThe three validator property tests now say which axis they bite on: without\nnumba they compare an expression to itself.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Re-measure on top of #624, and rewrite what the deletions left dangling\n\nThe branch's figures were taken before the buffer views landed, in the same\ncandidate loop they rewrote, so they measured a tree that no longer exists.\nThe profiler and the measurement baseline were taken from master verbatim\nrather than hand-merged - a merged report is a number nobody measured - and\nre-taken here.\n\nPaired A/B re-run on both backends against this tree, 25 rounds a side,\n2,500 fixture points, answers asserted equal every round. clang: random\n-11.2 %, on_land -13.3 %, ambiguous -16.8 %, unique -7.5 %; numba -16.6 /\n-17.0 / -19.5 / -14.4 %. Both estimators agree in sign on every cell, 20-25\nof 25 rounds. `FINDINGS` re-taken on all four backend/memory-mode\ncombinations; the two mapped columns are tabulated and `--in-memory` is\nrecorded as within ~2 %, matching the structure #624 left.\n\n**The anchor is deliberately not moved.** The log says re-anchoring waits on\nPROF-1, and #624 left it alone for that reason; the two commits that moved it\nare dropped from this branch.\n\nHalf of PROF-1 went by deletion rather than repair: the `zone_ids_of` rung\nbound the checked public accessor at ~1,793 ns where the lookup called the\nunchecked one at ~564, and it was most of the ladder's ~28-30 % overshoot,\nnow -3 to -6 %. Its item is rewritten to say so and to refuse the stale 1,781\nns figure, which priced a call that no longer exists. PERF-8's entry loses its\nlink to the deleted PERF-2 and states the lasting fact instead: two of the\nthree siblings the discovery round found have now shipped, so its own\nincrement must be measured rather than read off the -30 % the three shared.\n\nThe two superseded 2026-08-25 shortcut-compiler entries are merged into one\nand the 2026-09-03 bounds entry trimmed to the rule that survives, keeping the\nlog inside its word budget.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Remove njit from the scalar helpers instead of inlining them at call sites\n\n`is_valid_lat`, `is_valid_lng` and `coord2int` each take one number and do one\noperation, so the dispatch cost about twice what the body did. The earlier form\nof this branch bypassed them at the call sites; taking the decorator off\ninstead keeps one definition of where the world ends, and is what the\ndispatch-boundary rule actually asks for. The rule in the coding-design memory\nnow says so, since the inline form is the tempting wrong answer.\n\nThe compiled vectorised validators in `scripts/utils_numba.py` keep their njit\nand inline the comparison against the same constants, because numba cannot\ncall a pure-Python function from nopython mode. A property test holds the two\nforms to each other over the whole float domain.\n\nDropping the decorator also drops `coord2int`'s `i4` return cast, which is a\nfix: under numba an out-of-range product wrapped silently into int32, where the\nno-numba configuration never did. Both backends now answer the same.\n\nRe-measured, 25 rounds a side, 2,500 fixture points, clang then numba: random\n-4.7 / -11.2 %, on_land -8.3 / -13.0 %, ambiguous -15.2 / -16.3 %, all 25/25;\nunique +2.0 % (5/25) clang and -7.4 % (25/25) numba. The backends differ by\ndesign and both columns are recorded: without numba `njit` is a no-op, so a\nunique query executes the same statements and only the zone id gather deletion\nreaches that configuration. A null A/B of the harness against itself puts\nclang's unique band at +-1 %. `FINDINGS` re-taken on all four\nbackend/memory-mode combinations.\n\nThe changelog moves to a fragment under `changelog.d/user/`: master's policy\nnow forbids editing the unreleased section directly.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Move the three plain coordinate helpers out of the numba module\n\n`is_valid_lat`, `is_valid_lng` and `coord2int` stopped being `njit` functions\nin the previous commit but stayed in `utils_numba.py`, which is the module the\npackage compiles - a reader reaching for a function there is entitled to\nassume it is compiled, and an uncompiled one sitting among them invites the\ndecorator back. They move to `timezonefinder/utils.py`, which already\nre-exported all three under the same names, so the aliasing indirection goes\nwith them and no public name changes.\n\n`int2coord` stays in the numba module and stays compiled: `convert2coords` and\n`convert2coord_pairs` call it from nopython mode over a whole ring, which is\nwhere the line between the two modules falls.\n\nThe four `from timezonefinder.utils_numba import coord2int` sites follow, and\nthe three helpers join `utils.__all__`, which they had never been in despite\nbeing reachable as `utils.coord2int` for as long as the aliases existed.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* register: keep the classification log inside its budget after #625\n\nThe 2026-09-06 entry arrived alongside master's own, taking the file over its\n2,000-word limit. Trimmed: this branch's entry to its measurements and the rule\nit establishes, and three older ones to the halves that survive - the\n2026-09-03 bounds entry and the 2026-08-24 per-cell one both quoted stage\nprices this branch invalidated, and the 2026-08-23/24 batch entry quoted an\nambiguous-stratum figure that two later changes have moved.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Re-measure on top of #625, and repair the ladder's hole rung\n\n#625 renamed `_iter_hole_ids_of` to `_hole_ids_of` and guarded the call on a\nnon-empty range, without updating the profiler that binds it - so\n`prototypes/query_stage_profile.py` raises `AttributeError` on master before it\nreaches the ladder. Fixed here because this change cannot produce the `FINDINGS`\nit is required to update otherwise; the ladder now guards the same way the\nlookup does, so its hole rung measures what runs.\n\nFigures re-taken on the tree #625 left, since it moved the hole check the\nambiguous stratum's denominator includes. Paired A/B, 25 rounds a side, 2,500\nfixture points, clang then numba: random -4.8 / -12.3 %, on_land -7.7 / -13.0 %,\nambiguous -15.7 / -16.6 %, unique +0.8 % (12/25) / -8.0 % (23/25). The clang\nunique column now straddles - +0.8 % min against -0.8 % median at 12/25 - which\nis what the null A/B said it should look like, and firmer than the +2.0 % the\npre-#625 run read.\n\n`FINDINGS` re-taken on all four backend/memory-mode combinations.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Answer the second independent review: a decision record describing the design it refused\n\nThe canonical query-path decision file recorded *inlining* the three helpers as\nthe shipped fix, which is the design the same pull request measured and\nrejected - and dated it 2026-09-04 with a -10.4 % figure that appears nowhere\nelse. It was written before the design changed and never updated, which is the\nworst place for it: a decision record is what a later pass reads instead of\nre-deriving. It now says the decorator came off, why inlining was refused, and\nthat the win is worth nothing without numba.\n\nThree more claims that outlived what they described:\n\n- the sequencing line named `PERF-8`, which #625 shipped and deleted. Nothing\n  catches a dangling id there - `test_improvement_ledger.py` cross-checks the\n  ranking table against `items/`, not this file.\n- the measurement baseline still warned that two ladder rungs mis-bind the\n  checked public accessors. One of them is the `zone_ids_of` rung this change\n  deletes, so the file routed for ranking pointed at a retired answer and a\n  1,685 ns figure that prices a call that no longer exists.\n- the same file counted \"two numpy calls per ambiguous query\" against the\n  `FINDINGS` block's one, in the section that declares counts the most durable\n  figure there is.\n\n`FINDINGS` also claimed zero njit dispatches \"on any stratum\", which is false\non numba, where the kernel still dispatches per candidate - the case the rule\nexempts. Narrowed to the scalar stages.\n\nThe wrap fix was advertised in the changelog and the docstring with nothing\npinning it: the property tests are bounded to the validated domain, which is\nexactly the range where the int32 form and the exact one agreed. Two tests now\ncover the range where they did not - the old form answered `coord2int(300.0)`\nas -1,294,967,296, a negative longitude for a positive input, and differed by\nbackend so no single-backend run could see it. Re-adding the decorator fails\nboth.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Keep the query-path decision file inside its budget after the merge\n\nThis branch and #631 both added to the file, putting it at 2007 words\nagainst the 2000-word cap tests/test_contributor_memory.py enforces. Two\nphrases that restated their own sentence are cut; no decision, figure or\nrefusal is dropped.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T11:17:10+02:00",
+          "tree_id": "fe25b5324d15b9503c9d29d7c661d1d451f0d983",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/52eacf369068d7ac64dca22e6a98d6aded502f88"
+        },
+        "date": 1788686281284,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 514928.6041189016,
+            "range": "± 11302",
+            "unit": "lookups/sec",
+            "extra": "min of 168 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 689087.3644252114,
+            "range": "± 17827",
+            "unit": "lookups/sec",
+            "extra": "min of 237 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 160862.4906250476,
+            "range": "± 2393",
+            "unit": "lookups/sec",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 856342.9838602723,
+            "range": "± 14164",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1500531.788460018,
+            "range": "± 21188",
+            "unit": "lookups/sec",
+            "extra": "min of 446 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 191491.9659928032,
+            "range": "± 18032",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 841484.7965593775,
+            "range": "± 10938",
+            "unit": "lookups/sec",
+            "extra": "min of 260 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1470262.1830407006,
+            "range": "± 21979",
+            "unit": "lookups/sec",
+            "extra": "min of 491 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 191386.2558180398,
+            "range": "± 3661",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8707 GHz"
           }
         ]
       }
