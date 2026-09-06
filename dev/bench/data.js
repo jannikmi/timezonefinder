@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788730438489,
+  "lastUpdate": 1788731734021,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7707,6 +7707,93 @@ window.BENCHMARK_DATA = {
             "range": "± 15689",
             "unit": "lookups/sec",
             "extra": "min of 84 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5997 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e4e9aba867bbb7e06a16d8351dc0de613a0952c",
+          "message": "Answer the NumPy 1 install question on the getting started page (#635)\n\nReported as #634: pip pulls NumPy 2 and displaces the NumPy 1 the\nenvironment already has. The floor is deliberate - `numpy>=2` since\n8.2.1, following NEP 29 - but nothing published said so, or said what\nsomeone stuck on NumPy 1 can do instead.\n\nThe Dependencies section now names the policy that sets the supported\ngenerations, states that 8.2.1 is where NumPy 1 left the floor, and\nshows the `pip install timezonefinder \"numpy<2\"` fallback while naming a\nvirtual environment as the better answer where the clash is with a\nsystem-managed NumPy.\n\nNo version bound is restated: the documentation rules keep bounds in\npyproject.toml so a bump cannot falsify the page, and the release number\nis history, which a bump cannot move either.\n\nThe bound is policy rather than capability, which is why the page frames\nit as a support scope. Checked on this tree at 9.0.0 with CPython\n3.12.12 on macOS arm64: the cffi extension includes no NumPy headers,\nevery `np.*` symbol used exists in 1.26, and the full non-integration\nsuite passes against NumPy 1.26.4 - 2009 passed in the default scope and\n1371 in the slow one, the same counts as the identical venv on 2.5.2.\nWhat NumPy 1 cannot do is span Python 3.11-3.14, since 1.26.4 stops at\n3.12.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T23:54:45+02:00",
+          "tree_id": "7039531c946d23abca987fccf17c24c6bb7a0d8f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2e4e9aba867bbb7e06a16d8351dc0de613a0952c"
+        },
+        "date": 1788731732572,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 521177.96226129105,
+            "range": "± 19644",
+            "unit": "lookups/sec",
+            "extra": "min of 174 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 710720.5370086391,
+            "range": "± 18738",
+            "unit": "lookups/sec",
+            "extra": "min of 244 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 160099.72804178213,
+            "range": "± 1671",
+            "unit": "lookups/sec",
+            "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 853463.6970681008,
+            "range": "± 17600",
+            "unit": "lookups/sec",
+            "extra": "min of 256 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1491541.7649602531,
+            "range": "± 33557",
+            "unit": "lookups/sec",
+            "extra": "min of 510 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 193731.64973812996,
+            "range": "± 24215",
+            "unit": "lookups/sec",
+            "extra": "min of 68 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 839314.0051636135,
+            "range": "± 13188",
+            "unit": "lookups/sec",
+            "extra": "min of 265 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1460177.1720598487,
+            "range": "± 32402",
+            "unit": "lookups/sec",
+            "extra": "min of 503 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 188030.9146891804,
+            "range": "± 3532",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           }
         ]
       }
