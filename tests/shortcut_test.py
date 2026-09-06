@@ -14,7 +14,7 @@ from tests.auxiliaries import (
     load_benchmark_points,
 )
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
-from timezonefinder.utils_numba import coord2int, int2coord
+from timezonefinder.utils import coord2int, int2coord
 
 # Tests now work directly with hybrid_shortcuts format
 

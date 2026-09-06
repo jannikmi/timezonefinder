@@ -122,9 +122,8 @@ def test_scalar_and_vectorised_latitude_bounds_agree(lat):
     import numpy as np
 
     from scripts.utils_numba import is_valid_lat_vec
-    from timezonefinder import utils_numba
 
-    assert utils_numba.is_valid_lat(lat) == is_valid_lat_vec(np.array([lat]))
+    assert utils.is_valid_lat(lat) == is_valid_lat_vec(np.array([lat]))
 
 
 @pytest.mark.unit
@@ -133,9 +132,8 @@ def test_scalar_and_vectorised_longitude_bounds_agree(lng):
     import numpy as np
 
     from scripts.utils_numba import is_valid_lng_vec
-    from timezonefinder import utils_numba
 
-    assert utils_numba.is_valid_lng(lng) == is_valid_lng_vec(np.array([lng]))
+    assert utils.is_valid_lng(lng) == is_valid_lng_vec(np.array([lng]))
 
 
 @pytest.mark.unit
