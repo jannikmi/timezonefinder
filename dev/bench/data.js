@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788684156087,
+  "lastUpdate": 1788684158171,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15215,6 +15215,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2585 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "711f8e16333d9070a17610b1f7edf32d27b595de",
+          "message": "Refuse a performance item only when no instrument shows a gain (#631)\n\n* Refuse a performance item only when no instrument shows a gain\n\nA ceiling below the batch suite's 3-9 % noise floor was a rejection\nreason, which is a property of the instrument rather than of the change:\nseveral real sub-floor savings land on the same query and compose. The\nranking rule now refuses a performance item when the gain cannot be\nmeasured at all, and names what suffices instead - a removed count, a\nnon-noise line or stage profile, or a win rate outside a coin flip in an\nin-query alternating A/B. What it still forbids is unchanged: selling a\nsub-floor increment as a suite-visible speed-up, and converting a\nper-call microbenchmark into a workload share.\n\nPERF-4 was refused on exactly the superseded half, so it is open again on\nits existing measurement (-2.0 % of an ambiguous query, 12 of 15 rounds),\ncarrying the cleanup() ordering change the resource-semantics half of the\nsame decision still requires. GH-301 is unparked and ranked last of the\nperformance items on the size of its enumerated 2.90 %, not on the\ninstrument; GH-364's noise-floor arithmetic now prices the item rather\nthan refusing it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Keep the decisions file inside its 2,000-word budget\n\ntests/test_contributor_memory.py caps a canonical memory file at 2,000\nwords; the supersession note pushed the query-performance decisions to\n2,019. Condensed the PERF-4 entry back to 1,968 without dropping either\nhalf of the decision.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T10:41:47+02:00",
+          "tree_id": "b2c383333e02a6b8640597a5d851bcad45e3b3d3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/711f8e16333d9070a17610b1f7edf32d27b595de"
+        },
+        "date": 1788684157516,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2342891693115234,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2350540161132812,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58827590942383,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58908462524414,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8311 GHz"
           }
         ]
       }
