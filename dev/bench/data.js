@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788687239818,
+  "lastUpdate": 1788687867334,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7533,6 +7533,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1303",
             "unit": "lookups/sec",
             "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8688 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c27b452e57d422ed2ea399823b27201bfdd81403",
+          "message": "TOOL-3: hold every zip in the tree to a stated length contract (#632)\n\n* TOOL-3: hold every zip in the tree to a stated length contract\n\n`B905` was selected as part of `B` and then ignored again, so nothing\nchecked that a `zip`'s arms agree. The 27 sites were judged one at a\ntime; 26 pair iterables whose lengths a bug would have to break, and\ncarry `strict=True`. The one exception walks consecutive releases as\n`zip(releases, releases[1:])`, where the second arm is one shorter by\nconstruction, and says so.\n\nDeleting `B905` from `ignore` empties the list, so the key goes with it.\n`SELECTED_RULE_PROBES` gains `B905`, so re-ignoring it fails a test\nrather than passing silently.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Retire TOOL-3, which the preceding commit ships\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Answer the independent review\n\nFour findings, all confirmed:\n\n- `strict=` on a star-unpack constrains each position's arity, not the\n  number of arms. The three sites unpacking parsed GeoJSON are back to\n  `strict=False`: a position may carry elevation, and dropping it is\n  what those functions do, so `strict=True` turned valid input into a\n  `ValueError` mid-parse.\n- The new fragment said all 27 sites were strict and then named an\n  exception. It now states 23 and what the other four are.\n- The sibling fragment for the bugbear adoption still announced B905 as\n  ignored; both are unreleased, so one changelog would have said both.\n- The probe table justifies every rule it holds; B905 now does too.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T11:43:42+02:00",
+          "tree_id": "b5a0032fa83aa932e2b76155276e36f2f735a679",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c27b452e57d422ed2ea399823b27201bfdd81403"
+        },
+        "date": 1788687866262,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 674291.7374451896,
+            "range": "± 7028",
+            "unit": "lookups/sec",
+            "extra": "min of 217 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 929908.6904035235,
+            "range": "± 44247",
+            "unit": "lookups/sec",
+            "extra": "min of 316 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 209158.84844828263,
+            "range": "± 1457",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1095772.727970853,
+            "range": "± 40573",
+            "unit": "lookups/sec",
+            "extra": "min of 338 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1929837.291557811,
+            "range": "± 35008",
+            "unit": "lookups/sec",
+            "extra": "min of 664 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 249966.2045692375,
+            "range": "± 5631",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1085287.5382495103,
+            "range": "± 100677",
+            "unit": "lookups/sec",
+            "extra": "min of 348 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1873848.051907353,
+            "range": "± 34169",
+            "unit": "lookups/sec",
+            "extra": "min of 636 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 244389.31021604207,
+            "range": "± 12954",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6967 GHz"
           }
         ]
       }
