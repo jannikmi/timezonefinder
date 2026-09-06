@@ -25,7 +25,8 @@ try:
 except Exception as exc:
     # Clang extension should be fully optional
     warnings.warn(
-        f"C lang extension cannot be build, since cffi failed with this error: {exc}"
+        f"C lang extension cannot be build, since cffi failed with this error: {exc}",
+        stacklevel=2,
     )
 
 if ffibuilder is not None:

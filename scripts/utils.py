@@ -10,7 +10,7 @@ from scripts.configs import DEBUG, DTYPE_FORMAT_F_NUMPY, DTYPE_FORMAT_SIGNED_I_N
 from scripts.utils_numba import is_valid_lat_vec, is_valid_lng_vec
 from timezonefinder import configs
 from timezonefinder.configs import COORD2INT_FACTOR, SOURCE_COORD_STEP
-from timezonefinder.utils_numba import coord2int
+from timezonefinder.utils import coord2int
 
 
 def write_json(obj, path: Path):

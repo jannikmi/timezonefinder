@@ -9,8 +9,9 @@
 - **How the counts here were taken, 2026-09-05:** a continuation line is an unindented prose line whose unindented prose predecessor does not end in a sentence terminator, excluding directives, field lists, tables, section underlines, literal blocks and list item starts. Across the eleven hand-written pages that is **718 lines**. DOC-1 recorded **628 across 11 files on 2026-09-02** by a method it did not state; the file set agrees and the totals do not, so treat the absolute numbers as an ordering, not a target — the superseded figure is kept here rather than dropped, since a later recount that disagrees with both should not read as a regression.
 - **Not in the same pull request as a content change to this file.** A reflow diff and an edit diff in one review are exactly the reviewing problem this work exists to remove.
 - **Changelog sentence it stands under:** the data format reference uses semantic line breaks, so a correction to it diffs as the lines it changed. Development-only, so `Internal:`.
-- **Status:** open.
-- **Last touched:** 2026-09-05 — sliced out of DOC-1 and re-counted.
+- **Withdrawn 2026-09-06, superseded by [DOC-9](doc-9-migrate-the-documentation-from-sphinx-to-mkdocs.md).** The maintainer chose to move `docs/` off Sphinx to MkDocs, which rewrites `docs/data_format.rst` wholesale into Markdown — so the line breaks are set while the new file is written and cost nothing extra, exactly as this slice's own rule against mixing a reflow with a content change would demand. The counts and the method above are kept because DOC-9 checks its converted output against them. **Reopen this entry if DOC-9 is abandoned**; the hard wrap and its merge-conflict cost are unchanged until one of the two lands.
+- **Status:** withdrawn — superseded by DOC-9.
+- **Last touched:** 2026-09-06 — withdrawn into DOC-9. Filed 2026-09-05 — sliced out of DOC-1 and re-counted.
 
 ## Related memory
 

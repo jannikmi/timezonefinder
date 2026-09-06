@@ -17,14 +17,14 @@ from scripts.utils_numba import (
     fully_contained_in_hole,
 )
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
-from timezonefinder.utils_numba import coord2int, int2coord
+from timezonefinder.utils import coord2int, int2coord
 
 if TYPE_CHECKING:
     from scripts.timezone_data import TimezoneData
 
 
 try:
-    profile  # type: ignore[used-before-def]
+    profile  # type: ignore[used-before-def]  # noqa: B018 - probing for the name
 except NameError:  # pragma: no cover - used only during profiling
 
     def profile(func):  # type: ignore[misc]

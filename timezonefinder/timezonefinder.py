@@ -1031,19 +1031,28 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         return self.boundaries.coords_of(boundary_id)
 
-    def _iter_hole_ids_of(self, boundary_id: IntegerLike) -> Iterable[int]:
+    def _hole_ids_of(self, boundary_id: IntegerLike) -> range:
         """
-        Yield the hole IDs for a given boundary polygon id.
+        The hole IDs of a boundary polygon, as an empty ``range`` when it has none.
+
+        A ``dict.get`` and a ``range``, not a lookup that raises and a generator: 1,225
+        of the 1,322 packaged boundary polygons own no hole at all, so the majority path
+        used to build a generator object, enter it, raise a ``KeyError``, catch it and
+        return - to establish that there was nothing to check. That is ~190 ns of every
+        hole probe, on a step ``inside_of_polygon`` performs for every candidate polygon
+        surviving the bounding-box test.
+
+        A ``range`` rather than a generator because both callers only iterate it, and
+        because the empty case is then the same object shape as the non-empty one.
 
         :param boundary_id: id of the boundary polygon
-        :yield: Hole IDs
+        :return: the hole ids, in storage order
         """
-        try:
-            amount_of_holes, first_hole_id = self.hole_registry[int(boundary_id)]
-        except KeyError:
-            return
-        for i in range(amount_of_holes):
-            yield first_hole_id + i
+        entry = self.hole_registry.get(int(boundary_id))
+        if entry is None:
+            return range(0)
+        amount_of_holes, first_hole_id = entry
+        return range(first_hole_id, first_hole_id + amount_of_holes)
 
     def _holes_of_poly(self, boundary_id: IntegerLike) -> Iterable[np.ndarray]:
         """
@@ -1052,7 +1061,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param boundary_id: id of the boundary polygon
         :yield: Generator of hole coordinates
         """
-        for hole_id in self._iter_hole_ids_of(boundary_id):
+        for hole_id in self._hole_ids_of(boundary_id):
             yield self.holes.coords_of(hole_id)
 
     def get_polygon(
@@ -1139,8 +1148,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         # NOTE: holes are much smaller (fewer points) -> less expensive to check
         # -> check holes before the boundary
-        hole_id_iter = self._iter_hole_ids_of(boundary_id)
-        if self.holes.in_any_polygon(hole_id_iter, x, y):
+        #
+        # The emptiness test is not redundant with the loop inside ``in_any_polygon``:
+        # 1,225 of the 1,322 packaged boundary polygons own no hole, so on the majority
+        # path this is one truth test against a whole bound-method call that iterates
+        # nothing and answers False.
+        hole_ids = self._hole_ids_of(boundary_id)
+        if hole_ids and self.holes.in_any_polygon(hole_ids, x, y):
             # the point is within one of the holes
             # it is excluded fromn this boundary polygon
             return False
@@ -1184,33 +1198,32 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # batch path, so the loop below exists once.
         return self.zone_names.name_of(self._zone_id_in_ambiguous_cell(entry, lng, lat))
 
-    def _prepare_ambiguous_cell(self, entry: int) -> tuple[np.ndarray, np.ndarray, int]:
+    def _prepare_ambiguous_cell(self, entry: int) -> tuple[np.ndarray, int]:
         """Everything a cell's candidate list costs before any point is tested.
 
         A property of the *cell*, not of the query point, which is what lets a batch pay
-        it once per distinct cell. Measured at 898 ns against 10,228 ns for resolving a
-        whole ambiguous point on the C-extension backend in mapped mode - so this is the
-        8.8 % ceiling on what sharing it can win, and the geometry below is the rest.
+        it once per distinct cell. What is left of it is two reads - the candidate slice
+        at 243 ns and the stop index at 98 ns - against ~3,300 ns for resolving a whole
+        ambiguous point on the C-extension backend in mapped mode, so sharing it can win
+        at most ~10 %, and the geometry below is the rest. Both figures are from the
+        profiler's `FINDINGS`; re-read them there rather than trusting this comment, since
+        the denominator has moved with every change to the candidate loop.
 
         NOTE: neither the empty nor the single-candidate case can occur here; both are
         unambiguous and are stored in the shortcut table itself.
         """
         possible_boundaries = self.shortcuts.candidates_of(entry)
 
-        # create a list of all the timezone ids of all possible boundary polygons
-        zone_ids = self._zone_ids_of(possible_boundaries)
-
         # where the loop may stop, precomputed at build time - a property of the candidate
         # list, so it is stored once per distinct list rather than recomputed per query.
         # NOTE: the case last_zone_change_idx == 0 is covered by the unique zone shortcut
         last_zone_change_idx = self.shortcuts.stop_index_of(entry)
 
-        return possible_boundaries, zone_ids, last_zone_change_idx
+        return possible_boundaries, last_zone_change_idx
 
     def _zone_id_among(
         self,
         possible_boundaries: np.ndarray,
-        zone_ids: np.ndarray,
         last_zone_change_idx: int,
         lng: float,
         lat: float,
@@ -1221,24 +1234,35 @@ class TimezoneFinder(AbstractTimezoneFinder):
         whose note explains when that is and is not correct.
         """
         # ATTENTION: the polygons are stored converted to 32-bit ints,
-        # convert the query coordinates in the same fashion in order to make the data formats match
+        # convert the query coordinates in the same fashion in order to make the data
+        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
+        # see its comment - so calling it here costs the multiplication and not a
+        # dispatch on top of it.
         # x = longitude  y = latitude  both converted to 8byte int
         x = utils.coord2int(lng)
         y = utils.coord2int(lat)
 
-        # check until the point is included in one of the possible boundary polygons
+        # check until the point is included in one of the possible boundary polygons.
+        #
+        # The zone id is read for the *one* candidate that answers, rather than for all
+        # of them up front. Narrowing the whole candidate list first - ``self.zone_ids``
+        # indexed by the candidate array - is a numpy fancy index over a handful of
+        # elements, where the per-call overhead dominates whatever is computed: 599 ns
+        # against a single scalar read here. It also has to happen before any point is
+        # tested, so a cell prepared for a batch paid it for every candidate the loop
+        # then never reached.
         for i, boundary_id in enumerate(possible_boundaries):
             if i >= last_zone_change_idx:
                 # avoid expensive PIP checks when no other zone can be matched anymore
                 break
 
             if self.inside_of_polygon(boundary_id, x, y):
-                return int(zone_ids[i])
+                return self._zone_id_of(boundary_id)
 
         # since it is the last possible option,
         # the polygons of the last possible zone don't actually have to be checked
         # -> instantly return the last zone
-        return int(zone_ids[-1])
+        return self._zone_id_of(possible_boundaries[-1])
 
     def _resolve_ambiguous_cells(
         self,
@@ -1256,7 +1280,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         values taken through ``tolist()`` up front. That is the loop's own overhead, so
         it is paid on every ambiguous point whether or not the cell was already prepared.
         """
-        prepared: dict[int, tuple[np.ndarray, np.ndarray, int]] = {}
+        prepared: dict[int, tuple[np.ndarray, int]] = {}
         for i, entry, lng, lat in zip(
             positions.tolist(),
             entries[positions].tolist(),
@@ -1267,10 +1291,9 @@ class TimezoneFinder(AbstractTimezoneFinder):
             if cell is None:
                 cell = self._prepare_ambiguous_cell(entry)
                 prepared[entry] = cell
-            possible_boundaries, zone_ids, last_zone_change_idx = cell
+            possible_boundaries, last_zone_change_idx = cell
             out[i] = self._zone_id_among(
                 possible_boundaries,
-                zone_ids,
                 last_zone_change_idx,
                 lng,
                 lat,
@@ -1279,7 +1302,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
         """Prepare this one cell and work it - the single-point path.
 
-        The three preparation expressions are written out here rather than delegated to
+        The two preparation expressions are written out here rather than delegated to
         :meth:`_prepare_ambiguous_cell`, which is the only duplication in this class and
         is deliberate: this runs on every ambiguous ``timezone_at``, and the extra call
         measured **+0.8 %** of such a query on the C-extension backend - against a batch
@@ -1288,10 +1311,8 @@ class TimezoneFinder(AbstractTimezoneFinder):
         over every point in every committed fixture; a change to one and not the other
         fails there.
         """
-        possible_boundaries = self.shortcuts.candidates_of(entry)
         return self._zone_id_among(
-            possible_boundaries,
-            self._zone_ids_of(possible_boundaries),
+            self.shortcuts.candidates_of(entry),
             self.shortcuts.stop_index_of(entry),
             lng,
             lat,
@@ -1314,7 +1335,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
         lng, lat = utils.validate_coordinates(lng, lat)
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
-        # convert the query coordinates in the same fashion in order to make the data formats match
+        # convert the query coordinates in the same fashion in order to make the data
+        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
+        # see its comment - so calling it here costs the multiplication and not a
+        # dispatch on top of it.
         # x = longitude  y = latitude  both converted to 8byte int
         x = utils.coord2int(lng)
         y = utils.coord2int(lat)

@@ -356,9 +356,17 @@ def derive_payload_offsets(
     """Where every block of a whole collection starts inside *its own ring's* payload.
 
     Derived once when a collection is loaded rather than stored, because the widths and
-    the vertex counts already say it. Ring-relative rather than file-relative, so that
-    the kernels take the same word offset whether the payload came out of a mapping or
-    out of a preloaded copy.
+    the vertex counts already say it.
+
+    **Ring-relative, and rebased by the caller.** What this function can know is where a
+    block sits inside its own ring, since that follows from the widths and the vertex
+    counts alone; where the ring sits in the coordinate buffer is the accessor's answer,
+    so :class:`~timezonefinder.polygon_array.PolygonArray` adds it once and the kernels
+    are handed absolute word indices. That is why the width the offsets are stored in is
+    bounded by the whole collection's payload rather than by the largest ring's - see
+    :data:`~timezonefinder.configs.BLOCK_PAYLOAD_OFFSET_DTYPE`, and
+    ``timezonefinder._data_integrity.validate_payload_offset_width`` for where the bound
+    is checked.
 
     **Written to allocate as little as it can**, which is why it is one flat pass rather
     than the obvious per-ring one. The result is 0.25 MB; an earlier version built it out
