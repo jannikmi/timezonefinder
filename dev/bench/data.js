@@ -26,25 +26,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 61.33135028632948,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008241621190456379",
-            "extra": "mean: 16.304875000002994 msec\nrounds: 54"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 153328.3757158237,
+            "range": "± 775",
+            "extra": "min of 54 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 289.84893942855547,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005350981758861343",
-            "extra": "mean: 3.450072999996223 msec\nrounds: 228"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 724622.3485713886,
+            "range": "± 11239",
+            "extra": "min of 228 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 19.436601343881733,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0015613569380360651",
-            "extra": "mean: 51.44932399998936 msec\nrounds: 50"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 48591.50335970434,
+            "range": "± 1475",
+            "extra": "min of 50 round(s) on an unrecorded CPU"
           }
         ]
       },
@@ -71,25 +71,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 69.34893554934533,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0017872343498658045",
-            "extra": "mean: 14.419831999994415 msec\nrounds: 60"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 173372.33887336333,
+            "range": "± 21488",
+            "extra": "min of 60 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 229.5851717367877,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013617321835197052",
-            "extra": "mean: 4.355681999996364 msec\nrounds: 187"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 573962.9293419692,
+            "range": "± 17944",
+            "extra": "min of 187 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.841384413884363,
-            "unit": "iter/sec",
-            "range": "stddev: 0.005321676764769119",
-            "extra": "mean: 41.943872999993914 msec\nrounds: 50"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59603.461034710905,
+            "range": "± 7562",
+            "extra": "min of 50 round(s) on an unrecorded CPU"
           }
         ]
       },
@@ -116,25 +116,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 81.20414046922033,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028586064967666954",
-            "extra": "mean: 12.314642999996295 msec\nrounds: 60"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 203010.35117305085,
+            "range": "± 4712",
+            "extra": "min of 60 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 251.41597476974383,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000043821879463010236",
-            "extra": "mean: 3.9774720000025354 msec\nrounds: 213"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 628539.9369243595,
+            "range": "± 6925",
+            "extra": "min of 213 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 27.672954930576957,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028238160771667424",
-            "extra": "mean: 36.13636500000439 msec\nrounds: 50"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 69182.38732644239,
+            "range": "± 541",
+            "extra": "min of 50 round(s) on an unrecorded CPU"
           }
         ]
       },
@@ -161,25 +161,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.96772126915656,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000351248780909782",
-            "extra": "mean: 13.7046899999973 msec\nrounds: 60"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 182419.30317289138,
+            "range": "± 4675",
+            "extra": "min of 60 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 225.64154403802675,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006687011271233858",
-            "extra": "mean: 4.4318079999996485 msec\nrounds: 176"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 564103.8600950668,
+            "range": "± 8512",
+            "extra": "min of 176 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.435867454967106,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003958112982050958",
-            "extra": "mean: 40.92345000000108 msec\nrounds: 50"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61089.668637417766,
+            "range": "± 591",
+            "extra": "min of 50 round(s) on an unrecorded CPU"
           }
         ]
       },
@@ -206,25 +206,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.54273597793839,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015409488121831012",
-            "extra": "mean: 13.597536000020227 msec\nrounds: 61"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 183856.83994484597,
+            "range": "± 2084",
+            "extra": "min of 61 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.00540714274769,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008987398869743909",
-            "extra": "mean: 4.328903000015316 msec\nrounds: 195"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 577513.5178568693,
+            "range": "± 11990",
+            "extra": "min of 195 round(s) on an unrecorded CPU"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.112727265791364,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00037062811069100786",
-            "extra": "mean: 39.820445999993126 msec\nrounds: 50"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62781.818164478405,
+            "range": "± 584",
+            "extra": "min of 50 round(s) on an unrecorded CPU"
           }
         ]
       },
@@ -251,25 +251,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 68.7684411171036,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025711244281631415",
-            "extra": "mean: 14.541553999997348 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 171921.10279275902,
+            "range": "± 3040",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 232.76161649225503,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011161919497904683",
-            "extra": "mean: 4.296240999998702 msec\nrounds: 187 on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 581904.0412306376,
+            "range": "± 15118",
+            "extra": "min of 187 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.132780683000167,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007085043308702564",
-            "extra": "mean: 41.43741300000414 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 60331.95170750042,
+            "range": "± 1032",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2009 GHz"
           }
         ]
       },
@@ -296,25 +296,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 70.52980011005238,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003412710874961649",
-            "extra": "mean: 14.17840400000614 msec\nrounds: 59 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 176324.50027513094,
+            "range": "± 4244",
+            "extra": "min of 59 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 222.9587789354164,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000057361647360525064",
-            "extra": "mean: 4.485133999992286 msec\nrounds: 187 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 557396.947338541,
+            "range": "± 7129",
+            "extra": "min of 187 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.96576756365622,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007112642784788309",
-            "extra": "mean: 40.0548470000075 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62414.41890914056,
+            "range": "± 1108",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -341,25 +341,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 92.62191428927795,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00022830568634465043",
-            "extra": "mean: 10.796581000008132 msec\nrounds: 74 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 231554.7857231949,
+            "range": "± 4896",
+            "extra": "min of 74 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 294.35538231704186,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005463387680290109",
-            "extra": "mean: 3.3972540000064555 msec\nrounds: 220 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 735888.4557926046,
+            "range": "± 11834",
+            "extra": "min of 220 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 30.88061191044319,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023993728126517593",
-            "extra": "mean: 32.38277799999878 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 77201.52977610797,
+            "range": "± 572",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -386,25 +386,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 75.25513371708776,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001716472962295132",
-            "extra": "mean: 13.288129999999398 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 188137.8342927194,
+            "range": "± 2430",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 245.3123869262154,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010734150322608228",
-            "extra": "mean: 4.076435000001766 msec\nrounds: 187 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 613280.9673155384,
+            "range": "± 16149",
+            "extra": "min of 187 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.98995342756224,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003037061885494187",
-            "extra": "mean: 38.47640600000091 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 64974.88356890561,
+            "range": "± 513",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
           }
         ]
       },
@@ -431,25 +431,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 70.66048189613082,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00035108508968047084",
-            "extra": "mean: 14.152181999975255 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 176651.20474032706,
+            "range": "± 4382",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 221.3514257146249,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000056706195628151837",
-            "extra": "mean: 4.517702999976336 msec\nrounds: 176 on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 553378.5642865623,
+            "range": "± 6946",
+            "extra": "min of 176 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.071927883386987,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020578423903222138",
-            "extra": "mean: 41.542165000009845 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 60179.81970846747,
+            "range": "± 298",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8701 GHz"
           }
         ]
       },
@@ -476,25 +476,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 70.09237052957063,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00022794022431988292",
-            "extra": "mean: 14.266888000001643 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 175230.92632392657,
+            "range": "± 2800",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.7601360757112,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005778234620189392",
-            "extra": "mean: 4.371390999999392 msec\nrounds: 190 on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 571900.340189278,
+            "range": "± 7560",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.53973578312042,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006073423425625873",
-            "extra": "mean: 40.7502349999973 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61349.33945780105,
+            "range": "± 914",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2417 GHz"
           }
         ]
       },
@@ -521,25 +521,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 84.97966564073681,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041772252509675865",
-            "extra": "mean: 11.767520999995895 msec\nrounds: 62 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 212449.16410184203,
+            "range": "± 7542",
+            "extra": "min of 62 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 272.21743421996626,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000147407952162598",
-            "extra": "mean: 3.6735340000007 msec\nrounds: 215 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 680543.5855499157,
+            "range": "± 27308",
+            "extra": "min of 215 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 29.181576141864543,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006106274216422634",
-            "extra": "mean: 34.26819700000294 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 72953.94035466136,
+            "range": "± 1300",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.2521 GHz"
           }
         ]
       },
@@ -566,25 +566,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.91828171340647,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003127409633987191",
-            "extra": "mean: 13.528452999992169 msec\nrounds: 58 on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 184795.70428351618,
+            "range": "± 4272",
+            "extra": "min of 58 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 227.80454734290464,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000045303650894134994",
-            "extra": "mean: 4.3897280000066985 msec\nrounds: 183 on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 569511.3683572616,
+            "range": "± 5878",
+            "extra": "min of 183 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.88993979746678,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00029104484614172853",
-            "extra": "mean: 40.17687499998601 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62224.84949366695,
+            "range": "± 451",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8695 GHz"
           }
         ]
       },
@@ -611,25 +611,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 62.16852519469553,
-            "unit": "iter/sec",
-            "range": "stddev: 0.003937478563476201",
-            "extra": "mean: 16.085310000008235 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 155421.31298673883,
+            "range": "± 38045",
+            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 209.32549255858413,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005774688590872399",
-            "extra": "mean: 4.777248999999983 msec\nrounds: 168 on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 523313.7313964603,
+            "range": "± 63258",
+            "extra": "min of 168 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.655317050552732,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0020280056685056938",
-            "extra": "mean: 42.27379400001041 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59138.29262638183,
+            "range": "± 2837",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8704 GHz"
           }
         ]
       },
@@ -656,25 +656,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 75.00028312610048,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002715624293672008",
-            "extra": "mean: 13.333282999994367 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 187500.7078152512,
+            "range": "± 3819",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 233.3849736486208,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000027752635016094322",
-            "extra": "mean: 4.2847659999978305 msec\nrounds: 193 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 583462.4341215519,
+            "range": "± 3779",
+            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.894087898098597,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005169994933174523",
-            "extra": "mean: 38.61885400000631 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 64735.21974524649,
+            "range": "± 867",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -701,25 +701,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 71.52058777336747,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002285869414702787",
-            "extra": "mean: 13.981987999997614 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 178801.46943341868,
+            "range": "± 2923",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 226.15035334849549,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000054314293948660763",
-            "extra": "mean: 4.4218370000024265 msec\nrounds: 178 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 565375.8833712387,
+            "range": "± 6945",
+            "extra": "min of 178 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.469781434934752,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003098540711834759",
-            "extra": "mean: 40.866731999997796 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61174.45358733688,
+            "range": "± 464",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -746,25 +746,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 65.5923341976657,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001836665513561623",
-            "extra": "mean: 15.245683999999926 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 163980.83549416426,
+            "range": "± 1975",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 216.8435387128089,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001052792693790784",
-            "extra": "mean: 4.611620000005701 msec\nrounds: 183 on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 542108.8467820223,
+            "range": "± 12376",
+            "extra": "min of 183 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.400361250099344,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002996697201997306",
-            "extra": "mean: 42.734382999995546 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 58500.90312524836,
+            "range": "± 410",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8723 GHz"
           }
         ]
       },
@@ -791,25 +791,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 68.23223715291515,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006818031513835209",
-            "extra": "mean: 14.655828999991627 msec\nrounds: 58 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 170580.59288228786,
+            "range": "± 7936",
+            "extra": "min of 58 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 226.48820302201892,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006766843630032412",
-            "extra": "mean: 4.415241000003789 msec\nrounds: 179 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 566220.5075550473,
+            "range": "± 8678",
+            "extra": "min of 179 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.523639340358482,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002630245569745943",
-            "extra": "mean: 42.51042900000357 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 58809.0983508962,
+            "range": "± 364",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8289 GHz"
           }
         ]
       },
@@ -836,25 +836,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.1513644375189,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007713968759963417",
-            "extra": "mean: 13.670285000003446 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 182878.41109379724,
+            "range": "± 10320",
+            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 221.45318911433432,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000047389617343983655",
-            "extra": "mean: 4.515626999996414 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 553632.9727858359,
+            "range": "± 5810",
+            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.82648891033347,
-            "unit": "iter/sec",
-            "range": "stddev: 0.002417173662867126",
-            "extra": "mean: 40.27955799999461 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62066.22227583368,
+            "range": "± 3725",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8689 GHz"
           }
         ]
       },
@@ -881,25 +881,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.06862276245806,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017799155828772975",
-            "extra": "mean: 13.685764999991079 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 182671.55690614515,
+            "range": "± 2376",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.23311998261576,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004570490879777784",
-            "extra": "mean: 4.324639999992996 msec\nrounds: 188 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 578082.7999565394,
+            "range": "± 6109",
+            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.415193400839367,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003545780800055254",
-            "extra": "mean: 39.34654300002194 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63537.98350209842,
+            "range": "± 573",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -926,25 +926,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 74.07881511824121,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018109824831577794",
-            "extra": "mean: 13.499136000000078 msec\nrounds: 62 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 185197.037795603,
+            "range": "± 2485",
+            "extra": "min of 62 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 237.54436140947658,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020326803462425699",
-            "extra": "mean: 4.209740000000295 msec\nrounds: 198 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 593860.9035236915,
+            "range": "± 28675",
+            "extra": "min of 198 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.58743243574769,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0014979965048630857",
-            "extra": "mean: 39.08168599999584 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63968.581089369225,
+            "range": "± 2452",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           }
         ]
       },
@@ -971,25 +971,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.60492717268728,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025716804881253556",
-            "extra": "mean: 13.586047000003987 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 184012.31793171822,
+            "range": "± 3483",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 232.38212358704087,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000052922376836108094",
-            "extra": "mean: 4.303256999996563 msec\nrounds: 188 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 580955.3089676022,
+            "range": "± 7145",
+            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.4616431421867,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004692236516049199",
-            "extra": "mean: 39.274763000001656 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63654.10785546675,
+            "range": "± 760",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2981 GHz"
           }
         ]
       },
@@ -1016,25 +1016,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 79.94675546087025,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006568183233119599",
-            "extra": "mean: 12.508324999998877 msec\nrounds: 56 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 199866.88865217564,
+            "range": "± 10495",
+            "extra": "min of 56 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 261.479335026764,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006397459530551538",
-            "extra": "mean: 3.8243939999986765 msec\nrounds: 214 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 653698.33756691,
+            "range": "± 10935",
+            "extra": "min of 214 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.99854293765912,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004903410944675962",
-            "extra": "mean: 38.463694000000714 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 64996.3573441478,
+            "range": "± 829",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           }
         ]
       },
@@ -1061,25 +1061,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 69.70492788737229,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020345979255571977",
-            "extra": "mean: 14.346188000018856 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 174262.31971843072,
+            "range": "± 2471",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 232.88200800165066,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015956113211435126",
-            "extra": "mean: 4.294020000003229 msec\nrounds: 194 on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 582205.0200041267,
+            "range": "± 21634",
+            "extra": "min of 194 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.990461140988383,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00034335189409628446",
-            "extra": "mean: 40.015267999990556 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62476.15285247096,
+            "range": "± 536",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2414 GHz"
           }
         ]
       },
@@ -1106,25 +1106,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 113.16328964764071,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00039600539074657616",
-            "extra": "mean: 8.836788000010642 msec\nrounds: 66 on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 282908.22411910177,
+            "range": "± 12678",
+            "extra": "min of 66 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 378.27992336077784,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000021765108810534807",
-            "extra": "mean: 2.643544999997971 msec\nrounds: 329 on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 945699.8084019446,
+            "range": "± 7786",
+            "extra": "min of 329 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 39.062940983985044,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005172377323306261",
-            "extra": "mean: 25.599710999998138 msec\nrounds: 50 on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 97657.35245996261,
+            "range": "± 1973",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) 6973P-C @ 4.1992 GHz"
           }
         ]
       },
@@ -1151,25 +1151,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 113.29629450876027,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00024311858679197245",
-            "extra": "mean: 8.82641399999784 msec\nrounds: 87 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 283240.73627190065,
+            "range": "± 7802",
+            "extra": "min of 87 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 400.6973737086171,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015491134604192158",
-            "extra": "mean: 2.4956490000036524 msec\nrounds: 278 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1001743.4342715427,
+            "range": "± 62181",
+            "extra": "min of 278 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 40.113156004033954,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008176728820422246",
-            "extra": "mean: 24.92947700000059 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 100282.89001008488,
+            "range": "± 3289",
+            "extra": "min of 50 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4787 GHz"
           }
         ]
       },
@@ -1196,25 +1196,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.7763848781766,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005521433492322375",
-            "extra": "mean: 13.740721000004896 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 181940.9621954415,
+            "range": "± 7311",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 232.75121478675734,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018652182254459113",
-            "extra": "mean: 4.296433000000377 msec\nrounds: 192 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 581878.0369668934,
+            "range": "± 25261",
+            "extra": "min of 192 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.831777125859308,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006037202365882388",
-            "extra": "mean: 40.27098000000251 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62079.44281464827,
+            "range": "± 931",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2387 GHz"
           }
         ]
       },
@@ -1241,25 +1241,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 71.73544027014812,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016051648161068263",
-            "extra": "mean: 13.940111000003697 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 179338.60067537028,
+            "range": "± 2065",
+            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 219.5922391710443,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003751553283378558",
-            "extra": "mean: 4.553895000000807 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 548980.5979276107,
+            "range": "± 4523",
+            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.447107875361155,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00047980202129747294",
-            "extra": "mean: 40.90463399999322 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61117.769688402885,
+            "range": "± 717",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8530 GHz"
           }
         ]
       },
@@ -1286,25 +1286,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 94.1018910809595,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000493385438514795",
-            "extra": "mean: 10.626779000006081 msec\nrounds: 66 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 235254.72770239876,
+            "range": "± 10923",
+            "extra": "min of 66 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 302.06689271308164,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016859601670266523",
-            "extra": "mean: 3.310525000003395 msec\nrounds: 235 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 755167.2317827041,
+            "range": "± 38459",
+            "extra": "min of 235 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 30.591867592516778,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007542570951573416",
-            "extra": "mean: 32.6884260000071 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 76479.66898129195,
+            "range": "± 1765",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.4996 GHz"
           }
         ]
       },
@@ -1331,25 +1331,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.91733646863389,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009700183113695445",
-            "extra": "mean: 13.528625999995825 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 184793.34117158473,
+            "range": "± 13250",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 230.17581980001603,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015826920416328486",
-            "extra": "mean: 4.344504999998833 msec\nrounds: 190 on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 575439.5495000401,
+            "range": "± 20963",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.49469914215551,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007074296761031074",
-            "extra": "mean: 39.22383999999823 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63736.74785538878,
+            "range": "± 1150",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2439 GHz"
           }
         ]
       },
@@ -1376,25 +1376,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 68.50192925405374,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008614080662329286",
-            "extra": "mean: 14.598129000006566 msec\nrounds: 59 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 171254.82313513433,
+            "range": "± 10105",
+            "extra": "min of 59 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 234.25929786808766,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006839260076048306",
-            "extra": "mean: 4.268774000010467 msec\nrounds: 195 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 585648.2446702191,
+            "range": "± 9383",
+            "extra": "min of 195 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.9899861959192,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007425216467151772",
-            "extra": "mean: 41.684059000004936 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59974.965489798,
+            "range": "± 1068",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           }
         ]
       },
@@ -1421,25 +1421,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 74.59858501404895,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001886781308507913",
-            "extra": "mean: 13.405079999998293 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 186496.46253512238,
+            "range": "± 2625",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 230.96987252083204,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000876223724483392",
-            "extra": "mean: 4.329568999999367 msec\nrounds: 194 on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 577424.68130208,
+            "range": "± 11686",
+            "extra": "min of 194 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.594160763886407,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00033507674877212727",
-            "extra": "mean: 39.07141199999842 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63985.40190971602,
+            "range": "± 549",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2425 GHz"
           }
         ]
       },
@@ -1466,25 +1466,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.80164158966797,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0015072944884529295",
-            "extra": "mean: 13.735953999997719 msec\nrounds: 57 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 182004.1039741699,
+            "range": "± 19972",
+            "extra": "min of 57 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.00971686137484,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005171773741419775",
-            "extra": "mean: 4.385778000013829 msec\nrounds: 185 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 570024.2921534372,
+            "range": "± 6722",
+            "extra": "min of 185 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.45620227999062,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007756763571677018",
-            "extra": "mean: 40.88942299999587 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61140.50569997655,
+            "range": "± 1160",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           }
         ]
       },
@@ -1511,25 +1511,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.17237997663746,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003454198671307802",
-            "extra": "mean: 13.8557159999948 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 180430.94994159366,
+            "range": "± 4498",
+            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.5468238732037,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00033995957723088617",
-            "extra": "mean: 4.375471000003017 msec\nrounds: 183 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 571367.0596830093,
+            "range": "± 44393",
+            "extra": "min of 183 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.9730864706337,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003177089210792669",
-            "extra": "mean: 41.71344400000265 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59932.71617658425,
+            "range": "± 456",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           }
         ]
       },
@@ -1556,25 +1556,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.16839567234811,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002567326531456719",
-            "extra": "mean: 13.667103000017278 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 182920.98918087027,
+            "range": "± 3436",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 234.21255163824839,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00031461096343030813",
-            "extra": "mean: 4.2696259999956965 msec\nrounds: 194 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 585531.3790956209,
+            "range": "± 43145",
+            "extra": "min of 194 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.090842650351153,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003309209853007905",
-            "extra": "mean: 39.85517800001048 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62727.10662587788,
+            "range": "± 521",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -1601,25 +1601,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.70615357252687,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012482881504108294",
-            "extra": "mean: 13.75399400000532 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 181765.3839313172,
+            "range": "± 1650",
+            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 223.11677173237894,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005564723182610773",
-            "extra": "mean: 4.4819579999995085 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 557791.9293309473,
+            "range": "± 6925",
+            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.558274612245814,
-            "unit": "iter/sec",
-            "range": "stddev: 0.001411422159300122",
-            "extra": "mean: 40.71947300000289 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61395.686530614534,
+            "range": "± 2128",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -1646,25 +1646,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 74.051858516549,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00014338465331506454",
-            "extra": "mean: 13.50404999999455 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 185129.6462913725,
+            "range": "± 1966",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.53459508884873,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004271242878970631",
-            "extra": "mean: 4.319008999999596 msec\nrounds: 193 on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 578836.4877221219,
+            "range": "± 5724",
+            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.430766023756217,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0015784869718891731",
-            "extra": "mean: 39.322448999996595 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63576.91505939054,
+            "range": "± 2552",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2377 GHz"
           }
         ]
       },
@@ -1691,25 +1691,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 80.28838302575214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021667857227594453",
-            "extra": "mean: 12.455101999989893 msec\nrounds: 60 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 200720.95756438034,
+            "range": "± 3492",
+            "extra": "min of 60 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 259.25219223635236,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000037276416150018817",
-            "extra": "mean: 3.8572480000027554 msec\nrounds: 210 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 648130.4805908808,
+            "range": "± 6264",
+            "extra": "min of 210 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 26.773712968879597,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005057930706958977",
-            "extra": "mean: 37.35006799999496 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 66934.28242219899,
+            "range": "± 906",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1000 GHz"
           }
         ]
       },
@@ -1736,25 +1736,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 125.92902564662903,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009086758186590737",
-            "extra": "mean: 7.940980999933345 msec\nrounds: 93 on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 314822.56411657255,
+            "range": "± 3602",
+            "extra": "min of 93 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 389.385810075091,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006555138936445836",
-            "extra": "mean: 2.568147000033605 msec\nrounds: 279 on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 973464.5251877275,
+            "range": "± 24847",
+            "extra": "min of 279 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 42.417680537505596,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000280897804850661",
-            "extra": "mean: 23.575075000053403 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 106044.201343764,
+            "range": "± 1264",
+            "extra": "min of 50 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.2795 GHz"
           }
         ]
       },
@@ -1781,25 +1781,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 73.64043012788856,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002061586420139222",
-            "extra": "mean: 13.579496999994944 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 184101.07531972142,
+            "range": "± 2795",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 233.09197436383894,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004942295133853405",
-            "extra": "mean: 4.290151999995828 msec\nrounds: 193 on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 582729.9359095973,
+            "range": "± 6713",
+            "extra": "min of 193 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.382167879787087,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00029835481454414787",
-            "extra": "mean: 39.39773800000523 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 63455.41969946772,
+            "range": "± 481",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
           }
         ]
       },
@@ -1826,25 +1826,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 93.49897861720063,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00055244958072303",
-            "extra": "mean: 10.695303999995076 msec\nrounds: 64 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 233747.4465430016,
+            "range": "± 12074",
+            "extra": "min of 64 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 302.80347569928307,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000306113806639335",
-            "extra": "mean: 3.302472000001444 msec\nrounds: 258 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 757008.6892482077,
+            "range": "± 70169",
+            "extra": "min of 258 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 32.18590164812281,
-            "unit": "iter/sec",
-            "range": "stddev: 0.001606563376866152",
-            "extra": "mean: 31.069504000001302 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 80464.75412030701,
+            "range": "± 4161",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.3248 GHz"
           }
         ]
       },
@@ -1871,25 +1871,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 70.1001928035461,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003681912326230307",
-            "extra": "mean: 14.265296000004923 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 175250.48200886522,
+            "range": "± 4523",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 222.7170004117642,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000878725718099139",
-            "extra": "mean: 4.490003000000797 msec\nrounds: 182 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 556792.5010294105,
+            "range": "± 10897",
+            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.250411887187465,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028724743429096725",
-            "extra": "mean: 41.23641299999292 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 60626.02971796866,
+            "range": "± 422",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.7352 GHz"
           }
         ]
       },
@@ -1916,25 +1916,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 68.64774446509198,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003934554357366776",
-            "extra": "mean: 14.567120999998906 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 171619.36116272994,
+            "range": "± 4635",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.81420698169845,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008885842477503965",
-            "extra": "mean: 4.3703580000169495 msec\nrounds: 183 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 572035.5174542462,
+            "range": "± 11631",
+            "extra": "min of 183 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.433264325650782,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002274761119860143",
-            "extra": "mean: 40.927809999999454 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61083.16081412695,
+            "range": "± 339",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2524 GHz"
           }
         ]
       },
@@ -1961,25 +1961,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 71.81003660156122,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0022837396253831835",
-            "extra": "mean: 13.925630000002798 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 179525.09150390307,
+            "range": "± 29441",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.06219986473266,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001328697784832279",
-            "extra": "mean: 4.327838999998335 msec\nrounds: 195 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 577655.4996618317,
+            "range": "± 17735",
+            "extra": "min of 195 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.654009938967604,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041682151724125466",
-            "extra": "mean: 40.56135300000108 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61635.02484741901,
+            "range": "± 633",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -2006,25 +2006,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 71.01147538339397,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028397787656812834",
-            "extra": "mean: 14.082231000003276 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 177528.68845848492,
+            "range": "± 3580",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.92627527561274,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008478332651968453",
-            "extra": "mean: 4.311715000000049 msec\nrounds: 195 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 579815.6881890318,
+            "range": "± 11401",
+            "extra": "min of 195 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.865381930401142,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00235419507327891",
-            "extra": "mean: 40.21655500000065 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62163.45482600285,
+            "range": "± 3639",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -2051,25 +2051,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 80.77718639007215,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000342232534964755",
-            "extra": "mean: 12.379732999995952 msec\nrounds: 57 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 201942.96597518036,
+            "range": "± 5583",
+            "extra": "min of 57 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 260.4540391083969,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011863191604404065",
-            "extra": "mean: 3.8394489999973302 msec\nrounds: 205 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 651135.0977709922,
+            "range": "± 20119",
+            "extra": "min of 205 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 27.086802475560113,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007145820815651182",
-            "extra": "mean: 36.91834800000038 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 67717.00618890028,
+            "range": "± 1311",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0089 GHz"
           }
         ]
       },
@@ -2096,25 +2096,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 94.89748556817491,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001317228235801293",
-            "extra": "mean: 10.537686999953166 msec\nrounds: 76 on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 237243.7139204373,
+            "range": "± 2966",
+            "extra": "min of 76 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 291.5632103204143,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006367563943112333",
-            "extra": "mean: 3.4297880000053738 msec\nrounds: 223 on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 728908.0258010358,
+            "range": "± 13533",
+            "extra": "min of 223 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 31.676850510133608,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017991932629635754",
-            "extra": "mean: 31.568794999998318 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 79192.12627533403,
+            "range": "± 451",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6939 GHz"
           }
         ]
       },
@@ -2141,25 +2141,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 92.54755278359183,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00038410664488100276",
-            "extra": "mean: 10.805255999997598 msec\nrounds: 75 on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 231368.88195897956,
+            "range": "± 8225",
+            "extra": "min of 75 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 293.3203333764608,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001162412150673603",
-            "extra": "mean: 3.409241999996482 msec\nrounds: 225 on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 733300.833441152,
+            "range": "± 25003",
+            "extra": "min of 225 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 30.977922839822927,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041852140462968174",
-            "extra": "mean: 32.281053999994924 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 77444.80709955732,
+            "range": "± 1004",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6972 GHz"
           }
         ]
       },
@@ -2186,25 +2186,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 69.80718487656529,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017867163238632265",
-            "extra": "mean: 14.325173000003133 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 174517.96219141321,
+            "range": "± 2177",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 217.59101505762328,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006218964569761348",
-            "extra": "mean: 4.595778000002326 msec\nrounds: 179 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 543977.5376440582,
+            "range": "± 7361",
+            "extra": "min of 179 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.265527966320636,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00026862001472689094",
-            "extra": "mean: 41.21072500000622 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 60663.81991580159,
+            "range": "± 395",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -2231,25 +2231,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.54816581548758,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003440626536923643",
-            "extra": "mean: 13.783946000003766 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 181370.41453871893,
+            "range": "± 4527",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 229.08001237954528,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006326486546850572",
-            "extra": "mean: 4.36528699999883 msec\nrounds: 189 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 572700.0309488632,
+            "range": "± 83000",
+            "extra": "min of 189 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.821621280287623,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0011448916773541254",
-            "extra": "mean: 40.28745700000513 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62054.053200719056,
+            "range": "± 1763",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -2276,25 +2276,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 92.49899731088675,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008639219246772046",
-            "extra": "mean: 10.810927999997944 msec\nrounds: 65 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 231247.49327721688,
+            "range": "± 18479",
+            "extra": "min of 65 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 299.25604946099605,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003069013677915662",
-            "extra": "mean: 3.341620000000489 msec\nrounds: 232 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 748140.1236524901,
+            "range": "± 68711",
+            "extra": "min of 232 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 30.749612516439953,
-            "unit": "iter/sec",
-            "range": "stddev: 0.001499271537087475",
-            "extra": "mean: 32.52073500000563 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 76874.03129109988,
+            "range": "± 3544",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
           }
         ]
       },
@@ -2321,25 +2321,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 72.77852468737841,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010224748622223278",
-            "extra": "mean: 13.740317000042523 msec\nrounds: 59 on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 181946.31171844603,
+            "range": "± 1354",
+            "extra": "min of 59 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 227.17478396350612,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000033157558036621084",
-            "extra": "mean: 4.401896999979726 msec\nrounds: 190 on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 567936.9599087653,
+            "range": "± 4278",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 25.188324919211574,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002820196946465669",
-            "extra": "mean: 39.70093300000599 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 62970.81229802893,
+            "range": "± 447",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2433 GHz"
           }
         ]
       },
@@ -2366,25 +2366,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 92.80194691055893,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000225696514993787",
-            "extra": "mean: 10.775636000005306 msec\nrounds: 67 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 232004.8672763973,
+            "range": "± 4859",
+            "extra": "min of 67 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 302.1319639909147,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008181669344015246",
-            "extra": "mean: 3.3098119999976916 msec\nrounds: 244 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 755329.9099772867,
+            "range": "± 18671",
+            "extra": "min of 244 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 31.6413080567434,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009902672366461516",
-            "extra": "mean: 31.60425599999428 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 79103.2701418585,
+            "range": "± 2479",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5994 GHz"
           }
         ]
       },
@@ -2411,25 +2411,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 132.2507813376249,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007208475174284629",
-            "extra": "mean: 7.5613919999995005 msec\nrounds: 97 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 330626.9533440622,
+            "range": "± 3152",
+            "extra": "min of 97 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 254.96603724948713,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006511283548688269",
-            "extra": "mean: 3.9220909999926334 msec\nrounds: 233 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 637415.0931237178,
+            "range": "± 10582",
+            "extra": "min of 233 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 24.75592024216712,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003077884188878541",
-            "extra": "mean: 40.39437800000201 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 61889.800605417804,
+            "range": "± 472",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9997 GHz"
           }
         ]
       },
@@ -2456,25 +2456,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 123.96487777477802,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001224088172390881",
-            "extra": "mean: 8.066801000012447 msec\nrounds: 98 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 309912.194436945,
+            "range": "± 4703",
+            "extra": "min of 98 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 243.10901421504866,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009867185685943308",
-            "extra": "mean: 4.113380999996252 msec\nrounds: 222 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 607772.5355376217,
+            "range": "± 14579",
+            "extra": "min of 222 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.605699832280852,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028619311099872965",
-            "extra": "mean: 42.36265000000117 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59014.249580702126,
+            "range": "± 399",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -2501,25 +2501,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 117.5002940445012,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0012214530515568711",
-            "extra": "mean: 8.510616999998888 msec\nrounds: 94 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 293750.735111253,
+            "range": "± 42159",
+            "extra": "min of 94 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 241.79674323948743,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006256002444947966",
-            "extra": "mean: 4.135705000003043 msec\nrounds: 218 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 604491.8580987186,
+            "range": "± 9144",
+            "extra": "min of 218 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 22.748907455284073,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007064689745973316",
-            "extra": "mean: 43.958154999998555 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 56872.26863821018,
+            "range": "± 914",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           }
         ]
       },
@@ -2546,25 +2546,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 124.64630054206403,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001192995043440214",
-            "extra": "mean: 8.022700999958943 msec\nrounds: 98 on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 311615.7513551601,
+            "range": "± 4634",
+            "extra": "min of 98 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 244.4554449413134,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000051589317991955295",
-            "extra": "mean: 4.0907249999690976 msec\nrounds: 221 on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 611138.6123532836,
+            "range": "± 7707",
+            "extra": "min of 221 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.864323113790626,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002065574177770951",
-            "extra": "mean: 41.90355599996565 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 59660.807784476565,
+            "range": "± 294",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2429 GHz"
           }
         ]
       },
@@ -2591,25 +2591,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 118.62869030123066,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000048113961881423346",
-            "extra": "mean: 8.429664000004777 msec\nrounds: 93 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 296571.72575307667,
+            "range": "± 1693",
+            "extra": "min of 93 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 223.15914348824376,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003043489924597324",
-            "extra": "mean: 4.481107000003703 msec\nrounds: 199 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 557897.8587206093,
+            "range": "± 3789",
+            "extra": "min of 199 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 22.880121821093024,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001380506808795379",
-            "extra": "mean: 43.706060999994634 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 57200.30455273256,
+            "range": "± 181",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -2636,25 +2636,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 122.94591191321206,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013464672873382655",
-            "extra": "mean: 8.133657999998434 msec\nrounds: 97 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 307364.77978303016,
+            "range": "± 5088",
+            "extra": "min of 97 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 240.54779468188372,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041645931408079213",
-            "extra": "mean: 4.157177999999817 msec\nrounds: 120 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 601369.4867047092,
+            "range": "± 60244",
+            "extra": "min of 120 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.50117827857491,
-            "unit": "iter/sec",
-            "range": "stddev: 0.005074711357519997",
-            "extra": "mean: 42.55105800000081 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 58752.94569643727,
+            "range": "± 7007",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2432 GHz"
           }
         ]
       },
@@ -2681,25 +2681,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 122.02090535360117,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009411301293885323",
-            "extra": "mean: 8.195317000001978 msec\nrounds: 94 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 305052.2633840029,
+            "range": "± 3503",
+            "extra": "min of 94 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 240.0616862504899,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008356931052312203",
-            "extra": "mean: 4.165596000007099 msec\nrounds: 220 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 600154.2156262248,
+            "range": "± 12040",
+            "extra": "min of 220 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.31385895609106,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00037370368621781344",
-            "extra": "mean: 42.892942000008816 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 58284.64739022765,
+            "range": "± 508",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2446 GHz"
           }
         ]
       },
@@ -2726,25 +2726,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 220.80689906743362,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010032936874713178",
-            "extra": "mean: 4.52884399999931 msec\nrounds: 157 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 552017.247668584,
+            "range": "± 12229",
+            "extra": "min of 157 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 417.7751634335701,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00033414018364103974",
-            "extra": "mean: 2.393632000000423 msec\nrounds: 348 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1044437.9085839253,
+            "range": "± 145799",
+            "extra": "min of 348 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.706629911138556,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000545175765272945",
-            "extra": "mean: 22.879824000000326 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 109266.57477784638,
+            "range": "± 2604",
+            "extra": "min of 50 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5903 GHz"
           }
         ]
       },
@@ -2771,25 +2771,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 189.5610259501057,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002248012680712486",
-            "extra": "mean: 5.275345999990577 msec\nrounds: 110 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 473902.56487526424,
+            "range": "± 20195",
+            "extra": "min of 110 round(s) on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 376.5536604024833,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004456923496070867",
-            "extra": "mean: 2.655664000002389 msec\nrounds: 334 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 941384.1510062082,
+            "range": "± 15799",
+            "extra": "min of 334 round(s) on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 36.711288258568175,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0011426019762499498",
-            "extra": "mean: 27.23957800000676 msec\nrounds: 50 on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 91778.22064642044,
+            "range": "± 3850",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) 6973P-C @ 3.7315 GHz"
           }
         ]
       },
@@ -2816,25 +2816,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 157.12810056910243,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006872914393698501",
-            "extra": "mean: 6.364234000017177 msec\nrounds: 114 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 392820.25142275606,
+            "range": "± 4242",
+            "extra": "min of 114 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 309.30287153650676,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008196703429721567",
-            "extra": "mean: 3.233077000004414 msec\nrounds: 283 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 773257.1788412669,
+            "range": "± 19604",
+            "extra": "min of 283 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 29.938506308036878,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002623648836895099",
-            "extra": "mean: 33.40180000000714 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 74846.2657700922,
+            "range": "± 588",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5945 GHz"
           }
         ]
       },
@@ -2861,25 +2861,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 101.47837759615176,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010778266557751754",
-            "extra": "mean: 9.854316000001972 msec\nrounds: 81 on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 253695.9439903794,
+            "range": "± 2775",
+            "extra": "min of 81 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 195.13432559174166,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008538589924677814",
-            "extra": "mean: 5.124674999990475 msec\nrounds: 171 on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 487835.81397935416,
+            "range": "± 8128",
+            "extra": "min of 171 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 19.044234252391195,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003018697496727884",
-            "extra": "mean: 52.509330999981785 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 47610.58563097799,
+            "range": "± 274",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.4621 GHz"
           }
         ]
       },
@@ -2906,25 +2906,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 121.76835907641343,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000278781084310101",
-            "extra": "mean: 8.212313999997889 msec\nrounds: 95 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 304420.8976910336,
+            "range": "± 10334",
+            "extra": "min of 95 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 242.43270552935056,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003924788771675899",
-            "extra": "mean: 4.124856000004229 msec\nrounds: 221 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 606081.7638233764,
+            "range": "± 5767",
+            "extra": "min of 221 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 23.521384054689232,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00033682876251586974",
-            "extra": "mean: 42.51450499999976 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 58803.46013672308,
+            "range": "± 466",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -2951,25 +2951,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 208.69258893005173,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012092164973954444",
-            "extra": "mean: 4.791736999990803 msec\nrounds: 146 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 521731.4723251293,
+            "range": "± 13166",
+            "extra": "min of 146 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 409.5327763420016,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000365155598296211",
-            "extra": "mean: 2.441806999996743 msec\nrounds: 337 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1023831.940855004,
+            "range": "± 15311",
+            "extra": "min of 337 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 44.355583454231656,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008360323196569935",
-            "extra": "mean: 22.54507600000011 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 110888.95863557914,
+            "range": "± 4112",
+            "extra": "min of 50 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.4712 GHz"
           }
         ]
       },
@@ -2996,25 +2996,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 118.7842573798168,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006596942640700013",
-            "extra": "mean: 8.418624000000818 msec\nrounds: 93 on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 296960.643449542,
+            "range": "± 2327",
+            "extra": "min of 93 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 224.84632877642912,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000052343734832934414",
-            "extra": "mean: 4.447482000003333 msec\nrounds: 197 on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 562115.8219410728,
+            "range": "± 6616",
+            "extra": "min of 197 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 22.592430830785673,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007047980401098049",
-            "extra": "mean: 44.26261200000425 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 56481.07707696418,
+            "range": "± 899",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8761 GHz"
           }
         ]
       },
@@ -3041,25 +3041,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 219.6681648768476,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000301158970850977",
-            "extra": "mean: 4.5523209999984715 msec\nrounds: 152 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 549170.412192119,
+            "range": "± 36330",
+            "extra": "min of 152 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 417.79890168965704,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006376360986085846",
-            "extra": "mean: 2.393496000003381 msec\nrounds: 333 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1044497.2542241426,
+            "range": "± 27826",
+            "extra": "min of 333 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 39.81894960716858,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005398408782342558",
-            "extra": "mean: 25.113670999999727 msec\nrounds: 50 on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 99547.37401792144,
+            "range": "± 2140",
+            "extra": "min of 50 round(s) on AMD EPYC 9V45 96-Core Processor @ 4.5941 GHz"
           }
         ]
       },
@@ -3086,25 +3086,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 147.7414324003221,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000792969644586802",
-            "extra": "mean: 6.768582000006518 msec\nrounds: 109 on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 369353.58100080525,
+            "range": "± 4327",
+            "extra": "min of 109 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 224.62647425139278,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000035470368517060005",
-            "extra": "mean: 4.451835000004678 msec\nrounds: 196 on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 561566.1856284819,
+            "range": "± 4474",
+            "extra": "min of 196 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 38.908990354108674,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0017134206225988826",
-            "extra": "mean: 25.70100100000161 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 97272.47588527169,
+            "range": "± 6485",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
           }
         ]
       },
@@ -3131,25 +3131,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 147.1716695713365,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006921141440606121",
-            "extra": "mean: 6.794786000000386 msec\nrounds: 112 on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 367929.17392834125,
+            "range": "± 3748",
+            "extra": "min of 112 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 244.61318949428372,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000285214919822207",
-            "extra": "mean: 4.088086999999518 msec\nrounds: 219 on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 611532.9737357093,
+            "range": "± 42665",
+            "extra": "min of 219 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 35.75678137192,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001893749445406193",
-            "extra": "mean: 27.966722999998694 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 89391.95342979999,
+            "range": "± 605",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2735 GHz"
           }
         ]
       },
@@ -3176,25 +3176,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 151.4852446554041,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004910163142424909",
-            "extra": "mean: 6.601303000003611 msec\nrounds: 116 on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 378713.11163851025,
+            "range": "± 2817",
+            "extra": "min of 116 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 238.52304621582397,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003430612814444479",
-            "extra": "mean: 4.192467000002864 msec\nrounds: 226 on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 596307.6155395599,
+            "range": "± 4879",
+            "extra": "min of 226 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 37.07743771175307,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023956161272813026",
-            "extra": "mean: 26.970580000003963 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 92693.59427938267,
+            "range": "± 823",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.0498 GHz"
           }
         ]
       },
@@ -3221,25 +3221,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 150.59306561108272,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005871529669058167",
-            "extra": "mean: 6.640411999995877 msec\nrounds: 110 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 376482.6640277068,
+            "range": "± 33289",
+            "extra": "min of 110 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 245.24025451984215,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003097974996948395",
-            "extra": "mean: 4.077634000005048 msec\nrounds: 213 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 613100.6362996054,
+            "range": "± 46580",
+            "extra": "min of 213 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 37.643583922152736,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0013594541845323358",
-            "extra": "mean: 26.564952000001085 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 94108.95980538183,
+            "range": "± 4816",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -3266,25 +3266,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 223.25804030382173,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00014195405399620433",
-            "extra": "mean: 4.4791219999922305 msec\nrounds: 141 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 558145.1007595543,
+            "range": "± 17689",
+            "extra": "min of 141 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 353.5269081702599,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013860038604423852",
-            "extra": "mean: 2.8286390000005213 msec\nrounds: 304 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 883817.2704256497,
+            "range": "± 43306",
+            "extra": "min of 304 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 63.42389991403606,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0011904603752389276",
-            "extra": "mean: 15.766927000001374 msec\nrounds: 51 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 158559.74978509016,
+            "range": "± 11972",
+            "extra": "min of 51 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       },
@@ -3311,25 +3311,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 151.66382802527136,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000683104097301902",
-            "extra": "mean: 6.593530000003511 msec\nrounds: 112 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 379159.57006317837,
+            "range": "± 3928",
+            "extra": "min of 112 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 246.69496586842533,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005105579809820575",
-            "extra": "mean: 4.053589000001523 msec\nrounds: 221 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 616737.4146710633,
+            "range": "± 77679",
+            "extra": "min of 221 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 37.21949250328824,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000652598671997623",
-            "extra": "mean: 26.867641999999137 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 93048.73125822059,
+            "range": "± 2260",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -3356,25 +3356,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 150.2413100801918,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006234941137415933",
-            "extra": "mean: 6.6559589999997115 msec\nrounds: 111 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 375603.2752004795,
+            "range": "± 3518",
+            "extra": "min of 111 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 247.14803524761888,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009404389175731673",
-            "extra": "mean: 4.046157999994193 msec\nrounds: 222 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 617870.0881190472,
+            "range": "± 14361",
+            "extra": "min of 222 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 37.20469932555432,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016297928401210507",
-            "extra": "mean: 26.878325000012637 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 93011.74831388581,
+            "range": "± 564",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           }
         ]
       },
@@ -3401,25 +3401,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 148.25089150672636,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009559603910170941",
-            "extra": "mean: 6.745322000000442 msec\nrounds: 75 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 370627.2287668159,
+            "range": "± 52526",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 241.80709210534383,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004710902176693601",
-            "extra": "mean: 4.135527999999056 msec\nrounds: 217 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 604517.7302633596,
+            "range": "± 68862",
+            "extra": "min of 217 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 36.53393765336693,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0018872874949748268",
-            "extra": "mean: 27.371810000005325 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 91334.84413341731,
+            "range": "± 6298",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2406 GHz"
           }
         ]
       },
@@ -3446,25 +3446,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 150.97069628590924,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009371177135421389",
-            "extra": "mean: 6.623802000000012 msec\nrounds: 108 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 377426.7407147731,
+            "range": "± 53397",
+            "extra": "min of 108 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 226.87929794455206,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005054652406103178",
-            "extra": "mean: 4.407630000002882 msec\nrounds: 202 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 567198.2448613802,
+            "range": "± 6505",
+            "extra": "min of 202 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 39.48267431156875,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00036334394146683713",
-            "extra": "mean: 25.327564999997776 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 98706.68577892188,
+            "range": "± 1416",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8702 GHz"
           }
         ]
       },
@@ -3491,25 +3491,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 152.12825141750977,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00022413354416398842",
-            "extra": "mean: 6.573401000025569 msec\nrounds: 111 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 380320.6285437744,
+            "range": "± 12968",
+            "extra": "min of 111 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 226.2518685575327,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003547108999948945",
-            "extra": "mean: 4.4198530000016945 msec\nrounds: 198 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 565629.6713938317,
+            "range": "± 4539",
+            "extra": "min of 198 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 38.981354828159745,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00036957445056864897",
-            "extra": "mean: 25.653290000008155 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 97453.38707039936,
+            "range": "± 1404",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8729 GHz"
           }
         ]
       },
@@ -3536,25 +3536,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 156.63225612622716,
-            "unit": "iter/sec",
-            "range": "stddev: 0.001039861948578535",
-            "extra": "mean: 6.384381000003714 msec\nrounds: 135 on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 391580.6403155679,
+            "range": "± 63779",
+            "extra": "min of 135 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 241.09509248504196,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000490042923648131",
-            "extra": "mean: 4.147741000004146 msec\nrounds: 220 on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 602737.7312126049,
+            "range": "± 7121",
+            "extra": "min of 220 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 39.595340372825184,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020129197453879483",
-            "extra": "mean: 25.255497000003402 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 98988.35093206297,
+            "range": "± 789",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2410 GHz"
           }
         ]
       },
@@ -3581,25 +3581,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 157.0894220542,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011695792529693091",
-            "extra": "mean: 6.365800999986959 msec\nrounds: 133 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 392723.55513550004,
+            "range": "± 7215",
+            "extra": "min of 133 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 235.8317585657654,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010075879097552641",
-            "extra": "mean: 4.240311000017982 msec\nrounds: 218 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 589579.3964144135,
+            "range": "± 14010",
+            "extra": "min of 218 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 41.04500753360047,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00027454808539517536",
-            "extra": "mean: 24.36349900000323 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 102612.51883400117,
+            "range": "± 1156",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -3626,25 +3626,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 151.01677328183482,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005758384336702979",
-            "extra": "mean: 6.621781000006877 msec\nrounds: 131 on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 377541.933204587,
+            "range": "± 32832",
+            "extra": "min of 131 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.76379931792087,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003008511188533739",
-            "extra": "mean: 4.371321000007811 msec\nrounds: 218 on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 571909.4982948021,
+            "range": "± 39361",
+            "extra": "min of 218 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 40.57215172946746,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002661633891028841",
-            "extra": "mean: 24.647447999996075 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 101430.37932366865,
+            "range": "± 1095",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2442 GHz"
           }
         ]
       },
@@ -3671,25 +3671,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 155.01282808655432,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00019535140388695564",
-            "extra": "mean: 6.451079000001414 msec\nrounds: 130 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 387532.0702163858,
+            "range": "± 11735",
+            "extra": "min of 130 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 236.56819042650682,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006163479138181255",
-            "extra": "mean: 4.227110999991623 msec\nrounds: 216 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 591420.476066267,
+            "range": "± 8623",
+            "extra": "min of 216 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 40.51989291727316,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004417273821118896",
-            "extra": "mean: 24.679235999997218 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 101299.7322931829,
+            "range": "± 1813",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -3716,25 +3716,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 206.0297914961345,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016068252655412064",
-            "extra": "mean: 4.853666999991901 msec\nrounds: 167 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 515074.47874033626,
+            "range": "± 17052",
+            "extra": "min of 167 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 294.72078447608095,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016874129347396478",
-            "extra": "mean: 3.3930419999990136 msec\nrounds: 255 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 736801.9611902024,
+            "range": "± 36642",
+            "extra": "min of 255 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 57.44652604482293,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001188341742651224",
-            "extra": "mean: 17.407493000007435 msec\nrounds: 55 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 143616.31511205732,
+            "range": "± 980",
+            "extra": "min of 55 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -3761,25 +3761,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 141.55918667458195,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0012601946299886724",
-            "extra": "mean: 7.064182999997115 msec\nrounds: 129 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 353897.9666864549,
+            "range": "± 63133",
+            "extra": "min of 129 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 228.39330789330046,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00032166801491726794",
-            "extra": "mean: 4.378412000001219 msec\nrounds: 200 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 570983.2697332512,
+            "range": "± 41948",
+            "extra": "min of 200 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 40.884801062937655,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0016184644893590925",
-            "extra": "mean: 24.458967000001053 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 102212.00265734414,
+            "range": "± 6763",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -3806,25 +3806,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 212.3515556454226,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000817107178567386",
-            "extra": "mean: 4.709171999991213 msec\nrounds: 167 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 530878.8891135565,
+            "range": "± 9211",
+            "extra": "min of 167 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 306.4200516396969,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009785060164425356",
-            "extra": "mean: 3.2634939999809376 msec\nrounds: 270 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 766050.1290992423,
+            "range": "± 22969",
+            "extra": "min of 270 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 60.42806881385685,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00031476334424935246",
-            "extra": "mean: 16.548600999982455 msec\nrounds: 56 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 151070.1720346421,
+            "range": "± 2873",
+            "extra": "min of 56 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6176 GHz"
           }
         ]
       },
@@ -3851,25 +3851,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 159.41493443754533,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008848625323250596",
-            "extra": "mean: 6.272937999995065 msec\nrounds: 135 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 398537.3360938633,
+            "range": "± 5622",
+            "extra": "min of 135 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 226.73531305059396,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006349354254494904",
-            "extra": "mean: 4.410428999989335 msec\nrounds: 205 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 566838.2826264849,
+            "range": "± 8160",
+            "extra": "min of 205 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 44.75059620103161,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002188750857956283",
-            "extra": "mean: 22.346070999986978 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 111876.49050257904,
+            "range": "± 1096",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8770 GHz"
           }
         ]
       },
@@ -3896,25 +3896,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 159.97760313558118,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006036791824440496",
-            "extra": "mean: 6.250874999999212 msec\nrounds: 134 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 399944.00783895294,
+            "range": "± 3862",
+            "extra": "min of 134 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 231.91949795904316,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00033090283191596",
-            "extra": "mean: 4.311841000003369 msec\nrounds: 203 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 579798.744897608,
+            "range": "± 44495",
+            "extra": "min of 203 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 45.21432176302024,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00045749399593420507",
-            "extra": "mean: 22.11688599999917 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 113035.80440755059,
+            "range": "± 2338",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -3941,25 +3941,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 182.02092002853118,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000652232070893089",
-            "extra": "mean: 5.493873999995458 msec\nrounds: 152 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 455052.30007132795,
+            "range": "± 5402",
+            "extra": "min of 152 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 289.4996172818363,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009241484731614871",
-            "extra": "mean: 3.454235999996058 msec\nrounds: 249 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 723749.0432045908,
+            "range": "± 19363",
+            "extra": "min of 249 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.33633861557478,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000324509117670909",
-            "extra": "mean: 21.58133400000395 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 115840.84653893695,
+            "range": "± 1742",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8899 GHz"
           }
         ]
       },
@@ -3986,25 +3986,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 298.43761937581945,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000035329269269450595",
-            "extra": "mean: 3.350783999991336 msec\nrounds: 248 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 746094.0484395486,
+            "range": "± 7867",
+            "extra": "min of 248 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 476.3528898432902,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025318508945113498",
-            "extra": "mean: 2.09928399999626 msec\nrounds: 396 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1190882.2246082255,
+            "range": "± 14363",
+            "extra": "min of 396 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 74.97868356040624,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007220422083879552",
-            "extra": "mean: 13.337123999974665 msec\nrounds: 65 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 187446.7089010156,
+            "range": "± 1015",
+            "extra": "min of 65 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       },
@@ -4031,25 +4031,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 180.5737985251333,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017328430817779028",
-            "extra": "mean: 5.537902000000372 msec\nrounds: 153 on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 451434.4963128333,
+            "range": "± 14126",
+            "extra": "min of 153 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 301.94558638654775,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013446864052925195",
-            "extra": "mean: 3.311854999992647 msec\nrounds: 265 on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 754863.9659663694,
+            "range": "± 30649",
+            "extra": "min of 265 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 40.83469047428116,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002586165157234013",
-            "extra": "mean: 24.488981999994053 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 102086.7261857029,
+            "range": "± 1078",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1995 GHz"
           }
         ]
       },
@@ -4076,25 +4076,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 237.77215103168683,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023850516438796393",
-            "extra": "mean: 4.205707000004111 msec\nrounds: 194 on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 594430.3775792171,
+            "range": "± 33710",
+            "extra": "min of 194 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 372.1837322213185,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013349648126735793",
-            "extra": "mean: 2.6868449999994937 msec\nrounds: 249 on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 930459.3305532963,
+            "range": "± 46230",
+            "extra": "min of 249 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 58.88926715428298,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002604976848486331",
-            "extra": "mean: 16.981022999999595 msec\nrounds: 55 on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 147223.16788570746,
+            "range": "± 2258",
+            "extra": "min of 55 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6938 GHz"
           }
         ]
       },
@@ -4121,25 +4121,25 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 190.94095895508335,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007427298099673472",
-            "extra": "mean: 5.237221000001568 msec\nrounds: 168 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 477352.39738770836,
+            "range": "± 6770",
+            "extra": "min of 168 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 311.5627802117465,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008193130007014745",
-            "extra": "mean: 3.2096260000002985 msec\nrounds: 270 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 778906.9505293663,
+            "range": "± 19883",
+            "extra": "min of 270 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 45.0292219387224,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001315491649171015",
-            "extra": "mean: 22.207801000000416 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 112573.054846806,
+            "range": "± 667",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.7934 GHz"
           }
         ]
       },
@@ -4166,67 +4166,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 182.2512106946691,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013558818063905733",
-            "extra": "mean: 5.486932000003719 msec\nrounds: 162 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 455628.0267366728,
+            "range": "± 11259",
+            "extra": "min of 162 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 300.9385973913967,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005262752477930759",
-            "extra": "mean: 3.3229370000000813 msec\nrounds: 269 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 752346.4934784917,
+            "range": "± 119154",
+            "extra": "min of 269 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.07234521554362,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041318711149861175",
-            "extra": "mean: 23.216752999999812 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 107680.86303885905,
+            "range": "± 1916",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 272.6079943383121,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004243074005552381",
-            "extra": "mean: 3.668271000002221 msec\nrounds: 232 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 681519.9858457802,
+            "range": "± 7883",
+            "extra": "min of 232 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 583.6583824124996,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002896317060466702",
-            "extra": "mean: 1.713331000004814 msec\nrounds: 519 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1459145.956031249,
+            "range": "± 24666",
+            "extra": "min of 519 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 55.26310321336524,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00032523594433199904",
-            "extra": "mean: 18.095255999995175 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138157.7580334131,
+            "range": "± 2483",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 271.4813706768212,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001785958422999986",
-            "extra": "mean: 3.6834940000005645 msec\nrounds: 235 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 678703.426692053,
+            "range": "± 32907",
+            "extra": "min of 235 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 569.2044457125559,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002394859440571653",
-            "extra": "mean: 1.7568380000057005 msec\nrounds: 511 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1423011.1142813896,
+            "range": "± 19398",
+            "extra": "min of 511 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.79876688073142,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002804845228525581",
-            "extra": "mean: 17.92154299999993 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 139496.91720182856,
+            "range": "± 2183",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.1451 GHz"
           }
         ]
       },
@@ -4253,67 +4253,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 206.44948181166066,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002629301854876632",
-            "extra": "mean: 4.843800000003284 msec\nrounds: 161 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 516123.70452915167,
+            "range": "± 28016",
+            "extra": "min of 161 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 322.0377518413236,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004661954197935124",
-            "extra": "mean: 3.1052260000024035 msec\nrounds: 259 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 805094.379603309,
+            "range": "± 12087",
+            "extra": "min of 259 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 52.897030165027736,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00035671967528263105",
-            "extra": "mean: 18.904652999992777 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 132242.57541256933,
+            "range": "± 2495",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 316.1092764487117,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006662644125714273",
-            "extra": "mean: 3.1634629999928165 msec\nrounds: 241 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 790273.1911217791,
+            "range": "± 16644",
+            "extra": "min of 241 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 654.5612116173326,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000028281401168903827",
-            "extra": "mean: 1.5277410000038572 msec\nrounds: 562 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1636403.0290433315,
+            "range": "± 30293",
+            "extra": "min of 562 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 64.13014417545865,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021994101730075667",
-            "extra": "mean: 15.593291000001841 msec\nrounds: 55 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 160325.36043864663,
+            "range": "± 2261",
+            "extra": "min of 55 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 313.7739221226595,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006431228730414666",
-            "extra": "mean: 3.187008000011815 msec\nrounds: 253 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 784434.8053066487,
+            "range": "± 15830",
+            "extra": "min of 253 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 648.490767438219,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004161151015566292",
-            "extra": "mean: 1.5420419999969681 msec\nrounds: 525 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1621226.9185955476,
+            "range": "± 43748",
+            "extra": "min of 525 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 64.22016934606998,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002732079640209621",
-            "extra": "mean: 15.57143199998734 msec\nrounds: 56 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 160550.42336517494,
+            "range": "± 2817",
+            "extra": "min of 56 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -4340,67 +4340,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 232.89301803050233,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003785209540085898",
-            "extra": "mean: 4.293816999997091 msec\nrounds: 197 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 582232.5450762558,
+            "range": "± 5133",
+            "extra": "min of 197 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 361.39401235168646,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004356508388678049",
-            "extra": "mean: 2.7670630000002916 msec\nrounds: 313 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 903485.0308792162,
+            "range": "± 14225",
+            "extra": "min of 313 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 59.202824495709415,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004965740471222362",
-            "extra": "mean: 16.89108600000111 msec\nrounds: 57 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 148007.06123927355,
+            "range": "± 4351",
+            "extra": "min of 57 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 368.61304182478847,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007058973529970754",
-            "extra": "mean: 2.71287199999648 msec\nrounds: 296 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 921532.6045619712,
+            "range": "± 23979",
+            "extra": "min of 296 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 759.057068946793,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008339285940665157",
-            "extra": "mean: 1.3174239999997894 msec\nrounds: 663 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1897642.6723669826,
+            "range": "± 120121",
+            "extra": "min of 663 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 76.1777885984187,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007399204260418775",
-            "extra": "mean: 13.127185999998403 msec\nrounds: 68 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 190444.47149604675,
+            "range": "± 1073",
+            "extra": "min of 68 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 362.97825106923824,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000038553709973628595",
-            "extra": "mean: 2.7549859999993487 msec\nrounds: 307 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 907445.6276730956,
+            "range": "± 12699",
+            "extra": "min of 307 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 735.4520235251815,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003629155587136705",
-            "extra": "mean: 1.3597079999954076 msec\nrounds: 625 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1838630.0588129538,
+            "range": "± 49074",
+            "extra": "min of 625 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 75.25788619866681,
-            "unit": "iter/sec",
-            "range": "stddev: 0.002350810541586928",
-            "extra": "mean: 13.287643999994714 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 188144.71549666702,
+            "range": "± 33286",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6944 GHz"
           }
         ]
       },
@@ -4427,67 +4427,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 238.12143145300305,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000058320011141210544",
-            "extra": "mean: 4.199537999994618 msec\nrounds: 194 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 595303.5786325076,
+            "range": "± 8267",
+            "extra": "min of 194 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 370.62129471621404,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000026522284676573355",
-            "extra": "mean: 2.698171999981014 msec\nrounds: 312 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 926553.236790535,
+            "range": "± 9108",
+            "extra": "min of 312 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 60.72940017760542,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00022282857612401417",
-            "extra": "mean: 16.466488999981266 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 151823.50044401354,
+            "range": "± 2055",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 366.2766186968329,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000291815446163458",
-            "extra": "mean: 2.730176999989453 msec\nrounds: 295 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 915691.5467420822,
+            "range": "± 9787",
+            "extra": "min of 295 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 771.5954123867434,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000021548644553862084",
-            "extra": "mean: 1.2960160000261567 msec\nrounds: 668 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1928988.5309668586,
+            "range": "± 32073",
+            "extra": "min of 668 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 75.39379498500706,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013894753991925896",
-            "extra": "mean: 13.263691000020117 msec\nrounds: 66 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 188484.48746251766,
+            "range": "± 1975",
+            "extra": "min of 66 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 363.5468650088634,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000032895596478622567",
-            "extra": "mean: 2.750676999994539 msec\nrounds: 293 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 908867.1625221585,
+            "range": "± 10869",
+            "extra": "min of 293 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 744.3200933568446,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025093746258925242",
-            "extra": "mean: 1.3435080000192556 msec\nrounds: 606 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1860800.2333921115,
+            "range": "± 34756",
+            "extra": "min of 606 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 75.07248811771923,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002585269938607895",
-            "extra": "mean: 13.320458999999119 msec\nrounds: 63 on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 187681.22029429808,
+            "range": "± 3643",
+            "extra": "min of 63 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.7022 GHz"
           }
         ]
       },
@@ -4514,67 +4514,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 186.6703552745114,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005682089407961457",
-            "extra": "mean: 5.35703699995338 msec\nrounds: 159 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 466675.88818627846,
+            "range": "± 4950",
+            "extra": "min of 159 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 288.68226936517374,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000024797099832894315",
-            "extra": "mean: 3.464016000009451 msec\nrounds: 256 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 721705.6734129343,
+            "range": "± 5166",
+            "extra": "min of 256 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 47.1177262305337,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015454848265393723",
-            "extra": "mean: 21.223434999967594 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 117794.31557633425,
+            "range": "± 858",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 286.0671290860513,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008900978435972761",
-            "extra": "mean: 3.4956829999828187 msec\nrounds: 234 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 715167.8227151282,
+            "range": "± 18210",
+            "extra": "min of 234 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 595.8271838921828,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000026624785121793975",
-            "extra": "mean: 1.6783390000227882 msec\nrounds: 517 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1489567.959730457,
+            "range": "± 23630",
+            "extra": "min of 517 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 57.883307021512344,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001910203648330196",
-            "extra": "mean: 17.27613799999972 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144708.26755378087,
+            "range": "± 1600",
+            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 282.97861021032986,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000039631931191352346",
-            "extra": "mean: 3.5338360000309876 msec\nrounds: 238 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 707446.5255258246,
+            "range": "± 7934",
+            "extra": "min of 238 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 581.9241554895736,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000024514686554568872",
-            "extra": "mean: 1.718437000022277 msec\nrounds: 497 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1454810.388723934,
+            "range": "± 20754",
+            "extra": "min of 497 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 57.771743840053425,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010310804354908388",
-            "extra": "mean: 17.309500000010303 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144429.35960013355,
+            "range": "± 860",
+            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8708 GHz"
           }
         ]
       },
@@ -4601,67 +4601,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 182.93933384088712,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002793258060934316",
-            "extra": "mean: 5.466293000004896 msec\nrounds: 149 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 457348.3346022178,
+            "range": "± 23370",
+            "extra": "min of 149 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 291.20737197282733,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020165120896611043",
-            "extra": "mean: 3.43397900000042 msec\nrounds: 172 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 728018.4299320683,
+            "range": "± 42751",
+            "extra": "min of 172 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 42.998363611274314,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0009516702915359741",
-            "extra": "mean: 23.256699000000935 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 107495.90902818578,
+            "range": "± 4399",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 271.085064053185,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000044484973770928336",
-            "extra": "mean: 3.688879000002032 msec\nrounds: 225 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 677712.6601329625,
+            "range": "± 8173",
+            "extra": "min of 225 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 558.4926061159862,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000023870687277184054",
-            "extra": "mean: 1.790534000001287 msec\nrounds: 477 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1396231.5152899656,
+            "range": "± 18614",
+            "extra": "min of 477 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 55.108533501296925,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00039660540826001647",
-            "extra": "mean: 18.146010000002377 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 137771.3337532423,
+            "range": "± 3011",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 267.34143645237214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004109547829914658",
-            "extra": "mean: 3.7405349999986015 msec\nrounds: 226 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 668353.5911309303,
+            "range": "± 7343",
+            "extra": "min of 226 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 550.7727065688368,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000020257875001425786",
-            "extra": "mean: 1.8156309999994846 msec\nrounds: 494 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1376931.766422092,
+            "range": "± 15363",
+            "extra": "min of 494 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 54.12992079547605,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00014663342399509824",
-            "extra": "mean: 18.47407099999998 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 135324.80198869013,
+            "range": "± 1074",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.9262 GHz"
           }
         ]
       },
@@ -4688,67 +4688,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 180.72584197000114,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000705774041517483",
-            "extra": "mean: 5.53324300000213 msec\nrounds: 154 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 451814.60492500284,
+            "range": "± 5763",
+            "extra": "min of 154 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 297.5423596179124,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023163390467596023",
-            "extra": "mean: 3.3608660000012947 msec\nrounds: 268 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 743855.899044781,
+            "range": "± 51267",
+            "extra": "min of 268 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 44.01133379868695,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0013881589329623404",
-            "extra": "mean: 22.72141999999633 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 110028.33449671738,
+            "range": "± 6722",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 276.08796604371497,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004035303100167619",
-            "extra": "mean: 3.622033999995722 msec\nrounds: 237 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 690219.9151092875,
+            "range": "± 7690",
+            "extra": "min of 237 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.7384333127073,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005077819654703798",
-            "extra": "mean: 1.6956669999999008 msec\nrounds: 540 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1474346.0832817683,
+            "range": "± 44151",
+            "extra": "min of 540 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 56.45226847796441,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004810794407306661",
-            "extra": "mean: 17.714079999997523 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 141130.67119491103,
+            "range": "± 3833",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 272.7321571123391,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000368062559718227",
-            "extra": "mean: 3.666600999999048 msec\nrounds: 242 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 681830.3927808477,
+            "range": "± 6844",
+            "extra": "min of 242 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 573.8166323049231,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002619809031593286",
-            "extra": "mean: 1.742716999999061 msec\nrounds: 506 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1434541.5807623079,
+            "range": "± 21565",
+            "extra": "min of 506 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 56.00002464001129,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001247499938748622",
-            "extra": "mean: 17.857134999999857 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140000.06160002822,
+            "range": "± 978",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2426 GHz"
           }
         ]
       },
@@ -4775,67 +4775,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 185.27991812095763,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002598107725613984",
-            "extra": "mean: 5.397239000004106 msec\nrounds: 149 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 463199.7953023941,
+            "range": "± 22297",
+            "extra": "min of 149 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 284.5669119250103,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003724948020520082",
-            "extra": "mean: 3.514112000004843 msec\nrounds: 243 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 711417.2798125257,
+            "range": "± 7541",
+            "extra": "min of 243 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.359033375227355,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008404366631651014",
-            "extra": "mean: 21.570768999993106 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 115897.58343806838,
+            "range": "± 4516",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 284.5524985133545,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006618475867815013",
-            "extra": "mean: 3.5142899999982546 msec\nrounds: 230 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 711381.2462833863,
+            "range": "± 13397",
+            "extra": "min of 230 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 591.1552533315555,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003011424367297112",
-            "extra": "mean: 1.691602999997599 msec\nrounds: 501 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1477888.1333288888,
+            "range": "± 26310",
+            "extra": "min of 501 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 59.253072360647636,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002803090832453577",
-            "extra": "mean: 16.87676200000965 msec\nrounds: 52 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 148132.68090161908,
+            "range": "± 2460",
+            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 280.76172903136336,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003458090001188124",
-            "extra": "mean: 3.5617390000055593 msec\nrounds: 235 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 701904.3225784084,
+            "range": "± 6815",
+            "extra": "min of 235 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 575.1483019864206,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000030125650565723976",
-            "extra": "mean: 1.7386820000098169 msec\nrounds: 461 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1437870.7549660516,
+            "range": "± 24914",
+            "extra": "min of 461 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 58.14742873524616,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025573413686958503",
-            "extra": "mean: 17.19766499999764 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 145368.5718381154,
+            "range": "± 2162",
+            "extra": "min of 51 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8743 GHz"
           }
         ]
       },
@@ -4862,67 +4862,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 197.51330745925856,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010374098676356877",
-            "extra": "mean: 5.062949999995681 msec\nrounds: 169 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 493783.26864814636,
+            "range": "± 10118",
+            "extra": "min of 169 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 319.7865360915076,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008042769117332718",
-            "extra": "mean: 3.127085999999224 msec\nrounds: 265 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 799466.3402287691,
+            "range": "± 20562",
+            "extra": "min of 265 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.428367807009046,
-            "unit": "iter/sec",
-            "range": "stddev: 0.001945083619865468",
-            "extra": "mean: 21.538556000002984 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 116070.91951752262,
+            "range": "± 10482",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 286.11410974541127,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009713189814701228",
-            "extra": "mean: 3.49510900000638 msec\nrounds: 241 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 715285.2743635281,
+            "range": "± 19878",
+            "extra": "min of 241 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 584.8100273857098,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000026402590767644367",
-            "extra": "mean: 1.7099570000027597 msec\nrounds: 510 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1462025.0684642743,
+            "range": "± 22574",
+            "extra": "min of 510 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 57.8522747948253,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021567181545739347",
-            "extra": "mean: 17.28540500000264 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144630.68698706324,
+            "range": "± 1805",
+            "extra": "min of 54 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 283.2512943163641,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005164774429477045",
-            "extra": "mean: 3.5304340000053003 msec\nrounds: 242 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 708128.2357909103,
+            "range": "± 10359",
+            "extra": "min of 242 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 573.2554546672519,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002616620967191581",
-            "extra": "mean: 1.744423000005213 msec\nrounds: 499 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1433138.6366681298,
+            "range": "± 21497",
+            "extra": "min of 499 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 58.37000477524927,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028098908201822873",
-            "extra": "mean: 17.13208700000024 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 145925.01193812318,
+            "range": "± 2393",
+            "extra": "min of 54 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4918 GHz"
           }
         ]
       },
@@ -4949,67 +4949,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 178.25658287991737,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000573670120021492",
-            "extra": "mean: 5.609891000062817 msec\nrounds: 148 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 445641.4571997934,
+            "range": "± 4557",
+            "extra": "min of 148 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 273.476523817681,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002696859006877683",
-            "extra": "mean: 3.656621000004634 msec\nrounds: 238 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 683691.3095442025,
+            "range": "± 5042",
+            "extra": "min of 238 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.49575183525256,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003206069218624715",
-            "extra": "mean: 22.99075099995207 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 108739.3795881314,
+            "range": "± 1516",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 284.37900441603887,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006937816680979985",
-            "extra": "mean: 3.5164339999482763 msec\nrounds: 222 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 710947.5110400972,
+            "range": "± 14027",
+            "extra": "min of 222 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 596.0317398506597,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006428914467080436",
-            "extra": "mean: 1.6777630000888166 msec\nrounds: 500 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1490079.3496266494,
+            "range": "± 57097",
+            "extra": "min of 500 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 57.8583199018319,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004451932901164453",
-            "extra": "mean: 17.283599000052163 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144645.79975457976,
+            "range": "± 3726",
+            "extra": "min of 51 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 282.8844711191897,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000505122685746666",
-            "extra": "mean: 3.5350119999293383 msec\nrounds: 223 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 707211.1777979742,
+            "range": "± 10105",
+            "extra": "min of 223 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 579.0401367453993,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002902303694386222",
-            "extra": "mean: 1.7269960000021456 msec\nrounds: 464 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1447600.3418634983,
+            "range": "± 24328",
+            "extra": "min of 464 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 57.365569953469624,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025163054695887264",
-            "extra": "mean: 17.43205900004341 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 143413.92488367407,
+            "range": "± 2070",
+            "extra": "min of 51 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8697 GHz"
           }
         ]
       },
@@ -5036,67 +5036,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 183.63961973413663,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002585731340217847",
-            "extra": "mean: 5.445447999989028 msec\nrounds: 157 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 459099.04933534155,
+            "range": "± 21800",
+            "extra": "min of 157 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 284.1344171715489,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005479464841593117",
-            "extra": "mean: 3.5194610000246485 msec\nrounds: 243 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 710336.0429288722,
+            "range": "± 11059",
+            "extra": "min of 243 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.51538159011506,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0007854533749729411",
-            "extra": "mean: 21.49826499999108 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 116288.45397528766,
+            "range": "± 4249",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 287.5771281855773,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000044870052536439414",
-            "extra": "mean: 3.4773280000024442 msec\nrounds: 234 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 718942.8204639432,
+            "range": "± 9277",
+            "extra": "min of 234 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 597.5443318100578,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025294443732744297",
-            "extra": "mean: 1.6735160000109772 msec\nrounds: 513 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1493860.8295251445,
+            "range": "± 22579",
+            "extra": "min of 513 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 58.16751954791005,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00014726386381456663",
-            "extra": "mean: 17.191725000003544 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 145418.7988697751,
+            "range": "± 1246",
+            "extra": "min of 53 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 282.72483409746604,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000335730142641111",
-            "extra": "mean: 3.537007999995012 msec\nrounds: 239 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 706812.0852436651,
+            "range": "± 6709",
+            "extra": "min of 239 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 579.0099624398159,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000028511772928738742",
-            "extra": "mean: 1.7270860000166977 msec\nrounds: 488 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1447524.9060995397,
+            "range": "± 23897",
+            "extra": "min of 488 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 57.61669685786632,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008440101751779056",
-            "extra": "mean: 17.356079999984786 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144041.7421446658,
+            "range": "± 700",
+            "extra": "min of 53 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           }
         ]
       },
@@ -5123,67 +5123,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 212.97961678591935,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008206260192523129",
-            "extra": "mean: 4.695284999996829 msec\nrounds: 180 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 532449.0419647984,
+            "range": "± 9306",
+            "extra": "min of 180 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 338.1617190791455,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000055954479394996946",
-            "extra": "mean: 2.9571649999979854 msec\nrounds: 294 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 845404.2976978637,
+            "range": "± 15996",
+            "extra": "min of 294 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 52.98559523011906,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000401719140521207",
-            "extra": "mean: 18.873053999996614 msec\nrounds: 50 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 132463.98807529765,
+            "range": "± 2820",
+            "extra": "min of 50 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 314.00378374559705,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000056775033215169436",
-            "extra": "mean: 3.18467499999997 msec\nrounds: 250 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 785009.4593639927,
+            "range": "± 13995",
+            "extra": "min of 250 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 596.8755950081345,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005816237468497715",
-            "extra": "mean: 1.6753910000062433 msec\nrounds: 483 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1492188.9875203362,
+            "range": "± 51802",
+            "extra": "min of 483 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 68.05718382366896,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00030805922595317616",
-            "extra": "mean: 14.693526000002066 msec\nrounds: 58 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 170142.95955917242,
+            "range": "± 3567",
+            "extra": "min of 58 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 312.0486995676669,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000064702898598962",
-            "extra": "mean: 3.2046280000059824 msec\nrounds: 261 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 780121.7489191673,
+            "range": "± 15751",
+            "extra": "min of 261 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 589.4537296505267,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000027245079762210594",
-            "extra": "mean: 1.6964860000001636 msec\nrounds: 521 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1473634.3241263167,
+            "range": "± 23666",
+            "extra": "min of 521 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 67.57712425141399,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00022912568712862757",
-            "extra": "mean: 14.797907000001942 msec\nrounds: 58 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 168942.81062853496,
+            "range": "± 2616",
+            "extra": "min of 58 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0193 GHz"
           }
         ]
       },
@@ -5210,67 +5210,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 193.55493050213877,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001975390649575752",
-            "extra": "mean: 5.166492000000744 msec\nrounds: 165 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 483887.32625534694,
+            "range": "± 18501",
+            "extra": "min of 165 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 320.0876784200517,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011647580098941114",
-            "extra": "mean: 3.1241439999689646 msec\nrounds: 257 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 800219.1960501292,
+            "range": "± 29834",
+            "extra": "min of 257 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 44.70258898166715,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011181098241753589",
-            "extra": "mean: 22.3700690000328 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 111756.47245416787,
+            "range": "± 559",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 283.59502064067436,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000051980672042958725",
-            "extra": "mean: 3.526154999974551 msec\nrounds: 240 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 708987.5516016859,
+            "range": "± 10452",
+            "extra": "min of 240 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 583.5824257683636,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000046012751249769274",
-            "extra": "mean: 1.7135539999912908 msec\nrounds: 515 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1458956.064420909,
+            "range": "± 39176",
+            "extra": "min of 515 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 56.29023379646667,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012976671776100516",
-            "extra": "mean: 17.765070999985255 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140725.5844911667,
+            "range": "± 1028",
+            "extra": "min of 53 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 281.19911174809357,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005867881391131126",
-            "extra": "mean: 3.556199000001925 msec\nrounds: 232 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 702997.7793702339,
+            "range": "± 11600",
+            "extra": "min of 232 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 575.437231606929,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002687235048496607",
-            "extra": "mean: 1.7378089999624535 msec\nrounds: 486 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1438593.0790173225,
+            "range": "± 22245",
+            "extra": "min of 486 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.74245070226757,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015947591291323252",
-            "extra": "mean: 17.939649000027202 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 139356.12675566893,
+            "range": "± 1239",
+            "extra": "min of 53 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           }
         ]
       },
@@ -5297,67 +5297,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 236.84144460036816,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000040456404882353956",
-            "extra": "mean: 4.222233999996661 msec\nrounds: 193 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 592103.6115009204,
+            "range": "± 5673",
+            "extra": "min of 193 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 373.1605052886509,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002879813804639993",
-            "extra": "mean: 2.6798120000037784 msec\nrounds: 319 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 932901.2632216272,
+            "range": "± 10025",
+            "extra": "min of 319 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 60.11750567660775,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006466606487044747",
-            "extra": "mean: 16.634089999996604 msec\nrounds: 58 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 150293.76419151938,
+            "range": "± 584",
+            "extra": "min of 58 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 368.4621458572704,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002664669332601528",
-            "extra": "mean: 2.713982999999587 msec\nrounds: 294 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 921155.364643176,
+            "range": "± 9044",
+            "extra": "min of 294 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 769.315985769063,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000018480951290698483",
-            "extra": "mean: 1.2998560000028192 msec\nrounds: 655 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1923289.9644226574,
+            "range": "± 27345",
+            "extra": "min of 655 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 75.45357217208007,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021573643434937074",
-            "extra": "mean: 13.253182999996227 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 188633.93043020018,
+            "range": "± 3071",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 364.55956101219084,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010175574578385911",
-            "extra": "mean: 2.7430359999982556 msec\nrounds: 304 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 911398.9025304771,
+            "range": "± 33809",
+            "extra": "min of 304 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 745.0015980288273,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004871540217650355",
-            "extra": "mean: 1.3422789999992801 msec\nrounds: 624 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1862503.9950720682,
+            "range": "± 67596",
+            "extra": "min of 624 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 75.28092205278192,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018861428691474582",
-            "extra": "mean: 13.283577999999352 msec\nrounds: 67 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 188202.30513195478,
+            "range": "± 2672",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -5384,67 +5384,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 188.02431756098005,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016682386509513732",
-            "extra": "mean: 5.318461000001662 msec\nrounds: 164 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 470060.7939024501,
+            "range": "± 14744",
+            "extra": "min of 164 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 292.38312715464525,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008557076970360226",
-            "extra": "mean: 3.4201699999982793 msec\nrounds: 263 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 730957.8178866131,
+            "range": "± 18288",
+            "extra": "min of 263 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 44.8657518001373,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017989194854877062",
-            "extra": "mean: 22.288716000005593 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 112164.37950034326,
+            "range": "± 905",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 284.5376007903909,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000052800939009975186",
-            "extra": "mean: 3.514473999999268 msec\nrounds: 242 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 711344.0019759773,
+            "range": "± 10687",
+            "extra": "min of 242 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 583.4785708771069,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002055181197437392",
-            "extra": "mean: 1.7138589999916576 msec\nrounds: 525 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1458696.4271927672,
+            "range": "± 17492",
+            "extra": "min of 525 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 57.63968487692001,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021975275794509276",
-            "extra": "mean: 17.349158000001808 msec\nrounds: 55 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144099.2121923,
+            "range": "± 1825",
+            "extra": "min of 55 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 281.22307289007244,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005701769842255563",
-            "extra": "mean: 3.555896000008829 msec\nrounds: 232 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 703057.6822251811,
+            "range": "± 11273",
+            "extra": "min of 232 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 573.2570977823466,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025327765981618347",
-            "extra": "mean: 1.7444180000012466 msec\nrounds: 488 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1433142.7444558665,
+            "range": "± 20808",
+            "extra": "min of 488 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 56.77016909278582,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017998770603711733",
-            "extra": "mean: 17.614885000000413 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 141925.42273196456,
+            "range": "± 1450",
+            "extra": "min of 53 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4822 GHz"
           }
         ]
       },
@@ -5471,67 +5471,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 247.3612124274115,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021051510595851612",
-            "extra": "mean: 4.0426709999792365 msec\nrounds: 195 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 618403.0310685288,
+            "range": "± 32202",
+            "extra": "min of 195 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 386.3447230273642,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008924139860433232",
-            "extra": "mean: 2.5883620000399787 msec\nrounds: 339 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 965861.8075684104,
+            "range": "± 33301",
+            "extra": "min of 339 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 60.991936256041484,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005588034670503376",
-            "extra": "mean: 16.39561000001777 msec\nrounds: 55 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 152479.8406401037,
+            "range": "± 5197",
+            "extra": "min of 55 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 355.9842555268162,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017739314912049715",
-            "extra": "mean: 2.8091130000120756 msec\nrounds: 290 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 889960.6388170405,
+            "range": "± 56200",
+            "extra": "min of 290 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 678.1398893877417,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008254569905922464",
-            "extra": "mean: 1.4746220000461108 msec\nrounds: 622 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1695349.7234693544,
+            "range": "± 94901",
+            "extra": "min of 622 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 76.9214319878822,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00040748319195575786",
-            "extra": "mean: 13.000277999992704 msec\nrounds: 64 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 192303.5799697055,
+            "range": "± 6028",
+            "extra": "min of 64 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 359.7441931030222,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020543416760718258",
-            "extra": "mean: 2.779752999970242 msec\nrounds: 288 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 899360.4827575556,
+            "range": "± 66466",
+            "extra": "min of 288 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 667.5308966758031,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005542738973757207",
-            "extra": "mean: 1.4980579999814836 msec\nrounds: 589 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1668827.2416895076,
+            "range": "± 61746",
+            "extra": "min of 589 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 76.8085022711346,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023062212049466938",
-            "extra": "mean: 13.019391999989693 msec\nrounds: 67 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 192021.2556778365,
+            "range": "± 3401",
+            "extra": "min of 67 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5036 GHz"
           }
         ]
       },
@@ -5558,67 +5558,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 183.82346182960026,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005982635912675256",
-            "extra": "mean: 5.440002000000277 msec\nrounds: 150 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 459558.6545740007,
+            "range": "± 5054",
+            "extra": "min of 150 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 296.91775615719354,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004288250169183645",
-            "extra": "mean: 3.3679359999965186 msec\nrounds: 257 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 742294.3903929838,
+            "range": "± 9451",
+            "extra": "min of 257 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.08905244631221,
-            "unit": "iter/sec",
-            "range": "stddev: 0.004231009069669012",
-            "extra": "mean: 23.207751000001053 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 107722.63111578052,
+            "range": "± 19639",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 271.8614680953681,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003351131232516192",
-            "extra": "mean: 3.678344000000777 msec\nrounds: 231 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 679653.6702384203,
+            "range": "± 61919",
+            "extra": "min of 231 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.0499155006274,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000051719400013903136",
-            "extra": "mean: 1.6976490000004674 msec\nrounds: 507 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1472624.7887515686,
+            "range": "± 44864",
+            "extra": "min of 507 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 55.260696757799934,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001865490754875373",
-            "extra": "mean: 18.09604400000353 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138151.74189449984,
+            "range": "± 1424",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 271.39870206277146,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004115472010958898",
-            "extra": "mean: 3.6846160000010286 msec\nrounds: 230 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 678496.7551569287,
+            "range": "± 7578",
+            "extra": "min of 230 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 575.9081495594669,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025371460457977037",
-            "extra": "mean: 1.7363880000047516 msec\nrounds: 519 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1439770.3738986673,
+            "range": "± 21037",
+            "extra": "min of 519 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.0869067567003,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018695486915008992",
-            "extra": "mean: 18.15313400000207 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 137717.26689175074,
+            "range": "± 1418",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -5645,67 +5645,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 187.11702991320962,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006628363467053113",
-            "extra": "mean: 5.344249000017953 msec\nrounds: 163 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 467792.574783024,
+            "range": "± 5802",
+            "extra": "min of 163 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 289.13474980346024,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000024693319012664113",
-            "extra": "mean: 3.45859500001211 msec\nrounds: 266 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 722836.8745086506,
+            "range": "± 5161",
+            "extra": "min of 266 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.90161813397154,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00024098693465438338",
-            "extra": "mean: 21.32122599999775 msec\nrounds: 50 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 117254.04533492884,
+            "range": "± 1325",
+            "extra": "min of 50 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 283.58207262151257,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003173500585667898",
-            "extra": "mean: 3.526316000005636 msec\nrounds: 231 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 708955.1815537814,
+            "range": "± 6380",
+            "extra": "min of 231 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 577.9484909156411,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000020211281075047297",
-            "extra": "mean: 1.7302580000091439 msec\nrounds: 522 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1444871.2272891027,
+            "range": "± 16878",
+            "extra": "min of 522 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 58.92963742357095,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002412129893996821",
-            "extra": "mean: 16.969390000014073 msec\nrounds: 54 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 147324.0935589274,
+            "range": "± 2094",
+            "extra": "min of 54 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 278.6287564373563,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003849734884907554",
-            "extra": "mean: 3.589005000009138 msec\nrounds: 236 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 696571.8910933908,
+            "range": "± 7472",
+            "extra": "min of 236 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 569.2874001854926,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000018929805440565634",
-            "extra": "mean: 1.7565820000129406 msec\nrounds: 510 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1423218.5004637316,
+            "range": "± 15337",
+            "extra": "min of 510 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 58.42297462450518,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001348795590741239",
-            "extra": "mean: 17.116553999983353 msec\nrounds: 53 on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 146057.43656126296,
+            "range": "± 1151",
+            "extra": "min of 53 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4910 GHz"
           }
         ]
       },
@@ -5732,67 +5732,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 183.80521646548686,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005295479832535046",
-            "extra": "mean: 5.440542000002324 msec\nrounds: 153 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 459513.04116371716,
+            "range": "± 4473",
+            "extra": "min of 153 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 285.2134508962951,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004695502593582894",
-            "extra": "mean: 3.5061459999781164 msec\nrounds: 241 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 713033.6272407378,
+            "range": "± 9549",
+            "extra": "min of 241 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 46.76437521694464,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012951681957102876",
-            "extra": "mean: 21.383799000005865 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 116910.93804236161,
+            "range": "± 708",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 288.8046606127661,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005375099699517148",
-            "extra": "mean: 3.462548000015886 msec\nrounds: 231 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 722011.6515319153,
+            "range": "± 11208",
+            "extra": "min of 231 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 596.8884206619202,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012470650030270162",
-            "extra": "mean: 1.6753550000032646 msec\nrounds: 516 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1492221.0516548005,
+            "range": "± 111075",
+            "extra": "min of 516 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 59.5016416204692,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015465694016606455",
-            "extra": "mean: 16.806259000020418 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 148754.104051173,
+            "range": "± 1369",
+            "extra": "min of 53 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 283.97893103548773,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006637807634574362",
-            "extra": "mean: 3.5213879999957953 msec\nrounds: 229 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 709947.3275887193,
+            "range": "± 13382",
+            "extra": "min of 229 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 587.3728925035919,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000026240104062272775",
-            "extra": "mean: 1.7024960000071587 msec\nrounds: 504 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1468432.2312589795,
+            "range": "± 22633",
+            "extra": "min of 504 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 58.80256802575105,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00041882899528472724",
-            "extra": "mean: 17.006059999999934 msec\nrounds: 53 on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 147006.42006437763,
+            "range": "± 3621",
+            "extra": "min of 53 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.1437 GHz"
           }
         ]
       },
@@ -5819,67 +5819,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 178.8079339940306,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001794991257405308",
-            "extra": "mean: 5.592593000002921 msec\nrounds: 153 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 447019.8349850765,
+            "range": "± 14347",
+            "extra": "min of 153 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 295.13664974470805,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004863398682987911",
-            "extra": "mean: 3.388260999997783 msec\nrounds: 258 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 737841.6243617701,
+            "range": "± 10591",
+            "extra": "min of 258 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 42.92916880329184,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018430388058875946",
-            "extra": "mean: 23.29418499999747 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 107322.9220082296,
+            "range": "± 849",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 272.1119533879528,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000037733093661338416",
-            "extra": "mean: 3.6749580000048354 msec\nrounds: 227 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 680279.883469882,
+            "range": "± 6985",
+            "extra": "min of 227 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 575.9224117287603,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000019591648916577976",
-            "extra": "mean: 1.7363450000118519 msec\nrounds: 527 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1439806.0293219006,
+            "range": "± 16246",
+            "extra": "min of 527 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 56.35316256484391,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007801244856129871",
-            "extra": "mean: 17.745232999999416 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140882.9064121098,
+            "range": "± 619",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 270.70207666414024,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00035391471471033046",
-            "extra": "mean: 3.6940979999968704 msec\nrounds: 230 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 676755.1916603505,
+            "range": "± 64837",
+            "extra": "min of 230 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 561.4854659486145,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003430307701703668",
-            "extra": "mean: 1.7809900000003154 msec\nrounds: 503 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1403713.6648715364,
+            "range": "± 27036",
+            "extra": "min of 503 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.452349491079,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007376210502875193",
-            "extra": "mean: 18.033501000005003 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138630.8737276975,
+            "range": "± 567",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -5906,67 +5906,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 182.91156061367934,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016351548672670347",
-            "extra": "mean: 5.467123000016727 msec\nrounds: 154 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 457278.9015341984,
+            "range": "± 13677",
+            "extra": "min of 154 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 289.9930923633461,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000028491685159390485",
-            "extra": "mean: 3.4483580000141956 msec\nrounds: 252 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 724982.7309083652,
+            "range": "± 5990",
+            "extra": "min of 252 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.28558918420315,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00034867653127885285",
-            "extra": "mean: 23.102376999986518 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 108213.97296050786,
+            "range": "± 1633",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 275.14055555085145,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006614633710919971",
-            "extra": "mean: 3.6345060000257945 msec\nrounds: 234 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 687851.3888771286,
+            "range": "± 12519",
+            "extra": "min of 234 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 584.3169334739432,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000038235941038507015",
-            "extra": "mean: 1.7114000000901797 msec\nrounds: 531 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1460792.333684858,
+            "range": "± 32637",
+            "extra": "min of 531 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 56.32603310386979,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00019213749092895446",
-            "extra": "mean: 17.753780000020924 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140815.08275967446,
+            "range": "± 1524",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 273.0237517016683,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00015360342170760364",
-            "extra": "mean: 3.662684999994781 msec\nrounds: 226 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 682559.3792541707,
+            "range": "± 28625",
+            "extra": "min of 226 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 570.8863924463745,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000021211228175016093",
-            "extra": "mean: 1.7516620000606054 msec\nrounds: 511 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1427215.9811159363,
+            "range": "± 17282",
+            "extra": "min of 511 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.98936426050828,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021998168414146294",
-            "extra": "mean: 17.860534999954325 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 139973.4106512707,
+            "range": "± 1724",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -5993,67 +5993,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 174.7193352282263,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018395466513100836",
-            "extra": "mean: 5.723464999988437 msec\nrounds: 147 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 436798.3380705658,
+            "range": "± 14039",
+            "extra": "min of 147 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 290.99238880361895,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000505216566638909",
-            "extra": "mean: 3.436515999993617 msec\nrounds: 255 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 727480.9720090474,
+            "range": "± 10695",
+            "extra": "min of 255 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 41.0070427545446,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025464831094212194",
-            "extra": "mean: 24.3860550000079 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 102517.6068863615,
+            "range": "± 1071",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 267.7224927861557,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006831018853435102",
-            "extra": "mean: 3.735210999991523 msec\nrounds: 216 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 669306.2319653893,
+            "range": "± 12240",
+            "extra": "min of 216 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.4790950113907,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000025022417912233457",
-            "extra": "mean: 1.6964129999905708 msec\nrounds: 494 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1473697.7375284766,
+            "range": "± 21737",
+            "extra": "min of 494 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 51.30863441710417,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003556412932568289",
-            "extra": "mean: 19.4898969999997 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 128271.58604276043,
+            "range": "± 2341",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 268.80903886624634,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020000435176228376",
-            "extra": "mean: 3.7201129999857585 msec\nrounds: 214 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 672022.5971656159,
+            "range": "± 36130",
+            "extra": "min of 214 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 574.5855083772218,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018659463751115232",
-            "extra": "mean: 1.7403850000050625 msec\nrounds: 454 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1436463.7709430545,
+            "range": "± 154010",
+            "extra": "min of 454 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 51.0141693385766,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00027443427333469656",
-            "extra": "mean: 19.602396999999883 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 127535.4233464415,
+            "range": "± 1786",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2501 GHz"
           }
         ]
       },
@@ -6080,67 +6080,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 187.33864288517265,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00042008768643470213",
-            "extra": "mean: 5.337926999999354 msec\nrounds: 152 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 468346.6072129316,
+            "range": "± 36858",
+            "extra": "min of 152 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 283.8991158814097,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011746072590719539",
-            "extra": "mean: 3.5223779999995486 msec\nrounds: 242 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 709747.7897035243,
+            "range": "± 23668",
+            "extra": "min of 242 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 47.01855794270566,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0008320131731642606",
-            "extra": "mean: 21.268198000001348 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 117546.39485676415,
+            "range": "± 4598",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 287.20372422843195,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000039761116410077",
-            "extra": "mean: 3.481848999996373 msec\nrounds: 231 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 718009.3105710798,
+            "range": "± 8199",
+            "extra": "min of 231 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 594.4214733570294,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008855293986115886",
-            "extra": "mean: 1.6823079999994661 msec\nrounds: 514 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1486053.6833925736,
+            "range": "± 78223",
+            "extra": "min of 514 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 57.900101134104055,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0032039638127584445",
-            "extra": "mean: 17.271127000000774 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 144750.25283526015,
+            "range": "± 26853",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 283.14077872786487,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000054031327351043324",
-            "extra": "mean: 3.5318119999985242 msec\nrounds: 217 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 707851.9468196621,
+            "range": "± 10829",
+            "extra": "min of 217 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 582.1907839211649,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000035856344290334906",
-            "extra": "mean: 1.7176499999962402 msec\nrounds: 500 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1455476.9598029123,
+            "range": "± 30383",
+            "extra": "min of 500 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 58.59781407887653,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002533261067862709",
-            "extra": "mean: 17.065482999996107 msec\nrounds: 51 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 146494.53519719132,
+            "range": "± 2175",
+            "extra": "min of 51 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -6167,67 +6167,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 179.34057546422477,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012150779160559733",
-            "extra": "mean: 5.5759830000070565 msec\nrounds: 152 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 448351.4386605619,
+            "range": "± 9770",
+            "extra": "min of 152 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 293.24412456082905,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00046938297211878127",
-            "extra": "mean: 3.4101279999987355 msec\nrounds: 266 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 733110.3114020727,
+            "range": "± 100908",
+            "extra": "min of 266 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 42.60607197026648,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00025668213554256447",
-            "extra": "mean: 23.470832999997526 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 106515.17992566619,
+            "range": "± 1165",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 274.60924477487094,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00012224945672857434",
-            "extra": "mean: 3.6415380000036635 msec\nrounds: 228 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 686523.1119371774,
+            "range": "± 23047",
+            "extra": "min of 228 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 582.0233926836612,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008372425001344719",
-            "extra": "mean: 1.7181440000015868 msec\nrounds: 505 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1455058.481709153,
+            "range": "± 70904",
+            "extra": "min of 505 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 55.29092397824612,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021758351466056303",
-            "extra": "mean: 18.08615099999855 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138227.3099456153,
+            "range": "± 1663",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 270.49009830381567,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006811854179134193",
-            "extra": "mean: 3.6969930000054774 msec\nrounds: 225 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 676225.2457595392,
+            "range": "± 124597",
+            "extra": "min of 225 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 565.615018662175,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021959067494645127",
-            "extra": "mean: 1.7679870000009146 msec\nrounds: 474 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1414037.5466554374,
+            "range": "± 175629",
+            "extra": "min of 474 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.33162845521121,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00031316044870940876",
-            "extra": "mean: 18.07284599999548 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138329.07113802803,
+            "range": "± 2397",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -6254,67 +6254,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 177.63046291384492,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000923356402350223",
-            "extra": "mean: 5.629665000000728 msec\nrounds: 153 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 444076.1572846123,
+            "range": "± 7284",
+            "extra": "min of 153 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 293.26897838874214,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007922973911832448",
-            "extra": "mean: 3.4098389999996925 msec\nrounds: 257 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 733172.4459718553,
+            "range": "± 17036",
+            "extra": "min of 257 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 41.32906503280656,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0004439661460370036",
-            "extra": "mean: 24.196047000003773 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 103322.6625820164,
+            "range": "± 1896",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 274.96647471261116,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00028806390278438715",
-            "extra": "mean: 3.6368069999994646 msec\nrounds: 223 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 687416.1867815279,
+            "range": "± 54449",
+            "extra": "min of 223 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.234219425276,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002293577363643571",
-            "extra": "mean: 1.697117999995612 msec\nrounds: 528 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1473085.54856319,
+            "range": "± 199081",
+            "extra": "min of 528 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 55.56149446194843,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001335628786106552",
-            "extra": "mean: 17.998076000004914 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 138903.73615487106,
+            "range": "± 1031",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 271.6135091866725,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003977618215380808",
-            "extra": "mean: 3.6817020000015077 msec\nrounds: 224 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 679033.7729666813,
+            "range": "± 7336",
+            "extra": "min of 224 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 573.5474194658539,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000255428995956416",
-            "extra": "mean: 1.7435350000027938 msec\nrounds: 522 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1433868.5486646346,
+            "range": "± 21006",
+            "extra": "min of 522 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 55.97958223108612,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00044620250988173924",
-            "extra": "mean: 17.863656000002948 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 139948.9555777153,
+            "range": "± 3496",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -6341,67 +6341,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 293.2523800383303,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003873798248669944",
-            "extra": "mean: 3.4100319999765816 msec\nrounds: 243 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 733130.9500958257,
+            "range": "± 8328",
+            "extra": "min of 243 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 466.4076860251932,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000150239152421313",
-            "extra": "mean: 2.144047000001592 msec\nrounds: 378 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1166019.2150629829,
+            "range": "± 81706",
+            "extra": "min of 378 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 73.80992203167834,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017638287600557027",
-            "extra": "mean: 13.548313999990569 msec\nrounds: 64 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 184524.80507919585,
+            "range": "± 2402",
+            "extra": "min of 64 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 440.27998285036404,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000024769512889987543",
-            "extra": "mean: 2.2712819999810563 msec\nrounds: 340 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 1100699.95712591,
+            "range": "± 12004",
+            "extra": "min of 340 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 850.7691378353143,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000017013408280007616",
-            "extra": "mean: 1.1754070000051797 msec\nrounds: 745 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 2126922.844588286,
+            "range": "± 30786",
+            "extra": "min of 745 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 94.64776361527505,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016566944377787387",
-            "extra": "mean: 10.56549000000473 msec\nrounds: 78 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 236619.40903818764,
+            "range": "± 3710",
+            "extra": "min of 78 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 432.6599414003459,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00013712650907317056",
-            "extra": "mean: 2.3112840000010237 msec\nrounds: 357 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 1081649.8535008647,
+            "range": "± 64173",
+            "extra": "min of 357 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 839.0035993246003,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000017711295078224442",
-            "extra": "mean: 1.1918900000011945 msec\nrounds: 748 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 2097508.9983115005,
+            "range": "± 31169",
+            "extra": "min of 748 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 94.11236790848658,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018365600936768006",
-            "extra": "mean: 10.625596000011228 msec\nrounds: 79 on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 235280.91977121643,
+            "range": "± 4067",
+            "extra": "min of 79 round(s) on Intel(R) Xeon(R) 6973P-C @ 2.6000 GHz"
           }
         ]
       },
@@ -6428,67 +6428,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 182.41610865584565,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0006877617891022246",
-            "extra": "mean: 5.481971999998336 msec\nrounds: 155 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 456040.27163961413,
+            "range": "± 57214",
+            "extra": "min of 155 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 305.0097237099685,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00039239944176786793",
-            "extra": "mean: 3.278584000000251 msec\nrounds: 266 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 762524.3092749213,
+            "range": "± 91263",
+            "extra": "min of 266 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 43.75627109407399,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00016589372146735896",
-            "extra": "mean: 22.853867000002026 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 109390.67773518497,
+            "range": "± 794",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 276.7003374083619,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000043980363947828244",
-            "extra": "mean: 3.614018000000385 msec\nrounds: 232 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 691750.8435209048,
+            "range": "± 8418",
+            "extra": "min of 232 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 588.0222225355502,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000017770254469280264",
-            "extra": "mean: 1.7006160000008208 msec\nrounds: 523 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1470055.5563388756,
+            "range": "± 15361",
+            "extra": "min of 523 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 56.111470598611085,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001078290271360262",
-            "extra": "mean: 17.821667999996293 msec\nrounds: 51 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140278.6764965277,
+            "range": "± 849",
+            "extra": "min of 51 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 272.6044272595292,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000033976110045002836",
-            "extra": "mean: 3.6683189999990873 msec\nrounds: 232 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 681511.068148823,
+            "range": "± 6312",
+            "extra": "min of 232 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 574.4845006947669,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00002522170960780748",
-            "extra": "mean: 1.7406910000019593 msec\nrounds: 522 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1436211.2517369173,
+            "range": "± 20810",
+            "extra": "min of 522 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 56.104673816681036,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009624827356079365",
-            "extra": "mean: 17.823827000000847 msec\nrounds: 52 on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 140261.6845417026,
+            "range": "± 757",
+            "extra": "min of 52 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2445 GHz"
           }
         ]
       },
@@ -6515,67 +6515,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 249.78456081635707,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00018535925111964034",
-            "extra": "mean: 4.00344999999902 msec\nrounds: 205 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 624461.4020408926,
+            "range": "± 28912",
+            "extra": "min of 205 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 396.6099369033084,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009101122739483778",
-            "extra": "mean: 2.5213690000001066 msec\nrounds: 332 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 991524.842258271,
+            "range": "± 35790",
+            "extra": "min of 332 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 62.238776076937675,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005180010913996109",
-            "extra": "mean: 16.067154000005246 msec\nrounds: 53 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 155596.9401923442,
+            "range": "± 5016",
+            "extra": "min of 53 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 366.31794419445936,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000987964009099322",
-            "extra": "mean: 2.7298689999994963 msec\nrounds: 269 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 915794.8604861484,
+            "range": "± 33143",
+            "extra": "min of 269 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 697.8498548123357,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00007539941156452752",
-            "extra": "mean: 1.432973000000004 msec\nrounds: 639 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1744624.6370308392,
+            "range": "± 91798",
+            "extra": "min of 639 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 78.24753686535394,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00047589997606032816",
-            "extra": "mean: 12.779954999999177 msec\nrounds: 61 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 195618.84216338483,
+            "range": "± 7284",
+            "extra": "min of 61 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 359.6863535001921,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00010267414353262146",
-            "extra": "mean: 2.7801999999965687 msec\nrounds: 306 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 899215.8837504804,
+            "range": "± 33208",
+            "extra": "min of 306 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 685.5752902219737,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005119110557935589",
-            "extra": "mean: 1.4586289999982682 msec\nrounds: 610 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1713938.2255549342,
+            "range": "± 60151",
+            "extra": "min of 610 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 77.84879490845552,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003724543198123701",
-            "extra": "mean: 12.84541399999739 msec\nrounds: 67 on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 194621.9872711388,
+            "range": "± 5643",
+            "extra": "min of 67 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6052 GHz"
           }
         ]
       },
@@ -6602,67 +6602,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 346.11213964040894,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00021219691566521872",
-            "extra": "mean: 2.889237000005096 msec\nrounds: 257 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 865280.3491010224,
+            "range": "± 63550",
+            "extra": "min of 257 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 513.7164870628079,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00001798910730829718",
-            "extra": "mean: 1.9465990000000488 msec\nrounds: 418 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 1284291.2176570198,
+            "range": "± 11869",
+            "extra": "min of 418 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 87.10492580968203,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00044919957916994275",
-            "extra": "mean: 11.480407000000525 msec\nrounds: 78 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 217762.31452420508,
+            "range": "± 8520",
+            "extra": "min of 78 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 518.8282782180563,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000018058008817188444",
-            "extra": "mean: 1.9274199999941288 msec\nrounds: 386 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 1297070.695545141,
+            "range": "± 12152",
+            "extra": "min of 386 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 1063.178307754737,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000023365815122646048",
-            "extra": "mean: 940.5760000049668 usec\nrounds: 799 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 2657945.7693868424,
+            "range": "± 66029",
+            "extra": "min of 799 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 110.45098240622704,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023383935815270488",
-            "extra": "mean: 9.053790000002948 msec\nrounds: 90 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 276127.4560155676,
+            "range": "± 7132",
+            "extra": "min of 90 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 511.32351489903334,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000480413872275178",
-            "extra": "mean: 1.9557090000006383 msec\nrounds: 362 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 1278308.7872475833,
+            "range": "± 31401",
+            "extra": "min of 362 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 1031.1925432409928,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006042500602101158",
-            "extra": "mean: 969.7509999995191 usec\nrounds: 823 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 2577981.358102482,
+            "range": "± 160634",
+            "extra": "min of 823 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 110.50186521620196,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0005963069649439133",
-            "extra": "mean: 9.049621000002617 msec\nrounds: 85 on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 276254.6630405049,
+            "range": "± 18203",
+            "extra": "min of 85 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -6689,67 +6689,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 191.0021193594665,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003989824003344817",
-            "extra": "mean: 5.235544000001369 msec\nrounds: 163 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 477505.2983986662,
+            "range": "± 36389",
+            "extra": "min of 163 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 281.63056209808536,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003626325570627258",
-            "extra": "mean: 3.5507509999987974 msec\nrounds: 248 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 704076.4052452134,
+            "range": "± 7191",
+            "extra": "min of 248 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 50.66081973258139,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009692333248771292",
-            "extra": "mean: 19.739120000004107 msec\nrounds: 50 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 126652.04933145347,
+            "range": "± 622",
+            "extra": "min of 50 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 302.53066904665195,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011765647233761847",
-            "extra": "mean: 3.305449999999155 msec\nrounds: 248 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 756326.6726166299,
+            "range": "± 26921",
+            "extra": "min of 248 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.3432594460805,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000060457908755758775",
-            "extra": "mean: 1.6968039999980533 msec\nrounds: 514 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1473358.1486152012,
+            "range": "± 52496",
+            "extra": "min of 514 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 67.19060557076929,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009369489994024666",
-            "extra": "mean: 14.88303300000382 msec\nrounds: 60 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 167976.51392692325,
+            "range": "± 1057",
+            "extra": "min of 60 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 300.1427478908248,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000421264856283705",
-            "extra": "mean: 3.3317480000008004 msec\nrounds: 244 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 750356.8697270621,
+            "range": "± 9487",
+            "extra": "min of 244 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 567.2481148930284,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000023470336952732013",
-            "extra": "mean: 1.7628969999989863 msec\nrounds: 495 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1418120.287232571,
+            "range": "± 18880",
+            "extra": "min of 495 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 66.5821295561624,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017147594609173548",
-            "extra": "mean: 15.019045000002507 msec\nrounds: 59 on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 166455.323890406,
+            "range": "± 1900",
+            "extra": "min of 59 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           }
         ]
       },
@@ -6776,67 +6776,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 244.87818901360768,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000030312305362858016",
-            "extra": "mean: 4.0836630000740115 msec\nrounds: 201 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 612195.4725340192,
+            "range": "± 4544",
+            "extra": "min of 201 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 363.5088051046266,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000023133891583961652",
-            "extra": "mean: 2.7509649999046815 msec\nrounds: 311 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 908772.0127615666,
+            "range": "± 7642",
+            "extra": "min of 311 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 65.66994142924716,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001975158555079392",
-            "extra": "mean: 15.22766700009015 msec\nrounds: 61 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 164174.8535731179,
+            "range": "± 2129",
+            "extra": "min of 61 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 397.10983462466845,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000034064219092703355",
-            "extra": "mean: 2.518194999993284 msec\nrounds: 314 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 992774.5865616711,
+            "range": "± 13429",
+            "extra": "min of 314 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 772.8817437931284,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000023135134004413104",
-            "extra": "mean: 1.2938589998157113 msec\nrounds: 658 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1932204.359482821,
+            "range": "± 34549",
+            "extra": "min of 658 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 87.29353551335097,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00023238291303129312",
-            "extra": "mean: 11.455601999841747 msec\nrounds: 75 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 218233.83878337743,
+            "range": "± 4427",
+            "extra": "min of 75 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 390.23293777783704,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003991776841463836",
-            "extra": "mean: 2.562572000442742 msec\nrounds: 311 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 975582.3444445926,
+            "range": "± 15197",
+            "extra": "min of 311 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 749.9236951508839,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008530072156747698",
-            "extra": "mean: 1.3334690002011484 msec\nrounds: 624 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1874809.2378772097,
+            "range": "± 119930",
+            "extra": "min of 624 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 86.27937867031562,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003370747640264241",
-            "extra": "mean: 11.590254999646277 msec\nrounds: 70 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 215698.44667578905,
+            "range": "± 6273",
+            "extra": "min of 70 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       },
@@ -6863,67 +6863,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 192.60014822498232,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006429259435389333",
-            "extra": "mean: 5.192104000002473 msec\nrounds: 161 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 481500.3705624558,
+            "range": "± 5962",
+            "extra": "min of 161 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 301.19919447285304,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00019133086565696966",
-            "extra": "mean: 3.3200620000002345 msec\nrounds: 253 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 752997.9861821326,
+            "range": "± 43394",
+            "extra": "min of 253 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 48.264483966606534,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00020736335416595938",
-            "extra": "mean: 20.719168999960402 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 120661.20991651634,
+            "range": "± 1208",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 296.6849315820141,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000033743787592820347",
-            "extra": "mean: 3.3705789999771696 msec\nrounds: 245 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 741712.3289550352,
+            "range": "± 7425",
+            "extra": "min of 245 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 585.7180845290148,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005641252089421323",
-            "extra": "mean: 1.707305999957498 msec\nrounds: 523 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1464295.2113225372,
+            "range": "± 48383",
+            "extra": "min of 523 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 65.08124417109607,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000780106619563831",
-            "extra": "mean: 15.365410000015345 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 162703.11042774018,
+            "range": "± 826",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 292.3718431836853,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00011814378996970214",
-            "extra": "mean: 3.4203020000518336 msec\nrounds: 242 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 730929.6079592133,
+            "range": "± 25248",
+            "extra": "min of 242 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 569.4122014719975,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008384278472621181",
-            "extra": "mean: 1.7561970000201654 msec\nrounds: 523 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1423530.5036799938,
+            "range": "± 67961",
+            "extra": "min of 523 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 64.68901564355396,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008976671730998434",
-            "extra": "mean: 15.458574999968278 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 161722.5391088849,
+            "range": "± 939",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       },
@@ -6950,67 +6950,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 194.1211572262037,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002940592916420987",
-            "extra": "mean: 5.1514219999972966 msec\nrounds: 168 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 485302.89306550927,
+            "range": "± 27703",
+            "extra": "min of 168 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 303.36170270860515,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003354114740592114",
-            "extra": "mean: 3.2963949999995634 msec\nrounds: 190 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 758404.2567715129,
+            "range": "± 77168",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 50.8267995482521,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0003640962572936939",
-            "extra": "mean: 19.674659999999733 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 127066.99887063024,
+            "range": "± 2351",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 301.77309801501315,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008129119146739633",
-            "extra": "mean: 3.313747999996508 msec\nrounds: 251 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 754432.7450375329,
+            "range": "± 18507",
+            "extra": "min of 251 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 591.1307918244221,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006996454244693971",
-            "extra": "mean: 1.6916730000033908 msec\nrounds: 537 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1477826.9795610553,
+            "range": "± 61120",
+            "extra": "min of 537 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 68.45137190583573,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002698006176623225",
-            "extra": "mean: 14.608910999996283 msec\nrounds: 61 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 171128.42976458932,
+            "range": "± 3160",
+            "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 300.00930028807227,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00009536913453697564",
-            "extra": "mean: 3.3332300000026294 msec\nrounds: 249 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 750023.2507201807,
+            "range": "± 21459",
+            "extra": "min of 249 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 574.1681738559141,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003645533582502509",
-            "extra": "mean: 1.7416500000067003 msec\nrounds: 508 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1435420.4346397852,
+            "range": "± 30045",
+            "extra": "min of 508 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 68.27586508251203,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00017577670050045676",
-            "extra": "mean: 14.646464000001913 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 170689.66270628007,
+            "range": "± 2048",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
           }
         ]
       },
@@ -7037,67 +7037,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 191.70606705614438,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006694100044058628",
-            "extra": "mean: 5.216318999998748 msec\nrounds: 163 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 479265.16764036095,
+            "range": "± 6150",
+            "extra": "min of 163 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 297.4258093619081,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00004523156968342025",
-            "extra": "mean: 3.362183000007235 msec\nrounds: 254 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 743564.5234047702,
+            "range": "± 10003",
+            "extra": "min of 254 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 49.600701949120165,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001908084978555058",
-            "extra": "mean: 20.161005000005616 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 124001.75487280042,
+            "range": "± 1174",
+            "extra": "min of 50 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 303.2690584876625,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0000395097443424677",
-            "extra": "mean: 3.2974020000153814 msec\nrounds: 253 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 758172.6462191562,
+            "range": "± 9084",
+            "extra": "min of 253 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 589.8848898636217,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000059029509640161934",
-            "extra": "mean: 1.6952459999970415 msec\nrounds: 535 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1474712.224659054,
+            "range": "± 51350",
+            "extra": "min of 535 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 67.36076546622378,
-            "unit": "iter/sec",
-            "range": "stddev: 0.000185355778402577",
-            "extra": "mean: 14.84543699999108 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 168401.91366555946,
+            "range": "± 2103",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 298.4165124586428,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00026346566398475157",
-            "extra": "mean: 3.351021000014498 msec\nrounds: 251 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 746041.281146607,
+            "range": "± 58656",
+            "extra": "min of 251 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 573.4194838732664,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002442136163778158",
-            "extra": "mean: 1.7439240000101108 msec\nrounds: 514 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1433548.709683166,
+            "range": "± 200750",
+            "extra": "min of 514 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 67.63417351879131,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00045603505711906125",
-            "extra": "mean: 14.785425000013674 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 169085.4337969783,
+            "range": "± 5215",
+            "extra": "min of 58 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           }
         ]
       },
@@ -7124,67 +7124,67 @@ window.BENCHMARK_DATA = {
         "tool": "pytest",
         "benches": [
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
-            "value": 209.5901318266053,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006750028972310347",
-            "extra": "mean: 4.771216999984063 msec\nrounds: 171 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "unit": "lookups/sec",
+            "value": 523975.32956651325,
+            "range": "± 7413",
+            "extra": "min of 171 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
-            "value": 320.9402264849614,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00006601103014891288",
-            "extra": "mean: 3.1158450000248195 msec\nrounds: 260 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 802350.5662124035,
+            "range": "± 16998",
+            "extra": "min of 260 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
-            "value": 57.240335799431236,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002480551744724121",
-            "extra": "mean: 17.470197999955417 msec\nrounds: 54 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "unit": "lookups/sec",
+            "value": 143100.83949857808,
+            "range": "± 2032",
+            "extra": "min of 54 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
-            "value": 345.0949753120374,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005555249935653092",
-            "extra": "mean: 2.897753000013381 msec\nrounds: 260 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 862737.4382800935,
+            "range": "± 16539",
+            "extra": "min of 260 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
-            "value": 654.9809334939218,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00008744384459185602",
-            "extra": "mean: 1.526762000025883 msec\nrounds: 548 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1637452.3337348045,
+            "range": "± 93784",
+            "extra": "min of 548 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
-            "value": 78.42424978177326,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0001855446671121817",
-            "extra": "mean: 12.751158000014584 msec\nrounds: 66 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 196060.62445443313,
+            "range": "± 2853",
+            "extra": "min of 66 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
-            "value": 340.547259446756,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00005376990117865133",
-            "extra": "mean: 2.936449999992874 msec\nrounds: 266 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "unit": "lookups/sec",
+            "value": 851368.1486168901,
+            "range": "± 15590",
+            "extra": "min of 266 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
-            "value": 657.1968975242327,
-            "unit": "iter/sec",
-            "range": "stddev: 0.00003205281373367108",
-            "extra": "mean: 1.521613999955207 msec\nrounds: 535 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 1642992.2438105817,
+            "range": "± 34610",
+            "extra": "min of 535 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           },
           {
-            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
-            "value": 78.02744131477407,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0002052397414862552",
-            "extra": "mean: 12.816004000001158 msec\nrounds: 65 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "unit": "lookups/sec",
+            "value": 195068.60328693516,
+            "range": "± 3124",
+            "extra": "min of 65 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           }
         ]
       }
