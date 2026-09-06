@@ -477,7 +477,9 @@ class ParseAccumulator:
         tz_name: str,
     ) -> None:
         original_boundary_coords = poly_with_hole[0]
-        x_coords_orig, y_coords_orig = zip(*original_boundary_coords, strict=True)
+        # not strict: this unpacks parsed GeoJSON, where `strict=` would constrain each
+        # position's arity and reject the elevation a position is allowed to carry
+        x_coords_orig, y_coords_orig = zip(*original_boundary_coords, strict=False)
         if (
             len(x_coords_orig) > 3
             and x_coords_orig[0] == x_coords_orig[-1]
