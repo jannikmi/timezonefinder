@@ -30,8 +30,10 @@ the report leads with the one that measures the *real* function untouched.
   each executing the real code up to stage k and stopping. The cost of stage k is
   ``T_k - T_(k-1)``. Nothing is instrumented, so nothing is distorted; the prices are
   that the ladder is a *copy* of the lookup - which the ``timezone_at`` row at the
-  bottom of every table cross-checks against the real thing - and that a stage measured
-  as the difference of two large numbers is noise (see the ``ffi.from_buffer`` note).
+  bottom of every table cross-checks against the real thing, and which has twice bound a
+  *checked public* accessor where the lookup calls the unchecked internal one (finding
+  10) - and that a stage measured as the difference of two large numbers is noise (see
+  the ``ffi.from_buffer`` note).
 * **line_profiler** (``--line-profile``, corroboration only). Its cost is not a per-line
   probe that could be subtracted off: enabling it deoptimises the whole interpreter, so
   code that never calls the profiled function slows down too. Measured here, with only
@@ -62,9 +64,19 @@ Inputs are the committed fixtures in ``tests/fixtures/benchmarks/``, so two runs
 same commit execute the same workload.
 
 
-FINDINGS (2026-09-06, Apple arm64, Python 3.14.2, data 2026c, fixture set v3)
+FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2 free-threading build, data 2026c,
+fixture set v3)
 
-Re-taken when ``is_valid_lat``, ``is_valid_lng`` and ``coord2int`` stopped being
+**The ladder tables below are a re-take of the instrument, not of the code**: nothing
+under ``timezonefinder/`` moved with them, so the block tables, the point-in-polygon
+table, the paired A/B figures and the conclusions are the previous run's and still
+describe this tree. What changed is the ladder itself - ``zone_name_from_id`` now binds
+``tf.zone_names.name_of``, the accessor ``timezone_at`` calls, rather than the checked
+public wrapper in front of it, and the two geometry rungs stop at the candidate the
+lookup stops at (finding 8). Only ladder figures moved.
+
+The run before that was taken when ``is_valid_lat``, ``is_valid_lng`` and ``coord2int``
+stopped being
 ``njit`` functions, and when the numpy gather that built a cell's whole zone id array to
 read one element of it was deleted. The first moves the prologue on *every* stratum
 **on the numba backend only** - without numba ``njit`` was already a no-op decorator, so
@@ -148,43 +160,57 @@ Unique-shortcut stratum - the common case, and the one with no geometry in it at
 (``in_memory=False``):
 
     stage                       numba      clang
-    validate_coordinates          212        211
-    h3.latlng_to_cell             365        371
-    shortcut table read           114        110
-    zone_name_from_id              58         64
+    validate_coordinates          211        211
+    h3.latlng_to_cell             364        375
+    shortcut table read           112        115
+    zone_name_from_id              38         37
     ------------------------------------------------
-    ladder total                  742        745
-    real timezone_at()            791        792   (+49 / +47 call overhead)
+    ladder total                  715        728
+    real timezone_at()            793        806   (+78 / +78 call overhead)
 
   ``validate_coordinates`` reads the same ~212 ns on both backends now, against 270
   numba / 212 clang before. The clang figure did not move and the numba one fell to meet
   it: the whole backend gap that stage carried was the ``njit`` dispatch, not the
   comparison, and removing the decorator removed the difference rather than making the
   stage cheaper than it was on the backend that never paid for it. ``coord2int x2``
-  reads the same way - 92/119 ns against 229 numba / 104 clang.
+  reads the same way - 107/106 ns against 229 numba / 104 clang.
+
+  ``zone_name_from_id`` reads 37-38 ns here against 58-64 before, and **that fall is the
+  instrument being repaired rather than the stage getting cheaper**: the rung used to
+  bind the checked public ``tf.zone_name_from_id``, which runs a sign test before
+  delegating, where ``timezone_at`` calls ``self.zone_names.name_of`` directly. It was
+  ~1.7x the cost of the call it claimed to price, and 8.2-8.7 % of this ladder where it
+  is now 5.2-5.3 %.
 
 Ambiguous-shortcut stratum, ``in_memory=False``:
 
     stage                       numba      clang
-    validate + h3 + table         684        688
-    candidate list slice          252        243
-    last_change read              114         98
-    coord2int x2                   92        119
-    bbox rejection                557        584
-    hole checks                   582        594
-    boundary PIP                1,208        731
+    validate + h3 + table         683        697
+    candidate list slice          265        271
+    last_change read               88         91
+    coord2int x2                  107        106
+    bbox rejection                506        496
+    hole checks                   537        556
+    boundary PIP                1,209        782
     ------------------------------------------------
-    ladder total                3,492      3,069
-    real timezone_at()          3,663      3,225
+    ladder total                3,400      3,005
+    real timezone_at()          3,562      3,156
 
-  **The ladder no longer overshoots**: it reads -4 % of the real function, in the
-  direction it should, where it was +28-30 % before. That gap was mostly one rung - the
-  deleted ``zone_ids_of``, which bound the *checked public* accessor at ~1,793 ns where
-  ``timezone_at`` called the unchecked one at ~564. Deleting the call deleted the rung
-  and with it that half of the instrument error. **``PROF-1`` is not finished by this**:
-  ``zone_name_from_id`` still binds the checked public accessor, and PROF-1 owns the
-  measurement and the repair for it. Rungs here can be read again, but the block
-  breakdown above is still the one to quote a share from.
+  **The ladder no longer overshoots**: it reads -4.5 % (numba) / -4.8 % (clang) of the
+  real function, in the direction it should, where it was +28-30 % two runs ago. Both
+  accessor mis-bindings are gone - ``zone_ids_of`` by deletion when the candidate loop
+  stopped building the array, ``zone_name_from_id`` by rebinding (finding 8) - so every
+  rung here now binds the symbol the lookup binds. The block breakdown above is still
+  the one to quote a *share* from, because a rung is a difference of two large numbers
+  and the blocks are measured over the real function.
+
+  The two geometry rungs moved for a second reason, and it is the smaller one: they now
+  break where the lookup breaks. Counted over the fixtures, the candidate slice they
+  used to run to is **1.0695 candidates per ambiguous query against the 1.0465 the
+  lookup actually opens - 2.2 % more** (1.4 % on ``random``, 2.6 % on ``on_land``). Read
+  the count rather than the rung deltas: 2 % of a ~540 ns rung is ~12 ns, which is
+  inside this machine's round-to-round spread, and the clang and numba columns duly
+  disagree about how much of the change was the break and how much was jitter.
 
 One point-in-polygon test, per call, by polygon size stratum. Nothing precedes the
 kernel any more: since polygon layout 3 a collection binds its backend and wraps its
@@ -261,7 +287,12 @@ CONCLUSIONS
    kernel itself, not the crossing.
 
 6. **Better shortcut ordering has a much lower ceiling than it had.** The boundary-PIP
-   rung is ~18-23 % of the ambiguous ladder, against 59-66 % before the index - and a correspondingly small share of a random one, which is the workload.
+   rung is 26 % (clang) / 36 % (numba) of the ambiguous ladder, against 59-66 % before
+   the index - and a correspondingly small share of a random one, which is the workload.
+   That is higher than the ~18-23 % quoted here before finding 10, and the rung rather
+   than the kernel is what moved: the two rungs above it used to run past the ``break``,
+   so the difference taken as ``boundary PIP`` was charged with candidates the lookup
+   never opens.
    Ordering still wins by reducing *how many* candidates are opened rather than by
    opening cheaper ones first, and it was rejected on a count, which no timing here
    disturbs. What changed is that opening a *large* candidate is no longer expensive, so
@@ -296,8 +327,8 @@ CONCLUSIONS
    Half of ``PROF-1`` went with it, by deletion rather than repair: the ``zone_ids_of``
    rung bound the checked public accessor at ~1,793 ns where the lookup called the
    unchecked one at ~564, and it was most of the ~28-30 % this ladder used to overshoot
-   the real function by. The ladder now reads -3 to -6 %. **The other half stands**:
-   ``zone_name_from_id`` still binds the public accessor, and PROF-1 owns it.
+   the real function by. **The other half has now been repaired rather than deleted**,
+   and is finding 10.
 
 9. **Two checkouts do not compare unless they name the same interpreter.** uv picks a
    Python per invocation, and two worktrees *inside* this repository, on one machine and
@@ -310,10 +341,39 @@ CONCLUSIONS
    question allows it. The contributor memory carries the rule; this is where it was
    measured.
 
+10. **A ladder rung must bind the symbol the lookup binds, and must stop where the lookup
+    stops.** Both halves were wrong here, and neither was visible from the numbers.
+
+    *Binding.* ``zone_name_from_id`` bound ``tf.zone_name_from_id``, the checked public
+    accessor, where ``timezone_at`` calls ``self.zone_names.name_of``. The public form
+    adds a sign test, and the rung read 58-64 ns for a call costing 37-38 - ~1.7x, and
+    8.2-8.7 % of the unique ladder rather than 5.2-5.3 %. The public/private accessor
+    split on ``TimezoneFinder`` exists *because* the two differ in cost, which makes the
+    ladder the one caller for which reaching for the public name is a bug. This is the
+    second rung to have carried that mistake - the deleted ``zone_ids_of`` was the first
+    - so it is a property of copying a function by hand rather than a slip: check every
+    binding in ``make_ladder`` against the real call site when a rung is added.
+
+    *Stopping.* ``s8_bbox`` and ``s9_holes`` run no point-in-polygon test, so nothing in
+    them can reproduce the ``break`` that ends the real candidate loop on a match, and
+    left alone they ran to ``stop_index_of`` - 2.2 % more candidates per ambiguous query
+    than the lookup opens (1.0695 against 1.0465; 1.4 % on ``random``, 2.6 % on
+    ``on_land``). That overstates those two rungs and understates ``boundary PIP``,
+    which is taken as the difference above them. ``examined_candidates`` counts the real
+    loop's trip count once per stratum, outside every timed loop, and the rungs are
+    handed it. The cost of receiving it is added to *every* rung including ``loop
+    overhead``, so it cancels in every difference and in the ladder total.
+
+    **What this does not license.** 2.2 % of a rung is ~12 ns, inside this machine's
+    round-to-round spread, so the stopping half is justified by the count and not by a
+    timing delta - the two backends disagree about the size of that delta, which is what
+    a sub-noise change looks like. The binding half is the one worth 20-28 ns.
+
 """
 
 import argparse
 import collections
+import functools
 import inspect
 import signal
 import time
@@ -374,15 +434,68 @@ def measure(fn: Callable[[], object], repeats: int = REPEATS) -> float:
 # Each function is a verbatim copy of the real lookup up to one more stage. They are
 # written out rather than parametrised on purpose - a `if depth >= k` inside the loop
 # would add a branch per stage to the very thing being measured.
+#
+# Every rung takes the same `stops` sequence and unpacks it in the same `zip`, including
+# the rungs that never read it. That is deliberate: a cost added to *every* prefix
+# cancels in every difference, so the per-stage figures and the ladder total are the ones
+# the loop shape would have produced without it. Only the two geometry rungs use the
+# value - see `examined_candidates` for why they cannot derive it themselves.
 # ---------------------------------------------------------------------------
 
 
-def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]:
+def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
+    """How many candidate polygons ``timezone_at`` opens for each point.
+
+    The geometry rungs need this because they cannot discover it themselves: ``s8_bbox``
+    and ``s9_holes`` run no point-in-polygon test, so nothing in them can reproduce the
+    ``break`` that ends the real loop on a match. Left to run to ``stop_index_of`` they
+    open more candidates than the lookup does, which overstates their own two rungs and
+    understates ``boundary PIP``, the rung taken as the difference above them.
+
+    Computed once per stratum, outside every timed loop. It is a count, so it does not
+    move between backends or machines. Zero for a point whose cell holds a unique zone,
+    which reaches no candidate list at all.
+    """
+    counts = []
+    for lng, lat in points:
+        lng, lat = utils.validate_coordinates(lng, lat)
+        entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
+        if entry >= 0:
+            counts.append(0)
+            continue
+        candidates = tf.shortcuts.candidates_of(entry)
+        last = tf.shortcuts.stop_index_of(entry)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
+        opened = 0
+        for i, boundary_id in enumerate(candidates):
+            if i >= last:
+                break
+            opened = i + 1
+            if tf.boundaries.outside_bbox(boundary_id, x, y):
+                continue
+            hole_ids = tf._hole_ids_of(boundary_id)
+            if hole_ids and tf.holes.in_any_polygon(hole_ids, x, y):
+                continue
+            if tf.boundaries.pip(boundary_id, x, y):
+                break
+        counts.append(opened)
+    return counts
+
+
+def make_ladder(
+    tf: TimezoneFinder,
+) -> list[tuple[str, Callable[[Points, Sequence[int]], int]]]:
     validate = utils.validate_coordinates
     latlng_to_cell = h3.latlng_to_cell
     res = SHORTCUT_H3_RES
     shortcuts = tf.shortcuts
-    zone_name_from_id = tf.zone_name_from_id
+    # A rung must bind the symbol the lookup binds. ``timezone_at`` calls
+    # ``self.zone_names.name_of``; the public ``tf.zone_name_from_id`` in front of it
+    # adds a sign check, and the public/private accessor split on this class exists
+    # precisely because the two differ in cost - so the ladder is the one caller for
+    # which reaching for the public name is a bug.
+    zone_name_from_id = tf.zone_names.name_of
     zone_id_of = tf._zone_id_of
     coord2int = utils.coord2int
     outside_bbox = tf.boundaries.outside_bbox
@@ -390,39 +503,39 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
     hole_ids_of = tf._hole_ids_of
     boundary_pip = tf.boundaries.pip
 
-    def s0_loop(points: Points) -> int:
+    def s0_loop(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             n += 1
         return n
 
-    def s1_validate(points: Points) -> int:
+    def s1_validate(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             n += 1
         return n
 
-    def s2_h3(points: Points) -> int:
+    def s2_h3(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             n += 1
         return n
 
-    def s3_shortcut(points: Points) -> int:
+    def s3_shortcut(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
             n += 1
         return n
 
-    def s4_zone_name(points: Points) -> int:
+    def s4_zone_name(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -431,9 +544,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             n += 1
         return n
 
-    def s4b_candidates(points: Points) -> int:
+    def s4b_candidates(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -444,9 +557,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             n += 1
         return n
 
-    def s6_last_change(points: Points) -> int:
+    def s6_last_change(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -458,9 +571,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             n += 1
         return n
 
-    def s7_coord2int(points: Points) -> int:
+    def s7_coord2int(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -474,9 +587,9 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             n += 1
         return n
 
-    def s8_bbox(points: Points) -> int:
+    def s8_bbox(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -488,16 +601,16 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             x = coord2int(lng)
             y = coord2int(lat)
             for i, boundary_id in enumerate(candidates):
-                if i >= last:
+                if i >= stop:
                     break
                 outside_bbox(boundary_id, x, y)
             zone_name_from_id(zone_id_of(candidates[-1]))
             n += 1
         return n
 
-    def s9_holes(points: Points) -> int:
+    def s9_holes(points: Points, stops: Sequence[int]) -> int:
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -509,7 +622,7 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             x = coord2int(lng)
             y = coord2int(lat)
             for i, boundary_id in enumerate(candidates):
-                if i >= last:
+                if i >= stop:
                     break
                 if outside_bbox(boundary_id, x, y):
                     continue
@@ -520,10 +633,10 @@ def make_ladder(tf: TimezoneFinder) -> list[tuple[str, Callable[[Points], int]]]
             n += 1
         return n
 
-    def s10_full(points: Points) -> int:
+    def s10_full(points: Points, stops: Sequence[int]) -> int:
         """The whole lookup, inlined - compare against ``tf.timezone_at`` below."""
         n = 0
-        for lng, lat in points:
+        for (lng, lat), stop in zip(points, stops, strict=True):
             lng, lat = validate(lng, lat)
             hex_id = latlng_to_cell(lat, lng, res)
             entry = shortcuts.entry_of(hex_id)
@@ -580,8 +693,9 @@ def profile_query_stages(tf: TimezoneFinder) -> None:
     for stratum, fixture in QUERY_STRATA:
         points = load_benchmark_points(fixture)[:BATCH_SIZE]
         n = len(points)
-        totals = [measure(lambda fn=fn, points=points: fn(points)) for _, fn in ladder]
-        real = measure(lambda points=points: timezone_at_batch(points))
+        stops = examined_candidates(tf, points)
+        totals = [measure(functools.partial(fn, points, stops)) for _, fn in ladder]
+        real = measure(functools.partial(timezone_at_batch, points))
 
         ladder_total = totals[-1] - totals[0]
         print(f"\n### {stratum} ({n} points, min of {REPEATS} rounds)\n")
@@ -835,7 +949,7 @@ def profile_combined(tf: TimezoneFinder) -> None:
 
     for stratum, fixture in QUERY_STRATA:
         points = load_benchmark_points(fixture)[:BATCH_SIZE]
-        untouched = measure(lambda points=points: timezone_at_batch(points))
+        untouched = measure(functools.partial(timezone_at_batch, points))
         per_query_ns = untouched / len(points) * 1e9
         unsampled_mean_ns = mean_ns_per_query(tf, points, OVERHEAD_REFERENCE_SECONDS)
         samples, queries, elapsed = sample_blocks(tf, points, blocks)
