@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788730436974,
+  "lastUpdate": 1788730438489,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15827,6 +15827,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.6946 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7001881725b9edf2d7ceaaea9334482e37368254",
+          "message": "PROF-1: bind the stage ladder to the accessors the query path calls (#633)\n\n* PROF-1: bind the stage ladder to the accessors the query path calls\n\nThe stage ladder in prototypes/query_stage_profile.py is a hand-written copy of\nTimezoneFinder.timezone_at, and it had drifted from it in two ways that produce a\nplausible table rather than a failure.\n\nIts zone_name_from_id rung bound tf.zone_name_from_id, the checked public accessor,\nwhere timezone_at calls self.zone_names.name_of. The public form runs a sign test\nfirst, so the rung priced 58-64 ns for a call costing 37-38 - 8.2-8.7 % of a unique\nquery's ladder where it is 5.2-5.3 %. The deleted zone_ids_of rung carried the same\nmistake, which makes it a property of copying a function by hand.\n\nIts bbox and hole rungs ran the candidate loop to stop_index_of, where the lookup\nbreaks on the first candidate containing the point. Counted over the fixtures they\nopened 1.0695 candidates per ambiguous query against the 1.0465 the lookup opens -\n2.2 %, which overstated those two rungs and understated boundary PIP, the difference\ntaken above them. examined_candidates computes the real trip count once per stratum\noutside every timed loop; the cost of receiving it is added to every rung, including\nloop overhead, so it cancels in every difference and in the ladder total.\n\nBoth ladder tables in FINDINGS are re-taken on both backends. No lookup code moved,\nso the block, point-in-polygon and paired A/B tables there are unchanged and still\ndescribe this tree; only ladder figures and the shares read off them moved, which is\nwhy conclusion 6's boundary-PIP share rises to 26 % (clang) / 36 % (numba).\n\ntests/test_query_stage_profile.py asserts both properties structurally, over what\nmake_ladder actually closes over and against the lookup's own loop, so a rung added\nlater is covered without anyone remembering the rule.\n\nThree closure-default lambdas in this file could not be inferred against\nmeasure()'s Callable[[], object] and were already failing the mypy hook on master;\nthey are functools.partial now, which is what makes this branch's gate green.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PROF-1: retire the item its pull request ships\n\nThe ladder now binds the accessors the query path calls and stops where the lookup\nstops, so the item, its ranking row and its sequencing entry go with the change.\nThe classification log's re-anchoring note kept its lasting fact - a re-anchoring\npass no longer has to repair the instrument first - rather than a dangling handle.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PROF-1: settle the independent review of the ladder repair\n\nCorrectness. examined_candidates fell through to the ambiguous branch on an ABSENT\nentry, where candidates_of is defined only below ABSENT and would have indexed\nanother cell's list by Python's negative-index rule; the lookup returns None there,\nso the helper now counts zero and says why. Unreachable with the packaged ocean data,\nreachable with custom data that leaves cells uncovered.\n\nReuse. The helper hand-inlined bbox -> holes -> pip, a copy of the predicate the real\nloop reaches through tf.inside_of_polygon - the exact drift this change exists to\nprevent, and the reason the rungs are written out (no branch in a timed loop) does not\napply to a helper that runs once per stratum outside every timed loop. It calls\ninside_of_polygon now, and so does the test, which therefore asserts the loop rather\nthan a third derivation of the predicate.\n\nTests. The binding guard inspected only the last rung, so a mis-bound accessor\nreferenced by any other rung was invisible to it - verified by leaking tf.zone_ids_of\ninto s4_zone_name, which passed before and fails now. The stopping guard sampled 300\npoints, where random has one differing point and on_land none, leaving two of four\nparametrizations unable to fail; it runs the profiler's own 2,000 now, and catches a\nremoved break on three strata instead of two.\n\nNumbers. zone_name_from_id's share is 7.8-8.6 % -> 5.1-5.3 % and the ratio 1.5x\n(numba) / 1.7x (clang), both read off the published tables rather than rounded past\nthem. Conclusion 6 no longer explains a 13-point jump that did not happen: the rung\nmoved 23.8 -> 26.0 % (clang) and 34.6 -> 35.6 % (numba), and the stale \"~18-23 %\" it\nused to be measured against never matched the table beside it. Finding 10 now states\nthis machine's measured round-to-round spread - two clang runs of identical code,\nminutes apart, differing by up to ~20 % on a small rung - which is what makes \"inside\nthe spread\" checkable rather than asserted. The baseline's unique-query stage shares\nwere stale before this change and are updated with the rest of the shares it moved.\n\nCounts are unchanged by all of it: 1.0465 candidates opened per ambiguous query\nagainst 1.0695 run to the end of the slice, 2.20 %.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T23:32:45+02:00",
+          "tree_id": "6ea8f3baf329d13335b7938502751a18cdaa4d09",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7001881725b9edf2d7ceaaea9334482e37368254"
+        },
+        "date": 1788730438166,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083551406860352,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085334777832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234416961669922,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2351818084716797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58840847015381,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.5891752243042,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
           }
         ]
       }
