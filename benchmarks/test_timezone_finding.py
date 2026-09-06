@@ -122,7 +122,7 @@ def test_timezone_at_timezonefinderl(benchmark, ambiguous_shortcut_points):
 
 
 def _batch_axes(points: Iterable[tuple[float, float]]) -> tuple[np.ndarray, np.ndarray]:
-    lngs, lats = zip(*points)
+    lngs, lats = zip(*points, strict=True)
     # One contiguous array per axis is the batch API's zero-copy input form.
     # Slicing columns out of an (N, 2) array would create strided views and
     # benchmark an input copy on every call instead of the lookup itself.

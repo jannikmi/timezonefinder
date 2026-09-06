@@ -989,7 +989,7 @@ def render_chart(measurement: Measurement) -> str:
     widths = [_legend_entry_width(label) for label, _, _ in entries]
     cursor = right - sum(widths) - LEGEND_GAP * (len(entries) - 1)
     legend_y = CHART_MARGIN_TOP - 26
-    for (label, colour, dashes), width in zip(entries, widths):
+    for (label, colour, dashes), width in zip(entries, widths, strict=True):
         if dashes == "hollow":
             parts.append(
                 f'<circle cx="{cursor + 13:.0f}" cy="{legend_y}" r="4.5" '
@@ -1035,14 +1035,16 @@ def render_chart(measurement: Measurement) -> str:
         points = plotted[series.label]
         polyline = " ".join(
             f"{_chart_x(result.distance_m, low, high):.1f},{y_of(point.percent):.1f}"
-            for result, point in zip(measurement.by_distance, points)
+            for result, point in zip(measurement.by_distance, points, strict=True)
         )
         dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
         parts.append(
             f'<polyline points="{polyline}" fill="none" stroke="{series.colour}" '
             f'stroke-width="2.4" stroke-linejoin="round"{dash}/>'
         )
-        for index, (result, point) in enumerate(zip(measurement.by_distance, points)):
+        for index, (result, point) in enumerate(
+            zip(measurement.by_distance, points, strict=True)
+        ):
             x = _chart_x(result.distance_m, low, high)
             y = y_of(point.percent)
             if point.is_upper_bound:

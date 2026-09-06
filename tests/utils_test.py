@@ -173,7 +173,7 @@ def test_convert2coords():
     assert len(coord_lists) == 2
     x_coords, y_coords = coord_lists
     assert len(x_coords) == len(y_coords)
-    for lng, lat in zip(x_coords, y_coords):
+    for lng, lat in zip(x_coords, y_coords, strict=True):
         assert isinstance(lng, float)
         assert isinstance(lat, float)
         utils.validate_coordinates(lng, lat)
@@ -299,7 +299,7 @@ def test_inside_polygon(inside_poly_func: Callable, test_case: tuple):
     coords, query_points, expected_results = test_case
     coords_int = convert_polygon(coords)
     for i, ((lng, lat), expected_result) in enumerate(
-        zip(query_points, expected_results)
+        zip(query_points, expected_results, strict=True)
     ):
         utils.validate_coordinates(lng, lat)  # check the range of lng, lat
         x, y = convert_inside_polygon_input(lng, lat)

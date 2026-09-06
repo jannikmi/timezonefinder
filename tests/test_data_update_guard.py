@@ -210,7 +210,9 @@ def test_the_band_clears_every_release_it_was_calibrated_over() -> None:
     one.
     """
     releases = list(CALIBRATION_PAYLOADS.values())
-    for previous, current in zip(releases, releases[1:]):
+    # deliberately offset by one: the pairs are consecutive releases, so the
+    # second arm is one shorter than the first
+    for previous, current in zip(releases, releases[1:], strict=False):
         assert oversized_payload_moves(previous, current) == {}
         for key, band in PAYLOAD_SIZE_GATES.items():
             move = (current[key] - previous[key]) / previous[key]

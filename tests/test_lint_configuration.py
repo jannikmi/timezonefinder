@@ -46,6 +46,8 @@ DEFAULT_RULE_PROBES = {
 SELECTED_RULE_PROBES = {
     # B, loop variable not bound in a function defined inside the loop
     "B023": ("fs = []\nfor i in range(3):\n    fs.append(lambda: i)\n"),
+    # B, zip() without an explicit strict=
+    "B905": "for a, b in zip([1], [2]):\n    print(a, b)\n",
     # RUF013, implicit Optional
     "RUF013": "def f(x: int = None):\n    return x\n",
 }

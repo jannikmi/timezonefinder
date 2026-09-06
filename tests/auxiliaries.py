@@ -747,11 +747,11 @@ def group_packed_pip_inputs_by_stratum(
     for stratum, bucket in grouped.items():
         ids = [
             poly_id
-            for (_, _, poly_id), label in zip(inputs, strata)
+            for (_, _, poly_id), label in zip(inputs, strata, strict=True)
             if label == stratum
         ]
         rows = []
-        for (x, y, _coords), poly_id in zip(bucket, ids[: len(bucket)]):
+        for (x, y, _coords), poly_id in zip(bucket, ids[: len(bucket)], strict=True):
             start = boundaries.block_offsets[poly_id]
             rows.append(
                 (

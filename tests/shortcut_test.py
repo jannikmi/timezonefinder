@@ -328,7 +328,7 @@ def test_the_index_lists_the_polygon_covering_each_sampled_coordinate(tf):
 
     uncovered = [
         (float(lng), float(lat))
-        for lng, lat in zip(lngs, lats)
+        for lng, lat in zip(lngs, lats, strict=True)
         if tf.certain_timezone_at(lng=float(lng), lat=float(lat)) is None
     ]
 

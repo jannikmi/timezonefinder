@@ -594,7 +594,7 @@ class AbstractTimezoneFinder(ABC):
         hex_ids = np.fromiter(
             (
                 latlng_to_cell(lat, lng, resolution)
-                for lat, lng in zip(lats.tolist(), lngs.tolist())
+                for lat, lng in zip(lats.tolist(), lngs.tolist(), strict=True)
             ),
             dtype=np.uint64,
             count=nr_points,
@@ -1276,6 +1276,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
             entries[positions].tolist(),
             lngs[positions].tolist(),
             lats[positions].tolist(),
+            strict=True,
         ):
             cell = prepared.get(entry)
             if cell is None:

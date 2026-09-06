@@ -191,9 +191,9 @@ def to_numpy_polygon_repr(
 ) -> np.ndarray:
     if flipped:
         # support the (lat, lng) format used by h3
-        y_coords, x_coords = zip(*coord_pairs)
+        y_coords, x_coords = zip(*coord_pairs, strict=True)
     else:
-        x_coords, y_coords = zip(*coord_pairs)
+        x_coords, y_coords = zip(*coord_pairs, strict=True)
     # Remove last coordinate if it repeats the first
     if y_coords[0] == y_coords[-1] and x_coords[0] == x_coords[-1]:
         x_coords = x_coords[:-1]

@@ -153,7 +153,7 @@ def test_both_pip_backends_agree_on_resolved_hole_rings():
 def _write_hole_dir(path, *, rings, poly_ref, bboxes):
     path.mkdir(parents=True, exist_ok=True)
     write_polygon_collection(path, rings)
-    xmin, xmax, ymin, ymax = zip(*bboxes)
+    xmin, xmax, ymin, ymax = zip(*bboxes, strict=True)
     store_per_polygon_vector(get_xmin_path(path), np.array(xmin, dtype=np.int32))
     store_per_polygon_vector(get_xmax_path(path), np.array(xmax, dtype=np.int32))
     store_per_polygon_vector(get_ymin_path(path), np.array(ymin, dtype=np.int32))

@@ -150,7 +150,9 @@ def test_lookups_agree_across_acceleration_paths(
     other_results, _ = results[other]
     mismatches = [
         (point, clang, interpreted)
-        for point, clang, interpreted in zip(points, clang_results, other_results)
+        for point, clang, interpreted in zip(
+            points, clang_results, other_results, strict=True
+        )
         if clang != interpreted
     ]
     assert not mismatches, (

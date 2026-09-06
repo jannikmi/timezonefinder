@@ -171,7 +171,7 @@ def render_answers(points: np.ndarray, answers: list[str]) -> str:
     """The committed baseline's exact text for this sample and these answers."""
     lines = [
         f"{format_coordinate(lng)},{format_coordinate(lat)}{FIELD_SEPARATOR}{answer}"
-        for (lng, lat), answer in zip(points.tolist(), answers)
+        for (lng, lat), answer in zip(points.tolist(), answers, strict=True)
     ]
     return ANSWERS_HEADER + "\n".join(lines) + "\n"
 
@@ -199,7 +199,11 @@ def parse_answers(text: str) -> tuple[list[str], list[str]]:
 
 
 def changed_indices(baseline: list[str], current: list[str]) -> list[int]:
-    return [i for i, (was, now) in enumerate(zip(baseline, current)) if was != now]
+    return [
+        i
+        for i, (was, now) in enumerate(zip(baseline, current, strict=True))
+        if was != now
+    ]
 
 
 def payload_metrics(data_dir: Path = SOURCE_DATA_DIR) -> dict[str, int | str]:

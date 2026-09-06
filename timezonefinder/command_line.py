@@ -371,7 +371,7 @@ def _check_columns_fit(row: list[str], indices: tuple[int, int]) -> None:
     :param indices: The resolved ``(longitude, latitude)`` column indices
     :raises ValueError: If either column lies beyond the row
     """
-    for index, axis in zip(indices, ("longitude", "latitude")):
+    for index, axis in zip(indices, ("longitude", "latitude"), strict=True):
         if index >= len(row):
             raise ValueError(
                 f"{_column_flag(axis)} addresses column {index + 1}, but the "

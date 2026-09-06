@@ -157,7 +157,9 @@ class PolygonCollection(BaseModel):
             self.polygons
         ):
             raise ValueError("original_polygons length must match number of polygons")
-        for idx, (poly, length) in enumerate(zip(self.polygons, self.lengths)):
+        for idx, (poly, length) in enumerate(
+            zip(self.polygons, self.lengths, strict=True)
+        ):
             if poly.shape[1] != length:
                 raise ValueError(
                     f"Polygon {idx} length mismatch: length list value {length} != polygon coordinate count {poly.shape[1]}"
@@ -216,7 +218,9 @@ class HoleCollection(BaseModel):
             raise ValueError(
                 f"Hole count ({len(self.holes)}) does not match hole_lengths entries ({len(self.lengths)})"
             )
-        for idx, (hole, length) in enumerate(zip(self.holes, self.lengths)):
+        for idx, (hole, length) in enumerate(
+            zip(self.holes, self.lengths, strict=True)
+        ):
             if hole.shape[1] != length:
                 raise ValueError(
                     f"Hole {idx} length mismatch: length list value {length} != hole coordinate count {hole.shape[1]}"
@@ -473,7 +477,7 @@ class ParseAccumulator:
         tz_name: str,
     ) -> None:
         original_boundary_coords = poly_with_hole[0]
-        x_coords_orig, y_coords_orig = zip(*original_boundary_coords)
+        x_coords_orig, y_coords_orig = zip(*original_boundary_coords, strict=True)
         if (
             len(x_coords_orig) > 3
             and x_coords_orig[0] == x_coords_orig[-1]

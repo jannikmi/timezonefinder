@@ -111,7 +111,9 @@ def test_both_candidates_see_the_same_inputs_within_a_round():
 
     rounds = _batches(calls, 5)[2:]  # drop the two warm-up batches
     assert len(rounds) == 8
-    for (first_name, first), (second_name, second) in zip(rounds[::2], rounds[1::2]):
+    for (first_name, first), (second_name, second) in zip(
+        rounds[::2], rounds[1::2], strict=True
+    ):
         assert first == second
         assert first_name != second_name
 
