@@ -3,7 +3,6 @@
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | [GH-362](items/data-pipeline-and-developer-tooling/gh-362-reuse-the-polygonarray-binaries-in-file-conversion.md) | Reuse the `PolygonArray` binaries in file conversion | internal | M | free — ranked on clarity; the read-back-per-access implementation is ruled out by measurement |
-| [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | M | free — 2.90 % fewer point-in-polygon tests by enumeration; last of the performance items on size, not on the instrument |
 | [FT-1](items/packaging-distribution-and-release/ft-1-setup-py-claims-abi3-where-the-interpreter-forbids-it.md) | `setup.py` claims abi3 where the interpreter forbids it | packaging | ~15 | free — a latent hard build failure with a one-line fix, and the precondition FT-5 needs |
 | [FT-2](items/data-pipeline-and-developer-tooling/ft-2-no-environment-tests-a-free-threaded-interpreter.md) | No environment tests a free-threaded interpreter | testing | ~40 | free — `pytest-run-parallel` is installed and dormant; includes the `build.yml` matrix entry, without which the env is never invoked |
 | [FT-4](items/data-pipeline-and-developer-tooling/ft-4-the-thread-safety-documentation-contradicts-itself.md) | The thread-safety documentation contradicts itself | docs | M | free — seven sites across two pages and two modules state opposites; the evidence settles which, and the one lookup-path write is benign for a stated reason |
@@ -31,6 +30,7 @@ Kept so the dead end is not re-proposed on its merits, and out of the ranking ab
 |---|---|---|---|
 | [TOOL-5](items/data-pipeline-and-developer-tooling/tool-5-the-pylint-complexity-limits-are-a-threshold-argument.md) | The pylint complexity limits are a threshold argument | tooling | rejected — nothing there is wrong; 10 of 15 sites are tooling, and the two worst are calling conventions the rule can never be satisfied on |
 | [GH-524](items/packaging-distribution-and-release/gh-524-move-timezonefinder-under-packages-for-a-symmetric-workspace-layout.md) | Move `timezonefinder` under `packages/` | repo layout | rejected — the asymmetric layout is intended; the move buys tidiness alone once no third distribution is in prospect, and spends the release path to buy it |
+| [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | rejected — closed by construction: the provably optimal ordering is worth 0.27 % of a mixed workload and measures as no difference, and an oracle's ceiling is 4.7 % |
 | [GH-513](items/lookup-geometry-and-data-format/gh-513-drop-hole-polygons-entirely.md) | Drop hole polygons entirely | data format | rejected — the zone precedence relation it needs is cyclic, so no candidate ordering satisfies it |
 | [GH-317](items/packaging-distribution-and-release/gh-317-reduce-the-release-artifact-count.md) | Reduce the release artifact count | packaging | withdrawn — superseded by the distribution split |
 
