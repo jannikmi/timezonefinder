@@ -81,7 +81,7 @@ concurrency:
 permissions: {}
 
 env:
-  # a benchmark's *name* is the join key of its trend history, and the numba
+  # a charted series' *name* is the join key of its trend history, and the numba
   # and clang point-in-polygon paths are completely different implementations
   # whose numbers are not comparable. Keeping the acceleration path in the
   # suite name means a numba-tracked suite could never silently overwrite this
@@ -122,6 +122,9 @@ env:
   # fails if the copies drift. The merge base's passes are consumed by glob,
   # so their filenames stay local to this file.
   REPORT_FILENAME: "benchmark-report.json"
+  # the chart-shaped export of the same measurement, staged beside it
+  # (see scripts/export_timing_chart_json.py)
+  CHART_FILENAME: "benchmark-chart.json"
   REPORT_DIR: "benchmark-report"
   BASE_REPORT_DIR: "benchmark-base-report"
   # --- memory footprint (scripts/measure_memory.py) ---------------------------
@@ -369,6 +372,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$REPORT_DIR"
           cp "$(make -s print-ci-benchmark-json)" "$REPORT_DIR/$REPORT_FILENAME"
+          cp "$(make -s print-timing-chart-json)" "$REPORT_DIR/$CHART_FILENAME"
           cp "$(make -s print-ci-memory-json)" "$REPORT_DIR/$MEMORY_REPORT_FILENAME"
           cp "$(make -s print-memory-chart-json)" "$REPORT_DIR/$MEMORY_CHART_FILENAME"
 
@@ -467,15 +471,21 @@ jobs:
           path: benchmark-report
 
       # github-action-benchmark owns storage, charting, comparison and
-      # alerting. The report it consumes is an ordinary pytest-benchmark JSON
-      # whose tracked value was rewritten from the mean to the min by
-      # scripts/normalize_benchmark_json.py (see that module for why).
+      # alerting; what it charts is decided here.
+      #
+      # `customBiggerIsBetter` rather than `pytest`: that extractor tracks
+      # `stats.ops` as `iter/sec` under the raw node id, and one "iteration" of
+      # these benchmarks is a whole batch of 2,500 points - so the chart read
+      # "183 iter/sec" for `test_timezone_at[random-in_memory]`, a number in no
+      # unit anyone quotes and a name that says nothing about the workload.
+      # scripts/export_timing_chart_json.py re-expresses the same tracked
+      # measurement as lookups/sec under the labels the docs use.
       - name: Store the result and update the trend chart
         uses: benchmark-action/github-action-benchmark@v1
         with:
           name: ${{ env.BENCHMARK_SUITE_NAME }}
-          tool: pytest
-          output-file-path: benchmark-report/${{ env.REPORT_FILENAME }}
+          tool: customBiggerIsBetter
+          output-file-path: benchmark-report/${{ env.CHART_FILENAME }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: dev/bench
@@ -493,9 +503,8 @@ jobs:
       # same branch. `dev/bench/data.js` keys its entries by suite name, so the
       # two coexist and the page renders a chart for each.
       #
-      # `customSmallerIsBetter` rather than `pytest`: the pytest extractor
-      # tracks `stats.ops` in iter/sec, where bigger is better - the wrong unit
-      # and the wrong direction for a footprint. See
+      # `customSmallerIsBetter`, the mirror of the timing chart above: a
+      # footprint is the one metric here where a *rise* is the regression. See
       # scripts/export_memory_chart_json.py.
       - name: Store the memory footprint and update its trend chart
         uses: benchmark-action/github-action-benchmark@v1

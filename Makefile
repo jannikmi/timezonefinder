@@ -267,6 +267,10 @@ RAW_CORE_BENCHMARK_JSON := tmp/benchmark-core-raw.json
 # the tracked value rewritten from the mean to $(BENCHMARK_ESTIMATOR).
 # Overridable on the command line so `benchmark-noise` can collect several runs.
 CI_BENCHMARK_JSON := tmp/benchmark-core-tracked.json
+# what benchmark-action/github-action-benchmark actually stores for the timing
+# chart: the tracked durations re-expressed as lookups/sec under the same
+# human-readable names the docs use, for `tool: customBiggerIsBetter`
+TIMING_CHART_JSON := tmp/benchmark-chart.json
 # min is the least noise-sensitive estimator here - see scripts/benchmark_utils.py
 BENCHMARK_ESTIMATOR := min
 # Ordinary published rows use a fixed number of rounds instead of inheriting
@@ -296,13 +300,16 @@ NOISE_RUNS := 5
 RAW_MEMORY_JSON := tmp/memory-raw.json
 CI_MEMORY_JSON := tmp/memory-tracked.json
 # what benchmark-action/github-action-benchmark actually stores for the memory
-# chart: its pytest extractor only understands durations, so the tracked
-# metrics are re-shaped for `tool: customSmallerIsBetter`
+# chart: bytes, where a rise is the regression, so the tracked metrics are
+# re-shaped for `tool: customSmallerIsBetter`
 MEMORY_CHART_JSON := tmp/memory-chart.json
 NOISE_MEMORY_RUNS_DIR := tmp/memory-noise
 
 print-ci-benchmark-json:
 	@echo $(CI_BENCHMARK_JSON)
+
+print-timing-chart-json:
+	@echo $(TIMING_CHART_JSON)
 
 print-ci-memory-json:
 	@echo $(CI_MEMORY_JSON)
@@ -325,6 +332,9 @@ benchmarks-ci:
 		--benchmark-json=$(RAW_CORE_BENCHMARK_JSON) \
 		--output=$(CI_BENCHMARK_JSON) \
 		--estimator=$(BENCHMARK_ESTIMATOR)
+	uv run python -m scripts.export_timing_chart_json \
+		--benchmark-json=$(CI_BENCHMARK_JSON) \
+		--output=$(TIMING_CHART_JSON)
 
 # repeat the CI measurement on unchanged code to characterise the noise floor.
 # NOTE: locally this captures single-machine jitter only - the residual the
@@ -469,5 +479,5 @@ docs:
 	bootstrap check-data \
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
-	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json \
+	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths
