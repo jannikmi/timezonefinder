@@ -13,7 +13,7 @@
 - The id-taking APIs and their internal callers were traced.
 - `timezonefinder/timezonefinder.py` was read end to end for the batch path.
 - Persistent loaded-array mutability was audited in both storage modes.
-- The binary-data-to-`timezone_at` flow was read end to end on 2026-09-05 — `block_payload.py`, `coord_accessors.py`, `polygon_array.py`, the packed kernels in `utils_numba.py` / `utils_clang.py` / `inside_polygon_int.c`, and the candidate loop in `timezonefinder.py` — against the committed benchmark fixtures rather than by reading alone. It produced five entries against the loop and the instrument that measures it; the buffer-view one has since shipped, and the [classification log](../../query-path-change-classification-log.md) carries what it moved.
+- The binary-data-to-`timezone_at` flow was read end to end on 2026-09-05 — `block_payload.py`, `coord_accessors.py`, `polygon_array.py`, the packed kernels in `utils_numba.py` / `utils_clang.py` / `inside_polygon_int.c`, and the candidate loop in `timezonefinder.py` — against the committed benchmark fixtures rather than by reading alone. It produced five entries against the loop and the instrument that measures it; the buffer-view and hole-registry ones have since shipped, and the [classification log](../../query-path-change-classification-log.md) carries what it moved.
 
 ## Durable evidence
 
