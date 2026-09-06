@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788674691866,
+  "lastUpdate": 1788682168362,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7098,6 +7098,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00045603505711906125",
             "extra": "mean: 14.785425000013674 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9124731ab7ebae8de77bc6e83cb73773b5bfef99",
+          "message": "maintainer-decisions: the documentation becomes Markdown, and docs/ leaves Sphinx for MkDocs (#627)\n\n* maintainer-decision: README and CHANGELOG move to Markdown, docs/ does not\n\nThe maintainer asked whether the documentation could be migrated to Markdown\nin full. It can — Sphinx reads Markdown through myst-parser, and the two\nsuffixes coexist in one build — but the answer splits by file, because MyST\nrespells reStructuredText's markup rather than removing it: 42 list-table,\n36 code-block, 28 note, 21 image, 14 autodoc directives and 111 roles survive\nthe move as brace-fenced directives and {role}`...`. README.rst and\nCHANGELOG.rst use none of them; the docs/ pages are almost nothing but.\n\nRecords the decision and its refused options, and files the two items it makes\neligible. DOC-7 combines the README migration with the semantic-line-break\nslice DOC-5 held for that same file — a format migration rewrites the file\nanyway, so splitting them means reviewing one file's diff twice — and DOC-5\nnarrows to the seven remaining pages accordingly. DOC-8 carries the changelog\nand its fragments, whose only real coupling is three constants in\nscripts/changelog_fragments.py and the RST include in docs/6_changelog.rst.\n\nRegister-only: no source, tests, changelog or implementation.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* maintainer-decision: docs/ leaves Sphinx for MkDocs\n\nSupersedes yesterday's \"docs/ stays reStructuredText\". That refusal rested on\ntwo arguments which both assumed staying inside Sphinx, and both reverse under\na different generator: GitHub renders pipe tables and fences, so docs/ sources\nbecome more readable in the repository rather than less, and `mkdocs --strict`\nfails on a broken cross-reference, which rstcheck never checked at all.\nSwitching generator was not among the options recorded, and it is the only\nroute that removes directive syntax rather than respelling it.\n\nDecided 2026-09-06: MkDocs with Material and mkdocstrings. PDF and ePub are\ngiven up on an explicit assumption that nobody reads them rather than on a\nmeasurement, recorded as such so one complaint reopens the decision. MyST, the\nstatus quo, pdoc and the JavaScript-toolchain generators are kept as refused\nwith their reasons; the 2026-09-05 markup count is what still rules MyST out.\n\nDOC-9 carries the migration. It absorbs DOC-2 to DOC-5, which are withdrawn:\nthe conversion rewrites those same files wholesale, so their line breaks are\nset as the Markdown is written — the argument that had already moved README\nout of DOC-5 into DOC-7. Their counts and caveats are kept, and DOC-6 reads\nthe exclusion list from DOC-5 still. DOC-6's blockers move onto DOC-9, and\nDOC-8's docs-page complication disappears if it follows DOC-9.\n\nRegister-only: no source, tests, changelog or implementation.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Plan the MkDocs migration before implementing it, and define lossless\n\nThe maintainer required a reviewed plan before a big-bang migration, and a\nlossless conversion. The reason is specific to the shape of the change: a\n5,332-line wholesale rewrite cannot be reviewed for omissions, because every\nhunk is new on both sides and a dropped paragraph reads exactly like a\nconverted one. The plan is what makes that diff reviewable.\n\nDOC-10 produces it, on an issue, per the register's division of labour. It\ndefines the contract as what is preserved — visible text, table cells, code\nblocks verbatim, admonitions, images, link targets, published URLs,\nexternally reachable anchors, the documented API surface — and what is\ndeliberately given up: PDF, ePub and the theme's appearance. Each half gets a\nrunnable check rather than an assertion. The strongest is a normalised text\ndiff of the Sphinx build against the MkDocs build, which is the only check\nthat sees an omission rather than a malformation; the generated pages get a\ncell-value comparison, and the API page a symbol inventory.\n\nTwo URL hazards are already found and handed to the plan settled rather than\nleft to be discovered mid-conversion. MkDocs' default use_directory_urls\nserves data_format/ where Sphinx serves data_format.html, breaking the eight\nreadthedocs links in README.rst and every external inbound link;\nuse_directory_urls: false reproduces the URL set exactly. And README deep-links\nthree headings by anchor, which Sphinx and python-markdown slugify by\ndifferent rules, with nothing warning when one moves.\n\nDOC-9 is blocked on DOC-10 and carries the contract as binding. A plan that\nfinds it unaffordable reopens the generator choice, which is why the refused\noptions are kept.\n\nRegister-only: no source, tests, changelog or implementation.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T10:08:40+02:00",
+          "tree_id": "94c70873e1b11ef8c64313d8e2a9dac64b042efe",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9124731ab7ebae8de77bc6e83cb73773b5bfef99"
+        },
+        "date": 1788682167200,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 209.5901318266053,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006750028972310347",
+            "extra": "mean: 4.771216999984063 msec\nrounds: 171 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 320.9402264849614,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006601103014891288",
+            "extra": "mean: 3.1158450000248195 msec\nrounds: 260 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 57.240335799431236,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002480551744724121",
+            "extra": "mean: 17.470197999955417 msec\nrounds: 54 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 345.0949753120374,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005555249935653092",
+            "extra": "mean: 2.897753000013381 msec\nrounds: 260 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 654.9809334939218,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008744384459185602",
+            "extra": "mean: 1.526762000025883 msec\nrounds: 548 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 78.42424978177326,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001855446671121817",
+            "extra": "mean: 12.751158000014584 msec\nrounds: 66 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 340.547259446756,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005376990117865133",
+            "extra": "mean: 2.936449999992874 msec\nrounds: 266 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 657.1968975242327,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003205281373367108",
+            "extra": "mean: 1.521613999955207 msec\nrounds: 535 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 78.02744131477407,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002052397414862552",
+            "extra": "mean: 12.816004000001158 msec\nrounds: 65 on AMD EPYC 9V74 80-Core Processor @ 3.0206 GHz"
           }
         ]
       }
