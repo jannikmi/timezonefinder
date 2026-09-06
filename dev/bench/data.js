@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788683139278,
+  "lastUpdate": 1788684156087,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7272,6 +7272,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3908",
             "unit": "lookups/sec",
             "extra": "min of 61 round(s) on AMD EPYC 7763 64-Core Processor @ 2.7708 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "711f8e16333d9070a17610b1f7edf32d27b595de",
+          "message": "Refuse a performance item only when no instrument shows a gain (#631)\n\n* Refuse a performance item only when no instrument shows a gain\n\nA ceiling below the batch suite's 3-9 % noise floor was a rejection\nreason, which is a property of the instrument rather than of the change:\nseveral real sub-floor savings land on the same query and compose. The\nranking rule now refuses a performance item when the gain cannot be\nmeasured at all, and names what suffices instead - a removed count, a\nnon-noise line or stage profile, or a win rate outside a coin flip in an\nin-query alternating A/B. What it still forbids is unchanged: selling a\nsub-floor increment as a suite-visible speed-up, and converting a\nper-call microbenchmark into a workload share.\n\nPERF-4 was refused on exactly the superseded half, so it is open again on\nits existing measurement (-2.0 % of an ambiguous query, 12 of 15 rounds),\ncarrying the cleanup() ordering change the resource-semantics half of the\nsame decision still requires. GH-301 is unparked and ranked last of the\nperformance items on the size of its enumerated 2.90 %, not on the\ninstrument; GH-364's noise-floor arithmetic now prices the item rather\nthan refusing it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Keep the decisions file inside its 2,000-word budget\n\ntests/test_contributor_memory.py caps a canonical memory file at 2,000\nwords; the supersession note pushed the query-performance decisions to\n2,019. Condensed the PERF-4 entry back to 1,968 without dropping either\nhalf of the decision.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T10:41:47+02:00",
+          "tree_id": "b2c383333e02a6b8640597a5d851bcad45e3b3d3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/711f8e16333d9070a17610b1f7edf32d27b595de"
+        },
+        "date": 1788684154575,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 486526.33430431754,
+            "range": "± 11514",
+            "unit": "lookups/sec",
+            "extra": "min of 163 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 710407.4982682667,
+            "range": "± 8759",
+            "unit": "lookups/sec",
+            "extra": "min of 245 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 133647.66551492206,
+            "range": "± 2466",
+            "unit": "lookups/sec",
+            "extra": "min of 52 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 772342.0004340886,
+            "range": "± 9458",
+            "unit": "lookups/sec",
+            "extra": "min of 252 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1443503.8573199182,
+            "range": "± 17188",
+            "unit": "lookups/sec",
+            "extra": "min of 506 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 175731.92699032635,
+            "range": "± 2819",
+            "unit": "lookups/sec",
+            "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 772184.0763264099,
+            "range": "± 18005",
+            "unit": "lookups/sec",
+            "extra": "min of 255 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1445174.4180675175,
+            "range": "± 19842",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 177678.61889391317,
+            "range": "± 1252",
+            "unit": "lookups/sec",
+            "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8754 GHz"
           }
         ]
       }
