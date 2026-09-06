@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788661864643,
+  "lastUpdate": 1788661866889,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14450,6 +14450,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0.001",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e4f0eb5bbb158c7e53a9c5750306fffde5100189",
+          "message": "TOOL-2: enforce B023, and refine the lint item into slices (#630)\n\n* improvement register: refine TOOL-1 into TOOL-2 to TOOL-6\n\nTOOL-1 held six ruff rule families plus the 0.16 version bump: 73 sites to\njudge across disjoint rules, and a dependency pin an improvement pass may not\ntouch. That is not one reviewable pull request, so it is refined into slices\nthat each stand alone:\n\n  TOOL-2  B023, 24 loop-closure sites   (shipped by this branch)\n  TOOL-3  B905, 27 zip sites\n  TOOL-4  A001 / A002 / PLW2901, 7 sites - adopt or refuse\n  TOOL-5  PLR09xx complexity limits     - needs a decision\n  TOOL-6  raise ruff off the 0.15 line  - needs a decision\n\nCounts re-measured on ruff 0.15.22 rather than carried over; PLR0913 is 7\nwhere TOOL-1 recorded 10 and A002 is 2 where it recorded 1.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TOOL-2: enforce B023 by taking the closures out of their loops\n\nAll 24 sites were read and all 24 are false positives: every closure is\ndefined and fully consumed inside the iteration that makes it. Rather than\nbind seven loop variables as default arguments to say so, the three loop\nbodies in _data_integrity.py move into module-level _validate_*_of functions\n- the closures stay exactly where they are, with no loop around them - and\nat_target in test_border_sampling.py takes its distance explicitly.\n\nNo behaviour changes; the extractions are re-indentation plus a call.\n\ntests/test_lint_configuration.py gains a probe set for the rules select adds\nbeyond ruff's defaults, so B023 cannot be returned to ignore silently - the\nsame failure mode the file already guards for the default rules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* improvement register: retire TOOL-2, shipped by this branch\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:30:14+02:00",
+          "tree_id": "9b81f4b778c256c7385f0184ecb52a4e81f24754",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e4f0eb5bbb158c7e53a9c5750306fffde5100189"
+        },
+        "date": 1788661866181,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.23384952545166,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2346582412719727,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58842468261719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.5892276763916,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
           }
         ]
       }
