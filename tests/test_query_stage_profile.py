@@ -17,19 +17,24 @@ import pytest
 
 from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import SHORTCUT_H3_RES
+from timezonefinder.shortcut_index import ABSENT
 
 pytest.importorskip("line_profiler", reason="prototypes/ needs the `proto` group")
 
 from prototypes.query_stage_profile import (  # noqa: E402
+    BATCH_SIZE,
     QUERY_STRATA,
     examined_candidates,
     make_ladder,
 )
 from tests.auxiliaries import load_benchmark_points  # noqa: E402
 
-# a few hundred points per stratum is enough to reach every branch; the profiler's own
-# batch is 2,000 and this is a correctness check, not a measurement
-SAMPLE = 300
+# The profiler's own batch, not a sample of it. A correct and a run-to-the-end count
+# differ on very few points - 40 of 2,000 on the ambiguous stratum, 10 on ``on_land``,
+# 3 on ``random``, 0 on ``unique`` - so a 300-point sample left ``random`` with a single
+# differing point and ``on_land`` with none, and two of the four parametrizations could
+# not fail on a defective helper at all. The whole file still runs in ~0.1 s.
+SAMPLE = BATCH_SIZE
 
 
 @pytest.fixture(scope="module")
@@ -44,22 +49,27 @@ def test_ladder_binds_no_public_timezonefinder_method(tf: TimezoneFinder) -> Non
     ``timezone_at`` calls the unchecked internals (``self._zone_id_of``) and the
     collaborators (``self.zone_names.name_of``, ``self.shortcuts.entry_of``) directly.
     The public wrappers in front of those add id validation that the query path does not
-    pay, so a rung binding one prices a call the lookup never makes: ``zone_ids_of`` read
-    ~1,685 ns against ~564, and ``zone_name_from_id`` 58-64 ns against 37-38. The
+    pay, so a rung binding one prices a call the lookup never makes: the
+    ``zone_name_from_id`` rung read 58-64 ns for a call costing 37-38. The
     public/private split on this class exists *because* the two differ in cost, which
-    makes the ladder the one caller for which the public name is a bug.
+    makes the ladder the one caller for which the public name is a bug. The deleted
+    ``zone_ids_of`` rung carried the same mistake, which is why this is asserted rather
+    than remembered.
 
-    Asserted structurally, over what ``make_ladder`` actually closes over, so a rung
-    added later is covered without anyone remembering this rule.
+    Asserted structurally, over what ``make_ladder`` actually closes over, and over
+    *every* rung rather than the last one: a rung's ``co_freevars`` lists only the names
+    that rung references, so a mis-bound accessor used by one new rung is invisible from
+    any other.
     """
-    closure = inspect.getclosurevars(make_ladder(tf)[-1][1]).nonlocals
-    offenders = {
-        name: bound.__func__.__name__
-        for name, bound in closure.items()
-        if inspect.ismethod(bound)
-        and bound.__self__ is tf
-        and not bound.__func__.__name__.startswith("_")
-    }
+    offenders = {}
+    for name, rung in make_ladder(tf):
+        for var, bound in inspect.getclosurevars(rung).nonlocals.items():
+            if (
+                inspect.ismethod(bound)
+                and bound.__self__ is tf
+                and not bound.__func__.__name__.startswith("_")
+            ):
+                offenders[f"{name}:{var}"] = bound.__func__.__name__
     assert not offenders, (
         f"stage-ladder rungs bind public TimezoneFinder methods {offenders}; "
         "bind the internal accessor or the collaborator that timezone_at calls"
@@ -91,8 +101,8 @@ def test_examined_candidates_matches_the_lookup(
     for (lng, lat), opened in zip(points, counts, strict=True):
         lng, lat = utils.validate_coordinates(lng, lat)
         entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        if entry >= 0:
-            assert opened == 0, "a unique-zone cell reaches no candidate list"
+        if entry >= 0 or entry == ABSENT:
+            assert opened == 0, "these two entries answer without opening a candidate"
             continue
         slice_length = min(
             tf.shortcuts.stop_index_of(entry), len(tf.shortcuts.candidates_of(entry))
@@ -100,18 +110,13 @@ def test_examined_candidates_matches_the_lookup(
         assert 1 <= opened <= slice_length
         candidates = tf.shortcuts.candidates_of(entry)
         x, y = utils.coord2int(lng), utils.coord2int(lat)
-
-        def contains(boundary_id: int, x: int = x, y: int = y) -> bool:
-            hole_ids = tf._hole_ids_of(boundary_id)
-            return bool(
-                not tf.boundaries.outside_bbox(boundary_id, x, y)
-                and not (hole_ids and tf.holes.in_any_polygon(hole_ids, x, y))
-                and tf.boundaries.pip(boundary_id, x, y)
-            )
+        # ``inside_of_polygon`` is what the lookup's own loop calls, so this asserts the
+        # loop and not a re-derivation of the predicate inside it
+        contains = tf.inside_of_polygon
 
         # Pinned from both sides, so neither a missing nor a premature ``break``
         # survives: the lookup stops at the first candidate containing the point, so
         # none before the last one opened may contain it, and the last one either
         # contains it or is the end of the slice.
-        assert not any(contains(int(b)) for b in candidates[: opened - 1])
-        assert contains(int(candidates[opened - 1])) or opened == slice_length
+        assert not any(contains(int(b), x, y) for b in candidates[: opened - 1])
+        assert contains(int(candidates[opened - 1]), x, y) or opened == slice_length

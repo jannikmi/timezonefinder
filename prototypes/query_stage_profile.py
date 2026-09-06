@@ -67,6 +67,12 @@ same commit execute the same workload.
 FINDINGS (2026-09-06, Apple arm64, CPython 3.14.2 free-threading build, data 2026c,
 fixture set v3)
 
+The interpreter is named more precisely than it was before 2026-09-06 - finding 9 is why
+- and the evidence that it did not *change* is that the previous revision of this script,
+re-run on it that day, reproduced the unique ladder it had recorded to the nanosecond
+(total 745, real 792). That is what makes the retained tables below comparable with the
+re-taken ladder ones.
+
 **The ladder tables below are a re-take of the instrument, not of the code**: nothing
 under ``timezonefinder/`` moved with them, so the block tables, the point-in-polygon
 table, the paired A/B figures and the conclusions are the previous run's and still
@@ -179,8 +185,8 @@ Unique-shortcut stratum - the common case, and the one with no geometry in it at
   instrument being repaired rather than the stage getting cheaper**: the rung used to
   bind the checked public ``tf.zone_name_from_id``, which runs a sign test before
   delegating, where ``timezone_at`` calls ``self.zone_names.name_of`` directly. It was
-  ~1.7x the cost of the call it claimed to price, and 8.2-8.7 % of this ladder where it
-  is now 5.2-5.3 %.
+  1.5x (numba) / 1.7x (clang) the cost of the call it claimed to price, and 7.8-8.6 % of
+  this ladder where it is now 5.1-5.3 %.
 
 Ambiguous-shortcut stratum, ``in_memory=False``:
 
@@ -289,10 +295,11 @@ CONCLUSIONS
 6. **Better shortcut ordering has a much lower ceiling than it had.** The boundary-PIP
    rung is 26 % (clang) / 36 % (numba) of the ambiguous ladder, against 59-66 % before
    the index - and a correspondingly small share of a random one, which is the workload.
-   That is higher than the ~18-23 % quoted here before finding 10, and the rung rather
-   than the kernel is what moved: the two rungs above it used to run past the ``break``,
-   so the difference taken as ``boundary PIP`` was charged with candidates the lookup
-   never opens.
+   It read 23.8 % / 34.6 % on the previous table, and finding 10's stopping repair is
+   the direction of that 2.2 / 1.0 point move rather than a measured size for it: the
+   two rungs above this one used to run past the ``break``, so their overshoot was
+   charged here, but 2.2 % of a rung is inside this machine's spread. The prose here
+   quoted "~18-23 %" until 2026-09-06, which never matched the table beside it.
    Ordering still wins by reducing *how many* candidates are opened rather than by
    opening cheaper ones first, and it was rejected on a count, which no timing here
    disturbs. What changed is that opening a *large* candidate is no longer expensive, so
@@ -346,8 +353,8 @@ CONCLUSIONS
 
     *Binding.* ``zone_name_from_id`` bound ``tf.zone_name_from_id``, the checked public
     accessor, where ``timezone_at`` calls ``self.zone_names.name_of``. The public form
-    adds a sign test, and the rung read 58-64 ns for a call costing 37-38 - ~1.7x, and
-    8.2-8.7 % of the unique ladder rather than 5.2-5.3 %. The public/private accessor
+    adds a sign test, and the rung read 58-64 ns for a call costing 37-38 - 1.5x
+    (numba) / 1.7x (clang) - and 7.8-8.6 % of the unique ladder rather than 5.1-5.3 %. The public/private accessor
     split on ``TimezoneFinder`` exists *because* the two differ in cost, which makes the
     ladder the one caller for which reaching for the public name is a bug. This is the
     second rung to have carried that mistake - the deleted ``zone_ids_of`` was the first
@@ -364,10 +371,18 @@ CONCLUSIONS
     handed it. The cost of receiving it is added to *every* rung including ``loop
     overhead``, so it cancels in every difference and in the ladder total.
 
-    **What this does not license.** 2.2 % of a rung is ~12 ns, inside this machine's
-    round-to-round spread, so the stopping half is justified by the count and not by a
-    timing delta - the two backends disagree about the size of that delta, which is what
-    a sub-noise change looks like. The binding half is the one worth 20-28 ns.
+    **What this does not license.** 2.2 % of a rung is ~12 ns, and this machine's
+    spread is larger than that: two clang runs of the *identical* final code, minutes
+    apart, read ``shortcut table read`` 115 and 138 ns, ``zone_name_from_id`` 37 and 44,
+    ``bbox rejection`` 496 and 555, for ladder totals of 3,005 and 3,087 - up to ~20 %
+    on a small rung and ~2.7 % on a total. So the stopping half is justified by the
+    count and not by a timing delta, and the two backends duly disagree about that
+    delta's size, which is what a sub-noise change looks like. The binding half is the
+    one worth 20-28 ns, which is a rung's whole cost rather than 2 % of it.
+
+    Read that spread as the *rung* precision of every table above: a difference of two
+    large numbers inherits both their noise, which is why the block breakdown and not a
+    rung is what a share should be quoted from.
 
 """
 
@@ -396,7 +411,7 @@ from tests.auxiliaries import (
 )
 from timezonefinder import TimezoneFinder, utils
 from timezonefinder.configs import SHORTCUT_H3_RES
-from timezonefinder.shortcut_index import slot_of
+from timezonefinder.shortcut_index import ABSENT, slot_of
 
 # one pass over this many points is a round; the reported value is the min over
 # ``REPEATS`` rounds, the estimator the benchmark suite tracks (see
@@ -452,15 +467,26 @@ def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
     open more candidates than the lookup does, which overstates their own two rungs and
     understates ``boundary PIP``, the rung taken as the difference above them.
 
-    Computed once per stratum, outside every timed loop. It is a count, so it does not
-    move between backends or machines. Zero for a point whose cell holds a unique zone,
-    which reaches no candidate list at all.
+    The per-candidate test is ``tf.inside_of_polygon``, the same call
+    ``_zone_id_in_ambiguous_cell`` makes, rather than a fourth hand-inlined copy of
+    bbox -> holes -> pip. The rungs are written out because a branch inside a *timed*
+    loop is the thing being measured; this runs once per stratum outside every timed
+    loop, so the copy would buy nothing and would drift the next time that predicate
+    gains a step.
+
+    Zero for a cell a single zone covers and for an ``ABSENT`` cell, the two entries the
+    lookup answers without opening a candidate. ``ABSENT`` is unreachable with the
+    packaged ocean data but is not with custom data, and it must be rejected before
+    ``candidates_of``, which is defined only for entries *below* ``ABSENT`` and would
+    otherwise index another cell's list through Python's negative-index rule.
+
+    It is a count, so it does not move between backends or machines.
     """
     counts = []
     for lng, lat in points:
         lng, lat = utils.validate_coordinates(lng, lat)
         entry = tf.shortcuts.entry_of(h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES))
-        if entry >= 0:
+        if entry >= 0 or entry == ABSENT:
             counts.append(0)
             continue
         candidates = tf.shortcuts.candidates_of(entry)
@@ -472,12 +498,7 @@ def examined_candidates(tf: TimezoneFinder, points: Points) -> list[int]:
             if i >= last:
                 break
             opened = i + 1
-            if tf.boundaries.outside_bbox(boundary_id, x, y):
-                continue
-            hole_ids = tf._hole_ids_of(boundary_id)
-            if hole_ids and tf.holes.in_any_polygon(hole_ids, x, y):
-                continue
-            if tf.boundaries.pip(boundary_id, x, y):
+            if tf.inside_of_polygon(boundary_id, x, y):
                 break
         counts.append(opened)
     return counts
@@ -597,6 +618,8 @@ def make_ladder(
                 zone_name_from_id(entry)
                 continue
             candidates = shortcuts.candidates_of(entry)
+            # read but not branched on: the rung is timing this read, and where
+            # the loop stops comes from `stop` - see `examined_candidates`
             last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
@@ -618,6 +641,8 @@ def make_ladder(
                 zone_name_from_id(entry)
                 continue
             candidates = shortcuts.candidates_of(entry)
+            # read but not branched on: the rung is timing this read, and where
+            # the loop stops comes from `stop` - see `examined_candidates`
             last = shortcuts.stop_index_of(entry)
             x = coord2int(lng)
             y = coord2int(lat)
