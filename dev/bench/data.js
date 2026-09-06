@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788662934115,
+  "lastUpdate": 1788674689541,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -7011,6 +7011,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00017577670050045676",
             "extra": "mean: 14.646464000001913 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 2.6773 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f01f590fc4a0405286cd01e4fa1cbaa25a50b33",
+          "message": "FMT-3: bound the payload offset by the buffer it indexes, and check it (#626)\n\n* FMT-3: bound the payload offset by the buffer it indexes, and check it\n\nTwo memory sites described the per-block payload offsets as ring-relative and\nsized the dtype against the largest packaged ring's payload, ~1.2 MB. The array\nthe kernels are handed is not ring-relative: `PolygonArray.__init__` adds each\nring's own start, so every entry is a word index into the whole coordinate\nbuffer - 7,933,908 words for the packaged 2026c boundaries, ~26x the bound that\nwas written down.\n\nNothing checked either quantity. The addition is unsigned arithmetic, so a\ncollection that outgrew the width would wrap rather than raise, and a wrapped\noffset addresses another ring's residuals - a wrong timezone for the points\nwhose ray crosses that block, with nothing to notice it.\n\nBoth claims are rewritten rather than corrected underneath, and\n`validate_payload_offset_width` checks the bound that applies, over the data as\nit is produced. The check is exact and costs one file size, because the\nbuffer's word count bounds every offset into it.\n\nNo answer was wrong: the packaged data uses 0.18 % of the width.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* FMT-3: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the one reference that\nwould otherwise be a dangling handle to name the lasting fact instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T08:04:06+02:00",
+          "tree_id": "e4e72ec07e28779f364f4fdd970190ca99d88136",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7f01f590fc4a0405286cd01e4fa1cbaa25a50b33"
+        },
+        "date": 1788674688746,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 191.70606705614438,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006694100044058628",
+            "extra": "mean: 5.216318999998748 msec\nrounds: 163 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 297.4258093619081,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004523156968342025",
+            "extra": "mean: 3.362183000007235 msec\nrounds: 254 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 49.600701949120165,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001908084978555058",
+            "extra": "mean: 20.161005000005616 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 303.2690584876625,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000395097443424677",
+            "extra": "mean: 3.2974020000153814 msec\nrounds: 253 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 589.8848898636217,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000059029509640161934",
+            "extra": "mean: 1.6952459999970415 msec\nrounds: 535 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 67.36076546622378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000185355778402577",
+            "extra": "mean: 14.84543699999108 msec\nrounds: 60 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 298.4165124586428,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00026346566398475157",
+            "extra": "mean: 3.351021000014498 msec\nrounds: 251 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 573.4194838732664,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002442136163778158",
+            "extra": "mean: 1.7439240000101108 msec\nrounds: 514 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 67.63417351879131,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00045603505711906125",
+            "extra": "mean: 14.785425000013674 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 3.2363 GHz"
           }
         ]
       }
