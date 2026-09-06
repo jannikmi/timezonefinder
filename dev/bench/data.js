@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788662932291,
+  "lastUpdate": 1788662934115,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14603,6 +14603,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2457 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "201362ade0827ebc06d28b39093c8e8be05bd731",
+          "message": "PERF-8: look up a candidate's holes without raising (#625)\n\n* PERF-8: look up a candidate's holes without raising\n\n`_iter_hole_ids_of` was a generator whose body indexed `hole_registry` inside a\n`try`/`except KeyError`. 1,225 of the 1,322 packaged boundary polygons own no\nhole, so for the majority of candidates that survive the bounding-box test the\nstep built a generator object, entered it, raised, caught and returned - to\nestablish that there was nothing to check, after which `in_any_polygon`\niterated the exhausted generator and answered False.\n\nIt is now a `dict.get` returning a `range`, named `_hole_ids_of` since it no\nlonger iterates, and `inside_of_polygon` skips the hole call entirely when that\nrange is empty.\n\nCounts removed per ambiguous query, over the committed fixtures: 0.498 raised\nand caught KeyErrors, 0.779 generator objects, and 0.498 calls that iterated\nnothing. Per hole-less candidate, 160 ns -> 88 ns.\n\nPaired inside one process, arms alternated round by round, 41 rounds a side,\n2,000 fixture points, answers asserted equal every round:\n\n  stratum              clang min/median   numba min/median\n  ambiguous_shortcut    -4.0 % / -0.8 %    -4.7 % / -4.1 %\n  on_land               -2.0 % / -5.3 %    -1.7 % / -1.5 %\n  random                -1.1 % / -1.1 %    -1.7 % / -0.2 %\n  unique_shortcut       +0.2 % / +1.1 %    +0.4 % / +0.2 %\n\nOrder 2-4 % of an ambiguous query; the clang estimators straddle on the median,\nso it ships on being the simpler code, as its register entry always said.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-8: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the three references\nthat would otherwise be dangling handles. Two corrections travel with them:\nthe entry claimed this shared a method with PERF-9, where in fact one touches\ntimezonefinder.py and the other polygon_array.py; and the -30 % figure the\nthree siblings were prototyped at came from comparing separate finder\ninstances, which over-reads each part - the references now say to price\nagainst the current tree instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Merge the two shortcut-compiler entries the log records twice\n\nTaking both this round's classification entries put the file at 2038\nwords against the 2000-word cap tests/test_contributor_memory.py\nenforces. The 2026-08-25 antimeridian entry stated it was \"the same\nshape as the entry above and the same reasoning\" as the hole-side\noverlap entry beside it, so the two become one bullet carrying both\ncell counts and both fixture checks. No classification is dropped.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:48:06+02:00",
+          "tree_id": "13bf045809199466d9760bf41ea0cd87e7fcf17b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/201362ade0827ebc06d28b39093c8e8be05bd731"
+        },
+        "date": 1788662933645,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2341432571411133,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2348098754882812,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58817481994629,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58893871307373,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
           }
         ]
       }
