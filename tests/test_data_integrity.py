@@ -244,6 +244,7 @@ def test_validate_data_dir_runs_every_general_check(
         "validate_zone_data",
         "validate_hole_references",
         "validate_payload_offset_table",
+        "validate_payload_offset_width",
         "validate_block_index",
         "validate_block_payload",
         "validate_hole_registry",
