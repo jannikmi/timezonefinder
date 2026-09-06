@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788661127550,
+  "lastUpdate": 1788661129102,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14297,6 +14297,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8705 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3750c96ce73d55f60a27579c00763c8557262593",
+          "message": "Let a merge round review what nothing else did, and collect finished refs (#629)\n\nFive changes to the merge-round workflow, all from a run that parked six\nof nine pull requests on a reviewer outage.\n\nA missing independent review no longer parks a pull request: the round\nperforms the review itself, against the tree rather than against the\nbody. Silence now explicitly includes a review whose commit predates the\nhead, which three pull requests in that run had - the body names the\nreviewed commit, so it is checkable against headRefOid.\n\nStale branch and worktree cleanup becomes a duty of the run, recorded in\nthe branch-update rules rather than the workflow, which had no room and\nalready routes there. The shared checkout had accumulated 51 local\nbranches whose pull requests were merged. A MERGED pull request is the\ndeletion proof, because a squash merge never makes the branch an\nancestor of master and `git branch -d` therefore refuses it.\n\nA contributor-memory file over its word budget joins conflict resolution\nas in-scope repair, cut from restatement only, never a rule. One pull\nrequest in the run was red on nothing else.\n\nBranch protection requires an up-to-date head, so merges serialize: the\nworkflow now says to update one pull request at a time rather than\nspending a full matrix on every remaining head after each merge.\n\nRequested by the maintainer during the run.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:17:55+02:00",
+          "tree_id": "ab4fb2f55e17fcb7d5da231c71f261424e40efda",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/3750c96ce73d55f60a27579c00763c8557262593"
+        },
+        "date": 1788661128763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2343482971191406,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.235157012939453,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.587491035461426,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58829975128174,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.7794 GHz"
           }
         ]
       }
