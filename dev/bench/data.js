@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788661129102,
+  "lastUpdate": 1788661864643,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -6837,6 +6837,93 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0003370747640264241",
             "extra": "mean: 11.590254999646277 msec\nrounds: 70 on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e4f0eb5bbb158c7e53a9c5750306fffde5100189",
+          "message": "TOOL-2: enforce B023, and refine the lint item into slices (#630)\n\n* improvement register: refine TOOL-1 into TOOL-2 to TOOL-6\n\nTOOL-1 held six ruff rule families plus the 0.16 version bump: 73 sites to\njudge across disjoint rules, and a dependency pin an improvement pass may not\ntouch. That is not one reviewable pull request, so it is refined into slices\nthat each stand alone:\n\n  TOOL-2  B023, 24 loop-closure sites   (shipped by this branch)\n  TOOL-3  B905, 27 zip sites\n  TOOL-4  A001 / A002 / PLW2901, 7 sites - adopt or refuse\n  TOOL-5  PLR09xx complexity limits     - needs a decision\n  TOOL-6  raise ruff off the 0.15 line  - needs a decision\n\nCounts re-measured on ruff 0.15.22 rather than carried over; PLR0913 is 7\nwhere TOOL-1 recorded 10 and A002 is 2 where it recorded 1.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* TOOL-2: enforce B023 by taking the closures out of their loops\n\nAll 24 sites were read and all 24 are false positives: every closure is\ndefined and fully consumed inside the iteration that makes it. Rather than\nbind seven loop variables as default arguments to say so, the three loop\nbodies in _data_integrity.py move into module-level _validate_*_of functions\n- the closures stay exactly where they are, with no loop around them - and\nat_target in test_border_sampling.py takes its distance explicitly.\n\nNo behaviour changes; the extractions are re-indentation plus a call.\n\ntests/test_lint_configuration.py gains a probe set for the rules select adds\nbeyond ruff's defaults, so B023 cannot be returned to ignore silently - the\nsame failure mode the file already guards for the default rules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* improvement register: retire TOOL-2, shipped by this branch\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T04:30:14+02:00",
+          "tree_id": "9b81f4b778c256c7385f0184ecb52a4e81f24754",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e4f0eb5bbb158c7e53a9c5750306fffde5100189"
+        },
+        "date": 1788661863064,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[random-in_memory]",
+            "value": 192.60014822498232,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00006429259435389333",
+            "extra": "mean: 5.192104000002473 msec\nrounds: 161 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[unique_shortcut-in_memory]",
+            "value": 301.19919447285304,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019133086565696966",
+            "extra": "mean: 3.3200620000002345 msec\nrounds: 253 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_at[ambiguous_shortcut-in_memory]",
+            "value": 48.264483966606534,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020736335416595938",
+            "extra": "mean: 20.719168999960402 msec\nrounds: 50 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[random-file_based]",
+            "value": 296.6849315820141,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000033743787592820347",
+            "extra": "mean: 3.3705789999771696 msec\nrounds: 245 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[unique_shortcut-file_based]",
+            "value": 585.7180845290148,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00005641252089421323",
+            "extra": "mean: 1.707305999957498 msec\nrounds: 523 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_ids_at[ambiguous_shortcut-file_based]",
+            "value": 65.08124417109607,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000780106619563831",
+            "extra": "mean: 15.365410000015345 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[random-file_based]",
+            "value": 292.3718431836853,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00011814378996970214",
+            "extra": "mean: 3.4203020000518336 msec\nrounds: 242 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[unique_shortcut-file_based]",
+            "value": 569.4122014719975,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008384278472621181",
+            "extra": "mean: 1.7561970000201654 msec\nrounds: 523 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "benchmarks/test_timezone_finding.py::test_timezone_names_at[ambiguous_shortcut-file_based]",
+            "value": 64.68901564355396,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00008976671730998434",
+            "extra": "mean: 15.458574999968278 msec\nrounds: 58 on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
