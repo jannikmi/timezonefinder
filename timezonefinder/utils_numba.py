@@ -337,9 +337,29 @@ def int2coord(i4: int) -> float:
     return float(i4 * INT2COORD_FACTOR)
 
 
-# @cc.export('coord2int', i4(f8))
-@njit(i4(f8), cache=True)
 def coord2int(double: float) -> int:
+    """A coordinate in degrees as the scaled integer the packaged data stores.
+
+    **Deliberately not ``njit``**, unlike everything else in this module. It takes one
+    scalar and performs one multiplication, so the dispatch costs more than the body:
+    94.7 ns per call against 46.4 ns for the same expression written out, on a query
+    path that scales two coordinates per ambiguous lookup. The rule is in the
+    `query-path decisions <../contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md>`__
+    - no scalar per-query stage in the single-digit hundreds of nanoseconds survives a
+    dispatch boundary - and ``pt_in_poly_python`` beside it is the contrast: an array of
+    hundreds to tens of thousands of vertices, where the dispatch amortises to nothing.
+
+    Dropping the decorator also drops the ``i4`` return cast, which is the safer
+    direction: under numba an out-of-range product wrapped silently into int32, while
+    the no-numba configuration a plain ``pip install`` gives never did. Both backends
+    now answer the same for every input. Nothing narrows the result afterwards - the
+    query path's callers are bounded to +-180 degrees by ``validate_coordinates``
+    first, i.e. +-1.8e9.
+
+    No ``njit`` function calls this, which is what makes the decorator removable at all;
+    ``int2coord`` above keeps its own, because ``convert2coords`` and
+    ``convert2coord_pairs`` call it from nopython mode over a whole ring.
+    """
     return int(double * COORD2INT_FACTOR)
 
 
@@ -364,11 +384,21 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
     return coodinate_list
 
 
-@njit(boolean(f8), cache=True)
+# Both **deliberately not** ``njit``, for the reason given on ``coord2int`` above: one
+# scalar, one comparison, and 87.8 ns of dispatch against 40.6 ns to perform it. They run
+# on *every* query through ``utils.validate_coordinates``, twice.
+#
+# They read the bounds from ``configs`` rather than restating them, and the bounds are
+# declared pre-negated there because ``UNARY_NEGATIVE`` costs ten times what the global
+# load does - see the comment beside them before "simplifying" these.
+#
+# The vectorised forms the converter uses are ``njit``, and they inline this comparison
+# rather than calling these: numba cannot call a pure-Python function from nopython mode
+# (``scripts/utils_numba.py``). That is the split to keep - the scalar form for the query
+# path, the compiled loop for whole arrays.
 def is_valid_lat(lat: float) -> bool:
     return MIN_LAT_VAL <= lat <= MAX_LAT_VAL
 
 
-@njit(boolean(f8), cache=True)
 def is_valid_lng(lng: float) -> bool:
     return MIN_LNG_VAL <= lng <= MAX_LNG_VAL

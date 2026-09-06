@@ -7,8 +7,6 @@ Changelog
 X.X.X (unreleased)
 ------------------
 
-* **every lookup is faster, because three scalar per-query stages no longer cross a dispatch boundary.** Coordinate validation compared its bounds through two ``njit`` functions taking one float each, the query coordinates were scaled to integers through a third, and a cell's candidate polygons had their zone ids gathered into an array with NumPy before any point was tested - to read one element of it. All three now do the same work inline, at the call site: the answer for every coordinate is unchanged, and no stored data, public method or signature moves. Measured as a paired A/B inside one process with the rounds alternated, 2,500 committed fixture points per round and the minimum over 25 rounds - on the C extension in the default memory-mapped mode, ``timezone_at`` is **11.2 % faster on uniformly random points**, 13.3 % on on-land points, 16.8 % on points that reach the polygon tests and 7.5 % on points a single zone's H3 cell answers; with Numba the same four are 16.6, 17.0, 19.5 and 14.4 %. The batch lookups gain 5.8-11.0 %. The last column is the one that has not moved before: points answered from the H3 index alone read no geometry, so the latitude block index, the packed payload and the buffer views all left them untouched, and only removing fixed cost reaches them. The prologue every query pays - validation plus the H3 cell computation - falls from ~690-830 ns to ~670-730
-
 
 9.0.0 (2026-09-02)
 ------------------

@@ -31,7 +31,6 @@ from timezonefinder.np_binary_helpers import (
 from timezonefinder.polygon_array import HoleArray, PolygonArray
 from timezonefinder import utils, utils_clang
 from timezonefinder.configs import (
-    COORD2INT_FACTOR,
     DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
     MAX_LNG_VAL,
@@ -1236,15 +1235,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data
-        # formats match. Written out rather than calling ``utils.coord2int``: that is an
-        # ``njit`` function over one scalar, and on a numba install the dispatch costs
-        # 94.7 ns against 46.4 ns for this expression, twice per ambiguous query. The
-        # truncation is the same one - ``int()`` rounds toward zero either way - and the
-        # product cannot leave int32, because ``validate_coordinates`` has already bound
-        # both coordinates to +-180 deg, i.e. +-1.8e9.
+        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
+        # see its comment - so calling it here costs the multiplication and not a
+        # dispatch on top of it.
         # x = longitude  y = latitude  both converted to 8byte int
-        x = int(lng * COORD2INT_FACTOR)
-        y = int(lat * COORD2INT_FACTOR)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
 
         # check until the point is included in one of the possible boundary polygons.
         #
@@ -1340,17 +1336,12 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         # ATTENTION: the polygons are stored converted to 32-bit ints,
         # convert the query coordinates in the same fashion in order to make the data
-        # formats match. Written out rather than calling ``utils.coord2int``: that is an
-        # ``njit`` function over one scalar, and on a numba install the dispatch costs
-        # 94.7 ns against 46.4 ns for this expression, twice per call - this method tests
-        # every candidate rather than stopping at the shortcut's answer, so it pays this
-        # on every call and not only on an ambiguous one. The
-        # truncation is the same one - ``int()`` rounds toward zero either way - and the
-        # product cannot leave int32, because ``validate_coordinates`` has already bound
-        # both coordinates to +-180 deg, i.e. +-1.8e9.
+        # formats match. ``coord2int`` is a plain Python function, not an ``njit`` one -
+        # see its comment - so calling it here costs the multiplication and not a
+        # dispatch on top of it.
         # x = longitude  y = latitude  both converted to 8byte int
-        x = int(lng * COORD2INT_FACTOR)
-        y = int(lat * COORD2INT_FACTOR)
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
 
         # check if the query point is found to be truly included in one of the possible boundary polygons
         for boundary_id in self._iter_boundaries_in_shortcut(lng=lng, lat=lat):
