@@ -192,18 +192,11 @@ exclude = ["prototypes/*"]
 # `select` replaces the default rather than adding to it.
 select = ["E4", "E7", "E9", "F", "B", "RUF013"]
 ignore = [
-    # The two flake8-bugbear rules the tree does not satisfy yet. Both are real rule
-    # families rather than noise, and clearing them is what remains of TOOL-1 in
-    # contributing/improvements/ - they are ignored so the rest of `B` can be enforced
-    # now instead of waiting for that pass.
-    #
-    # B023 (24 sites, nearly all in timezonefinder/_data_integrity.py) flags a closure
-    # over a loop variable. Every site has to be read individually, because the rule
-    # cannot see whether the closure outlives the iteration.
-    "B023",
-    # B905 (27 sites across 18 files) wants an explicit `strict=` on `zip`. Each site
-    # needs the judgement of whether unequal lengths are possible; TOOL-1 records the
-    # analysis of the one that looked dangerous and was not.
+    # The one flake8-bugbear rule the tree does not satisfy yet, ignored so the rest of
+    # `B` can be enforced now. B905 (27 sites across 18 files) wants an explicit
+    # `strict=` on `zip`, and each site needs the judgement of whether unequal lengths
+    # are possible; TOOL-3 in contributing/improvements/ carries that work and records
+    # the analysis of the one site that looked dangerous and was not.
     "B905",
 ]
 

@@ -38,6 +38,18 @@ DEFAULT_RULE_PROBES = {
     "F821": "undefined_name_probe()\n",  # F, undefined name
 }
 
+# The rules `select` adds beyond ruff's defaults, probed the same way and for the same
+# reason: `ignore` is where a family is switched off one rule at a time, so what has to
+# hold is that the rule still fires. B023 is here because the tree only just started
+# satisfying it - `timezonefinder/_data_integrity.py` held 22 of its 24 sites - and
+# re-ignoring it would leave those closures unguarded without failing anything.
+SELECTED_RULE_PROBES = {
+    # B, loop variable not bound in a function defined inside the loop
+    "B023": ("fs = []\nfor i in range(3):\n    fs.append(lambda: i)\n"),
+    # RUF013, implicit Optional
+    "RUF013": "def f(x: int = None):\n    return x\n",
+}
+
 # A file under the exempted directory that ruff has something to say about, so the
 # control below can establish that the exemption is what silences it.
 EXEMPT_SAMPLE = "prototypes/query_stage_profile.py"
@@ -89,6 +101,22 @@ def test_the_default_rules_survive_the_explicit_select():
             "`select` replaces ruff's default rule set rather than adding to it, and "
             "`ignore` / `per-file-ignores` can switch a selected rule off again - none "
             f"of which fails anything else.\nruff said: {reported.stdout!r}"
+        )
+
+
+@pytest.mark.unit
+def test_the_explicitly_selected_rules_are_not_ignored_again():
+    """`select` and `ignore` are separate lists, so a selected rule can still be off.
+
+    Probed rather than read out of the TOML for the reason above: a name in `select`
+    says nothing about whether the rule reaches any code.
+    """
+    for rule, offending_source in SELECTED_RULE_PROBES.items():
+        reported = _ruff("--stdin-filename", "probe.py", "-", input=offending_source)
+        assert rule in reported.stdout, (
+            f"{rule} is not reported on code that breaks it. It is named in "
+            "`[tool.ruff.lint] select`, so something in `ignore` or `per-file-ignores` "
+            f"is switching it off again.\nruff said: {reported.stdout!r}"
         )
 
 

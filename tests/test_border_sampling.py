@@ -402,6 +402,15 @@ def test_the_prune_agrees_with_brute_force_over_the_packaged_borders() -> None:
             )
 
 
+def _at_target(found: dict[int, float], distance_m: float) -> set[int]:
+    """The rings a search placed at ``distance_m``, within the tolerance."""
+    return {
+        ring_id
+        for ring_id, measured in found.items()
+        if abs(measured - distance_m) <= DISTANCE_TOLERANCE * distance_m
+    }
+
+
 @pytest.mark.slow
 def test_a_wider_search_never_changes_the_verdict() -> None:
     """Why the search radius is the target distance and not a multiple of it.
@@ -435,14 +444,7 @@ def test_a_wider_search_never_changes_the_verdict() -> None:
                     "disagrees with the nearest found by a ten times wider search"
                 )
 
-            def at_target(found: dict[int, float]) -> set[int]:
-                return {
-                    ring_id
-                    for ring_id, measured in found.items()
-                    if abs(measured - distance_m) <= DISTANCE_TOLERANCE * distance_m
-                }
-
-            assert at_target(near) == at_target(wide), (
+            assert _at_target(near, distance_m) == _at_target(wide, distance_m), (
                 f"({lng}, {lat}): a wider search changes which rings sit at "
                 f"{distance_m} m, so the multiplicity correction would differ"
             )
