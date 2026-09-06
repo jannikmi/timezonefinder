@@ -17,7 +17,7 @@ from scripts.utils_numba import (
     fully_contained_in_hole,
 )
 from timezonefinder.configs import MAX_LAT_VAL, MAX_LNG_VAL
-from timezonefinder.utils_numba import coord2int, int2coord
+from timezonefinder.utils import coord2int, int2coord
 
 if TYPE_CHECKING:
     from scripts.timezone_data import TimezoneData

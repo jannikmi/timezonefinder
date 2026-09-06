@@ -27,6 +27,9 @@ from timezonefinder.configs import (
 from timezonefinder import utils_numba, utils_clang
 
 __all__ = [
+    "is_valid_lat",
+    "is_valid_lng",
+    "coord2int",
     "validate_lat",
     "validate_lng",
     "validate_coordinates",
@@ -53,12 +56,58 @@ __all__ = [
 # make numba functions available via utils
 using_numba = utils_numba.using_numba
 clang_extension_loaded = utils_clang.clang_extension_loaded
-is_valid_lat = utils_numba.is_valid_lat
-is_valid_lng = utils_numba.is_valid_lng
-coord2int = utils_numba.coord2int
 int2coord = utils_numba.int2coord
 convert2coords = utils_numba.convert2coords
 convert2coord_pairs = utils_numba.convert2coord_pairs
+
+
+# --- the scalar coordinate helpers ------------------------------------------------
+#
+# Plain Python, and defined *here* rather than in ``utils_numba`` beside ``int2coord``
+# for exactly that reason: that module is what the package compiles, and a reader
+# reaching for a function there is entitled to assume it is compiled. Each of these
+# takes one number and performs one operation, which is the shape ``njit`` cannot pay
+# for - an empty dispatch is ~98 ns against ~40 ns to do the work - so the decorator
+# came off and the definitions followed it out. The rule is in the
+# `query-path decisions <../contributing/improvements/decisions/query-performance-and-shortcut-index-decisions.md>`__.
+#
+# ``int2coord`` above stays where it is and stays compiled, which is the line between
+# the two modules: ``convert2coords`` and ``convert2coord_pairs`` call it from nopython
+# mode over a whole ring, where the dispatch amortises to nothing. Same for the
+# vectorised bounds validators the data converter uses (``scripts/utils_numba.py``) -
+# those inline the comparison below rather than calling it, because numba cannot call a
+# pure-Python function from nopython mode, and ``tests/test_property_validation.py``
+# holds the two forms to each other.
+#
+# All three read the bounds and the scale from ``configs``; do not restate them as
+# literals, and see the comment beside ``MIN_LAT_VAL`` for why they are declared
+# pre-negated.
+
+
+def is_valid_lat(lat: float) -> bool:
+    """Whether a latitude in degrees lies within the coordinate plane."""
+    return MIN_LAT_VAL <= lat <= MAX_LAT_VAL
+
+
+def is_valid_lng(lng: float) -> bool:
+    """Whether a longitude in degrees lies within the coordinate plane."""
+    return MIN_LNG_VAL <= lng <= MAX_LNG_VAL
+
+
+def coord2int(double: float) -> int:
+    """A coordinate in degrees as the scaled integer the packaged data stores.
+
+    Truncates toward zero, which is what a *query* wants: it is where the caller's float
+    falls on the storage grid. ``scripts.utils.source_coord2int`` is the converter's
+    counterpart and rounds instead, because applied to the source that truncation
+    introduces an error the source does not have.
+
+    Nothing narrows the result. The former ``njit`` signature cast it to ``int32``, so an
+    out-of-range product wrapped silently under numba while the no-numba configuration a
+    plain ``pip install`` gives never did; both answer the same now. Query-path callers
+    are bounded to +-180 degrees by :func:`validate_coordinates` first, i.e. +-1.8e9.
+    """
+    return int(double * COORD2INT_FACTOR)
 
 
 inside_polygon: Callable[[int, int, np.ndarray], bool]
@@ -97,6 +146,12 @@ def _validate_coordinate(
 ) -> None:
     """
     Internal helper for coordinate validation.
+
+    ``validator`` is an ordinary Python function, which is what makes this chain cheap
+    enough to keep: ``is_valid_lat`` / ``is_valid_lng`` used to be ``njit``, and the
+    dispatch cost more than the comparison they perform - 87.8 ns against 40.6 - twice on
+    *every* query. Removing the decorator, rather than bypassing the helpers at the call
+    site, keeps one definition of where the world ends.
 
     :param value: The coordinate value to validate
     :param validator: Function that returns True if coordinate is valid

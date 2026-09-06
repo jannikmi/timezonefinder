@@ -6,10 +6,14 @@ JIT compiled for efficiency in case `numba` is installed
 
 import numpy as np
 
+from timezonefinder.configs import (
+    MAX_LAT_VAL,
+    MAX_LNG_VAL,
+    MIN_LAT_VAL,
+    MIN_LNG_VAL,
+)
 from timezonefinder.utils_numba import (
     CoordType,
-    is_valid_lat,
-    is_valid_lng,
     pt_in_poly_python,
 )
 
@@ -158,10 +162,20 @@ def fully_contained_in_hole(poly: np.ndarray, hole: np.ndarray) -> bool:
     return not any_edge_crossing(poly, hole)
 
 
+# The bounds test is written out here rather than calling ``is_valid_lat`` /
+# ``is_valid_lng``, which are plain Python functions: numba cannot call one from nopython
+# mode. They are plain because a scalar comparison is not worth a dispatch boundary - see
+# their comment in ``timezonefinder/utils_numba.py`` - and these are the compiled form of
+# the same test, over a whole ring at a time, where the dispatch amortises to nothing.
+#
+# The bounds are the same module-level constants those read, so the two forms cannot
+# disagree about where the world ends;
+# ``tests/test_property_validation.py`` holds them to each other over the whole float
+# domain.
 @njit(boolean(FloatCoordType1D), cache=True)
 def is_valid_lat_vec(lats: np.ndarray) -> bool:
     for lat in lats:
-        if not is_valid_lat(lat):
+        if not (MIN_LAT_VAL <= lat <= MAX_LAT_VAL):
             return False
     return True
 
@@ -169,6 +183,6 @@ def is_valid_lat_vec(lats: np.ndarray) -> bool:
 @njit(boolean(FloatCoordType1D), cache=True)
 def is_valid_lng_vec(lngs: np.ndarray) -> bool:
     for lng in lngs:
-        if not is_valid_lng(lng):
+        if not (MIN_LNG_VAL <= lng <= MAX_LNG_VAL):
             return False
     return True

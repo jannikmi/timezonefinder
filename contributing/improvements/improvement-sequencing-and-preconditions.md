@@ -9,7 +9,7 @@ DOC-10 (plan, maintainer-approved) ─→ DOC-9 ─┐
 DOC-7 ──────────────────────────────────────┴─→ DOC-6
 DOC-8 independent; cheaper after DOC-9
 
-independent: GH-362, GH-524, PERF-2
+independent: GH-362, GH-524, PROF-1
 
 TOOL-3, TOOL-4 (disjoint rule families, any order); TOOL-6 is cheaper after both
 ```
