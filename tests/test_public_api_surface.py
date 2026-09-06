@@ -72,7 +72,7 @@ def test_a_submodule_is_still_importable(submodule: str):
 def test_an_unknown_attribute_raises_attribute_error():
     """The lazy resolver serves ``__all__`` and nothing else."""
     with pytest.raises(AttributeError, match="no attribute 'does_not_exist'"):
-        timezonefinder.does_not_exist
+        timezonefinder.does_not_exist  # noqa: B018 - the access is what must raise
 
 
 @pytest.mark.unit

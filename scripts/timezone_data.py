@@ -426,55 +426,52 @@ class HexCache:
             return hex_obj
 
 
-class TimezoneData(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+@dataclass
+class ParseAccumulator:
+    """The state a GeoJSON parse builds up, passed down the parse as one object.
 
-    zones: ZoneCollection
-    polygon_store: PolygonCollection
-    hole_store: HoleCollection
-    hex_cache: HexCache = Field(default_factory=HexCache, exclude=True)
+    Every field is append-only apart from the two counters, and the collections
+    below are what `from_geojson` builds `ZoneCollection`, `PolygonCollection`
+    and `HoleCollection` out of once the parse ends. Threading them as separate
+    parameters is what this replaces: several were of the same type, so a
+    transposed pair at any of the three call sites type-checked and silently
+    wrote into the wrong list.
+    """
 
-    @classmethod
-    def _process_hole(
-        cls,
-        hole: list[list[tuple[float, float]]],
-        poly_id: int,
-        hole_nr: int,
-        nr_of_holes: int,
-        tz_name: str,
-        polynrs_of_holes: PolynrHolesList,
-        holes: PolygonList,
-        all_hole_lengths: HoleLengthList,
-    ) -> int:
-        nr_of_holes += 1
+    all_tz_names: list[str] = field(default_factory=list)
+    polygons: PolygonList = field(default_factory=list)
+    polygon_lengths: LengthList = field(default_factory=list)
+    poly_zone_ids: list[int] = field(default_factory=list)
+    polynrs_of_holes: PolynrHolesList = field(default_factory=list)
+    holes: PolygonList = field(default_factory=list)
+    all_hole_lengths: HoleLengthList = field(default_factory=list)
+    original_polygons: list[np.ndarray] = field(default_factory=list)
+    # The id the next polygon receives, and how many holes have been seen so far.
+    # Both used to be returned and reassigned at every call level.
+    poly_id: int = 0
+    nr_of_holes: int = 0
+
+    def add_hole(
+        self, hole: list[list[tuple[float, float]]], hole_nr: int, tz_name: str
+    ) -> None:
+        self.nr_of_holes += 1
         print(
-            f"\rpolygon {poly_id}, zone {tz_name}, hole number {nr_of_holes}, {hole_nr + 1} in polygon",
+            f"\rpolygon {self.poly_id}, zone {tz_name}, hole number {self.nr_of_holes}, {hole_nr + 1} in polygon",
             end="",
             flush=True,
         )
-        polynrs_of_holes.append(poly_id)
+        self.polynrs_of_holes.append(self.poly_id)
         hole_poly = to_numpy_polygon_repr(hole, from_source=True)
-        holes.append(hole_poly)
+        self.holes.append(hole_poly)
         nr_coords = hole_poly.shape[1]
-        all_hole_lengths.append(nr_coords)
-        return nr_of_holes
+        self.all_hole_lengths.append(nr_coords)
 
-    @classmethod
-    def _process_polygon_with_holes(
-        cls,
+    def add_polygon_with_holes(
+        self,
         poly_with_hole: list[list[list[tuple[float, float]]]],
         zone_id: int,
         tz_name: str,
-        poly_id: int,
-        polygons: PolygonList,
-        polygon_lengths: LengthList,
-        poly_zone_ids: list[int],
-        nr_of_holes: int,
-        polynrs_of_holes: PolynrHolesList,
-        holes: PolygonList,
-        all_hole_lengths: HoleLengthList,
-        original_polygons: list[np.ndarray],
-    ) -> int:
+    ) -> None:
         original_boundary_coords = poly_with_hole[0]
         x_coords_orig, y_coords_orig = zip(*original_boundary_coords)
         if (
@@ -487,69 +484,37 @@ class TimezoneData(BaseModel):
         original_coord_array = np.array(
             [x_coords_orig, y_coords_orig], dtype=np.float64
         )
-        original_polygons.append(original_coord_array)
+        self.original_polygons.append(original_coord_array)
 
         poly = to_numpy_polygon_repr(poly_with_hole.pop(0), from_source=True)
-        polygons.append(poly)
+        self.polygons.append(poly)
         x_coords = poly[0]
-        polygon_lengths.append(len(x_coords))
-        poly_zone_ids.append(zone_id)
+        self.polygon_lengths.append(len(x_coords))
+        self.poly_zone_ids.append(zone_id)
 
         for hole_nr, hole in enumerate(poly_with_hole):
-            nr_of_holes = cls._process_hole(
-                hole,
-                poly_id,
-                hole_nr,
-                nr_of_holes,
-                tz_name,
-                polynrs_of_holes,
-                holes,
-                all_hole_lengths,
-            )
+            self.add_hole(hole, hole_nr, tz_name)
 
-        return nr_of_holes
-
-    @classmethod
-    def _process_timezone_feature(
-        cls,
-        zone_id: int,
-        timezone: Any,
-        poly_id: int,
-        all_tz_names: list[str],
-        polygons: PolygonList,
-        polygon_lengths: LengthList,
-        poly_zone_ids: list[int],
-        nr_of_holes: int,
-        polynrs_of_holes: PolynrHolesList,
-        holes: PolygonList,
-        all_hole_lengths: HoleLengthList,
-        original_polygons: list[np.ndarray],
-    ) -> tuple[int, int]:
+    def add_timezone_feature(self, zone_id: int, timezone: Any) -> None:
         tz_name = timezone.id
-        all_tz_names.append(tz_name)
+        self.all_tz_names.append(tz_name)
         tz_geometry = timezone.geometry
         multipolygon = tz_geometry.coordinates
         if isinstance(tz_geometry, PolygonGeometry):
             multipolygon = [multipolygon]
 
         for poly_with_hole in multipolygon:
-            nr_of_holes = cls._process_polygon_with_holes(
-                poly_with_hole,
-                zone_id,
-                tz_name,
-                poly_id,
-                polygons,
-                polygon_lengths,
-                poly_zone_ids,
-                nr_of_holes,
-                polynrs_of_holes,
-                holes,
-                all_hole_lengths,
-                original_polygons,
-            )
-            poly_id += 1
+            self.add_polygon_with_holes(poly_with_hole, zone_id, tz_name)
+            self.poly_id += 1
 
-        return poly_id, nr_of_holes
+
+class TimezoneData(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    zones: ZoneCollection
+    polygon_store: PolygonCollection
+    hole_store: HoleCollection
+    hex_cache: HexCache = Field(default_factory=HexCache, exclude=True)
 
     @classmethod
     def create_validated(cls, **kwargs) -> "TimezoneData":
@@ -570,41 +535,18 @@ class TimezoneData(BaseModel):
                 f"Zone ID dtype must be unsigned integer, got {zone_id_dtype}"
             )
 
-        all_tz_names: list[str] = []
-        polygons: PolygonList = []
-        polygon_lengths: LengthList = []
-        poly_zone_ids: list[int] = []
-        nr_of_holes: int = 0
-        polynrs_of_holes: PolynrHolesList = []
-        holes: PolygonList = []
-        all_hole_lengths: HoleLengthList = []
-        original_polygons: list[np.ndarray] = []
-
-        poly_id: int = 0
+        acc = ParseAccumulator()
         print("parsing data...\nprocessing holes:")
 
         for zone_id, timezone in enumerate(geo_json.features):
-            poly_id, nr_of_holes = cls._process_timezone_feature(
-                zone_id,
-                timezone,
-                poly_id,
-                all_tz_names,
-                polygons,
-                polygon_lengths,
-                poly_zone_ids,
-                nr_of_holes,
-                polynrs_of_holes,
-                holes,
-                all_hole_lengths,
-                original_polygons,
-            )
+            acc.add_timezone_feature(zone_id, timezone)
 
             if DEBUG and zone_id >= DEBUG_ZONE_CTR_STOP:
                 break
 
         print("\n")
 
-        max_zone_id = len(all_tz_names) - 1
+        max_zone_id = len(acc.all_tz_names) - 1
         dtype_info = np.iinfo(zone_id_dtype)
         if max_zone_id > dtype_info.max:
             raise ValueError(
@@ -614,19 +556,19 @@ class TimezoneData(BaseModel):
             )
 
         zone_collection = ZoneCollection(
-            names=all_tz_names,
-            poly_zone_ids=np.array(poly_zone_ids, dtype=zone_id_dtype),
+            names=acc.all_tz_names,
+            poly_zone_ids=np.array(acc.poly_zone_ids, dtype=zone_id_dtype),
             dtype_str=zone_id_dtype_to_string(zone_id_dtype),
         )
         polygon_collection = PolygonCollection(
-            polygons=polygons,
-            lengths=polygon_lengths,
-            original_polygons=original_polygons,
+            polygons=acc.polygons,
+            lengths=acc.polygon_lengths,
+            original_polygons=acc.original_polygons,
         )
         hole_collection = HoleCollection(
-            holes=holes,
-            lengths=all_hole_lengths,
-            polynrs_of_holes=polynrs_of_holes,
+            holes=acc.holes,
+            lengths=acc.all_hole_lengths,
+            polynrs_of_holes=acc.polynrs_of_holes,
         )
 
         return cls.create_validated(
