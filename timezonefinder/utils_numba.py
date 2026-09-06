@@ -14,12 +14,7 @@ if __name__ == "__main__":
 import numpy as np
 
 from timezonefinder.configs import (
-    COORD2INT_FACTOR,
     INT2COORD_FACTOR,
-    MAX_LAT_VAL,
-    MAX_LNG_VAL,
-    MIN_LAT_VAL,
-    MIN_LNG_VAL,
     SOURCE_COORD_STEP,
     CoordLists,
     CoordPairs,
@@ -337,12 +332,6 @@ def int2coord(i4: int) -> float:
     return float(i4 * INT2COORD_FACTOR)
 
 
-# @cc.export('coord2int', i4(f8))
-@njit(i4(f8), cache=True)
-def coord2int(double: float) -> int:
-    return int(double * COORD2INT_FACTOR)
-
-
 @njit(cache=True)
 def convert2coords(polygon_data: np.ndarray) -> CoordLists:
     # return a tuple of coordinate lists
@@ -362,13 +351,3 @@ def convert2coord_pairs(polygon_data: np.ndarray) -> CoordPairs:
         (int2coord(x_coords[i]), int2coord(y_coords[i])) for i in range(nr_coords)
     ]
     return coodinate_list
-
-
-@njit(boolean(f8), cache=True)
-def is_valid_lat(lat: float) -> bool:
-    return MIN_LAT_VAL <= lat <= MAX_LAT_VAL
-
-
-@njit(boolean(f8), cache=True)
-def is_valid_lng(lng: float) -> bool:
-    return MIN_LNG_VAL <= lng <= MAX_LNG_VAL
