@@ -1031,19 +1031,28 @@ class TimezoneFinder(AbstractTimezoneFinder):
         """
         return self.boundaries.coords_of(boundary_id)
 
-    def _iter_hole_ids_of(self, boundary_id: IntegerLike) -> Iterable[int]:
+    def _hole_ids_of(self, boundary_id: IntegerLike) -> range:
         """
-        Yield the hole IDs for a given boundary polygon id.
+        The hole IDs of a boundary polygon, as an empty ``range`` when it has none.
+
+        A ``dict.get`` and a ``range``, not a lookup that raises and a generator: 1,225
+        of the 1,322 packaged boundary polygons own no hole at all, so the majority path
+        used to build a generator object, enter it, raise a ``KeyError``, catch it and
+        return - to establish that there was nothing to check. That is ~190 ns of every
+        hole probe, on a step ``inside_of_polygon`` performs for every candidate polygon
+        surviving the bounding-box test.
+
+        A ``range`` rather than a generator because both callers only iterate it, and
+        because the empty case is then the same object shape as the non-empty one.
 
         :param boundary_id: id of the boundary polygon
-        :yield: Hole IDs
+        :return: the hole ids, in storage order
         """
-        try:
-            amount_of_holes, first_hole_id = self.hole_registry[int(boundary_id)]
-        except KeyError:
-            return
-        for i in range(amount_of_holes):
-            yield first_hole_id + i
+        entry = self.hole_registry.get(int(boundary_id))
+        if entry is None:
+            return range(0)
+        amount_of_holes, first_hole_id = entry
+        return range(first_hole_id, first_hole_id + amount_of_holes)
 
     def _holes_of_poly(self, boundary_id: IntegerLike) -> Iterable[np.ndarray]:
         """
@@ -1052,7 +1061,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         :param boundary_id: id of the boundary polygon
         :yield: Generator of hole coordinates
         """
-        for hole_id in self._iter_hole_ids_of(boundary_id):
+        for hole_id in self._hole_ids_of(boundary_id):
             yield self.holes.coords_of(hole_id)
 
     def get_polygon(
@@ -1139,8 +1148,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         # NOTE: holes are much smaller (fewer points) -> less expensive to check
         # -> check holes before the boundary
-        hole_id_iter = self._iter_hole_ids_of(boundary_id)
-        if self.holes.in_any_polygon(hole_id_iter, x, y):
+        #
+        # The emptiness test is not redundant with the loop inside ``in_any_polygon``:
+        # 1,225 of the 1,322 packaged boundary polygons own no hole, so on the majority
+        # path this is one truth test against a whole bound-method call that iterates
+        # nothing and answers False.
+        hole_ids = self._hole_ids_of(boundary_id)
+        if hole_ids and self.holes.in_any_polygon(hole_ids, x, y):
             # the point is within one of the holes
             # it is excluded fromn this boundary polygon
             return False

@@ -9,3 +9,16 @@ For a clean update, `gh pr update-branch <n>` merges the base in server-side, wi
 - **Changelog fragments.** One file per change means they cannot conflict; a conflict there is a change that edited `CHANGELOG.rst` directly, against the [changelog policy](changelog-and-release-note-policy.md).
 - **Generated and measured files.** Regenerate through the [generator that owns them](generated-file-regeneration-rules.md), or take the base and let the pull request that owns the artifact regenerate it. A hand-merged report is a number nobody measured.
 - **Semantic conflicts git cannot see.** Two branches that each pass alone can fail together: a symbol one renamed and the other calls, a fixture both add, a constant that moved, a new `scripts/` command an exhaustiveness table on the base does not list. After every update, run the gate the merged-in change selects, not the one this branch selected when it was opened, and re-read the diff of the merge itself rather than only the resolved files.
+
+## Collecting finished refs
+
+A shared checkout accumulates merged branches and abandoned worktrees until `git branch` is useless, and the [merge round](../workflows/review-and-merge-one-pull-request.md) is the only workflow that knows which are finished, so it collects them once per run.
+
+```bash
+git worktree prune -v
+gh pr list --head <branch> --state all --json state --jq '.[0].state'
+```
+
+Prune worktree registrations whose directory is gone. Then delete every local branch whose upstream is gone and whose pull request reports `MERGED` — that state is the proof, and `git branch -d` refuses it anyway, since a squash merge never makes the branch an ancestor of `master`. Leave everything else: a branch a worktree holds, one whose pull request is open or closed unmerged, one with no pull request, and another session's worktree directory, whose owner alone knows whether it is done.
+
+`--delete-branch` failing locally because a sibling session's worktree holds the head is expected; the remote branch is still deleted.
