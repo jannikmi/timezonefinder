@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788674689541,
+  "lastUpdate": 1788674691866,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -14756,6 +14756,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f01f590fc4a0405286cd01e4fa1cbaa25a50b33",
+          "message": "FMT-3: bound the payload offset by the buffer it indexes, and check it (#626)\n\n* FMT-3: bound the payload offset by the buffer it indexes, and check it\n\nTwo memory sites described the per-block payload offsets as ring-relative and\nsized the dtype against the largest packaged ring's payload, ~1.2 MB. The array\nthe kernels are handed is not ring-relative: `PolygonArray.__init__` adds each\nring's own start, so every entry is a word index into the whole coordinate\nbuffer - 7,933,908 words for the packaged 2026c boundaries, ~26x the bound that\nwas written down.\n\nNothing checked either quantity. The addition is unsigned arithmetic, so a\ncollection that outgrew the width would wrap rather than raise, and a wrapped\noffset addresses another ring's residuals - a wrong timezone for the points\nwhose ray crosses that block, with nothing to notice it.\n\nBoth claims are rewritten rather than corrected underneath, and\n`validate_payload_offset_width` checks the bound that applies, over the data as\nit is produced. The check is exact and costs one file size, because the\nbuffer's word count bounds every offset into it.\n\nNo answer was wrong: the packaged data uses 0.18 % of the width.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* FMT-3: retire the entry the change above ships\n\nDeletes the item file and its ranking row, and rewrites the one reference that\nwould otherwise be a dangling handle to name the lasting fact instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T08:04:06+02:00",
+          "tree_id": "e4e72ec07e28779f364f4fdd970190ca99d88136",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/7f01f590fc4a0405286cd01e4fa1cbaa25a50b33"
+        },
+        "date": 1788674691550,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2343645095825195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.235126495361328,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.588008880615234,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58877086639404,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2400 GHz"
           }
         ]
       }
