@@ -476,7 +476,7 @@ def build_shortcut_index(
     entry_index: list[int] = []
     entry_payloads: list[np.ndarray] = []
 
-    for key, compact_slot in zip(keys, compact_slots):
+    for key, compact_slot in zip(keys, compact_slots, strict=True):
         hex_id = int(key)
         value = mapping[hex_id]
         if isinstance(value, (int, np.integer)):

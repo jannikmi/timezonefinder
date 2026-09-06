@@ -253,7 +253,7 @@ def validate_hole_registry(data_dir: Path) -> None:
         boundary_id = int(boundary_id_value)
         boundary = boundaries.coords_of(boundary_id)
         hole = holes.coords_of(hole_id)
-        for vertex_id, (x, y) in enumerate(zip(hole[0], hole[1])):
+        for vertex_id, (x, y) in enumerate(zip(hole[0], hole[1], strict=True)):
             if boundaries.outside_bbox(
                 boundary_id, int(x), int(y)
             ) or not inside_polygon(int(x), int(y), boundary):

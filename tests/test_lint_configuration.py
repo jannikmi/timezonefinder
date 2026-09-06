@@ -42,10 +42,14 @@ DEFAULT_RULE_PROBES = {
 # reason: `ignore` is where a family is switched off one rule at a time, so what has to
 # hold is that the rule still fires. B023 is here because the tree only just started
 # satisfying it - `timezonefinder/_data_integrity.py` held 22 of its 24 sites - and
-# re-ignoring it would leave those closures unguarded without failing anything.
+# re-ignoring it would leave those closures unguarded without failing anything. B905 is
+# here for the same reason: 27 `zip` sites were judged one at a time to satisfy it, and
+# re-ignoring the rule would silently stop holding any of them to a length contract.
 SELECTED_RULE_PROBES = {
     # B, loop variable not bound in a function defined inside the loop
     "B023": ("fs = []\nfor i in range(3):\n    fs.append(lambda: i)\n"),
+    # B, zip() without an explicit strict=
+    "B905": "for a, b in zip([1], [2]):\n    print(a, b)\n",
     # RUF013, implicit Optional
     "RUF013": "def f(x: int = None):\n    return x\n",
 }

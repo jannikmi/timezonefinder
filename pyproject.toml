@@ -191,14 +191,6 @@ exclude = ["prototypes/*"]
 # ruff's default set is E4, E7, E9, F; those four are repeated here because naming any
 # `select` replaces the default rather than adding to it.
 select = ["E4", "E7", "E9", "F", "B", "RUF013"]
-ignore = [
-    # The one flake8-bugbear rule the tree does not satisfy yet, ignored so the rest of
-    # `B` can be enforced now. B905 (27 sites across 18 files) wants an explicit
-    # `strict=` on `zip`, and each site needs the judgement of whether unequal lengths
-    # are possible; TOOL-3 in contributing/improvements/ carries that work and records
-    # the analysis of the one site that looked dangerous and was not.
-    "B905",
-]
 
 [tool.ruff.lint.isort]
 known-local-folder = ["timezonefinder"]

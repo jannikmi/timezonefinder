@@ -21,7 +21,9 @@ def main():
 
     print("One call for the whole batch:")
     print("=" * 60)
-    for lng, lat, name in zip(lngs, lats, tf.timezone_names_at(lngs=lngs, lats=lats)):
+    for lng, lat, name in zip(
+        lngs, lats, tf.timezone_names_at(lngs=lngs, lats=lats), strict=True
+    ):
         print(f"({lng:9.4f}, {lat:9.4f}) -> {name}")
 
     print("\nIds instead of names, for a caller that maps them itself:")

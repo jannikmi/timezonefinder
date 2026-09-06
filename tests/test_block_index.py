@@ -454,7 +454,7 @@ def test_rotating_a_ring_does_not_change_an_answer(finder, by):
     ys = rng.integers(int(ring[1].min()), int(ring[1].max()) + 1, 200)
     # the rotated ring through the naive kernel against the stored one through the
     # shipped path: if where a ring starts were observable, these would part company
-    for x, y in zip(xs.tolist(), ys.tolist()):
+    for x, y in zip(xs.tolist(), ys.tolist(), strict=True):
         assert utils.inside_polygon(x, y, rotated) == boundaries.pip(poly_id, x, y)
 
 
