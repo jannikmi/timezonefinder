@@ -164,11 +164,19 @@ class FileCoordAccessor(AbstractCoordAccessor):
         if close_resource is None:
             return
 
+        # `words` is this accessor's own zero-copy view onto the mapping, and it is
+        # dropped *before* the close is attempted rather than in the loop below.
+        # mmap.close() refuses to unmap while any export is alive, so leaving our own
+        # view in place would make close_resource swallow a BufferError on every
+        # cleanup and defer the unmapping to whenever the accessor is collected - on
+        # the one mode whose reason for existing is that the data need not be resident.
+        # A view a *caller* still holds refuses the close after this too, and must:
+        # unmapping underneath it would leave it dangling. That is the case
+        # close_resource's suppression exists for, and the only one left here.
+        if hasattr(self, "words"):
+            del self.words
+
         # close_resource already ignores None and common close errors.
-        # Note: closing coord_buf is refused while the word view or any payload view
-        # handed out by __getitem__ is still alive, since those are zero-copy views onto
-        # the mmap. close_resource suppresses the resulting BufferError (unmapping
-        # underneath a live view would leave it dangling).
         close_resource(getattr(self, "coord_file", None))
         close_resource(getattr(self, "coord_buf", None))
 
@@ -179,7 +187,6 @@ class FileCoordAccessor(AbstractCoordAccessor):
         # The offset table is plain integers owning their own storage - it references
         # nothing and is dropped only so a cleaned-up accessor has no usable state left.
         for attr in (
-            "words",
             "word_offsets",
             "word_lengths",
             "coord_buf",

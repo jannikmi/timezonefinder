@@ -388,8 +388,11 @@ def close_resource(obj: Any) -> None:
     is a safety guarantee rather than a failure: unmapping while views reference the
     memory would leave them dangling. Closing is then merely deferred - the mapping is
     released once the last view is dropped and nothing else references the mmap object.
-    Callers that suppress this must therefore also drop their own references to the
-    mmap, as ``FileCoordAccessor.cleanup()`` does, otherwise the mapping stays alive
+    A caller that suppresses this must therefore drop *its own* exports of the mapping
+    before attempting the close and its reference to the mmap object after, as
+    ``FileCoordAccessor.cleanup()`` does: a view the caller itself holds refuses the
+    close exactly as a caller-facing one does, so leaving one in place turns the
+    deferral from the exceptional case into every case, and the mapping stays alive
     for as long as the caller does.
 
     This is useful for cleanup operations where some resources may not exist or may fail
