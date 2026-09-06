@@ -8,7 +8,7 @@ Read the [register rules](../improvements/improvement-register-rules.md), the [r
 
 - Never merge, enable auto-merge, push to `master`, or tag.
 - Never ask a maintainer question during the pass. Record a briefed decision question in the item, leave it ineligible, and continue down the ranking.
-- Do not change dependencies, the lockfile, supported Python versions, or the `timezonefinder` release version. Generated data, bindings, and benchmark fixtures may be regenerated through their generators when the selected item requires it; the data distribution's version follows a format or upstream-data change. Never edit a generated artifact by hand. `prototypes/` is out of scope, except that a query-path change updates the profiler's committed `FINDINGS`.
+- Do not change runtime or build dependencies, the lockfile, supported Python versions, or the `timezonefinder` release version. **One exception** ([TOOL-6](../improvements/items/data-pipeline-and-developer-tooling/tool-6-the-ruff-version-is-pinned-below-0-16.md)): a pass may raise a lint or formatter pin with its `.pre-commit-config.yaml` rev and the lockfile lines that bump alone produces; a bump resolving anything further stops. Generated data, bindings, and benchmark fixtures may be regenerated through their generators when the item requires it, per the [generated-file rules](../development/generated-file-regeneration-rules.md) and the [data-pipeline rules](../development/data-pipeline-format-versioning-and-release-order.md). `prototypes/` is out of scope, except that a query-path change updates the profiler's committed `FINDINGS`.
 - Preserve the lookup fast path. A performance claim requires paired evidence, measured noise, and the acceleration backend named; an unresolved regression is reverted and recorded.
 
 ## Re-verify and rank
@@ -43,27 +43,7 @@ Recorded decisions are binding. New contrary evidence creates a new briefed ques
 
 ## Isolate and claim
 
-Preserve the shared checkout. Survey first:
-
-```bash
-git fetch --prune origin
-git branch -r
-gh pr list --state open
-```
-
-Claim one item at a time — never a batch, never ahead of need, and never while another item is being worked on, which blocks a concurrent pass for no reason. Claim through the item's canonical remote ref, `refs/heads/improvement-claims/<ITEM-ID>`:
-
-1. Create one unique claim commit on the `origin/master` tree and parent, without adding it to the implementation branch. Its message records the claimed item ID, a unique run token, the planned feature branch, the base commit, and the creation time. Never point a claim ref straight at `origin/master`: concurrent pushes of one commit can both report success.
-2. Push the claim ref with `git push --atomic`, guarding it with `--force-with-lease=<claim-ref>:` so it succeeds only when the ref is absent. A rejected push acquires nothing: fetch again, inspect the winning claim and concurrent work, then re-rank rather than retrying blindly.
-3. Fetch the ref immediately afterwards and verify it points at this run's claim commit. Until that succeeds nothing is claimed and no implementation may begin.
-
-A refinement claims the oversized item's ID before it starts. Once the slices are recorded, claim the first slice's new ID the same way; the original ID's claim is released with the refinement's pull request, alongside the item it retires.
-
-Never overwrite, delete, or steal another run's claim. Treat a foreign or orphaned claim as blocking, report its recorded metadata, and continue down the ranking. A maintainer may remove a confirmed orphan separately.
-
-After ownership is verified, create a uniquely named worktree and, inside it, a feature branch named after the item ID and started from a recorded `origin/master` commit. A later item in the same session reuses the worktree but branches from `origin/master` afresh: never stack one item's branch on another's, because `master` squash-merges and deleting a merged base branch closes the pull request built on it. Push the branch as its work begins, so the work behind the claim is inspectable. Do not base a pass on another open pull request merely to absorb its contributor-memory edits; an item that truly depends on unmerged work is ineligible until that lands. Then install and record untouched `make test` and `make hook` baselines, which the session shares. Do not widen an item after implementation begins: finish what is claimed, and leave anything discovered beside it to the register.
-
-Keep the claim until its pull request is open and visible, then delete only this run's ref, guarding the deletion with a force-with-lease expecting this run's claim commit; the open pull request becomes the durable claim. Release claims the same way when abandoning or yielding work. If verification fails and findings are pushed without a pull request, retain the claims so another pass resumes rather than races that branch. Stage explicit paths, never `git add -A`.
+Preserve the shared checkout, take the item's claim ref, and work in a dedicated worktree and branch, per the [claim and isolation protocol](claim-an-improvement-item.md). Nothing is claimed until the pushed ref is fetched back and verified, and no implementation may begin before that.
 
 ## Deliverable
 
