@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788731734021,
+  "lastUpdate": 1788731736105,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -15980,6 +15980,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.6000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e4e9aba867bbb7e06a16d8351dc0de613a0952c",
+          "message": "Answer the NumPy 1 install question on the getting started page (#635)\n\nReported as #634: pip pulls NumPy 2 and displaces the NumPy 1 the\nenvironment already has. The floor is deliberate - `numpy>=2` since\n8.2.1, following NEP 29 - but nothing published said so, or said what\nsomeone stuck on NumPy 1 can do instead.\n\nThe Dependencies section now names the policy that sets the supported\ngenerations, states that 8.2.1 is where NumPy 1 left the floor, and\nshows the `pip install timezonefinder \"numpy<2\"` fallback while naming a\nvirtual environment as the better answer where the clash is with a\nsystem-managed NumPy.\n\nNo version bound is restated: the documentation rules keep bounds in\npyproject.toml so a bump cannot falsify the page, and the release number\nis history, which a bump cannot move either.\n\nThe bound is policy rather than capability, which is why the page frames\nit as a support scope. Checked on this tree at 9.0.0 with CPython\n3.12.12 on macOS arm64: the cffi extension includes no NumPy headers,\nevery `np.*` symbol used exists in 1.26, and the full non-integration\nsuite passes against NumPy 1.26.4 - 2009 passed in the default scope and\n1371 in the slow one, the same counts as the identical venv on 2.5.2.\nWhat NumPy 1 cannot do is span Python 3.11-3.14, since 1.26.4 stops at\n3.12.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-06T23:54:45+02:00",
+          "tree_id": "7039531c946d23abca987fccf17c24c6bb7a0d8f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2e4e9aba867bbb7e06a16d8351dc0de613a0952c"
+        },
+        "date": 1788731735491,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083551406860352,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085334777832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234424591064453,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2352333068847656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58828163146973,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58909034729004,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8712 GHz"
           }
         ]
       }
