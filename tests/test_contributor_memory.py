@@ -20,6 +20,12 @@ ADAPTER_ROOTS = (
     PROJECT_ROOT / ".agents" / "skills",
     PROJECT_ROOT / ".claude" / "skills",
 )
+# Not memory, but paired with it by the documentation maintenance rules and linking into
+# it: `prototypes/README.md` carries one row per study and points at the decision records
+# behind them. Nothing else checked its links, which is how a link to the discovery
+# coverage log outlived the split of that file into `discovery-coverage/` - the page still
+# rendered, the link just went nowhere.
+PAIRED_FILES = (PROJECT_ROOT / "prototypes" / "README.md",)
 LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 GENERIC_FILENAMES = {"README.md", "notes.md", "decisions.md"}
 CANONICAL_LIMIT = 2_000
@@ -37,7 +43,13 @@ def canonical_files() -> set[Path]:
 
 def checked_files() -> list[Path]:
     adapters = [path for root in ADAPTER_ROOTS for path in root.glob("*/SKILL.md")]
-    return [ENTRYPOINT, *MEMORY_ROOT.rglob("*.md"), *COMPATIBILITY_FILES, *adapters]
+    return [
+        ENTRYPOINT,
+        *MEMORY_ROOT.rglob("*.md"),
+        *COMPATIBILITY_FILES,
+        *adapters,
+        *PAIRED_FILES,
+    ]
 
 
 def local_targets(path: Path) -> set[Path]:
