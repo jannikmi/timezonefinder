@@ -26,7 +26,7 @@ These methods are reusable audits, not a schedule. Repeat one when its trigger i
 ## Type-check excluded directories
 
 - Manual mypy runs found real defects before `scripts/` and `tests/` were added to the hook; that seam is now closed.
-- The remaining exclusions are `prototypes/`, `docs/`, and `benchmarks/`; `prototypes/` is deliberate.
+- The remaining exclusions are `prototypes/`, `docs/`, and `benchmarks/`. `prototypes/` stays excluded from the hook deliberately, but since the 2026-09-07 scope reversal a manual mypy run over it is a usable probe whose findings can become items.
 
 ## Packaging-pattern audit
 

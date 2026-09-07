@@ -42,7 +42,7 @@ Recorded decisions are **kept, never deleted** — including the rejected option
 
 ## Scope notes
 
-`prototypes/` is excluded throughout — it carries its own crop of ruff findings (`RUF012` mutable class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave in exploratory code.
+`prototypes/` is **in scope**, decided by the maintainer on 2026-09-07, reversing its blanket exclusion. A finding there can now be a register item and a pass may implement one. It stays *periphery* for discovery ranking, so it is still reached through a signal that already points at it rather than swept for its own sake — the reversal changes what may be recorded and taken, not how hard a pass looks. Two things it did **not** grant, because neither was the boundary being argued about: the `[tool.ruff.lint] exclude = ["prototypes/*"]` and mypy exclusions stand on their own reasoning — exploratory code carries findings (`RUF012` mutable class defaults, `RUF034` useless `if`/`else`, `B905` unstrict `zip`) that are appropriate to leave there, so that backlog is still not register material and holding `prototypes/` to those rules is a fresh maintainer question; and the pairing with `prototypes/README.md` in the [documentation rules](../development/documentation-maintenance-rules.md) now applies to passes too, one row per script.
 
 `packages/timezonefinder-data/timezonefinder_data/data/` and `timezonefinder/flatbuf/generated/` are generated and are never edited directly; findings there belong against the generator or the schema instead. The first is not in the repository at all — `make bootstrap` obtains it — so nothing there can be read from a diff.
 
