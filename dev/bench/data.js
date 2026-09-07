@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788822453176,
+  "lastUpdate": 1788822455457,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16745,6 +16745,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9e7e7c95acfd1c1d2cd8dcc3e9690e64ed5bf9b8",
+          "message": "PROTO-1: make the prototype records say what is still open (#641)\n\n* PROTO-1: make the prototype records say what is still open\n\nThe studies under prototypes/ exist so a committed decision can be re-read against\nthe measurement behind it. Four of those records had drifted, every one of them\nbecause a *shipping* pull request edited elsewhere - so nothing in prototypes/\nchanged and nothing pointed at it.\n\npolygon_block_encoding.py closed on a question it could not answer: byte-aligned\nagainst bit-packed widths for the payload. That was answered when the payload shipped\nas polygon layout 3 in the bit-packed B = 128 form this script recommended, and\nanswered against byte-aligned - the byte-addressed read is five dependent byte loads\nand measured 2.2x the whole kernel on numba. The header said it was open.\n\nshortcut_resolution_query_bench.py reported the polar shortcut-coverage gap as live\nand named Hex.is_special as where a fix would go. The exhaustive follow-up - all\n288,122 cells, 2,016,842 coordinates - reproduced the bad answers and re-diagnosed\nthem as antimeridian-straddling rather than polar; is_special deliberately conflates\nthe two cases and only crosses_antimeridian draws the distinction that can be acted\non. A reader of that header would have gone to the wrong function.\n\nFMT-2 and PROF-1 were left as dangling handles by their own shipping pull requests,\nand #633 - which retired PROF-1 - edited the very file that kept the handle. Both are\nrewritten to the lasting fact.\n\nREADME.md linked to improvement-discovery-coverage-log.md, which the split into\ndiscovery-coverage/ removed; and it claimed the directory is not part of the test\nsuite, when tests/test_query_stage_profile.py imports query_stage_profile and gates\ntwo stage-ladder invariants in the default make test selection. Its restatement of\nfinding 5's byte counts had also drifted from the script in the last two digits, so\nthose figures are now stated once, in the script.\n\nClosing the loop rather than only the instances: the register's retirement grep was\nscoped to contributing/improvements/, which is why two ids survived it; the register\nscope note said prototypes/ is excluded \"throughout\", where what is exempt is the\nexploratory code and not the cited FINDINGS blocks; and the documentation pairing\nrule named the trigger that does not fire (the script changing) rather than the one\nthat does (the work it recommended shipping). tests/test_contributor_memory.py now\nchecks prototypes/README.md's links and line breaks, which fails on the dead link\nthat was there.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Put prototypes/ in the changelog's contributor-memory exception\n\nDecided by the maintainer on 2026-09-07, in review of this pull request.\n\nprototypes/ was the one contributor-only tree still owing changelog fragments,\nand the asymmetry was an accident of the exception being written as a list of\npaths rather than as a rule. MANIFEST.in excludes prototypes/ from the sdist in\nthe same block as contributing/, CLAUDE.md and AGENTS.md; nothing there is\nimported by a packaged module; and a study is a record of how a decision was\nreached, which is the register's subject rather than the changelog's. A reader of\nInternal: cannot act on a correction to an exploratory script's FINDINGS block.\n\nThe test clause widens with it, because a test whose only subject is a prototype\ncannot owe an entry that the prototype itself does not.\n\nTwo fragments go with the rule. This branch's own is withdrawn, and so is #633's\nstage-ladder fragment, whose change was prototypes/ plus its test plus\ncontributing/ and is therefore exempt in full under the new reading. Neither has\nbeen released, so nothing published changes.\n\nThe improvement-pass workflow's boundary is brought into line with the register\nrules in the same commit: prototypes/ is out of scope as a source of work, and\nits records still carry the retirement grep and the documentation pairing. The\ntwo files stating one boundary differently is the drift this branch exists to\nremove.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T01:06:35+02:00",
+          "tree_id": "9abadb3d065050304ac4688e07ac3023b18dcf89",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/9e7e7c95acfd1c1d2cd8dcc3e9690e64ed5bf9b8"
+        },
+        "date": 1788822454768,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083589553833008,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085372924804688,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234405517578125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.235171318054199,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.5882453918457,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58901119232178,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2409 GHz"
           }
         ]
       }
