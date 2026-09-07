@@ -79,15 +79,28 @@ package whose own index is resolution 3, and both halves of that are now the wro
 round. What the script is still the right shape for is the next resolution question, and
 the correctness gate ahead of the timing is the part worth keeping either way.
 
-**A separate, pre-existing gap, found while checking the above and worth its own entry.**
-Brute-forcing every polygon for 3,000 points sampled *uniformly in latitude and longitude*
-finds the containing polygon absent from the shortcut for 7 points at resolution 3 and 1 at
-resolution 4 - every one of them above latitude 88, where ``timezone_at`` returns a
-neighbouring ocean zone and ``certain_timezone_at`` returns ``None``. **Sampled by area
-instead - a realistic workload - both resolutions return 0 wrong answers in 3,000 points.**
-Uniform latitude oversamples the poles enormously, so quote the area-weighted figure and
-treat the polar cells as the narrow defect they are. ``hex_utils`` already special-cases
-them (``surrounds_north_pole``, ``is_special``), which is where a fix would go.
+**A separate, pre-existing gap, found while checking the above - since closed, and its
+diagnosis here was wrong.** Brute-forcing every polygon for 3,000 points sampled *uniformly
+in latitude and longitude* found the containing polygon absent from the shortcut for 7
+points at resolution 3 and 1 at resolution 4, every one of them above latitude 88, where
+``timezone_at`` returned a neighbouring ocean zone and ``certain_timezone_at`` returned
+``None``. **Sampled by area instead - a realistic workload - both resolutions returned 0
+wrong answers in 3,000 points.** Uniform latitude oversamples the poles enormously, which
+is why the area-weighted figure is the one to quote, and that sampling bias is also what
+made the cause look polar. This section used to end by naming ``hex_utils``'s polar
+special cases (``surrounds_north_pole``, ``is_special``) as where a fix would go, and that
+pointer was wrong; the correction is below.
+
+**It was not polar.** The exhaustive follow-up - every one of the 288,122 shortcut cells,
+2,016,842 coordinates, replayed against the packaged binaries - reproduced the bad answers
+and then corrected the diagnosis to **antimeridian-straddling** cells; after every packaged
+polygon's longitude span and frame was checked, the clean rerun found no answer from a cell
+lacking a containing polygon. So the repair site this section used to name is the wrong one:
+``is_special`` deliberately conflates a ring wrapping +-180 deg with one enclosing a pole, and only the
+first can be fixed - ``Hex.crosses_antimeridian`` draws that distinction and
+``rotate_half_turn`` is what resolves it. ``tests/shortcut_test.py::test_the_index_lists_the_polygon_covering_each_sampled_coordinate``
+is the affordable sampled guard left behind; the sweep itself is recorded in the improvement
+discovery coverage as a reusable method.
 
 Neither finding is caused by the shortcut index format; both predate it.
 """

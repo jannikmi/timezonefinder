@@ -103,9 +103,10 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
         delta+zigzag+varint @1e-6        29,043,454      0.458   sequential decode
         block-FOR B=128 bitpack @1e-6    32,696,514      0.516   random access
 
-    At 1e-6 - which GH-542 established is lossless *by construction*, the source
-    carrying six decimals - the random-access encoding is smaller than the sequential
-    one at full precision. Median block width is 19 bits against today's fixed 32
+    At 1e-6 - which is lossless *by construction*, the source carrying six decimals and
+    never seven, settled 2026-08-31 in the geometry data-format decisions and since
+    shipped - the random-access encoding is smaller than the sequential one at full
+    precision. Median block width is 19 bits against today's fixed 32
     (p99 25); 29.7 % of polygons fit in a single B=128 block, median 3, max 1,508.
 
 6.  **Where a ring starts is worth choosing at build time, and this script's answer to
@@ -160,10 +161,19 @@ arm64, Python 3.14.2, C extension, default memory-mapped mode):
     17 % "regression" on a stratum whose code path had not changed. Pass ``--python``
     explicitly, or compare inside one process.
 
-What this does **not** establish: whether byte-aligned widths (+~8 MB, decode is a
-widening load) beat bit-packed ones for FMT-2's payload. Building the index up front also
-faults in every coordinate page, which favours neither variant but does not represent
-mapped mode's cold behaviour.
+**What this left open has since been settled by the work it recommended, which shipped as
+polygon layout 3.** The bit-packed ``B = 128`` frame-of-reference payload above is what the
+package stores, and the question this script could not answer - whether byte-aligned widths
+(+~8 MB, decode is a widening load) beat bit-packed ones - was answered *against*
+byte-aligned when it was built: a payload is a stream of 32-bit words with every region
+word-aligned, so a field is read with two loads, where the byte-addressed form of the same
+read is five dependent byte loads and measured **2.2x the whole kernel on numba**. Nothing
+in this file is live evidence for pending work any more; it is the record of how the layout
+was chosen.
+
+The one caveat that outlives it: building the index up front faults in every coordinate
+page, which favoured neither variant but does not represent mapped mode's cold behaviour -
+so this script says nothing about a cold mapping, and neither does anything else here.
 """
 
 import sys
