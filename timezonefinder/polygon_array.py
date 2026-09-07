@@ -209,9 +209,10 @@ class PolygonArray:
         ``AttributeError`` once this has run.
         """
         # `packed` goes first, and the ordering is the point rather than a tidiness
-        # preference. The wrapped kernel buffers export the accessor's `words` - on the
-        # C backend as `ffi.from_buffer` handles - and `mmap.close()` refuses to unmap
-        # while any export is alive. Dropping them before the accessor closes is what
+        # preference. The wrapped kernel buffers export the accessor's `words` on both
+        # backends - as `ffi.from_buffer` handles on the C one, and as the array itself
+        # on the numba one - and `mmap.close()` refuses to unmap while any export is
+        # alive. Dropping them before the accessor closes is what
         # makes the release happen here instead of whenever the last reference is
         # collected. `test_finder_cleanup_closes_the_mapping` fails if these two swap.
         if hasattr(self, "packed"):

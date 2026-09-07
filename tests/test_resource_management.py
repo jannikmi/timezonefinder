@@ -297,18 +297,24 @@ class TestFinderReleasesItsMappings:
         """``__del__`` calls cleanup() again after an explicit one, in both modes."""
         finder = TimezoneFinder(in_memory=in_memory)
         finder.timezone_at(lng=13.4, lat=52.5)
-        finder.cleanup()
-        finder.cleanup()
 
+        # Installed before the *first* cleanup(), not after it. The accessor's __del__
+        # fires inside that call - dropping `coordinates` releases the last reference -
+        # so a cleanup() that is not idempotent reports its AttributeError there, and a
+        # hook installed later never sees it.
         unraisable = []
         original_hook = sys.unraisablehook
         sys.unraisablehook = unraisable.append
         try:
+            finder.cleanup()
+            finder.cleanup()
             del finder
             gc.collect()
         finally:
             sys.unraisablehook = original_hook
-        assert not unraisable, f"exception escaped __del__: {unraisable[0].exc_value!r}"
+        assert not unraisable, (
+            f"exception escaped teardown: {unraisable[0].exc_value!r}"
+        )
 
     def test_lightweight_finder_without_polygons_cleans_up(self):
         """``TimezoneFinderL`` loads no polygon data, so it has neither array."""

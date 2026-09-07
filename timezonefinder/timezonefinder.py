@@ -834,11 +834,16 @@ class AbstractTimezoneFinder(ABC):
         finder must not be used afterwards: the lookups raise ``AttributeError`` once
         this has run, which is what ``__exit__`` promises by calling it.
 
-        ``holes`` is released first, because it resolves references through
-        ``boundaries``. Each array is asked for its own release rather than handed to
+        Each array is asked for its own release rather than handed to
         ``close_resource``: neither has ever had a ``close()``, so the best-effort form
         this replaces swallowed an ``AttributeError`` and released nothing at all,
         leaving the mapped coordinate files open until the finder was collected.
+
+        ``holes`` goes first only because it holds a reference to ``boundaries``, so
+        releasing it first leaves no interval where a live array points at a released
+        one. Either order in fact unmaps cleanly - each array exports only its own
+        coordinate words - so this is defensive rather than load-bearing, and nothing
+        asserts it.
         """
         for attr in ("holes", "boundaries"):
             array = getattr(self, attr, None)
