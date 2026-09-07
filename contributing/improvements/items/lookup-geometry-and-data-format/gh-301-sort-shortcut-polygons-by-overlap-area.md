@@ -6,7 +6,7 @@
 - [Query performance and shortcut decisions](../../decisions/query-performance-and-shortcut-index-decisions.md) — the refusal in one paragraph. This file is the measurement record it points at, and is retained for that reason rather than deleted.
 - [Query performance measurement baseline](../../query-performance-measurement-baseline.md)
 - **Tracks:** issue #301, **closed as not planned 2026-08-21** with the enumeration as justification.
-- **Status:** rejected 2026-09-06 after being built and measured. Eight keys spanning the whole per-cell blend of the two properties available — a zone's vertex count in the cell and the area it covers of the cell — were compiled into real shortcut binaries; the family is monotone and its best member is what already ships. What is refused is the family, not one key.
+- **Status:** rejected 2026-09-06, and closed by construction rather than by sampling: the ordering that provably minimises expected compute is worth 0.27 % of a mixed workload, and measures as no difference. Eight heuristic keys spanning the whole per-cell blend of the two properties available — a zone's vertex count in the cell and the area it covers of the cell — were compiled into real shortcut binaries; the family is monotone and its best member is what already ships. What is refused is the family, not one key.
 
 ## What was measured
 
@@ -36,6 +36,22 @@ The 2.90 % this item was ranked on was a count of *tests*, and a count is a work
 Smith's rule (`w = 1`) is what the cost model says to do about that, and it does help: it keeps a huge polygon in the free final slot, which is why it moves 2 answers where `w = ∞` moves 158. It still loses, and so does every weight between, because today's key already minimises the term that dominates — the cost of a *failed* test, which is what the loop mostly does. **Sweeping the weight is what turns a refusal of one key into a refusal of the family**, and it is the cheap half of this measurement: the counts come from one pass over the fixtures per key.
 
 **This is a different instrument from the 2.90 %, not the same number re-run.** That was an index-uniform enumeration at resolution 3 over 41,162 cells; these are fixture-weighted counts at resolution 4. The two landing within a tenth of a point is a coincidence of denominators, not corroboration.
+
+## The optimum, constructed and verified
+
+The heuristic sweep above refuses a family by sampling it. The optimum settles it outright.
+
+**The model.** The loop stops at the first hit and never tests the final zone's run, so with `S` the index where that run starts, `c_t` the expected compute of testing the candidate at position `t` and `p_t` its hit probability for a uniform point in the cell, the expected compute is `E = Σ_{t<S} c_t · (1 − Σ_{u<t} p_u)`. Zone contiguity is a hard constraint: `last_zone_change_idx` is only well defined with one final run.
+
+**The construction.** Within a zone, order by `c/p` ascending — adjacent exchange of `i` and `j` moves `E` by `c_j·p_i − c_i·p_j`. Across zones, a zone entered at survival `R` contributes `R·C − K` with `C = Σc`, `K = Σ_i c_i·Σ_{u<i} p_u`, so exchanging adjacent zone blocks moves `E` by `C_A·P_B − C_B·P_A`: the `K` terms cancel and a zone behaves **exactly** as one job of cost `C` and probability `P`, ordered by `C/P` ascending. The free final slot does not reduce to a sort key, because designating zone `m` last both saves its own contribution and removes its probability from shielding everything after it — `E(m) = E_all − (R_m·C_m − K_m) + P_m·Σ_{j>m} C_j`. With `k ≤ 25` zones, and `k = 2` in 94 % of cells, evaluate all `k` and keep the minimum.
+
+**Verified, not argued.** Enumerating every contiguity-respecting ordering of all 31,344 ambiguous cells holding at most 5 candidates, the construction attains the minimum in **31,344 of 31,344** — no cell where it is beaten.
+
+**The cost coefficient is not the vertex count**, and this is the part with teeth. The packed kernel walks every latitude block of a ring, skips those whose stored range excludes the query latitude, and scans only survivors, so `c_i = α + β·(blocks) + γ·(in-band edges)`, all three counts computable at build time from `_block_index.block_latitude_ranges`. Calibrated against measured `PolygonArray.pip` times over 1,500 (polygon, latitude) samples: **`437.5 ns + 0.511·blocks + 1.133·in-band edges`, R² = 0.9886**, against **R² = 0.524 for the total vertex count** the shipped key sorts on. A polygon of ≥512 vertices scans a median **2.2 %** of its ring, and the two keys disagree on which of two candidates is cheaper in **31.6 % of candidate pairs**.
+
+**And it still does not matter, because the loop is overhead-bound.** With the calibrated model, expected candidate-loop compute per ambiguous query is 758.5 ns shipped, 735.8 ns under a pure true-cost key and **723.8 ns under the optimum — −4.57 %**. But 437.5 ns of that is fixed per-candidate overhead and only ~1.05 candidates are tested, so the loop is **14.7 % of a 5,150 ns ambiguous query**: the optimum saves **34.7 ns, 0.67 % of an ambiguous query and 0.27 % of a mixed workload**. Three paired A/B runs agree — +3.8 %, −6.3 %, +0.2 % on ambiguous with 29, 30 and 30 of 61 rounds won, dead even every time and `unresolved` or `no difference` throughout. **Even an oracle** that knows the answer and pays only the cheapest candidate saves 80 % of the loop, which is 11.8 % of an ambiguous query and **4.7 % of a mixed workload** — that is the ceiling on candidate ordering as a subject, reached only by clairvoyance.
+
+**What this prices for the future.** The candidate loop is bound by per-call overhead, not by geometry: 437.5 ns fixed against ~1.1 ns per scanned edge. Any further work on this loop should attack the overhead, not the order; and the block index has already collected the win that reordering would have been reaching for.
 
 ## What else the measurement turned up
 
