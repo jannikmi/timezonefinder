@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788768148282,
+  "lastUpdate": 1788768149850,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -16592,6 +16592,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0141e4bab5b80c02bfc015cdf99bead11427aa78",
+          "message": "BUG-6: release the mapped coordinate files when a finder is cleaned up (#640)\n\n* BUG-6: release the mapped coordinate files when a finder is cleaned up\n\n`AbstractTimezoneFinder.cleanup()` handed each polygon array to\n`close_resource`, which calls `close()`. Neither `PolygonArray` nor `HoleArray`\nhas ever had one, so the `AttributeError` was suppressed as an expected close\nfailure and the call released nothing: both mapped coordinate files, and their\nfile handles, stayed open until the finder was collected. `__exit__` calls this,\nso a `with` block promised deterministic release and delivered none.\n\n`PolygonArray.cleanup()` performs the release and `__del__` now calls it. The\nordering inside it is the substance rather than tidiness: `packed` holds the\nwrapped kernel buffers, which export the accessor's `words` -- on the C backend\nas `ffi.from_buffer` handles -- and `mmap.close()` refuses to unmap while an\nexport is alive. Dropping them first, then closing the accessor explicitly\nrather than waiting for its reference count to fall to zero, is what makes the\nunmapping happen by the time `cleanup()` returns.\n\n`HoleArray` splits the same way and drops its boundaries *reference* first, as\nits `__del__` already did; the boundaries array owns its own release and the\nfinder performs it, holes first.\n\n`MemoryCoordAccessor.cleanup()` is now idempotent and tolerates a partially\ninitialised instance, matching its file-backed sibling. That was previously\ndocumented as deliberate and unneeded; routing the finder into it is what needs\nit, since an accessor is now cleaned up once by the caller and again by\n`__del__`.\n\nTraded away, and pinned by `test_finder_is_unusable_after_cleanup`: a finder\nused after `cleanup()` now raises `AttributeError` where the no-op left it able\nto answer. That is the documented contract, unenforceable while the call did\nnothing.\n\n`test_finder_cleanup_closes_the_mapping` fails if `packed` and the accessor\nrelease swap places -- verified on both backends.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Retire BUG-6\n\nIts item file and ranking row are deleted in the pull request that ships it.\nNothing else in the register referenced the id, so no reference needed\nrewriting to a lasting fact.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Answer the review: pin the idempotency guard and correct four claims\n\nFive findings from the independent review, all confirmed by running them.\n\n`test_cleanup_is_idempotent_and_leaves_no_unraisable` was vacuous. The\naccessor's `__del__` fires *inside* the first `cleanup()` -- dropping\n`coordinates` releases the last reference -- so the hook, installed afterwards,\nnever saw the AttributeError it existed to catch. Reverting the\n`MemoryCoordAccessor` guard passed the whole unit suite. The hook now wraps the\nfirst cleanup, and that mutation fails the test in both memory modes.\n\n`AbstractTimezoneFinder.cleanup`'s docstring claimed holes must be released\nfirst because it resolves through boundaries. Swapping the order in fact unmaps\ncleanly either way -- each array exports only its own words. The order is kept\nas defensive and now says so instead of asserting a dependency nothing checks.\n\n`packed_buffers_clang`'s docstring and the ordering comment in\n`PolygonArray.cleanup` were both stale or narrow: the ordering moved from\n`__del__` to `cleanup()`, and the export is not specific to the C backend --\n`packed_buffers_numba` returns the accessor's array itself.\n\nThe sibling fragment for the accessor change said \"no public teardown path\nreaches this yet\". This is that path, and both fragments assemble into one\nsection, so it is amended rather than contradicted.\n\nThe user fragment claimed no-use-after-cleanup \"has always been the documented\ncontract\". It was documented on the internal accessor only; the finder's own\ndocstring said \"Clean up resources.\" `docs/1_usage.rst` now documents the\ncontext manager and the rule, which is where a user meets this.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-07T10:01:36+02:00",
+          "tree_id": "82220e711fd4126f8828c0a9f42fedbd968d5e2f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0141e4bab5b80c02bfc015cdf99bead11427aa78"
+        },
+        "date": 1788768149524,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2343225479125977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2350454330444336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.588029861450195,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.588751792907715,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2476 GHz"
           }
         ]
       }
