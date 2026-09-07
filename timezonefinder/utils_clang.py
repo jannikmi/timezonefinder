@@ -74,8 +74,9 @@ def packed_buffers_clang(
     the kernel taking collection-wide arrays and a ``block_start`` is for. Wrapping
     copies nothing and faults no mapping in, but it does keep the buffers alive - and
     the coordinate one is an export of the memory map, which ``mmap.close()`` refuses
-    to unmap under. That is why ``PolygonArray.__del__`` drops ``packed`` before
-    ``coordinates``, and why holding these anywhere else keeps the mapping open.
+    to unmap under. That is why ``PolygonArray.cleanup`` drops ``packed`` before it
+    releases ``coordinates``, and why holding these anywhere else keeps the mapping
+    open.
 
     ATTENTION: every array must be C-contiguous, as for :func:`pt_in_poly_clang`. Here
     that holds by construction - each is one array per collection, never a slice.

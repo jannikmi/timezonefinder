@@ -827,18 +827,31 @@ class AbstractTimezoneFinder(ABC):
         return dt.replace(tzinfo=zone)
 
     def cleanup(self) -> None:
-        """Clean up resources. Override in subclasses as needed."""
-        # At termination utils may have been tidied up. If we're terminating we don't need to
-        # worry about closing file handles so just avoid an exception.
-        close_resource = getattr(utils, "close_resource", None)
-        if close_resource is None:
-            return
+        """Release the loaded polygon data, and with it the coordinate file mappings.
 
-        # PolygonArray exposes underlying accessors that manage their own buffers;
-        # this is a best-effort close for any objects with a close() method.
-        close_resource(getattr(self, "boundaries", None))
-        close_resource(getattr(self, "holes", None))
-        # hole_registry is an in-memory dict only; nothing to close
+        Idempotent, and safe on a finder that never loaded polygons - ``TimezoneFinderL``
+        has neither array, and ``__init__`` can raise before either is assigned. The
+        finder must not be used afterwards: the lookups raise ``AttributeError`` once
+        this has run, which is what ``__exit__`` promises by calling it.
+
+        Each array is asked for its own release rather than handed to
+        ``close_resource``: neither has ever had a ``close()``, so the best-effort form
+        this replaces swallowed an ``AttributeError`` and released nothing at all,
+        leaving the mapped coordinate files open until the finder was collected.
+
+        ``holes`` goes first only because it holds a reference to ``boundaries``, so
+        releasing it first leaves no interval where a live array points at a released
+        one. Either order in fact unmaps cleanly - each array exports only its own
+        coordinate words - so this is defensive rather than load-bearing, and nothing
+        asserts it.
+        """
+        for attr in ("holes", "boundaries"):
+            array = getattr(self, attr, None)
+            if array is None:
+                continue
+            array.cleanup()
+            delattr(self, attr)
+        # hole_registry is an in-memory dict only; nothing to release
 
     def __enter__(self) -> Self:
         """Enter the runtime context for the TimezoneFinder."""

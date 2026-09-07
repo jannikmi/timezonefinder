@@ -72,6 +72,18 @@ Use the ``in_memory`` argument to read all polygon data into memory for faster a
     tf = TimezoneFinder(in_memory=True)
 
 
+In the default memory-mapped mode a finder holds the coordinate files open for as long as it lives.
+Call ``cleanup()``, or use the finder as a context manager, to release them at a point you choose rather than when the instance is eventually collected:
+
+.. code-block:: python
+
+    with TimezoneFinder() as tf:
+        tz = tf.timezone_at(lng=13.358, lat=52.5061)
+    # the coordinate files are closed here
+
+A finder must not be used after ``cleanup()``; its data is released and a lookup that reads geometry raises ``AttributeError``.
+Long-lived programs that keep one instance around need neither call - the files are released when the finder is.
+
 Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
 
 .. code-block:: python
