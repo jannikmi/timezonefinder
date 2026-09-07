@@ -331,11 +331,13 @@ CONCLUSIONS
    gains 8.0 % on numba and nothing on clang. A change that removes dispatch is worth
    nothing on the configuration that never paid for it, which is the tracked one.
 
-   Half of ``PROF-1`` went with it, by deletion rather than repair: the ``zone_ids_of``
-   rung bound the checked public accessor at ~1,793 ns where the lookup called the
-   unchecked one at ~564, and it was most of the ~28-30 % this ladder used to overshoot
-   the real function by. **The other half has now been repaired rather than deleted**,
-   and is finding 10.
+   Half of the ladder's mis-binding went with it, by deletion rather than repair: the
+   ``zone_ids_of`` rung bound the checked public accessor at ~1,793 ns where the lookup
+   called the unchecked one at ~564, and it was most of the ~28-30 % this ladder used to
+   overshoot the real function by. **The other half has now been repaired rather than
+   deleted**, and is finding 10. Both are gated now rather than remembered:
+   ``tests/test_query_stage_profile.py`` asserts structurally that no rung binds a checked
+   public accessor and that a rung opens the candidates the lookup opens.
 
 9. **Two checkouts do not compare unless they name the same interpreter.** uv picks a
    Python per invocation, and two worktrees *inside* this repository, on one machine and
