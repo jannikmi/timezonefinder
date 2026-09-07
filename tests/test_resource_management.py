@@ -132,6 +132,25 @@ class TestNumpyViewOutlivesAccessor:
         assert payload.ndim == 1
         assert payload.size > 0
 
+    def test_cleanup_closes_the_mapping_when_no_caller_holds_a_view(self):
+        """The ordinary case must unmap deterministically, not defer to collection.
+
+        The accessor holds a whole-file word view of its own (``words``), which is an
+        export of the mmap exactly as a payload view is. Dropped after the close is
+        attempted, it makes ``mmap.close()`` refuse on *every* cleanup - a BufferError
+        ``close_resource`` swallows, leaving the mapping open until the accessor is
+        collected. Nothing else fails when that happens, which is why it is asserted
+        here: the close is only allowed to be refused when a caller's view is alive.
+        """
+        accessor = self._accessor()
+        coord_buf = accessor.coord_buf
+
+        accessor.cleanup()
+
+        assert coord_buf.closed, (
+            "cleanup() left the mapping open with no caller view alive"
+        )
+
     def test_cleanup_releases_mapping_once_the_view_is_dropped(self):
         """A refused close must only defer the unmapping, not pin it to the accessor.
 
