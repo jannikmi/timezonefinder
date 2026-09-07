@@ -231,13 +231,14 @@ class MemoryCoordAccessor(AbstractCoordAccessor):
     def cleanup(self) -> None:
         """Drop the payload. Unlike the file-backed sibling, nothing to close.
 
-        Not safe to call twice, and not safe on a partially initialised instance: both
-        raise ``AttributeError``, which ``__del__`` turns into an ignored-exception
-        message on stderr. ``FileCoordAccessor.cleanup`` tolerates both (see
-        ``test_repeated_cleanup_with_live_view_does_not_raise``); aligning this one is a
-        behaviour change, so it is left as is until something actually needs it.
+        Safe to call repeatedly and on a partially initialised instance, as
+        ``FileCoordAccessor.cleanup`` is. It used to raise ``AttributeError`` on both,
+        which ``__del__`` turned into an ignored-exception message on stderr; that
+        became reachable when the finder started releasing its arrays explicitly, since
+        an accessor is then cleaned up once by the caller and again by ``__del__``.
         """
-        del self.words
+        if hasattr(self, "words"):
+            del self.words
 
 
 def create_coord_accessor(

@@ -254,6 +254,86 @@ def test_shortcut_arrays_do_not_pin_the_file_buffer(hybrid_shortcuts):
 
 
 @pytest.mark.unit
+class TestFinderReleasesItsMappings:
+    """``cleanup()`` and ``__exit__`` must actually release the coordinate files.
+
+    They used to release nothing at all: ``cleanup()`` handed each polygon array to
+    ``close_resource``, which calls ``close()`` -- a method neither array has ever had.
+    The resulting ``AttributeError`` was suppressed as an expected close failure, so
+    both mapped files stayed open until the finder was garbage collected.
+    """
+
+    def test_finder_cleanup_closes_the_mapping(self):
+        """Both mapped coordinate files are closed by the time cleanup() returns.
+
+        This also pins ``PolygonArray.cleanup``'s ordering, which nothing else does:
+        the wrapped kernel buffers in ``packed`` export the accessor's ``words``, so
+        releasing the accessor before dropping them puts a live export at the close,
+        ``mmap.close()`` refuses, and both assertions below fail.
+        """
+        finder = TimezoneFinder(in_memory=False)
+        finder.timezone_at(lng=13.4, lat=52.5)
+        # held before cleanup(), which deletes the attributes naming them
+        mappings = [finder.boundaries.coordinates, finder.holes.coordinates]
+        buffers = [(a.coord_buf, a.coord_file) for a in mappings]
+        del mappings
+
+        finder.cleanup()
+
+        for coord_buf, coord_file in buffers:
+            assert coord_buf.closed, "coordinate mapping left open"
+            assert coord_file.closed, "coordinate file left open"
+
+    def test_context_manager_releases_on_exit(self):
+        """The seam whose whole purpose is deterministic release."""
+        with TimezoneFinder(in_memory=False) as finder:
+            finder.timezone_at(lng=13.4, lat=52.5)
+            coord_buf = finder.boundaries.coordinates.coord_buf
+
+        assert coord_buf.closed
+
+    @pytest.mark.parametrize("in_memory", [False, True])
+    def test_cleanup_is_idempotent_and_leaves_no_unraisable(self, in_memory):
+        """``__del__`` calls cleanup() again after an explicit one, in both modes."""
+        finder = TimezoneFinder(in_memory=in_memory)
+        finder.timezone_at(lng=13.4, lat=52.5)
+        finder.cleanup()
+        finder.cleanup()
+
+        unraisable = []
+        original_hook = sys.unraisablehook
+        sys.unraisablehook = unraisable.append
+        try:
+            del finder
+            gc.collect()
+        finally:
+            sys.unraisablehook = original_hook
+        assert not unraisable, f"exception escaped __del__: {unraisable[0].exc_value!r}"
+
+    def test_lightweight_finder_without_polygons_cleans_up(self):
+        """``TimezoneFinderL`` loads no polygon data, so it has neither array."""
+        finder = TimezoneFinderL()
+        finder.timezone_at(lng=13.4, lat=52.5)
+        finder.cleanup()  # must not raise
+        assert not hasattr(finder, "boundaries")
+
+    def test_finder_is_unusable_after_cleanup(self):
+        """The documented contract, now enforced through the public class.
+
+        Pinned because it is the side this change trades away: the old no-op left a
+        cleaned-up finder fully able to answer.
+        """
+        finder = TimezoneFinder(in_memory=False)
+        assert finder.get_geometry(tz_name="Europe/Berlin")
+        finder.cleanup()
+
+        # a lookup answered by the h3 index alone reads no geometry, so ask for the
+        # geometry itself rather than pinning which coordinates happen to reach it
+        with pytest.raises(AttributeError):
+            finder.get_geometry(tz_name="Europe/Berlin")
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize("in_memory", [False, True])
 def test_loaded_dataset_arrays_are_read_only(in_memory):
     """Publicly reachable dataset state must not be mutable by accident.

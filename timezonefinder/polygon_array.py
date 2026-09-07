@@ -193,21 +193,37 @@ class PolygonArray:
         )
         self.pip_kernel = utils.inside_polygon_packed
 
-    def __del__(self) -> None:
-        """Clean up resources when the object is destroyed.
+    def cleanup(self) -> None:
+        """Release the coordinate accessor and drop this array's loaded state.
 
-        Tolerates a partially initialised instance, as ``FileCoordAccessor.cleanup``
-        does: ``__init__`` can raise between reading the bbox vectors and building the
-        coordinate accessor - a data directory whose coordinate file the layout guard
-        rejects does exactly that - and ``__del__`` still runs on the half-built object.
-        Deleting a never-assigned attribute would raise inside ``__del__``, which Python
-        can only report as an unraisable exception on stderr: noise that tells the user
-        nothing about the real error already propagating out of ``__init__``.
+        Idempotent, and tolerates a partially initialised instance, as
+        ``FileCoordAccessor.cleanup`` does: ``__init__`` can raise between reading the
+        bbox vectors and building the coordinate accessor - a data directory whose
+        coordinate file the layout guard rejects does exactly that - and ``__del__``
+        still runs on the half-built object. Deleting a never-assigned attribute would
+        raise inside ``__del__``, which Python can only report as an unraisable
+        exception on stderr: noise that tells the user nothing about the real error
+        already propagating out of ``__init__``.
+
+        The array must not be used afterwards; ``coords_of`` and the lookups raise
+        ``AttributeError`` once this has run.
         """
+        # `packed` goes first, and the ordering is the point rather than a tidiness
+        # preference. The wrapped kernel buffers export the accessor's `words` - on the
+        # C backend as `ffi.from_buffer` handles - and `mmap.close()` refuses to unmap
+        # while any export is alive. Dropping them before the accessor closes is what
+        # makes the release happen here instead of whenever the last reference is
+        # collected. `test_finder_cleanup_closes_the_mapping` fails if these two swap.
+        if hasattr(self, "packed"):
+            del self.packed
+        # Closed explicitly rather than left to the accessor's own `__del__`: relying on
+        # the reference count to reach zero here is what made this deferred in the first
+        # place, and it is not a property a caller can check.
+        coordinates = getattr(self, "coordinates", None)
+        if coordinates is not None:
+            coordinates.cleanup()
+
         for attr in (
-            # the wrapped buffers first: on the C backend they hold the mapping open,
-            # and the accessor below is what closes it
-            "packed",
             "coordinates",
             "xmin",
             "xmax",
@@ -227,6 +243,10 @@ class PolygonArray:
         ):
             if hasattr(self, attr):
                 delattr(self, attr)
+
+    def __del__(self) -> None:
+        """Release resources when the object is destroyed."""
+        self.cleanup()
 
     def __len__(self) -> int:
         """
@@ -499,13 +519,14 @@ class HoleArray(PolygonArray):
         collection, storage_idx = self._resolve(poly_id)
         return collection._pip_at(storage_idx, x, y)
 
-    def __del__(self) -> None:
-        """Clean up resources when the object is destroyed.
+    def cleanup(self) -> None:
+        """Release this array, and its reference to the boundaries it resolves through.
 
         Drops the boundaries reference *before* the base class tears this array down, so
         no half-deleted state is one that still resolves references: afterwards
         ``coords_of`` raises ``AttributeError`` instead of reading through a boundaries
-        array whose own accessor may already be gone.
+        array whose own accessor may already be gone. Only the *reference* is dropped -
+        the boundaries array owns its own release, and the finder performs it.
         """
         if hasattr(self, "_poly_ref_ints"):
             del self._poly_ref_ints
@@ -513,4 +534,4 @@ class HoleArray(PolygonArray):
             del self.poly_ref
         if hasattr(self, "boundaries"):
             del self.boundaries
-        super().__del__()
+        super().cleanup()
