@@ -135,3 +135,22 @@ def test_observation_hits_match_full_runtime_predicate(tf):
             x, y = utils.coord2int(lng), utils.coord2int(lat)
             for i, pid in enumerate(ids):
                 assert hits[i, j] == tf.inside_of_polygon(pid, x, y)
+
+
+def test_illegal_input_order_is_not_retained_as_a_zero_cost_tie():
+    zones = [0, 1, 0]
+    order = optimal_order(zones, np.zeros((3, 2), dtype=bool), np.ones((3, 2)))
+    check_shortcut_sorting(order, np.array(zones))
+    assert objective(order, zones, np.zeros((3, 2), dtype=bool), np.ones((3, 2))) == 2
+
+
+def test_rejected_cell_keeps_legacy_tie_precedence():
+    from scripts.shortcuts import optimise_shortcut_ordering
+
+    data = SimpleNamespace(polygon_lengths=[4] * 9, poly_zone_ids=np.arange(9))
+    legacy = optimise_shortcut_ordering(data, [8, 1])
+    assert legacy == [8, 1]
+    orderer = object.__new__(ShortcutOrderer)
+    orderer.data = data
+    orderer.safe_to_reorder = lambda *args: False
+    assert orderer.order(h3.latlng_to_cell(0, 0, 4), legacy) == [8, 1]

@@ -39,7 +39,7 @@ except NameError:  # pragma: no cover - used only during profiling
 
 @profile
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[int]:
-    """Deterministic legacy order, also the fallback for unsafe/large cells.
+    """Legacy order, also the fallback for unsafe/large cells.
 
     The work optimizer runs after candidate compilation, against the packed
     geometry the runtime will use. This order preserves the old zone precedence
@@ -54,7 +54,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     zone_buckets = defaultdict(list)
     zone_sizes: defaultdict[int, int] = defaultdict(int)
 
-    for poly_id in sorted(poly_ids):
+    for poly_id in poly_ids:
         zone_id = int(zone_ids[poly_id])
         zone_buckets[zone_id].append(poly_id)
         zone_sizes[zone_id] += int(polygon_lengths[poly_id])

@@ -2587,12 +2587,14 @@ pytz = [
 test = [
     { name = "hypothesis" },
     { name = "packaging" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-run-parallel" },
     { name = "pytz" },
     { name = "pyyaml" },
     { name = "setuptools" },
+    { name = "shapely" },
     { name = "tox" },
 ]
 
@@ -2639,12 +2641,14 @@ pytz = [{ name = "pytz", specifier = ">=2022.7.1" }]
 test = [
     { name = "hypothesis", specifier = ">=6" },
     { name = "packaging", specifier = ">=23" },
+    { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pytest" },
     { name = "pytest-benchmark", specifier = ">=5,<6" },
     { name = "pytest-run-parallel", specifier = ">=0.8.2" },
     { name = "pytz", specifier = ">=2022.7.1" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "setuptools", specifier = ">=62.3" },
+    { name = "shapely", specifier = ">=2.1,<3" },
     { name = "tox" },
 ]
 

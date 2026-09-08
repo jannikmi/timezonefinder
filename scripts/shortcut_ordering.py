@@ -8,7 +8,8 @@ The model, proof and limitations are part of this module's contract:
   differ by almost a factor of two). Cell probabilities multiply independent
   objectives by positive constants, so they cannot change a per-cell minimizer.
   We sample a containing spherical cap and reject using H3 itself. Each cell gets
-  its own fixed seed: traversal order cannot affect the generated binary.
+  its own fixed seed: traversal order cannot affect its samples. Legacy tie order is retained
+  at safety gates, including its existing dependence on candidate set iteration.
 * WGS84 is approximated by a sphere, not by a flat longitude/latitude plane.
   Ellipsoidal dA = a²(1-e²) cos(phi)/(1-e² sin²(phi))² dphi dlambda.
   Relative to spherical samples, normalized importance weights are proportional
@@ -94,6 +95,8 @@ def optimal_order(zones: list[int], hits: np.ndarray, costs: np.ndarray) -> list
     have shape (candidate, sample), as must Boolean hits.
     """
     n = len(zones)
+    if n == 0:
+        return []
     full = (1 << n) - 1
     groups = tuple(
         sum(1 << i for i, z in enumerate(zones) if z == zone)
@@ -121,6 +124,11 @@ def optimal_order(zones: list[int], hits: np.ndarray, costs: np.ndarray) -> list
         return best
 
     value, order = dp(0)
+    # Only a legal input order can be a fallback. In particular [A, B, A]
+    # must not be scored as zero by stopping at its first A.
+    first_final = zones.index(zones[-1])
+    if any(zone != zones[-1] for zone in zones[first_final:]):
+        return list(order)
     alive = np.ones(hits.shape[1], dtype=bool)
     original = 0.0
     for i, zone in enumerate(zones):

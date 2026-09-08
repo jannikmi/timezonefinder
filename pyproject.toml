@@ -53,6 +53,8 @@ docs = [
     "sphinx-rtd-theme>=3,<4",
 ]
 test=[
+    # Tests import converter modules; these remain conversion-only dependencies.
+    { include-group = "data" },
     "tox",
     "pytest",
     "hypothesis>=6",
