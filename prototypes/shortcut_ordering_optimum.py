@@ -55,7 +55,8 @@ predicate actually returns True on, rather than the ring. See A12 to A16.
 uses ``1 - sum p_u`` for
 the survival probability, which is the probability of no hit only if the candidates' hit regions
 are *disjoint within the cell*. They are not always. Upstream ships genuinely overlapping zones -
-``Asia/Urumqi`` lies inside ``Asia/Shanghai`` - so some points are inside two candidates at once.
+``Asia/Urumqi`` and ``Asia/Shanghai`` both cover the cell they share - so some points are inside two
+candidates at once.
 ``areas`` measures exactly this and prints it: the summed candidate area above the *union* area is
 the doubly-covered area, per cell. Where that is non-zero, (1) understates survival, and, far more
 importantly, **the ordering decides which zone is returned rather than only how long it takes** -
@@ -72,8 +73,8 @@ answers move. An ordering that wins on (1) and moves 158 answers has not been sh
 it has been shown to be different. Finding 7 is that report.
 
 Measured over 2026c: candidates overlap in **1,090 of 31,368 cells (3.47%)**, and where they do,
-the doubly-covered area is 2.7% of the cell on average and 100% of it in the worst case - a fully
-nested pair, which is what ``Asia/Urumqi`` inside ``Asia/Shanghai`` is.
+the doubly-covered area is 2.7% of the cell on average and 100% of it in the worst case - two zones
+both covering the whole cell, as ``Asia/Urumqi`` and ``Asia/Shanghai`` do on the cell they share.
 
 
 THE CONSTRUCTION
@@ -278,7 +279,8 @@ resolution 4, fixture set v3, taken against ``c27b452``)
 
 7. **Reordering moves answers with no data change** - up to 158 of 5,000 ambiguous fixture points
    depending on the key. Every moved point lies inside *two* zones' polygons where the upstream
-   boundaries genuinely overlap (A14), mostly ``Asia/Urumqi`` inside ``Asia/Shanghai``. Candidates
+   boundaries genuinely overlap (A14) - ``Asia/Urumqi`` and ``Asia/Shanghai`` both covering one cell
+   is the largest such case. Candidates
    overlap in **1,090 of 31,368 cells (3.47%)**; where they do, the doubly-covered area is 2.7% of
    the cell on average and 100% of the worst, which is a fully nested pair. That is the population
    an ordering change can silently re-answer, and it is why the disjointness (1) assumes is the
