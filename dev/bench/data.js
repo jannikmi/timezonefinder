@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788848094953,
+  "lastUpdate": 1788848097150,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17663,6 +17663,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "05155a7bb8a2e2d2fb634714792906b3ebbc9876",
+          "message": "Record TOOL-7 and PERF-7, found while measuring the shortcut candidate ordering (#648)\n\n* Record TOOL-7 and PERF-7, found while measuring the shortcut candidate ordering\n\nTwo discoveries made beside GH-301 and implemented by neither this change nor\nthe pass that found them. They are register-only, and split out of GH-301's own\npull request so that one retires exactly the item it ships.\n\nTOOL-7: the shortcut binary is reproducible only by set-iteration luck.\n`process_single_hex` takes `list(cell.polys_in_cell)` -- a set -- and\n`optimise_shortcut_ordering` sorts it stably, so where the sort key ties the\noutput order is whatever order the set happened to iterate in. Recompiling the\nshipped 2026c index from the same source with the candidates sorted reproduces\n`shortcuts.bin` to 29 differing bytes across ~6 cells, every one a tie. Answers\nare unaffected, but the byte diff is how the generated-file rules prove a\nconverter refactor neutral, and a proof that can fail for unrelated reasons is\nworth ~10 lines to fix.\n\nPERF-7: 826 of 31,368 ambiguous cells (2.63 %) are covered entirely by one zone,\nso no query point in them can fall outside it and the index could store them as\nunique-zone cells -- no geometry at all. Worth ~109 ns, 2.12 % of an ambiguous\nquery, about three times the provably optimal candidate ordering, because it\nremoves the loop rather than reordering it. It is not free: in 824 of the 826\nanother zone genuinely overlaps, so converting changes which of the two answers\nthere, and \"fully covered\" is a property of a cell, which would make zone\nprecedence depend on the index resolution that the 2026-08-21 geometry decision\nkeeps it out of. Filed with the briefed question and left ineligible.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-7: record the proposed precedence heuristic and what it leaves open\n\nProposed 2026-09-08: where one smaller polygon sits beside a polygon covering\nthe whole cell the smaller takes precedence, and where several cover it the\nlower id wins. The intuition is right -- the more specific zone winning over the\none enclosing it is the enclave rule, and it is what today's ordering does by\naccident -- but measured against the packaged index it does not close the\ndecision.\n\nOf the 826 fully covered cells, exactly one polygon covers 98 of them; 728 have\nseveral coverers and fall to the id tie-break the proposal itself marks\nambiguous; and a further 266 cells have overlapping candidates with no coverer\nat all, which the heuristic does not reach. No cell has two non-covering\ncandidates overlapping each other, so it never has to order two of those.\n\nTwo objections have teeth. Ids come from upstream GeoJSON feature order -- the\npackaged zone names are not sorted, so ids track that file and not the zones --\nso a data update can flip a winner with no geometry change. And the rule is not\nconsistent between cells: of the 7 zone pairs its first clause rules on, 2 get\nopposite winners in different cells, because whether a zone covers *this* cell\nis a property of the cell. Two points in one overlap region either side of a\ncell boundary would be answered differently, which is the failure the\n2026-08-21 H3-independence decision exists to prevent, now demonstrated.\n\nThe briefed question is therefore narrowed rather than answered: whether\nprecedence should be defined globally at the zone level, which would close all\n1,092 cells at once, keep precedence out of the index, and make the conversion\na pure speed change that cannot move an answer.\n\nAlso corrects the Urumqi/Shanghai characterisation: both polygons cover their\nshared cell entirely, so that pair is decided by the tie-break rather than by\nthe size rule.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* PERF-7: record the precedence decision, scoped to fully covered cells\n\nDecided 2026-09-08. Precedence is a documented heuristic used only in shortcut\ncells that one polygon covers entirely, and within that scope the rule is\ncontainment: of two overlapping zones the one for which the shared area is the\nlarger share of itself is the enclave and takes precedence. It is a property of\nthe two zones, computed once from their full geometry, so it holds in every cell\nand does not state a correctness property in terms of the H3 index.\n\nScoping is what makes it tractable. Across the index 118 zone pairs overlap and\nmost are coastal slivers where both containments round to zero, but none of\nthose occurs in a covered cell. The conversion has to order 2 pairs among the\ncovering zones -- Asia/Urumqi over Asia/Shanghai at 100.0 % against 17.7 %, and\nAfrica/Juba over Africa/Khartoum -- and 7 including coverer against a smaller\ncandidate, with margins from 1.1x to 281x. None is a near-tie, and the relation\nover all 118 pairs is acyclic by topological sort, which is the feasibility\nquestion GH-513 left open when the hole relation turned out cyclic.\n\nMeasured: 743 of 826 cells convert with none unresolved, point-in-polygon tests\nfall 2.6 % on ambiguous, 2.1 % on random and 4.4 % on on-land, and the index\ndoes not change size. Answers move on 2 of 5,000 ambiguous fixture points and\nnone of the 20,000 random and on-land ones -- stated as a count over one sample\nrather than as a property, since the rule decides precedence and therefore\nchanges answers by design wherever it differs from today's incidental ordering.\nThe whole-query A/B is no difference with a clean control, as the 2.12 % ceiling\npredicts.\n\nThe three refused alternatives are kept: smaller total zone area, lower id, and\ndeciding per cell.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T08:14:04+02:00",
+          "tree_id": "1f966a688cf3457a1794d10742da409f32ff5e28",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/05155a7bb8a2e2d2fb634714792906b3ebbc9876"
+        },
+        "date": 1788848096464,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2344179153442383,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.235226631164551,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.588582038879395,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.589303970336914,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
           }
         ]
       }
