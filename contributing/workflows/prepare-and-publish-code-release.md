@@ -115,7 +115,7 @@ Find the `master` workflow run for the exact head SHA and wait for it to succeed
 
 Ask explicitly for authorization to tag the named version on `master`, explaining that this publishes to PyPI irreversibly. On approval, run `make release`.
 
-**Then verify the upload, not the run.** A skipped job does not fail the run that contains it, so a green tag run is not evidence that anything was published — 9.0.0 was tagged, GitHub-released and left off PyPI exactly that way: `publish-pypi` skipped, its `pypi` deployment environment's branch policy not admitting the tag ref. The release is done when the index serves the version and `publish-pypi` concluded `success` rather than `skipped`:
+**Then verify the upload, not the run.** A skipped job does not fail the run that contains it, so a green tag run is not evidence that anything was published — 9.0.0 was tagged, GitHub-released and left off PyPI exactly that way: every gate in the workflow passed, `publish-pypi` was skipped at its `pypi` deployment environment, and nothing was red. The release is done when the index serves the version and `publish-pypi` concluded `success`, not `skipped`:
 
 ```bash
 gh api repos/<owner>/<repo>/actions/runs/<run-id>/jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'
