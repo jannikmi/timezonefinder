@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788822455457,
+  "lastUpdate": 1788826785403,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8229,6 +8229,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1129",
             "unit": "lookups/sec",
             "extra": "min of 68 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b528697cc555e4f6f4e5147b11be1cd8548deabb",
+          "message": "GH-362: the neutrality gate has a nondeterministic floor (#643)\n\n* GH-362: the neutrality gate has a nondeterministic floor\n\nThe entry states that regenerating and diffing the binaries is the only\nproof a converter refactor is neutral, and names `make parse` plus\n`diff -rq` as the gate. That diff is not a clean pass/fail over the\nwhole data directory.\n\n`process_single_hex` does `polys = list(cell.polys_in_cell)` over the\n`set[int]` that `Hex.polys_in_cell` builds, so wherever\n`optimise_shortcut_ordering`'s key ties, the tie is broken by set\niteration order. A regeneration that changes nothing semantically can\ntherefore differ in the shortcut binary - measured at 29 bytes across a\nhandful of cells on 2026-09-07.\n\nA pass taking GH-362 today would run the stated gate, get a diff, and\nhave to work out from scratch whether it had broken something. The\nentry now says which half of the diff is evidence, and that making the\nordering total removes the floor and belongs before this item.\n\nRegister-only: no changelog entry, per the agent-facing layer exception.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Answer the review: rewrite the gate rather than append to it\n\nTwo findings, both confirmed against the tree.\n\nThe first is the rule this repository already states: an amendment that\nleaves the original claim standing above it is an append, because a\nreader who skims one line gets the retired answer. The previous revision\nadded a corrective bullet under a bullet still calling `diff -rq` \"the\nonly proof\" and \"the gate\", so a pass could reject a neutral refactor\nbefore reaching the correction. The verification bullet is now one\naccurate gate: polygon binaries byte-identical as the pass condition,\nthe shortcut binary explicitly not a pass/fail signal, and what clears a\ndifference there.\n\nThe second: the bullet said making the ordering total \"is worth doing\nbefore this item\", a precondition nothing encodes -\n`improvement-priority-ranking.md` carries GH-362 as `free` and\n`improvement-sequencing-and-preconditions.md` lists it under\n`independent`, so a pass takes it immediately and meets the ambiguity\nanyway. No item for the ordering fix exists on master to depend on.\nRather than register a duplicate of the one draft #638 already carries,\nthe claim is dropped: the rewritten gate is self-contained, so GH-362\nneeds no prerequisite to be takeable safely.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T02:18:56+02:00",
+          "tree_id": "323b0b4776a1cf65ac4d359ae58281faabf62692",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/b528697cc555e4f6f4e5147b11be1cd8548deabb"
+        },
+        "date": 1788826783702,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 531728.3361640788,
+            "range": "± 10062",
+            "unit": "lookups/sec",
+            "extra": "min of 178 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 768340.9122480673,
+            "range": "± 115226",
+            "unit": "lookups/sec",
+            "extra": "min of 265 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 161981.54485940823,
+            "range": "± 8940",
+            "unit": "lookups/sec",
+            "extra": "min of 53 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 836343.6127763714,
+            "range": "± 10927",
+            "unit": "lookups/sec",
+            "extra": "min of 272 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1460344.3491956915,
+            "range": "± 64022",
+            "unit": "lookups/sec",
+            "extra": "min of 515 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 192034.9288492166,
+            "range": "± 5694",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 824318.5852845552,
+            "range": "± 8626",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1420828.3201732147,
+            "range": "± 46786",
+            "unit": "lookups/sec",
+            "extra": "min of 480 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 191462.51784239442,
+            "range": "± 1831",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
           }
         ]
       }
