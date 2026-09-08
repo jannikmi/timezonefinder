@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788848868926,
+  "lastUpdate": 1788848870921,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17816,6 +17816,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9415 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1ab75da5aee5961338d14dea0a986955bd4b553d",
+          "message": "Give the release workflow the data publish it only knew how to require (#645)\n\nThe code-release workflow already refused to ship a release whose declared `timezonefinder-data` version PyPI does not serve, and named the `data-v<version>` tag as the answer — but it stopped there. Whoever hit the check had to reconstruct the publish from the pipeline notes and `publish_data.yml`: which version the tag names, what has to be true of `master` first, what to watch, and when the code release may resume.\n\nThat reconstruction is now written down. The section derives `$data_version` from the data package rather than the root, states that this workflow publishes an already-declared version and never bumps or regenerates one, lists the four preconditions cheapest-first, and gives the annotated-tag form `make release` and `release_data_update.yml` already share. The maintainer ask is now an explicit stop with its content specified — the version, why it blocks, and what refusal means — since it gates an irreversible upload the same way the code tag does. The post-publish re-read of the index is called out too, because a cached JSON answer after a green run looks exactly like a failed release and invites a second push of the tag.\n\nThe hard boundary on tagging now names both namespaces on this branch instead of \"the tag\", which read as the code tag alone.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T06:26:40Z",
+          "tree_id": "497dcdcde1adb24e213ec936edd2f12d020066d3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1ab75da5aee5961338d14dea0a986955bd4b553d"
+        },
+        "date": 1788848870337,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0083122253417969,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0084905624389648,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.233898162841797,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2347068786621094,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58782482147217,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58863353729248,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2548 GHz"
           }
         ]
       }
