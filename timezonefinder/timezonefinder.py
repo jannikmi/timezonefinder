@@ -991,15 +991,15 @@ class TimezoneFinder(AbstractTimezoneFinder):
         self.boundaries = PolygonArray(
             data_location=self.boundaries_dir, in_memory=in_memory
         )
+        # read before the hole array, which needs it to answer which holes a boundary
+        # polygon owns and to build their union bounding boxes
+        self.hole_registry = self._load_hole_registry()
         self.holes = HoleArray(
             data_location=self.holes_dir,
             boundaries=self.boundaries,
             in_memory=in_memory,
+            hole_registry=self.hole_registry,
         )
-
-        # stores for which polygons (how many) holes exits and the id of the first of those holes
-        # since there are very few entries it is feasible to keep them in the memory
-        self.hole_registry = self._load_hole_registry()
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
@@ -1045,27 +1045,17 @@ class TimezoneFinder(AbstractTimezoneFinder):
         return self.boundaries.coords_of(boundary_id)
 
     def _hole_ids_of(self, boundary_id: IntegerLike) -> range:
-        """
-        The hole IDs of a boundary polygon, as an empty ``range`` when it has none.
+        """The hole ids of a boundary polygon, as an empty ``range`` when it has none.
 
-        A ``dict.get`` and a ``range``, not a lookup that raises and a generator: 1,225
-        of the 1,322 packaged boundary polygons own no hole at all, so the majority path
-        used to build a generator object, enter it, raise a ``KeyError``, catch it and
-        return - to establish that there was nothing to check. That is ~190 ns of every
-        hole probe, on a step ``inside_of_polygon`` performs for every candidate polygon
-        surviving the bounding-box test.
-
-        A ``range`` rather than a generator because both callers only iterate it, and
-        because the empty case is then the same object shape as the non-empty one.
+        Kept as the finder-level name for ``HoleArray.ids_of``, which owns the
+        relation. The lookup path does not come through here - it asks
+        ``self.holes.any_contains`` - so this serves ``get_polygon`` and the callers
+        that want the ids themselves.
 
         :param boundary_id: id of the boundary polygon
         :return: the hole ids, in storage order
         """
-        entry = self.hole_registry.get(int(boundary_id))
-        if entry is None:
-            return range(0)
-        amount_of_holes, first_hole_id = entry
-        return range(first_hole_id, first_hole_id + amount_of_holes)
+        return self.holes.ids_of(boundary_id)
 
     def _holes_of_poly(self, boundary_id: IntegerLike) -> Iterable[np.ndarray]:
         """
@@ -1162,12 +1152,10 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # NOTE: holes are much smaller (fewer points) -> less expensive to check
         # -> check holes before the boundary
         #
-        # The emptiness test is not redundant with the loop inside ``in_any_polygon``:
-        # 1,225 of the 1,322 packaged boundary polygons own no hole, so on the majority
-        # path this is one truth test against a whole bound-method call that iterates
-        # nothing and answers False.
-        hole_ids = self._hole_ids_of(boundary_id)
-        if hole_ids and self.holes.in_any_polygon(hole_ids, x, y):
+        # The hole array owns the whole question, union bounding box included: see
+        # ``HoleArray.any_contains``. Nothing here needs to know that a polygon has
+        # holes at all, which is why no emptiness test survives on this path.
+        if self.holes.any_contains(boundary_id, x, y):
             # the point is within one of the holes
             # it is excluded fromn this boundary polygon
             return False
