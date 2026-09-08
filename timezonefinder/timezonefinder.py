@@ -34,6 +34,7 @@ from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
     MAX_LNG_VAL,
+    MAX_LNG_VAL_INT,
     NO_ZONE_ID,
     SHORTCUT_H3_RES,
     DATA_VERSION_FILENAME,
@@ -53,6 +54,12 @@ from timezonefinder.shortcut_index import (
     read_shortcuts_binary,
 )
 from timezonefinder.zone_names import ZoneNames, read_zone_names
+
+# The lower bound stored for a boundary polygon that owns no hole: one step above the
+# largest scaled longitude `coord2int` can return for a valid query, so the first
+# comparison of the hole test fails and the rest is never evaluated. int32 holds it
+# with room to spare - `MAX_LNG_VAL_INT` is 1.8e9 against a 2.147e9 ceiling.
+NEVER_INSIDE = MAX_LNG_VAL_INT + 1
 
 
 def _negative_id_error(kind: str, value: object) -> ValueError:
@@ -851,6 +858,18 @@ class AbstractTimezoneFinder(ABC):
                 continue
             array.cleanup()
             delattr(self, attr)
+        # The hole union bounds export the arrays they view, so drop the views before
+        # the arrays - the same ordering rule `PolygonArray.cleanup` follows, and the
+        # reason a released finder must not answer a lookup afterwards.
+        for attr in (
+            "_hole_x0_ints",
+            "_hole_x1_ints",
+            "_hole_y0_ints",
+            "_hole_y1_ints",
+            "_hole_bounds",
+        ):
+            if hasattr(self, attr):
+                delattr(self, attr)
         # hole_registry is an in-memory dict only; nothing to release
 
     def __enter__(self) -> Self:
@@ -980,6 +999,11 @@ class TimezoneFinder(AbstractTimezoneFinder):
     # and __weakref__ unless they also define __slots__ (which should only contain names of any additional slots).
     __slots__ = [
         "hole_registry",
+        "_hole_bounds",
+        "_hole_x0_ints",
+        "_hole_x1_ints",
+        "_hole_y0_ints",
+        "_hole_y1_ints",
     ]
 
     def __init__(
@@ -1002,6 +1026,7 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # stores for which polygons (how many) holes exits and the id of the first of those holes
         # since there are very few entries it is feasible to keep them in the memory
         self.hole_registry = self._load_hole_registry()
+        self._build_hole_bounds()
 
     def __del__(self) -> None:
         """Clean up resources when the object is destroyed."""
@@ -1028,6 +1053,51 @@ class TimezoneFinder(AbstractTimezoneFinder):
             hole_registry_tmp = json.loads(json_file.read())
         # convert the json string keys to int
         return {int(k): v for k, v in hole_registry_tmp.items()}
+
+    def _build_hole_bounds(self) -> None:
+        """One bounding box per boundary polygon, enclosing *all* of its holes.
+
+        What it buys: ``in_any_polygon`` has to visit every hole before it can answer
+        "the point is in none of them", and that is the answer 99.8 % of the time - so a
+        polygon owning 95 holes pays 95 bounding-box tests on essentially every point
+        that reaches it. One test against the union answers the same question for the
+        whole set, and over the packaged ambiguous fixture it skips 75 % of all hole
+        bounding-box tests.
+
+        A hole-less polygon gets an empty box - ``x0`` above every representable
+        longitude - so the very first comparison in :meth:`inside_of_polygon` fails and
+        the registry is never consulted at all. That is what lets the union test
+        *replace* the ``dict.get`` and ``range`` construction on the majority path
+        rather than sit in front of them: 1,225 of the 1,322 packaged polygons own no
+        hole.
+
+        Derived here rather than stored in the data directory. It is 1,322 rows built
+        from vectors already resident, the loop runs over the 97 polygons that own a
+        hole, and it costs microseconds; storing it would spend a data format version
+        and a republished distribution to save that. If construction cost ever matters
+        it can move into the format without changing this method's contract.
+        """
+        nr_polygons = len(self.boundaries)
+        # int32 like the columns it is derived from: a scaled coordinate is bounded by
+        # +-1.8e9 by `coord2int`, which int32 holds with room to spare.
+        x0 = np.full(nr_polygons, NEVER_INSIDE, dtype=np.int32)
+        x1 = np.zeros(nr_polygons, dtype=np.int32)
+        y0 = np.full(nr_polygons, NEVER_INSIDE, dtype=np.int32)
+        y1 = np.zeros(nr_polygons, dtype=np.int32)
+        holes = self.holes
+        for boundary_id, (amount, first) in self.hole_registry.items():
+            ids = slice(first, first + amount)
+            x0[boundary_id] = holes.xmin[ids].min()
+            x1[boundary_id] = holes.xmax[ids].max()
+            y0[boundary_id] = holes.ymin[ids].min()
+            y1[boundary_id] = holes.ymax[ids].max()
+        self._hole_bounds = (x0, x1, y0, y1)
+        # buffer views for the reason the bbox columns are: this is read on every
+        # candidate polygon that survives its own bounding box
+        self._hole_x0_ints = memoryview(x0)
+        self._hole_x1_ints = memoryview(x1)
+        self._hole_y0_ints = memoryview(y0)
+        self._hole_y1_ints = memoryview(y1)
 
     @property
     def nr_of_polygons(self) -> int:
@@ -1164,12 +1234,20 @@ class TimezoneFinder(AbstractTimezoneFinder):
         # NOTE: holes are much smaller (fewer points) -> less expensive to check
         # -> check holes before the boundary
         #
-        # The emptiness test is not redundant with the loop inside ``in_any_polygon``:
-        # 1,225 of the 1,322 packaged boundary polygons own no hole, so on the majority
-        # path this is one truth test against a whole bound-method call that iterates
-        # nothing and answers False.
-        hole_ids = self._hole_ids_of(boundary_id)
-        if hole_ids and self.holes.in_any_polygon(hole_ids, x, y):
+        # Against the union of this polygon's holes first, which decides two things at
+        # once. A polygon owning no hole has an empty union, so the first comparison
+        # fails and neither the registry nor a ``range`` is built - the case that used
+        # to need its own truth test, and 1,225 of the 1,322 packaged polygons are in
+        # it. A polygon that owns holes gets the question "is the point in *any* of
+        # them" answered for the whole set by one test, where ``in_any_polygon`` has to
+        # visit every hole to answer "no" - which is the answer 99.8 % of the time, and
+        # is why the polygon owning 95 holes used to pay 95 bounding-box tests to
+        # establish nothing. See :meth:`_build_hole_bounds`.
+        if (
+            self._hole_x0_ints[boundary_id] <= x <= self._hole_x1_ints[boundary_id]
+            and self._hole_y0_ints[boundary_id] <= y <= self._hole_y1_ints[boundary_id]
+            and self.holes.in_any_polygon(self._hole_ids_of(boundary_id), x, y)
+        ):
             # the point is within one of the holes
             # it is excluded fromn this boundary polygon
             return False
