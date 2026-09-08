@@ -3,8 +3,9 @@
 ``in_any_polygon`` cannot answer "the point is in none of these holes" without
 visiting every one of them, and that is the answer on essentially every point that
 reaches a hole-owning polygon - so the polygon owning 95 holes used to pay 95 bounding
-box tests to establish nothing. ``_build_hole_bounds`` gives each boundary polygon one
-box enclosing all of its holes, so a single test answers for the whole set.
+box tests to establish nothing. ``HoleArray._build_union_bounds`` gives each boundary
+polygon one box enclosing all of its holes, so a single test answers for the whole
+set, and ``HoleArray.any_contains`` is the whole question in one call.
 
 The risk the union introduces is a *false negative*: a box too small skips a hole that
 does contain the point, and the polygon then claims a point it should have excluded.
@@ -16,7 +17,7 @@ import numpy as np
 import pytest
 
 from timezonefinder import TimezoneFinder
-from timezonefinder.timezonefinder import NEVER_INSIDE
+from timezonefinder.polygon_array import NEVER_INSIDE
 from timezonefinder import utils
 
 pytestmark = pytest.mark.unit
@@ -43,10 +44,18 @@ def test_bounds_are_exactly_the_union_of_the_member_holes(finder):
         ids = range(first, first + amount)
         # exact, not merely enclosing: a box larger than the union only costs a
         # pointless descent into the loop, but a smaller one loses a hole
-        assert finder._hole_x0_ints[pid] == min(finder.holes.xmin[h] for h in ids)
-        assert finder._hole_x1_ints[pid] == max(finder.holes.xmax[h] for h in ids)
-        assert finder._hole_y0_ints[pid] == min(finder.holes.ymin[h] for h in ids)
-        assert finder._hole_y1_ints[pid] == max(finder.holes.ymax[h] for h in ids)
+        assert finder.holes._union_x0_ints[pid] == min(
+            finder.holes.xmin[h] for h in ids
+        )
+        assert finder.holes._union_x1_ints[pid] == max(
+            finder.holes.xmax[h] for h in ids
+        )
+        assert finder.holes._union_y0_ints[pid] == min(
+            finder.holes.ymin[h] for h in ids
+        )
+        assert finder.holes._union_y1_ints[pid] == max(
+            finder.holes.ymax[h] for h in ids
+        )
 
 
 def test_a_hole_less_polygon_carries_a_box_no_query_can_enter(finder):
@@ -57,7 +66,7 @@ def test_a_hole_less_polygon_carries_a_box_no_query_can_enter(finder):
     # the empty box is what lets the union test stand in for the `dict.get` and the
     # `range` on the majority path, rather than sit in front of them
     for pid in holeless:
-        assert finder._hole_x0_ints[pid] == NEVER_INSIDE
+        assert finder.holes._union_x0_ints[pid] == NEVER_INSIDE
     assert NEVER_INSIDE > utils.coord2int(180.0)
     assert NEVER_INSIDE <= np.iinfo(np.int32).max
 
@@ -65,10 +74,10 @@ def test_a_hole_less_polygon_carries_a_box_no_query_can_enter(finder):
 def test_every_hole_is_inside_the_union_of_its_polygon(finder):
     for pid, (amount, first) in finder.hole_registry.items():
         for h in range(first, first + amount):
-            assert finder._hole_x0_ints[pid] <= finder.holes.xmin[h]
-            assert finder._hole_x1_ints[pid] >= finder.holes.xmax[h]
-            assert finder._hole_y0_ints[pid] <= finder.holes.ymin[h]
-            assert finder._hole_y1_ints[pid] >= finder.holes.ymax[h]
+            assert finder.holes._union_x0_ints[pid] <= finder.holes.xmin[h]
+            assert finder.holes._union_x1_ints[pid] >= finder.holes.xmax[h]
+            assert finder.holes._union_y0_ints[pid] <= finder.holes.ymin[h]
+            assert finder.holes._union_y1_ints[pid] >= finder.holes.ymax[h]
 
 
 def test_predicate_matches_the_pre_union_formulation_around_every_hole(finder):
@@ -120,8 +129,36 @@ def test_points_inside_a_hole_are_still_excluded(finder):
 
 def test_cleanup_releases_the_views(finder_factory=TimezoneFinder):
     tf = finder_factory(in_memory=True)
-    assert tf._hole_x0_ints is not None
+    holes = tf.holes
+    assert holes._union_x0_ints is not None
     tf.cleanup()
-    for attr in ("_hole_x0_ints", "_hole_x1_ints", "_hole_y0_ints", "_hole_y1_ints"):
-        assert not hasattr(tf, attr)
+    for attr in ("_union_x0_ints", "_union_y1_ints", "union_bounds", "hole_registry"):
+        assert not hasattr(holes, attr)
     tf.cleanup()  # idempotent
+
+
+def test_any_contains_matches_the_unguarded_loop(finder):
+    """``any_contains`` must equal the union-free question it replaces."""
+    rng = np.random.default_rng(11)
+    holes, boundaries = finder.holes, finder.boundaries
+    for pid in finder.hole_registry:
+        xs = rng.integers(
+            boundaries._xmin_ints[pid], boundaries._xmax_ints[pid] + 1, 60
+        )
+        ys = rng.integers(
+            boundaries._ymin_ints[pid], boundaries._ymax_ints[pid] + 1, 60
+        )
+        for x, y in zip(xs.tolist(), ys.tolist(), strict=True):
+            assert holes.any_contains(pid, x, y) == holes.in_any_polygon(
+                holes.ids_of(pid), x, y
+            )
+
+
+def test_an_array_without_a_registry_refuses_to_guess(finder):
+    """The integrity checks build one to *establish* the registry, so it has none."""
+    from timezonefinder.polygon_array import HoleArray
+
+    bare = HoleArray(data_location=finder.holes_dir, boundaries=finder.boundaries)
+    with pytest.raises(AttributeError, match="without a hole registry"):
+        bare.ids_of(0)
+    bare.cleanup()
