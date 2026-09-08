@@ -692,6 +692,23 @@ to disagree with it.
 candidate list, so it deduplicates with everything else and costs one byte per distinct
 list to take a scan off every ambiguous query.
 
+**The tested prefix may interleave zones.** Only the final zone must occupy a
+complete, untested suffix. During conversion, ``scripts/shortcut_ordering.py``
+minimizes a deterministic sample estimate of full-predicate work, including
+bounding boxes, hole checks and latitude-active blocks. Its module documentation
+contains the objective, dynamic-programming proof, spherical-area sampling,
+cost coefficients, accuracy budget and conservative geometric gates. The exact
+claim applies to that sampled objective and candidate-count budget, not to
+population latency. Cells failing those gates keep their legacy ordering.
+This changes no candidate membership or binary layout. It does change the
+fallback heuristic used by ``TimezoneFinderL``.
+
+Resolving overlapping-zone precedence and replacing covered ambiguous cells by
+direct answers are separate conversion decisions. This ordering pass preserves
+legacy overlap precedence; it does not infer a new precedence rule from cost.
+A coverage pass can run first, leaving only its remaining ambiguous cells to
+order.
+
 **The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
 base-8 slots can never be addressed. Which ones follows from the resolution and never from
 the data, so the file stores the compact base-7 form and the reader expands it - a base-8

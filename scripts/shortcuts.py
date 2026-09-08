@@ -10,6 +10,7 @@ import h3.api.numpy_int as h3
 import numpy as np
 
 from scripts.timezone_data import TimezoneData
+from scripts.shortcut_ordering import ShortcutOrderer
 from scripts.configs import (
     DEFAULT_INPUT_PATH,
     SOURCE_DATA_DIR,
@@ -38,14 +39,11 @@ except NameError:  # pragma: no cover - used only during profiling
 
 @profile
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[int]:
-    """optimises the order of polygon ids for faster timezone checks
+    """Deterministic legacy order, also the fallback for unsafe/large cells.
 
-    observation: as soon as just polygons of one zone are left, this zone can be returned
-    -> try to "rule out" zones fast
-    polygons from different zones should not get mixed up (group by zone id)
-    point in polygon test is faster with smaller polygons (fewer coordinates)
-    -> polygons of zones with fewer coordinates should come first!
-    -> sort the list of polygon ids in each shortcut after the size of the corresponding polygons
+    The work optimizer runs after candidate compilation, against the packed
+    geometry the runtime will use. This order preserves the old zone precedence
+    wherever that optimizer cannot establish safe coverage and disjointness.
     """
     if len(poly_ids) <= 1:
         return poly_ids
@@ -56,7 +54,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     zone_buckets = defaultdict(list)
     zone_sizes: defaultdict[int, int] = defaultdict(int)
 
-    for poly_id in poly_ids:
+    for poly_id in sorted(poly_ids):
         zone_id = int(zone_ids[poly_id])
         zone_buckets[zone_id].append(poly_id)
         zone_sizes[zone_id] += int(polygon_lengths[poly_id])
@@ -73,37 +71,16 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     return poly_ids_sorted
 
 
-def has_coherent_sequences(lst: Sequence[int] | np.ndarray) -> bool:
-    """
-    :return: True if equal entries in the list are not separated by entries of other values
-    """
-    if len(lst) <= 1:
-        return True
-    encountered = set()
-    # at least 2 entries, so lst[0] exists; comparing it against itself on the
-    # first iteration is a deliberate no-op.
-    prev = lst[0]
-    for e in lst:
-        if e in encountered:
-            # the entry appeared earlier already
-            return False
-        if e != prev:
-            encountered.add(prev)
-            prev = e
-
-    return True
-
-
 def check_shortcut_sorting(
     polygon_ids: Sequence[int] | np.ndarray, all_zone_ids: np.ndarray
 ) -> None:
-    # the polygons in the shortcuts are sorted by their zone id (and the size of their polygons)
-    if len(polygon_ids) == 1:
-        # single polygon in the shortcut, no need to check
+    """Only the final zone must be a complete, contiguous suffix."""
+    if len(polygon_ids) == 0:
         return
-    zone_ids = all_zone_ids[polygon_ids]
-    assert has_coherent_sequences(zone_ids), (
-        f"shortcut polygon ids {polygon_ids} do not have coherent sequences of zone ids: {zone_ids}"
+    zones = all_zone_ids[polygon_ids]
+    final_positions = np.flatnonzero(zones == zones[-1])
+    assert np.array_equal(final_positions, np.arange(final_positions[0], len(zones))), (
+        f"final zone is partially tested: {polygon_ids}"
     )
 
 
@@ -314,6 +291,20 @@ def compile_shortcuts(
 ) -> ShortcutMapping:
     print("\ncompiling shortcuts...")
     shortcuts: ShortcutMapping = compile_shortcut_mapping(data)
+
+    orderer = ShortcutOrderer(data, output_path)
+    changed = 0
+    try:
+        for processed, (cell, ids) in enumerate(shortcuts.items(), start=1):
+            ordered = orderer.order(cell, ids)
+            check_shortcut_sorting(ordered, data.poly_zone_ids)
+            changed += ordered != ids
+            shortcuts[cell] = ordered
+            if processed % 10_000 == 0:
+                print(f"Ordering: {processed:,}/{len(shortcuts):,} cells", flush=True)
+    finally:
+        orderer.close()
+    print(f"Optimized {changed:,} shortcut candidate orders")
 
     # Compute unique shortcuts mapping (needed for hybrid shortcuts)
     unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)

@@ -8,7 +8,7 @@ import pytest
 
 
 from scripts.hex_utils import surrounds_north_pole, surrounds_south_pole
-from scripts.shortcuts import check_shortcut_sorting, has_coherent_sequences
+from scripts.shortcuts import check_shortcut_sorting
 from tests.auxiliaries import (
     AMBIGUOUS_SHORTCUT_POINTS_FIXTURE,
     load_benchmark_points,
@@ -209,24 +209,8 @@ def test_unique_shortcut_consistency(tf, hybrid_shortcuts):
                 )
 
 
-@pytest.mark.parametrize(
-    "lst,expected",
-    [
-        ([], True),
-        ([1], True),
-        ([1, 1], True),
-        ([2, 3], True),
-        ([2, 3, 3, 0, 0, 4], True),
-        ([2, 3, 2], False),
-        ([2, 3, 2, 3], False),
-    ],
-)
-def test_has_coherent_check_fct(lst, expected):
-    assert has_coherent_sequences(lst) == expected
-
-
 def test_shortcut_sorting(tf, hybrid_shortcuts):
-    """Test that shortcuts are correctly sorted by zone ID and polygon size."""
+    """Test that shortcuts are ordered with a whole final zone suffix."""
     invalid_sortings = []
     for hex_id, hybrid_value in hybrid_shortcuts.items():
         if isinstance(hybrid_value, int):

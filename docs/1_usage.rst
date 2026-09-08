@@ -403,11 +403,13 @@ TimezoneFinderL
 
 :ref:`TimezoneFinderL <api_finderL>` is a light version of the :ref:`TimezoneFinder class <api_finder>`.
 It is useful for quickly suggesting probable timezones without using as many computational resources (cf. :ref:`speed tests <speed-tests>`).
-Instead of using timezone polygon data this class instantly returns the timezone just based on precomputed "shortcuts".
+Instead of using timezone polygon data this class instantly returns a suggestion from precomputed "shortcuts".
+For ambiguous cells it uses the fallback zone chosen to reduce expected work in the full lookup,
+which need not be the zone covering most of the cell. Its suggestions may change when shortcuts are regenerated.
 
 Check the (:ref:`API documentation <api_finderL>`) of ``TimezoneFinderL``.
 
-The most probable zone in proximity can be retrieved with ``timezone_at()``:
+A heuristic suggestion can be retrieved with ``timezone_at()``:
 
 .. code-block:: python
 

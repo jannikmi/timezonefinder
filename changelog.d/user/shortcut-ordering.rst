@@ -1,0 +1,1 @@
+Optimize shortcut candidate ordering for estimated full-predicate work, including bounding boxes and holes; TimezoneFinderL uses the resulting fallback-zone heuristic, which need not be the largest zone in a cell.
