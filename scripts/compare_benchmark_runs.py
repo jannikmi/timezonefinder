@@ -92,6 +92,14 @@ CORROBORATING_ESTIMATORS: dict[str, BenchmarkEstimator] = {
     "median": "min",
 }
 
+# RSS is sensitive to page-fault and filesystem-cache state. In CI the head
+# memory probe always runs before the base probe, and recent artifacts showed
+# the import-RSS minimum moving from ~3.4 MiB in the first position to ~4.3 MiB
+# in the second while the medians agreed at ~4.6 MiB. Use the robust centre for
+# memory comments; the heap-only trend chart remains on its near-deterministic
+# minimum and is unaffected by this renderer choice.
+DEFAULT_MEMORY_ESTIMATOR: BenchmarkEstimator = "median"
+
 
 @dataclass(frozen=True)
 class BenchmarkComparison:
@@ -157,6 +165,23 @@ def tracked_estimator(
             f"({sorted(recorded)}), so their numbers are not comparable"
         )
     return recorded.pop() if recorded else fallback
+
+
+def comparison_estimator(
+    runs: Sequence[dict[str, Any]],
+    timing_fallback: BenchmarkEstimator,
+    metric_key: str,
+) -> BenchmarkEstimator:
+    """Choose the statistic the comment should compare.
+
+    Timing keeps following the report's tracked statistic. Memory deliberately
+    defaults to the median because its RSS minima depend on whether that source
+    tree's imports were the first or second ones faulted into the runner cache.
+    The CLI estimator remains the fallback for unstamped timing reports.
+    """
+    if metric_key == "memory":
+        return DEFAULT_MEMORY_ESTIMATOR
+    return tracked_estimator(runs, timing_fallback)
 
 
 def reduce_side(
@@ -367,6 +392,7 @@ def render_markdown(
     base_label: str = "base",
     head_label: str = "head",
     metric: MetricSpec = METRIC_SPECS[DEFAULT_METRIC_KEY],
+    lookups_per_round: int | None = None,
 ) -> str:
     """Render the comparison for a job summary or a pull request comment."""
     lines = [
@@ -382,16 +408,34 @@ def render_markdown(
     for warning in warnings:
         lines += ["> [!WARNING]", f"> {warning}", ""]
     corroborating = CORROBORATING_ESTIMATORS[estimator]
+    throughput = metric.key == "duration" and lookups_per_round is not None
+    unit = " (lookups/s)" if throughput else ""
     lines += [
-        f"| {metric.row_noun} | {base_label} | {head_label} | change | "
-        f"{corroborating} change | |",
+        f"| {metric.row_noun} | {base_label}{unit} | {head_label}{unit} | change | "
+        f"{corroborating} change | result |",
         "| --- | ---: | ---: | ---: | ---: | --- |",
     ]
     for c in comparisons:
         second = c.corroborating_change_pct
+        base_value = c.base
+        head_value = c.head
+        change = c.change_pct
+        factor = c.factor
+        if throughput:
+            assert lookups_per_round is not None
+            base_value = lookups_per_round / c.base
+            head_value = lookups_per_round / c.head
+            change = (c.factor - 1.0) * 100.0
+            if second is not None:
+                assert c.base_corroborating is not None
+                assert c.head_corroborating is not None
+                second = (c.base_corroborating / c.head_corroborating - 1.0) * 100.0
+        format_value = (
+            (lambda value: f"{value:,.0f}") if throughput else metric.format_value
+        )
         lines.append(
-            f"| {_render_name(c.name)} | {metric.format_value(c.base)} | "
-            f"{metric.format_value(c.head)} | {c.change_pct:+.1f}% ({c.factor:.2f}x) | "
+            f"| {_render_name(c.name)} | {format_value(base_value)} | "
+            f"{format_value(head_value)} | {change:+.1f}% ({factor:.2f}x) | "
             f"{'n/a' if second is None else f'{second:+.1f}%'} | "
             f"{_verdict(c, threshold_pct, metric)} |"
         )
@@ -439,8 +483,9 @@ def main() -> None:
         choices=BENCHMARK_ESTIMATORS,
         default=DEFAULT_BENCHMARK_ESTIMATOR,
         help=(
-            "statistic to compare, used only if the reports do not record which "
-            f"one they were normalized to (default: {DEFAULT_BENCHMARK_ESTIMATOR})"
+            "fallback statistic for an unstamped timing report (default: "
+            f"{DEFAULT_BENCHMARK_ESTIMATOR}). Memory reports use "
+            f"{DEFAULT_MEMORY_ESTIMATOR} because RSS minima are order-sensitive"
         ),
     )
     parser.add_argument(
@@ -482,7 +527,9 @@ def main() -> None:
     head_runs = _load_all(args.head)
 
     try:
-        estimator = tracked_estimator([*base_runs, *head_runs], args.estimator)
+        estimator = comparison_estimator(
+            [*base_runs, *head_runs], args.estimator, args.metric
+        )
         comparisons = compare_runs(base_runs, head_runs, estimator)
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
@@ -499,6 +546,11 @@ def main() -> None:
         warnings=warnings,
         threshold_pct=args.threshold_pct,
         metric=METRIC_SPECS[args.metric],
+        lookups_per_round=(
+            comparability_info(head_runs[0])["batch_size"]
+            if args.metric == "duration"
+            else None
+        ),
     )
     print(report)
     if args.markdown_out is not None:
