@@ -46,7 +46,7 @@ Rank every surviving candidate against the current ranking before writing it dow
 
 ## Dispose of every candidate exactly once
 
-- An actionable finding becomes one item file and one ranking row, with a fresh id in the matching family.
+- An actionable finding becomes one item file and one ranking row, with a fresh id in the matching family. Insert the row where the [ordering invariant](../improvements/improvement-ranking-and-eligibility.md) puts it: above anything it blocks, and — if it arrives blocked, parked, conditional or needing a decision — below every eligible row rather than at the rank its expected value alone would earn.
 - A suspected defect is a measurement, not a defect. Confirm it inside the pass with one command or one focused test, or record the measurement as the item.
 - Something checked and found sound, or refused on its merits, goes to the narrowest file under `checked-and-found-sound/` **with its reason**: the reason is the filter, and a refusal without one gets re-raised.
 - A settled choice whose consequences reach past one item goes to the matching file under `decisions/`, keeping the refused options.
