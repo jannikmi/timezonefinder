@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788848870921,
+  "lastUpdate": 1788909373927,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8838,6 +8838,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2155",
             "unit": "lookups/sec",
             "extra": "min of 64 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "87626f57b0a164350b9eb6aa89e1ada4e5d48a3d",
+          "message": "Answer \"in none of these holes\" with one bounding box instead of ninety-five (#653)\n\n* Answer \"in none of these holes\" with one bounding box instead of ninety-five\n\n`in_any_polygon` cannot say the point is in none of a polygon's holes without\nvisiting every one of them, and that is the answer 99.8 % of the time. So the\nboundary polygon owning 95 holes paid 95 bounding-box tests on essentially every\npoint that reached it, to establish nothing. Over the packaged ambiguous fixture\n17,408 hole bounding-box tests are performed and 17,378 of them end in \"no\".\n\nOne box per boundary polygon, enclosing all of its holes, answers that for the\nwhole set: 75 % of those tests go away. A hole-less polygon carries an empty box\n- `x0` one step above the largest longitude `coord2int` can return - so the first\ncomparison fails and the union test *replaces* the registry `dict.get` and the\n`range` construction on the majority path rather than sitting in front of them.\n1,225 of the 1,322 packaged polygons are in that case.\n\nDerived when a finder is constructed, from vectors already resident, over the 97\npolygons that own a hole. Storing it instead would spend a data format version\nand a republished distribution to save microseconds, so no data format, binary\nlayout or packaged file changes here.\n\nMeasured, order-alternated against master, Apple arm64, free-threaded CPython\n3.14.2, C extension, in-memory, data 2026c, 9 timings per run:\n\n  ambiguous  -12.5 % minimum, -10.4 % median, 8 of 8 rounds won\n  random      -4.5 % minimum,  -4.2 % median, 4 of 4\n  on-land     -3.0 % minimum,  -3.2 % median, 4 of 4\n  unique      -0.3 % minimum,  +0.1 % median, 3 of 4 - no difference, as it has\n              no candidate loop to shorten\n\nThe risk a union introduces is a box too small, which would drop a hole and let a\npolygon claim a point it should exclude. `tests/test_hole_union_bounds.py` holds\nthe bounds to being *exactly* the union rather than merely enclosing, checks the\npredicate against its pre-union formulation over 24,250 points drawn inside the\nbounding box of every hole-owning polygon, and checks that points landing in a\nreal hole are still excluded. The frozen-answer guard is unchanged.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Build the hole bounds in four reductions, and stop filling bounds nothing reads\n\nReview of #653 raised `NEVER_INSIDE`. It is used - three times here and three in\nthe tests - but the reading behind the objection was right: only `x0` guards the\nempty case, because `inside_of_polygon`'s comparison chain opens with it and\nshort-circuits. The `y0` fill was decorative and `x1`/`y1` were zeros, so the\nfour columns implied a symmetry that one of them carried. Now only `x0` gets the\nsentinel and the comment says why.\n\nThat surfaced while vectorising: `np.minimum.reduceat` over the owners' start\noffsets replaces the Python loop, 221 us -> 16 us. `reduceat` needs each range to\nend where the next begins, which is not asserted here because\n`_data_integrity.validate_hole_registry` already establishes that the ranges\npartition the hole array with no gap or overlap - over what the converter writes\nand over what ships.\n\nMeasured against reading the same data instead of deriving it: four stored .npy\ncolumns cost 188.5 us to read back warm, one (1322, 4) column 47.5 us, and the\nraw bytes without a .npy header 16.2 us. Deriving now ties that floor, so\nstoring it could not pay for the format version it would cost.\n\nEquivalence re-checked against the loop on all 97 hole-owning polygons.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Give the hole array the hole question\n\n`inside_of_polygon` had grown the union bounding box, the registry lookup and the\nmembership loop inline, so the finder knew the layout of a structure it does not\nown. All three move onto `HoleArray` as `any_contains` and `ids_of`, and the\npredicate becomes three calls that each name what they decide.\n\n`HoleArray.__init__` takes the registry, so the finder now reads it before\nbuilding the array rather than after. The parameter is optional and its absence\nraises rather than answering False: `validate_hole_registry` constructs a\n`HoleArray` in order to *establish* the registry and so cannot be handed one, and\n`scripts/data_integrity.py`, `scripts/reporting.py` and\n`scripts/data_update_guard.py` only read rings. Answering False for them would\nhave made a missing registry look like a polygon with no holes.\n\n`TimezoneFinder._hole_ids_of` stays as a delegate: the lookup path no longer goes\nthrough it, but `get_polygon` and the existing tests want the ids themselves.\n\nNo behaviour change, and the gain is unmoved: ambiguous -11.7 % minimum,\n-12.5 % median against master, four alternating rounds. 1,594 answer-level and\nintegrity tests pass, including the frozen-answer guard.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Delete the copy of NEVER_INSIDE the move left behind\n\nThe constant moved to `polygon_array.py` with the code that reads it, but the\noriginal stayed in `timezonefinder.py` where nothing uses it any more. Ruff had\nno reason to complain: the dead constant still referenced `MAX_LNG_VAL_INT`, so\nthe import it kept alive looked used. Both go.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Remove the cleanup loop the move emptied\n\nTaking the four view names out of `TimezoneFinder.cleanup` left `for attr in ():`\nbehind, under a comment describing an ordering rule that now lives in\n`HoleArray.cleanup`, which is where the views went. Both go.\n\nNothing caught it: an empty loop is valid Python, ruff has no rule for one, and\nthe tests pass either way because the work still happens - one level down.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T23:15:20Z",
+          "tree_id": "bc186b67cdcba32d239929296ea4821d7b2f75c9",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/87626f57b0a164350b9eb6aa89e1ada4e5d48a3d"
+        },
+        "date": 1788909372472,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 542038.0892335023,
+            "range": "± 16207",
+            "unit": "lookups/sec",
+            "extra": "min of 180 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 705799.5834097273,
+            "range": "± 42346",
+            "unit": "lookups/sec",
+            "extra": "min of 241 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 181765.92576696278,
+            "range": "± 18649",
+            "unit": "lookups/sec",
+            "extra": "min of 68 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 903548.0524918464,
+            "range": "± 11748",
+            "unit": "lookups/sec",
+            "extra": "min of 280 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1506036.7979007536,
+            "range": "± 152978",
+            "unit": "lookups/sec",
+            "extra": "min of 501 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 220271.86658644106,
+            "range": "± 2929",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 900461.5405678515,
+            "range": "± 11463",
+            "unit": "lookups/sec",
+            "extra": "min of 272 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1452883.5670782006,
+            "range": "± 24143",
+            "unit": "lookups/sec",
+            "extra": "min of 511 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 219739.80697358985,
+            "range": "± 3071",
+            "unit": "lookups/sec",
+            "extra": "min of 76 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8706 GHz"
           }
         ]
       }
