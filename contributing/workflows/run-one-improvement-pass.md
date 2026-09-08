@@ -7,7 +7,7 @@ Read the [register rules](../improvements/improvement-register-rules.md), the [r
 ## Hard boundaries
 
 - Never merge, enable auto-merge, push to `master`, or tag.
-- Never ask a maintainer question during the pass. Record a briefed decision question in the item, leave it ineligible, and continue down the ranking.
+- Never ask a maintainer question during the pass. Record a briefed decision question in the item, move its now-ineligible row below the eligible ones, and continue down the ranking.
 - Do not change runtime or build dependencies, the lockfile, supported Python versions, or the `timezonefinder` release version. **One exception** ([TOOL-6](../improvements/items/data-pipeline-and-developer-tooling/tool-6-the-ruff-version-is-pinned-below-0-16.md)): a pass may raise a lint or formatter pin with its `.pre-commit-config.yaml` rev and the lockfile lines that bump alone produces; a bump resolving anything further stops. Generated data, bindings, and benchmark fixtures may be regenerated through their generators when the item requires it, per the [generated-file rules](../development/generated-file-regeneration-rules.md) and the [data-pipeline rules](../development/data-pipeline-format-versioning-and-release-order.md). `prototypes/` is out of scope **as a source of work** — a pass does not go looking for findings in exploratory code — but its records are not exempt from the obligations a pass already carries: a query-path change updates the profiler's committed `FINDINGS`, a retirement grep reaches the item ids cited there, and the [documentation pairing](../development/documentation-maintenance-rules.md) reaches `prototypes/README.md`. The [register rules](../improvements/improvement-register-rules.md) state that split and why.
 - Preserve the lookup fast path. A performance claim requires paired evidence, measured noise, and the acceleration backend named; an unresolved regression is reverted and recorded.
 
@@ -19,7 +19,7 @@ Treat entries as evidence, not gospel. Re-find locations by symbol rather than l
 
 Surface each candidate's trade-off while ranking, per the [trade-off rules](../development/trade-off-surfacing-and-validation.md): an option whose losing side a project constraint or the API contract forbids is ruled out before it is ranked, and a trade-off no available measurement can settle becomes a briefed decision rather than an implementation attempt.
 
-Rank expected value first: likely defects, then unblockers, drift-prone duplication, then readability; size only breaks ties. A performance item is ranked on measured removable workload share, never intuition. Use the [measurement baseline](../improvements/query-performance-measurement-baseline.md); an unmeasured hypothesis becomes a measurement item.
+Rank expected value first: likely defects, then unblockers, drift-prone duplication, then readability; size only breaks ties. The row order is what a pass walks, so it obeys the [ordering invariant](../improvements/improvement-ranking-and-eligibility.md): an item above every item it blocks, and every ineligible row below every eligible one. Whenever a pass changes a row's eligibility it moves the row too. A performance item is ranked on measured removable workload share, never intuition. Use the [measurement baseline](../improvements/query-performance-measurement-baseline.md); an unmeasured hypothesis becomes a measurement item.
 
 An item is eligible only when it is unclaimed, its [preconditions](../improvements/improvement-sequencing-and-preconditions.md) hold, and every maintainer-owned choice is recorded. Resume existing work instead of racing it.
 
@@ -37,7 +37,7 @@ Discovering the oversize mid-implementation does not change this: abandon the in
 
 A choice belongs to the maintainer only when reasonable answers produce materially different work and reversal is expensive. Naming, formatting, file placement, test structure, and small reversible implementation choices belong to the contributor.
 
-For a missing maintainer decision, change the item's status to start with `needs` and add exactly one `**Decision needed:**` bullet holding the question, consequences, two to four options, trade-offs, recommendation, reversibility, and unpriced uncertainty. Update the ranking eligibility cell. Do not answer it or wait; the [maintainer-decision workflow](record-maintainer-decisions.md) owns that interaction.
+For a missing maintainer decision, change the item's status to start with `needs` and add exactly one `**Decision needed:**` bullet holding the question, consequences, two to four options, trade-offs, recommendation, reversibility, and unpriced uncertainty. Update the ranking eligibility cell and move the row below the eligible ones. Do not answer it or wait; the [maintainer-decision workflow](record-maintainer-decisions.md) owns that interaction.
 
 Recorded decisions are binding. New contrary evidence creates a new briefed question; it never silently reverses the earlier decision.
 

@@ -42,7 +42,7 @@ Before presenting the next brief, compare every remaining question with the deci
 
 ## Record immediately
 
-For each answer, before presenting the next question, rewrite the item: remove the decision-needed bullet, record the chosen option, rationale, owner, and refused alternatives, and return the status to `open`. Update the ranking eligibility cell. A “do not do it” answer makes the item rejected or withdrawn and moves its row to `Closed`; the item remains as the argument against re-proposal.
+For each answer, before presenting the next question, rewrite the item: remove the decision-needed bullet, record the chosen option, rationale, owner, and refused alternatives, and return the status to `open`. Update the ranking eligibility cell and move the row to where its new eligibility puts it, per the [ordering invariant](../improvements/improvement-ranking-and-eligibility.md): an item that became `open` rises above the still-ineligible rows, and one that became `needs` or blocked drops below the eligible ones. A “do not do it” answer makes the item rejected or withdrawn and moves its row to `Closed`; the item remains as the argument against re-proposal.
 
 If the choice affects other items, add it to the applicable topic decision module and link those items to it. Preserve earlier decisions and corrections. Unanswered questions keep `needs` and gain the complete brief as the discussion left it so the next round does not re-derive or forget it.
 
