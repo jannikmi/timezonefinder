@@ -137,6 +137,34 @@ def is_torn_by_cut(ring: np.ndarray) -> bool:
     return int(ring[0].max()) - int(ring[0].min()) > HALF_TURN_LNG
 
 
+def rings_meet(ring1: np.ndarray, ring2: np.ndarray) -> bool:
+    """True if closed rings ``ring1`` and ``ring2`` share any point.
+
+    The three ways two rings can meet, none of which implies another: a vertex of one
+    inside the other, either way round, or an edge crossing with no vertex enclosed.
+    """
+    return (
+        any_pt_in_poly(ring1, ring2)
+        or any_pt_in_poly(ring2, ring1)
+        or any_edge_crossing(ring1, ring2)
+    )
+
+
+@dataclass
+class CellFrame:
+    """One cell, one polygon and its holes, expressed in a single coordinate frame.
+
+    ``euclidean_safe`` says whether a segment test applied to them means what it says.
+    It is false only for the cells no rotation helps - those enclosing a pole, and those
+    judged against a polygon the frame's cut tears - which keep the vertex tests alone.
+    """
+
+    hex_coords: np.ndarray
+    poly_coords: np.ndarray
+    holes: list[np.ndarray]
+    euclidean_safe: bool
+
+
 @dataclass
 class Hex:
     id: int
@@ -243,8 +271,13 @@ class Hex:
             }
         return self._poly_candidates
 
-    @profile
-    def lies_in_cell(self, poly_nr: int) -> bool:
+    def common_frame(self, poly_nr: int) -> "CellFrame":
+        """The cell, polygon ``poly_nr`` and its holes in one frame Euclidean tests can use.
+
+        Extracted so `lies_in_cell` and `covers_cell` cannot drift apart on it: the two
+        ask opposite questions of the same scene, and a frame chosen differently by one
+        of them would be a wrong answer nothing else in the converter could notice.
+        """
         poly_coords = self.data.polygons[poly_nr]
         holes = self.data.holes_in_poly(poly_nr)
         rotated = False
@@ -266,6 +299,19 @@ class Hex:
                 poly_coords = rotated_poly
                 holes = (rotate_half_turn(hole) for hole in holes)
         hex_coords = self.rotated_coords if rotated else self.coords
+        return CellFrame(
+            hex_coords=hex_coords,
+            poly_coords=poly_coords,
+            holes=list(holes),
+            euclidean_safe=rotated or not self.is_special,
+        )
+
+    @profile
+    def lies_in_cell(self, poly_nr: int) -> bool:
+        frame = self.common_frame(poly_nr)
+        hex_coords = frame.hex_coords
+        poly_coords = frame.poly_coords
+        holes = frame.holes
 
         overlap = any_pt_in_poly(hex_coords, poly_coords)
         if not overlap:
@@ -273,7 +319,7 @@ class Hex:
             # ATTENTION: some hex cells cannot be used as polygons in regular point in polygon algorithm!
             # h3 answers this one on the sphere, so it needs no frame of its own
             overlap = any_pt_in_cell(self.data, self, poly_nr)
-        if not overlap and (rotated or not self.is_special):
+        if not overlap and frame.euclidean_safe:
             # Two rings can overlap with no vertex of either inside the other, when an edge
             # passes clean through. Vertex inclusion alone therefore misses real coverage,
             # and the cell is recorded as uncovered - a wrong timezone for every point in
@@ -296,6 +342,44 @@ class Hex:
                 if fully_contained_in_hole(hex_coords, hole):
                     return False
         return overlap
+
+    @profile
+    def covers_cell(self, poly_nr: int) -> bool:
+        """True if every point of the cell lies inside polygon ``poly_nr``.
+
+        The converse of what `lies_in_cell` asks, and a strictly stronger property: a
+        polygon covering the cell needs no point-in-polygon test inside it, because no
+        query point in the cell can fall outside it. `resolve_covered_cells` is what
+        turns that into a unique-zone shortcut entry.
+
+        The claim is made about the cell's stored ring, which is the planar hexagon
+        through the vertices h3 reports - the converter's cell everywhere, but not quite
+        h3's own: the real edges are geodesics, and at resolution 4 they bow away from
+        the stored ones by up to a few tens of metres. `lies_in_cell` already rests on
+        the same approximation and a missed overlap there is a wrong timezone too, so
+        this adds no new class of error; what it changes is that a wrong answer would sit
+        in a band metres wide against a boundary the covering polygon usually clears by
+        kilometres. Tightening it means representing the cell as something other than its
+        ring, which is a change to every test here rather than to this one.
+
+        Answered `False` for a cell no rotation puts in a frame a segment test means
+        something in - one enclosing a pole, or judged against a polygon that is itself
+        torn by the cut. Vertex inclusion alone cannot establish *coverage*, and the safe
+        direction here is the opposite of `lies_in_cell`'s: an extra candidate polygon
+        costs a point-in-polygon test, while claiming coverage that does not hold costs
+        every point in the uncovered part its timezone.
+        """
+        frame = self.common_frame(poly_nr)
+        if not frame.euclidean_safe:
+            return False
+        hex_coords = frame.hex_coords
+        if not fully_contained_in_hole(hex_coords, frame.poly_coords):
+            return False
+        # A hole merely *reaching* the cell is enough to disqualify it, where
+        # `lies_in_cell` only drops the polygon for a hole that swallows the cell whole:
+        # the part of the cell inside the hole is not covered, and coverage is the claim
+        # being made here.
+        return not any(rings_meet(hex_coords, hole) for hole in frame.holes)
 
     @property
     def polys_in_cell(self) -> set[int]:

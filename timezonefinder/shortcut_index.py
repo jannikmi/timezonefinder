@@ -1,9 +1,10 @@
 """The H3 shortcut index: reader, writer and the slot arithmetic both share.
 
 The shortcut index answers "which timezone polygons can possibly cover this point" for
-every H3 cell at :data:`~timezonefinder.configs.SHORTCUT_H3_RES`. Most cells are covered
-by a single zone and need no answer beyond its id; the rest carry a list of candidate
-boundary polygons for the point-in-polygon loop to work through.
+every H3 cell at :data:`~timezonefinder.configs.SHORTCUT_H3_RES`. Most cells need no
+answer beyond a zone id - one zone holds the whole cell, or one boundary polygon covers
+all of it, which ``scripts/zone_precedence.py`` decides; the rest carry a list of
+candidate boundary polygons for the point-in-polygon loop to work through.
 
 ``docs/data_format.rst`` is the authoritative description of the binary layout. What
 belongs here is why it is shaped that way:
@@ -13,8 +14,8 @@ belongs here is why it is shaped that way:
   so those bits *are* the cell and :func:`slot_of` is a bijection onto a dense table
   rather than a hash. No keys are stored and no search runs at lookup time.
 * **The table holds the answer, not a pointer to it.** One ``int16`` per slot: a zone id
-  for a cell a single zone covers, ``ABSENT`` for a cell with no coverage, and otherwise
-  the index of a candidate list. Three quarters of the cells are answered by that one
+  for a cell the index resolves on its own, ``ABSENT`` for a cell with no coverage, and
+  otherwise the index of a candidate list. Three quarters of the cells are answered by that one
   read, and their offsets and payload entries therefore need not exist at all.
 * **Only the candidate lists are stored, each distinct one once.** Duplicates carry
   *equal* offsets into the shared payload rather than an index to a shared entry, so a

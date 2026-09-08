@@ -11,6 +11,7 @@ from scripts.hex_utils import (
     Hex,
     get_corrected_hex_boundaries,
     is_torn_by_cut,
+    rings_meet,
     rotate_half_turn,
 )
 from scripts.utils_numba import (
@@ -313,6 +314,10 @@ ENCLOSING_POLYGON = np.array(
     [[-500, 500, 500, -500], [-500, -500, 500, 500]], dtype=np.int32
 )
 
+#: a hole of ``ENCLOSING_POLYGON`` nowhere near the cell, for the cases weighing
+#: something other than the hole
+FAR_HOLE = np.array([[300, 400, 400, 300], [300, 300, 400, 400]], dtype=np.int32)
+
 
 @pytest.mark.unit
 def test_a_hole_clipping_the_cell_leaves_the_polygon_in_it():
@@ -327,6 +332,73 @@ def test_a_hole_covering_the_whole_cell_takes_the_polygon_away():
     cell = _cell_with(ENCLOSING_POLYGON, TestFullyContainedInHole.PLAIN)
 
     assert not cell.lies_in_cell(0)
+
+
+@pytest.mark.unit
+class TestRingsMeet:
+    """Three ways two rings can share a point, none of which implies another."""
+
+    CELL = TestFullyContainedInHole.CELL
+
+    def test_a_ring_enclosing_the_cell_meets_it(self):
+        assert rings_meet(self.CELL, ENCLOSING_POLYGON)
+
+    def test_a_ring_inside_the_cell_meets_it(self):
+        """The asymmetric case: no vertex of the cell is inside the small ring."""
+        tiny = np.array([[40, 60, 60, 40], [40, 40, 60, 60]], dtype=np.int32)
+        assert not any_pt_in_poly(self.CELL, tiny)
+        assert rings_meet(self.CELL, tiny)
+
+    def test_a_ring_crossing_the_cell_with_no_vertex_inside_meets_it(self):
+        """A bar passing clean through, which vertex inclusion alone cannot see."""
+        bar = np.array([[-200, 300, 300, -200], [40, 40, 60, 60]], dtype=np.int32)
+        assert not any_pt_in_poly(self.CELL, bar)
+        assert not any_pt_in_poly(bar, self.CELL)
+        assert rings_meet(self.CELL, bar)
+
+    def test_a_disjoint_ring_does_not_meet_it(self):
+        far = np.array([[500, 600, 600, 500], [500, 500, 600, 600]], dtype=np.int32)
+        assert not rings_meet(self.CELL, far)
+
+
+@pytest.mark.unit
+class TestCoversCell:
+    """`covers_cell` claims every point of the cell, where `lies_in_cell` claims one."""
+
+    def test_an_enclosing_polygon_covers_the_cell(self):
+        cell = _cell_with(ENCLOSING_POLYGON, FAR_HOLE)
+
+        assert cell.covers_cell(0)
+
+    def test_a_polygon_merely_overlapping_the_cell_does_not_cover_it(self):
+        """The distinction the whole item rests on: overlap is not coverage."""
+        straddling = np.array([[50, 300, 300, 50], [50, 50, 300, 300]], dtype=np.int32)
+        cell = _cell_with(straddling, FAR_HOLE)
+
+        assert cell.lies_in_cell(0)
+        assert not cell.covers_cell(0)
+
+    def test_a_hole_reaching_into_the_cell_defeats_coverage(self):
+        """`lies_in_cell` keeps the polygon here - the cell is still partly covered -
+        and that is exactly the case coverage may not claim."""
+        notching = TestFullyContainedInHole.NOTCHED
+        cell = _cell_with(ENCLOSING_POLYGON, notching)
+
+        assert cell.lies_in_cell(0)
+        assert not cell.covers_cell(0)
+
+    def test_a_hole_clear_of_the_cell_leaves_coverage_standing(self):
+        cell = _cell_with(ENCLOSING_POLYGON, FAR_HOLE)
+
+        assert cell.covers_cell(0)
+
+    def test_a_pole_cell_is_never_covered(self):
+        """No rotation puts it in a frame a segment test means anything in, so the
+        answer is the safe one rather than the one the vertex tests would give."""
+        cell = _cell_with(ENCLOSING_POLYGON, FAR_HOLE)
+        cell.surr_n_pole = True
+
+        assert not cell.covers_cell(0)
 
 
 class TestTheAntimeridianFrame:
