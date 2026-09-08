@@ -312,7 +312,7 @@ Using a TimezoneFinder instance:
 
 
 .. note::
-    The "lightweight" class :ref:`TimezoneFinderL <usage_finderL>`, which is using only shortcuts, also supports just querying the most probable timezone.
+    The "lightweight" class :ref:`TimezoneFinderL <usage_finderL>`, which is using only shortcuts, also answers without testing any geometry - but with a heuristic suggestion rather than the most probable timezone.
 
 
 certain_timezone_at()

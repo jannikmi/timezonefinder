@@ -100,10 +100,16 @@ pytz = [
 # the alternative package docs/alternatives.rst weighs this one against,
 # measured head-to-head by benchmarks/test_comparison.py. Deliberately its own
 # group rather than part of `test`: the configuration CI tracks is
-# `uv sync --group test` (.github/workflows/benchmark.yml), and that has to stay
-# exactly what a plain `pip install timezonefinder` gives you. `make benchmarks`
-# and `tox -e benchmarks` ask for this group explicitly; everything else runs
-# without it, and the comparison benchmarks skip.
+# `uv sync --group test` (.github/workflows/benchmark.yml), and nothing in that
+# environment may change what `timezonefinder` imports at run time - that is
+# what makes a timing taken there a timing of a plain `pip install
+# timezonefinder`. The rule is about the import surface, not the package list:
+# `test` also pulls in `data` for the converter modules the tests import, and
+# those are never reached from a query, so they cost install time and not a
+# measurement. `numba` is the group that would change the backend, which is why
+# it is kept separate as well. `make benchmarks` and `tox -e benchmarks` ask for
+# this group explicitly; everything else runs without it, and the comparison
+# benchmarks skip.
 # It is a Rust extension shipping abi3 wheels for CPython 3.10+ on the platforms
 # this project builds for; on one it does not cover, `make install` needs a Rust
 # toolchain or `--no-group compare`, and nothing but the comparison is lost.

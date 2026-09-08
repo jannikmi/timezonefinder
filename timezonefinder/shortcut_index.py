@@ -430,9 +430,19 @@ def check_fits(values: np.ndarray, dtype: np.dtype, *, what: str, remedy: str) -
 def get_last_change_idx(zone_ids: np.ndarray) -> int:
     """Index past which no zone other than the last one can still be matched.
 
-    A candidate list is ordered so that a zone's polygons are contiguous and the largest
-    zone comes last, so once the scan reaches the final run there is nothing left to rule
-    out and the answer is that zone whether or not its polygons are tested.
+    A candidate list is ordered so that the *final* zone's polygons are a complete,
+    contiguous suffix, so once the scan reaches that run there is nothing left to rule out
+    and the answer is that zone whether or not its polygons are tested.
+
+    That suffix is the whole of the ordering contract - see ``scripts.shortcuts``'s
+    ``check_shortcut_sorting``, which asserts it and nothing else. The tested prefix may
+    interleave zones freely, and the final zone is *not* required to be the largest one:
+    the converter orders the prefix by estimated full-predicate work, so a zone may
+    appear before another zone's remaining polygons. That is why this scans from the back:
+    a forward scan stopping at the first zone change would answer the start of the *first*
+    run rather than the last, and on an interleaved prefix that is too small -
+    the query would then break out of the candidate loop with zones still unruled-out and
+    return the final zone for a point one of them contains.
 
     **Build-time only.** The query used to call this per lookup; it now reads the answer
     out of the shortcut index, which stores one value per *distinct* candidate list. It
