@@ -1,6 +1,6 @@
 ---
 name: cut-release
-description: "Prepares a timezonefinder code-release pull request or, after its merge and explicit authorization, publishes the matching tag."
+description: "Prepares a timezonefinder code-release pull request, publishing the timezonefinder-data distribution first when the release needs a version PyPI does not serve, or, after the pull request is merged and with explicit authorization, publishes the matching code tag."
 ---
 
 # Cut a release

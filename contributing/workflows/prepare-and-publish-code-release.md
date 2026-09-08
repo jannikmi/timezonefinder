@@ -7,7 +7,7 @@ Read the [changelog policy](../development/changelog-and-release-note-policy.md)
 ## Hard boundaries
 
 - Never merge or enable auto-merge on the release pull request.
-- Never tag without explicit authorization in the same session. Pushing the tag publishes to PyPI, which will not accept that version again.
+- Never push a tag without explicit authorization naming it in the same session. That covers both namespaces on this branch — a bare `<version>` tag publishes `timezonefinder`, a `data-v<version>` tag publishes `timezonefinder-data` — and either upload reaches PyPI, which will not accept that version again.
 - Never force-push, delete a published tag, upload manually, regenerate data, fixtures, or bindings, or include unrelated files. The benchmark reports are the one exception, refreshed only through the step below and only in their own commit.
 - Stage explicit paths; the checkout may contain another contributor's work.
 
@@ -38,13 +38,37 @@ Ask through `released_versions`, not through the raw `releases` map the index se
 
 If the declared version is absent, the data release goes first — publish the data, then the code requiring it, or `timezonefinder` is uninstallable for everyone between the two. Every format change is in this position by construction, because `DATA_FORMAT_VERSION` is the data distribution's major version and the root pins `<N+1`; the [data pipeline and release order](../development/data-pipeline-format-versioning-and-release-order.md) carries the rest.
 
-The data release is a `data-v<version>` tag on `master`, published by `publish_data.yml` from the wheel `DATA_BUILD_RUN` names. Before tagging, confirm that run succeeded and that its `artifact-data-wheel` has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id:
+The data release is a `data-v<version>` tag on `master`, published by `publish_data.yml` from the wheel `DATA_BUILD_RUN` names. `<version>` is the *data* distribution's own version, never the root's, and a bare version tag would release the code instead:
 
 ```bash
+data_version=$(uv version --short --package timezonefinder-data)
+```
+
+That version is already declared in the checkout, put there by the merged pull request that changed the format. **This workflow publishes it and never bumps it, regenerates data, or compiles a wheel** — a version bump is a data update, `update_data.sh` owns it, and a data-only boundary release is outside this workflow entirely.
+
+Before tagging, confirm four things, cheapest first: local `master` is fast-forwarded to `origin/master` and reports `$data_version` there; the tag is absent both locally and remotely; the `master` workflow run for that exact head SHA is green; and the run `DATA_BUILD_RUN` names succeeded with an `artifact-data-wheel` that has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id:
+
+```bash
+git ls-remote --tags origin "data-v$data_version"
 gh api repos/<owner>/<repo>/actions/runs/"$(cat DATA_BUILD_RUN)"/artifacts -q '.artifacts[] | "\(.name) expired=\(.expired)"'
 ```
 
-This tag publishes to PyPI irreversibly and is bound by the same rule as the code tag: **ask for authorization naming the version in the same session**, and never push it on standing instruction alone. `scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but it is caught at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
+`publish_data.yml` re-checks the first two from its own end — it refuses a tag whose commit is not on `master`, and one whose name disagrees with the declared version — but only after the tag exists, and a tag pushed in error is the one thing this half cannot take back.
+
+This tag publishes to PyPI irreversibly and is bound by the same rule as the code tag: **stop and ask the maintainer for authorization, naming `data-v$data_version` and stating that pushing it uploads to PyPI permanently**, and never push it on standing instruction alone. Keep the ask short — the version, that the code release about to be prepared requires it while the index does not serve it, and that the preparation waits on the answer. On refusal, stop and say so rather than preparing a pull request that cannot be tagged: the code release cannot proceed without the data behind it.
+
+On approval, tag from the up-to-date `master` in the same annotated form `make release` and `release_data_update.yml` both use, and watch it publish:
+
+```bash
+git tag -a "data-v$data_version" -m "Data release $data_version"
+git push origin "data-v$data_version"
+gh run list --workflow publish_data.yml --limit 1
+gh run watch <run-id> --exit-status
+```
+
+Then re-run the index query above and confirm it lists `$data_version` before continuing. The upload is immediate but the JSON that query reads is cached, so a version still missing right after a green publish is a stale read rather than a failed release — re-ask before concluding anything, and never re-push the tag, which publishes nothing the second time.
+
+Only once the index serves it does preparation resume, at *Rewrite the changelog*. `scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but it is caught at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
 
 ## Rewrite the changelog
 
