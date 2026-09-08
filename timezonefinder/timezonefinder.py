@@ -851,12 +851,6 @@ class AbstractTimezoneFinder(ABC):
                 continue
             array.cleanup()
             delattr(self, attr)
-        # The hole union bounds export the arrays they view, so drop the views before
-        # the arrays - the same ordering rule `PolygonArray.cleanup` follows, and the
-        # reason a released finder must not answer a lookup afterwards.
-        for attr in ():
-            if hasattr(self, attr):
-                delattr(self, attr)
         # hole_registry is an in-memory dict only; nothing to release
 
     def __enter__(self) -> Self:
