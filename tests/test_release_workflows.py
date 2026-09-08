@@ -673,3 +673,64 @@ def test_a_job_using_a_local_action_checks_out_the_repo_first() -> None:
         assert checkout is not None and checkout < local_action, (
             f"{name} uses a local action without checking out the repository first"
         )
+
+
+# Steps whose action needs a permission the job must therefore declare. `checkout`
+# authenticates with GITHUB_TOKEN, so it reads `contents`; `download-artifact` is
+# absent because it reads the *current* run's artifacts through the runtime token and
+# needs no `actions` scope unless handed a `run-id`.
+PERMISSION_BY_ACTION = {"actions/checkout": ("contents", {"read", "write"})}
+LOCAL_ACTION_PREFIX = "./.github/actions/"
+
+
+def _resolved_steps(job: dict) -> list[dict]:
+    """``job``'s steps, with each local composite action replaced by its own.
+
+    A permission is needed by whatever finally runs, and half of what these jobs run
+    lives behind `uses: ./.github/actions/...`, so reading only the job's file would
+    miss it.
+    """
+    steps: list[dict] = []
+    for step in job["steps"]:
+        ref = _uses(step)
+        if ref.startswith(LOCAL_ACTION_PREFIX):
+            action = ACTION_DIR / ref[len(LOCAL_ACTION_PREFIX) :] / "action.yml"
+            steps.extend(yaml.safe_load(action.read_text())["runs"]["steps"])
+        else:
+            steps.append(step)
+    return steps
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("workflow_file", [BUILD_WORKFLOW, PUBLISH_DATA_WORKFLOW])
+def test_a_job_declaring_permissions_declares_every_one_it_uses(
+    workflow_file: Path,
+) -> None:
+    """A `permissions:` block is exhaustive: naming one zeroes all the others.
+
+    So a job that lists `id-token: write` for Trusted Publishing and nothing else has
+    `contents: none`, and its checkout gets a 403 - which `publish-pypi` did, unnoticed,
+    because it is gated at its deployment environment and skipped before reaching a
+    step. A skipped job does not fail the run containing it, so the release went green
+    with nothing published. The permission is asserted here rather than discovered on
+    the one ref that can exercise it, which is a tag, after the version is spent.
+    """
+    workflow = yaml.safe_load(workflow_file.read_text())
+    missing = []
+    for name, job in workflow["jobs"].items():
+        declared = job.get("permissions")
+        if not declared:
+            continue
+        for step in _resolved_steps(job):
+            for action, (scope, accepted) in PERMISSION_BY_ACTION.items():
+                if (
+                    _uses(step).startswith(action)
+                    and declared.get(scope) not in accepted
+                ):
+                    missing.append(
+                        f"{name}: {action} needs {scope}, got {declared.get(scope)!r}"
+                    )
+    assert not missing, (
+        f"jobs in {workflow_file.name} whose `permissions:` omit a scope their own "
+        f"steps require: {missing}"
+    )
