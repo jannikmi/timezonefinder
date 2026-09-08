@@ -38,9 +38,9 @@ Ask through `released_versions`, not through the raw `releases` map the index se
 
 If the declared version is absent, the data release goes first — publish the data, then the code requiring it, or `timezonefinder` is uninstallable for everyone between the two. Every format change is in this position by construction, because `DATA_FORMAT_VERSION` is the data distribution's major version and the root pins `<N+1`; the [data pipeline and release order](../development/data-pipeline-format-versioning-and-release-order.md) carries the rest.
 
-When it is absent, stop and publish it before touching the version: [publish the data distribution](publish-the-data-distribution.md) owns that tag, its authorization, and the checks around it. Return here once the index serves the version — the whole of *Prepare* below assumes it does.
+When it is absent, stop: [publish the data distribution](publish-the-data-distribution.md) owns that tag and its authorization. Return once the index serves the version, which the rest of *Prepare* assumes.
 
-`scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but it is caught at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
+`scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
 
 ## Rewrite the changelog
 
@@ -113,6 +113,16 @@ After the maintainer merges, update local `master` by fast-forward and verify it
 
 Find the `master` workflow run for the exact head SHA and wait for it to succeed. The tag workflow does not rerun the tox matrix and refuses publication without that green run.
 
-Ask explicitly for authorization to tag the named version on `master` and push it, explaining that this publishes to PyPI irreversibly. On approval, run `make release`. Confirm a tag-ref workflow appears and watch publication to completion. Report the tag and workflow URL.
+Ask explicitly for authorization to tag the named version on `master`, explaining that this publishes to PyPI irreversibly. On approval, run `make release`.
 
-If a tag workflow failed before publication because the matching `master` run was unavailable, wait for the green run and rerun the failed job; never retag. If the tag already exists, inspect the existing run. Any failure after publication spends the version and requires a new release.
+**Then verify the upload, not the run.** A skipped job does not fail the run that contains it, so a green tag run is not evidence that anything was published — 9.0.0 was tagged, GitHub-released and left off PyPI exactly that way: `publish-pypi` skipped, its `pypi` deployment environment's branch policy not admitting the tag ref. The release is done when the index serves the version and `publish-pypi` concluded `success` rather than `skipped`:
+
+```bash
+gh api repos/<owner>/<repo>/actions/runs/<run-id>/jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'
+uv run python -c 'from scripts.check_data_dependency import fetch_pypi_payload, released_versions
+print([str(v) for v in released_versions(fetch_pypi_payload("timezonefinder"))])'
+```
+
+Report the tag, the workflow URL and that answer; never "published" on a green run alone.
+
+A skipped or failed upload is recovered by fixing the cause and re-running that job, never by retagging — the tag and the GitHub Release already exist, and pushing it again publishes nothing. A run that failed for want of the matching green `master` run is the same shape: wait, then rerun. Any failure after a successful upload requires a new release.
