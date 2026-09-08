@@ -415,6 +415,12 @@ jobs:
       # required for Trusted Publishing: the job exchanges this for a short-lived
       # PyPI token, which is why no secret appears anywhere below
       id-token: write
+      # declaring any permission zeroes every other one, so the checkout below needs
+      # its own read listed here. No `actions: read` beside it: `stage-artifacts`
+      # downloads this run's own artifacts, which the runtime token covers - unlike
+      # `release`, which reads another run, and `publish-data-pypi`, whose wheel comes
+      # from the run DATA_BUILD_RUN names
+      contents: read
     steps:
       # nothing here runs uv or pip - the publishing action brings its own
       # environment - so the checkout exists for one reason: `uses: ./...` resolves
