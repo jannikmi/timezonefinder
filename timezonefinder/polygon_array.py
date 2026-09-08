@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from timezonefinder.configs import POLYGON_BLOCK_SIZE, IntegerLike
+from timezonefinder.configs import MAX_LNG_VAL_INT, POLYGON_BLOCK_SIZE, IntegerLike
 
 from timezonefinder import utils
 from timezonefinder.block_payload import decode_ring, derive_payload_offsets
@@ -24,6 +24,12 @@ from timezonefinder.np_binary_helpers import (
     get_ymin_path,
     read_per_polygon_vector,
 )
+
+# The `x0` stored for a boundary polygon that owns no hole: one step above the largest
+# scaled longitude `coord2int` can return for a valid query, so the first comparison in
+# `HoleArray.any_contains` fails and the rest is never evaluated. int32 holds it with
+# room to spare - `MAX_LNG_VAL_INT` is 1.8e9 against a 2.147e9 ceiling.
+NEVER_INSIDE = MAX_LNG_VAL_INT + 1
 
 
 class PolygonArray:
@@ -451,12 +457,19 @@ class HoleArray(PolygonArray):
         data_location: str | Path,
         boundaries: PolygonArray,
         in_memory: bool = False,
+        hole_registry: dict[int, tuple[int, int]] | None = None,
     ):
         """
         :param data_location: The path to the binary hole data files to use.
         :param boundaries: The boundary polygons that references resolve against. Held
             by reference, which keeps them alive for at least as long as this array.
         :param in_memory: Whether to completely read and keep the coordinate data in memory.
+        :param hole_registry: which holes each boundary polygon owns, as
+            ``{boundary id: (count, first hole id)}``. Optional because the callers
+            that read rings - the integrity checks, the converter's reports - have no
+            ownership question to ask, and because ``validate_hole_registry`` is what
+            establishes the registry and so cannot be handed one. Without it
+            :meth:`ids_of` and :meth:`any_contains` raise rather than answer.
         """
         super().__init__(data_location=data_location, in_memory=in_memory)
         self.boundaries = boundaries
@@ -469,6 +482,113 @@ class HoleArray(PolygonArray):
         # read through a buffer view for the reason the base class's bbox columns are:
         # ``_resolve`` runs on every hole a candidate owns and this is its one read
         self._poly_ref_ints = memoryview(self.poly_ref)
+        self.hole_registry = hole_registry
+        if hole_registry is not None:
+            self._build_union_bounds(hole_registry, len(boundaries))
+
+    def _build_union_bounds(
+        self, hole_registry: dict[int, tuple[int, int]], nr_boundaries: int
+    ) -> None:
+        """One bounding box per boundary polygon, enclosing *all* of its holes.
+
+        What it buys: :meth:`in_any_polygon` has to visit every hole before it can
+        answer "the point is in none of them", and that is the answer 99.8 % of the
+        time - so a polygon owning 95 holes paid 95 bounding-box tests on essentially
+        every point that reached it. One test against the union answers the same
+        question for the whole set, and over the packaged ambiguous fixture it skips
+        75 % of all hole bounding-box tests.
+
+        Only ``x0`` carries the empty case. :meth:`any_contains` opens its comparison
+        chain with it and short-circuits, so a hole-less polygon's other three bounds
+        are never read - they stay zero rather than take a sentinel that would suggest
+        all four guard something. 1,225 of the 1,322 packaged polygons are hole-less,
+        and that is what lets the union test *replace* the registry lookup on the
+        majority path rather than sit in front of it.
+
+        Derived here rather than read from the data directory, which is the cheaper
+        way round: four reductions cost ~16 us, against 47.5 us to load one stored
+        ``(nr_boundaries, 4)`` column and 188.5 us for four separate ones. 21,664
+        bytes is too small for a file to beat the arithmetic, and storing it would
+        additionally spend a data format version and a republished distribution.
+
+        ``reduceat`` needs each polygon's hole range to end where the next begins.
+        That the ranges partition the hole array with no gap or overlap is what
+        ``timezonefinder._data_integrity.validate_hole_registry`` establishes, over
+        what the converter writes and over what ships, so it is not re-derived here.
+        """
+        # int32 like the columns it is derived from: a scaled coordinate is bounded by
+        # +-1.8e9 by `coord2int`, which int32 holds with room to spare.
+        x0 = np.full(nr_boundaries, NEVER_INSIDE, dtype=np.int32)
+        x1 = np.zeros(nr_boundaries, dtype=np.int32)
+        y0 = np.zeros(nr_boundaries, dtype=np.int32)
+        y1 = np.zeros(nr_boundaries, dtype=np.int32)
+        if hole_registry:
+            owners = np.fromiter(
+                hole_registry.keys(), dtype=np.int64, count=len(hole_registry)
+            )
+            starts = np.fromiter(
+                (first for _, first in hole_registry.values()),
+                dtype=np.int64,
+                count=len(hole_registry),
+            )
+            order = np.argsort(starts)
+            owners, starts = owners[order], starts[order]
+            x0[owners] = np.minimum.reduceat(self.xmin, starts)
+            x1[owners] = np.maximum.reduceat(self.xmax, starts)
+            y0[owners] = np.minimum.reduceat(self.ymin, starts)
+            y1[owners] = np.maximum.reduceat(self.ymax, starts)
+        self.union_bounds = (x0, x1, y0, y1)
+        # buffer views for the reason the base class's bbox columns are: these are read
+        # on every candidate polygon that survives its own bounding box
+        self._union_x0_ints = memoryview(x0)
+        self._union_x1_ints = memoryview(x1)
+        self._union_y0_ints = memoryview(y0)
+        self._union_y1_ints = memoryview(y1)
+
+    def ids_of(self, boundary_id: IntegerLike) -> range:
+        """The hole ids a boundary polygon owns, as an empty ``range`` when it has none.
+
+        A ``dict.get`` and a ``range``, not a lookup that raises and a generator: the
+        empty case is the majority one, and used to build a generator object, enter it,
+        raise a ``KeyError``, catch it and return in order to establish that there was
+        nothing to check.
+
+        :param boundary_id: id of the boundary polygon
+        :return: the hole ids, in storage order
+        :raises AttributeError: if this array was built without a hole registry
+        """
+        if self.hole_registry is None:
+            raise AttributeError(
+                "this HoleArray was constructed without a hole registry, so it cannot "
+                "say which holes a boundary polygon owns. Pass `hole_registry=` to ask."
+            )
+        entry = self.hole_registry.get(int(boundary_id))
+        if entry is None:
+            return range(0)
+        amount_of_holes, first_hole_id = entry
+        return range(first_hole_id, first_hole_id + amount_of_holes)
+
+    def any_contains(self, boundary_id: IntegerLike, x: int, y: int) -> bool:
+        """Whether the point lies in any hole of this boundary polygon.
+
+        The union box decides two things at once: a hole-less polygon fails the first
+        comparison, so neither the registry nor a ``range`` is built; and a polygon
+        that owns holes gets "is it in *any* of them" answered for the whole set by one
+        test, where :meth:`in_any_polygon` has to visit every hole to answer "no". See
+        :meth:`_build_union_bounds`.
+
+        :param boundary_id: id of the boundary polygon
+        :param x: X-coordinate of the point
+        :param y: Y-coordinate of the point
+        :return: True if the point is inside one of this polygon's holes
+        """
+        return (
+            self._union_x0_ints[boundary_id] <= x <= self._union_x1_ints[boundary_id]
+            and self._union_y0_ints[boundary_id]
+            <= y
+            <= self._union_y1_ints[boundary_id]
+            and self.in_any_polygon(self.ids_of(boundary_id), x, y)
+        )
 
     def _resolve(self, idx: IntegerLike) -> tuple[PolygonArray, int]:
         """Which collection holds this hole id's ring, and where.
@@ -529,6 +649,17 @@ class HoleArray(PolygonArray):
         array whose own accessor may already be gone. Only the *reference* is dropped -
         the boundaries array owns its own release, and the finder performs it.
         """
+        # views before the arrays they export, the ordering the base class follows
+        for attr in (
+            "_union_x0_ints",
+            "_union_x1_ints",
+            "_union_y0_ints",
+            "_union_y1_ints",
+            "union_bounds",
+            "hole_registry",
+        ):
+            if hasattr(self, attr):
+                delattr(self, attr)
         if hasattr(self, "_poly_ref_ints"):
             del self._poly_ref_ints
         if hasattr(self, "poly_ref"):
