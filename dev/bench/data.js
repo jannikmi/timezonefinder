@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788826787550,
+  "lastUpdate": 1788829016872,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8316,6 +8316,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1831",
             "unit": "lookups/sec",
             "extra": "min of 66 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2369 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2eef77c32c085ded4a2273c879e010a53f474cab",
+          "message": "Order the improvement ranking the way a pass walks it (#646)\n\nThe row order is what an improvement pass reads top-down, so it now has\nto reproduce what a pass actually does: an item sits above everything it\nblocks, and every ineligible row sits below every eligible one.\n\nGH-364 and GH-332 held the top two rows on expected value while being\nblocked and parked the whole time, which bought nothing except making\nevery pass re-read them before reaching the first item it could start.\nExpected value still orders each group internally, and the eligibility\ncell keeps the rank the entry would hold if it were takeable.\n\nThe three workflows that write rows say to move a row whenever they\nchange its eligibility, rather than editing the cell alone.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T00:56:11Z",
+          "tree_id": "0abc0b3f0780a6d1b2f1124d2320187b17faf0b4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2eef77c32c085ded4a2273c879e010a53f474cab"
+        },
+        "date": 1788829015469,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 533158.6279139072,
+            "range": "± 53615",
+            "unit": "lookups/sec",
+            "extra": "min of 180 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 755575.3146901192,
+            "range": "± 100317",
+            "unit": "lookups/sec",
+            "extra": "min of 163 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 155599.3031640878,
+            "range": "± 2639",
+            "unit": "lookups/sec",
+            "extra": "min of 60 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 825497.981657245,
+            "range": "± 10970",
+            "unit": "lookups/sec",
+            "extra": "min of 274 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1467722.7225194166,
+            "range": "± 68814",
+            "unit": "lookups/sec",
+            "extra": "min of 538 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 187775.0058848783,
+            "range": "± 2934",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 817120.3046230851,
+            "range": "± 63521",
+            "unit": "lookups/sec",
+            "extra": "min of 277 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1416676.2056181713,
+            "range": "± 29054",
+            "unit": "lookups/sec",
+            "extra": "min of 514 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 186804.85244284078,
+            "range": "± 1987",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
