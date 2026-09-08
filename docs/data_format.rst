@@ -694,15 +694,16 @@ list to take a scan off every ambiguous query.
 
 **The tested prefix may interleave zones.** Only the final zone must occupy a
 complete, untested suffix. During conversion, ``scripts/shortcut_ordering.py``
-minimizes a deterministic sample estimate of full-predicate work, including
-bounding boxes, hole checks and latitude-active blocks. Its module documentation
-contains the objective, dynamic-programming proof, spherical-area sampling,
-cost coefficients, accuracy budget and conservative geometric gates. The exact
-claim applies to that sampled objective, not to population latency. There is no
-candidate-count cutoff: zero-hit tests are deferred by an exact exchange
-argument, retaining every candidate in the binary. Cells failing the geometric
-gates retain legacy zone precedence and the final zone, while still optimizing
-polygon order within each tested zone.
+reduces integrated expected full-predicate work, including bounding boxes, the
+union box enclosing all holes, individual hole checks and latitude-active blocks.
+No query points are sampled: the piecewise cost proxy is integrated analytically
+against spherical surface area over clipped polygon geometry. The module gives
+the formulas, search algorithm, cost coefficients and geometric approximations.
+Final zones are enumerated; greedy candidates and adjacent exchanges improve on
+the legacy incumbent. This is a heuristic for general point-dependent costs,
+with an exact ratio-order special case for constant costs and disjoint polygons.
+There is no candidate-count cutoff. Geometry safety gates preserve legacy zone
+precedence where necessary while allowing within-zone polygon optimization.
 This changes no candidate membership or binary layout. It does change the
 fallback heuristic used by ``TimezoneFinderL``.
 

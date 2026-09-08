@@ -424,7 +424,7 @@ Binary File Sizes
      - Percentage
    * - boundary polygon data
      - 30.27
-     - 97.81%
+     - 97.80%
    * - hole polygon data
      - 0.09
      - 0.29%
