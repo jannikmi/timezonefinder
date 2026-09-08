@@ -1,0 +1,18 @@
+# FT-2 — no environment tests a free-threaded interpreter
+
+- **Where:** `tox.ini`, `envlist` (`py{311,312,313,314}{,-numba,-pytz}` — no `t` interpreter); `pyproject.toml`, the `parallel_threads_limit` marker registration; `tests/`, for the new assertion.
+- **Defect:** `pytest-run-parallel` is a test dependency and its `parallel_threads_limit` marker is registered and used, but `--parallel-threads` is passed by no Makefile target, no tox env and no workflow. The plugin is dormant, and nothing anywhere asserts what a free-threaded interpreter actually does with this package.
+- **What that costs, concretely:** the GIL comes back on a free-threaded build — `h3` 4.5.0 ships its wheel without `Py_mod_gil` — and the repository has no check that can say so. One assertion would have caught it: on a free-threaded interpreter, `sys._is_gil_enabled()` is still `False`; skip otherwise.
+- **Assert it after constructing a finder, not after the import.** Verified 2026-09-08 on `cpython-3.14.2+freethreaded`: `import timezonefinder` leaves the GIL *disabled* and does not load `h3` at all — `timezonefinder/timezonefinder.py` is what imports `h3.api.numpy_int`, and the package's lazy surface means nothing pulls it until `TimezoneFinder()` is constructed, which is where `sys._is_gil_enabled()` flips to `True`. An import-only assertion passes today, so as a strict xfail it would fail the suite for the wrong reason and as a plain test it would guard nothing. The scoping on issue #364 states this as an import-time effect; that half is wrong and this is the correction.
+- **Write it as `xfail(strict=True)`, not as a passing test.** It fails today, and the strict form is what turns the h3 release that fixes it into a *failing* run rather than a silent one — which is the whole point of [FT-3](../packaging-distribution-and-release/ft-3-raise-the-h3-floor-and-flip-the-gil-assertion.md), and why this item blocks it.
+- **A parallel job must pick its backend deliberately.** `pytest tests/utils_test.py tests/global_functions_test.py --parallel-threads=4` flaked in 2 of 11 runs with `TypeError: No matching definition for argument type(s) int64, int64, array(int32, 2d, C)` from numba's `CPUDispatcher` on `pt_in_poly_python`'s eager signature; the same command with `--no-group numba` was clean 5 of 5. The flake is numba's rather than ours, but `uv sync --all-groups` installs numba and `utils.py` prefers it, so it is on the default dev environment's path.
+- **Do not reuse the benchmark entry points.** The [benchmarking rules](../../../development/benchmarking-and-performance-validation.md) already forbid combining `--parallel-threads` with the benchmark suites, and `Makefile` records that prohibition at its benchmark target.
+- **Not this item:** a "concurrent lookups return the same answers" sweep. The loaded state is immutable by construction and is now covered by `tests/test_resource_management.py`, so such a sweep passes without being able to fail — 640,000 concurrent queries returned 0 mismatches during scoping, and would have on a broken build too. It is a smoke test, worth having under `--parallel-threads` and worth nothing as the primary guard.
+- **Size:** ~20 lines — one tox env pinned to a `t` interpreter, and one assertion.
+- **Status:** open — the cost is a CI interpreter, not test code.
+- **Detail:** issue #364 carries the test plan and the flake reproduction this was sliced out of.
+
+## Related memory
+
+- [Testing strategy and change scope](../../../development/testing-strategy-and-change-scope.md)
+- [Benchmarking and performance validation](../../../development/benchmarking-and-performance-validation.md)
