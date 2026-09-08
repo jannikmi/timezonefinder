@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788846868841,
+  "lastUpdate": 1788846870997,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17510,6 +17510,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.8716 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cdd9c56b8e221fe3fe8277d8fbcce0b043a28ad3",
+          "message": "Give publish-pypi the contents: read its checkout needs (#649)\n\n`publish-pypi` declares `permissions: {id-token: write}` and nothing else. A permissions block is exhaustive - naming one scope zeroes every other - so the job runs with `contents: none` while its first step is `actions/checkout@v7`, which authenticates with GITHUB_TOKEN and gets a 403.\n\nNothing noticed because the job has never run. It gained `environment: pypi` in the 9.0.0 cycle, was gated there, and a job gated at its environment is skipped before its first step - and a skipped job does not fail the run containing it, so 9.0.0 went green with nothing published and the missing permission still ahead of the failure. Its sibling `publish-data-pypi` lists `contents: read` beside the same `id-token: write` and publishes fine.\n\nNo `actions: read` beside it. `stage-artifacts` downloads this run's own artifacts, which the runtime token covers; the jobs that do declare it - `release` and `publish-data-pypi` - each read a *different* run.\n\nThe test generalises it rather than pinning the one line: any job declaring permissions must declare every scope its own steps require, resolved through the local composite actions it calls, since half of what these jobs run lives behind `uses: ./.github/actions/...`. Reverting the workflow line fails it with the job named. Only `actions/checkout` is in the table so far, which is the whole of what these two workflows need today.\n\nWhy it earns a test at all: the only ref that can exercise this job is a tag, and a tag is discovered wrong after the version is spent.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T07:53:30+02:00",
+          "tree_id": "1cbbbaede6f75b57a717d0feb0dd1afd9f48512d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/cdd9c56b8e221fe3fe8277d8fbcce0b043a28ad3"
+        },
+        "date": 1788846870327,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008316993713379,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0084953308105469,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234225273132324,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2350339889526367,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58819103240967,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58895683288574,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V45 96-Core Processor @ 4.4902 GHz"
           }
         ]
       }
