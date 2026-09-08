@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788829016872,
+  "lastUpdate": 1788829018647,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17051,6 +17051,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2527 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2eef77c32c085ded4a2273c879e010a53f474cab",
+          "message": "Order the improvement ranking the way a pass walks it (#646)\n\nThe row order is what an improvement pass reads top-down, so it now has\nto reproduce what a pass actually does: an item sits above everything it\nblocks, and every ineligible row sits below every eligible one.\n\nGH-364 and GH-332 held the top two rows on expected value while being\nblocked and parked the whole time, which bought nothing except making\nevery pass re-read them before reaching the first item it could start.\nExpected value still orders each group internally, and the eligibility\ncell keeps the rank the entry would hold if it were takeable.\n\nThe three workflows that write rows say to move a row whenever they\nchange its eligibility, rather than editing the cell alone.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T00:56:11Z",
+          "tree_id": "0abc0b3f0780a6d1b2f1124d2320187b17faf0b4",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2eef77c32c085ded4a2273c879e010a53f474cab"
+        },
+        "date": 1788829018209,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.008580207824707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.234010696411133,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2346887588500977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58811855316162,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.58884334564209,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
           }
         ]
       }
