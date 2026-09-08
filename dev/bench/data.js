@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788831959599,
+  "lastUpdate": 1788846868841,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8577,6 +8577,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1574",
             "unit": "lookups/sec",
             "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cdd9c56b8e221fe3fe8277d8fbcce0b043a28ad3",
+          "message": "Give publish-pypi the contents: read its checkout needs (#649)\n\n`publish-pypi` declares `permissions: {id-token: write}` and nothing else. A permissions block is exhaustive - naming one scope zeroes every other - so the job runs with `contents: none` while its first step is `actions/checkout@v7`, which authenticates with GITHUB_TOKEN and gets a 403.\n\nNothing noticed because the job has never run. It gained `environment: pypi` in the 9.0.0 cycle, was gated there, and a job gated at its environment is skipped before its first step - and a skipped job does not fail the run containing it, so 9.0.0 went green with nothing published and the missing permission still ahead of the failure. Its sibling `publish-data-pypi` lists `contents: read` beside the same `id-token: write` and publishes fine.\n\nNo `actions: read` beside it. `stage-artifacts` downloads this run's own artifacts, which the runtime token covers; the jobs that do declare it - `release` and `publish-data-pypi` - each read a *different* run.\n\nThe test generalises it rather than pinning the one line: any job declaring permissions must declare every scope its own steps require, resolved through the local composite actions it calls, since half of what these jobs run lives behind `uses: ./.github/actions/...`. Reverting the workflow line fails it with the job named. Only `actions/checkout` is in the table so far, which is the whole of what these two workflows need today.\n\nWhy it earns a test at all: the only ref that can exercise this job is a tag, and a tag is discovered wrong after the version is spent.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T07:53:30+02:00",
+          "tree_id": "1cbbbaede6f75b57a717d0feb0dd1afd9f48512d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/cdd9c56b8e221fe3fe8277d8fbcce0b043a28ad3"
+        },
+        "date": 1788846867038,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 975532.4748817468,
+            "range": "± 38818",
+            "unit": "lookups/sec",
+            "extra": "min of 263 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 1310813.2128002993,
+            "range": "± 17483",
+            "unit": "lookups/sec",
+            "extra": "min of 402 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 270862.419442237,
+            "range": "± 10229",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1500385.899267396,
+            "range": "± 51725",
+            "unit": "lookups/sec",
+            "extra": "min of 369 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 2592132.153093735,
+            "range": "± 55888",
+            "unit": "lookups/sec",
+            "extra": "min of 775 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 317815.5444350433,
+            "range": "± 16753",
+            "unit": "lookups/sec",
+            "extra": "min of 103 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1487602.0271470763,
+            "range": "± 51852",
+            "unit": "lookups/sec",
+            "extra": "min of 381 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 2539574.184559254,
+            "range": "± 65609",
+            "unit": "lookups/sec",
+            "extra": "min of 677 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 335689.6058144605,
+            "range": "± 81446",
+            "unit": "lookups/sec",
+            "extra": "min of 101 round(s) on AMD EPYC 9V45 96-Core Processor @ 2.5961 GHz"
           }
         ]
       }
