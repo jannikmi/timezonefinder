@@ -525,7 +525,8 @@ How it works:
 * For each hexagon cell, the library uses a hybrid storage approach:
 
    - **Unique zones**: When all polygons in a hexagon belong to the same timezone, the zone ID is stored directly
-   - **Multiple zones**: When a hexagon contains polygons from different timezones, an array of polygon IDs is stored
+   - **Covered cells**: When a single boundary polygon covers the *whole* hexagon, the zone ID is stored directly too, even though polygons of other zones reach into the cell. No point in the cell can fall outside the covering polygon, so no point-in-polygon test can change the answer - but the zones overlapping inside the cell have to be ordered first, and ``scripts/zone_precedence.py`` holds the rule that orders them. Several hundred cells of the packaged dataset are answered this way
+   - **Multiple zones**: When a hexagon contains polygons from different timezones and none of them covers it, an array of polygon IDs is stored
 
 * When looking up a timezone for a specific point, the library:
    * Determines which H3 hexagon contains the point

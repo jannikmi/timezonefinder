@@ -158,7 +158,7 @@ value is the fastest such pass. That design buys comparability on a noisy runner
 by discarding the shape of the distribution *before* any estimator sees it. A batch mean cannot
 distinguish 2,500 queries that each cost 2 µs from 2,475 that cost 1 µs and 25 that cost 100 µs.
 
-For this package that distinction is the interesting one. A query whose H3 cell holds a single zone
+For this package that distinction is the interesting one. A query whose H3 cell resolves to a zone id
 reads no geometry at all and costs ~1 µs; a query that falls in a very large boundary polygon is
 answered by one ray cast across that whole ring and costs tens of microseconds. Query time
 correlates 0.92 with *vertices tested* and only 0.76 with the number of candidate polygons: the tail

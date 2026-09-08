@@ -20,6 +20,7 @@ from scripts.configs import (
 from scripts.utils import (
     time_execution,
 )
+from scripts.zone_precedence import resolve_covered_cells
 from timezonefinder.shortcut_index import (
     build_shortcut_index,
     get_shortcut_file_path,
@@ -202,7 +203,12 @@ def compile_shortcut_mapping(
 def compute_unique_shortcut_mapping(
     shortcuts: ShortcutMapping, zone_ids: np.ndarray
 ) -> dict[int, int]:
-    """Derive a mapping from hex id to a unique zone id when present."""
+    """Derive a mapping from hex id to a unique zone id when present.
+
+    Only the cells whose candidates all carry the same zone id. The cells that hold
+    several zones but are still answerable without geometry are `resolve_covered_cells`'
+    subject, and `compile_shortcuts` merges the two.
+    """
 
     unique_map: dict[int, int] = {}
     for hex_id, polygon_ids in shortcuts.items():
@@ -317,6 +323,16 @@ def compile_shortcuts(
 
     # Compute unique shortcuts mapping (needed for hybrid shortcuts)
     unique_mapping = compute_unique_shortcut_mapping(shortcuts, data.poly_zone_ids)
+
+    # An ambiguous cell one polygon covers entirely is answerable without geometry too,
+    # once the zones overlapping inside it are ordered; `scripts.zone_precedence` holds
+    # the rule that orders them and why it is allowed to.
+    covered = resolve_covered_cells(data, shortcuts)
+    print(
+        f"  - cells resolved by polygon coverage: {len(covered)} "
+        f"({len(covered) / len(shortcuts) * 100:.2f}% of all cells)"
+    )
+    unique_mapping.update(covered)
 
     # Compile and write hybrid shortcuts binary file (replaces legacy formats)
     compile_shortcut_index(

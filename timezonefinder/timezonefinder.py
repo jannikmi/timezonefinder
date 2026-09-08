@@ -402,8 +402,8 @@ class AbstractTimezoneFinder(ABC):
         if entry == ABSENT:
             return
         if entry >= 0:
-            # a cell a single zone covers: every boundary polygon of that zone is a
-            # candidate. Most are quickly ruled out by the bounding box check.
+            # a cell the table answers with a zone id: every boundary polygon of that
+            # zone is a candidate. Most are quickly ruled out by the bounding box check.
             yield from self._iter_boundary_ids_of_zone(entry)
         else:
             yield from self.shortcuts.candidates_of(entry)
@@ -461,8 +461,8 @@ class AbstractTimezoneFinder(ABC):
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
         """The zone id of a point whose H3 cell several timezones cover.
 
-        Reached only for ``entry < ABSENT``: a cell a single zone covers and a cell no
-        zone covers are both answered by the shortcut table itself. Both
+        Reached only for ``entry < ABSENT``: a cell the table answers with a zone id and
+        a cell no zone covers are both answered by the shortcut table itself. Both
         :meth:`timezone_at` and :meth:`timezone_ids_at` funnel through here, so the
         subclass's candidate handling exists exactly once.
 
@@ -713,7 +713,10 @@ class AbstractTimezoneFinder(ABC):
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
-        :return: the timezone name of the unique zone or ``None`` if there are no or multiple zones in this shortcut
+        :return: the timezone name when the shortcut index resolves the cell on its own -
+            one zone holds the whole cell, or one boundary polygon covers all of it -
+            and ``None`` when a point-in-polygon test would be needed, or no zone
+            covers the cell at all
         """
         lng, lat = utils.validate_coordinates(lng, lat)
         hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
