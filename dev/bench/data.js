@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788848097150,
+  "lastUpdate": 1788848868926,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8751,6 +8751,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1293",
             "unit": "lookups/sec",
             "extra": "min of 68 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1ab75da5aee5961338d14dea0a986955bd4b553d",
+          "message": "Give the release workflow the data publish it only knew how to require (#645)\n\nThe code-release workflow already refused to ship a release whose declared `timezonefinder-data` version PyPI does not serve, and named the `data-v<version>` tag as the answer — but it stopped there. Whoever hit the check had to reconstruct the publish from the pipeline notes and `publish_data.yml`: which version the tag names, what has to be true of `master` first, what to watch, and when the code release may resume.\n\nThat reconstruction is now written down. The section derives `$data_version` from the data package rather than the root, states that this workflow publishes an already-declared version and never bumps or regenerates one, lists the four preconditions cheapest-first, and gives the annotated-tag form `make release` and `release_data_update.yml` already share. The maintainer ask is now an explicit stop with its content specified — the version, why it blocks, and what refusal means — since it gates an irreversible upload the same way the code tag does. The post-publish re-read of the index is called out too, because a cached JSON answer after a green run looks exactly like a failed release and invites a second push of the tag.\n\nThe hard boundary on tagging now names both namespaces on this branch instead of \"the tag\", which read as the code tag alone.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T06:26:40Z",
+          "tree_id": "497dcdcde1adb24e213ec936edd2f12d020066d3",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/1ab75da5aee5961338d14dea0a986955bd4b553d"
+        },
+        "date": 1788848867329,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 538391.1665940871,
+            "range": "± 57861",
+            "unit": "lookups/sec",
+            "extra": "min of 177 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 764493.7308461338,
+            "range": "± 102278",
+            "unit": "lookups/sec",
+            "extra": "min of 268 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 161162.25577388643,
+            "range": "± 24601",
+            "unit": "lookups/sec",
+            "extra": "min of 52 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 825896.1386050059,
+            "range": "± 9441",
+            "unit": "lookups/sec",
+            "extra": "min of 269 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1477952.7870950461,
+            "range": "± 26856",
+            "unit": "lookups/sec",
+            "extra": "min of 496 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 186869.85150196834,
+            "range": "± 6137",
+            "unit": "lookups/sec",
+            "extra": "min of 66 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 815987.3463207739,
+            "range": "± 12953",
+            "unit": "lookups/sec",
+            "extra": "min of 268 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1431941.8104628895,
+            "range": "± 44700",
+            "unit": "lookups/sec",
+            "extra": "min of 475 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 179314.01915740242,
+            "range": "± 2155",
+            "unit": "lookups/sec",
+            "extra": "min of 64 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2478 GHz"
           }
         ]
       }
