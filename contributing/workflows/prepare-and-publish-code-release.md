@@ -7,7 +7,7 @@ Read the [changelog policy](../development/changelog-and-release-note-policy.md)
 ## Hard boundaries
 
 - Never merge or enable auto-merge on the release pull request.
-- Never tag without explicit authorization in the same session. Pushing the tag publishes to PyPI, which will not accept that version again.
+- Never push a tag without explicit authorization naming it in the same session. That covers both namespaces on this branch — a bare `<version>` tag publishes `timezonefinder`, a `data-v<version>` tag publishes `timezonefinder-data` — and either upload reaches PyPI, which will not accept that version again.
 - Never force-push, delete a published tag, upload manually, regenerate data, fixtures, or bindings, or include unrelated files. The benchmark reports are the one exception, refreshed only through the step below and only in their own commit.
 - Stage explicit paths; the checkout may contain another contributor's work.
 
@@ -38,13 +38,9 @@ Ask through `released_versions`, not through the raw `releases` map the index se
 
 If the declared version is absent, the data release goes first — publish the data, then the code requiring it, or `timezonefinder` is uninstallable for everyone between the two. Every format change is in this position by construction, because `DATA_FORMAT_VERSION` is the data distribution's major version and the root pins `<N+1`; the [data pipeline and release order](../development/data-pipeline-format-versioning-and-release-order.md) carries the rest.
 
-The data release is a `data-v<version>` tag on `master`, published by `publish_data.yml` from the wheel `DATA_BUILD_RUN` names. Before tagging, confirm that run succeeded and that its `artifact-data-wheel` has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id:
+When it is absent, stop: [publish the data distribution](publish-the-data-distribution.md) owns that tag and its authorization. Return once the index serves the version, which the rest of *Prepare* assumes.
 
-```bash
-gh api repos/<owner>/<repo>/actions/runs/"$(cat DATA_BUILD_RUN)"/artifacts -q '.artifacts[] | "\(.name) expired=\(.expired)"'
-```
-
-This tag publishes to PyPI irreversibly and is bound by the same rule as the code tag: **ask for authorization naming the version in the same session**, and never push it on standing instruction alone. `scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but it is caught at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
+`scripts/check_data_dependency.py` refuses the *code* publish while the data is missing, so a forgotten data release is caught rather than shipped — but at the tag, after the release pull request has been reviewed and merged, which is the wrong end of the process to discover it. Do not write a changelog bullet claiming the data "is published before this release" until it is.
 
 ## Rewrite the changelog
 
@@ -117,6 +113,16 @@ After the maintainer merges, update local `master` by fast-forward and verify it
 
 Find the `master` workflow run for the exact head SHA and wait for it to succeed. The tag workflow does not rerun the tox matrix and refuses publication without that green run.
 
-Ask explicitly for authorization to tag the named version on `master` and push it, explaining that this publishes to PyPI irreversibly. On approval, run `make release`. Confirm a tag-ref workflow appears and watch publication to completion. Report the tag and workflow URL.
+Ask explicitly for authorization to tag the named version on `master`, explaining that this publishes to PyPI irreversibly. On approval, run `make release`.
 
-If a tag workflow failed before publication because the matching `master` run was unavailable, wait for the green run and rerun the failed job; never retag. If the tag already exists, inspect the existing run. Any failure after publication spends the version and requires a new release.
+**Then verify the upload, not the run.** A skipped job does not fail the run that contains it, so a green tag run is not evidence that anything was published — 9.0.0 was tagged, GitHub-released and left off PyPI exactly that way: every gate in the workflow passed, `publish-pypi` was skipped at its `pypi` deployment environment, and nothing was red. The release is done when the index serves the version and `publish-pypi` concluded `success`, not `skipped`:
+
+```bash
+gh api repos/<owner>/<repo>/actions/runs/<run-id>/jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'
+uv run python -c 'from scripts.check_data_dependency import fetch_pypi_payload, released_versions
+print([str(v) for v in released_versions(fetch_pypi_payload("timezonefinder"))])'
+```
+
+Report the tag, the workflow URL and that answer; never "published" on a green run alone.
+
+A skipped or failed upload is recovered by fixing the cause and re-running that job, never by retagging — the tag and the GitHub Release already exist, and pushing it again publishes nothing. A run that failed for want of the matching green `master` run is the same shape: wait, then rerun. Any failure after a successful upload requires a new release.
