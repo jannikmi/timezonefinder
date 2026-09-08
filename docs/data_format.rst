@@ -698,8 +698,11 @@ minimizes a deterministic sample estimate of full-predicate work, including
 bounding boxes, hole checks and latitude-active blocks. Its module documentation
 contains the objective, dynamic-programming proof, spherical-area sampling,
 cost coefficients, accuracy budget and conservative geometric gates. The exact
-claim applies to that sampled objective and candidate-count budget, not to
-population latency. Cells failing those gates keep their legacy ordering.
+claim applies to that sampled objective, not to population latency. There is no
+candidate-count cutoff: zero-hit tests are deferred by an exact exchange
+argument, retaining every candidate in the binary. Cells failing the geometric
+gates retain legacy zone precedence and the final zone, while still optimizing
+polygon order within each tested zone.
 This changes no candidate membership or binary layout. It does change the
 fallback heuristic used by ``TimezoneFinderL``.
 

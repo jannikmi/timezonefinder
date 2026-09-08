@@ -11,6 +11,7 @@ from scripts.shortcut_ordering import (
     ShortcutOrderer,
     cell_points,
     optimal_order,
+    optimal_order_with_zone_precedence,
     BBOX,
     HOLE_LOOKUP,
     HOLE_BBOX,
@@ -153,4 +154,81 @@ def test_rejected_cell_keeps_legacy_tie_precedence():
     orderer = object.__new__(ShortcutOrderer)
     orderer.data = data
     orderer.safe_to_reorder = lambda *args: False
+    orderer.observe = lambda ids, points: (
+        np.zeros((len(ids), len(points)), dtype=bool),
+        np.ones((len(ids), len(points))),
+    )
     assert orderer.order(h3.latlng_to_cell(0, 0, 4), legacy) == [8, 1]
+
+
+@pytest.mark.parametrize("preserve_precedence", [False, True])
+def test_sparse_reduction_matches_exhaustive_orders(preserve_precedence):
+    rng = np.random.default_rng(513)
+    zones = [0, 0, 0, 1, 1, 2]
+    for _ in range(20):
+        hits = rng.random((6, 11)) < 0.3  # overlaps and gaps are intentional
+        hits[[0, 3]] = False
+        costs = rng.integers(1, 100, hits.shape)
+        if preserve_precedence:
+            legal = [
+                list(a) + list(b) + [5]
+                for a in itertools.permutations([0, 1, 2])
+                for b in itertools.permutations([3, 4])
+            ]
+            solver = optimal_order_with_zone_precedence
+        else:
+            legal = []
+            for final in set(zones):
+                tail = [i for i, zone in enumerate(zones) if zone == final]
+                legal.extend(
+                    list(prefix) + tail
+                    for prefix in itertools.permutations(
+                        i for i, zone in enumerate(zones) if zone != final
+                    )
+                )
+            solver = optimal_order
+        order = solver(zones, hits, costs)
+        assert objective(order, zones, hits, costs) == min(
+            objective(p, zones, hits, costs) for p in legal
+        )
+
+
+@pytest.mark.parametrize("unrestricted", [False, True])
+def test_large_cell_reaches_optimizer_and_preserves_all_candidates(unrestricted):
+    # 51 candidates, only two hit-producing: total size must not bypass the
+    # solver. The costly no-hit polygon at position 0 should move behind hits.
+    zones = [0] * 50 + [1]
+    hits = np.zeros((51, 2), dtype=bool)
+    hits[49, 0] = hits[50, 1] = True
+    costs = np.ones((51, 2))
+    costs[0] = 1000
+    costs[50] = 100000
+    orderer = object.__new__(ShortcutOrderer)
+    orderer.data = SimpleNamespace(poly_zone_ids=np.array(zones))
+    orderer.safe_to_reorder = lambda *args: unrestricted
+    orderer.observe = lambda *args: (hits, costs)
+    order = orderer.order(h3.latlng_to_cell(0, 0, 4), list(range(51)))
+    assert sorted(order) == list(range(51))
+    assert order[0] == 49
+    assert order[-1] == 50
+    assert objective(order, zones, hits, costs) == 1050
+    assert objective(order, zones, hits, costs) < objective(
+        list(range(51)), zones, hits, costs
+    )
+
+
+def test_precedence_preserves_answers_for_every_hit_pattern():
+    zones = [0, 0, 1, 1, 2]
+    training = np.eye(5, dtype=bool)
+    costs = np.array([100, 1, 100, 1, 1])[:, None] * np.ones((5, 5))
+    order = optimal_order_with_zone_precedence(zones, training, costs)
+    assert order != list(range(5))
+
+    # Includes every possible overlap and gap, including ones absent in training.
+    def answer(sequence, pattern):
+        for i in sequence:
+            if zones[i] == zones[sequence[-1]] or pattern[i]:
+                return zones[i]
+
+    for pattern in itertools.product([False, True], repeat=5):
+        assert answer(order, pattern) == answer(list(range(5)), pattern)

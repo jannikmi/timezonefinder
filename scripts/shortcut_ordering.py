@@ -8,7 +8,7 @@ The model, proof and limitations are part of this module's contract:
   differ by almost a factor of two). Cell probabilities multiply independent
   objectives by positive constants, so they cannot change a per-cell minimizer.
   We sample a containing spherical cap and reject using H3 itself. Each cell gets
-  its own fixed seed: traversal order cannot affect its samples. Legacy tie order is retained
+  its own fixed seed: traversal order cannot affect its samples. Legacy zone precedence is retained
   at safety gates, including its existing dependence on candidate set iteration.
 * WGS84 is approximated by a sphere, not by a flat longitude/latitude plane.
   Ellipsoidal dA = a²(1-e²) cos(phi)/(1-e² sin²(phi))² dphi dlambda.
@@ -36,8 +36,11 @@ The model, proof and limitations are part of this module's contract:
   Our point-dependent model needs the recurrence instead of a ratio sort.
 * The optimum is exact for the sampled work objective, NOT measured latency or
   the population integral. 128 samples are a fixed conversion-time accuracy
-  budget, with no claim that small slivers are resolved. States cost O(N n 2^n);
-  above 14 candidates the legacy order is retained, not called optimal.
+  budget, with no claim that small slivers are resolved. There is NO candidate
+  cutoff. For each final zone, defer tests with no hits on reachable samples;
+  the exchange proof in _optimal_test_sequence makes this an exact reduction.
+  Complexity depends exponentially on hit-producing tests, not all candidates.
+  All deferred polygons remain in the serialized list and are tested at runtime.
 * Warm additive work omits caches, branch prediction, storage/backend variation,
   and lookup overhead independent of order. Coefficients below are deliberately
   rounded engineering estimates informed by earlier full-predicate measurements,
@@ -45,11 +48,13 @@ The model, proof and limitations are part of this module's contract:
   Crucially, 95 rejected holes still cost 95 bbox/dispatch checks; modelling only
   outer PIP would miss the dominant cost of some candidates.
 * Sampling is NOT a correctness certificate. Geometry is used separately to
-  preserve the old order where different zones overlap with positive area.
-  Invalid geometry is retained unchanged, never repaired for this decision.
-  A conservative cap bbox also checks coverage by the candidate union; if it
-  cannot prove coverage, the old order is retained (including custom land-only
-  data). This rejects some safe changes, including cells crossing the date line.
+  preserve the old ZONE precedence where different zones overlap with positive
+  area. Invalid geometry is never repaired for this decision. A conservative
+  cap bbox also checks coverage by the candidate union. Where coverage cannot
+  be proved (including custom land-only and date-line cells), zone precedence
+  and the final zone are fixed, but polygon order WITHIN each tested zone is
+  still optimized exactly. This restricts some safe interleavings, but never
+  excludes a cell from optimization merely because it has many candidates.
   GEOS operates on the same quantized planar rings as the runtime; it is used
   for set relations, never as a spherical probability/area estimator. Numerical
   overlay error and boundary tie conventions remain limitations: no ordering
@@ -57,7 +62,7 @@ The model, proof and limitations are part of this module's contract:
 """
 
 from functools import lru_cache
-from itertools import combinations
+from itertools import combinations, groupby
 from math import inf
 from pathlib import Path
 
@@ -72,7 +77,6 @@ from timezonefinder.configs import POLYGON_BLOCK_SIZE, SHORTCUT_H3_RES
 from timezonefinder.polygon_array import HoleArray, PolygonArray
 
 SAMPLES_PER_CELL = 128
-MAX_EXACT_CANDIDATES = 14
 # Relative work units, roughly nanoseconds on the reference warm C/mapped path.
 # Bbox includes candidate dispatch; hole lookup is paid after a surviving bbox;
 # each visited hole pays HOLE_BBOX even if it rejects. PIP pays dispatch + all
@@ -88,55 +92,116 @@ BLOCK_PROBE = 1
 ACTIVE_VERTEX = 1
 
 
-def optimal_order(zones: list[int], hits: np.ndarray, costs: np.ndarray) -> list[int]:
-    """Return positions, retaining the input order on objective ties.
+def _optimal_test_sequence(
+    indices: list[int], hits: np.ndarray, costs: np.ndarray, alive: np.ndarray
+) -> tuple[float, list[int]]:
+    """Exactly order tests that must all fail before the caller can proceed.
 
-    Caller bounds the exponential state count. Costs must be nonnegative and
-    have shape (candidate, sample), as must Boolean hits.
+    If h_a is zero on all currently reachable samples, exchanging [a,b] for
+    [b,a] saves sum_x R(x) h_b(x) c_a(x) >= 0, even for point-dependent costs.
+    Repeated exchanges therefore put every such a after the hit-producing
+    tests. They are still executed by the runtime, in original order; only
+    their optimization states disappear. This is an exact sample reduction,
+    not a claim that these polygons have zero population hit probability.
     """
-    n = len(zones)
-    if n == 0:
-        return []
-    full = (1 << n) - 1
-    groups = tuple(
-        sum(1 << i for i, z in enumerate(zones) if z == zone)
-        for zone in dict.fromkeys(zones)
-    )
+    active = [i for i in indices if np.any(hits[i] & alive)]
+    deferred = [i for i in indices if not np.any(hits[i] & alive)]
+    # Every deferred test sees the same survivors. Aggregate its point-dependent
+    # cost, not its unconditional mean. Its cost must NOT simply be discarded.
+    deferred_cost = costs[deferred].sum(axis=0)
+    full = (1 << len(active)) - 1
+
+    @lru_cache(None)
+    def survivors(tested: int) -> np.ndarray:
+        if tested == 0:
+            return alive
+        bit = tested & -tested
+        return survivors(tested ^ bit) & ~hits[active[bit.bit_length() - 1]]
 
     @lru_cache(None)
     def dp(tested: int) -> tuple[float, tuple[int, ...]]:
-        remaining = full ^ tested
-        if remaining in groups:
-            return 0, tuple(i for i in range(n) if remaining & (1 << i))
-        if not any(remaining & group == group for group in groups):
-            return inf, ()
-        alive = np.ones(hits.shape[1], dtype=bool)
-        for i in range(n):
-            if tested & (1 << i):
-                alive &= ~hits[i]
+        live = survivors(tested)
+        if tested == full:
+            return float(deferred_cost[live].sum()), ()
         best: tuple[float, tuple[int, ...]] = (inf, ())
-        for i in range(n):
-            if remaining & (1 << i):
-                tail_cost, tail = dp(tested | (1 << i))
-                value = float(costs[i, alive].sum()) + tail_cost
+        for position, i in enumerate(active):
+            bit = 1 << position
+            if not tested & bit:
+                tail_cost, tail = dp(tested | bit)
+                value = float(costs[i, live].sum()) + tail_cost
                 if value < best[0]:
                     best = value, (i,) + tail
         return best
 
     value, order = dp(0)
-    # Only a legal input order can be a fallback. In particular [A, B, A]
-    # must not be scored as zero by stopping at its first A.
-    first_final = zones.index(zones[-1])
-    if any(zone != zones[-1] for zone in zones[first_final:]):
-        return list(order)
+    return value, list(order) + deferred
+
+
+def _sequence_cost(
+    order: list[int], hits: np.ndarray, costs: np.ndarray, alive: np.ndarray
+) -> float:
+    """Replay a tested sequence; the caller excludes its untested final zone."""
+    live = alive.copy()
+    value = 0.0
+    for i in order:
+        value += float(costs[i, live].sum())
+        live &= ~hits[i]
+    return value
+
+
+def optimal_order(zones: list[int], hits: np.ndarray, costs: np.ndarray) -> list[int]:
+    """Exact sampled optimum with no candidate-count exclusion.
+
+    Enumerate the untested final zone. For each, solve the remaining tests with
+    the exact zero-hit reduction. If m_L is the number of hit-producing tests
+    outside final zone L, complexity is O(N sum_L m_L 2**m_L), plus linear work
+    for deferred tests. Memory is O(N 2**max(m_L)); worst-case complexity is
+    still exponential, but sparse large candidate lists no longer imply large
+    state spaces. There is no heuristic timeout or silent legacy fallback.
+    Costs must be nonnegative and shaped (candidate, sample), like Boolean hits.
+    """
+    if not zones:
+        return []
     alive = np.ones(hits.shape[1], dtype=bool)
-    original = 0.0
-    for i, zone in enumerate(zones):
-        if zone == zones[-1]:
-            break
-        original += float(costs[i, alive].sum())
-        alive &= ~hits[i]
-    return list(range(n)) if original <= value else list(order)
+    best: tuple[float, list[int]] = (inf, [])
+    for final in dict.fromkeys(zones):
+        prefix = [i for i, z in enumerate(zones) if z != final]
+        tail = [i for i, z in enumerate(zones) if z == final]
+        value, order = _optimal_test_sequence(prefix, hits, costs, alive)
+        if value < best[0]:
+            best = value, order + tail
+    # Retain input ties only when the input has a legal complete final suffix.
+    first_final = zones.index(zones[-1])
+    if all(zone == zones[-1] for zone in zones[first_final:]):
+        if _sequence_cost(list(range(first_final)), hits, costs, alive) <= best[0]:
+            return list(range(len(zones)))
+    return best[1]
+
+
+def optimal_order_with_zone_precedence(
+    zones: list[int], hits: np.ndarray, costs: np.ndarray
+) -> list[int]:
+    """Optimize within legacy zone blocks while preserving every zone's priority.
+
+    After a complete zone block, survivors depend on the UNION of that zone's
+    hits, not on its polygon order. Each tested block can therefore be optimized
+    independently on those survivors. This is exact within the constrained
+    family, including overlaps and coverage gaps; the final fallback zone and
+    the first matching zone at every point remain unchanged, even off-sample.
+    Input must have contiguous zone blocks, as the legacy converter produces.
+    """
+    groups = [list(group) for _, group in groupby(range(len(zones)), zones.__getitem__)]
+    if len({zones[group[0]] for group in groups}) != len(groups):
+        raise ValueError("legacy zone precedence requires contiguous input zone blocks")
+    alive = np.ones(hits.shape[1], dtype=bool)
+    order: list[int] = []
+    for group in groups[:-1]:
+        value, optimized = _optimal_test_sequence(group, hits, costs, alive)
+        if _sequence_cost(group, hits, costs, alive) <= value:
+            optimized = group
+        order.extend(optimized)
+        alive = alive & ~np.any(hits[group], axis=0)
+    return order + (groups[-1] if groups else [])
 
 
 def cell_cap(cell: int) -> tuple[float, float, float]:
@@ -282,9 +347,9 @@ class ShortcutOrderer:
 
     def order(self, cell: int, ids: list[int]) -> list[int]:
         zones = [int(self.data.poly_zone_ids[pid]) for pid in ids]
-        if len(set(zones)) <= 1 or len(ids) > MAX_EXACT_CANDIDATES:
+        if len(set(zones)) <= 1:
             return ids
-        if not self.safe_to_reorder(cell, ids):
-            return ids
+        unrestricted = self.safe_to_reorder(cell, ids)
         hits, costs = self.observe(ids, cell_points(cell))
-        return [ids[i] for i in optimal_order(zones, hits, costs)]
+        solver = optimal_order if unrestricted else optimal_order_with_zone_precedence
+        return [ids[i] for i in solver(zones, hits, costs)]

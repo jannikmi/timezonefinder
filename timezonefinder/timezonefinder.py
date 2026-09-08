@@ -881,7 +881,7 @@ class TimezoneFinderL(AbstractTimezoneFinder):
 
         The converter chooses this heuristic to reduce expected full-lookup work.
         It is not a maximum-area estimate. Cells retained by the converter's
-        safety/budget gates use the legacy total-vertex-count heuristic.
+        geometry safety gates use the legacy total-vertex-count heuristic.
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)

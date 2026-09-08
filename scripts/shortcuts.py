@@ -39,7 +39,7 @@ except NameError:  # pragma: no cover - used only during profiling
 
 @profile
 def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[int]:
-    """Legacy order, also the fallback for unsafe/large cells.
+    """Legacy zone precedence, retained where geometry restricts reordering.
 
     The work optimizer runs after candidate compilation, against the packed
     geometry the runtime will use. This order preserves the old zone precedence
