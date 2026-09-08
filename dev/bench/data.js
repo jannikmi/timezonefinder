@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788830060927,
+  "lastUpdate": 1788830062711,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -17204,6 +17204,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2382 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e92fea628b73f33ae64a8b999c05c2e15f58c78",
+          "message": "Accept a performance change on a clear benefit, not on a suite-visible delta (#644)\n\n* Accept a performance change on a clear benefit, not on a suite-visible delta\n\nThe ranking rules stopped refusing sub-noise performance items in #631, but\nthe development-side rules still carried the superseded framing: the\ntrade-off rules told a contributor that a change below the machine's\nrun-to-run noise \"has to stand on correctness or simplicity instead\", and\nthe improvement-pass boundary asked every performance claim for paired\nsuite evidence. So an item the ranking now accepts could still be argued\naway while it was being implemented.\n\nFour files now say the same thing. The batch suite's 3-9 % floor is a\nproperty of the instrument and of the 2,500-point random workload it\naverages over, not of the change; several sub-floor savings land on the\nsame query and compose, which is where a good deal of the current speed\ncame from. What changes below the floor is which instrument decides - the\ncount a change removes, a line or stage profile, or an in-query\nalternating A/B - and any one of them establishes the benefit. The suite is\nthen run as a no-regression check: a flat row is the expected result, and\nonly a measured regression argues against the change.\n\nWhat stays forbidden is unchanged: selling a sub-floor increment as a\nsuite-visible speed-up, and quoting a composite of increments that have not\nall shipped and been re-measured together. The coding rules' method-call\naside now points at the same instruments, since an unmeasured structural\nsacrifice is no better argued than an unmeasured saving.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* An improvement still has to be shown to be one\n\nThe first pass wrote the batch suite up as a no-regression check and called\na flat row \"the expected result for a sub-floor win\", which reads as though\nthe absence of a measured effect were itself the evidence. It is not: it is\nthe absence of evidence, and it would license exactly the claim the rule set\nrefuses - \"nothing can see it, so it must be the improvement I predicted\".\n\nWhat the sub-floor rule relaxes is the scope at which the improvement has to\nbe visible, never the burden of demonstrating it. The instrument that can\nresolve the change must read as a win on the path the change touches; a\nchange nothing measures as a win is a measurement item. The suite still runs,\nbut for what it can resolve - a regression the narrow instrument was not\npointed at - not as a substitute for the proof.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T01:12:56Z",
+          "tree_id": "460078c3f59a31ed9b1f9b3ac82f0cb6c7312022",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/2e92fea628b73f33ae64a8b999c05c2e15f58c78"
+        },
+        "date": 1788830062180,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085363388061523,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2340898513793945,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.234898567199707,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.58823299407959,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.588998794555664,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.5123 GHz"
           }
         ]
       }
