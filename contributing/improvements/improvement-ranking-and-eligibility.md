@@ -4,6 +4,10 @@ How the order in the [priority ranking](improvement-priority-ranking.md) is deci
 
 **The order is the ranking's point.** Listing everything that could be improved is easy and worth little; what costs something is deciding which findings earn a reviewer's attention, and writing down why the rest do not. Rows are ordered by expected value — *defects that will cause a real bug later > work that unblocks other work > duplication that will drift > readability* — with size breaking ties only.
 
+**The row order is the order a pass considers the items in, and nothing else.** A pass walks the table top-down and takes the first eligible row, so the table is read correctly only if walking it reproduces what a pass actually does. Two consequences, and they outrank the expected-value ordering wherever they collide, because that ordering decides which of two *takeable* items is worth more and says nothing about an item nobody can take. **An item appears above every item it blocks**, without exception — a blocker read after the work waiting on it is a row the pass has already skipped for a reason it had not yet seen. And **an ineligible row sorts below every eligible one**: `needs`, `blocked`, `parked` and `conditional` entries are live work, but no pass can take them as they stand, so leading with them puts the reading cost of the whole ineligible set in front of the first item anyone can start. Expected value then orders each of the two groups internally, and the eligibility cell keeps the rank the entry would hold if it were takeable, so nothing is lost by moving it down.
+
+This is why the ranking does not double as a statement of what matters most. GH-364 and GH-332 sat at the top for months on expected value while being unreachable the whole time; what that bought was that every pass re-read them first. An entry that becomes eligible moves up in the same change that clears it.
+
 **The ranking has no numbers**, because the row order is the ranking. A number column would have to be re-flowed on every insertion and deletion — churn on the one operation the file exists to make cheap, and a conflict between any two passes that both ship something.
 
 ## What outranks what
@@ -20,7 +24,7 @@ Unmeasured is not a third case — it means the item is a measurement, and the m
 
 State the ceiling as a **workload** share, not a stratum share, and prefer the count a change removes to the time it removes: the counts are machine-independent and the shares are not. The [measured baseline](query-performance-measurement-baseline.md) carries the conversion and the rest of what one machine's numbers can and cannot be asked.
 
-An item sits **below its own blocker**, because the list is walked top-down.
+An item sits **below its own blocker**, because the list is walked top-down; that is the ordering invariant above, restated where a rank is being argued.
 
 ## Eligibility
 
@@ -28,7 +32,7 @@ A pass takes the highest-ranked item that is *eligible*: unclaimed, [preconditio
 
 **`needs …` means a person has to decide something** and the row is ineligible until they have. The [maintainer-decision workflow](../workflows/record-maintainer-decisions.md) collects those questions; answering one turns the entry back to `open` and makes the row eligible again.
 
-**Blocked is not closed.** A blocked item is live work waiting on a blocker and stays in the ranking below it, as do *parked* and *conditional*, which can become live without the entry changing. Only *rejected*, *withdrawn* and *out of scope* leave the ranking, because no pass will ever take them as they stand; the [register rules](improvement-register-rules.md) say where they go.
+**Blocked is not closed.** A blocked item is live work waiting on a blocker and stays in the ranking below it — and, by the ordering rule above, below every eligible row too, as do *needs*, *parked* and *conditional*, which can become live without the entry changing. Only *rejected*, *withdrawn* and *out of scope* leave the ranking, because no pass will ever take them as they stand; the [register rules](improvement-register-rules.md) say where they go.
 
 Both tables sit under one heading in the ranking file on purpose: `tests/test_improvement_ledger.py` reads the section rather than a single table, so every entry still has exactly one row and the two halves cannot drift.
 

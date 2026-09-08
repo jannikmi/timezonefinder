@@ -2,8 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [GH-364](items/lookup-geometry-and-data-format/gh-364-free-threaded-python-via-a-native-candidate-loop.md) | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
-| [GH-332](items/packaging-distribution-and-release/gh-332-reduced-timezone-dataset-as-a-second-distribution.md) | Reduced timezone dataset as a second distribution | packaging | M | parked — decided 2026-09-05 to publish nothing; resume only on evidenced user demand for an installable reduced dataset |
 | [GH-362](items/data-pipeline-and-developer-tooling/gh-362-reuse-the-polygonarray-binaries-in-file-conversion.md) | Reuse the `PolygonArray` binaries in file conversion | internal | M | free — ranked on clarity; the read-back-per-access implementation is ruled out by measurement |
 | [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | M | free — 2.90 % fewer point-in-polygon tests by enumeration; last of the performance items on size, not on the instrument |
 | [TOOL-4](items/data-pipeline-and-developer-tooling/tool-4-three-small-lint-families-are-not-selected-at-all.md) | Three small lint families are not selected at all | tooling | ~15 | free — 7 sites; the item is the adopt-or-refuse judgement |
@@ -13,6 +11,8 @@
 | [DOC-10](items/data-pipeline-and-developer-tooling/doc-10-plan-the-mkdocs-migration-for-maintainer-review.md) | Plan the MkDocs migration for maintainer review | docs | M | free — produces a plan and a losslessness contract; DOC-9 cannot start without it |
 | [DOC-9](items/data-pipeline-and-developer-tooling/doc-9-migrate-the-documentation-from-sphinx-to-mkdocs.md) | Migrate `docs/` from Sphinx to MkDocs, converting the prose in the same pass | docs | L | blocked on DOC-10 — the plan and its approval; big-bang, 5,332 lines, and it sets the line breaks the reflow slices were withdrawn for |
 | [DOC-6](items/data-pipeline-and-developer-tooling/doc-6-price-a-check-that-rejects-a-new-hard-wrapped-paragraph.md) | Price a check that rejects a newly hard-wrapped paragraph | docs tooling | S | blocked on DOC-9 and DOC-7 — and may close with a measurement rather than a check |
+| [GH-364](items/lookup-geometry-and-data-format/gh-364-free-threaded-python-via-a-native-candidate-loop.md) | Free-threaded Python, via a native candidate loop | performance | L | blocked on an h3 release |
+| [GH-332](items/packaging-distribution-and-release/gh-332-reduced-timezone-dataset-as-a-second-distribution.md) | Reduced timezone dataset as a second distribution | packaging | M | parked — decided 2026-09-05 to publish nothing; resume only on evidenced user demand for an installable reduced dataset |
 | [GH-522](items/packaging-distribution-and-release/gh-522-shrink-the-repository-history-by-dropping-the-committed-coordinate-binaries.md) | Shrink the repository history by dropping the committed binaries | repo history | L | parked — resume only for a concrete repository-history size need |
 | [PYPI-1](items/packaging-distribution-and-release/pypi-1-the-pypi-project-holds-11-37-gb-of-pre-split-releases.md) | The PyPI project holds 11.37 GB of pre-split releases | packaging | S | conditional — only if PyPI storage is exhausted |
 | [GH-505](items/lookup-geometry-and-data-format/gh-505-distance-to-the-nearest-timezone-border.md) | Distance to the nearest timezone border | public API | L | conditional — never implement unprompted |
