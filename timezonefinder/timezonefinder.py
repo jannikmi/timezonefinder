@@ -34,7 +34,6 @@ from timezonefinder.configs import (
     DEFAULT_DATA_DIR,
     MAX_LAT_VAL,
     MAX_LNG_VAL,
-    MAX_LNG_VAL_INT,
     NO_ZONE_ID,
     SHORTCUT_H3_RES,
     DATA_VERSION_FILENAME,
@@ -54,12 +53,6 @@ from timezonefinder.shortcut_index import (
     read_shortcuts_binary,
 )
 from timezonefinder.zone_names import ZoneNames, read_zone_names
-
-# The lower bound stored for a boundary polygon that owns no hole: one step above the
-# largest scaled longitude `coord2int` can return for a valid query, so the first
-# comparison of the hole test fails and the rest is never evaluated. int32 holds it
-# with room to spare - `MAX_LNG_VAL_INT` is 1.8e9 against a 2.147e9 ceiling.
-NEVER_INSIDE = MAX_LNG_VAL_INT + 1
 
 
 def _negative_id_error(kind: str, value: object) -> ValueError:
