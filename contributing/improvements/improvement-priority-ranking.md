@@ -3,7 +3,6 @@
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
 | [GH-362](items/data-pipeline-and-developer-tooling/gh-362-reuse-the-polygonarray-binaries-in-file-conversion.md) | Reuse the `PolygonArray` binaries in file conversion | internal | M | free — ranked on clarity; the read-back-per-access implementation is ruled out by measurement |
-| [GH-301](items/lookup-geometry-and-data-format/gh-301-sort-shortcut-polygons-by-overlap-area.md) | Sort shortcut polygons by overlap area | performance | M | free — 2.90 % fewer point-in-polygon tests by enumeration; last of the performance items on size, not on the instrument |
 | [PERF-7](items/lookup-geometry-and-data-format/perf-7-answer-a-fully-covered-ambiguous-cell-without-geometry.md) | Answer a fully covered ambiguous cell without geometry | performance | M | free — precedence decided 2026-09-08; 743 of 826 cells convert, 2.6-4.4 % fewer point-in-polygon tests, whole-query effect under the noise floor |
 | [FT-1](items/packaging-distribution-and-release/ft-1-setup-py-claims-abi3-where-the-interpreter-forbids-it.md) | `setup.py` claims abi3 where the interpreter forbids it | packaging | ~15 | free — a latent hard build failure with a one-line fix, and the precondition FT-5 needs |
 | [FT-2](items/data-pipeline-and-developer-tooling/ft-2-no-environment-tests-a-free-threaded-interpreter.md) | No environment tests a free-threaded interpreter | testing | ~40 | free — `pytest-run-parallel` is installed and dormant; includes the `build.yml` matrix entry, without which the env is never invoked |
