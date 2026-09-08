@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788830062711,
+  "lastUpdate": 1788831957436,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -8490,6 +8490,93 @@ window.BENCHMARK_DATA = {
             "range": "± 8156",
             "unit": "lookups/sec",
             "extra": "min of 86 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.3000 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e76e2d61c5d3e31f321333b43bf26ced23f0fd0c",
+          "message": "Slice GH-364 into the five items a pass can actually take (#647)\n\n* Slice GH-364 into the five items a pass can actually take\n\nGH-364 held the whole free-threading topic behind one L-sized entry blocked\non an h3 release, so the three pieces that need neither h3 nor a decision were\nunreachable. Split along the slicing on the issue, dropping the two slices that\nhave already landed (the coordinate offset table, and the read-only loaded\narrays with their state-contract test).\n\nFT-1, FT-2 and FT-4 are free; FT-3 waits on an h3 release carrying\nuber/h3-py#493, which 4.5.0 predates; FT-5 carries the wheel-set decision.\nGH-364 is reduced to the native candidate loop alone, with the one question\nthat decides it: after the offset table took ~5 us out of a candidate, is an\nL-sized C loop worth a gain the batch suite cannot resolve.\n\nRe-verifying the premises corrected one: `import timezonefinder` does not\nre-enable the GIL. h3 is not loaded until a TimezoneFinder is constructed,\nwhich is where sys._is_gil_enabled() flips, so an import-time assertion passes\nwhile the package still forces the GIL back on. Corrected in the runtime\nloading decisions and in the two items that would have written that test.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Correct four entry premises the review caught, and one stale absolute\n\nFT-1 prescribed CPython's unqualified `not Py_GIL_DISABLED` guard, which would\nhave disabled the abi3 claim on 3.15t too - the one free-threaded interpreter\nthat has a stable ABI, and the wheel FT-5 recommends shipping. Mirror cffi's\nown condition instead: `USE_LIMITED_API` is false only below 3.15, verified in\nthe cffi 2.1.1 the lockfile holds. The wheel tag question moves to FT-5, which\nis the item that would build one.\n\nFT-5 repeated the issue's `CIBW_ENABLE=cpython-freethreading`, which the pinned\ncibuildwheel 4.2.0 rejects as an unknown enable group; free-threaded builds are\nno longer gated behind one. Verified against that pin, which also offers no\n`cp313t` identifier at all - narrowing the decision it records.\n\nFT-2 scoped a tox env and an assertion, neither of which CI would run:\n`build.yml` invokes an explicit `tox -e` list from its matrix, so the env is\neither never selected or fails for a missing interpreter.\n\nFT-4 listed three prose sites and missed four, including the `TimezoneFinder`\nclass docstring's \"race conditions and incorrect results\". It also rested on\nthe audit's absolute that nothing on the lookup path assigns to `self`, which\nis false: `_iter_boundary_ids_of_zone` already writes `self._zone_positions`,\nreached by the very method carrying the file's \"not thread-safe\" note. The\nrace is benign - an immutable equal value published by one attribute store -\nbut that is the sentence the docs have to say, not \"no state is mutated\".\nCorrected at the decision record making the same claim, where it was being\nused to price a future cache against a rule that already had an exception.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-08T01:45:03Z",
+          "tree_id": "b3f2a06042a2f0e3e65a2609c8de25db40eb1286",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/e76e2d61c5d3e31f321333b43bf26ced23f0fd0c"
+        },
+        "date": 1788831955535,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 518545.2524070414,
+            "range": "± 6734",
+            "unit": "lookups/sec",
+            "extra": "min of 174 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 708039.5913083719,
+            "range": "± 6367",
+            "unit": "lookups/sec",
+            "extra": "min of 248 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 162591.93923799918,
+            "range": "± 7661",
+            "unit": "lookups/sec",
+            "extra": "min of 62 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 838234.771454122,
+            "range": "± 11725",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1488589.6625216866,
+            "range": "± 23446",
+            "unit": "lookups/sec",
+            "extra": "min of 517 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 191698.6068495217,
+            "range": "± 3168",
+            "unit": "lookups/sec",
+            "extra": "min of 68 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 838400.9078868496,
+            "range": "± 47501",
+            "unit": "lookups/sec",
+            "extra": "min of 268 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1460519.2437990224,
+            "range": "± 24414",
+            "unit": "lookups/sec",
+            "extra": "min of 495 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 191220.91032778603,
+            "range": "± 1574",
+            "unit": "lookups/sec",
+            "extra": "min of 67 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
           }
         ]
       }
