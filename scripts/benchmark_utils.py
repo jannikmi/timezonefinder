@@ -152,17 +152,17 @@ DURATION_METRIC = MetricSpec(
     key="duration",
     heading="Benchmark",
     row_noun="benchmark",
-    # kept as a fixed-precision millisecond value rather than routed through
-    # `format_duration`: this is the form every stored comparison has used, and
-    # a rendering that does not move is easier to read across runs
+    # The comparison renderer replaces this with batch_size / seconds. Keeping
+    # the duration formatter here still gives non-CI callers a meaningful
+    # fallback when their report predates the recorded batch size.
     format_value=lambda seconds: f"{seconds * 1e3:.3f} ms",
     worse="slower",
     better="faster",
     estimator_phrase="tracking pytest-benchmark's `{estimator}`",
     change_help=(
-        "`change` is the head duration relative to base - negative is faster. "
-        "The `x` factor is `base / head`, so 1.20x means head does the same "
-        "work in 1.20 times fewer seconds."
+        "`change` is the head throughput relative to base - positive is faster. "
+        "The `x` factor is `head / base`, so 1.20x means head performs 1.20 "
+        "times as many lookups per second."
     ),
     noise_note=(
         "Same-runner comparison removes the machine-to-machine term but not "
