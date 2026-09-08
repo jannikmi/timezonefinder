@@ -298,8 +298,9 @@ resolution 4, fixture set v3, taken against ``c27b452``)
    outside it and the index could store them as unique-zone cells. That is ~109 ns, **2.12% of an
    ambiguous query** - about three times the provably optimal ordering, because it removes the loop
    instead of reordering it. It is not free: in 824 of the 826 another zone genuinely overlaps, so
-   converting changes which zone answers there (only 2 are answer-preserving). Recorded as PERF-7
-   with the precedence question that blocks it; do not implement it from here.
+   converting changes which zone answers there (only 2 are answer-preserving). Recorded in the
+   improvement register as PERF-7, with the precedence question that blocks it; do not implement it
+   from here.
 
 9. **The shipped ordering is not reproducible from the data alone.** Rebuilding it here reproduces
    the packaged ``shortcuts.bin`` to 29 bytes over ~6 cells - every one a tie in the sort key,

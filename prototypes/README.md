@@ -27,6 +27,4 @@ They need the `proto` dependency group:
 uv sync --group proto
 ```
 
-`shortcut_ordering_optimum.py` additionally needs `shapely` — a converter-time dependency the
-package does not ship — and the upstream GeoJSON the packaged data was built from, so it is run as
-`uv run --group proto --with shapely python prototypes/shortcut_ordering_optimum.py …`.
+`shortcut_ordering_optimum.py` additionally needs `shapely` — a converter-time dependency the package does not ship — and the upstream GeoJSON the packaged data was built from, so it is run as `uv run --group proto --with shapely python prototypes/shortcut_ordering_optimum.py …`.
