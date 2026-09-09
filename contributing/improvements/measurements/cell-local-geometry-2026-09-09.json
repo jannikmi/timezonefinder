@@ -1,0 +1,375 @@
+{
+  "environment_at_recording": {
+    "h3_c": "4.5.0",
+    "h3_python": "4.5.0",
+    "platform": "macOS-26.3-arm64-arm-64bit-Mach-O"
+  },
+  "fixture_sha256": {
+    "tests/fixtures/benchmarks/ambiguous_shortcut_points.npy": "e5b0fc04a040e36973fd57fb251b753a2a0681d159f3e597009a39e1c7362a72",
+    "tests/fixtures/benchmarks/metadata.json": "f01a016bd24333936e11892d083c184eaed9b6d77af3cee036dca6b074c7e7b5",
+    "tests/fixtures/benchmarks/on_land_points.npy": "b92a987883efa00675f3816739373ee2efcfc6d4274cb75a8729071821ec0e49",
+    "tests/fixtures/benchmarks/pip_inputs.npy": "65a9be3293465b511241de8ea23a145a729d25ef0f17f1ec047f79b9621b2089",
+    "tests/fixtures/benchmarks/pip_strata.npy": "c9b0763c695d6886e7e908a34f2ddc4c1f947e951236ea13c9b1567784589fe7",
+    "tests/fixtures/benchmarks/random_points.npy": "5c019b54f7b8696ff2659f81e4144540e7d10e466ce09e5ed904d3fc03648060",
+    "tests/fixtures/benchmarks/unique_shortcut_points.npy": "87941235c5aabf88e255022e437ccb26aa2e8acd303022a5a0db7e120fe33103"
+  },
+  "limits": [
+    "No native shared-fragment kernel was implemented or timed.",
+    "No resident-memory or wheel-compression measurement was made.",
+    "Cell envelopes use guarded floating point, not certified intervals.",
+    "Shared reader records but does not independently enforce source hashes.",
+    "Temporary experiment scripts and binary artifacts are not maintained repository tools."
+  ],
+  "measurements": {
+    "exact_census": {
+      "artifact_bytes": 63166803,
+      "artifact_plus_originals_bytes": 95934127,
+      "baseline_all_bytes": 33384683,
+      "baseline_geometry_bytes": 32759928,
+      "build_seconds": 68.30025391699746,
+      "counts": {
+        "ambiguous_shortcut_whole_query_checks": 5000,
+        "blocks": 152568,
+        "candidate_containment_checks": 161169,
+        "candidate_order_checks": 31916,
+        "candidates": 66307,
+        "cells": 31394,
+        "empty_rings_omitted": 492551,
+        "exceptions": 104359,
+        "fixture_queries_using_fragments": 7937,
+        "fractional_vertices": 103798,
+        "full_longitude_windows": 1,
+        "holes_skipped_with_empty_exterior": 16500,
+        "on_land_whole_query_checks": 10000,
+        "random_whole_query_checks": 10000,
+        "rings": 69483,
+        "rings_roundtripped_exactly": 69483,
+        "split_cells": 522,
+        "unique_shortcut_whole_query_checks": 5000,
+        "vertices": 12706733,
+        "window_coverage_probes": 1161572,
+        "windows": 31916
+      },
+      "data_version": "2026c",
+      "files": {
+        "blocks.bin": 2135952,
+        "candidates.bin": 795684,
+        "exceptions.bin": 2922052,
+        "format.json": 352,
+        "payload.bin": 52812208,
+        "rings.bin": 1945524,
+        "shortcuts.bin": 610210,
+        "timezone_names.txt": 7149,
+        "window_table.bin": 1171688,
+        "windows.bin": 765984
+      },
+      "total_seconds": 109.20107466698391
+    },
+    "exact_format_manifest": {
+      "block_size": 128,
+      "data_version": "2026c",
+      "endianness": "little",
+      "format": "exact-rectangular-clipping-probe",
+      "h3_resolution": 4,
+      "rational_encoding": "vertex:u32,xn:i64,xd:u32,yn:i64,yd:u32",
+      "scale": 10000000,
+      "source_step": 10,
+      "version": 1,
+      "window_bounds": "strict interior; spherical-cap rectangle; 1e-6 radian guard"
+    },
+    "naive_census": {
+      "baseline_files": {
+        "boundaries/block_bases.npy": 250724,
+        "boundaries/block_offsets.npy": 5420,
+        "boundaries/block_ranges.npy": 501320,
+        "boundaries/block_widths.npy": 125426,
+        "boundaries/coordinates.bin": 31735692,
+        "boundaries/nr_vertices.npy": 5416,
+        "boundaries/xmax.npy": 5416,
+        "boundaries/xmin.npy": 5416,
+        "boundaries/ymax.npy": 5416,
+        "boundaries/ymin.npy": 5416,
+        "data_version.txt": 6,
+        "hole_registry.json": 3067,
+        "holes/block_bases.npy": 836,
+        "holes/block_offsets.npy": 240,
+        "holes/block_ranges.npy": 1544,
+        "holes/block_widths.npy": 482,
+        "holes/coordinates.bin": 95168,
+        "holes/nr_vertices.npy": 236,
+        "holes/poly_ref.npy": 3152,
+        "holes/xmax.npy": 3152,
+        "holes/xmin.npy": 3152,
+        "holes/ymax.npy": 3152,
+        "holes/ymin.npy": 3152,
+        "schemas/polygons.fbs": 533,
+        "shortcuts.bin": 610210,
+        "timezone_names.txt": 7149,
+        "zone_ids.npy": 2772,
+        "zone_positions.npy": 1018
+      },
+      "counts": {
+        "antimeridian_cells_excluded": 521,
+        "assigned_probes_outside_planar_clip": 92266,
+        "candidate_pairs": 64100,
+        "candidate_probe_disagreements": 94801,
+        "cells": 30873,
+        "empty_pairs": 2,
+        "fragments": 67455,
+        "h3_edge_probes": 185237,
+        "off_source_grid_vertices": 330022,
+        "packed_step_10_bytes": 35970500,
+        "packed_step_1_bytes": 43094240,
+        "ring_metadata_bytes": 1896020,
+        "rings": 67715,
+        "vertices": 8515808
+      },
+      "data_version": "2026c",
+      "elapsed_seconds": 168.53703083400615,
+      "examples": {
+        "candidate_coverage": {
+          "cell": "0x8400001ffffffff",
+          "clipped_contains": false,
+          "lng_lat": [
+            38.760102079734025,
+            79.3817262348777
+          ],
+          "original_runtime_contains": true,
+          "polygon_id": 1234
+        },
+        "h3_coverage": {
+          "cell": "0x8400001ffffffff",
+          "lng_lat": [
+            38.760102079734025,
+            79.3817262348777
+          ]
+        }
+      },
+      "sampled_cells": 31394,
+      "shapely_version": "2.1.2",
+      "total_ambiguous_cells": 31394
+    },
+    "naive_pilot": {
+      "baseline_files": {
+        "boundaries/block_bases.npy": 250724,
+        "boundaries/block_offsets.npy": 5420,
+        "boundaries/block_ranges.npy": 501320,
+        "boundaries/block_widths.npy": 125426,
+        "boundaries/coordinates.bin": 31735692,
+        "boundaries/nr_vertices.npy": 5416,
+        "boundaries/xmax.npy": 5416,
+        "boundaries/xmin.npy": 5416,
+        "boundaries/ymax.npy": 5416,
+        "boundaries/ymin.npy": 5416,
+        "data_version.txt": 6,
+        "hole_registry.json": 3067,
+        "holes/block_bases.npy": 836,
+        "holes/block_offsets.npy": 240,
+        "holes/block_ranges.npy": 1544,
+        "holes/block_widths.npy": 482,
+        "holes/coordinates.bin": 95168,
+        "holes/nr_vertices.npy": 236,
+        "holes/poly_ref.npy": 3152,
+        "holes/xmax.npy": 3152,
+        "holes/xmin.npy": 3152,
+        "holes/ymax.npy": 3152,
+        "holes/ymin.npy": 3152,
+        "schemas/polygons.fbs": 533,
+        "shortcuts.bin": 610210,
+        "timezone_names.txt": 7149,
+        "zone_ids.npy": 2772,
+        "zone_positions.npy": 1018
+      },
+      "counts": {
+        "antimeridian_cells_excluded": 12,
+        "assigned_probes_outside_planar_clip": 1489,
+        "candidate_pairs": 1029,
+        "candidate_probe_disagreements": 1538,
+        "cells": 500,
+        "empty_pairs": 0,
+        "fragments": 1080,
+        "h3_edge_probes": 3000,
+        "off_source_grid_vertices": 5317,
+        "packed_step_10_bytes": 539516,
+        "packed_step_1_bytes": 643624,
+        "ring_metadata_bytes": 30464,
+        "rings": 1088,
+        "vertices": 124567
+      },
+      "data_version": "2026c",
+      "elapsed_seconds": 5.931193709024228,
+      "examples": {
+        "candidate_coverage": {
+          "cell": "0x84000abffffffff",
+          "clipped_contains": false,
+          "lng_lat": [
+            37.520582230522464,
+            82.33147420920353
+          ],
+          "original_runtime_contains": true,
+          "polygon_id": 1234
+        },
+        "h3_coverage": {
+          "cell": "0x84000abffffffff",
+          "lng_lat": [
+            37.520582230522464,
+            82.33147420920353
+          ]
+        }
+      },
+      "sampled_cells": 512,
+      "shapely_version": "2.1.2",
+      "total_ambiguous_cells": 31394
+    },
+    "p99_benchmark": {
+      "all_answers_equal": true,
+      "current_backend": "timezonefinder.utils_clang",
+      "data_version": "2026c",
+      "fixture_pool": 5000,
+      "limitation": "This measures the existing materializing prototype, not an optimized/native implementation; memory is not compared.",
+      "machine": "arm64",
+      "median_round_p99_us": {
+        "current": 11.75,
+        "prototype": 2320.6612500000037
+      },
+      "metric": "ambiguous whole-query p99, microseconds",
+      "p99_rounds_us": {
+        "current": [
+          11.20842000000001,
+          11.70842000000001,
+          11.75,
+          12.876250000000027,
+          11.70842000000001,
+          12.875830000000018,
+          12.960500000000055
+        ],
+        "prototype": [
+          2320.6612500000037,
+          2325.6768400000033,
+          2221.156340000002,
+          2390.317320000005,
+          2210.724670000006,
+          2352.050840000009,
+          2226.8276800000035
+        ]
+      },
+      "prototype_backend": "Python reconstruction and exact Fraction ray cast",
+      "prototype_p99_winning_rounds": 0,
+      "python": "3.14.2",
+      "queries_per_arm_per_round": 5000,
+      "rounds": 7
+    },
+    "rounding_witnesses": {
+      "probes_before_first_witness": {
+        "1": 80,
+        "10": 80
+      },
+      "witnesses": {
+        "1": {
+          "cell": "0x8403569ffffffff",
+          "distance_to_clip_mask_degrees": 0.0013260506622828963,
+          "distance_to_source_border_degrees": 4.372321117934891e-09,
+          "floating_clip_contains": true,
+          "lng_lat": [
+            -81.7275056,
+            83.0386731
+          ],
+          "original_runtime_contains": true,
+          "polygon_id": 1290,
+          "pure_python_confirmed": true,
+          "query_int": [
+            -817275056,
+            830386731
+          ],
+          "rounded_runtime_contains": false
+        },
+        "10": {
+          "cell": "0x8403569ffffffff",
+          "distance_to_clip_mask_degrees": 0.0013260066970045632,
+          "distance_to_source_border_degrees": 3.824558293316649e-09,
+          "floating_clip_contains": false,
+          "lng_lat": [
+            -81.7275055,
+            83.0386731
+          ],
+          "original_runtime_contains": false,
+          "polygon_id": 1290,
+          "pure_python_confirmed": true,
+          "query_int": [
+            -817275055,
+            830386731
+          ],
+          "rounded_runtime_contains": true
+        }
+      }
+    },
+    "shared_census": {
+      "additional_bytes": 11579380,
+      "baseline_bytes": 33384683,
+      "combined_bytes": 44964063,
+      "exact_overrides": 103798,
+      "files": {
+        "candidates.bin": 795684,
+        "exceptions.bin": 2906344,
+        "format.json": 2980,
+        "inline.bin": 2360376,
+        "ring_index.bin": 833796,
+        "runs.bin": 2742528,
+        "window_table.bin": 1171688,
+        "windows.bin": 765984
+      },
+      "inline_vertices": 295047,
+      "rings_identical": 69483,
+      "runs": 171408,
+      "source_vertices_referenced": 12411686,
+      "total_seconds": 80.76639691600576
+    },
+    "shared_format_manifest": {
+      "format": "shared-exact-clipping-probe",
+      "run_layout": "source:u32,start:u32,count:u32,output:u32",
+      "scale": 10000000,
+      "source_hashes": {
+        "boundaries/block_bases.npy": "64299c3b9001b2f1a500edde057b00e5085045986bd9299393cacc3ef4c17930",
+        "boundaries/block_offsets.npy": "53a3b086cfc6f3681319c0ad7d8f70230dbed961802aa0dec2164ff6c6a308e3",
+        "boundaries/block_ranges.npy": "cb584f2c44c95dca28bf86a15e753117095dc8c6cc59038e04b72e2869d64d5a",
+        "boundaries/block_widths.npy": "4242e6d0ef038432f11871099a477e6f5f09114c397850b4dc4e19a6863a6868",
+        "boundaries/coordinates.bin": "03998b32bb059dea929657849b8dcf6f0e1f4204178538b4fb1eef012f6624f6",
+        "boundaries/nr_vertices.npy": "5da996190a4e1c081d6cfe5b68d0bc3b63dc42f99b5cf30eafd57b748a6531d5",
+        "boundaries/xmax.npy": "ea263d231ae29e98e59b016a5b3fc8b17d1551f6d1d140f896548789b58e5266",
+        "boundaries/xmin.npy": "11120b72a8f2318e03e118ad332d952c990c85d4802858d959426e2aec72226c",
+        "boundaries/ymax.npy": "bb6db23cf6e3aeed7f088a8127a795ff3c214c819efc1ce7fbc7c22252b03b77",
+        "boundaries/ymin.npy": "09acb501ec86a6916cfc8bf438b2da2dbf545b09f199a03b76f9ed3bd85ad396",
+        "data_version.txt": "b8b066b540bc2870e6f1f3cd76f1b0e6c3629b2e3a12f14ba9e47085a1abb781",
+        "hole_registry.json": "fca1dd0fdf71be85e47a6f1e7559c5f3127007eb41d611635cc3cd5fd80e3b55",
+        "holes/block_bases.npy": "be72d2bdd40e510f35e4f8b37c524faacf42f7900a4d6daffd65f6134b8c1b69",
+        "holes/block_offsets.npy": "fff3762c8a047be1c3b2240985e9e7adf4a3bd10314e9cc2ecaf14618b7d010c",
+        "holes/block_ranges.npy": "5688d0dab99198a470bc69984982c009892d67f9329f0a7a95e01b889ff02790",
+        "holes/block_widths.npy": "b7c01f1625cc61925fb89418bd1957542e7ed4c5eeda7b0a30159b79ad579c48",
+        "holes/coordinates.bin": "b25034e7a6e5c5f39514cbc705302b8fbff40cd9ac10890d4e89bc2e4811f6ae",
+        "holes/nr_vertices.npy": "8fb87bfce51160fa0b47dc2d2aef27b52d4280eda6aea4e343fd80c953dacdfe",
+        "holes/poly_ref.npy": "56ffbf3fa3a4868b6e0eed7e3c842bf3de7806361c64767c5b24d525d8ac0b37",
+        "holes/xmax.npy": "95aa4d09c679378c3c9da30b0abf4d15a7b0a2c7a6e813d8d7f8968f6e3c772c",
+        "holes/xmin.npy": "66cf5cdf1896d1b38b8ce0245d83ed603b5cd92a865755675871a5eb211135f4",
+        "holes/ymax.npy": "96d1259fd850a7985ac7ce854fe5d002c9010661d1a1f1c620f9af3f8b31d3ec",
+        "holes/ymin.npy": "9b0f347941633700d8bcbee8582f4ac9926dbc0892b2b75e2c977f54542180e2",
+        "schemas/polygons.fbs": "b9a0d198b4e22ce5fa33b607822162562403119d13e35e5cf06707de52e95c0a",
+        "shortcuts.bin": "fee4f5e4127ecc48ff137a459fb012d092ef30d93697f572aef33074c1a2376e",
+        "timezone_names.txt": "8625e551d30b2b56842c5d4bcb461ca2d3254dd04ba3c4e4b243e93f2594cda6",
+        "zone_ids.npy": "a5ab8c8676d5d23833462dd6816c8ac7d869c7c99c9358683e92bd5fd7b367f8",
+        "zone_positions.npy": "e11233d5265e102996c48e546409d628e5ebeb929968fc6934604e82f66b138e"
+      },
+      "source_id": "boundary id, or high bit plus inline-hole storage id; all bits set means new vertex pool",
+      "source_step": 10,
+      "version": 1
+    },
+    "world_limits": {
+      "candidate_checks": 755,
+      "whole_query_checks": 120,
+      "world_limit_queries": 120
+    }
+  },
+  "record_kind": "Frozen exploratory evidence, not current benchmark or released format",
+  "recorded_date": "2026-09-09",
+  "seed": 20260909,
+  "source_checkout": "c2b1cbd104660a3906d7e2bf7fe097172315206f"
+}
