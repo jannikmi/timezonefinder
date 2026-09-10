@@ -24,17 +24,12 @@ X.X.X (unreleased)
 * Added ``localize()`` to both finder classes and the global API for attaching the coordinate's local timezone to a naive datetime. Solves issue #502.
 * Reworked the aware-datetime and UTC-offset examples around the standard-library helpers; Windows users must install ``tzdata``. The retained ``pytz`` example uses ``localize()`` rather than ``replace(tzinfo=...)``. Solves issue #502.
 * Added ``timezonefinder validate-data DIR`` for exhaustive, opt-in validation of custom compiled datasets. It reports incomplete and inconsistent files as validation errors and never runs on finder construction. Solves issue #500.
-* ``TimezoneFinder.cleanup()`` and context-manager exit now release the memory-mapped coordinate files before returning.
-* A finder must not be used after ``cleanup()``; geometry-backed operations now fail instead of continuing through mappings that should have been released.
-* Public methods accepting zone or boundary IDs now reject negative values with ``ValueError`` instead of indexing from the end of the dataset.
 * NumPy arrays retained as dataset state are read-only, so mutating publicly reachable implementation arrays fails instead of corrupting later lookups.
-* ``coord2int`` no longer wraps out-of-range values silently when Numba is installed.
 * ``timezonefinder`` can now expose its documented public surface without importing NumPy, H3, or the polygon readers until a finder-related name is first accessed.
 * Candidate polygons are ordered by the work needed for a full lookup, including hole checks. ``TimezoneFinderL`` therefore returns the final fallback of that ordering, not an estimate of the zone covering most of the H3 cell.
 * The revised shortcut ordering ships in ``timezonefinder-data`` 3.2026.3.post1, a rebuilt output from upstream 2026c rather than a falsely labelled 2026d release.
 * The root dependency now requires ``timezonefinder-data>=3.2026.3.post1,<4`` so installations cannot retain older format-3 data that lacks the ordering promised by this release.
 * Polygon coordinates use block-packed residuals on the upstream source grid instead of fixed-width absolute values. Custom compiled data directories must be regenerated with format generation 3.
-* Source vertices are rounded to timezone-boundary-builder's six-decimal grid rather than truncated toward zero. ``get_geometry()`` therefore returns corrected source-aligned coordinates.
 * The converter rejects upstream geometry carrying precision beyond the declared source grid instead of silently rounding it.
 * Each boundary polygon carries a latitude block index that skips blocks whose edges cannot cross the query latitude.
 * Stored rings may begin at a different vertex because the converter rotates them to form tighter latitude blocks; ``get_geometry()`` still returns the same closed path.
@@ -43,15 +38,9 @@ X.X.X (unreleased)
 * The H3 shortcut index moves from resolution 3 to resolution 4. Benchmark fixtures classified as unique or ambiguous shortcuts are therefore not comparable with earlier releases.
 * The shortcut index uses a new array-based format with shared candidate lists and precomputed stopping positions. Custom compiled data directories must be regenerated.
 * The internal ``shortcut_mapping`` attribute is removed with the dictionary-backed shortcut representation. Solves issue #477.
-* Shortcut compilation now detects boundary edges that cross an H3 cell without either shape containing a corner.
-* Shortcut compilation no longer removes a polygon when an H3 cell extends outside one of its holes despite all cell corners lying inside the hole.
-* Shortcut compilation handles cells crossing the antimeridian without treating wrapped longitude bounds as empty.
-* The corrected shortcut-overlap rules fix wrong answers observed near the Lesotho border, Pacific atolls, the Strait of Malacca, and the poles.
-* The point-in-polygon C extension uses fixed-width arithmetic for slope products and no longer overflows on Windows.
 * Duplicate enclave geometry is stored once and referenced from holes through ``holes/poly_ref.npy``. A referenced hole returned by ``get_geometry()`` may start at another vertex or use the opposite winding while tracing the same path.
 * The hybrid shortcut loader retains compact read-only candidate slices rather than keeping the complete serialized shortcut buffer alive.
 * ``certain_timezone_at()`` and ``get_geometry()`` load the zone-position table lazily once per finder instead of reopening it on every call.
-* ``pip install timezonefinder[numba]`` no longer carries a second, stale upper bound on NumPy; Numba's own dependency metadata decides compatibility.
 * Linux wheels now target ``musllinux_1_2`` instead of the retired ``musllinux_1_1`` image.
 * The NumPy 1 migration guidance identifies 8.2.1 as the last compatible timezonefinder release and recommends an isolated environment when a system NumPy constraint conflicts.
 * The reduced ``timezones-now`` documentation reports the 2026c dataset accurately and points to the vendored upstream mapping for exact release-specific counts.
@@ -59,6 +48,19 @@ X.X.X (unreleased)
 * The usage documentation states that coordinates exactly on timezone boundaries have no guaranteed side and that ``certain_timezone_at()`` may return ``None`` there.
 * The package comparison now states the border-correctness trade-off and directs readers to reproducible comparison reports rather than embedding transient performance claims.
 * Added a point-in-polygon acceleration-path report covering the C extension, Numba, and pure-Python implementations.
+
+Bug fixes:
+
+* ``TimezoneFinder.cleanup()`` and context-manager exit now release the memory-mapped coordinate files before returning.
+* Geometry-backed operations on a finder after ``cleanup()`` now fail instead of continuing through mappings that should have been released.
+* Public methods accepting zone or boundary IDs now reject negative values with ``ValueError`` instead of indexing from the end of the dataset.
+* ``coord2int`` no longer wraps out-of-range values silently when Numba is installed.
+* Source vertices are rounded to timezone-boundary-builder's six-decimal grid rather than truncated toward zero. ``get_geometry()`` therefore returns corrected source-aligned coordinates.
+* Shortcut compilation detects boundary edges that cross an H3 cell without either shape containing a corner, fixing missed candidates near the Lesotho border, the Strait of Malacca, and the poles.
+* Shortcut compilation retains a polygon when an H3 cell extends outside one of its holes despite all cell corners lying inside the hole, fixing wrong answers around Pacific atolls.
+* Shortcut compilation handles cells crossing the antimeridian without treating wrapped longitude bounds as empty.
+* The point-in-polygon C extension uses fixed-width arithmetic for slope products and no longer overflows on Windows.
+* ``pip install timezonefinder[numba]`` no longer carries a stale upper bound on NumPy; Numba's dependency metadata decides compatibility.
 
 Internal:
 
