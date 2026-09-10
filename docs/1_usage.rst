@@ -312,7 +312,7 @@ Using a TimezoneFinder instance:
 
 
 .. note::
-    The "lightweight" class :ref:`TimezoneFinderL <usage_finderL>`, which is using only shortcuts, also supports just querying the most probable timezone.
+    The "lightweight" class :ref:`TimezoneFinderL <usage_finderL>` answers from the shortcut index without testing geometry. In a cell containing several zones, its result is a fast suggestion rather than the most probable zone at the query point.
 
 
 certain_timezone_at()
@@ -403,11 +403,16 @@ TimezoneFinderL
 
 :ref:`TimezoneFinderL <api_finderL>` is a light version of the :ref:`TimezoneFinder class <api_finder>`.
 It is useful for quickly suggesting probable timezones without using as many computational resources (cf. :ref:`speed tests <speed-tests>`).
-Instead of using timezone polygon data this class instantly returns the timezone just based on precomputed "shortcuts".
+Instead of using timezone polygon data this class instantly returns a suggestion from precomputed "shortcuts".
+For a cell containing several zones, it returns the zone that the full lookup would use only after
+the other candidates had failed their geometry checks. The converter chooses that fallback while
+arranging candidates for faster full lookups; it is not an estimate of which zone covers the query
+point or most of the cell. Suggestions near borders can therefore differ from
+``TimezoneFinder.timezone_at()`` and may change when shortcuts are regenerated.
 
 Check the (:ref:`API documentation <api_finderL>`) of ``TimezoneFinderL``.
 
-The most probable zone in proximity can be retrieved with ``timezone_at()``:
+A heuristic suggestion can be retrieved with ``timezone_at()``:
 
 .. code-block:: python
 

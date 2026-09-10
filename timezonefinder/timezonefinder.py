@@ -867,8 +867,10 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     """A lightweight version of TimezoneFinder for quick timezone suggestions.
 
     Instead of using timezone polygon data like ``TimezoneFinder``,
-    this class only uses a precomputed 'shortcut' to suggest a probable result:
-    the most common zone in a rectangle of a half degree of latitude and one degree of longitude.
+    this class suggests a result from a precomputed shortcut. In a cell containing
+    several zones, it returns the zone that the full lookup would use after every
+    earlier candidate failed its geometry check. The converter chooses that fallback
+    while optimizing the full lookup; it need not cover the point or most of the cell.
 
     Thread Safety:
         Each thread that performs timezone lookups must create its own independent
@@ -876,14 +878,17 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     """
 
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
-        """instantly returns the name of the most common zone within the corresponding shortcut
+        """Instantly return the fallback zone of the corresponding shortcut.
 
-        Note: 'most common' in this context means that the boundary polygons with the most coordinates in sum
-            occurring in the corresponding shortcut belong to this zone.
+        In a cell containing several zones, this is the zone the full lookup would
+        use after every earlier candidate failed its geometry check. Candidate order
+        is optimized for full-lookup work, so the result is not an estimate of which
+        zone covers this point or most of the cell. Cells retained by the converter's
+        geometry safety gates use the legacy total-vertex-count ordering.
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
-        :return: the timezone name of the most common zone or None if there are no timezone polygons in this shortcut
+        :return: the suggested timezone name or None if there are no timezone polygons in this shortcut
         """
         lng, lat = utils.validate_coordinates(lng, lat)
         # Inline fast-path to minimize helper overhead
@@ -907,9 +912,9 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     ) -> None:
         """One lookup per *distinct* cell answers every point in it.
 
-        Exact rather than an approximation: which zone is most common in a cell does not
+        Exact rather than an approximation: which fallback zone is stored for a cell does not
         depend on the point, so this class's whole ambiguous answer is a property of the
-        entry - which is why the resolution goes through :meth:`_most_common_zone_of`
+        entry - which is why the resolution goes through :meth:`_fallback_zone_of`
         and never through the coordinate-taking :meth:`_zone_id_in_ambiguous_cell`.
         Nothing here has to invent a point for a signature that would not use it.
 
@@ -919,32 +924,32 @@ class TimezoneFinderL(AbstractTimezoneFinder):
         """
         distinct, inverse = np.unique(entries[positions], return_inverse=True)
         answers = np.fromiter(
-            (self._most_common_zone_of(entry) for entry in distinct.tolist()),
+            (self._fallback_zone_of(entry) for entry in distinct.tolist()),
             dtype=out.dtype,
             count=distinct.shape[0],
         )
         out[positions] = answers[inverse]
 
-    def _most_common_zone_of(self, entry: int) -> int:
-        """The zone covering most of a cell several zones cover - no geometry tested.
+    def _fallback_zone_of(self, entry: int) -> int:
+        """The fallback of an ambiguous cell, without testing geometry.
 
         A property of the cell alone, which is the whole of what makes this class
         lightweight, and what lets a batch answer every point in a cell from one lookup.
         """
-        # several zones - the last candidate belongs to the most common one
-        poly_of_biggest_zone = self.shortcuts.candidates_of(entry)[-1]
+        # The final complete zone is the full lookup's untested fallback.
+        fallback_polygon = self.shortcuts.candidates_of(entry)[-1]
         # a numpy integer scalar from array indexing, which mypy reads as ndarray. Safe:
         # element access yields a scalar compatible with IntegerLike
-        return self._zone_id_of(poly_of_biggest_zone)  # type: ignore[arg-type]
+        return self._zone_id_of(fallback_polygon)  # type: ignore[arg-type]
 
     def _zone_id_in_ambiguous_cell(self, entry: int, lng: float, lat: float) -> int:
-        """The most common zone of the cell - the point is not consulted.
+        """The fallback zone of the cell; the point is not consulted.
 
         The coordinates the contract passes are unused here, which is why the batch path
-        calls :meth:`_most_common_zone_of` directly instead of handing this a point it
+        calls :meth:`_fallback_zone_of` directly instead of handing this a point it
         would have to invent.
         """
-        return self._most_common_zone_of(entry)
+        return self._fallback_zone_of(entry)
 
 
 class TimezoneFinder(AbstractTimezoneFinder):

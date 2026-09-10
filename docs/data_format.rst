@@ -692,6 +692,27 @@ to disagree with it.
 candidate list, so it deduplicates with everything else and costs one byte per distinct
 list to take a scan off every ambiguous query.
 
+**The tested prefix may interleave zones.** Only the final zone must occupy a
+complete, untested suffix. During conversion, ``scripts/shortcut_ordering.py``
+reduces integrated expected full-predicate work, including bounding boxes, the
+union box enclosing all holes, individual hole checks and latitude-active blocks.
+No query points are sampled: the piecewise cost proxy is integrated analytically
+against spherical surface area over clipped polygon geometry. The module gives
+the formulas, search algorithm, cost coefficients and geometric approximations.
+Final zones are enumerated; greedy candidates and adjacent exchanges improve on
+the legacy incumbent. This is a heuristic for general point-dependent costs,
+with an exact ratio-order special case for constant costs and disjoint polygons.
+There is no candidate-count cutoff. Geometry safety gates preserve legacy zone
+precedence where necessary while allowing within-zone polygon optimization.
+This changes no candidate membership or binary layout. It does change the
+fallback heuristic used by ``TimezoneFinderL``.
+
+Resolving overlapping-zone precedence and replacing covered ambiguous cells by
+direct answers are separate conversion decisions. This ordering pass preserves
+legacy overlap precedence; it does not infer a new precedence rule from cost.
+A coverage pass can run first, leaving only its remaining ambiguous cells to
+order.
+
 **The file is base-7, the table is base-8.** H3 digits only take 0-6, so a third of the
 base-8 slots can never be addressed. Which ones follows from the resolution and never from
 the data, so the file stores the compact base-7 form and the reader expands it - a base-8
