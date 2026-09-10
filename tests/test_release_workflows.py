@@ -63,6 +63,7 @@ DATA_UPDATE_GATE = "the weekly data update's merge"
 # assertion below. `scripts/changelog_fragments.py` shipped reachable only from a manual
 # `make` target and no test noticed, which is what this table exists to prevent.
 SCRIPT_GATES: dict[str, str | None] = {
+    "audit_shortcut_candidates": DATA_UPDATE_GATE,
     "_memory_probe": NOT_A_GATE,
     "assert_acceleration_path": NOT_A_GATE,
     "benchmark_noise": NOT_A_GATE,
@@ -113,6 +114,10 @@ RELEASE_GATE_CONSEQUENCE = {
 # A gate whose boundary is not build.yml's, and the test that pins its ordering there.
 # The pointer is asserted to resolve, so it cannot rot into a claim nothing checks.
 GATE_ELSEWHERE_PROOF = {
+    "audit_shortcut_candidates": (
+        Path("tests") / "test_shortcut_candidate_coverage.py",
+        "test_dataset_validation_runs_all_streams_before_release_preparation",
+    ),
     "data_update_guard": (
         Path("tests") / "test_data_update_guard.py",
         "test_a_draft_update_is_never_merged",

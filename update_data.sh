@@ -168,6 +168,22 @@ if ! uv run python -m scripts.file_converter -inp "$JSON_PATH"; then
     exit 1
 fi
 
+# Validate candidate coverage once per compiled dataset, before either returning
+# binaries or preparing a release. Ordinary pytest/tox runs exercise the guard's
+# failure behavior on small inputs rather than repeating these full sample streams.
+# Keep reports outside the packaged data so they cannot enter the released wheel.
+for mode in cell-edges source-edges seams; do
+    echo "AUDITING SHORTCUT CANDIDATES: $mode..."
+    if ! uv run python -m scripts.audit_shortcut_candidates \
+        --mode "$mode" --output "$WORKING_FOLDER_NAME/shortcut-candidates-$mode.json"; then
+        echo "shortcut candidate validation failed ($mode); see $WORKING_FOLDER_NAME/shortcut-candidates-$mode.json" >&2
+        if [ -f "$WORKING_FOLDER_NAME/shortcut-candidates-$mode.json" ]; then
+            cat "$WORKING_FOLDER_NAME/shortcut-candidates-$mode.json" >&2
+        fi
+        exit 1
+    fi
+done
+
 # Everything below turns a parse into a *prepared release*: the stamps, the fixtures,
 # the reports and the version bump. A caller that only wants the binaries has all of
 # those in its tree already and would be overwriting them with a runner's numbers.
