@@ -126,9 +126,11 @@ Two accuracy tiers, two memory modes
 These are independent choices, and both are about what a deployment can afford.
 
 **Accuracy tier.** ``TimezoneFinder`` runs the full pipeline: shortcut, then geometry when the
-shortcut is ambiguous. ``TimezoneFinderL`` consults *only* the shortcut index and gives up when the
-cell is ambiguous - no polygon data is loaded at all. It is right when an approximate answer near a
-border is acceptable and the footprint is not.
+shortcut is ambiguous. ``TimezoneFinderL`` consults *only* the shortcut index - no polygon data is
+loaded at all. In an ambiguous cell it returns the full lookup's precomputed fallback: the zone used
+after every earlier candidate fails its geometry check. Candidate order is optimized for full-lookup
+work, so this fallback is a fast suggestion, not an estimate of which zone covers the point or most
+of the cell. Use this tier when an approximate answer near a border is acceptable.
 
 **Memory mode.** By default the coordinate data is **memory-mapped**: only the pages a lookup
 actually touches become resident, and the kernel can reclaim them under pressure. Passing

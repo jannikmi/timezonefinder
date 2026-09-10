@@ -867,9 +867,10 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     """A lightweight version of TimezoneFinder for quick timezone suggestions.
 
     Instead of using timezone polygon data like ``TimezoneFinder``,
-    this class only uses a precomputed 'shortcut' to suggest a probable result:
-    the fallback zone of the containing H3 cell, chosen by the converter to
-    reduce expected work in the full lookup. It need not cover most of the cell.
+    this class suggests a result from a precomputed shortcut. In a cell containing
+    several zones, it returns the zone that the full lookup would use after every
+    earlier candidate failed its geometry check. The converter chooses that fallback
+    while optimizing the full lookup; it need not cover the point or most of the cell.
 
     Thread Safety:
         Each thread that performs timezone lookups must create its own independent
@@ -879,9 +880,11 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
         """Instantly return the fallback zone of the corresponding shortcut.
 
-        The converter chooses this heuristic to reduce expected full-lookup work.
-        It is not a maximum-area estimate. Cells retained by the converter's
-        geometry safety gates use the legacy total-vertex-count heuristic.
+        In a cell containing several zones, this is the zone the full lookup would
+        use after every earlier candidate failed its geometry check. Candidate order
+        is optimized for full-lookup work, so the result is not an estimate of which
+        zone covers this point or most of the cell. Cells retained by the converter's
+        geometry safety gates use the legacy total-vertex-count ordering.
 
         :param lng: longitude of the point in degree (-180.0 to 180.0)
         :param lat: latitude in degree (90.0 to -90.0)
