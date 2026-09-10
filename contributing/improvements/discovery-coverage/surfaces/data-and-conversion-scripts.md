@@ -21,6 +21,7 @@
 
 ## Durable evidence
 
+- The [shortcut candidate audit](../../decisions/shortcut-candidate-audit-and-geometry-authority.md) reviews the exclusion and propagation obligations in `Hex` against `cce42b8`, evaluates released and proposed H3 region modes, and records packaged-data probes. It does not certify the current candidate construction; the broad delta anchor above remains unchanged.
 - Tooling and packaging non-findings live in [developer tooling and packaging checks](../../checked-and-found-sound/developer-tooling-and-packaging-checks.md).
 
 ## Next useful gap
