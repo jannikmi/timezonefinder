@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789001201711,
+  "lastUpdate": 1789032852016,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9273,6 +9273,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1727",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2411 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba99fc488b1ea2db4cb91551dc34da34f9e881b7",
+          "message": "Guard data releases with shortcut candidate coverage audits (#659)\n\n* GEOM-2: add reproducible shortcut candidate audits\n\n* GEOM-1: retire combined scope after delivering GEOM-2 audit slice\n\n* GEOM-2: guard data releases with candidate coverage tests\n\nAt the maintainer request, run the complete audit sample streams in required slow pytest/tox CI, test missing-candidate failure and CI selection, and park speculative GEOM-3 repairs until a counterexample or certified-coverage need arises.\n\n* GEOM-2: validate candidate coverage once per dataset\n\nAt the maintainer request, move the full audit streams out of slow tox runs and into update_data.sh after conversion. Retain fast tests of audit failures and pipeline ordering, and update the register to describe this boundary.",
+          "timestamp": "2026-09-10T09:33:11Z",
+          "tree_id": "e1022f7efb4729d8671e6f2c41d002b72b9b0080",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ba99fc488b1ea2db4cb91551dc34da34f9e881b7"
+        },
+        "date": 1789032850308,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 557441.4418916369,
+            "range": "± 8762",
+            "unit": "lookups/sec",
+            "extra": "min of 179 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 738712.4006465977,
+            "range": "± 20826",
+            "unit": "lookups/sec",
+            "extra": "min of 257 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 176225.42756692742,
+            "range": "± 2404",
+            "unit": "lookups/sec",
+            "extra": "min of 65 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 881959.8983419054,
+            "range": "± 10636",
+            "unit": "lookups/sec",
+            "extra": "min of 283 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1457890.8634541393,
+            "range": "± 18748",
+            "unit": "lookups/sec",
+            "extra": "min of 510 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 213734.2006609471,
+            "range": "± 3529",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 867988.9494596673,
+            "range": "± 10271",
+            "unit": "lookups/sec",
+            "extra": "min of 276 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1426300.757761493,
+            "range": "± 113260",
+            "unit": "lookups/sec",
+            "extra": "min of 485 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 213443.52711152562,
+            "range": "± 9485",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
