@@ -38,6 +38,7 @@ from scripts.compare_benchmark_runs import (
     REGRESSION_THRESHOLD_PCT,
     BenchmarkComparison,
     benchmark_set_warnings,
+    comparison_estimator,
     comparability_warnings,
     compare_runs,
     regressions,
@@ -387,11 +388,26 @@ def test_comparison_markdown_names_the_machine_and_flags_the_verdicts():
         estimator="min",
         machine=f"{CPU_7763} @ 3.2449 GHz",
         threshold_pct=REGRESSION_THRESHOLD_PCT,
+        lookups_per_round=2500,
     )
 
     assert CPU_7763 in report
-    assert "+50.0%" in report and "🔴 slower" in report
-    assert "-50.0%" in report and "🟢 faster" in report
+    assert "-33.3%" in report and "🔴 slower" in report
+    assert "+100.0%" in report and "🟢 faster" in report
+    assert "base (lookups/s)" in report
+    assert "2,500" in report and "5,000" in report
+    assert "| result |" in report
+
+
+@pytest.mark.unit
+def test_memory_comments_default_to_the_median_despite_a_tracked_minimum():
+    report = _run(a=_stats(1.0, 2.0, 3.0))
+    report[ESTIMATOR_KEY] = "min"
+
+    assert comparison_estimator([report], "min", "memory") == "median"
+    assert comparison_estimator([report], "mean", "duration") == "min"
+    del report[ESTIMATOR_KEY]
+    assert comparison_estimator([report], "mean", "duration") == "mean"
 
 
 @pytest.mark.unit
