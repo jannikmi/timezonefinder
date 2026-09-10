@@ -8,7 +8,7 @@ Run each deterministic stream with `uv run python -m scripts.audit_shortcut_cand
 
 Reports retain data hashes, H3 and Python versions, backend, counts and bounded witnesses. A missing polygon is not necessarily a wrong zone: overlapping polygons may supply the same answer. The report separately counts omissions whose answer belongs to none of the directly containing polygons. It makes no precedence claim when multiple zones contain a point. This is not an independent test of the polygon kernel, and zero sampled omissions is never a completeness certificate.
 
-At the maintainer's request, `tests/test_shortcut_candidate_coverage.py` runs all three untruncated streams against the dataset under test in pytest's `slow` suite. The existing required CI tox environment selects that suite, so an omission fails a data-update build before its automatic merge/release. Diagnostics retain coordinates and missing IDs for replay; a mutation test verifies that removing a shortcut fails the same guard. `tests/test_data_update_workflow.py::test_ci_selects_the_candidate_coverage_release_guards` checks both the CI matrix and actual pytest collection under tox's marker expression. The CLI remains an optional diagnostic; CI invokes the shared oracle through pytest.
+At the maintainer's request, `update_data.sh` runs all three untruncated audit streams once after conversion, before returning binaries or preparing a release. An omission or audit error stops the update before CI builds the data wheel. Reports live under `tmp/`, outside the packaged data; failure diagnostics include replay coordinates and missing IDs. Ordinary pytest/tox runs do not repeat these expensive streams: `tests/test_shortcut_candidate_coverage.py` executes the update script with external commands stubbed to verify all streams run and each failure blocks preparation, while the audit's unit tests check real missing-candidate detection and CLI failure. This intentionally leaves ordinary code PRs without a full sampled geometry census; rerun the diagnostic streams when changing candidate generation or the oracle.
 
 ## Exclusion audit
 
@@ -32,7 +32,7 @@ Geodesic mode is not a drop-in conservative predicate for this package: it also 
 
 ## Packaged-data evidence
 
-The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose CI regression guards over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. PERF-7 remains blocked; a green sampled audit cannot establish its full-coverage predicate.
+The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose one-time dataset validation over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. PERF-7 remains blocked; a green sampled audit cannot establish its full-coverage predicate.
 
 On 2026-09-10, data 2026c, H3 4.5.0, Python 3.14.2 with Numba on macOS arm64:
 

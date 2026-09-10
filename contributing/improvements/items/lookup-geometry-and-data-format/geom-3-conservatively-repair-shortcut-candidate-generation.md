@@ -2,7 +2,7 @@
 
 ## Reopening condition
 
-Parked at the maintainer's request on 2026-09-10 after 21,561,744 adversarial probes found no packaged candidate omissions. `tests/test_shortcut_candidate_coverage.py` now guards new datasets in the required slow pytest/tox CI suite. Reopen for a reproducible missing-candidate counterexample or a proposed optimization that needs certified cell coverage. The current exclusion proof gaps remain; these sampled guards can miss an unsampled defect, and their passing does not unblock PERF-7. A speculative L-sized repair with storage/query costs is not justified by the present evidence.
+Parked at the maintainer's request on 2026-09-10 after 21,561,744 adversarial probes found no packaged candidate omissions. `update_data.sh` now guards newly compiled datasets once, before release preparation; fast pytest tests verify pipeline ordering and refusal. Reopen for a reproducible missing-candidate counterexample or a proposed optimization that needs certified cell coverage. The current exclusion proof gaps remain; these sampled guards can miss an unsampled defect, and their passing does not unblock PERF-7. A speculative L-sized repair with storage/query costs is not justified by the present evidence.
 
 ## Work if reopened
 
@@ -15,4 +15,4 @@ Deliver the enclosure/propagation proof and regression witnesses together with r
 PERF-7 stays blocked: replacing a whole cell with an unconditional zone requires the opposite proof, that every assigned point is covered. Merely retaining uncertain exterior candidates does not establish it.
 
 - **Size:** L — numerical enclosure, propagation and regeneration form one correctness boundary.
-- **Status:** parked — CI guards future datasets; reopen for a counterexample or a proposed optimization requiring certified cell coverage.
+- **Status:** parked — one-time validation guards future datasets; reopen for a counterexample or a proposed optimization requiring certified cell coverage.

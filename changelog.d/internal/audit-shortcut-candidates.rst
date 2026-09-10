@@ -1,1 +1,1 @@
-Guard data updates in the slow pytest/tox CI suite by checking sampled H3 edges, source edges and coordinate seams against full polygon containment, with replayable omission diagnostics and a standalone audit command that records dataset hashes.
+Validate sampled shortcut candidate coverage once after dataset conversion, before preparing a data release, with replayable omission diagnostics and fast pytest checks of the validation pipeline.

@@ -8,15 +8,10 @@ contains a particular shell string is not one of those: it fails on any
 rewording and passes on any bug that keeps the wording.
 """
 
-import configparser
-import shlex
-import subprocess
-import sys
-
 import pytest
 import yaml
 
-from tests.auxiliaries import ACTION_DIR, PROJECT_ROOT, WORKFLOW_DIR
+from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 
 RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
 RESOLVE_ACTION = ACTION_DIR / "resolve-update-pr" / "action.yml"
@@ -27,58 +22,6 @@ NOTIFY_ACTION_REF = "./.github/actions/notify-update-pr"
 
 def _workflow() -> dict:
     return yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
-
-
-@pytest.mark.unit
-def test_ci_selects_the_candidate_coverage_release_guards():
-    """A green data-update build must not silently omit the expensive geometry guard.
-
-    Exercise the real tox marker expression through pytest collection, so changing
-    it to exclude slow tests fails here even though the guard's own tests still pass.
-    Existing build aggregation and auto-release rules propagate this job's failure.
-    """
-    build = yaml.safe_load((WORKFLOW_DIR / "build.yml").read_text(encoding="utf-8"))
-    job = build["jobs"]["test"]
-    environments = {
-        env.strip()
-        for row in job["strategy"]["matrix"]["include"]
-        for env in row["tox-env"].split(",")
-    }
-    assert "slow" in environments
-    assert not job.get("continue-on-error", False)
-    assert "test" in build["jobs"]["ci-ok"]["needs"]
-
-    config = configparser.ConfigParser(interpolation=None)
-    config.read(PROJECT_ROOT / "tox.ini")
-    commands = [
-        shlex.split(line)
-        for line in config["testenv:slow"]["commands"].splitlines()
-        if line.strip()
-    ]
-    pytest_commands = [tokens for tokens in commands if "pytest" in tokens]
-    assert len(pytest_commands) == 1
-    tokens = pytest_commands[0]
-    arguments = [
-        token for token in tokens[tokens.index("pytest") + 1 :] if token != "{posargs}"
-    ]
-    test_path = "tests/test_shortcut_candidate_coverage.py"
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", *arguments, "--collect-only", "-q", test_path],
-        cwd=PROJECT_ROOT,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    collected = {
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.startswith(test_path + "::")
-    }
-    assert collected == {
-        test_path + "::test_packaged_shortcuts_cover_curved_cell_edges",
-        test_path + "::test_packaged_shortcuts_cover_source_edges",
-        test_path + "::test_packaged_shortcuts_cover_coordinate_seams",
-    }, result.stdout
 
 
 def _jobs() -> dict:
