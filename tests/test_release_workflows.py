@@ -63,6 +63,8 @@ DATA_UPDATE_GATE = "the weekly data update's merge"
 # assertion below. `scripts/changelog_fragments.py` shipped reachable only from a manual
 # `make` target and no test noticed, which is what this table exists to prevent.
 SCRIPT_GATES: dict[str, str | None] = {
+    # A sampled diagnostic cannot certify candidate coverage for a release.
+    "audit_shortcut_candidates": NOT_A_GATE,
     "_memory_probe": NOT_A_GATE,
     "assert_acceleration_path": NOT_A_GATE,
     "benchmark_noise": NOT_A_GATE,
