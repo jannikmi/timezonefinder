@@ -26,27 +26,26 @@ NAIVE = datetime(2026, 1, 1, 12, 0)
 
 
 def with_zoneinfo():
-    tf = TimezoneFinder()
+    with TimezoneFinder() as tf:
+        aware = tf.localize(NAIVE, **BERLIN)
+        print("localize() - the naive time read as local time there:")
+        print(f"  {NAIVE} -> {aware}")
+        print(f"  the same instant in UTC: {aware.astimezone(utc_timezone.utc)}")
 
-    aware = tf.localize(NAIVE, **BERLIN)
-    print("localize() - the naive time read as local time there:")
-    print(f"  {NAIVE} -> {aware}")
-    print(f"  the same instant in UTC: {aware.astimezone(utc_timezone.utc)}")
+        zone = tf.zoneinfo_at(**BERLIN)
+        print("\nzoneinfo_at() - the zone itself, for building your own datetimes:")
+        print(f"  {zone!r}")
+        print(f"  now there: {datetime.now(tz=zone)}")
 
-    zone = tf.zoneinfo_at(**BERLIN)
-    print("\nzoneinfo_at() - the zone itself, for building your own datetimes:")
-    print(f"  {zone!r}")
-    print(f"  now there: {datetime.now(tz=zone)}")
+        print("\nAn already-aware datetime is refused rather than re-labelled:")
+        try:
+            tf.localize(aware, **BERLIN)
+        except ValueError as e:
+            print(f"  ValueError: {e}")
 
     print("\nBoth are available as global functions on a shared instance:")
     print(f"  {localize(NAIVE, **BERLIN)}")
     print(f"  {zoneinfo_at(**BERLIN)!r}")
-
-    print("\nAn already-aware datetime is refused rather than silently re-labelled:")
-    try:
-        tf.localize(aware, **BERLIN)
-    except ValueError as e:
-        print(f"  ValueError: {e}")
 
 
 def with_pytz():
@@ -57,8 +56,8 @@ def with_pytz():
         print("\npytz is not installed - skipping the pytz section")
         return
 
-    tf = TimezoneFinder()
-    tz_name = tf.timezone_at(**BERLIN)
+    with TimezoneFinder() as tf:
+        tz_name = tf.timezone_at(**BERLIN)
     tz = timezone(tz_name)
 
     print("\npytz needs tz.localize(); replace(tzinfo=...) is the classic bug:")
