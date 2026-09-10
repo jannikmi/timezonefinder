@@ -1,1 +1,0 @@
-Internal: ``B023`` (a function defined inside a loop closing over a name the loop rebinds) is now enforced. All 24 sites were false positives - each closure was consumed inside its own iteration - and the three in ``timezonefinder/_data_integrity.py`` are gone because each ``for polygon_dir in (...)`` body now lives in its own module-level function.
