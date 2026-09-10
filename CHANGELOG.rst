@@ -11,9 +11,14 @@ X.X.X (unreleased)
 9.0.0 (2026-09-10)
 ------------------
 
+Breaking changes:
+
 * **BREAKING:** importing ``timezonefinder`` no longer binds its submodules as package attributes. Public names are resolved lazily; import a submodule explicitly before accessing it through the package.
 * **BREAKING:** ``TimezoneFinderL`` and the shared base class no longer accept the ineffective ``in_memory`` argument. ``TimezoneFinder(in_memory=...)`` is unchanged.
 * **BREAKING:** the command line requires an explicit ``query``, ``rows``, or ``validate-data`` command. Replace ``timezonefinder LNG LAT`` with ``timezonefinder query LNG LAT`` and ``--stdin`` with ``timezonefinder rows``.
+
+New features:
+
 * Added ``timezone_ids_at()`` and ``timezone_names_at()`` batch lookups to both finder classes and the global API. They accept separate one-dimensional ``lngs`` and ``lats`` arrays and preserve input order. Solves issue #499.
 * Added ``timezone_ids_at_land()`` and ``timezone_names_at_land()`` batch lookups for land-restricted results. Solves issue #499.
 * Added ``zone_names_from_ids()`` for converting arrays of zone IDs after filtering, joining, or grouping them. Solves issue #499.
@@ -22,8 +27,10 @@ X.X.X (unreleased)
 * Added ``zoneinfo_at()`` to both finder classes and the global API, returning a standard-library ``zoneinfo.ZoneInfo``. Solves issue #502.
 * Added ``utc_offset_at()`` to both finder classes and the global API. Solves issue #502.
 * Added ``localize()`` to both finder classes and the global API for attaching the coordinate's local timezone to a naive datetime. Solves issue #502.
-* Reworked the aware-datetime and UTC-offset examples around the standard-library helpers; Windows users must install ``tzdata``. The retained ``pytz`` example uses ``localize()`` rather than ``replace(tzinfo=...)``. Solves issue #502.
 * Added ``timezonefinder validate-data DIR`` for exhaustive, opt-in validation of custom compiled datasets. It reports incomplete and inconsistent files as validation errors and never runs on finder construction. Solves issue #500.
+
+Changed:
+
 * NumPy arrays retained as dataset state are read-only, so mutating publicly reachable implementation arrays fails instead of corrupting later lookups.
 * ``timezonefinder`` can now expose its documented public surface without importing NumPy, H3, or the polygon readers until a finder-related name is first accessed.
 * Candidate polygons are ordered by the work needed for a full lookup, including hole checks. ``TimezoneFinderL`` therefore returns the final fallback of that ordering, not an estimate of the zone covering most of the H3 cell.
@@ -42,12 +49,6 @@ X.X.X (unreleased)
 * The hybrid shortcut loader retains compact read-only candidate slices rather than keeping the complete serialized shortcut buffer alive.
 * ``certain_timezone_at()`` and ``get_geometry()`` load the zone-position table lazily once per finder instead of reopening it on every call.
 * Linux wheels now target ``musllinux_1_2`` instead of the retired ``musllinux_1_1`` image.
-* The NumPy 1 migration guidance identifies 8.2.1 as the last compatible timezonefinder release and recommends an isolated environment when a system NumPy constraint conflicts.
-* The reduced ``timezones-now`` documentation reports the 2026c dataset accurately and points to the vendored upstream mapping for exact release-specific counts.
-* The use-case documentation explains the inverted sign convention of ``Etc/GMT`` names and recommends resolving offsets through ``ZoneInfo``. Solves issue #503. Thanks to `weed33834 <https://github.com/weed33834>`__ for PR #538.
-* The usage documentation states that coordinates exactly on timezone boundaries have no guaranteed side and that ``certain_timezone_at()`` may return ``None`` there.
-* The package comparison now states the border-correctness trade-off and directs readers to reproducible comparison reports rather than embedding transient performance claims.
-* Added a point-in-polygon acceleration-path report covering the C extension, Numba, and pure-Python implementations.
 
 Bug fixes:
 
@@ -61,6 +62,16 @@ Bug fixes:
 * Shortcut compilation handles cells crossing the antimeridian without treating wrapped longitude bounds as empty.
 * The point-in-polygon C extension uses fixed-width arithmetic for slope products and no longer overflows on Windows.
 * ``pip install timezonefinder[numba]`` no longer carries a stale upper bound on NumPy; Numba's dependency metadata decides compatibility.
+
+Documentation:
+
+* Reworked the aware-datetime and UTC-offset examples around the standard-library helpers; Windows users must install ``tzdata``. The retained ``pytz`` example uses ``localize()`` rather than ``replace(tzinfo=...)``. Solves issue #502.
+* The NumPy 1 migration guidance identifies 8.2.1 as the last compatible timezonefinder release and recommends an isolated environment when a system NumPy constraint conflicts.
+* The reduced ``timezones-now`` documentation reports the 2026c dataset accurately and points to the vendored upstream mapping for exact release-specific counts.
+* The use-case documentation explains the inverted sign convention of ``Etc/GMT`` names and recommends resolving offsets through ``ZoneInfo``. Solves issue #503. Thanks to `weed33834 <https://github.com/weed33834>`__ for PR #538.
+* The usage documentation states that coordinates exactly on timezone boundaries have no guaranteed side and that ``certain_timezone_at()`` may return ``None`` there.
+* The package comparison now states the border-correctness trade-off and directs readers to reproducible comparison reports rather than embedding transient performance claims.
+* Added a point-in-polygon acceleration-path report covering the C extension, Numba, and pure-Python implementations.
 
 Internal:
 
