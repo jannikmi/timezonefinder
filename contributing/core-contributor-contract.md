@@ -20,7 +20,7 @@ The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read
 
 ## Maintaining contributor memory
 
-When asked to change the repository, default to delivering the implementation and its durable contributor-memory rule. Amend the narrowest module in the same change so the next coding agent inherits the decision. Omit that edit only when the rule is already recorded or the work creates no durable, non-obvious lesson; verify before deciding.
+When an implementation request establishes or exposes a reusable, non-obvious invariant with a concrete failure mode, default to delivering the implementation and its contributor-memory rule. Amend the narrowest module so the next coding agent inherits the decision. Mechanical edits, already-recorded rules, and lessons without a durable failure mode create no new memory.
 
 Record a repository fact only when it is durable beyond the current change, non-obvious enough to have caused a failed check or wrong assumption, and has a concrete failure mode. Put it in the narrowest existing module, or at the code/configuration decision site when that is sufficient. Never copy a rule merely to make it more visible: route to its canonical owner instead.
 
