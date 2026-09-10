@@ -22,7 +22,7 @@ The base version names the binary format and upstream boundary release. A rebuil
 
 ## Before tagging
 
-Confirm four things, cheapest first: local `master` is fast-forwarded to `origin/master` and reports `$data_version` there; the tag is absent both locally and remotely; the `master` workflow run for that exact head SHA is green; and the run `DATA_BUILD_RUN` names succeeded with an `artifact-data-wheel` that has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id:
+Confirm five things, cheapest first: local `master` is fast-forwarded to `origin/master` and reports `$data_version` there; the tag is absent both locally and remotely; PyPI does not serve that exact version and, for a post-release, its number is exactly one above the greatest post-release PyPI serves for the same base; the `master` workflow run for that exact head SHA is green; and the run `DATA_BUILD_RUN` names succeeded with an `artifact-data-wheel` that has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id. The README insertion rejects a skipped local post number, while the index check covers a published version missing from the checkout's history:
 
 ```bash
 git ls-remote --tags origin "data-v$data_version"

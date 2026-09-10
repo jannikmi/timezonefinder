@@ -113,6 +113,25 @@ def test_a_post_release_may_reuse_the_upstream_tag() -> None:
 
 
 @pytest.mark.unit
+def test_a_post_release_cannot_skip_a_number() -> None:
+    with pytest.raises(ValueError, match=r"expected 1\.2026\.3\.post1"):
+        insert_data_release(
+            _releases(),
+            version="1.2026.3.post99",
+            release_date=date(2026, 9, 1),
+            data_tag="2026c",
+            data_repo_url="https://example.test/data",
+            summary="Recompiled the index.",
+        )
+
+
+@pytest.mark.unit
+def test_a_post_release_requires_the_base_release_to_be_recorded() -> None:
+    with pytest.raises(ValueError, match="unrecorded base"):
+        _insert(_releases(), version="1.2026.4.post1")
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "version",
     ["3.2026.3rc1", "3.2026.3.dev1", "3.2026.3+local", "3.2026.3.post0"],

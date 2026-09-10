@@ -76,7 +76,8 @@ def insert_data_release(
     """
     validate_release_order(readme)
 
-    for listed in _RELEASE_ENTRY.finditer(readme):
+    listed_entries = list(_RELEASE_ENTRY.finditer(readme))
+    for listed in listed_entries:
         if listed.group("version") == version:
             raise ValueError(
                 f"the release list already has an entry for {listed.group('version')}: "
@@ -91,6 +92,30 @@ def insert_data_release(
             f"{version!r} is not a data distribution version for {data_tag!r}: "
             "expected <format>.<year>.<letter>[.postN]"
         ) from None
+
+    base, separator, post_text = version.partition(".post")
+    post_release = int(post_text) if separator else 0
+    same_base_versions = [
+        listed.group("version")
+        for listed in listed_entries
+        if listed.group("version").partition(".post")[0] == base
+    ]
+    if same_base_versions:
+        previous_posts = [
+            int(text) if marker else 0
+            for listed_version in same_base_versions
+            for _, marker, text in [listed_version.partition(".post")]
+        ]
+        expected_post = max(previous_posts) + 1
+        if post_release != expected_post:
+            raise ValueError(
+                f"{version!r} skips the next post-release for {base}: expected "
+                f"{base}.post{expected_post}"
+            )
+    elif post_release:
+        raise ValueError(
+            f"{version!r} is a post-release of an unrecorded base {base!r}"
+        )
 
     summary = summary.strip()
     if not summary:
