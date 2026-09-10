@@ -18,6 +18,8 @@ The tag names the *data* distribution's own version, never the root's — a bare
 data_version=$(uv version --short --package timezonefinder-data)
 ```
 
+The base version names the binary format and upstream boundary release. A rebuild from the same upstream release uses the next unused PEP 440 post-release (``.post1``, then ``.post2``); it does not increment the component that encodes the upstream release. Confirm its concise change summary is present in ``packages/timezonefinder-data/README.md`` before tagging.
+
 ## Before tagging
 
 Confirm four things, cheapest first: local `master` is fast-forwarded to `origin/master` and reports `$data_version` there; the tag is absent both locally and remotely; the `master` workflow run for that exact head SHA is green; and the run `DATA_BUILD_RUN` names succeeded with an `artifact-data-wheel` that has not expired — the run id is the only reference to it, and an expired artefact is re-made by re-dispatching `compile_data.yml` on the branch and recording the new id:

@@ -40,6 +40,10 @@ Options:
                              whichever one is latest. For reproducing the binaries a
                              branch already declares in DATA_VERSION, where "latest"
                              would silently compile a different release
+  --post=<N>                 prepare post-release N from the same upstream release;
+                             requires --release-summary and preserves the upstream
+                             component of the data distribution version
+  --release-summary=<text>   concise data changelog entry; required with --post
   --binaries-only            stop once the converter has run: write no stamps, bump no
                              version, regenerate no fixtures, and leave every committed
                              report as it was. For a branch whose data is compiled by CI
@@ -55,6 +59,8 @@ INTERFIX=""
 RM_TMP=0
 PINNED_TAG=""
 BINARIES_ONLY=0
+POST_RELEASE=0
+RELEASE_SUMMARY=""
 
 for arg in "$@"; do
     case $arg in
@@ -63,6 +69,8 @@ for arg in "$@"; do
     --with-oceans) INTERFIX=-with-oceans ;;
     --rm-tmp) RM_TMP=1 ;;
     --tag=*) PINNED_TAG="${arg#--tag=}" ;;
+    --post=*) POST_RELEASE="${arg#--post=}" ;;
+    --release-summary=*) RELEASE_SUMMARY="${arg#--release-summary=}" ;;
     --binaries-only) BINARIES_ONLY=1 ;;
     -h | --help)
         usage
@@ -75,6 +83,15 @@ for arg in "$@"; do
         ;;
     esac
 done
+
+if ! [[ "$POST_RELEASE" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: --post must be zero or a positive integer" >&2
+    exit 1
+fi
+if [ "$POST_RELEASE" -gt 0 ] && [ -z "$RELEASE_SUMMARY" ]; then
+    echo "ERROR: --release-summary is required with --post" >&2
+    exit 1
+fi
 
 echo "TIME ZONE DATA UPDATE SCRIPT"
 
@@ -300,16 +317,20 @@ fi
 # The version follows from the release just parsed rather than from a bump - it states
 # which upstream release this is, prefixed by the data format generation.
 DATA_TAG=$(cat DATA_VERSION)
-NEW_VERSION=$(uv run python -m scripts.data_releases derive-version --data-tag "$DATA_TAG")
+NEW_VERSION=$(uv run python -m scripts.data_releases derive-version --data-tag "$DATA_TAG" --post "$POST_RELEASE")
 uv version --package "$DATA_PACKAGE" "$NEW_VERSION"
 
 # record it in the data package's own README, which is its PyPI long description
 RELEASE_DATE=$(date +%Y-%m-%d)
+if [ -z "$RELEASE_SUMMARY" ]; then
+    RELEASE_SUMMARY="Updated the packaged boundaries to upstream $DATA_TAG."
+fi
 uv run python -m scripts.data_releases insert-data-release \
     --version "$NEW_VERSION" \
     --date "$RELEASE_DATE" \
     --data-tag "$DATA_TAG" \
-    --data-repo-url "$DATA_REPO_URL"
+    --data-repo-url "$DATA_REPO_URL" \
+    --summary "$RELEASE_SUMMARY"
 echo "recorded the data release $NEW_VERSION ($RELEASE_DATE)"
 
 # The bump above renamed the version this checkout declares, while the data directory
