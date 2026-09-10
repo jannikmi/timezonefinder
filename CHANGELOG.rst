@@ -75,6 +75,7 @@ Documentation:
 
 Internal:
 
+* Changelog fragments are filed under their final release-note section so assembly produces the grouped changelog before release curation.
 * Added sampled shortcut-candidate coverage validation after dataset conversion, with replayable omission diagnostics.
 * Candidate polygon metadata is read through buffer views rather than repeated NumPy scalar indexing.
 * Hole membership first checks one union bounding box before inspecting individual holes.
