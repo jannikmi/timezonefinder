@@ -13,9 +13,9 @@ X.X.X (unreleased)
 
 Breaking changes:
 
-* **BREAKING:** importing ``timezonefinder`` no longer binds its submodules as package attributes. Public names are resolved lazily; import a submodule explicitly before accessing it through the package.
-* **BREAKING:** ``TimezoneFinderL`` and the shared base class no longer accept the ineffective ``in_memory`` argument. ``TimezoneFinder(in_memory=...)`` is unchanged.
-* **BREAKING:** the command line requires an explicit ``query``, ``rows``, or ``validate-data`` command. Replace ``timezonefinder LNG LAT`` with ``timezonefinder query LNG LAT`` and ``--stdin`` with ``timezonefinder rows``.
+* Importing ``timezonefinder`` no longer binds its submodules as package attributes. Public names are resolved lazily; import a submodule explicitly before accessing it through the package.
+* ``TimezoneFinderL`` and the shared base class no longer accept the ineffective ``in_memory`` argument. ``TimezoneFinder(in_memory=...)`` is unchanged.
+* The command line requires an explicit ``query``, ``rows``, or ``validate-data`` command. Replace ``timezonefinder LNG LAT`` with ``timezonefinder query LNG LAT`` and ``--stdin`` with ``timezonefinder rows``.
 
 New features:
 
