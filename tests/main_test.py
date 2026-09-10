@@ -403,10 +403,15 @@ class TestTimezonefinderCleanup:
 
         class FailingCleanupTimezoneFinder(TimezoneFinder):
             # bound as a default argument, not captured from the enclosing
-            # scope: the instance is collected (re-entering __del__) after this
-            # call has returned, and a closure would raise whatever the name
-            # refers to by then
+            # scope: a closure would raise whatever the name refers to when a
+            # later finalizer runs. Raise only once so that the explicit call
+            # under test cannot leave a second warning for natural finalization;
+            # delayed collection otherwise lets one parametrized case leak into
+            # the next case's warning recorder.
             def cleanup(self, error=error):
+                if getattr(self, "_cleanup_failure_raised", False):
+                    return
+                self._cleanup_failure_raised = True
                 raise error
 
         return FailingCleanupTimezoneFinder()
