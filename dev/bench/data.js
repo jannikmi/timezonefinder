@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789032854273,
+  "lastUpdate": 1789047477167,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9360,6 +9360,93 @@ window.BENCHMARK_DATA = {
             "range": "± 9485",
             "unit": "lookups/sec",
             "extra": "min of 75 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9ab735729226432399a2fbc408db5bff3ad6aca",
+          "message": "Optimize shortcut ordering for full-predicate work during data conversion (#650)\n\n* Optimize shortcut prefixes for full predicate work during conversion\n\nUse an exact sampled subset recurrence with a whole-zone fallback, deterministic spherical sampling and explicit full-predicate work estimates. Preserve unsafe overlap and coverage cases. The user requested dropping prefix zone contiguity for simplicity, approved the new TimezoneFinderL fallback heuristic, requested no additional benchmarks, and chose to keep PERF-7 separate. Correctness tests and CI performance checks replace further local benchmarks.\n\n* Preserve unsafe-cell tie precedence and include converter test dependencies\n\n* Record regenerated shortcuts and their CI data wheel\n\n* Say the ordering contract the same way in the two places that state it\n\nReview of #650 found two sites still asserting the invariant this branch\nremoves.\n\n``get_last_change_idx`` documented \"a zone's polygons are contiguous and the\nlargest zone comes last\". Neither half holds any more: ``check_shortcut_sorting``\nnow asserts only that the final zone is a complete suffix, and the converter\norders the prefix by estimated full-predicate work. The docstring now states the\nsuffix contract, names the assertion that is its authority, and says why the scan\nruns backwards - a forward scan stopping at the first zone change answers the\nfirst run instead of the last, which on an interleaved prefix breaks the\ncandidate loop early and returns the final zone for a point another candidate\ncontains.\n\nThe ``unique_timezone_at`` note still called ``TimezoneFinderL`` a most-probable-\ntimezone query, ~90 lines above the section this branch rewrote to say the\nopposite.\n\nProse only; no packaged data, generator or query behaviour changes.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* State what the benchmark environment actually has to hold\n\nPulling `data` into `test` makes `uv sync --group test` - the environment\nbenchmark.yml times in - carry pydantic and shapely, so the comment's claim that\nit \"has to stay exactly what a plain `pip install timezonefinder` gives you\" is\nno longer true as written.\n\nThe invariant it was protecting is about the import surface, not the package\nlist: what must not change is anything `timezonefinder` reaches from a query.\nConversion-only packages cost install time and not a measurement; `numba` is the\ngroup that would change the backend, which is the reason it is separate too.\nSaid that way instead.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Retire the shortcut-candidate ordering item this ships\n\nThe register is a to-do list, not a history: work that landed is deleted, item\nfile and ranking row, in the pull request that ships it. Candidate ordering is\nwhat this branch ships, so GH-301 goes.\n\nGrepping the id turns up four more references, rewritten to the lasting fact\nrather than left as dangling handles. Three are provenance and lose only the\nhandle. The fourth is a premise that moved: the sequencing rules told the next\npass that a count of candidates tested is the cheap portable instrument and that\nit settled this subject. The first half is still true and worth keeping; the\nsecond is the trap. A count is a workload share only when the counted things are\ninterchangeable, and candidates are not - the full predicate runs ~1,170 ns for a\nhole-free polygon against ~12,471 ns for the one owning 95 holes, and 22.7 % of\nthe candidates in a tested prefix own at least one hole. That is the term an\noverlap-area or test-count key cannot see, and the reason the shipped order is\ncompiled against estimated work instead. Measured 2026-09-08, Apple arm64, C\nextension, in-memory, packaged 2026c.\n\nNo changelog: the register is the agent-facing layer, and the ordering change\nitself is already announced.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Optimize large shortcut lists with exact sparse-state reduction\n\nRemove the candidate-count cutoff. Defer zero-hit tests by an exchange proof, enumerate complete final zones, and solve the reduced state spaces exactly. Where geometry prevents changing zone precedence, optimize each tested zone on its reachable samples while preserving its priority and final fallback. Every candidate stays in the binary; no new local benchmarks.\n\n* Record regenerated uncapped shortcut data artifact\n\n* Answer \"in none of these holes\" with one bounding box instead of ninety-five\n\n`in_any_polygon` cannot say the point is in none of a polygon's holes without\nvisiting every one of them, and that is the answer 99.8 % of the time. So the\nboundary polygon owning 95 holes paid 95 bounding-box tests on essentially every\npoint that reached it, to establish nothing. Over the packaged ambiguous fixture\n17,408 hole bounding-box tests are performed and 17,378 of them end in \"no\".\n\nOne box per boundary polygon, enclosing all of its holes, answers that for the\nwhole set: 75 % of those tests go away. A hole-less polygon carries an empty box\n- `x0` one step above the largest longitude `coord2int` can return - so the first\ncomparison fails and the union test *replaces* the registry `dict.get` and the\n`range` construction on the majority path rather than sitting in front of them.\n1,225 of the 1,322 packaged polygons are in that case.\n\nDerived when a finder is constructed, from vectors already resident, over the 97\npolygons that own a hole. Storing it instead would spend a data format version\nand a republished distribution to save microseconds, so no data format, binary\nlayout or packaged file changes here.\n\nMeasured, order-alternated against master, Apple arm64, free-threaded CPython\n3.14.2, C extension, in-memory, data 2026c, 9 timings per run:\n\n  ambiguous  -12.5 % minimum, -10.4 % median, 8 of 8 rounds won\n  random      -4.5 % minimum,  -4.2 % median, 4 of 4\n  on-land     -3.0 % minimum,  -3.2 % median, 4 of 4\n  unique      -0.3 % minimum,  +0.1 % median, 3 of 4 - no difference, as it has\n              no candidate loop to shorten\n\nThe risk a union introduces is a box too small, which would drop a hole and let a\npolygon claim a point it should exclude. `tests/test_hole_union_bounds.py` holds\nthe bounds to being *exactly* the union rather than merely enclosing, checks the\npredicate against its pre-union formulation over 24,250 points drawn inside the\nbounding box of every hole-owning polygon, and checks that points landing in a\nreal hole are still excluded. The frozen-answer guard is unchanged.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* Integrate spherical work estimates without query sampling\n\nAt the maintainer’s request, replace the sampled objective with analytic surface integrals and a deterministic greedy/adjacent-exchange search without a candidate cutoff. Model the hole-union gate carried from PR 653. Document geometric, stage-cost and search approximations, and preserve the independent zone-precedence safety gate. Regenerated data retains every candidate and changes 8,221 cell orders; 3,965 tests and the frozen answer guard pass. No further local benchmarks were run as requested.\n\n* Use the verified sampling-free shortcut data artifact\n\n* Record coverage and deterministic overlap-tie decisions\n\nThe maintainer accepts full coverage for the ocean-inclusive dataset and reserves containment without fallback for certain_timezone_at. Equal compared zone areas use the timezone identifier as a secondary key. Move the existing index-independence decision verbatim into the linked semantics page to keep the memory word budget.\n\n* Clarify TimezoneFinderL fallback heuristic for users\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-10T13:37:01Z",
+          "tree_id": "13b400d1cced4a51f19b028ae2d31bbc6b5c98ca",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d9ab735729226432399a2fbc408db5bff3ad6aca"
+        },
+        "date": 1789047475927,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 565987.9716248501,
+            "range": "± 23190",
+            "unit": "lookups/sec",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 749321.6391229562,
+            "range": "± 8353",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 185397.0046963809,
+            "range": "± 14451",
+            "unit": "lookups/sec",
+            "extra": "min of 69 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 872405.1617073852,
+            "range": "± 15173",
+            "unit": "lookups/sec",
+            "extra": "min of 273 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1463489.4505889488,
+            "range": "± 21528",
+            "unit": "lookups/sec",
+            "extra": "min of 493 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 212772.76617525952,
+            "range": "± 2908",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 866176.4339043711,
+            "range": "± 19624",
+            "unit": "lookups/sec",
+            "extra": "min of 277 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1416748.460276434,
+            "range": "± 21905",
+            "unit": "lookups/sec",
+            "extra": "min of 454 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 204348.0524688516,
+            "range": "± 5239",
+            "unit": "lookups/sec",
+            "extra": "min of 70 round(s) on AMD EPYC 7763 64-Core Processor @ 3.3227 GHz"
           }
         ]
       }
