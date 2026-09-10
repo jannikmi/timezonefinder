@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789032852016,
+  "lastUpdate": 1789032854273,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -18734,6 +18734,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2459 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba99fc488b1ea2db4cb91551dc34da34f9e881b7",
+          "message": "Guard data releases with shortcut candidate coverage audits (#659)\n\n* GEOM-2: add reproducible shortcut candidate audits\n\n* GEOM-1: retire combined scope after delivering GEOM-2 audit slice\n\n* GEOM-2: guard data releases with candidate coverage tests\n\nAt the maintainer request, run the complete audit sample streams in required slow pytest/tox CI, test missing-candidate failure and CI selection, and park speculative GEOM-3 repairs until a counterexample or certified-coverage need arises.\n\n* GEOM-2: validate candidate coverage once per dataset\n\nAt the maintainer request, move the full audit streams out of slow tox runs and into update_data.sh after conversion. Retain fast tests of audit failures and pipeline ordering, and update the register to describe this boundary.",
+          "timestamp": "2026-09-10T09:33:11Z",
+          "tree_id": "e1022f7efb4729d8671e6f2c41d002b72b9b0080",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ba99fc488b1ea2db4cb91551dc34da34f9e881b7"
+        },
+        "date": 1789032853566,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.008401870727539,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0085334777832031,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2561426162719727,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.256951332092285,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61062145233154,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61134338378906,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2458 GHz"
           }
         ]
       }
