@@ -6,7 +6,9 @@
 
 Run each deterministic stream with `uv run python -m scripts.audit_shortcut_candidates --mode MODE --output tmp/audit.json`: `cell-edges` enumerates all shortcut-resolution cells, including pentagons and face-crossing boundary vertices; `source-edges` enumerates stored boundary/hole vertices and planar midpoints; `seams` checks both poles and antimeridian representations. Source probes preserve the integer coordinate reached by runtime truncation. `--points` accepts a JSON array of longitude/latitude pairs for replay. `--max-points` bounds exploratory runs and records whether the stream was exhausted. Exit 1 means at least one omission; empty input fails instead of reporting success.
 
-Reports retain data hashes, H3 and Python versions, backend, counts and bounded witnesses. A missing polygon is not necessarily a wrong zone: overlapping polygons may supply the same answer. The report separately counts omissions whose answer belongs to none of the directly containing polygons. It makes no precedence claim when multiple zones contain a point. This is not an independent test of the polygon kernel or a release gate, and zero sampled omissions is never a completeness certificate.
+Reports retain data hashes, H3 and Python versions, backend, counts and bounded witnesses. A missing polygon is not necessarily a wrong zone: overlapping polygons may supply the same answer. The report separately counts omissions whose answer belongs to none of the directly containing polygons. It makes no precedence claim when multiple zones contain a point. This is not an independent test of the polygon kernel, and zero sampled omissions is never a completeness certificate.
+
+At the maintainer's request, `tests/test_shortcut_candidate_coverage.py` runs all three untruncated streams against the dataset under test in pytest's `slow` suite. The existing required CI tox environment selects that suite, so an omission fails a data-update build before its automatic merge/release. Diagnostics retain coordinates and missing IDs for replay; a mutation test verifies that removing a shortcut fails the same guard. `tests/test_data_update_workflow.py::test_ci_selects_the_candidate_coverage_release_guards` checks both the CI matrix and actual pytest collection under tox's marker expression. The CLI remains an optional diagnostic; CI invokes the shared oracle through pytest.
 
 ## Exclusion audit
 
@@ -30,7 +32,7 @@ Geodesic mode is not a drop-in conservative predicate for this package: it also 
 
 ## Packaged-data evidence
 
-The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The next useful geometry work is a certified enclosure and propagation construction, followed by regeneration and paired storage/query measurements; the audit alone cannot approve that repair.
+The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose CI regression guards over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. PERF-7 remains blocked; a green sampled audit cannot establish its full-coverage predicate.
 
 On 2026-09-10, data 2026c, H3 4.5.0, Python 3.14.2 with Numba on macOS arm64:
 
