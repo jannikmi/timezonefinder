@@ -20,6 +20,8 @@ The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read
 
 ## Maintaining contributor memory
 
+When asked to change the repository, default to delivering the implementation and its durable contributor-memory rule. Amend the narrowest module in the same change so the next coding agent inherits the decision. Omit that edit only when the rule is already recorded or the work creates no durable, non-obvious lesson; verify before deciding.
+
 Record a repository fact only when it is durable beyond the current change, non-obvious enough to have caused a failed check or wrong assumption, and has a concrete failure mode. Put it in the narrowest existing module, or at the code/configuration decision site when that is sufficient. Never copy a rule merely to make it more visible: route to its canonical owner instead.
 
 Amend existing memory instead of appending corrective history. An amendment that leaves the original claim standing above it is an append: rewrite the claim, because a reader who skims one line gets the retired answer. Delete or correct stale rules as part of the change that invalidates them. A confidently wrong instruction costs more than a missing one. A rule that *removes* a check is code that removes a check: state at the rule what now passes unexamined, because the cost falls on a later change that no one will connect back to it. Do not restate what the code, git history, Makefile, or public documentation already makes clear.
