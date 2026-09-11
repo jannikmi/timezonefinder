@@ -566,6 +566,23 @@ def test_an_existing_release_can_be_recovered_only_from_master_dispatch() -> Non
 
 
 @pytest.mark.unit
+def test_recovery_downloads_the_release_wheel_before_inspecting_it() -> None:
+    """The data guard discovers metadata from the staged code wheel in ``dist/``."""
+    steps = _workflow(BUILD_WORKFLOW)["jobs"]["publish-pypi"]["steps"]
+    step_names = [step.get("name") for step in steps]
+    download_index = step_names.index(
+        "Validate and download the existing release artifacts"
+    )
+    data_guard_index = step_names.index(
+        "Verify the recovery tag's required data version is published"
+    )
+    assert download_index < data_guard_index, (
+        "recovery checks the code wheel's data dependency before downloading that "
+        "wheel into dist/"
+    )
+
+
+@pytest.mark.unit
 def test_the_upload_overrides_a_skipped_transitive_dependency() -> None:
     """A successful direct dependency does not erase its skipped ancestor.
 
