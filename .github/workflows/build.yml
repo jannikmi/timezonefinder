@@ -459,10 +459,6 @@ jobs:
         if: inputs.publish_existing_tag != ''
         uses: astral-sh/setup-uv@v7
 
-      - name: Verify the recovery tag's required data version is published
-        if: inputs.publish_existing_tag != ''
-        run: uv run --with packaging python -m scripts.check_data_dependency
-
       - name: Verify the recovery tag consumed every changelog fragment
         if: inputs.publish_existing_tag != ''
         run: uv run python -m scripts.changelog_fragments --check --require-consumed
@@ -495,6 +491,12 @@ jobs:
           test "$(( $(find dist -maxdepth 1 -name '*.whl' | wc -l) ))" -gt 0
           test "$(( $(find dist -maxdepth 1 -name '*.tar.gz' | wc -l) ))" -eq 1
           test "$(( $(find dist -maxdepth 1 -name 'timezonefinder_data-*' | wc -l) ))" -eq 0
+
+      # This guard reads the wheel in dist/, so recovery must download the immutable
+      # release artifacts above before running it.
+      - name: Verify the recovery tag's required data version is published
+        if: inputs.publish_existing_tag != ''
+        run: uv run --with packaging python -m scripts.check_data_dependency
 
       # the data wheel is deliberately left out of dist/: this job uploads whatever
       # is in it as `timezonefinder`, and publishing timezonefinder-data is

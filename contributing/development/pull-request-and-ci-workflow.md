@@ -37,3 +37,5 @@ GitHub loads a tag-triggered workflow from the tagged commit, so merging a workf
 When a code tag and GitHub Release exist but PyPI lacks the version, use `make release-recover RELEASE_TAG=<version>` from current `master`.
 
 That dispatch runs the corrected trusted-publisher workflow from `master`, checks out the immutable tag for its release guards, and uploads only that release's attached code artifacts; never move or recreate the tag.
+
+Recovery guards that inspect wheel metadata must run after those attached artifacts are downloaded into `dist/`; checkout alone provides source trees, not the already-published code wheel the recovery promises to upload.
