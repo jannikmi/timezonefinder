@@ -434,7 +434,9 @@ def _as_python(condition: str) -> str:
     expression = re.sub(r"needs\.([A-Za-z0-9_-]+)\.result", r"needs['\1']", expression)
     expression = expression.replace("cancelled()", "cancelled")
     expression = expression.replace("always()", "True")
+    expression = expression.replace("github.event_name", "event_name")
     expression = expression.replace("github.ref", "ref")
+    expression = re.sub(r"inputs\.([A-Za-z0-9_]+)", r"inputs.get('\1', '')", expression)
     expression = re.sub(
         r"startsWith\(\s*([^,]+?)\s*,\s*('[^']*')\s*\)",
         r"\1.startswith(\2)",
@@ -445,7 +447,14 @@ def _as_python(condition: str) -> str:
     return expression.replace("\0NE\0", "!=")
 
 
-def _simulate(workflow: dict, ref: str, failing: frozenset[str] = frozenset()) -> dict:
+def _simulate(
+    workflow: dict,
+    ref: str,
+    failing: frozenset[str] = frozenset(),
+    *,
+    event_name: str = "push",
+    inputs: dict[str, str] | None = None,
+) -> dict:
     """Every job's result for a run on ``ref``, with ``failing`` jobs failing.
 
     Models the two rules that make this workflow's conditions non-obvious: a job with no
@@ -468,7 +477,13 @@ def _simulate(workflow: dict, ref: str, failing: frozenset[str] = frozenset()) -
             value = eval(  # noqa: S307 - the input is this repository's own workflow
                 _as_python(condition),
                 {},
-                {"ref": ref, "needs": needs, "cancelled": False},
+                {
+                    "ref": ref,
+                    "needs": needs,
+                    "cancelled": False,
+                    "event_name": event_name,
+                    "inputs": inputs or {},
+                },
             )
             names_status_function = any(fn in condition for fn in _STATUS_FUNCTIONS)
             runs = bool(value) and (names_status_function or all_needs_succeeded)
@@ -520,6 +535,33 @@ def test_a_version_tag_publishes_without_re_running_the_matrix() -> None:
         assert results[name] == "success", (
             f"`{name}` is skipped on a version tag: a skipped `needs` job skips its "
             "dependents, so the condition has to name a status check function"
+        )
+
+
+@pytest.mark.unit
+def test_an_existing_release_can_be_recovered_only_from_master_dispatch() -> None:
+    """Recovery uses the corrected default-branch workflow without moving the tag."""
+    workflow = _workflow(BUILD_WORKFLOW)
+    recovery_inputs = {"publish_existing_tag": "9.0.0"}
+
+    recovered = _simulate(
+        workflow,
+        "refs/heads/master",
+        event_name="workflow_dispatch",
+        inputs=recovery_inputs,
+    )
+    assert recovered["release"] == "skipped"
+    assert recovered["publish-pypi"] == "success"
+
+    for ref, event_name in (
+        ("refs/heads/topic", "workflow_dispatch"),
+        ("refs/heads/master", "push"),
+    ):
+        results = _simulate(
+            workflow, ref, event_name=event_name, inputs=recovery_inputs
+        )
+        assert results["publish-pypi"] == "skipped", (
+            f"existing-release recovery publishes for {event_name=} on {ref=}"
         )
 
 
