@@ -8,12 +8,11 @@ unreleased section the repository's last routine cross-change merge hotspot:
 independently authored work contends on a release artifact whose curation is
 needed once, at release time, and not before.
 
-A change now drops one file into ``changelog.d/user/`` or
-``changelog.d/internal/`` instead. The directory carries the placement, so no
-fragment has to say where it goes and no two fragments touch the same lines.
-``--assemble`` folds them into the unreleased section and deletes them; the
-release then performs the end-state rewrite the changelog policy has always
-required, on a section that already holds every bullet.
+A change now drops one file into the subdirectory named for its release-note
+section. The directory carries the placement, so no fragment has to say where
+it goes and no two fragments touch the same lines. ``--assemble`` folds them
+into the grouped unreleased section and deletes them; release curation then
+checks the end state without having to classify every bullet again.
 
 ``CHANGELOG.rst`` stays the published artifact - it is what ``README.rst``
 includes and what ships - so nothing downstream learns about fragments.
@@ -30,10 +29,19 @@ REPO_ROOT: Final[Path] = Path(__file__).resolve().parent.parent
 FRAGMENT_ROOT: Final[Path] = REPO_ROOT / "changelog.d"
 CHANGELOG_PATH: Final[Path] = REPO_ROOT / "CHANGELOG.rst"
 
-#: Directory name -> where the bullet lands. Ordered, and the order is the
-#: rendered order: the changelog policy puts user-visible changes in the main
-#: list and development-only ones under ``Internal:``.
-CATEGORIES: Final[tuple[str, ...]] = ("user", "internal")
+#: Directory names in rendered order. Each maps mechanically to one release-note
+#: section, so classification happens while the change is still being authored.
+CATEGORIES: Final[tuple[str, ...]] = (
+    "breaking-changes",
+    "new-features",
+    "changed",
+    "bug-fixes",
+    "documentation",
+    "internal",
+)
+CATEGORY_HEADINGS: Final[dict[str, str]] = {
+    category: category.replace("-", " ").capitalize() + ":" for category in CATEGORIES
+}
 FRAGMENT_SUFFIX: Final[str] = ".rst"
 #: Files allowed to sit at the fragment root without being fragments.
 ROOT_ALLOWLIST: Final[frozenset[str]] = frozenset({"README.md"})
@@ -46,7 +54,6 @@ KEEP_FILE: Final[str] = ".gitkeep"
 SLUG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 UNRELEASED_HEADING: Final[str] = "X.X.X (unreleased)"
-INTERNAL_MARKER: Final[str] = "Internal:"
 
 
 def _display(path: Path) -> str:
@@ -184,32 +191,56 @@ def assemble(changelog_text: str, fragments: Sequence[Fragment]) -> str:
     Additive by construction: existing bullets are never rewritten, reordered
     or re-wrapped, so assembling into a section that already holds curated text
     leaves that text byte-identical and appends beneath it. The release's
-    end-state rewrite is a separate, deliberate act.
+    final wording pass is a separate, deliberate act.
     """
     lines = changelog_text.splitlines()
     start, end = _unreleased_bounds(lines)
     section = lines[start:end]
+    for category in CATEGORIES:
+        bullets = render_bullets(fragments, category)
+        if bullets:
+            section = _append_to_category(section, category, bullets)
 
-    internal_at = next(
-        (i for i, line in enumerate(section) if line.strip() == INTERNAL_MARKER),
-        None,
-    )
-    user_bullets = render_bullets(fragments, "user")
-    internal_bullets = render_bullets(fragments, "internal")
-
-    if internal_at is None:
-        head, tail = section, []
-    else:
-        head, tail = section[:internal_at], section[internal_at:]
-
-    head = _append_bullets(head, user_bullets)
-    if internal_bullets:
-        if not tail:
-            tail = ["", INTERNAL_MARKER, ""]
-        tail = _append_bullets(tail, internal_bullets)
-
-    rebuilt = lines[:start] + _tidy(head + tail) + lines[end:]
+    rebuilt = lines[:start] + _tidy(section) + lines[end:]
     return "\n".join(rebuilt) + "\n"
+
+
+def _append_to_category(
+    section: list[str], category: str, bullets: list[str]
+) -> list[str]:
+    """Append bullets to their group, creating it in canonical order if absent."""
+    heading = CATEGORY_HEADINGS[category]
+    heading_indexes = {
+        line.strip(): index
+        for index, line in enumerate(section)
+        if line.strip() in CATEGORY_HEADINGS.values()
+    }
+    if heading in heading_indexes:
+        start = heading_indexes[heading]
+        end = next(
+            (
+                index
+                for index in range(start + 1, len(section))
+                if section[index].strip() in CATEGORY_HEADINGS.values()
+            ),
+            len(section),
+        )
+        block = _append_bullets(section[start:end], bullets)
+        if end < len(section):
+            block.append("")
+        return section[:start] + block + section[end:]
+
+    category_index = CATEGORIES.index(category)
+    insert_at = next(
+        (
+            heading_indexes[CATEGORY_HEADINGS[later]]
+            for later in CATEGORIES[category_index + 1 :]
+            if CATEGORY_HEADINGS[later] in heading_indexes
+        ),
+        len(section),
+    )
+    group = [heading, "", *bullets, ""]
+    return section[:insert_at] + group + section[insert_at:]
 
 
 def _unreleased_bounds(lines: Sequence[str]) -> tuple[int, int]:
