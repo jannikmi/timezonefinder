@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789085233036,
+  "lastUpdate": 1789086697448,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9534,6 +9534,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4763",
             "unit": "lookups/sec",
             "extra": "min of 82 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea3b514872d7067ed35c87a030054f5fdc33ef45",
+          "message": "Release 9.0.0 from current master (#661)\n\n* Support rebuilt data post-releases\n\n* Amend the 9.0.0 release notes\n\n* Make independent reviews traceable\n\n* Require consecutive data post-releases\n\n* Pin the 3.2026.3.post1 data wheel\n\n* Refresh 9.0.0 benchmark reports\n\n* Isolate cleanup warning finalizer tests\n\n* Record data dependency floor semantics\n\n* Make release notes atomic and measurement-free\n\n* Default changes to durable contributor memory\n\n* Narrow the durable-memory trigger\n\n* Group 9.0.0 bug fixes in changelog\n\n* Structure 9.0.0 release notes\n\n* Remove redundant breaking labels\n\n* Pre-group changelog fragments by section",
+          "timestamp": "2026-09-11T00:30:11Z",
+          "tree_id": "49dfaa6c7f4a43e722c8179090286aaef991960d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ea3b514872d7067ed35c87a030054f5fdc33ef45"
+        },
+        "date": 1789086696232,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 574512.6868478669,
+            "range": "± 10134",
+            "unit": "lookups/sec",
+            "extra": "min of 190 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 762761.1465317858,
+            "range": "± 15699",
+            "unit": "lookups/sec",
+            "extra": "min of 269 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 196577.66154375396,
+            "range": "± 2958",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 912972.2029198033,
+            "range": "± 9048",
+            "unit": "lookups/sec",
+            "extra": "min of 292 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1489899.968117074,
+            "range": "± 20073",
+            "unit": "lookups/sec",
+            "extra": "min of 511 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 238548.13877595073,
+            "range": "± 4137",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 897787.27756873,
+            "range": "± 10747",
+            "unit": "lookups/sec",
+            "extra": "min of 287 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1435812.8480987619,
+            "range": "± 21186",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 238052.25265939583,
+            "range": "± 17529",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
