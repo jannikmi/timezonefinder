@@ -126,3 +126,10 @@ print([str(v) for v in released_versions(fetch_pypi_payload("timezonefinder"))])
 Report the tag, the workflow URL and that answer; never "published" on a green run alone.
 
 A skipped or failed upload is recovered by fixing the cause and re-running that job, never by retagging — the tag and the GitHub Release already exist, and pushing it again publishes nothing. A run that failed for want of the matching green `master` run is the same shape: wait, then rerun. Any failure after a successful upload requires a new release.
+
+When a tag-side job deliberately skips a dependency, every publishing job downstream
+of that skip must name a status function and then explicitly require each direct
+dependency that must succeed. A successful intermediate job does not absorb a skipped
+ancestor: GitHub otherwise skips the later upload before allocating a runner, while
+the workflow itself remains green. Pin this behavior in the workflow-structure tests;
+it is invisible on pull requests and first executes after the version tag is spent.

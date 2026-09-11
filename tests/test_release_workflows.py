@@ -524,6 +524,29 @@ def test_a_version_tag_publishes_without_re_running_the_matrix() -> None:
 
 
 @pytest.mark.unit
+def test_the_upload_overrides_a_skipped_transitive_dependency() -> None:
+    """A successful direct dependency does not erase its skipped ancestor.
+
+    ``release`` needs the deliberately skipped tag-side ``test`` job and uses a status
+    function to run anyway. GitHub propagates that skipped ancestor to the upload too,
+    even though the upload directly needs only the successful ``release`` job. The
+    upload therefore needs its own status function and must explicitly require its
+    direct dependency to have succeeded; omitting either half produces a green workflow
+    with a skipped upload or publishes after a failed release.
+    """
+    job = _workflow(BUILD_WORKFLOW)["jobs"]["publish-pypi"]
+    condition = str(job.get("if", ""))
+    assert any(function in condition for function in _STATUS_FUNCTIONS), (
+        "`publish-pypi` inherits `release`'s skipped `test` ancestor unless its "
+        "condition names a status function"
+    )
+    assert "needs.release.result == 'success'" in condition, (
+        "a status function removes the implicit success gate, so `publish-pypi` must "
+        "explicitly require its direct `release` dependency to have succeeded"
+    )
+
+
+@pytest.mark.unit
 def test_a_tag_release_still_requires_every_job_that_did_run() -> None:
     """Naming a status function drops the implicit `success()` over *all* of `needs`.
 
