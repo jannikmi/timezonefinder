@@ -69,8 +69,10 @@ which is what ``timezonefinder.configs.DEFAULT_DATA_DIR`` resolves to. Any other
 same shape works just as well: pass it as ``bin_file_location`` (see :ref:`use cases <use_cases>`).
 
 That distribution's **major version is the data format generation**
-(``timezonefinder.configs.DATA_FORMAT_VERSION``), and its remaining two components name the
-upstream release: ``3.2026.3`` is format 3 built from ``2026c``. ``timezonefinder`` requires
+(``timezonefinder.configs.DATA_FORMAT_VERSION``), and its next two components name the
+upstream release: ``3.2026.3`` is format 3 built from ``2026c``. A PEP 440 post-release suffix
+identifies revised compiled contents from the same source, so ``3.2026.3.post1`` is still built
+from ``2026c`` rather than implying an upstream ``2026d`` release. ``timezonefinder`` requires
 ``timezonefinder-data>=…,<N+1``, so a dataset update needs no code release while a format change is
 refused when resolving rather than when reading. Bumping either per-file ``layout_version`` below
 requires bumping ``DATA_FORMAT_VERSION`` too.

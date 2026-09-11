@@ -1,1 +1,0 @@
-Optimize shortcut candidate ordering with geometrically integrated work estimates, including the hole-union bounding-box shortcut. In a cell containing several zones, TimezoneFinderL returns the full lookup's final fallback after the earlier candidates are skipped; this is optimized for full-lookup work and is not an estimate of which zone covers the point or most of the cell.

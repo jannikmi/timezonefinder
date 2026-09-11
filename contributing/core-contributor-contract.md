@@ -14,11 +14,13 @@ Keep changes focused and production-ready: no placeholders, speculative compatib
 
 Add targeted tests for behavioral changes. Select integration, slow, acceleration-path, benchmark, or documentation gates by the changed subsystem rather than running expensive suites reflexively. Rebase onto current `master` before the final gate, because rebasing afterwards invalidates it.
 
-Every change needs an entry in the current unreleased changelog, with user-visible changes in the main list and development-only changes under `Internal:`. Changes confined to contributor memory, provider adapters, and their structural tests are the exception and receive no changelog entry. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
+Every change needs a fragment in the matching unreleased changelog section, with development-only changes under `internal/`. Changes confined to contributor memory, provider adapters, and their structural tests are the exception and receive no changelog entry. Describe the final state rather than the sequence of commits, and amend an existing bullet instead of adding a corrective follow-up.
 
 The detailed rules are routed from [`CONTRIBUTING.md`](../CONTRIBUTING.md). Read the modules from every applicable route, because one change may match multiple triggers; ignore unrelated routes.
 
 ## Maintaining contributor memory
+
+When an implementation request establishes or exposes a reusable, non-obvious invariant with a concrete failure mode, default to delivering the implementation and its contributor-memory rule. Amend the narrowest module so the next coding agent inherits the decision. Mechanical edits, already-recorded rules, and lessons without a durable failure mode create no new memory.
 
 Record a repository fact only when it is durable beyond the current change, non-obvious enough to have caused a failed check or wrong assumption, and has a concrete failure mode. Put it in the narrowest existing module, or at the code/configuration decision site when that is sufficient. Never copy a rule merely to make it more visible: route to its canonical owner instead.
 

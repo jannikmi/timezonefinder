@@ -16,8 +16,8 @@ wall-clock time at the coordinate and returns it aware:
     from datetime import datetime
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    aware = tf.localize(datetime(2026, 1, 1, 12), lng=13.41, lat=52.52)
+    with TimezoneFinder() as tf:
+        aware = tf.localize(datetime(2026, 1, 1, 12), lng=13.41, lat=52.52)
     # datetime.datetime(2026, 1, 1, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Berlin'))
 
 :meth:`zoneinfo_at <timezonefinder.TimezoneFinder.zoneinfo_at>` returns the zone itself,
@@ -28,8 +28,8 @@ for the cases that need it rather than a datetime:
     from datetime import datetime
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    zone = tf.zoneinfo_at(lng=13.41, lat=52.52)  # ZoneInfo(key='Europe/Berlin')
+    with TimezoneFinder() as tf:
+        zone = tf.zoneinfo_at(lng=13.41, lat=52.52)  # ZoneInfo(key='Europe/Berlin')
     now_there = datetime.now(tz=zone)
 
 Both answer ``None`` wherever ``timezone_at()`` does, and both are available as global
@@ -58,9 +58,9 @@ the moment to read it at and defaults to now:
     from datetime import datetime
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()
-    tf.utc_offset_at(lng=9.67, lat=45.69)  # right now
-    tf.utc_offset_at(lng=9.67, lat=45.69, when=datetime(2026, 7, 1))
+    with TimezoneFinder() as tf:
+        tf.utc_offset_at(lng=9.67, lat=45.69)  # right now
+        tf.utc_offset_at(lng=9.67, lat=45.69, when=datetime(2026, 7, 1))
     # datetime.timedelta(seconds=7200)
 
 .. warning::

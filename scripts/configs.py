@@ -163,13 +163,17 @@ def resolve_data_version(input_path: Path | str, explicit: str | None = None) ->
 
 
 def data_distribution_version(
-    data_tag: str, format_version: int = DATA_FORMAT_VERSION
+    data_tag: str,
+    format_version: int = DATA_FORMAT_VERSION,
+    post_release: int = 0,
 ) -> str:
     """The ``timezonefinder-data`` version built from upstream release ``data_tag``.
 
     ``2026c`` at format version 1 becomes ``1.2026.3``: the format generation, the
-    upstream year, and the release letter as a number. Written by ``update_data.sh``
-    into the data package's ``pyproject.toml``.
+    upstream year, and the release letter as a number. A rebuilt distribution from
+    the same upstream release uses a PEP 440 post-release (``1.2026.3.post1``), so it
+    does not pretend to contain the next upstream dataset. Written by
+    ``update_data.sh`` into the data package's ``pyproject.toml``.
 
     The letter suffix is **bijective base-26** (``a``=1 ... ``z``=26, ``aa``=27), not a
     single-character lookup: :data:`DATA_VERSION_TAG_PATTERN` admits ``[a-z]+`` and
@@ -183,7 +187,8 @@ def data_distribution_version(
     ordering the ``<N+1>`` ceiling needs; the data package's README lists both numbers
     for human readers.
 
-    :raises ValueError: if ``data_tag`` is not a timezone-boundary-builder release tag.
+    :raises ValueError: if ``data_tag`` is not a timezone-boundary-builder release
+        tag, or ``post_release`` is negative.
     """
     if not DATA_VERSION_TAG_PATTERN.fullmatch(data_tag):
         raise ValueError(
@@ -195,7 +200,31 @@ def data_distribution_version(
     letter_value = 0
     for char in letters:
         letter_value = letter_value * 26 + (ord(char) - ord("a") + 1)
-    return f"{format_version}.{year}.{letter_value}"
+    if post_release < 0:
+        raise ValueError("post_release must be zero or a positive integer")
+    base = f"{format_version}.{year}.{letter_value}"
+    return f"{base}.post{post_release}" if post_release else base
+
+
+def validate_data_distribution_version(
+    version: str,
+    data_tag: str,
+    format_version: int | None = None,
+) -> None:
+    """Require the base version derived from ``data_tag``, optionally with ``.postN``.
+
+    :raises ValueError: if another PEP 440 suffix or release component is present.
+    """
+    if format_version is None:
+        major = re.match(r"[1-9]\d*", version)
+        if major is None:
+            raise ValueError(f"{version!r} has no positive format generation")
+        format_version = int(major.group())
+    base = data_distribution_version(data_tag, format_version)
+    if not re.fullmatch(rf"{re.escape(base)}(?:\.post[1-9]\d*)?", version):
+        raise ValueError(
+            f"{version!r} is not {base!r} or a positive post-release of it"
+        )
 
 
 DEBUG = False
