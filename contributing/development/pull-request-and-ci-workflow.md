@@ -23,3 +23,11 @@ Wait for the base to land and cut from `master`. When that is genuinely impracti
 If it happens anyway, do not reopen the closed pull request: the squash means the base's commits never become ancestors of `master`, so retargeting it there shows the base's work as a second, duplicated diff. Rebase onto `master` instead - `git rebase --onto origin/master <base-branch-tip> HEAD`, passing `HEAD` so the rebase lands detached and the pushed branch is never rewritten - and open a fresh pull request from a new branch that references the closed one.
 
 Thank you for helping to keep timezonefinder robust and high-performance!
+
+## Skipped job propagation
+
+When a job deliberately skips a dependency, every publishing job downstream of that skip must name a status function, then explicitly require each direct dependency that must succeed.
+
+A successful intermediate job does not absorb a skipped ancestor: GitHub otherwise skips the later upload before allocating a runner, while the workflow remains green.
+
+Pin this behavior in workflow-structure tests because pull-request runs cannot exercise tag-only publication.
