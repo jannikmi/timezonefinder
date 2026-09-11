@@ -33,25 +33,24 @@ def offset_in_minutes(
 
 
 def main():
-    tf = TimezoneFinder()
+    with TimezoneFinder() as tf:
+        print("Right now:")
+        print(f"  Bergamo: {tf.utc_offset_at(**BERGAMO)}")
+        print(f"  {offset_in_minutes(**BERGAMO)} minutes, as a number")
 
-    print("Right now:")
-    print(f"  Bergamo: {tf.utc_offset_at(**BERGAMO)}")
-    print(f"  {offset_in_minutes(**BERGAMO)} minutes, as a number")
+        print("\nThe same place on two dates - the offset moves with daylight saving:")
+        for label, when in (
+            ("winter", datetime(2026, 1, 15)),
+            ("summer", datetime(2026, 7, 15)),
+        ):
+            print(f"  {label}: {tf.utc_offset_at(**BERGAMO, when=when)}")
 
-    print("\nThe same place on two dates - the offset moves with daylight saving:")
-    for label, when in (
-        ("winter", datetime(2026, 1, 15)),
-        ("summer", datetime(2026, 7, 15)),
-    ):
-        print(f"  {label}: {tf.utc_offset_at(**BERGAMO, when=when)}")
-
-    print("\nAt sea, where reading the name would give the wrong sign:")
-    name = tf.timezone_at(**OPEN_SEA)
-    offset = tf.utc_offset_at(**OPEN_SEA, when=datetime(2026, 1, 15))
-    hours = offset.total_seconds() / 3600
-    print(f"  the zone is named {name!r}, and its actual offset is UTC{hours:+g}")
-    assert offset == timedelta(hours=-2), "Etc/GMT+2 denotes UTC-2, not UTC+2"
+        print("\nAt sea, where reading the name would give the wrong sign:")
+        name = tf.timezone_at(**OPEN_SEA)
+        offset = tf.utc_offset_at(**OPEN_SEA, when=datetime(2026, 1, 15))
+        hours = offset.total_seconds() / 3600
+        print(f"  the zone is named {name!r}, and its actual offset is UTC{hours:+g}")
+        assert offset == timedelta(hours=-2), "Etc/GMT+2 denotes UTC-2, not UTC+2"
 
     print("\nThe global function is the same lookup on a shared instance:")
     print(f"  {utc_offset_at(**BERGAMO, when=datetime(2026, 1, 15))}")

@@ -1,11 +1,11 @@
 [project]
 name = "timezonefinder-data"
-# <format>.<year>.<letter>: the timezone-boundary-builder release this was built
+# <format>.<year>.<letter>[.postN]: the timezone-boundary-builder release this was built
 # from, prefixed by timezonefinder.configs.DATA_FORMAT_VERSION. The major is the
 # binary format generation, which is what lets `timezonefinder` bound the data it
 # can read (`timezonefinder-data>=...,<N+1`) without also capping the data axis.
 # Written by update_data.sh; tests/test_data_version.py holds it to the derivation.
-version = "3.2026.3"
+version = "3.2026.3.post1"
 description = "the packaged timezone boundary data for the timezonefinder package"
 authors = [{name = "jannikmi", email = "github@michelfe.it"}]
 # Replace with license="ODbL-1.0" with setuptools>=71

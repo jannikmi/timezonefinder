@@ -16,7 +16,11 @@ from pathlib import Path
 import re
 import sys
 
-from scripts.configs import DATA_RELEASES_FILE, data_distribution_version
+from scripts.configs import (
+    DATA_RELEASES_FILE,
+    data_distribution_version,
+    validate_data_distribution_version,
+)
 
 RELEASES_HEADING = "## Releases"
 
@@ -25,8 +29,9 @@ RELEASES_HEADING = "## Releases"
 # it cannot match is invisible: the ordering check would pass over it and the next
 # update would insert above it rather than below.
 _RELEASE_ENTRY = re.compile(
-    r"(?m)^- `(?P<version>\d+\.\d+\.\d+)` - timezone-boundary-builder "
-    r"\[(?P<tag>[^\]]+)\]\((?P<url>[^)]+)\), (?P<date>\d{4}-\d{2}-\d{2})$"
+    r"(?m)^- `(?P<version>\d+\.\d+\.\d+(?:\.post[1-9]\d*)?)` - "
+    r"timezone-boundary-builder \[(?P<tag>[^\]]+)\]\((?P<url>[^)]+)\), "
+    r"(?P<date>\d{4}-\d{2}-\d{2}) - (?P<summary>[^\n]+)$"
 )
 
 
@@ -62,34 +67,69 @@ def insert_data_release(
     release_date: date,
     data_tag: str,
     data_repo_url: str,
+    summary: str,
 ) -> str:
     """Prepend a data release to the list, keeping it newest-first.
 
-    :raises ValueError: if ``version`` or ``data_tag`` is already listed. A re-run of
-        ``update_data.sh`` over an unchanged upstream release derives the same version
-        and the same date, and equal dates satisfy the descending-order check - so
-        without this the list would grow a second copy of a release nobody published
-        twice, in the text that is the distribution's PyPI page.
+    :raises ValueError: if ``version`` is already listed or ``summary`` is empty.
+        Multiple versions may name one upstream tag when a post-release recompiles it.
     """
     validate_release_order(readme)
 
-    for listed in _RELEASE_ENTRY.finditer(readme):
-        if listed.group("version") == version or listed.group("tag") == data_tag:
+    listed_entries = list(_RELEASE_ENTRY.finditer(readme))
+    for listed in listed_entries:
+        if listed.group("version") == version:
             raise ValueError(
-                f"the release list already has an entry for {listed.group('version')} "
-                f"/ {listed.group('tag')!r}: {listed.group(0)}. A data release is "
+                f"the release list already has an entry for {listed.group('version')}: "
+                f"{listed.group(0)}. A data release is "
                 "recorded once; correct that line rather than adding a second."
             )
+
+    try:
+        validate_data_distribution_version(version, data_tag)
+    except ValueError:
+        raise ValueError(
+            f"{version!r} is not a data distribution version for {data_tag!r}: "
+            "expected <format>.<year>.<letter>[.postN]"
+        ) from None
+
+    base, separator, post_text = version.partition(".post")
+    post_release = int(post_text) if separator else 0
+    same_base_versions = [
+        listed.group("version")
+        for listed in listed_entries
+        if listed.group("version").partition(".post")[0] == base
+    ]
+    if same_base_versions:
+        previous_posts = [
+            int(text) if marker else 0
+            for listed_version in same_base_versions
+            for _, marker, text in [listed_version.partition(".post")]
+        ]
+        expected_post = max(previous_posts) + 1
+        if post_release != expected_post:
+            raise ValueError(
+                f"{version!r} skips the next post-release for {base}: expected "
+                f"{base}.post{expected_post}"
+            )
+    elif post_release:
+        raise ValueError(
+            f"{version!r} is a post-release of an unrecorded base {base!r}"
+        )
+
+    summary = summary.strip()
+    if not summary:
+        raise ValueError("a data release needs a non-empty change summary")
 
     entry = (
         f"- `{version}` - timezone-boundary-builder "
         f"[{data_tag}]({data_repo_url}/releases/tag/{data_tag}), "
-        f"{release_date.isoformat()}\n"
+        f"{release_date.isoformat()} - {summary}\n"
     )
     if not _RELEASE_ENTRY.fullmatch(entry.rstrip("\n")):
         raise ValueError(
             f"{version!r} is not a data distribution version: an entry must read "
-            "<format>.<year>.<letter>, or nothing downstream can find it"
+            "<format>.<year>.<letter>[.postN], or nothing downstream can find it"
         )
 
     # above the current newest entry, which is where the heading's own text ends up
@@ -110,6 +150,12 @@ def main(argv: list[str] | None = None) -> int:
     # in shell would be a second implementation of the base-26 rule
     derive_parser = subparsers.add_parser("derive-version")
     derive_parser.add_argument("--data-tag", required=True)
+    derive_parser.add_argument(
+        "--post",
+        type=int,
+        default=0,
+        help="post-release number for rebuilt data from the same upstream tag",
+    )
 
     insert_parser = subparsers.add_parser("insert-data-release")
     # defaulted, so that no caller restates where the release list lives
@@ -120,11 +166,12 @@ def main(argv: list[str] | None = None) -> int:
     insert_parser.add_argument("--date", type=date.fromisoformat, required=True)
     insert_parser.add_argument("--data-tag", required=True)
     insert_parser.add_argument("--data-repo-url", required=True)
+    insert_parser.add_argument("--summary", required=True)
 
     args = parser.parse_args(argv)
     if args.command == "derive-version":
         try:
-            print(data_distribution_version(args.data_tag))
+            print(data_distribution_version(args.data_tag, post_release=args.post))
             return 0
         except ValueError as error:
             print(error, file=sys.stderr)
@@ -138,6 +185,7 @@ def main(argv: list[str] | None = None) -> int:
             release_date=args.date,
             data_tag=args.data_tag,
             data_repo_url=args.data_repo_url,
+            summary=args.summary,
         )
         args.releases.write_text(updated, encoding="utf-8")
         return 0

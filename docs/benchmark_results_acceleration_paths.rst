@@ -6,9 +6,9 @@ Point-in-Polygon Acceleration Paths
 
 **Numba JIT: 1.02x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (unresolved).
 
-**pure Python: 40.9x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
+**pure Python: 46.8x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
 
-*Measured on Linux x86_64, AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz, Python 3.13.15, across 2 environments on one machine.*
+*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2439 GHz, Python 3.13.15, across 2 environments on one machine.*
 
 The three point-in-polygon implementations, measured against each other rather than across commits. ``timezonefinder/utils.py`` binds one of them at import time, so which one a process runs is decided by its environment: Numba when it is importable, the C extension when it is not but the extension loaded, and the plain Python function when neither is available. See :doc:`benchmarking_methodology`.
 
@@ -52,21 +52,21 @@ Numba JIT against the C extension
      - Rounds won
      - Verdict
    * - small polygons
-     - 1.62ms
-     - 2.70ms
-     - 1.66x
+     - 1.84ms
+     - 2.77ms
+     - 1.51x
      - 0 of 61
      - slower
    * - medium polygons
-     - 1.76ms
-     - 2.89ms
-     - 1.65x
+     - 1.96ms
+     - 2.92ms
+     - 1.49x
      - 0 of 61
      - slower
    * - large polygons
-     - 3.00ms
-     - 4.81ms
-     - 1.60x
+     - 3.06ms
+     - 4.83ms
+     - 1.58x
      - 0 of 61
      - slower
 
@@ -89,21 +89,21 @@ pure Python against the C extension
      - Rounds won
      - Verdict
    * - small polygons
-     - 1.61ms
-     - 5.75ms
+     - 1.79ms
+     - 6.37ms
      - 3.57x
      - 0 of 15
      - slower
    * - medium polygons
-     - 1.85ms
-     - 139ms
-     - 75.4x
+     - 1.98ms
+     - 150ms
+     - 75.8x
      - 0 of 15
      - slower
    * - large polygons
-     - 3.11ms
-     - 463ms
-     - 149x
+     - 3.13ms
+     - 495ms
+     - 158x
      - 0 of 15
      - slower
 
@@ -134,21 +134,21 @@ Numba JIT against the C extension
      - Rounds won
      - Verdict
    * - random points
-     - 6.13ms
-     - 6.25ms
+     - 4.35ms
+     - 4.42ms
      - 1.02x
-     - 1 of 61
+     - 2 of 61
      - unresolved
    * - unique-shortcut points
-     - 4.36ms
-     - 4.38ms
+     - 3.41ms
+     - 3.42ms
      - 1.00x
-     - 30 of 61
+     - 29 of 61
      - no difference
    * - ambiguous-shortcut points
-     - 23.0ms
-     - 24.4ms
-     - 1.06x
+     - 12.9ms
+     - 14.0ms
+     - 1.09x
      - 0 of 61
      - slower
 
@@ -171,21 +171,21 @@ pure Python against the C extension
      - Rounds won
      - Verdict
    * - random points
-     - 5.50ms
-     - 225ms
-     - 40.9x
+     - 4.41ms
+     - 206ms
+     - 46.8x
      - 0 of 15
      - slower
    * - unique-shortcut points
-     - 3.46ms
-     - 3.44ms
-     - 0.99x
-     - 9 of 15
+     - 3.37ms
+     - 3.36ms
+     - 1.00x
+     - 6 of 15
      - no difference
    * - ambiguous-shortcut points
-     - 21.6ms
-     - 2.73s
-     - 126x
+     - 12.9ms
+     - 2.46s
+     - 190x
      - 0 of 15
      - slower
 
@@ -215,20 +215,20 @@ The kernel a lookup reaches
      - Spread
      - Within 3 %
    * - small
-     - 1.62ms
-     - 1.61ms
-     - 0.7 %
+     - 1.84ms
+     - 1.79ms
+     - 2.9 %
      - yes
    * - medium
-     - 1.76ms
-     - 1.85ms
-     - 5.3 %
-     - **no**
+     - 1.96ms
+     - 1.98ms
+     - 1.0 %
+     - yes
    * - large
-     - 3.00ms
-     - 3.11ms
-     - 3.5 %
-     - **no**
+     - 3.06ms
+     - 3.13ms
+     - 2.1 %
+     - yes
 
 
 
@@ -248,20 +248,20 @@ What a caller actually pays
      - Spread
      - Within 3 %
    * - random
-     - 6.13ms
-     - 5.50ms
-     - 11.6 %
-     - **no**
+     - 4.35ms
+     - 4.41ms
+     - 1.4 %
+     - yes
    * - unique shortcut
-     - 4.36ms
-     - 3.46ms
-     - 26.2 %
-     - **no**
+     - 3.41ms
+     - 3.37ms
+     - 1.3 %
+     - yes
    * - ambiguous shortcut
-     - 23.0ms
-     - 21.6ms
-     - 6.3 %
-     - **no**
+     - 12.9ms
+     - 12.9ms
+     - 0.2 %
+     - yes
 
 
 Two things move these rows. The first is ordinary run-to-run variation: the C kernel is the same compiled code in both runs, so wherever its two timings differ that is the floor for comparing anything *across* the two processes - and it is wider than the 3 % a paired comparison inside one process resolves, which is the whole reason this page does not divide one run into the other.

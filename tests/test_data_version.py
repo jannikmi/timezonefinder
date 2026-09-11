@@ -29,6 +29,7 @@ from scripts.configs import (
     data_distribution_version,
     read_data_version,
     resolve_data_version,
+    validate_data_distribution_version,
 )
 from scripts.reporting import DATA_VERSION_LABEL
 from scripts.upstream_release import read_record
@@ -252,19 +253,39 @@ def test_a_version_cannot_be_derived_from_a_non_release_tag(data_tag: str) -> No
         data_distribution_version(data_tag)
 
 
+@pytest.mark.parametrize(
+    ("post_release", "expected"),
+    [(0, "3.2026.3"), (1, "3.2026.3.post1"), (12, "3.2026.3.post12")],
+)
+def test_a_recompiled_upstream_release_uses_a_post_release(
+    post_release: int, expected: str
+) -> None:
+    assert data_distribution_version("2026c", 3, post_release) == expected
+
+
+def test_a_negative_post_release_is_refused() -> None:
+    with pytest.raises(ValueError, match="zero or a positive integer"):
+        data_distribution_version("2026c", 3, -1)
+
+
 def test_the_data_distribution_version_matches_the_packaged_release() -> None:
     # the second of the two hand-touchable copies of DATA_FORMAT_VERSION: the data
     # package's own version. update_data.sh writes it from the tag it just parsed, so
     # this catches a hand-edit and a half-applied update alike - a version naming a
     # release other than the one whose binaries sit next to it would publish data
     # under a number no consumer could use to pin it.
-    assert _declared_version(DATA_PYPROJECT_FILE) == data_distribution_version(
-        read_data_version()
-    ), (
+    declared = Version(_declared_version(DATA_PYPROJECT_FILE))
+    derived = data_distribution_version(read_data_version())
+    try:
+        validate_data_distribution_version(str(declared), read_data_version())
+    except ValueError as error:
+        pytest.fail(str(error))
+    assert declared.base_version == derived, (
         f"{DATA_PYPROJECT_FILE} declares "
-        f"{_declared_version(DATA_PYPROJECT_FILE)!r}, but the packaged release "
+        f"{str(declared)!r}, but the packaged release "
         f"{read_data_version()!r} at format version {DATA_FORMAT_VERSION} derives "
-        f"{data_distribution_version(read_data_version())!r}."
+        f"{derived!r}. Only a .postN suffix may distinguish a rebuilt distribution "
+        "from that same upstream release."
     )
 
 

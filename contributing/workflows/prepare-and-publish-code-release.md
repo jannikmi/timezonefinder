@@ -50,7 +50,7 @@ Assemble the fragments first. Every non-exempt change since the last release fil
 make changelog-assemble
 ```
 
-That folds them into the `X.X.X (unreleased)` section and deletes the files it consumed, additively — existing bullets are never rewritten, so what it produces is the raw material for the rewrite below rather than the result of it. Confirm nothing is left behind before the version commit:
+That folds them into their preselected groups in the `X.X.X (unreleased)` section and deletes the files it consumed, additively — existing bullets are never rewritten. Confirm nothing is left behind before the version commit:
 
 ```bash
 uv run python -m scripts.changelog_fragments --check --require-consumed
@@ -58,7 +58,7 @@ uv run python -m scripts.changelog_fragments --check --require-consumed
 
 A fragment surviving the release is a change that ships with no changelog entry and no way to notice — `changelog.d/` is pruned from the distribution, so the bullet is absent from `CHANGELOG.rst` *and* from the package. It is therefore also *enforced*, not merely documented: `make release` runs the same check before it tags, and the `release` job runs it beside the data-dependency check, ahead of the first irreversible step. `tests/test_release_workflows.py` asserts that ordering. Running it here is what lets a release discover the problem while the version is still spendable.
 
-Rewrite the entire unreleased section to describe the release end state: merge bullets for one feature, remove tuning history and review narration, retain decision-relevant trade-offs, and keep internal work under `Internal:`. Compare every commit since the newest tag with the section and add missing non-exempt changes without inventing behavior. Show the resulting changelog diff before selecting the version level so the evidence and the decision are reviewed together.
+Curate the grouped unreleased section as atomic changes: split independent outcomes, merge duplicates, remove performance claims and process history, and retain compatibility trade-offs. Classification belongs to fragment authoring; at release time, correct a misfiled fragment but do not sort the section from scratch. Compare every commit since the newest tag with the section and add missing non-exempt changes without inventing behavior. Show the changelog diff before selecting the version level so the evidence and the decision are reviewed together.
 
 Compute patch, minor, and major candidates with `uv version --bump <level> --dry-run`. Select the strongest applicable rule:
 

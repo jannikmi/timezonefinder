@@ -33,6 +33,8 @@ FROZEN_CHANGELOG = textwrap.dedent(
     X.X.X (unreleased)
     ------------------
 
+    Changed:
+
     * a bullet curated before the fragments arrived
 
     Internal:
@@ -86,13 +88,13 @@ def write(root, category, name, text):
 
 class TestLoading:
     def test_the_directory_classifies_the_bullet(self, fragment_dir):
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
         write(fragment_dir, "internal", "tooling", "a development-only change")
 
         fragments = load_fragments(fragment_dir)
 
         assert [(f.category, f.text) for f in fragments] == [
-            ("user", "a user-visible change"),
+            ("new-features", "a user-visible change"),
             ("internal", "a development-only change"),
         ]
 
@@ -100,7 +102,7 @@ class TestLoading:
         self, fragment_dir
     ):
         for name in ("zulu", "alpha", "mike"):
-            write(fragment_dir, "user", name, f"the {name} change")
+            write(fragment_dir, "bug-fixes", name, f"the {name} change")
         write(fragment_dir, "internal", "alpha-internal", "an internal change")
 
         fragments = load_fragments(fragment_dir)
@@ -111,8 +113,8 @@ class TestLoading:
             "zulu",
             "alpha-internal",
         ]
-        # user before internal, whatever the names sort to
-        assert [f.category for f in fragments] == ["user"] * 3 + ["internal"]
+        # bug fixes before internal, whatever the names sort to
+        assert [f.category for f in fragments] == ["bug-fixes"] * 3 + ["internal"]
 
     def test_an_absent_root_holds_no_fragments(self, tmp_path):
         assert load_fragments(tmp_path / "nothing-here") == []
@@ -131,7 +133,7 @@ class TestLoading:
         ],
     )
     def test_a_malformed_fragment_is_refused(self, fragment_dir, text, message):
-        write(fragment_dir, "user", "broken", text)
+        write(fragment_dir, "changed", "broken", text)
 
         with pytest.raises(FragmentError, match=message):
             load_fragments(fragment_dir)
@@ -148,20 +150,20 @@ class TestLoading:
         loses a bullet - a changelog entry disappearing on someone else's
         filesystem is exactly the failure nothing downstream would report.
         """
-        write(fragment_dir, "user", name, "a change")
+        write(fragment_dir, "changed", name, "a change")
 
         with pytest.raises(FragmentError, match="kebab-case slug"):
             load_fragments(fragment_dir)
 
     def test_a_kebab_case_slug_is_accepted(self, fragment_dir):
-        write(fragment_dir, "user", "a-perfectly-fine-slug-2", "a change")
+        write(fragment_dir, "changed", "a-perfectly-fine-slug-2", "a change")
 
         assert [f.path.stem for f in load_fragments(fragment_dir)] == [
             "a-perfectly-fine-slug-2"
         ]
 
     def test_a_fragment_that_is_not_rst_is_refused(self, fragment_dir):
-        (fragment_dir / "user" / "notes.md").write_text("a change", encoding="utf-8")
+        (fragment_dir / "changed" / "notes.md").write_text("a change", encoding="utf-8")
 
         with pytest.raises(FragmentError, match="must end in .rst"):
             load_fragments(fragment_dir)
@@ -178,8 +180,8 @@ class TestLoading:
         with pytest.raises(FragmentError, match="unknown category directory"):
             load_fragments(fragment_dir)
 
-    def test_one_slug_may_not_be_filed_under_both_categories(self, fragment_dir):
-        write(fragment_dir, "user", "same-change", "described for users")
+    def test_one_slug_may_not_be_filed_under_multiple_categories(self, fragment_dir):
+        write(fragment_dir, "breaking-changes", "same-change", "breaking change")
         write(fragment_dir, "internal", "same-change", "described for contributors")
 
         with pytest.raises(FragmentError, match="name the same change"):
@@ -188,20 +190,20 @@ class TestLoading:
 
 class TestAssembly:
     def test_fragments_land_in_the_list_their_directory_names(self, fragment_dir):
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
         write(fragment_dir, "internal", "tooling", "a development-only change")
 
         assembled = assemble(FROZEN_CHANGELOG, load_fragments(fragment_dir))
 
         unreleased, released = assembled.split("9.0.0 (2026-09-02)")
         main, internal = unreleased.split("Internal:")
-        assert "* a user-visible change" in main
+        assert "New features:\n\n* a user-visible change" in main
         assert "* a development-only change" in internal
         assert "* a user-visible change" not in internal
 
     def test_assembling_leaves_every_existing_line_byte_identical(self, fragment_dir):
         """The migration property: a frozen baseline is appended to, not rewritten."""
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
         write(fragment_dir, "internal", "tooling", "a development-only change")
 
         assembled = assemble(FROZEN_CHANGELOG, load_fragments(fragment_dir))
@@ -216,7 +218,7 @@ class TestAssembly:
         assert assemble(FROZEN_CHANGELOG, []) == FROZEN_CHANGELOG
 
     def test_released_sections_are_never_touched(self, fragment_dir):
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
 
         assembled = assemble(FROZEN_CHANGELOG, load_fragments(fragment_dir))
 
@@ -225,9 +227,7 @@ class TestAssembly:
             released == FROZEN_CHANGELOG[FROZEN_CHANGELOG.index("9.0.0 (2026-09-02)") :]
         )
 
-    def test_an_internal_marker_is_created_when_the_section_has_none(
-        self, fragment_dir
-    ):
+    def test_an_internal_group_is_created_when_the_section_has_none(self, fragment_dir):
         write(fragment_dir, "internal", "tooling", "a development-only change")
 
         assembled = assemble(EMPTY_UNRELEASED, load_fragments(fragment_dir))
@@ -235,34 +235,53 @@ class TestAssembly:
         assert "Internal:\n\n* a development-only change" in assembled
         assert assembled.count("Internal:") == 1
 
-    def test_an_empty_section_takes_user_bullets_without_an_internal_marker(
+    def test_an_empty_section_takes_feature_bullets_without_an_internal_group(
         self, fragment_dir
     ):
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
 
         assembled = assemble(EMPTY_UNRELEASED, load_fragments(fragment_dir))
 
-        assert "* a user-visible change" in assembled
+        assert "New features:\n\n* a user-visible change" in assembled
         assert "Internal:" not in assembled
 
     def test_a_changelog_without_an_unreleased_section_is_refused(self, fragment_dir):
-        write(fragment_dir, "user", "visible", "a user-visible change")
+        write(fragment_dir, "new-features", "visible", "a user-visible change")
 
         with pytest.raises(FragmentError, match="no 'X.X.X \\(unreleased\\)' section"):
             assemble("=========\nChangelog\n=========\n", load_fragments(fragment_dir))
 
     def test_the_result_is_valid_rst_the_next_assembly_can_read(self, fragment_dir):
         """Assembly is repeatable: its own output is a legal input."""
-        write(fragment_dir, "user", "first", "the first change")
+        write(fragment_dir, "changed", "first", "the first change")
         once = assemble(EMPTY_UNRELEASED, load_fragments(fragment_dir))
 
-        (fragment_dir / "user" / "first.rst").unlink()
-        write(fragment_dir, "user", "second", "the second change")
+        (fragment_dir / "changed" / "first.rst").unlink()
+        write(fragment_dir, "changed", "second", "the second change")
         twice = assemble(once, load_fragments(fragment_dir))
 
         assert "* the first change" in twice
         assert "* the second change" in twice
         assert twice.index("the first change") < twice.index("the second change")
+
+    def test_all_groups_are_rendered_in_canonical_order(self, fragment_dir):
+        for category in reversed(CATEGORIES):
+            write(fragment_dir, category, f"{category}-entry", f"the {category} change")
+
+        assembled = assemble(EMPTY_UNRELEASED, load_fragments(fragment_dir))
+
+        positions = [
+            assembled.index(heading)
+            for heading in (
+                "Breaking changes:",
+                "New features:",
+                "Changed:",
+                "Bug fixes:",
+                "Documentation:",
+                "Internal:",
+            )
+        ]
+        assert positions == sorted(positions)
 
 
 class TestPreview:
@@ -271,7 +290,7 @@ class TestPreview:
     def test_existing_unreleased_bullets_are_shown_beside_the_fragments(
         self, fragment_dir
     ):
-        write(fragment_dir, "user", "new-change", "a newly filed change")
+        write(fragment_dir, "changed", "new-change", "a newly filed change")
 
         preview = _preview(load_fragments(fragment_dir), FROZEN_CHANGELOG)
 
@@ -295,21 +314,24 @@ class TestPreview:
 
 def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():
     fragments = [
-        Fragment("user", FRAGMENT_ROOT / "user" / "a.rst", "a change"),
+        Fragment("changed", FRAGMENT_ROOT / "changed" / "a.rst", "a change"),
         Fragment("internal", FRAGMENT_ROOT / "internal" / "b.rst", "another change"),
     ]
 
-    assert render_bullets(fragments, "user") == ["* a change"]
+    assert render_bullets(fragments, "changed") == ["* a change"]
     assert render_bullets(fragments, "internal") == ["* another change"]
 
 
 def test_the_committed_fragments_are_sound():
-    """The gate this repository actually runs: whatever is filed must assemble."""
+    """Filed fragments are valid; assemble them when a target section exists."""
     fragments = load_fragments()
+    changelog = (FRAGMENT_ROOT.parent / "CHANGELOG.rst").read_text(encoding="utf-8")
 
-    assembled = assemble(
-        (FRAGMENT_ROOT.parent / "CHANGELOG.rst").read_text(encoding="utf-8"), fragments
-    )
+    if "X.X.X (unreleased)" not in changelog:
+        assert changelog.startswith("=========\nChangelog\n=========")
+        return
+
+    assembled = assemble(changelog, fragments)
     assert assembled.startswith("=========\nChangelog\n=========")
     for fragment in fragments:
         assert f"* {fragment.text}" in assembled
