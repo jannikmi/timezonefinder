@@ -1,75 +1,50 @@
 """
 Resource management example: proper cleanup of TimezoneFinder instances.
 
-This demonstrates different ways to manage instance lifecycle and ensure
-proper cleanup of resources.
+Prefer a context manager for bounded work. Keep one instance for the lifetime of a
+service or worker and call cleanup() during its orderly shutdown.
 """
 
 from timezonefinder import TimezoneFinder
 
 
-def example_1_manual_cleanup():
-    """Method 1: Manual cleanup with del statement."""
-    print("Method 1: Manual cleanup with 'del'")
+def example_1_context_manager():
+    """Method 1: context manager (recommended for bounded work)."""
+    print("Method 1: Context manager (recommended)")
     print("-" * 60)
 
-    tf = TimezoneFinder(in_memory=True)
-    tz = tf.timezone_at(lng=13.358, lat=52.5061)
-    print(f"Berlin timezone: {tz}")
-
-    # Manually delete to trigger cleanup (optional but good practice)
-    del tf
-    print("Instance deleted\n")
-
-
-def example_2_context_manager():
-    """Method 2: Context manager (automatic cleanup)."""
-    print("Method 2: Context manager (recommended)")
-    print("-" * 60)
-
-    # Using 'with' statement ensures cleanup happens automatically
     with TimezoneFinder(in_memory=True) as tf:
         tz = tf.timezone_at(lng=13.358, lat=52.5061)
         print(f"Berlin timezone: {tz}")
-    # Cleanup happens automatically when exiting the 'with' block
-    print("Cleanup automatic\n")
+    print("Cleanup ran at block exit\n")
 
 
-def example_3_batch_with_context_manager():
-    """Method 3: Batch processing with context manager."""
-    print("Method 3: Batch processing with context manager")
-    print("-" * 60)
-
-    coordinates = [
-        (13.358, 52.5061),  # Berlin
-        (2.3522, 48.8566),  # Paris
-        (-74.0060, 40.7128),  # New York
-    ]
-
-    # Create instance once and reuse it
-    with TimezoneFinder(in_memory=True) as tf:
-        for lng, lat in coordinates:
-            tz = tf.timezone_at(lng=lng, lat=lat)
-            print(f"  ({lng:9.4f}, {lat:9.4f}) -> {tz}")
-    # Cleanup happens automatically when exiting the 'with' block
-    print("Cleanup automatic\n")
-
-
-def example_4_exception_safety():
-    """Method 4: Exception safety with context manager."""
-    print("Method 4: Exception safety with context manager")
+def example_2_exception_safety():
+    """Method 2: cleanup also runs when work raises."""
+    print("Method 2: Exception-safe cleanup")
     print("-" * 60)
 
     try:
         with TimezoneFinder(in_memory=True) as tf:
-            # Even if an exception occurs...
-            tz = tf.timezone_at(lng=13.358, lat=52.5061)
-            print(f"Berlin timezone: {tz}")
-            # ... cleanup still happens automatically
-    except Exception as e:
+            print(tf.timezone_at(lng=13.358, lat=52.5061))
+            raise ValueError("the job failed")
+    except ValueError as e:
         print(f"Exception occurred: {e}")
+    print("Cleanup ran and the exception still propagated\n")
+
+
+def example_3_application_owned_lifetime():
+    """Method 3: explicit shutdown for a long-lived application."""
+    print("Method 3: Application-owned lifetime")
+    print("-" * 60)
+
+    tf = TimezoneFinder(in_memory=True)
+    try:
+        # A real service would reuse this instance for all work until shutdown.
+        print(tf.timezone_at(lng=13.358, lat=52.5061))
     finally:
-        print("Cleanup happened even though exception occurred\n")
+        tf.cleanup()
+    print("Cleanup ran during orderly shutdown\n")
 
 
 def main():
@@ -77,28 +52,28 @@ def main():
     print("RESOURCE MANAGEMENT EXAMPLES")
     print("=" * 60 + "\n")
 
-    example_1_manual_cleanup()
-    example_2_context_manager()
-    example_3_batch_with_context_manager()
-    example_4_exception_safety()
+    example_1_context_manager()
+    example_2_exception_safety()
+    example_3_application_owned_lifetime()
 
     print("=" * 60)
     print("RECOMMENDATIONS")
     print("=" * 60)
     print("""
-1. For simple scripts and batch processing:
-   Use context manager (with statement) for automatic cleanup
+1. For scripts, jobs, and bounded batches:
+   Use a context manager for deterministic, exception-safe cleanup.
 
 2. For long-running applications:
-   Keep instance alive and reuse it (cleanup on shutdown)
+   Keep one instance alive, reuse it, and call cleanup() during shutdown.
 
-3. For libraries/packages:
-   Use context manager to avoid resource leaks
+3. Do not use del for resource management:
+   It removes one reference but does not express or guarantee timely cleanup.
 
 4. For thread-safe parallel processing:
-   Create one instance per thread and clean up after thread exits
+   Create one instance per worker and clean it up when the worker exits.
 
-Key benefit: Context managers ensure cleanup even if exceptions occur.
+The context manager makes ownership visible and closes mapped coordinate files even
+when an operation raises. It must not be used again after its with block exits.
 """)
 
 

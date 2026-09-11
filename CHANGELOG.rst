@@ -52,8 +52,8 @@ Changed:
 
 Bug fixes:
 
-* ``TimezoneFinder.cleanup()`` and context-manager exit now release the memory-mapped coordinate files before returning.
-* Geometry-backed operations on a finder after ``cleanup()`` now fail instead of continuing through mappings that should have been released.
+* ``TimezoneFinder.cleanup()`` and leaving a finder context now release the memory-mapped coordinate files before returning, including when an operation raises.
+* Geometry-backed operations after ``cleanup()`` or after leaving a finder context now fail instead of continuing through mappings that should have been released.
 * Public methods accepting zone or boundary IDs now reject negative values with ``ValueError`` instead of indexing from the end of the dataset.
 * ``coord2int`` no longer wraps out-of-range values silently when Numba is installed.
 * Source vertices are rounded to timezone-boundary-builder's six-decimal grid rather than truncated toward zero. ``get_geometry()`` therefore returns corrected source-aligned coordinates.
@@ -65,6 +65,7 @@ Bug fixes:
 
 Documentation:
 
+* The README, usage guide, use cases, and bounded examples prefer context-managed finder lifetimes. They reserve explicit ``cleanup()`` for long-running services and workers that reuse one finder until orderly shutdown.
 * Reworked the aware-datetime and UTC-offset examples around the standard-library helpers; Windows users must install ``tzdata``. The retained ``pytz`` example uses ``localize()`` rather than ``replace(tzinfo=...)``. Solves issue #502.
 * The NumPy 1 migration guidance identifies 8.2.1 as the last compatible timezonefinder release and recommends an isolated environment when a system NumPy constraint conflicts.
 * The reduced ``timezones-now`` documentation reports the 2026c dataset accurately and points to the vendored upstream mapping for exact release-specific counts.
@@ -76,6 +77,7 @@ Documentation:
 Internal:
 
 * Changelog fragments are filed under their final release-note section so assembly produces the grouped changelog before release curation.
+* Cleanup-warning tests isolate their synthetic destructor failure so later collection cannot leak a warning into the next parametrized case.
 * Added sampled shortcut-candidate coverage validation after dataset conversion, with replayable omission diagnostics.
 * Candidate polygon metadata is read through buffer views rather than repeated NumPy scalar indexing.
 * Hole membership first checks one union bounding box before inspecting individual holes.

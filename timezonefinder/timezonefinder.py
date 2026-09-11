@@ -17,7 +17,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Self
+from types import TracebackType
+from typing import Literal, Self
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -84,6 +85,13 @@ class AbstractTimezoneFinder(ABC):
     Thread Safety:
         For parallel computation with multiple threads, each thread must create
         its own independent instance. Do not share a single instance across threads.
+
+    Lifecycle:
+        Prefer ``with TimezoneFinder(...) as finder`` (or ``TimezoneFinderL``) for a
+        bounded operation. Leaving the context calls :meth:`cleanup` even when the
+        operation raises, without suppressing that exception. A long-running service
+        or worker should instead reuse one instance and call :meth:`cleanup` during
+        orderly shutdown. A cleaned-up finder must not be used again.
 
     Attributes:
         zone_names: the dataset's names, and every way a zone id becomes one
@@ -854,11 +862,16 @@ class AbstractTimezoneFinder(ABC):
         # hole_registry is an in-memory dict only; nothing to release
 
     def __enter__(self) -> Self:
-        """Enter the runtime context for the TimezoneFinder."""
+        """Return this finder for a bounded lifetime managed by a ``with`` block."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the runtime context and clean up resources."""
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
+        """Release resources without suppressing an exception from the block."""
         self.cleanup()
         return False
 
