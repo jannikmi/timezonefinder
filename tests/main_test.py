@@ -407,6 +407,13 @@ class TestTimezonefinderCleanup:
             # call has returned, and a closure would raise whatever the name
             # refers to by then
             def cleanup(self, error=error):
+                # The test calls __del__ explicitly, after which Python calls it again
+                # when the synthetic instance is collected. Fail only on the explicit
+                # call so that later collection cannot leak a second warning into the
+                # next parametrized case's warning capture.
+                if getattr(self, "_cleanup_failure_raised", False):
+                    return
+                self._cleanup_failure_raised = True
                 raise error
 
         return FailingCleanupTimezoneFinder()

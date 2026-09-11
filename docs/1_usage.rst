@@ -55,25 +55,31 @@ The functionality of these global functions is equivalent to the respective meth
 Instance Initialisation
 -----------------------
 
-For more control and better performance, you can create your own instance of the :ref:`TimezoneFinder class <api_finder>`
-to be reused for multiple consequent timezone queries:
+For more control and better performance, create one :ref:`TimezoneFinder class <api_finder>`
+instance and reuse it for the whole bounded operation:
 
 .. code-block:: python
 
     from timezonefinder import TimezoneFinder
 
-    tf = TimezoneFinder()  # reuse
+    with TimezoneFinder() as tf:
+        first = tf.timezone_at(lng=13.358, lat=52.5061)
+        second = tf.timezone_at(lng=2.3522, lat=48.8566)
 
 
 Use the ``in_memory`` argument to read all polygon data into memory for faster access at the cost of memory consumption and initialisation time (see :doc:`benchmark_results_memory` for what each mode costs):
 
 .. code-block:: python
 
-    tf = TimezoneFinder(in_memory=True)
+    with TimezoneFinder(in_memory=True) as tf:
+        tz = tf.timezone_at(lng=13.358, lat=52.5061)
 
 
-In the default memory-mapped mode a finder holds the coordinate files open for as long as it lives.
-Call ``cleanup()``, or use the finder as a context manager, to release them at a point you choose rather than when the instance is eventually collected:
+Prefer the context-manager form for scripts, jobs and other bounded operations. In the
+default memory-mapped mode a finder holds coordinate files open, and ``with`` releases
+them deterministically at block exit instead of relying on garbage collection. Cleanup
+also runs when an operation raises, while the original exception continues to propagate,
+and the block makes the finder's usable lifetime visible at its call site:
 
 .. code-block:: python
 
@@ -81,14 +87,17 @@ Call ``cleanup()``, or use the finder as a context manager, to release them at a
         tz = tf.timezone_at(lng=13.358, lat=52.5061)
     # the coordinate files are closed here
 
-A finder must not be used after ``cleanup()``; its data is released and a lookup that reads geometry raises ``AttributeError``.
-Long-lived programs that keep one instance around need neither call - the files are released when the finder is.
+A finder must not be used after leaving its context or calling ``cleanup()``; its data is
+released and a lookup that reads geometry raises ``AttributeError``. A long-running
+service or worker should instead keep one instance alive, reuse it rather than constructing
+one per lookup, and call ``cleanup()`` during orderly shutdown.
 
 Use the argument ``bin_file_location`` to use data files from another location (e.g. :ref:`your own compiled files <parse_data>`):
 
 .. code-block:: python
 
-    tf = TimezoneFinder(bin_file_location="path/to/files")
+    with TimezoneFinder(bin_file_location="path/to/files") as tf:
+        tz = tf.timezone_at(lng=13.358, lat=52.5061)
 
 
 .. note::

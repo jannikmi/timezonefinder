@@ -1,0 +1,1 @@
+Cleanup warning tests isolate their synthetic destructor failure from the later automatic collection of the same object, preventing a Python 3.14/Numba-dependent warning from leaking into the next parametrized case.

@@ -286,11 +286,34 @@ class TestFinderReleasesItsMappings:
 
     def test_context_manager_releases_on_exit(self):
         """The seam whose whole purpose is deterministic release."""
-        with TimezoneFinder(in_memory=False) as finder:
+        finder = TimezoneFinder(in_memory=False)
+        with finder as entered_finder:
+            assert entered_finder is finder
             finder.timezone_at(lng=13.4, lat=52.5)
             coord_buf = finder.boundaries.coordinates.coord_buf
 
         assert coord_buf.closed
+
+    def test_context_manager_releases_on_exception_without_suppressing_it(self):
+        """A failed operation still releases its mapping and keeps its exception."""
+        finder = TimezoneFinder(in_memory=False)
+        coord_buf = finder.boundaries.coordinates.coord_buf
+
+        with pytest.raises(RuntimeError, match="lookup failed"):
+            with finder:
+                raise RuntimeError("lookup failed")
+
+        assert coord_buf.closed
+
+    def test_lightweight_finder_supports_the_shared_context_contract(self):
+        """The base-class lifecycle is uniform even when there is nothing to unmap."""
+        finder = TimezoneFinderL()
+
+        with finder as entered_finder:
+            assert entered_finder is finder
+            assert finder.timezone_at(lng=13.4, lat=52.5) == "Europe/Berlin"
+
+        assert not hasattr(finder, "boundaries")
 
     @pytest.mark.parametrize("in_memory", [False, True])
     def test_cleanup_is_idempotent_and_leaves_no_unraisable(self, in_memory):
