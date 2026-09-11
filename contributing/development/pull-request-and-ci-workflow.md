@@ -31,3 +31,9 @@ When a job deliberately skips a dependency, every publishing job downstream of t
 A successful intermediate job does not absorb a skipped ancestor: GitHub otherwise skips the later upload before allocating a runner, while the workflow remains green.
 
 Pin this behavior in workflow-structure tests because pull-request runs cannot exercise tag-only publication.
+
+GitHub loads a tag-triggered workflow from the tagged commit, so merging a workflow fix does not change retries for an existing tag.
+
+When a code tag and GitHub Release exist but PyPI lacks the version, use `make release-recover RELEASE_TAG=<version>` from current `master`.
+
+That dispatch runs the corrected trusted-publisher workflow from `master`, checks out the immutable tag for its release guards, and uploads only that release's attached code artifacts; never move or recreate the tag.

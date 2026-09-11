@@ -44,6 +44,8 @@
 #   builsdist  - build a single source distribution tarball
 #   build      - build wheels for supported Python versions
 #   release    - tag the current commit with the version number and push it
+#   release-recover - dispatch trusted publishing for an existing code-release tag
+#                     whose GitHub assets exist but whose PyPI upload did not run
 #   rmtag      - remove the current version tag locally and remotely
 #   changelog  - preview the unreleased changelog section assembled from changelog.d/
 #   changelog-assemble - fold changelog.d/ into CHANGELOG.rst and consume the fragments
@@ -464,6 +466,14 @@ release:
 	@echo "pushing the tag to the remote repository"
 	@git push origin "$(VERSION)"
 
+release-recover:
+	@if [ -z "$(RELEASE_TAG)" ]; then \
+		echo "Error: pass RELEASE_TAG=<existing-version-tag>"; \
+		exit 1; \
+	fi
+	@echo "dispatching trusted-publisher recovery for existing tag $(RELEASE_TAG)"
+	@gh workflow run build.yml --ref master -f publish_existing_tag="$(RELEASE_TAG)"
+
 rmtag:
 	@echo "removing the tag: $(VERSION)"
 	@git tag -d "$(VERSION)"
@@ -481,3 +491,5 @@ docs:
 	print-benchmark-acceleration-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
 	changelog changelog-assemble acceleration-paths
+
+.PHONY: release release-recover
