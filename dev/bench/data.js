@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789113904061,
+  "lastUpdate": 1789115523506,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -9795,6 +9795,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3298",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2564 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c150f7bb7d5839beae813c70421e677402977145",
+          "message": "Fix existing-release recovery guard order (#666)",
+          "timestamp": "2026-09-11T08:31:11Z",
+          "tree_id": "37f73f53affb6efae2f537e58e3b8dbf00899d00",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c150f7bb7d5839beae813c70421e677402977145"
+        },
+        "date": 1789115521718,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 550125.4506075355,
+            "range": "± 4147",
+            "unit": "lookups/sec",
+            "extra": "min of 182 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 721618.3879915457,
+            "range": "± 55626",
+            "unit": "lookups/sec",
+            "extra": "min of 244 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 198048.06991065177,
+            "range": "± 3020",
+            "unit": "lookups/sec",
+            "extra": "min of 74 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 933716.929147511,
+            "range": "± 13341",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1509846.9196423711,
+            "range": "± 90024",
+            "unit": "lookups/sec",
+            "extra": "min of 518 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 243743.94600974102,
+            "range": "± 3476",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 914121.9036403304,
+            "range": "± 9700",
+            "unit": "lookups/sec",
+            "extra": "min of 290 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1465948.9380629812,
+            "range": "± 20636",
+            "unit": "lookups/sec",
+            "extra": "min of 503 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 235139.24664016903,
+            "range": "± 2287",
+            "unit": "lookups/sec",
+            "extra": "min of 79 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5962 GHz"
           }
         ]
       }
