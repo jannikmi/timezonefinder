@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789086697448,
+  "lastUpdate": 1789086699140,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -19193,6 +19193,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 2.9380 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea3b514872d7067ed35c87a030054f5fdc33ef45",
+          "message": "Release 9.0.0 from current master (#661)\n\n* Support rebuilt data post-releases\n\n* Amend the 9.0.0 release notes\n\n* Make independent reviews traceable\n\n* Require consecutive data post-releases\n\n* Pin the 3.2026.3.post1 data wheel\n\n* Refresh 9.0.0 benchmark reports\n\n* Isolate cleanup warning finalizer tests\n\n* Record data dependency floor semantics\n\n* Make release notes atomic and measurement-free\n\n* Default changes to durable contributor memory\n\n* Narrow the durable-memory trigger\n\n* Group 9.0.0 bug fixes in changelog\n\n* Structure 9.0.0 release notes\n\n* Remove redundant breaking labels\n\n* Pre-group changelog fragments by section",
+          "timestamp": "2026-09-11T00:30:11Z",
+          "tree_id": "49dfaa6c7f4a43e722c8179090286aaef991960d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ea3b514872d7067ed35c87a030054f5fdc33ef45"
+        },
+        "date": 1789086698809,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014939308166504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0150747299194336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2630615234375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2637815475463867,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.617313385009766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61799144744873,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
           }
         ]
       }
