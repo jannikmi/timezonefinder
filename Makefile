@@ -384,16 +384,16 @@ memory-noise:
 	uv run python -m scripts.benchmark_noise $(NOISE_MEMORY_RUNS_DIR)/run-*.json \
 		--estimator=$(BENCHMARK_ESTIMATOR) --min-runs=$(NOISE_RUNS) --metric=memory
 
-# A change files one fragment under changelog.d/ rather than editing the shared
-# unreleased section, so two concurrent pull requests never touch the same lines.
-# This prints what the section will read as; tests/test_changelog_fragments.py
-# runs the same validation, so a malformed fragment fails CI rather than a release.
+# A change files one fragment under changelog.d/ rather than editing
+# CHANGELOG.rst, so two concurrent pull requests never touch the same lines.
+# This prints the pending section generated from those fragments;
+# tests/test_changelog_fragments.py runs the same validation.
 changelog:
 	@uv run python -m scripts.changelog_fragments
 
 # Release preparation only: this rewrites CHANGELOG.rst and *deletes* the
 # fragments it consumed, which is why it is not what `changelog` runs. The
-# release's end-state rewrite happens afterwards, on the combined section.
+# generated section is curated and dated afterwards.
 changelog-assemble:
 	@uv run python -m scripts.changelog_fragments --assemble
 

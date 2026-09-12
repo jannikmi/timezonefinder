@@ -20,6 +20,6 @@ A fragment holds the bullet text only, on one line, without the leading `* `. On
 uv run python -m scripts.changelog_fragments
 ```
 
-prints the unreleased section as it will read once assembled. `--check` validates without printing; the test suite runs the same validation, so a malformed fragment fails CI rather than a release.
+prints the pending release section as it will read once assembled. The section is generated from fragments and is not kept as an empty placeholder in `CHANGELOG.rst` between releases. `--check` validates without printing; the test suite runs the same validation, so a malformed fragment fails CI rather than a release.
 
 The [changelog policy](../contributing/development/changelog-and-release-note-policy.md) still decides *what* earns a bullet — including the exemptions, which create no fragment at all. The release consumes every fragment with `--assemble`; the resulting section is already grouped, so release curation checks wording, atomicity, duplicates, and omissions rather than classifying bullets. `CHANGELOG.rst` remains the published artifact. A fragment left behind cannot be published: `make release` and the release job both run `--check --require-consumed` before anything irreversible happens.
