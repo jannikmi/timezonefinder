@@ -32,24 +32,20 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: versions
+  - type: textarea
+    id: environment
     attributes:
-      label: Versions
-      description: Output of `pip show timezonefinder timezonefinder-data | grep -i version`, plus your python version and operating system.
-      placeholder: "timezonefinder 9.0.0, timezonefinder-data 2025.2, python 3.13, Ubuntu 24.04"
-    validations:
-      required: true
+      label: Environment
+      description: |
+        Run this and paste the output. It reports the installed versions and which point-in-polygon backend your installation actually uses - `numba` takes precedence over the C extension whenever it is installed, and a wrong answer that depends on the backend is a different bug from one that does not.
 
-  - type: dropdown
-    id: acceleration
-    attributes:
-      label: Which point-in-polygon backend is in use?
-      description: "`numba` takes precedence over the C extension whenever it is installed. Pick unsure if you have not checked - a wrong answer that depends on the backend is a different bug from one that does not."
-      options:
-        - C extension (a plain pip install)
-        - numba (the numba extra is installed)
-        - numpy fallback (no C extension built)
-        - unsure
+        ```shell
+        python -c "import platform, importlib.metadata as md; from timezonefinder import TimezoneFinder as TF; print('timezonefinder', md.version('timezonefinder'), '| timezonefinder-data', md.version('timezonefinder-data')); print('python', platform.python_version(), platform.platform()); print('numba', TF.using_numba(), '| clang', TF.using_clang_pip())"
+        ```
+      render: text
+      placeholder: |
+        timezonefinder 9.0.0 | timezonefinder-data 3.2026.3.post1
+        python 3.12.3 Linux-6.18.44-fc-v24-x86_64-with-glibc2.39
+        numba True | clang False
     validations:
       required: true
