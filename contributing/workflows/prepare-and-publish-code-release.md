@@ -15,7 +15,7 @@ Read the [changelog policy](../development/changelog-and-release-note-policy.md)
 
 Fetch `origin` and tags, inspect `uv version --short`, the top changelog section, and newest tags.
 
-- `X.X.X (unreleased)` and project version equal to newest tag: prepare.
+- Project version equals the newest tag and pending fragments generate a non-empty section: prepare.
 - Top section is a dated version matching the project version and no such tag exists: tag.
 - Matching tag already exists: inspect and report its workflow; do nothing.
 
@@ -50,7 +50,7 @@ Assemble the fragments first. Every non-exempt change since the last release fil
 make changelog-assemble
 ```
 
-That folds them into their preselected groups in the `X.X.X (unreleased)` section and deletes the files it consumed, additively — existing bullets are never rewritten. Confirm nothing is left behind before the version commit:
+That generates an `X.X.X (unreleased)` section from the fragments, folds them into their preselected groups, and deletes the files it consumed. Confirm nothing is left behind before the version commit:
 
 ```bash
 uv run python -m scripts.changelog_fragments --check --require-consumed
@@ -70,7 +70,7 @@ Compute patch, minor, and major candidates with `uv version --bump <level> --dry
 
 Internal code and bundled formats are versioned together and are not major changes. A data-only boundary release is outside this workflow. If the invocation explicitly names a level, use it but state when the table requires a higher one.
 
-Create `release/<version>`, run `uv version --bump <level>`, and replace the top changelog heading with the version and shell-derived date. Recompute its RST underline and insert a fresh empty `X.X.X (unreleased)` section above it. Only `CHANGELOG.rst`, `pyproject.toml`, `uv.lock`, and the consumed fragment deletions under `changelog.d/` belong in the version commit.
+Create `release/<version>`, run `uv version --bump <level>`, and replace the generated changelog heading with the version and shell-derived date. Recompute its RST underline; do not insert a new empty pending section above it. Only `CHANGELOG.rst`, `pyproject.toml`, `uv.lock`, and the consumed fragment deletions under `changelog.d/` belong in the version commit.
 
 Run `make hook`, `make test`, and `make testint`. Confirm the diff against `origin/master` contains exactly those files. Commit.
 
