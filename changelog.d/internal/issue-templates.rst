@@ -1,0 +1,1 @@
+Reporting now starts from a form: a bug report that asks for the failing coordinates and for the output of one command reporting the installed versions and which point-in-polygon backend the installation actually uses, or a feature request, with links routing usage questions to Discussions and misplaced boundaries upstream to ``timezone-boundary-builder``.
