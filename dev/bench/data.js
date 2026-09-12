@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789243987305,
+  "lastUpdate": 1789251523656,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10317,6 +10317,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4253",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a8d6bb9713284228a1e96d15aa51eda96f6a4aea",
+          "message": "Test the declared minimum NumPy in CI (#669)\n\n`numpy>=2` was published as the floor and never exercised: every environment\nresolved whatever NumPy was current, so a use of an API added after 2.0 would\nship green and break on an install that honours the declared bound.\n\nAdd a `py311-min` tox environment that overlays `numpy==2.0.0` on the ordinary\nenvironment and runs the same unit-test selection. Only NumPy is pinned - the\nfloor is the claim under test, and pinning the rest to their textual minimums\nwould test a combination nobody installs. One environment covers the claim:\nthe bound carries no environment markers, and 2.0.0 has no wheels for 3.13+,\nso it can only run on 3.11, the lowest supported interpreter.\n\nThe environment asserts the resolved version before running the suite, because\na pin the resolver quietly ignored would leave it green while testing nothing,\nwhich is the single failure mode it exists to rule out. The pin is stated once\nin tox.ini and held to `pyproject.toml`'s published lower bound by\ntests/test_python_version_support.py, so moving one without the other fails.\n\nCI gains the environment on the existing 3.11 job rather than a new job, and\nthe matrix test now reads the standalone environments off tox.ini instead of\nlisting them.\n\n\nClaude-Session: https://claude.ai/code/session_01GoyG6Zzr5W6SzgKXQ5vCza\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T00:17:54+02:00",
+          "tree_id": "0dea4189a062ab32e59e9be274181cfa1c36bdd6",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a8d6bb9713284228a1e96d15aa51eda96f6a4aea"
+        },
+        "date": 1789251521694,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 563311.0975629305,
+            "range": "± 5921",
+            "unit": "lookups/sec",
+            "extra": "min of 200 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 741823.2531871307,
+            "range": "± 17859",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 195243.53937143853,
+            "range": "± 2011",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 906958.7315810248,
+            "range": "± 67910",
+            "unit": "lookups/sec",
+            "extra": "min of 299 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1487245.3836014702,
+            "range": "± 16533",
+            "unit": "lookups/sec",
+            "extra": "min of 544 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 236791.71100210486,
+            "range": "± 1391",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 889744.625491647,
+            "range": "± 7228",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1423811.8290327243,
+            "range": "± 15281",
+            "unit": "lookups/sec",
+            "extra": "min of 525 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 235817.62166947455,
+            "range": "± 2515",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
