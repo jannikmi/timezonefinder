@@ -62,6 +62,7 @@ References
    :caption: Design
 
    Architecture <architecture>
+   Why No Simplification <why_no_simplification>
    Data Format <data_format>
    Data Report <data_report>
    Alternatives <alternatives>
