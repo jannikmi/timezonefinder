@@ -5,7 +5,7 @@ Contribution
 
 Contribution guidelines are documented in `CONTRIBUTING.md on GitHub <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`_
 
-If you encounter a bug or have a suggestion, `open an issue <https://github.com/jannikmi/timezonefinder/issues/new>`__ or a `pull request <https://github.com/jannikmi/timezonefinder/compare>`__ on GitHub.
+If you encounter a bug or have a suggestion, `open an issue <https://github.com/jannikmi/timezonefinder/issues/new/choose>`__ or a `pull request <https://github.com/jannikmi/timezonefinder/compare>`__ on GitHub.
 
 
 Contact
