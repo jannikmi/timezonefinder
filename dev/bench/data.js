@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789251525842,
+  "lastUpdate": 1789254663222,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10404,6 +10404,93 @@ window.BENCHMARK_DATA = {
             "range": "± 2515",
             "unit": "lookups/sec",
             "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "779b359c82c3922cd4f19010dfac649865334eb5",
+          "message": "docs: regroup the About and Contribution pages, add issue forms, credit xylar (#672)\n\n* docs: move Acknowledgements to the Contribution page\n\nThe contributor credits sat at the end of the About page, after Contact,\nso About closed on a list of names rather than on its call to action,\nwhile the Contribution page was a three-line stub that only linked out\nto CONTRIBUTING.md.\n\nThe list is a record of contributions, so it belongs next to the\ncontribution guidelines. Repoint the alternatives.rst cross-reference\nthat cites a contributor at the moved section.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* docs: exempt cosmetic docs changes from the changelog; credit xylar\n\nDrop the fragment this pull request filed: a bullet saying where a\nparagraph now lives tells a reader nothing they can act on, and the\nrendered docs are the current state of themselves.\n\nRecord the rule rather than only the instance. The changelog policy\ngains an exception for cosmetic documentation changes - a moved or\nretitled section, a typo, wording, a repointed cross-reference, an\nacknowledgement - alongside the existing contributor-memory and\nlock-refresh exceptions, and its opening paragraph no longer claims\nevery docs change owes a fragment. The documentation maintenance rules\npoint at it from the line that asks for the fragment.\n\nAcknowledge xylar for co-maintaining the timezonefinder and\ntimezonefinder-data conda-forge feedstocks.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* docs: trim the About page to what only it says\n\nAfter the acknowledgements moved out, two of the page's five sections\nwere the only content it did not share with the landing page: the\nMIT/ODbL split and the maintainer's contact note.\n\nDrop the rest. The badge block and the References list are both already\non `docs/index.rst`, the latter as a superset that this copy had already\ndrifted from - an http:// GUI link, and no docs, benchmark-chart or GUI\nrepository entries. \"Alternative python packages\" was a one-line stub\npointing at a page the sidebar already lists. The opening paragraphs\nretold index.rst's How it works, which the documentation maintenance\nrules pin to README.rst and index.rst as a deliberate two-copy pact:\nan unregistered third copy drifts with nothing to catch it, and this\none already had, left with a \"this index\" whose antecedent had been\nedited away. Replace them with pointers to the pages that carry the\nlong form.\n\nFix the typos the trim leaves in view: \"how your are using\", \"add a\nPull Requests\", a double space.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* docs: move Contact next to the guidelines, tighten the wording\n\nTwo of Contact's three paragraphs were contributing content, one of\nthem a pointer to the Contribution page itself. Move the section there,\nabove Acknowledgements, so that page reads how to reach me, how to\ncontribute, who has - and fold its issue/pull-request sentence into the\nline under the guidelines link, where it no longer needs the pointer.\n\nAbout keeps what only it says. Its opening sentence loses a doubled\npreposition and gains the precision index.rst already had (WGS84\ncoordinates), and the shouted LICENSE heading becomes title case like\nits neighbours - Sphinx slugs both to `license`, so the anchor is\nunchanged.\n\nDeclare the License section as the third deliberate duplicate in the\ndocumentation maintenance rules. It is in README.rst and 3_about.rst\nand neither can defer to the other, so both move together. The\nReferences list was a fourth copy of that shape, undeclared, and drifted\ninto a stale subset before this branch deleted it - so the note also\nsays to prefer deleting a copy over declaring it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* docs: link the issue and pull-request forms directly\n\nThe Contribution page told readers to open an issue or a pull request\nwithout saying where. Point both phrases at the forms that create one,\nso the invitation is one click rather than a search: /issues/new, and\n/compare for the branch comparison that opens a pull request against\nmaster. The repository has no issue-template chooser, so /issues/new is\nthe form itself.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* Add issue forms for bug reports and feature requests\n\nThe repository had a pull-request template but no issue template, so a\nbug report arrived in whatever shape the reporter chose and the first\nreply was usually a request for the coordinates, the versions, or which\nbackend was in use. The bug form asks for those up front, including the\npoint-in-polygon backend, because `numba` takes precedence over the C\nextension whenever it is installed and a wrong answer that depends on\nthe backend is a different bug from one that does not.\n\nTwo contact links route what does not belong in the tracker: usage\nquestions to Discussions, and a boundary in the wrong place to\n`timezone-boundary-builder`, which is where the polygons come from.\nBlank issues stay enabled, so nothing that does not fit a form is\nturned away.\n\nThe docs now link the chooser rather than the blank form.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n* Report the backend from a command instead of asking the reporter\n\nA dropdown asking which point-in-polygon backend is in use answers only\nas well as the reporter's guess, and \"unsure\" was a likely pick: the\nselection rule is `numba` over the C extension whenever it is installed,\nwhich is not something an installation announces.\n\nBoth public predicates already exist - `TimezoneFinder.using_numba()`\nand `using_clang_pip()` - so fold the dropdown and the separate versions\nfield into one Environment block whose command prints the versions, the\ninterpreter, the platform and both flags. It needs no packaged dataset,\nbecause both are staticmethods reporting the import-time binding.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01GJQ3azXBC7RN8rAXnTHs3b\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-12T23:10:13Z",
+          "tree_id": "83175cfd565cc6716326ea773a68cda9aab7b246",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/779b359c82c3922cd4f19010dfac649865334eb5"
+        },
+        "date": 1789254661933,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 577373.0726142348,
+            "range": "± 25234",
+            "unit": "lookups/sec",
+            "extra": "min of 192 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 763091.0559958859,
+            "range": "± 54057",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 198371.93770202505,
+            "range": "± 7325",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 912786.5328153169,
+            "range": "± 10836",
+            "unit": "lookups/sec",
+            "extra": "min of 300 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1466383.1659444165,
+            "range": "± 31099",
+            "unit": "lookups/sec",
+            "extra": "min of 528 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 240137.43545644698,
+            "range": "± 2823",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 900714.2664175073,
+            "range": "± 12710",
+            "unit": "lookups/sec",
+            "extra": "min of 297 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1432622.886093029,
+            "range": "± 19462",
+            "unit": "lookups/sec",
+            "extra": "min of 512 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 239765.46717481944,
+            "range": "± 4381",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
