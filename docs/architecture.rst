@@ -219,7 +219,7 @@ the `code-release workflow
 and the ``Makefile``; this section is the *why*.
 
 **One wheel per target, not one per Python version.** The C extension is built once against the
-stable ABI (``py_limited_api``, ``cp311``), so a single wheel serves every later interpreter instead
+stable ABI (``py_limited_api``, ``cp312``), so a single wheel serves every later interpreter instead
 of the build matrix growing a row per Python release. The saving is only real if the claim is true,
 which is why every wheel goes through ``abi3audit --strict`` in the repair step: a wheel that
 *declares* abi3 and links something version-specific installs happily and crashes at runtime on an
@@ -235,7 +235,7 @@ slower, never broken.
 and asserts both a known lookup result and ``clang_extension_loaded``. A smoke test that only checked
 ``import timezonefinder`` would pass on a wheel whose extension had silently failed to build, which
 is the one failure this package must not ship quietly - it would degrade to the pure-Python path
-without a single red check. It doubles as the proof that the abi3 claim holds, since one cp311 wheel
+without a single red check. It doubles as the proof that the abi3 claim holds, since one cp312 wheel
 is what all four interpreters install.
 
 **Two distributions, one repository.** The boundary data ships as ``timezonefinder-data``, a

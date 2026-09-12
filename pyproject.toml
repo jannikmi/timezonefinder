@@ -14,18 +14,25 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Localization",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-# following the official NumPy support/deprecation schedule:
-# https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule
+# following the official NumPy support/deprecation schedule: NEP 29
+# (https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule), which is
+# now superseded by SPEC 0 (https://scientific-python.org/specs/spec-0000/). The two
+# agree on what is supported here - NEP 29 keeps a Python minor for 42 months, SPEC 0
+# for 36 - so the earlier of the two drop dates is the one that applies. 3.11 reached
+# it on 2026-04-24 (SPEC 0: 2025-10-24); 3.12 reaches it on 2026-10-02 (NEP 29:
+# 2027-04-02), which is the next version to drop and the reason this floor is 3.12.
 # NOTE: When updating requires-python, also update the py_limited_api wheel config in setup.py
 # (tests/test_python_version_support.py fails if the two, or the classifiers above, drift apart)
-requires-python = ">=3.11,<4"
+requires-python = ">=3.12,<4"
 dependencies = [
-    "numpy>=2",
+    # The same schedule governs this floor - both documents keep a NumPy minor for 24
+    # months. 2.0 and 2.1 passed their drop dates (2026-06-16 and 2026-08-19); 2.2
+    # does not until 2026-12-09, which makes it the oldest release still supported.
+    "numpy>=2.2",
     "h3>=4",
     "cffi<3,>=1.15.1",
     "flatbuffers>=25.2.10",
@@ -181,7 +188,7 @@ timezonefinder = ["**/*.fbs", "**/*.c", "**/*.h", ]
 timezonefinder = ["inside_polygon_ext.c"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 src = ["timezonefinder", "tests", "build.py"]
 
 [tool.ruff.lint]
@@ -232,7 +239,7 @@ ignore_directives = ["autoclass", "autofunction", "include"]
 report_level = "warning"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false

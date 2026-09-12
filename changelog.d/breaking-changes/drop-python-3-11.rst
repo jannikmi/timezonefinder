@@ -1,0 +1,1 @@
+Dropped support for Python 3.11, which passed its drop date under the NumPy/Scientific-Python support schedule this project follows; the package now requires Python 3.12 or newer and its abi3 wheels are built against the ``cp312`` stable ABI.
