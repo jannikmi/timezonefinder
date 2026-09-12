@@ -1,0 +1,51 @@
+name: Bug report
+description: A wrong timezone, a crash, or behaviour that contradicts the documentation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+        Please check the [existing issues](https://github.com/jannikmi/timezonefinder/issues?q=is%3Aissue) first - a wrong answer at a border is often the upstream dataset rather than this package.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did the lookup return, and what did you expect instead?
+      placeholder: |
+        timezone_at(lng=13.358, lat=52.5061) returns 'Europe/Paris'; I expected 'Europe/Berlin'.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: The smallest snippet that shows it, including the coordinates involved. This is rendered as python, no backticks needed.
+      render: python
+      placeholder: |
+        from timezonefinder import TimezoneFinder
+
+        tf = TimezoneFinder()
+        print(tf.timezone_at(lng=13.358, lat=52.5061))
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Run this and paste the output. It reports the installed versions and which point-in-polygon backend your installation actually uses - `numba` takes precedence over the C extension whenever it is installed, and a wrong answer that depends on the backend is a different bug from one that does not.
+
+        ```shell
+        python -c "import platform, importlib.metadata as md; from timezonefinder import TimezoneFinder as TF; print('timezonefinder', md.version('timezonefinder'), '| timezonefinder-data', md.version('timezonefinder-data')); print('python', platform.python_version(), platform.platform()); print('numba', TF.using_numba(), '| clang', TF.using_clang_pip())"
+        ```
+      render: text
+      placeholder: |
+        timezonefinder 9.0.0 | timezonefinder-data 3.2026.3.post1
+        python 3.12.3 Linux-6.18.44-fc-v24-x86_64-with-glibc2.39
+        numba True | clang False
+    validations:
+      required: true

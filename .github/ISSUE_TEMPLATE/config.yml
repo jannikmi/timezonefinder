@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question about usage
+    url: https://github.com/jannikmi/timezonefinder/discussions
+    about: How to use the package, which accessor to pick, or how to read the benchmarks.
+  - name: Wrong timezone boundary in the data
+    url: https://github.com/evansiroky/timezone-boundary-builder/issues
+    about: The boundary polygons come from timezone-boundary-builder. A border in the wrong place is reported there, not here.

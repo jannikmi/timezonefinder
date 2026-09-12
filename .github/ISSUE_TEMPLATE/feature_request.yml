@@ -1,0 +1,27 @@
+name: Feature request
+description: A new capability, or a change to how an existing one behaves.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The use case behind the request, not only the API you have in mind - the constraint often has a solution that already exists.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: Sketch the API or behaviour you are asking for, if you have one in mind.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried?
+      description: Workarounds you are using today, or other packages you evaluated. See the [alternatives page](https://timezonefinder.readthedocs.io/en/latest/alternatives.html) for how this package compares against them.
+    validations:
+      required: false

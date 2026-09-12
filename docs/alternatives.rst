@@ -21,7 +21,7 @@ same query points, same process, same machine - in :doc:`benchmark_results_compa
 **If your query points are rarely near a timezone border - coarse geofencing, analytics
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
 metres of a boundary costs nothing - choose ``tzfpy``.** It is a good package, it will serve you
-better, and its maintainer is a contributor to this one (see :doc:`3_about`). If a wrong answer at
+better, and its maintainer is a contributor to this one (see :doc:`5_contributing`). If a wrong answer at
 a border is a bug rather than a rounding error, that is what this package is for.
 
 Alternative python packages
