@@ -4,3 +4,19 @@ Contribution
 ============
 
 Contribution guidelines are documented in `CONTRIBUTING.md on GitHub <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`_
+
+Acknowledgements
+----------------
+
+Thanks to:
+
+- `Adam <https://github.com/adamchainz>`__ for adding organisational features to the project and for helping me with publishing and testing routines.
+- `ringsaturn <https://github.com/ringsaturn>`__ for valuable feedback, sponsoring this project, creating the ``tzfpy`` package and adding the ``pytz`` compatibility extra
+- `theirix  <https://github.com/theirix>`__ for adding support for cibuildwheel
+- `snowman2 <https://github.com/snowman2>`__ for creating the conda-forge recipe.
+- `synapticarbors <https://github.com/synapticarbors>`__ for fixing Numba import with py27.
+- `zedrdave <https://github.com/zedrdave>`__ for valuable feedback.
+- `Tyler Huntley <https://github.com/Ty1776>`__ for adding docstrings
+- `Greg Meyer <https://github.com/gmmeyer>`__ for updating h3 to >4
+- `ARYAN RAJ <https://github.com/nikkhilaaryan>`__ for providing example scripts and updating python version support
+- `Romain Girard <https://github.com/romaingd-spi>`__ for fixing unwanted test  content
