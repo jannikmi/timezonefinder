@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789254664804,
+  "lastUpdate": 1789256538542,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10491,6 +10491,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4381",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a929aa754adbe1865a6a199ea2f47d7e8e8046b9",
+          "message": "docs: add design page on why polygons are never simplified (#673)\n\nStates the reasoning behind the no-simplification constraint in one place:\nerror concentrated at borders, broken shared borders and hole deduplication,\nthe lossless mechanisms that deliver the benefits instead, rejected options,\nand the conditions that would reopen the decision.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T01:41:29+02:00",
+          "tree_id": "18069ca2b85aff2c6076ae13a4ec72cf1c9be9be",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/a929aa754adbe1865a6a199ea2f47d7e8e8046b9"
+        },
+        "date": 1789256536570,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 567480.7215450583,
+            "range": "± 8968",
+            "unit": "lookups/sec",
+            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 749486.3020882651,
+            "range": "± 74936",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 191496.2050431344,
+            "range": "± 9963",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 909266.4801817863,
+            "range": "± 40243",
+            "unit": "lookups/sec",
+            "extra": "min of 290 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1490670.1933919706,
+            "range": "± 32477",
+            "unit": "lookups/sec",
+            "extra": "min of 513 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 232018.41075371255,
+            "range": "± 19034",
+            "unit": "lookups/sec",
+            "extra": "min of 78 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 894225.6274341292,
+            "range": "± 15201",
+            "unit": "lookups/sec",
+            "extra": "min of 285 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1438808.344399604,
+            "range": "± 55141",
+            "unit": "lookups/sec",
+            "extra": "min of 468 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 231084.5082517041,
+            "range": "± 4049",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
           }
         ]
       }
