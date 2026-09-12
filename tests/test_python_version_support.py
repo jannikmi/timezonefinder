@@ -24,6 +24,8 @@ import tomllib
 
 import pytest
 import yaml
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 from scripts.configs import PYPROJECT_FILE
 from tests.auxiliaries import PROJECT_ROOT
@@ -52,6 +54,23 @@ def tox_minors() -> list[int]:
     factors = re.search(r"py\{([\d,]+)\}", parser["tox"]["envlist"])
     assert factors, "envlist no longer uses a py{...} factor - update this test"
     return sorted(int(v[1:]) for v in factors.group(1).split(","))
+
+
+@pytest.fixture(scope="module")
+def tox_config() -> configparser.ConfigParser:
+    parser = configparser.ConfigParser()
+    parser.read_string(TOX_INI.read_text())
+    return parser
+
+
+@pytest.fixture(scope="module")
+def standalone_tox_envs(tox_config) -> set[str]:
+    """The envs tox.ini declares by name, e.g. `slow`, `docs`, `py311-min`."""
+    return {
+        section.split(":", 1)[1]
+        for section in tox_config.sections()
+        if section.startswith("testenv:")
+    }
 
 
 @pytest.fixture(scope="module")
@@ -86,16 +105,17 @@ def test_tox_defines_an_env_for_exactly_the_advertised_versions(
 
 @pytest.mark.unit
 def test_every_tox_env_named_in_the_matrix_is_generated_by_the_envlist(
-    matrix_entries, tox_minors
+    matrix_entries, tox_minors, standalone_tox_envs
 ):
-    # the envlist generates py3XY plus the -numba / -pytz variants; `slow` and
-    # `docs` are standalone testenv sections
+    # the envlist generates py3XY plus the -numba / -pytz variants; `slow`, `docs`
+    # and the minimum-dependency env are standalone testenv sections, read off
+    # tox.ini rather than listed here so adding one needs no edit to this test
     generated = {
         f"py3{minor}{suffix}"
         for minor in tox_minors
         for suffix in ("", "-numba", "-pytz")
     }
-    generated |= {"slow", "docs"}
+    generated |= standalone_tox_envs
     for entry in matrix_entries:
         for env in str(entry["tox-env"]).split(","):
             assert env in generated, (
@@ -127,3 +147,43 @@ def test_the_abi3_base_is_the_lowest_supported_version(
     assert setup_base, "setup.py no longer sets py_limited_api - update this test"
     assert setup_base.group(1) == expected
     assert build_workflow["env"]["CIBW_BUILD_VERSIONS"] == f"{expected}-*"
+
+
+@pytest.mark.unit
+def test_the_min_numpy_env_pins_the_declared_numpy_lower_bound(tox_config):
+    """The `py311-min` pin is the floor `pyproject.toml` publishes, not a guess.
+
+    The env exists to prove the declared `numpy` lower bound still works. Pinned
+    to anything else it proves something the package never claimed, and the claim
+    goes back to being untested - silently, because the env stays green. So the
+    two numbers are compared here: moving the published bound without moving the
+    pin (or the reverse) fails.
+    """
+    pinned = Version(tox_config["min-deps"]["numpy"])
+    dependencies = tomllib.loads(PYPROJECT_FILE.read_text())["project"]["dependencies"]
+    numpy_reqs = [
+        Requirement(dep)
+        for dep in dependencies
+        if Requirement(dep).name.lower() == "numpy"
+    ]
+    assert len(numpy_reqs) == 1, "expected exactly one `numpy` dependency declaration"
+    specifier = numpy_reqs[0].specifier
+    assert pinned in specifier, (
+        f"tox.ini pins numpy=={pinned}, which pyproject.toml's `numpy{specifier}` "
+        "does not allow"
+    )
+    # the floor itself, not merely some allowed version: anything above it would
+    # leave the lowest version the package promises to work with untested
+    lower_bounds = [s for s in specifier if s.operator in (">=", "==", "~=")]
+    assert len(lower_bounds) == 1, (
+        f"cannot read a single lower bound out of `numpy{specifier}`"
+    )
+    declared_floor = Version(lower_bounds[0].version)
+    assert (pinned.major, pinned.minor) == (
+        declared_floor.major,
+        declared_floor.minor,
+    ), (
+        f"tox.ini pins numpy=={pinned} while pyproject.toml declares a floor of "
+        f"{declared_floor}: the minimum-dependency env would not exercise the "
+        "published lower bound"
+    )

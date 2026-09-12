@@ -1,0 +1,1 @@
+CI now runs the test suite against the oldest NumPy release the published ``numpy>=2.2`` requirement allows (2.2.0 on Python 3.12) via the new ``py312-min`` tox environment, so the declared lower bound is exercised instead of assumed.
