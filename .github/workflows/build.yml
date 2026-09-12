@@ -72,8 +72,11 @@ jobs:
         # NOTE: need to match the versions in pyproject.toml > tox.ini
         # enforced by tests/test_python_version_support.py
         include:
+          # py311-min pins NumPy to the declared lower bound (see tox.ini); it rides
+          # on the lowest supported interpreter because that is the only one the
+          # floor is installable on, so the matrix gains an env rather than a job.
           - python-version: "3.11"
-            tox-env: "py311,py311-numba,py311-pytz"
+            tox-env: "py311,py311-numba,py311-pytz,py311-min"
           - python-version: "3.12"
             tox-env: "py312,py312-numba,py312-pytz,docs"
           - python-version: "3.13"
