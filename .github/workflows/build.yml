@@ -45,7 +45,7 @@ on:
 
 env:
   # Use one base Python version with future-proof abi3 support
-  CIBW_BUILD_VERSIONS: "cp311-*"
+  CIBW_BUILD_VERSIONS: "cp312-*"
 
 jobs:
   pre-commit-hooks:
@@ -72,13 +72,11 @@ jobs:
         # NOTE: need to match the versions in pyproject.toml > tox.ini
         # enforced by tests/test_python_version_support.py
         include:
-          # py311-min pins NumPy to the declared lower bound (see tox.ini); it rides
-          # on the lowest supported interpreter because that is the only one the
-          # floor is installable on, so the matrix gains an env rather than a job.
-          - python-version: "3.11"
-            tox-env: "py311,py311-numba,py311-pytz,py311-min"
+          # py312-min pins NumPy to the declared lower bound (see tox.ini); it rides
+          # on the lowest supported interpreter, so the matrix gains an env rather
+          # than a job.
           - python-version: "3.12"
-            tox-env: "py312,py312-numba,py312-pytz,docs"
+            tox-env: "py312,py312-numba,py312-pytz,docs,py312-min"
           - python-version: "3.13"
             tox-env: "py313,py313-numba,py313-pytz"
           - python-version: "3.14"
@@ -217,7 +215,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-            uv-python-version: ["cp311", "cp312", "cp313", "cp314"]
+            uv-python-version: ["cp312", "cp313", "cp314"]
     steps:
       # `uses: ./...` resolves from the workspace, so the staging action has to be on
       # disk. Sparse and non-cone deliberately: the test below builds a throwaway
