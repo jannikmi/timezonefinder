@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789232747467,
+  "lastUpdate": 1789243985258,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10230,6 +10230,93 @@ window.BENCHMARK_DATA = {
             "range": "± 13800",
             "unit": "lookups/sec",
             "extra": "min of 100 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d85d9518701997ec02e6e253fd13ccd538d6247e",
+          "message": "Follow the support schedule: require Python 3.12 and NumPy 2.2 (#670)\n\n`pyproject.toml` names the NEP 29 drop schedule as the policy for\n`requires-python`, and the repository had fallen behind it. NEP 29 (now\nsuperseded by SPEC 0, which agrees) says:\n\n    On Apr 24, 2026 drop support for Python 3.11\n    On Jun 16, 2026 drop support for NumPy 2.0\n    On Aug 19, 2026 drop support for NumPy 2.1\n    On Dec 09, 2026 drop support for NumPy 2.2\n\nAll three drop dates but the last have passed, so the supported set is Python\n3.12-3.14 and NumPy 2.2 or newer. Python 3.15 is not released yet, so nothing\nis added at the top of the range.\n\nDropping 3.11 moves the abi3 base with it: an abi3 wheel is tagged for its\nbase interpreter, so it has to be the lowest supported one. `setup.py`'s\n`py_limited_api` and `CIBW_BUILD_VERSIONS` move to `cp312` together, as\ntests/test_python_version_support.py requires, and the end-to-end wheel matrix\ndrops its `cp311` leg. The data distribution's `requires-python` mirrors the\nroot's, as its comment says it must.\n\nThe comment above `requires-python` now records both documents, which of the\ntwo drop dates binds, and when 3.12 follows - the schedule is the reason these\nnumbers are what they are, and a reader arriving later cannot recompute it\nfrom the version alone.\n\n\nClaude-Session: https://claude.ai/code/session_01GoyG6Zzr5W6SzgKXQ5vCza\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-12T20:12:18Z",
+          "tree_id": "a2b52d9b6c8558da1b10548ac5726b16803d711b",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/d85d9518701997ec02e6e253fd13ccd538d6247e"
+        },
+        "date": 1789243983458,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 579123.7024443882,
+            "range": "± 23849",
+            "unit": "lookups/sec",
+            "extra": "min of 189 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 761092.9294469549,
+            "range": "± 20892",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 194341.56649708928,
+            "range": "± 2548",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 912940.1969386822,
+            "range": "± 55218",
+            "unit": "lookups/sec",
+            "extra": "min of 298 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1483318.599034958,
+            "range": "± 18142",
+            "unit": "lookups/sec",
+            "extra": "min of 522 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 238004.88690682693,
+            "range": "± 21783",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 896336.8505602675,
+            "range": "± 20541",
+            "unit": "lookups/sec",
+            "extra": "min of 297 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1448999.8423495414,
+            "range": "± 54812",
+            "unit": "lookups/sec",
+            "extra": "min of 524 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 236282.63523951368,
+            "range": "± 4253",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           }
         ]
       }
