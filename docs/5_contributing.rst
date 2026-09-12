@@ -5,6 +5,18 @@ Contribution
 
 Contribution guidelines are documented in `CONTRIBUTING.md on GitHub <https://github.com/jannikmi/timezonefinder/blob/master/CONTRIBUTING.md>`_
 
+If you encounter a bug or have a suggestion, open an issue or a pull request on GitHub.
+
+
+Contact
+-------
+
+Tell me if and how you are using this package - it encourages me to develop and test it further.
+
+Most certainly there is something I missed, could have optimized further, or explained more clearly.
+I would be really glad to get some feedback.
+
+
 Acknowledgements
 ----------------
 
