@@ -45,7 +45,7 @@ on:
 
 env:
   # Use one base Python version with future-proof abi3 support
-  CIBW_BUILD_VERSIONS: "cp311-*"
+  CIBW_BUILD_VERSIONS: "cp312-*"
 
 jobs:
   pre-commit-hooks:
@@ -72,8 +72,6 @@ jobs:
         # NOTE: need to match the versions in pyproject.toml > tox.ini
         # enforced by tests/test_python_version_support.py
         include:
-          - python-version: "3.11"
-            tox-env: "py311,py311-numba,py311-pytz"
           - python-version: "3.12"
             tox-env: "py312,py312-numba,py312-pytz,docs"
           - python-version: "3.13"
@@ -214,7 +212,7 @@ jobs:
     strategy:
         fail-fast: false
         matrix:
-            uv-python-version: ["cp311", "cp312", "cp313", "cp314"]
+            uv-python-version: ["cp312", "cp313", "cp314"]
     steps:
       # `uses: ./...` resolves from the workspace, so the staging action has to be on
       # disk. Sparse and non-cone deliberately: the test below builds a throwaway
