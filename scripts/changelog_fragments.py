@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Assemble ``CHANGELOG.rst``'s unreleased section from per-change fragments.
+"""Render and assemble an unreleased changelog section from fragments.
 
 Every non-exempt change used to edit one file at one place, and internal
 changes all appended at the same ``Internal:`` boundary. That made the
@@ -11,8 +11,9 @@ needed once, at release time, and not before.
 A change now drops one file into the subdirectory named for its release-note
 section. The directory carries the placement, so no fragment has to say where
 it goes and no two fragments touch the same lines. ``--assemble`` folds them
-into the grouped unreleased section and deletes them; release curation then
-checks the end state without having to classify every bullet again.
+into a newly generated, grouped unreleased section and deletes them; release
+curation then checks the end state without having to classify every bullet
+again. Between releases, ``CHANGELOG.rst`` contains released history only.
 
 ``CHANGELOG.rst`` stays the published artifact - it is what ``README.rst``
 includes and what ships - so nothing downstream learns about fragments.
@@ -54,6 +55,10 @@ KEEP_FILE: Final[str] = ".gitkeep"
 SLUG_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 UNRELEASED_HEADING: Final[str] = "X.X.X (unreleased)"
+UNRELEASED_HEADER: Final[tuple[str, str]] = (
+    UNRELEASED_HEADING,
+    "-" * len(UNRELEASED_HEADING),
+)
 
 
 def _display(path: Path) -> str:
@@ -186,22 +191,34 @@ def render_bullets(fragments: Iterable[Fragment], category: str) -> list[str]:
 
 
 def assemble(changelog_text: str, fragments: Sequence[Fragment]) -> str:
-    """``changelog_text`` with every fragment folded into its unreleased section.
+    """``changelog_text`` with every fragment in a generated pending section.
 
-    Additive by construction: existing bullets are never rewritten, reordered
-    or re-wrapped, so assembling into a section that already holds curated text
-    leaves that text byte-identical and appends beneath it. The release's
-    final wording pass is a separate, deliberate act.
+    A release branch may already contain a generated section while it is being
+    curated. In that case assembly remains additive: existing bullets are never
+    rewritten, reordered or re-wrapped. With no fragments, the changelog is
+    returned byte-identically and no empty placeholder is created.
     """
+    if not fragments:
+        return changelog_text
+
     lines = changelog_text.splitlines()
-    start, end = _unreleased_bounds(lines)
-    section = lines[start:end]
+    bounds = _unreleased_bounds(lines)
+    section = [] if bounds is None else lines[bounds[0] : bounds[1]]
     for category in CATEGORIES:
         bullets = render_bullets(fragments, category)
         if bullets:
             section = _append_to_category(section, category, bullets)
 
-    rebuilt = lines[:start] + _tidy(section) + lines[end:]
+    if bounds is None:
+        insert_at = _published_section_start(lines)
+        rebuilt = (
+            lines[:insert_at]
+            + [*UNRELEASED_HEADER, *_tidy(section)]
+            + lines[insert_at:]
+        )
+    else:
+        start, end = bounds
+        rebuilt = lines[:start] + _tidy(section) + lines[end:]
     return "\n".join(rebuilt) + "\n"
 
 
@@ -243,22 +260,30 @@ def _append_to_category(
     return section[:insert_at] + group + section[insert_at:]
 
 
-def _unreleased_bounds(lines: Sequence[str]) -> tuple[int, int]:
-    """Index range of the unreleased section's *body*, heading excluded."""
+def _unreleased_bounds(lines: Sequence[str]) -> tuple[int, int] | None:
+    """Index range of a generated pending section's body, when present."""
     for index, line in enumerate(lines):
         if line.strip() != UNRELEASED_HEADING:
             continue
         underline = index + 1
         if underline >= len(lines) or not set(lines[underline]) == {"-"}:
-            break
+            raise FragmentError(
+                f"{CHANGELOG_PATH.name} has a malformed '{UNRELEASED_HEADING}' heading"
+            )
         start = underline + 1
         for offset in range(start, len(lines) - 1):
             if set(lines[offset + 1]) == {"-"} and lines[offset].strip():
                 return start, offset
         return start, len(lines)
-    raise FragmentError(
-        f"{CHANGELOG_PATH.name} has no '{UNRELEASED_HEADING}' section to assemble into"
-    )
+    return None
+
+
+def _published_section_start(lines: Sequence[str]) -> int:
+    """The first dated release heading, or the end of a history-free changelog."""
+    for index in range(3, len(lines) - 1):
+        if lines[index].strip() and set(lines[index + 1]) == {"-"}:
+            return index
+    return len(lines)
 
 
 def _append_bullets(block: list[str], bullets: list[str]) -> list[str]:
@@ -286,15 +311,15 @@ def _tidy(section: list[str]) -> list[str]:
 def _preview(fragments: Sequence[Fragment], changelog_text: str) -> str:
     """The unreleased section as it would read once assembled.
 
-    Built from the real changelog rather than from a synthetic empty section:
-    the unreleased section can already hold curated or legacy bullets, and a
-    preview that omits them cannot answer the question the changelog policy
-    asks of it - whether two bullets now describe the same change and should be
-    merged. It would also read as empty whenever no fragment is filed, which is
-    exactly when a release is deciding whether there is anything to ship.
+    Assembly supplies the temporary section when fragments exist. A release
+    branch can already hold curated bullets there, so the preview still reads
+    from the assembled changelog rather than rendering fragments independently.
     """
     lines = assemble(changelog_text, fragments).splitlines()
-    start, end = _unreleased_bounds(lines)
+    bounds = _unreleased_bounds(lines)
+    if bounds is None:
+        return ""
+    start, end = bounds
     heading = lines[start - 2 : start]
     body = lines[start:end]
     while body and not body[-1].strip():

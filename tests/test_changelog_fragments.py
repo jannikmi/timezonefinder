@@ -68,6 +68,19 @@ EMPTY_UNRELEASED = textwrap.dedent(
     """
 )
 
+RELEASED_ONLY = textwrap.dedent(
+    """\
+    =========
+    Changelog
+    =========
+
+    9.0.0 (2026-09-02)
+    ------------------
+
+    * the released text, which nothing here may touch
+    """
+)
+
 
 @pytest.fixture
 def fragment_dir(tmp_path):
@@ -245,11 +258,29 @@ class TestAssembly:
         assert "New features:\n\n* a user-visible change" in assembled
         assert "Internal:" not in assembled
 
-    def test_a_changelog_without_an_unreleased_section_is_refused(self, fragment_dir):
+    def test_a_pending_section_is_generated_when_fragments_exist(self, fragment_dir):
         write(fragment_dir, "new-features", "visible", "a user-visible change")
 
-        with pytest.raises(FragmentError, match="no 'X.X.X \\(unreleased\\)' section"):
-            assemble("=========\nChangelog\n=========\n", load_fragments(fragment_dir))
+        assembled = assemble(RELEASED_ONLY, load_fragments(fragment_dir))
+
+        assert assembled.startswith(
+            "=========\nChangelog\n=========\n\nX.X.X (unreleased)"
+        )
+        assert "New features:\n\n* a user-visible change" in assembled
+        assert assembled.index("X.X.X (unreleased)") < assembled.index("9.0.0")
+
+    def test_no_fragments_do_not_create_an_empty_pending_section(self):
+        assert assemble(RELEASED_ONLY, []) == RELEASED_ONLY
+
+    def test_a_malformed_existing_pending_heading_is_refused(self, fragment_dir):
+        write(fragment_dir, "changed", "visible", "a user-visible change")
+        malformed = RELEASED_ONLY.replace(
+            "9.0.0 (2026-09-02)\n------------------",
+            "X.X.X (unreleased)\nnot-an-underline",
+        )
+
+        with pytest.raises(FragmentError, match="malformed 'X.X.X \\(unreleased\\)'"):
+            assemble(malformed, load_fragments(fragment_dir))
 
     def test_the_result_is_valid_rst_the_next_assembly_can_read(self, fragment_dir):
         """Assembly is repeatable: its own output is a legal input."""
@@ -311,6 +342,20 @@ class TestPreview:
         assert "9.0.0" not in preview
         assert "the released text" not in preview
 
+    def test_fragments_are_previewed_without_a_committed_placeholder(
+        self, fragment_dir
+    ):
+        write(fragment_dir, "changed", "new-change", "a newly filed change")
+
+        preview = _preview(load_fragments(fragment_dir), RELEASED_ONLY)
+
+        assert preview.startswith("X.X.X (unreleased)\n------------------")
+        assert "Changed:\n\n* a newly filed change" in preview
+        assert "9.0.0" not in preview
+
+    def test_no_fragments_and_no_placeholder_have_an_empty_preview(self):
+        assert _preview([], RELEASED_ONLY) == ""
+
 
 def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():
     fragments = [
@@ -323,13 +368,9 @@ def test_render_bullets_adds_the_marker_the_fragment_may_not_carry():
 
 
 def test_the_committed_fragments_are_sound():
-    """Filed fragments are valid; assemble them when a target section exists."""
+    """The gate this repository runs: every filed fragment must assemble."""
     fragments = load_fragments()
     changelog = (FRAGMENT_ROOT.parent / "CHANGELOG.rst").read_text(encoding="utf-8")
-
-    if "X.X.X (unreleased)" not in changelog:
-        assert changelog.startswith("=========\nChangelog\n=========")
-        return
 
     assembled = assemble(changelog, fragments)
     assert assembled.startswith("=========\nChangelog\n=========")
