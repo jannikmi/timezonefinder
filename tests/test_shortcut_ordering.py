@@ -215,6 +215,42 @@ def test_geometric_safety_is_independent_of_objective_approximation():
     assert 0 in orderer.invalid_geometries
 
 
+def refusing_orderer():
+    """An orderer whose geometry cannot be read, to prove a refusal came first."""
+    orderer = object.__new__(ShortcutOrderer)
+
+    def refuse(pid):
+        raise AssertionError(f"geometry {pid} was consulted")
+
+    orderer.geometry = refuse
+    orderer.data = SimpleNamespace(poly_zone_ids=[0, 1])
+    orderer.invalid_geometries = set()
+    return orderer
+
+
+@pytest.mark.parametrize(
+    "lat, lng",
+    [(89.9, 0.0), (-89.9, 0.0), (0.0, 179.99), (0.0, -179.99)],
+)
+def test_the_safety_gate_refuses_seam_cells_before_consulting_geometry(lat, lng):
+    """A cell whose cap reaches a pole or crosses the antimeridian has no envelope.
+
+    Asserted by making the geometry unreadable rather than by the verdict alone: a
+    covering, disjoint candidate set is refused at a seam for *either* reason - the
+    bail-out, or a coverage test over a rectangle running past +-180 - so a verdict-only
+    test passes with the bail-outs deleted. What must hold is that neither containment
+    test is reached, because certification is what lets the converter change a final
+    zone the query then returns untested.
+    """
+    assert not refusing_orderer().safe_to_reorder(
+        h3.latlng_to_cell(lat, lng, 4), [0, 1]
+    )
+    with pytest.raises(AssertionError, match="was consulted"):
+        # The control: away from both seams the gate does read the geometry, so the
+        # refusals above are the seam checks and not a stub that refuses everything.
+        refusing_orderer().safe_to_reorder(h3.latlng_to_cell(0, 90, 4), [0, 1])
+
+
 def test_hole_union_gate_skips_all_individual_hole_costs():
     def array(n, low, high):
         return SimpleNamespace(
