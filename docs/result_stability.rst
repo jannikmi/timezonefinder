@@ -124,6 +124,19 @@ containment tests themselves are planar operations in the quantized coordinate f
 for a spherical cell. Everything unproven fails closed: invalid or repaired geometry is rejected,
 and any geometry error refuses the cell.
 
+**Both arguments are asserted by tests, not only argued here.**
+``tests/test_ordering_answer_invariance.py`` drives the real lookup over the committed
+ambiguous-cell points: a within-zone shuffle cannot move an answer, a point contained by a single
+zone's candidates survives any permutation, and - so that neither of those asserts nothing - a
+cross-zone rotation does move answers. It also pins ``TimezoneFinderL`` to the final candidate's
+zone. ``tests/test_shortcut_ordering.py`` covers the converter side: the restricted mode's answer
+over every hit pattern, the gate's overlap and coverage refusals, and its refusal of pole and
+antimeridian cells before any geometry is read.
+
+What no test establishes is the certification itself - that a positive verdict really implies
+coverage and disjointness for every point H3 assigns to the cell, which is where the cap-radius
+argument above carries the weight.
+
 Both arguments are about the **packaged** data, whose ocean zones cover the globe. If you compile
 your own data and it leaves areas uncovered, a point inside none of a cell's candidates is
 attributed to the last zone untested, so the stored order decides it outright. Use
