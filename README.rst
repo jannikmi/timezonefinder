@@ -61,7 +61,7 @@ Quick Guide
 
 This compiles a small C extension for the point-in-polygon test. The optional `Numba <https://numba.pydata.org/>`__ extra (``pip install timezonefinder[numba]``) replaces that extension with a JIT-compiled kernel and takes precedence over it - a dispatch rule, not a promise of more speed. The `acceleration path comparison <https://timezonefinder.readthedocs.io/en/latest/benchmark_results_acceleration_paths.html>`__ measures all three against each other and is regenerated with every report; check it before adding the extra.
 
-The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset - the `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the versions to choose from: ``pip install timezonefinder "timezonefinder-data==<version>"``.
+The timezone boundary data is installed automatically as the separate ``timezonefinder-data`` distribution, so that a new dataset ships without a new ``timezonefinder`` release. Pin it to hold a deployment to one dataset - the `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the versions to choose from: ``pip install timezonefinder "timezonefinder-data==<version>"``. A dataset update can change the answer for a coordinate, so pin it when a result has to stay reproducible across deployments - `result stability <https://timezonefinder.readthedocs.io/en/latest/result_stability.html>`__ covers what can change and what cannot.
 
 
 .. code-block:: python
