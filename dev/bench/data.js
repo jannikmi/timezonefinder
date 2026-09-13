@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789256540653,
+  "lastUpdate": 1789317671210,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10578,6 +10578,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4049",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2699 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92421e17aa5c147a159d85aae9fff47b852a5155",
+          "message": "record the wheel-only data distribution decision (#674)\n\nconda-forge put the sdist question to the project in practice: its feedstock\nhad to package timezonefinder-data from the released wheel, because the\ndata-v* tag archive stopped carrying the dataset at the 3.x format\ngeneration. The recipe was merged that way and the lint hint that raised it\nprefers an sdist only when one is available, so the \"no build-from-source\ncase\" claim survived its first real redistributor.\n\nThe short form already sits at both enforcement sites (obtain-data-wheel and\nDATA_DIST's dist_types). What those cannot carry is the refused option and\nits reopen condition, which is what this entry adds - including the reason\nthat outranks the storage one: the dataset is git-ignored, so an sdist is a\nsecond artifact that can be built empty, caught only once it is uploaded and\nnamed as the release.\n\nSplitting the repository and workspace layout decisions into their own file\npays for the entry: the distribution module sat at 1,750 of its 2,000-word\nbudget. The two moved bullets answer the same recurring proposal to\nrestructure the tree and say nothing about what the distributions contain;\nboth moved verbatim, and GH-524 now points at their new home.\n\n\nClaude-Session: https://claude.ai/code/session_01CeHyqZrGKgZLhqc9kQSuxH\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T16:40:21Z",
+          "tree_id": "416bfe74b71a2580aff795697a9e3aab721d51da",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/92421e17aa5c147a159d85aae9fff47b852a5155"
+        },
+        "date": 1789317669321,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 568012.3181420186,
+            "range": "± 10311",
+            "unit": "lookups/sec",
+            "extra": "min of 186 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 766354.4640756849,
+            "range": "± 118608",
+            "unit": "lookups/sec",
+            "extra": "min of 271 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 194106.50717226436,
+            "range": "± 6368",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 900850.9077316602,
+            "range": "± 29852",
+            "unit": "lookups/sec",
+            "extra": "min of 298 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1462144.7792380778,
+            "range": "± 121471",
+            "unit": "lookups/sec",
+            "extra": "min of 503 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 231978.47388228241,
+            "range": "± 4770",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 888887.9407413593,
+            "range": "± 13489",
+            "unit": "lookups/sec",
+            "extra": "min of 271 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1416022.234945985,
+            "range": "± 28111",
+            "unit": "lookups/sec",
+            "extra": "min of 448 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 236140.6903564298,
+            "range": "± 4253",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
           }
         ]
       }
