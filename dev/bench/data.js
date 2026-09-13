@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789317671210,
+  "lastUpdate": 1789317673460,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -21029,6 +21029,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0.002",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2977 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92421e17aa5c147a159d85aae9fff47b852a5155",
+          "message": "record the wheel-only data distribution decision (#674)\n\nconda-forge put the sdist question to the project in practice: its feedstock\nhad to package timezonefinder-data from the released wheel, because the\ndata-v* tag archive stopped carrying the dataset at the 3.x format\ngeneration. The recipe was merged that way and the lint hint that raised it\nprefers an sdist only when one is available, so the \"no build-from-source\ncase\" claim survived its first real redistributor.\n\nThe short form already sits at both enforcement sites (obtain-data-wheel and\nDATA_DIST's dist_types). What those cannot carry is the refused option and\nits reopen condition, which is what this entry adds - including the reason\nthat outranks the storage one: the dataset is git-ignored, so an sdist is a\nsecond artifact that can be built empty, caught only once it is uploaded and\nnamed as the release.\n\nSplitting the repository and workspace layout decisions into their own file\npays for the entry: the distribution module sat at 1,750 of its 2,000-word\nbudget. The two moved bullets answer the same recurring proposal to\nrestructure the tree and say nothing about what the distributions contain;\nboth moved verbatim, and GH-524 now points at their new home.\n\n\nClaude-Session: https://claude.ai/code/session_01CeHyqZrGKgZLhqc9kQSuxH\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T16:40:21Z",
+          "tree_id": "416bfe74b71a2580aff795697a9e3aab721d51da",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/92421e17aa5c147a159d85aae9fff47b852a5155"
+        },
+        "date": 1789317672755,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014939308166504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0151176452636719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.262744903564453,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2634201049804688,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61689281463623,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.617615699768066,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
           }
         ]
       }
