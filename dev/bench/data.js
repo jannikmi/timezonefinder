@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789317673460,
+  "lastUpdate": 1789340636075,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10665,6 +10665,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4253",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2441 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10bbbbfe399b1a455a50190eae32e92434053518",
+          "message": "GH-362: give the converter's collections the runtime's polygon vocabulary (#676)\n\n* GH-362: give the converter's collections the runtime's polygon vocabulary\n\n`TimezoneData` exposed a polygon collection as parallel per-polygon\nstructures - `polygons`, `polygon_lengths`, `poly_boundaries`,\n`hole_boundaries`, `holes`, `all_hole_lengths`, `polynrs_of_holes`,\n`original_polygons` - that every caller indexed and had to keep in step by\nhand. The rings were already grouped into `PolygonCollection` and\n`HoleCollection`; what was missing is that the two are the same collection\nthe runtime reads back, under different names.\n\nName them as the runtime does - `TimezoneData.boundaries` / `.holes`, with\n`coords_of` and `ids_of` as methods, `nr_vertices` as a column indexed\nrather than called, and `holes_of_poly` as the finder spells it - drop the\nindex-parallel pass-throughs, and move `Hex.is_poly_candidate`,\n`Hex.lies_in_cell`, `optimise_shortcut_ordering`, the binary writers and\nthe two prototypes onto the accessors. The rings stay in memory: the\nwritten binaries are deliberately not read back, which the coding rules\nrecord with the measurement that refuses it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011wk3mZLRKJtZR4yJqzoQiQ\n\n* retire GH-362 from the improvement register\n\nDelete the item file and its ranking row with the change that ships it, and\ndrop its handle from the sequencing graph. The measurement that refuses\nreading the written binaries back per access now lives at the accessor it\nrefuses, and the shared-vocabulary rule in the coding rules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011wk3mZLRKJtZR4yJqzoQiQ\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T23:02:57Z",
+          "tree_id": "4e1deb9c03bb5917e55c7cd619e3839598f7cbd0",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/10bbbbfe399b1a455a50190eae32e92434053518"
+        },
+        "date": 1789340633875,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 568944.0739359617,
+            "range": "± 7921",
+            "unit": "lookups/sec",
+            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 752043.0000136335,
+            "range": "± 71472",
+            "unit": "lookups/sec",
+            "extra": "min of 260 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 185177.8192230598,
+            "range": "± 1767",
+            "unit": "lookups/sec",
+            "extra": "min of 70 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 902064.6455601192,
+            "range": "± 14321",
+            "unit": "lookups/sec",
+            "extra": "min of 281 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1479176.1580469552,
+            "range": "± 31111",
+            "unit": "lookups/sec",
+            "extra": "min of 511 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 222946.21279935652,
+            "range": "± 5151",
+            "unit": "lookups/sec",
+            "extra": "min of 77 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 884894.6709873811,
+            "range": "± 13769",
+            "unit": "lookups/sec",
+            "extra": "min of 272 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1428122.5900455606,
+            "range": "± 24509",
+            "unit": "lookups/sec",
+            "extra": "min of 477 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 220261.30920674477,
+            "range": "± 3133",
+            "unit": "lookups/sec",
+            "extra": "min of 76 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
