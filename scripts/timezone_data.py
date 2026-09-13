@@ -171,11 +171,40 @@ class PolygonCollection(BaseModel):
     def nr_of_polygons(self) -> int:
         return len(self.lengths)
 
+    def __len__(self) -> int:
+        return len(self.lengths)
+
     @property
-    def boundaries(self) -> list[Boundaries]:
+    def bboxes(self) -> list[Boundaries]:
         if self._boundaries is None:
             self._boundaries = compile_bboxes(self.polygons)
         return self._boundaries
+
+    def coords_of(self, idx: int) -> CoordinateArray:
+        """The ring's coordinates, named as the runtime's `PolygonArray.coords_of`.
+
+        The converter holds the rings in memory, so this is an index rather than the
+        payload decode the runtime pays. Deliberately not the written binaries read
+        back through `PolygonArray`: that decode measures 193 us per call against
+        0.04 us here, and `Hex.lies_in_cell` reads a ring once per (cell, candidate)
+        pair while compiling the shortcut index.
+        """
+        return self.polygons[idx]
+
+    @property
+    def nr_vertices(self) -> LengthList:
+        """Vertex count per ring, indexed as the runtime's `PolygonArray.nr_vertices`
+        is - a column, not a call, so the two sides read the same at a call site."""
+        return self.lengths
+
+    def bounds_of(self, idx: int) -> Boundaries:
+        """The ring's bounding box, as one `Boundaries`.
+
+        Converter-side only: the runtime keeps the same four numbers as separate
+        integer columns and never materialises a box, because `outside_bbox` is what
+        it does with them. Here they are compared whole, against a cell.
+        """
+        return self.bboxes[idx]
 
     def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
         res_cache = self._vertex_hex_cache.setdefault(res, {})
@@ -234,11 +263,39 @@ class HoleCollection(BaseModel):
     def nr_of_holes(self) -> int:
         return len(self.lengths)
 
+    def __len__(self) -> int:
+        return len(self.lengths)
+
     @property
-    def boundaries(self) -> list[Boundaries]:
+    def bboxes(self) -> list[Boundaries]:
         if self._boundaries is None:
             self._boundaries = compile_bboxes(self.holes)
         return self._boundaries
+
+    def coords_of(self, idx: int) -> CoordinateArray:
+        """One hole ring, named as the runtime's `HoleArray.coords_of`."""
+        return self.holes[idx]
+
+    @property
+    def nr_vertices(self) -> HoleLengthList:
+        """Vertex count per hole ring, indexed as the runtime's column is."""
+        return self.lengths
+
+    def bounds_of(self, idx: int) -> Boundaries:
+        """The hole ring's bounding box; see `PolygonCollection.bounds_of`."""
+        return self.bboxes[idx]
+
+    def ids_of(self, boundary_id: int) -> range:
+        """The hole ids of one boundary polygon, as the runtime's `HoleArray.ids_of`.
+
+        A `dict.get` and a `range` rather than a lookup that raises, for the reason
+        that method records: the empty case is the majority one.
+        """
+        entry = self.registry.get(boundary_id)
+        if entry is None:
+            return range(0)
+        amount_of_holes, first_hole_id = entry
+        return range(first_hole_id, first_hole_id + amount_of_holes)
 
     @property
     def registry(self) -> HoleRegistry:
@@ -294,7 +351,7 @@ class HoleCollection(BaseModel):
         # bucketing on those first leaves only a handful of candidates to compare in
         # full - the canonical key is what decides, the bucket only narrows the search.
         buckets: dict[tuple[float, float, float, float, int], list[int]] = {}
-        for poly_id, bounds in enumerate(polygons.boundaries):
+        for poly_id, bounds in enumerate(polygons.bboxes):
             key = (
                 bounds.xmin,
                 bounds.xmax,
@@ -320,7 +377,7 @@ class HoleCollection(BaseModel):
         nr_same_zone = 0
         print("matching holes against identical boundary polygons...")
         for hole_id, hole in enumerate(self.holes):
-            bounds = self.boundaries[hole_id]
+            bounds = self.bboxes[hole_id]
             candidates = buckets.get(
                 (
                     bounds.xmin,
@@ -407,14 +464,10 @@ class HoleCollection(BaseModel):
             raise RuntimeError("holes have not been matched against boundaries yet")
         return self._inline_holes
 
-    def holes_in_poly(self, poly_nr: int) -> Iterator[CoordinateArray]:
-        registry = self.registry
-        if poly_nr not in registry:
-            return
-
-        hole_count, first_hole_index = registry[poly_nr]
-        for i in range(first_hole_index, first_hole_index + hole_count):
-            yield self.holes[i]
+    def holes_of_poly(self, boundary_id: int) -> Iterator[CoordinateArray]:
+        """The hole rings of one boundary polygon, as `TimezoneFinder._holes_of_poly`."""
+        for hole_id in self.ids_of(boundary_id):
+            yield self.coords_of(hole_id)
 
 
 @dataclass
@@ -518,8 +571,12 @@ class TimezoneData(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     zones: ZoneCollection
-    polygon_store: PolygonCollection
-    hole_store: HoleCollection
+    # Named as the runtime names the same two collections
+    # (`TimezoneFinder.boundaries` / `.holes`), so a reader of either side can read
+    # the other: `coords_of`, `nr_vertices` and `ids_of` are spelled and indexed as
+    # `PolygonArray` / `HoleArray` spell them, and `holes_of_poly` as the finder does.
+    boundaries: PolygonCollection
+    holes: HoleCollection
     hex_cache: HexCache = Field(default_factory=HexCache, exclude=True)
 
     @classmethod
@@ -579,8 +636,8 @@ class TimezoneData(BaseModel):
 
         return cls.create_validated(
             zones=zone_collection,
-            polygon_store=polygon_collection,
-            hole_store=hole_collection,
+            boundaries=polygon_collection,
+            holes=hole_collection,
         )
 
     @classmethod
@@ -593,7 +650,7 @@ class TimezoneData(BaseModel):
 
     @model_validator(mode="after")
     def validate_consistency(self) -> "TimezoneData":
-        polygon_count = self.polygon_store.nr_of_polygons
+        polygon_count = self.boundaries.nr_of_polygons
         zone_polygon_count = self.zones.nr_of_polygons
         if polygon_count != zone_polygon_count:
             raise ValueError(
@@ -606,7 +663,7 @@ class TimezoneData(BaseModel):
                 f"Number of polygons ({polygon_count}) cannot be less than number of zones ({zone_count})"
             )
 
-        self.hole_store.validate_references(polygon_count)
+        self.holes.validate_references(polygon_count)
         return self
 
     @property
@@ -622,48 +679,8 @@ class TimezoneData(BaseModel):
         return self.zones.dtype_str
 
     @property
-    def polygons(self) -> PolygonList:
-        return self.polygon_store.polygons
-
-    @property
-    def polygon_lengths(self) -> LengthList:
-        return self.polygon_store.lengths
-
-    @property
-    def holes(self) -> PolygonList:
-        return self.hole_store.holes
-
-    @property
-    def all_hole_lengths(self) -> HoleLengthList:
-        return self.hole_store.lengths
-
-    @property
-    def polynrs_of_holes(self) -> PolynrHolesList:
-        return self.hole_store.polynrs_of_holes
-
-    @property
-    def original_polygons(self) -> list[np.ndarray] | None:
-        return self.polygon_store.original_polygons
-
-    @property
-    def nr_of_polygons(self) -> int:
-        return self.polygon_store.nr_of_polygons
-
-    @property
     def nr_of_zones(self) -> int:
         return self.zones.nr_of_zones
-
-    @property
-    def nr_of_holes(self) -> int:
-        return self.hole_store.nr_of_holes
-
-    @property
-    def poly_boundaries(self) -> list[Boundaries]:
-        return self.polygon_store.boundaries
-
-    @property
-    def hole_boundaries(self) -> list[Boundaries]:
-        return self.hole_store.boundaries
 
     @property
     def zone_positions(self) -> list[int]:
@@ -676,7 +693,7 @@ class TimezoneData(BaseModel):
         return self.hex_cache.get(hex_id, self)
 
     def polygon_vertex_hexes(self, poly_nr: int, res: int) -> set[int]:
-        return self.polygon_store.polygon_vertex_hexes(poly_nr, res)
+        return self.boundaries.polygon_vertex_hexes(poly_nr, res)
 
     @property
     def hole_poly_refs(self) -> list[int]:
@@ -685,13 +702,13 @@ class TimezoneData(BaseModel):
         See :meth:`HoleCollection.deduplicate` for the encoding.
         """
         self.deduplicate_holes()
-        return self.hole_store.poly_refs
+        return self.holes.poly_refs
 
     @property
     def inline_holes(self) -> PolygonList:
         """The hole rings that have to be stored, i.e. all but the duplicated ones."""
         self.deduplicate_holes()
-        return self.hole_store.inline_holes
+        return self.holes.inline_holes
 
     def deduplicate_holes(self) -> None:
         """Match holes against identical boundary polygons, once.
@@ -700,11 +717,8 @@ class TimezoneData(BaseModel):
         bounding box with some hole, which is wasted work for the callers that build a
         ``TimezoneData`` only to compile shortcuts from it.
         """
-        self.hole_store.deduplicate(self.polygon_store, self.poly_zone_ids)
+        self.holes.deduplicate(self.boundaries, self.poly_zone_ids)
 
     @property
     def hole_registry(self) -> HoleRegistry:
-        return self.hole_store.registry
-
-    def holes_in_poly(self, poly_nr: int) -> Iterator[CoordinateArray]:
-        yield from self.hole_store.holes_in_poly(poly_nr)
+        return self.holes.registry

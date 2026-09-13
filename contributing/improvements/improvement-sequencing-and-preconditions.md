@@ -13,7 +13,7 @@ FT-2 ─→ FT-3 (also waits on an h3 release)
 FT-1 ─→ FT-5 (also waits on a decision)
 FT-4 and GH-364 independent
 
-independent: GH-362, GH-524
+independent: GH-524
 
 TOOL-4 independent; TOOL-6 is cheaper after it
 ```
