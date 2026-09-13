@@ -54,7 +54,10 @@ channels**, and only the first is what "the borders moved" usually brings to min
    can change the answer for coordinates far from any previous border.
 2. **Polygon precedence.** A point lying exactly on a border shared by two polygons, or inside
    overlapping polygons, is resolved by which candidate the lookup tests first. That is a
-   convention rather than a geometric fact, and a rebuild can decide it differently.
+   convention rather than a geometric fact. A cell like this is one the reordering gate below
+   refuses, so the converter keeps its inherited zone precedence - but that precedence orders zones
+   by their total vertex count in the cell, so a dataset that adds, drops or reshapes a polygon can
+   reorder them and decide such a point differently.
 3. **Shortcut composition and ordering.** The H3 shortcut index is regenerated for every dataset.
    Which cells exist, which candidates a cell holds and in which order they are tested are all
    outputs of that run - and the rules that run follows are code, so a code-side optimization
@@ -63,28 +66,11 @@ channels**, and only the first is what "the borders moved" usually brings to min
 Channel 3 affects the two finder classes very differently, and the difference is the practical
 one:
 
-* ``TimezoneFinder`` **reads the order, but is held invariant by the converter rather than by the
-  query.** The lookup returns the first candidate found to contain the point, and
-  ``timezone_at()`` goes further: once no zone other than the last remains, it returns that zone
-  *without a point-in-polygon test* (see the note on the method). So order does decide the answer
-  for two kinds of point - one inside polygons of two different zones, and one inside none of the
-  cell's candidates at all.
-
-  What keeps a regenerated index from moving those answers is discipline in the converter.
-  ``scripts/shortcut_ordering.py`` may change a cell's final zone, or interleave candidates from
-  different zones, only where a conservative geometric gate certifies that the cell is covered and
-  that no two zones overlap there with positive area - the two conditions that make both kinds of
-  point impossible. Everywhere else it preserves the legacy zone priority and final zone, and
-  reorders only *within* one zone's block, where which zone wins depends on the set of candidates
-  tested rather than their order.
-
-  The guarantee is therefore exactly as strong as that gate, whose own stated limitations are at
-  the top of that module - not a property of the lookup, which would happily return a different
-  zone for a differently ordered cell. It is also a guarantee about the **packaged** data, which
-  the gate's coverage condition relies on. If you compile your own data and it leaves areas
-  uncovered, a point inside none of a cell's candidates is attributed to the last zone untested, so
-  the stored order decides it outright; use ``certain_timezone_at()`` there, which tests every
-  candidate and returns ``None`` when none matches.
+* ``TimezoneFinder`` **reads the order but does not depend on it**, for the reasons set out in the
+  next section. The dependence is real - the lookup returns the first candidate found to contain
+  the point, and ``timezone_at()`` returns the last remaining zone *without a point-in-polygon
+  test* at all (see the note on the method) - so what holds the answer still is the converter's
+  discipline in what it is willing to reorder, not anything in the query.
 * ``TimezoneFinderL`` **is** its candidate order. In a cell containing several zones it returns
   the last candidate - the zone the full lookup would fall back on after every earlier candidate
   failed its geometry check - without testing any geometry against your point. A regenerated
@@ -95,6 +81,53 @@ one:
 So ``TimezoneFinderL`` should be treated as a suggestion that is stable only for a fixed dataset.
 It is documented as approximate for a related reason: its answer is not an estimate of which zone
 covers your point or most of the cell.
+
+
+Why reordering leaves a ``TimezoneFinder`` answer alone
+-------------------------------------------------------
+
+Two different reorderings are permitted, resting on two different arguments. They are worth keeping
+apart, because one is a proof about structure and the other is a geometric certification that can
+in principle be wrong.
+
+**Within one zone's block: structural, and exact.** This is the only reordering permitted when the
+gate below refuses. ``CellOptimizer`` then swaps an adjacent pair only where both candidates carry
+the same zone, runs its greedy pass per zone group, concatenates the groups in their original
+order, and appends the final zone's group untouched. The *sequence of zones* and the final zone
+therefore survive byte for byte; only polygons within one zone's block move.
+
+No geometry is needed to see that the answer cannot change. The lookup returns the zone of the
+first candidate containing the point, and any polygon of a zone yields that same zone, so which
+polygon of the winning zone matched is irrelevant. The stopping index is the start of the final
+block, which is unchanged because block order and sizes are. A point inside no candidate still
+reaches the same untested final zone.
+
+**Across zones: geometric, and conditional.** Changing the final zone or interleaving zones breaks
+the argument above, so it is permitted only where ``safe_to_reorder`` establishes, for an envelope
+enclosing the cell, that
+
+1. no two candidates of *different* zones intersect with positive area, and
+2. the candidates jointly **cover** the envelope.
+
+Given both, every point in the cell lies inside a candidate, and inside candidates of at most one
+zone. The answer is then "the zone whose polygon contains this point" - a function of the geometry
+alone, and so the same under any permutation. Coverage is also exactly what makes the untested
+final zone sound: a point that reaches it is inside none of the earlier zones' polygons, so
+coverage forces it inside one of the final zone's.
+
+This half is only as strong as that certification, and it is worth knowing what it assumes. The
+envelope is derived from the H3 cell's spherical cap and padded by one integer coordinate unit,
+with cells at the poles or across the antimeridian refused outright; the cap radius is the largest
+centre-to-vertex distance plus one percent, which bounds the cell because distance to a fixed point
+along a great-circle arc is largest at an endpoint - an argument, not a machine-checked proof. The
+containment tests themselves are planar operations in the quantized coordinate frame standing in
+for a spherical cell. Everything unproven fails closed: invalid or repaired geometry is rejected,
+and any geometry error refuses the cell.
+
+Both arguments are about the **packaged** data, whose ocean zones cover the globe. If you compile
+your own data and it leaves areas uncovered, a point inside none of a cell's candidates is
+attributed to the last zone untested, so the stored order decides it outright. Use
+``certain_timezone_at()`` there, which tests every candidate and returns ``None`` when none matches.
 
 
 Across code releases
