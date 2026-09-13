@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789342541320,
+  "lastUpdate": 1789342543513,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -21335,6 +21335,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac2f635bf4baa48e86d23b130048f0f8a48c55f3",
+          "message": "test: guard the candidate-ordering answer guarantee (#677)\n\nRequested by the maintainer as a follow-up to the result-stability\ndocumentation: the guarantee that reordering a multi-zone cell's\ncandidates cannot move a TimezoneFinder answer was published without\nanything asserting it.\n\nThe converter side was already covered - CellOptimizer's fixed-zone mode\nand the safety gate's overlap and coverage refusals - but through a\nhit-pattern helper written inside the test, so the runtime could stop\nhonouring the ordering contract without failing anything. Two mechanisms\nin _zone_id_among read the order: the first containing candidate wins,\nand past the stop index the final zone is returned with no\npoint-in-polygon test at all.\n\ntests/test_ordering_answer_invariance.py drives the real lookup over the\ncommitted ambiguous-cell points:\n\n- a within-zone shuffle cannot move an answer (the structural argument,\n  which is what carries every cell the geometric gate refuses)\n- a point contained by a single zone's candidates survives any\n  permutation, including cross-zone ones (the unconditional invariant)\n- a cross-zone rotation does move answers, so neither of the above is\n  vacuous\n- TimezoneFinderL answers the final candidate's zone, which is why its\n  suggestion is stable only for a fixed dataset\n\nBoth invariance tests were confirmed to fail against a deliberately\nbroken lookup: narrowing the stop index by one breaks both, and returning\nthe first rather than the last candidate as the untested tail breaks the\nunconditional one.\n\nThe gate's pole and antimeridian bail-outs get a test too, asserted by\nmaking the geometry unreadable rather than by the verdict: a covering,\ndisjoint candidate set is refused at a seam either by the bail-out or by\na coverage test over a rectangle running past +-180, so a verdict-only\ntest passes with both bail-outs deleted - confirmed, which is why this\none asserts that neither containment test is reached.\n\n\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T23:34:49Z",
+          "tree_id": "1f83bd9fc5325864677c566cf7162a87fe9b584f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ac2f635bf4baa48e86d23b130048f0f8a48c55f3"
+        },
+        "date": 1789342542858,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014939308166504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0151176452636719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2624473571777344,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.263256072998047,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61726093292236,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61802673339844,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
           }
         ]
       }
