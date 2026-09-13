@@ -63,14 +63,28 @@ channels**, and only the first is what "the borders moved" usually brings to min
 Channel 3 affects the two finder classes very differently, and the difference is the practical
 one:
 
-* ``TimezoneFinder`` is **unaffected by candidate reordering, by construction.** The converter's
-  ordering optimization may only change a cell's final zone, or interleave candidates from
-  different zones, after a conservative geometric gate certifies that the cell is covered and that
-  no two zones overlap with positive area there. Where the gate does not certify this, the
-  optimization is confined to reordering candidates *within* one zone's block, and which zone
-  wins depends only on the set of candidates tested, not on their order. The reasoning and its
-  stated limitations are documented at the top of ``scripts/shortcut_ordering.py``; the residual
-  is channel 2, which any polygon precedence has.
+* ``TimezoneFinder`` **reads the order, but is held invariant by the converter rather than by the
+  query.** The lookup returns the first candidate found to contain the point, and
+  ``timezone_at()`` goes further: once no zone other than the last remains, it returns that zone
+  *without a point-in-polygon test* (see the note on the method). So order does decide the answer
+  for two kinds of point - one inside polygons of two different zones, and one inside none of the
+  cell's candidates at all.
+
+  What keeps a regenerated index from moving those answers is discipline in the converter.
+  ``scripts/shortcut_ordering.py`` may change a cell's final zone, or interleave candidates from
+  different zones, only where a conservative geometric gate certifies that the cell is covered and
+  that no two zones overlap there with positive area - the two conditions that make both kinds of
+  point impossible. Everywhere else it preserves the legacy zone priority and final zone, and
+  reorders only *within* one zone's block, where which zone wins depends on the set of candidates
+  tested rather than their order.
+
+  The guarantee is therefore exactly as strong as that gate, whose own stated limitations are at
+  the top of that module - not a property of the lookup, which would happily return a different
+  zone for a differently ordered cell. It is also a guarantee about the **packaged** data, which
+  the gate's coverage condition relies on. If you compile your own data and it leaves areas
+  uncovered, a point inside none of a cell's candidates is attributed to the last zone untested, so
+  the stored order decides it outright; use ``certain_timezone_at()`` there, which tests every
+  candidate and returns ``None`` when none matches.
 * ``TimezoneFinderL`` **is** its candidate order. In a cell containing several zones it returns
   the last candidate - the zone the full lookup would fall back on after every earlier candidate
   failed its geometry check - without testing any geometry against your point. A regenerated
