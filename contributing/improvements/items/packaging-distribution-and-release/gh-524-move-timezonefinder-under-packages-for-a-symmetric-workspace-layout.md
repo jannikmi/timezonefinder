@@ -3,7 +3,7 @@
 
 ## Related memory
 
-- [Data distribution, packaging, and release decisions](../../decisions/data-distribution-packaging-and-release-decisions.md)
+- [Repository and workspace layout decisions](../../decisions/repository-and-workspace-layout-decisions.md)
 - **Tracks:** issue #524 — the asymmetry the distribution split deliberately left behind, and the machinery a move has to rewire.
 - **Refused 2026-09-06 by the maintainer: the current layout is the intended one, and the move does not happen.** The root `pyproject.toml` doubling as both the workspace root and the code package's manifest is legal, `uv` supports it, and a package that never gains a third distribution never pays for the asymmetry. Recorded in the [packaging decisions](../../decisions/data-distribution-packaging-and-release-decisions.md) so the tidiness argument does not come back as a fresh proposal. Reopen only on evidenced demand for a third distribution, which today means GH-332 being reopened.
 - **Why parking was refused too.** The item's own recommendation was to park the move on the pull request that adds a third distribution, with refusal as the honest fallback — and that fallback condition had fired before this decision: GH-332 is the only route to a third distribution on record and was answered "publish nothing" on 2026-09-05. A park whose trigger is a question already answered "no" is a row every later re-verification pays to re-read and no pass can ever take.
