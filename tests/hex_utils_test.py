@@ -131,13 +131,16 @@ def test_root_cell_keeps_only_the_polygons_its_bounds_overlap():
     there means "no candidate polygons", so a converter bug would have surfaced
     as silently missing shortcuts rather than as a failure.
     """
+    bboxes = [
+        Boundaries(xmax=5.0, xmin=1.0, ymax=5.0, ymin=1.0),  # inside
+        Boundaries(xmax=20.0, xmin=9.0, ymax=20.0, ymin=9.0),  # overlapping
+        Boundaries(xmax=99.0, xmin=90.0, ymax=99.0, ymin=90.0),  # disjoint
+    ]
     data = SimpleNamespace(
-        nr_of_polygons=3,
-        poly_boundaries=[
-            Boundaries(xmax=5.0, xmin=1.0, ymax=5.0, ymin=1.0),  # inside
-            Boundaries(xmax=20.0, xmin=9.0, ymax=20.0, ymin=9.0),  # overlapping
-            Boundaries(xmax=99.0, xmin=90.0, ymax=99.0, ymin=90.0),  # disjoint
-        ],
+        boundaries=SimpleNamespace(
+            nr_of_polygons=len(bboxes),
+            bounds_of=bboxes.__getitem__,
+        ),
     )
     cell = Hex(
         id=0,
@@ -292,8 +295,8 @@ class TestFullyContainedInHole:
 def _cell_with(polygon: np.ndarray, hole: np.ndarray) -> Hex:
     """A cell whose single candidate polygon encloses it, with one hole to weigh."""
     data = SimpleNamespace(
-        polygons=[polygon],
-        holes_in_poly=lambda poly_nr: iter([hole]),
+        boundaries=SimpleNamespace(coords_of=lambda poly_nr: polygon),
+        holes=SimpleNamespace(holes_of_poly=lambda boundary_id: iter([hole])),
     )
     return Hex(
         id=0,
@@ -304,7 +307,8 @@ def _cell_with(polygon: np.ndarray, hole: np.ndarray) -> Hex:
         surr_n_pole=False,
         surr_s_pole=False,
         # a stand-in for the converter's own data object: ``lies_in_cell`` reads only
-        # ``polygons`` and ``holes_in_poly``, and the real one means parsing the GeoJSON
+        # ``boundaries.coords_of`` and ``holes.holes_of_poly``, and the real one means
+        # parsing the GeoJSON
         data=cast("TimezoneData", data),
     )
 
@@ -370,8 +374,8 @@ class TestTheAntimeridianFrame:
     @staticmethod
     def _cell(polygon: np.ndarray, holes: list[np.ndarray] | None = None) -> Hex:
         data = SimpleNamespace(
-            polygons=[polygon],
-            holes_in_poly=lambda poly_nr: iter(holes or []),
+            boundaries=SimpleNamespace(coords_of=lambda poly_nr: polygon),
+            holes=SimpleNamespace(holes_of_poly=lambda boundary_id: iter(holes or [])),
             # no vertex of the polygon lies in this cell, which is the case that
             # leaves the whole answer to the Euclidean tests
             polygon_vertex_hexes=lambda poly_nr, res: set(),
