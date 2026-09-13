@@ -48,7 +48,7 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     if len(poly_ids) <= 1:
         return poly_ids
 
-    polygon_lengths = data.polygon_lengths
+    nr_vertices = data.boundaries.nr_vertices
     zone_ids = data.poly_zone_ids
 
     zone_buckets = defaultdict(list)
@@ -57,15 +57,14 @@ def optimise_shortcut_ordering(data: TimezoneData, poly_ids: list[int]) -> list[
     for poly_id in poly_ids:
         zone_id = int(zone_ids[poly_id])
         zone_buckets[zone_id].append(poly_id)
-        zone_sizes[zone_id] += int(polygon_lengths[poly_id])
+        zone_sizes[zone_id] += int(nr_vertices[poly_id])
 
     zone_ids_sorted = sorted(zone_buckets, key=zone_sizes.__getitem__)
-    get_length = polygon_lengths.__getitem__
     poly_ids_sorted: list[int] = []
 
     for zone_id in zone_ids_sorted:
         zone_poly_ids = zone_buckets[zone_id]
-        zone_poly_ids.sort(key=get_length)
+        zone_poly_ids.sort(key=nr_vertices.__getitem__)
         poly_ids_sorted.extend(zone_poly_ids)
 
     return poly_ids_sorted

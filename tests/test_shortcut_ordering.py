@@ -189,10 +189,11 @@ def test_fixed_zone_precedence_preserves_every_hit_pattern():
 
 def synthetic_orderer(polygons, zones):
     orderer = object.__new__(ShortcutOrderer)
+    rings = [np.array(p.exterior.coords).T for p in polygons]
     orderer.data = SimpleNamespace(
-        polygons=[np.array(p.exterior.coords).T for p in polygons],
+        boundaries=SimpleNamespace(coords_of=rings.__getitem__),
         poly_zone_ids=zones,
-        holes_in_poly=lambda _: (),
+        holes=SimpleNamespace(holes_of_poly=lambda _: ()),
     )
     orderer.geometries = {}
     orderer.invalid_geometries = set()

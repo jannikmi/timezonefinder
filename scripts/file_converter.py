@@ -279,8 +279,8 @@ def write_numpy_binaries(
 
     # save 4 bbox vectors for holes and polygons to the respective directories
     boundary_sources = [
-        (holes_dir, data.hole_boundaries),
-        (boundaries_dir, data.poly_boundaries),
+        (holes_dir, data.holes.bboxes),
+        (boundaries_dir, data.boundaries.bboxes),
     ]
 
     for output_dir, bounds in boundary_sources:
@@ -337,7 +337,7 @@ def write_binary_files(data: TimezoneData, output_path: Path) -> None:
     # shortcut compilation that runs afterwards is rotation-invariant and keeps reading
     # the model. ~2 s for the whole collection, and nothing is stored to record it.
     print("Choosing the stored start vertex of every ring...")
-    boundary_rings = rotate_rings(data.polygons)
+    boundary_rings = rotate_rings(data.boundaries.polygons)
     hole_rings = rotate_rings(data.inline_holes)
 
     write_numpy_binaries(data, output_path, boundary_rings, hole_rings)
