@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789340636075,
+  "lastUpdate": 1789340638342,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -21182,6 +21182,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2642 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10bbbbfe399b1a455a50190eae32e92434053518",
+          "message": "GH-362: give the converter's collections the runtime's polygon vocabulary (#676)\n\n* GH-362: give the converter's collections the runtime's polygon vocabulary\n\n`TimezoneData` exposed a polygon collection as parallel per-polygon\nstructures - `polygons`, `polygon_lengths`, `poly_boundaries`,\n`hole_boundaries`, `holes`, `all_hole_lengths`, `polynrs_of_holes`,\n`original_polygons` - that every caller indexed and had to keep in step by\nhand. The rings were already grouped into `PolygonCollection` and\n`HoleCollection`; what was missing is that the two are the same collection\nthe runtime reads back, under different names.\n\nName them as the runtime does - `TimezoneData.boundaries` / `.holes`, with\n`coords_of` and `ids_of` as methods, `nr_vertices` as a column indexed\nrather than called, and `holes_of_poly` as the finder spells it - drop the\nindex-parallel pass-throughs, and move `Hex.is_poly_candidate`,\n`Hex.lies_in_cell`, `optimise_shortcut_ordering`, the binary writers and\nthe two prototypes onto the accessors. The rings stay in memory: the\nwritten binaries are deliberately not read back, which the coding rules\nrecord with the measurement that refuses it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011wk3mZLRKJtZR4yJqzoQiQ\n\n* retire GH-362 from the improvement register\n\nDelete the item file and its ranking row with the change that ships it, and\ndrop its handle from the sequencing graph. The measurement that refuses\nreading the written binaries back per access now lives at the accessor it\nrefuses, and the shared-vocabulary rule in the coding rules.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011wk3mZLRKJtZR4yJqzoQiQ\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-13T23:02:57Z",
+          "tree_id": "4e1deb9c03bb5917e55c7cd619e3839598f7cbd0",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/10bbbbfe399b1a455a50190eae32e92434053518"
+        },
+        "date": 1789340637650,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014939308166504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0151176452636719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2629709243774414,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2637367248535156,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.617310523986816,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61803340911865,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2418 GHz"
           }
         ]
       }
