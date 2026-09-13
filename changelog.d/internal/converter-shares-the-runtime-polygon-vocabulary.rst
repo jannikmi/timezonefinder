@@ -1,0 +1,1 @@
+The data converter now reaches its boundary and hole rings through one collection object each, named and accessed as the runtime names the same two collections (``boundaries``/``holes`` with ``coords_of``, ``nr_vertices``, ``bounds_of``, ``ids_of`` and ``holes_of``), instead of indexing parallel per-polygon lists that callers had to keep in step by hand.

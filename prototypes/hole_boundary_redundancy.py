@@ -84,14 +84,14 @@ def bbox_key(bounds, nr_vertices: int) -> tuple:
 def measure_redundancy(data: TimezoneData) -> list[int]:
     """Match every hole ring against the boundary polygons. Returns the unmatched ids."""
     buckets: dict[tuple, list[int]] = defaultdict(list)
-    for poly_id, bounds in enumerate(data.poly_boundaries):
-        buckets[bbox_key(bounds, data.polygon_lengths[poly_id])].append(poly_id)
+    for poly_id, bounds in enumerate(data.boundaries.bboxes):
+        buckets[bbox_key(bounds, data.boundaries.nr_vertices[poly_id])].append(poly_id)
 
     cache: dict[int, bytes] = {}
 
     def boundary_key(poly_id: int) -> bytes:
         if poly_id not in cache:
-            cache[poly_id] = canonical_ring_key(data.polygons[poly_id])
+            cache[poly_id] = canonical_ring_key(data.boundaries.coords_of(poly_id))
         return cache[poly_id]
 
     matches: dict[int, int] = {}
@@ -99,8 +99,8 @@ def measure_redundancy(data: TimezoneData) -> list[int]:
     unmatched: list[int] = []
     ambiguous = 0
 
-    for hole_id, ring in enumerate(data.holes):
-        key = bbox_key(data.hole_boundaries[hole_id], data.all_hole_lengths[hole_id])
+    for hole_id, ring in enumerate(data.holes.holes):
+        key = bbox_key(data.holes.bounds_of(hole_id), data.holes.nr_vertices[hole_id])
         candidates = buckets.get(key, [])
         if not candidates:
             unmatched.append(hole_id)
@@ -116,14 +116,16 @@ def measure_redundancy(data: TimezoneData) -> list[int]:
 
     misses = sorted(unmatched + bbox_only)
     nr_holes = len(data.holes)
-    dedup_v = sum(data.all_hole_lengths[h] for h in matches)
-    inline_v = sum(data.all_hole_lengths[h] for h in misses)
-    boundary_v = sum(data.polygon_lengths)
+    dedup_v = sum(data.holes.nr_vertices[h] for h in matches)
+    inline_v = sum(data.holes.nr_vertices[h] for h in misses)
+    boundary_v = sum(data.boundaries.lengths)
     exact = sum(
-        1 for h, p in matches.items() if np.array_equal(data.holes[h], data.polygons[p])
+        1
+        for h, p in matches.items()
+        if np.array_equal(data.holes.coords_of(h), data.boundaries.coords_of(p))
     )
 
-    print(f"boundary polygons : {data.nr_of_polygons}")
+    print(f"boundary polygons : {len(data.boundaries)}")
     print(f"holes             : {nr_holes}")
     print(
         f"  ring-identical to a boundary     : {len(matches)} "
@@ -163,9 +165,9 @@ def probe_coverage(data: TimezoneData, misses: list[int]) -> None:
     )
 
     for hole_id in misses:
-        poly_id = data.polynrs_of_holes[hole_id]
-        ring = data.holes[hole_id]
-        bounds = data.hole_boundaries[hole_id]
+        poly_id = data.holes.polynrs_of_holes[hole_id]
+        ring = data.holes.coords_of(hole_id)
+        bounds = data.holes.bounds_of(hole_id)
 
         points, tries = [], 0
         while len(points) < SAMPLES_PER_HOLE and tries < MAX_REJECTION_TRIES:
@@ -180,7 +182,7 @@ def probe_coverage(data: TimezoneData, misses: list[int]) -> None:
         entry["points"] += len(points)
         for x, y in points:
             covering = set()
-            for other, other_bounds in enumerate(data.poly_boundaries):
+            for other, other_bounds in enumerate(data.boundaries.bboxes):
                 if other == poly_id:
                     continue
                 if not (
@@ -188,7 +190,7 @@ def probe_coverage(data: TimezoneData, misses: list[int]) -> None:
                     and other_bounds.ymin <= y <= other_bounds.ymax
                 ):
                     continue
-                if utils.inside_polygon(x, y, data.polygons[other]):
+                if utils.inside_polygon(x, y, data.boundaries.coords_of(other)):
                     covering.add(zone_of[other])
             if covering:
                 entry["by"].update(covering)

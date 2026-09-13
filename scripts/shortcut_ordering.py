@@ -331,6 +331,10 @@ class ShortcutOrderer:
 
     def __init__(self, data: TimezoneData, output_path: Path):
         self.data = data
+        # `self.boundaries` reads the *written* binaries and `self.data.boundaries`
+        # the in-memory rings the same parse built. Deliberately both, and one hop
+        # apart: the cost model below is about the packed layout, while the geometry
+        # above is about the rings - so keep the two apart when adding a caller.
         self.boundaries = PolygonArray(utils.get_boundaries_dir(output_path))
         self.holes = HoleArray(utils.get_holes_dir(output_path), self.boundaries)
         self.geometries: dict[int, BaseGeometry] = {}
@@ -344,8 +348,8 @@ class ShortcutOrderer:
     def geometry(self, pid: int) -> BaseGeometry:
         if pid not in self.geometries:
             geometry = Polygon(
-                self.data.polygons[pid].T,
-                [hole.T for hole in self.data.holes_in_poly(pid)],
+                self.data.boundaries.coords_of(pid).T,
+                [hole.T for hole in self.data.holes.holes_of_poly(pid)],
             )
             if not geometry.is_valid:
                 self.invalid_geometries.add(pid)

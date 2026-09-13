@@ -137,14 +137,14 @@ class TestGeoJsonParseAccumulation:
         data = TimezoneData.from_geojson(_geo_json())
         # polygon 0 (zone A, first polygon) and polygon 2 (zone B) carry holes,
         # polygon 1 carries none; the counter that assigns them advances per polygon.
-        assert data.polynrs_of_holes == [0, 2, 2]
+        assert data.holes.polynrs_of_holes == [0, 2, 2]
 
     def test_each_ring_s_recorded_length_is_its_own_vertex_count(self):
         data = TimezoneData.from_geojson(_geo_json())
         # the sizes the fixture builds, in parse order, spelled out rather than
         # read back off the arrays they are supposed to describe
-        assert data.polygon_lengths == [4, 6, 7]
-        assert data.all_hole_lengths == [5, 8, 9]
+        assert list(data.boundaries.nr_vertices) == [4, 6, 7]
+        assert list(data.holes.nr_vertices) == [5, 8, 9]
 
     def test_zone_ids_follow_the_polygons_of_each_zone(self):
         data = TimezoneData.from_geojson(_geo_json())
@@ -153,7 +153,7 @@ class TestGeoJsonParseAccumulation:
 
     def test_the_original_polygons_pair_with_the_parsed_boundaries(self):
         data = TimezoneData.from_geojson(_geo_json())
-        originals = data.original_polygons
+        originals = data.boundaries.original_polygons
         assert originals is not None
         # each boundary ring's own offset, so a permuted or shifted list of
         # originals fails here rather than matching on a shared shape
@@ -162,4 +162,38 @@ class TestGeoJsonParseAccumulation:
             10.0,
             20.0,
         ]
-        assert [o.shape[1] for o in originals] == data.polygon_lengths
+        assert [o.shape[1] for o in originals] == list(data.boundaries.nr_vertices)
+
+
+@pytest.mark.unit
+class TestTheRuntimeVocabulary:
+    """The accessors the converter shares with `PolygonArray` / `HoleArray`.
+
+    The converter's collections are named and indexed as the runtime names and
+    indexes the same two, so that a reader of either side can read the other.
+    Asserted against real collections, because the converter's callers are
+    exercised in the test suite through stand-ins that would keep passing if
+    these methods were wrong.
+    """
+
+    def test_a_ring_is_reached_by_id_on_both_sides(self):
+        data = TimezoneData.from_geojson(_geo_json())
+        # the fixture's three boundaries carry 4, 6 and 7 vertices, each ring at
+        # its own offset, so a permuted collection fails here
+        assert [data.boundaries.coords_of(i).shape[1] for i in range(3)] == [4, 6, 7]
+        assert [data.holes.coords_of(i).shape[1] for i in range(3)] == [5, 8, 9]
+        assert data.boundaries.bounds_of(1).xmin > data.boundaries.bounds_of(0).xmax
+
+    def test_the_hole_relation_answers_by_boundary_id(self):
+        data = TimezoneData.from_geojson(_geo_json())
+        # zone A's first polygon owns hole 0, its second owns none, and zone B's
+        # single polygon owns the remaining two
+        assert list(data.holes.ids_of(0)) == [0]
+        assert list(data.holes.ids_of(2)) == [1, 2]
+        assert [h.shape[1] for h in data.holes.holes_of_poly(2)] == [8, 9]
+
+    def test_a_boundary_without_holes_owns_an_empty_range(self):
+        data = TimezoneData.from_geojson(_geo_json())
+        # the majority case, and the one a lookup that raises used to pay for
+        assert data.holes.ids_of(1) == range(0)
+        assert list(data.holes.holes_of_poly(1)) == []

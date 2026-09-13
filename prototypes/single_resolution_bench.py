@@ -124,6 +124,8 @@ import pandas as pd
 
 from scripts.configs import DEFAULT_INPUT_PATH, DEBUG
 from scripts.shortcuts import optimise_shortcut_ordering
+from types import SimpleNamespace
+
 from scripts.timezone_data import HexCache, TimezoneData
 from timezonefinder import utils
 from timezonefinder.configs import DEFAULT_DATA_DIR, SHORTCUT_H3_RES
@@ -625,7 +627,9 @@ def test_single_resolution_index_creation() -> None:
         poly_zone_ids = np.asarray(
             [0, 0], dtype=np.uint32
         )  # Both polygons belong to zone 0
-        polygon_lengths = [10, 15]  # Required by optimise_shortcut_ordering
+        # `optimise_shortcut_ordering` reads the ring sizes off the boundary
+        # collection, as the runtime's `PolygonArray.nr_vertices` column is read
+        boundaries = SimpleNamespace(nr_vertices=[10, 15])
         # the builder evicts each leaf after use; the stub carries the same surface
         hex_cache = HexCache()
 

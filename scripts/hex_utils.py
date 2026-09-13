@@ -210,7 +210,7 @@ class Hex:
             return self._poly_candidates
         if self.res == 0:
             # at the highest level all polygons should be tested
-            self._poly_candidates = set(range(self.data.nr_of_polygons))
+            self._poly_candidates = set(range(self.data.boundaries.nr_of_polygons))
             return self._poly_candidates
 
         # polygon ids, inherited from the true parents - not hex ids
@@ -225,7 +225,7 @@ class Hex:
 
     def is_poly_candidate(self, poly_id: int) -> bool:
         cell_bounds = self.bounds
-        poly_bounds = self.data.poly_boundaries[poly_id]
+        poly_bounds = self.data.boundaries.bounds_of(poly_id)
         overlapping = cell_bounds.overlaps(poly_bounds)
         return overlapping
 
@@ -245,8 +245,8 @@ class Hex:
 
     @profile
     def lies_in_cell(self, poly_nr: int) -> bool:
-        poly_coords = self.data.polygons[poly_nr]
-        holes = self.data.holes_in_poly(poly_nr)
+        poly_coords = self.data.boundaries.coords_of(poly_nr)
+        holes = self.data.holes.holes_of_poly(poly_nr)
         rotated = False
         if self.crosses_antimeridian:
             # The cell's stored ring jumps the cut, so every Euclidean test below would
