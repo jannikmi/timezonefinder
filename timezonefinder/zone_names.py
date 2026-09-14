@@ -103,7 +103,8 @@ class ZoneNames:
     no shortcut and no polygon, so keeping it here is what stops the lookup module from
     also owning a string table, a lazily built gather array and a tuning constant for it.
 
-    Instances are per-thread by contract, as finders are.
+    Safe to share across threads, as finders are: the two arrays built on first use are
+    read-only and identical whichever thread builds them.
     """
 
     __slots__ = ("names", "_gather_lookup", "_ocean_flags")

@@ -11,14 +11,15 @@ Thread Safety:
     synchronization. The singleton is initialized exactly once using double-checked locking,
     even under high concurrency.
 
-    However, for performance-critical parallel workloads, consider creating separate
-    TimezoneFinder instances for each thread to avoid singleton overhead:
+    Lookups on the shared instance are safe as well; see ``TimezoneFinder``. For
+    performance-critical parallel workloads, still create a TimezoneFinder per thread:
+    threads sharing one instance contend on it and gain far less from parallelism.
 
         import threading
         from timezonefinder import TimezoneFinder
 
         def lookup_in_thread(lng, lat):
-            # Each thread creates its own instance (faster for parallel work)
+            # Each thread creates its own instance (scales with the thread count)
             tf = TimezoneFinder(in_memory=True)
             return tf.timezone_at(lng=lng, lat=lat)
 
@@ -98,10 +99,10 @@ def timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name of a matching polygon, or None if no match found
 
     Thread Safety:
-        This function is thread-safe for concurrent calls. The underlying global
-        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
-        performance-critical parallel workloads, create separate TimezoneFinder
-        instances per thread to avoid singleton overhead.
+        This function is safe to call concurrently: the global TimezoneFinder is
+        created once under a lock, and lookups on it are safe. For
+        performance-critical parallel workloads, create a TimezoneFinder per thread
+        instead, because threads sharing one instance contend on it.
 
     Example:
         >>> timezone_at(lng=13.4, lat=52.5)
@@ -170,10 +171,10 @@ def timezone_at_land(*, lng: float, lat: float) -> str | None:
     :return: The timezone name for land locations, or None for ocean areas
 
     Thread Safety:
-        This function is thread-safe for concurrent calls. The underlying global
-        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
-        performance-critical parallel workloads, create separate TimezoneFinder
-        instances per thread to avoid singleton overhead.
+        This function is safe to call concurrently: the global TimezoneFinder is
+        created once under a lock, and lookups on it are safe. For
+        performance-critical parallel workloads, create a TimezoneFinder per thread
+        instead, because threads sharing one instance contend on it.
     """
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
 
@@ -238,10 +239,10 @@ def unique_timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name if the shortcut contains exactly one zone, None otherwise
 
     Thread Safety:
-        This function is thread-safe for concurrent calls. The underlying global
-        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
-        performance-critical parallel workloads, create separate TimezoneFinder
-        instances per thread to avoid singleton overhead.
+        This function is safe to call concurrently: the global TimezoneFinder is
+        created once under a lock, and lookups on it are safe. For
+        performance-critical parallel workloads, create a TimezoneFinder per thread
+        instead, because threads sharing one instance contend on it.
 
     Note:
         This is faster than timezone_at() but may return None even for valid coordinates
@@ -262,10 +263,10 @@ def certain_timezone_at(*, lng: float, lat: float) -> str | None:
     :return: The timezone name if definitely matched, None if not in any polygon
 
     Thread Safety:
-        This function is thread-safe for concurrent calls. The underlying global
-        TimezoneFinder instance uses a thread-safe singleton pattern. However, for
-        performance-critical parallel workloads, create separate TimezoneFinder
-        instances per thread to avoid singleton overhead.
+        This function is safe to call concurrently: the global TimezoneFinder is
+        created once under a lock, and lookups on it are safe. For
+        performance-critical parallel workloads, create a TimezoneFinder per thread
+        instead, because threads sharing one instance contend on it.
 
     Note:
         For the standard global dataset, this is equivalent to timezone_at() since
@@ -340,8 +341,8 @@ def get_geometry(
     Retrieves the geometry of a timezone polygon.
     Uses the global TimezoneFinder instance.
 
-    Note: This function is not thread-safe. For multi-threaded environments,
-    create separate TimezoneFinder instances.
+    Note: Safe to call concurrently. The zone index this reads on first use is
+    stored once as an immutable array, identical whichever thread stores it.
 
     :param tz_name: one of the names in ``timezone_names.txt`` or ``self.timezone_names``
     :param tz_id: the id of the timezone (=index in ``self.timezone_names``)

@@ -83,8 +83,9 @@ class AbstractTimezoneFinder(ABC):
     (full accuracy) or TimezoneFinderL (lightweight heuristic) instead.
 
     Thread Safety:
-        For parallel computation with multiple threads, each thread must create
-        its own independent instance. Do not share a single instance across threads.
+        Lookups on a shared instance are safe; ``TimezoneFinder`` states why. For
+        parallel computation, still give each thread its own instance: threads
+        sharing one contend on its objects and gain far less from parallelism.
 
     Lifecycle:
         Prefer ``with TimezoneFinder(...) as finder`` (or ``TimezoneFinderL``) for a
@@ -886,8 +887,9 @@ class TimezoneFinderL(AbstractTimezoneFinder):
     while optimizing the full lookup; it need not cover the point or most of the cell.
 
     Thread Safety:
-        Each thread that performs timezone lookups must create its own independent
-        TimezoneFinderL instance. Do not share a single instance across threads.
+        Lookups on a shared instance are safe. For parallel computation, still give
+        each thread its own TimezoneFinderL: threads sharing one contend on its
+        objects and gain far less from parallelism, even without polygon data.
     """
 
     def timezone_at(self, *, lng: float, lat: float) -> str | None:
@@ -975,9 +977,20 @@ class TimezoneFinder(AbstractTimezoneFinder):
     `file_converter.py <https://github.com/jannikmi/timezonefinder/blob/master/scripts/file_converter.py>`__
 
     Thread Safety:
-        Each thread that performs timezone lookups must create its own independent
-        TimezoneFinder instance. Do not share a single instance across threads, as this can
-        lead to race conditions and incorrect results. Example:
+        Concurrent lookups on a shared instance return correct answers. The data a
+        lookup reads is loaded once and never modified. The only state a lookup
+        writes is a small array built on first use and kept - ``_zone_positions``
+        here, read by ``certain_timezone_at`` and ``get_geometry``, and the two in
+        ``ZoneNames`` - and each is published by a single store of a read-only array
+        that is identical whichever thread builds it, so a thread losing that race
+        repeats a small build and nothing else. Keep any new lazily kept value to
+        that shape, or this statement stops holding. Releasing the instance is not a
+        lookup: ``cleanup()``, or leaving its ``with`` block, frees the data lookups
+        read, so on a shared instance it must wait for every thread using it.
+
+        For parallel computation, still give each thread its own instance: threads
+        sharing one contend on its objects and gain far less from parallelism, which
+        shows once the GIL is disabled. Example:
 
             import threading
             from timezonefinder import TimezoneFinder
