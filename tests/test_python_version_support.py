@@ -150,6 +150,46 @@ def test_the_abi3_base_is_the_lowest_supported_version(
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    ("build_abi3", "gil_disabled", "claims_abi3"),
+    [(True, 0, True), (True, 1, False), (False, 0, False)],
+    ids=["gil-build", "free-threaded-build", "no-abi3-requested"],
+)
+def test_the_abi3_claim_is_gated_on_the_interpreter(
+    monkeypatch, build_abi3, gil_disabled, claims_abi3
+):
+    """`BUILD_ABI3` alone must not decide the abi3 claim.
+
+    The cibuildwheel override sets it for every identifier, and setuptools
+    refuses `py_limited_api` on any free-threaded interpreter, so an
+    environment-only guard turns the first free-threaded identifier into a failed
+    build. CI never runs a free-threaded build, so `setup.py` is executed here
+    with the interpreter's `Py_GIL_DISABLED` answer substituted.
+    """
+    import setuptools
+    import sysconfig
+
+    captured = {}
+    monkeypatch.setattr(setuptools, "setup", lambda **kwargs: captured.update(kwargs))
+    real_get_config_var = sysconfig.get_config_var
+    monkeypatch.setattr(
+        sysconfig,
+        "get_config_var",
+        lambda name: (
+            gil_disabled if name == "Py_GIL_DISABLED" else real_get_config_var(name)
+        ),
+    )
+    if build_abi3:
+        monkeypatch.setenv("BUILD_ABI3", "true")
+    else:
+        monkeypatch.delenv("BUILD_ABI3", raising=False)
+
+    exec(compile(SETUP_PY.read_text(), str(SETUP_PY), "exec"), {"__name__": "setup"})
+
+    assert ("py_limited_api" in captured["options"]["bdist_wheel"]) is claims_abi3
+
+
+@pytest.mark.unit
 def test_the_min_numpy_env_pins_the_declared_numpy_lower_bound(tox_config):
     """The `py311-min` pin is the floor `pyproject.toml` publishes, not a guess.
 
