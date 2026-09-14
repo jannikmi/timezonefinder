@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789364881940,
+  "lastUpdate": 1789374707980,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -10926,6 +10926,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3720",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5e94859a2da9ed9840e73153df76cf5add1fc27f",
+          "message": "Bump pypa/cibuildwheel from 4.2.0 to 4.2.1 (#678)\n\nBumps [pypa/cibuildwheel](https://github.com/pypa/cibuildwheel) from 4.2.0 to 4.2.1.\n- [Release notes](https://github.com/pypa/cibuildwheel/releases)\n- [Changelog](https://github.com/pypa/cibuildwheel/blob/main/docs/changelog.md)\n- [Commits](https://github.com/pypa/cibuildwheel/compare/v4.2.0...v4.2.1)\n\n---\nupdated-dependencies:\n- dependency-name: pypa/cibuildwheel\n  dependency-version: 4.2.1\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2026-09-14T10:30:28+02:00",
+          "tree_id": "abb748dab8470fd357980327acb690519c489f86",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/5e94859a2da9ed9840e73153df76cf5add1fc27f"
+        },
+        "date": 1789374706120,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 566912.9638933268,
+            "range": "± 8275",
+            "unit": "lookups/sec",
+            "extra": "min of 186 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 754434.3387127693,
+            "range": "± 17536",
+            "unit": "lookups/sec",
+            "extra": "min of 265 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 194817.13178225397,
+            "range": "± 4968",
+            "unit": "lookups/sec",
+            "extra": "min of 71 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 905185.7730865811,
+            "range": "± 9358",
+            "unit": "lookups/sec",
+            "extra": "min of 287 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1463935.9381609247,
+            "range": "± 29271",
+            "unit": "lookups/sec",
+            "extra": "min of 515 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 236885.5425911618,
+            "range": "± 8902",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 889085.8312772596,
+            "range": "± 11519",
+            "unit": "lookups/sec",
+            "extra": "min of 286 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1430983.6581676467,
+            "range": "± 18344",
+            "unit": "lookups/sec",
+            "extra": "min of 489 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 232128.28114477854,
+            "range": "± 2368",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2317 GHz"
           }
         ]
       }
