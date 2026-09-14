@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789379772936,
+  "lastUpdate": 1789386296914,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11100,6 +11100,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4658",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 9V74 80-Core Processor @ 2.8800 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c9426c69837060942f56b6c280695d6b3bf340f8",
+          "message": "FT-2: test the package on a free-threaded interpreter (#680)",
+          "timestamp": "2026-09-14T13:43:22+02:00",
+          "tree_id": "dd938ba310e9ce3aff6864f9cf3397a8dc44bcfd",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c9426c69837060942f56b6c280695d6b3bf340f8"
+        },
+        "date": 1789386295449,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 574172.7892625565,
+            "range": "± 7406",
+            "unit": "lookups/sec",
+            "extra": "min of 192 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 765359.9319379263,
+            "range": "± 9740",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 197993.83146255222,
+            "range": "± 1763",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 920502.4617921262,
+            "range": "± 76052",
+            "unit": "lookups/sec",
+            "extra": "min of 300 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1474909.7207794518,
+            "range": "± 18213",
+            "unit": "lookups/sec",
+            "extra": "min of 531 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 240724.26806811622,
+            "range": "± 1936",
+            "unit": "lookups/sec",
+            "extra": "min of 84 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 896915.3645547113,
+            "range": "± 11541",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1443341.346760682,
+            "range": "± 37449",
+            "unit": "lookups/sec",
+            "extra": "min of 512 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 240409.21109634376,
+            "range": "± 37228",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
