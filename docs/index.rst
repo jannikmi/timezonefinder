@@ -63,6 +63,7 @@ References
 
    Architecture <architecture>
    Why No Simplification <why_no_simplification>
+   Result Stability <result_stability>
    Data Format <data_format>
    Data Report <data_report>
    Alternatives <alternatives>

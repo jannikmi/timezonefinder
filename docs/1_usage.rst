@@ -365,6 +365,11 @@ Using a TimezoneFinder instance:
     vertices meet there. The same ambiguity applies at ``lng=+-180.0``, where
     the dataset is cropped at the antimeridian.
 
+    Such a point is still answered deterministically - the same input gives the
+    same output - it is simply not guaranteed to be the zone you expect. See
+    :doc:`result_stability` for what makes an answer reproducible and what can
+    change it.
+
 
 
 closest_timezone_at()
@@ -416,8 +421,11 @@ Instead of using timezone polygon data this class instantly returns a suggestion
 For a cell containing several zones, it returns the zone that the full lookup would use only after
 the other candidates had failed their geometry checks. The converter chooses that fallback while
 arranging candidates for faster full lookups; it is not an estimate of which zone covers the query
-point or most of the cell. Suggestions near borders can therefore differ from
-``TimezoneFinder.timezone_at()`` and may change when shortcuts are regenerated.
+point or most of the cell. Suggestions can therefore differ from
+``TimezoneFinder.timezone_at()`` anywhere in such a cell, not only near a border, and a
+regenerated shortcut index can change them even when the boundary geometry is unchanged.
+Treat a ``TimezoneFinderL`` result as stable only for a fixed ``timezonefinder-data``
+version - see :doc:`result_stability`.
 
 Check the (:ref:`API documentation <api_finderL>`) of ``TimezoneFinderL``.
 

@@ -57,6 +57,10 @@ choosing the version from its `release history <https://pypi.org/project/timezon
 
     pip install timezonefinder "timezonefinder-data==<version>"
 
+Pin it when a stored or audited answer has to stay reproducible: a new dataset can change the
+result for a coordinate, and not only near a border. :doc:`result_stability` explains what can
+change and what cannot.
+
 ``pyproject.toml`` remains the authoritative source for the supported version ranges.
 
 Which ``numpy`` generations are supported follows the `NumPy deprecation policy <https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule>`__: a generation leaves this package's floor once it leaves that schedule, and NumPy 1 did so in release 8.2.1.
