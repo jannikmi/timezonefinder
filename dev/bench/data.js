@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789364879678,
+  "lastUpdate": 1789364881940,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -21488,6 +21488,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2467 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5d68f6b9a53b0a6dc3e528215d748c2132535dd",
+          "message": "docs: document result stability and what a data update can change (#675)\n\n* docs: document result stability and what a data update can change\n\nDiscussion #671 asked for \"stable and reproducible\" answers, which turned out\nto conflate three separate things. Only one of them is a real exposure, and\nnone of it was written down anywhere.\n\nThe new Design page states what does hold - a lookup is a pure function of the\ncoordinates and the installed data, across both finder classes and all three\nacceleration paths - and then names the three independent channels through\nwhich a timezonefinder-data update can still change an answer: boundary\ngeometry, polygon precedence at shared borders and overlaps, and shortcut\ncomposition and ordering.\n\nThe third is the one that is easy to miss, and it splits the two classes.\nTimezoneFinder cannot be moved by candidate reordering: scripts/shortcut_ordering.py\nmay only change a cell's final zone or interleave zones once its geometric gate\ncertifies coverage and the absence of cross-zone overlap, and otherwise reorders\nwithin one zone's block, where the answer depends on the candidate set and not\nits order. TimezoneFinderL is the opposite - _fallback_zone_of returns the cell's\nlast candidate with no geometry test - so a regenerated index can change its\nanswer anywhere in a multi-zone cell on byte-identical geometry. The usage page\nclaimed those suggestions can differ \"near borders\"; corrected, since the\naffected points need not be near one.\n\nPinning the data distribution is what freezes all three channels, so the\nexisting pinning instructions in README.rst and the getting-started page now\nsay why it matters and link here.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\n* docs: correct the code-release claims on the result-stability page\n\nRequested by the maintainer, who caught two claims the page could not\nsupport.\n\nFirst: it asserted there is no third category of drift across code\nreleases beyond bug fixes and documented semantic changes - \"nothing in\nthe query path approximates, so no retuned threshold would shift answers\nas a side effect of performance work\". Wrong, and 9.0.0 is the shipped\ncounterexample: candidate polygons were reordered by the work a full\nlookup needs, which changed what TimezoneFinderL returns in a multi-zone\ncell, and the shortcut index moved from H3 resolution 3 to 4, which\nchanged which cells are multi-zone at all. Optimizing the query logic is\na real third category, because it changes how ambiguity is resolved. The\nsection now names it, notes that such a change reaches users through the\nnext dataset (the optimizer lives in scripts/ but its output ships in\ntimezonefinder-data, which is why 9.0.0 also raised the data floor), and\nstates the invariant that survives: a point strictly inside exactly one\npolygon is decided by geometry alone, so no ordering or traversal change\nreaches it.\n\nSecond: \"pinning the data distribution freezes all three channels at\nonce\". It freezes the artefacts - geometry, and the index with the\ncandidate order stored in it - but not the rules that read them. The\nedge-case behaviour of the point-in-polygon predicate and the traversal\nof a cell's candidates are code, so a code upgrade alone can still move\nan answer the geometry does not decide by itself. Pinning is now\ndescribed per axis.\n\nThe documentation-maintenance rules gain the pair this page forms with\nscripts/shortcut_ordering.py's safety gate and _fallback_zone_of, since\nno test asserts the page and widening that gate would falsify a\npublished guarantee silently.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\n* docs: correct the TimezoneFinder ordering-invariance claim\n\nThe maintainer asked for this claim to be double-checked, and it does not\nhold as written. The page said TimezoneFinder is \"unaffected by candidate\nreordering, by construction\". The query logic is in fact order-sensitive:\n_zone_id_among returns the first candidate found to contain the point,\nand past the precomputed stop index it returns the final zone without any\npoint-in-polygon test at all. Candidate order therefore decides the\nanswer for a point inside polygons of two different zones, and for a\npoint inside none of the cell's candidates.\n\nWhat actually holds the answer still is the converter, not the lookup.\nscripts/shortcut_ordering.py may change a cell's final zone or interleave\nzones only where its gate certifies coverage and the absence of\ncross-zone positive-area overlap - the two conditions that make both of\nthose cases impossible - and elsewhere preserves the legacy zone priority\nand final zone. So the guarantee is exactly as strong as that gate, and\nit is a guarantee about the packaged data: with custom data leaving areas\nuncovered, a point inside no candidate is attributed to the last zone\nuntested, which certain_timezone_at avoids.\n\nThe stated invariant for code releases is unaffected - a point strictly\ninside exactly one candidate polygon is returned whether it is tested or\nreached as the final zone - so only the reordering bullet changes.\n\nThe memory rule gains the same correction, since it repeated the\n\"by construction\" framing it exists to protect.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\n* docs: separate the two reordering-invariance arguments\n\nRequested by the maintainer, after asking how the invariance can be\nguaranteed at all. The page credited both permitted reorderings to \"the\ngate\", which undersold one and oversold the other: they rest on different\narguments and only one of them can be wrong.\n\nThe within-a-zone reordering - the only one permitted where the gate\nrefuses - is structural. CellOptimizer swaps an adjacent pair only where\nboth candidates carry the same zone, runs greedy per zone group,\nconcatenates the groups in their original order and appends the final\nzone's group untouched, so the zone sequence and the final zone survive\nexactly. No geometry is needed to see the answer cannot move: any polygon\nof a zone yields that zone, and the stopping index is the start of an\nunchanged final block.\n\nThe across-zone reordering is a geometric certification. safe_to_reorder\nrequires, over an envelope enclosing the cell, that no two candidates of\ndifferent zones overlap with positive area and that the candidates cover\nthe envelope; both together make the answer the zone containing the\npoint, which no permutation changes, and coverage is what makes the\nuntested final zone sound. The page now states what that certification\nassumes - a cap-derived envelope with poles and the antimeridian refused,\na cap radius of max centre-to-vertex distance plus one percent justified\nby an argument rather than a proof, planar tests in the quantized frame -\nand that everything unproven fails closed.\n\nChannel 2 gains the mechanism it was missing: precedence is preserved by\nthe converter in exactly the cells the gate refuses, but the inherited\norder sorts zones by total vertex count, so a dataset that reshapes a\npolygon can still reorder them.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\n* docs: name the tests that hold the ordering guarantee\n\nRequested by the maintainer. The page argued the guarantee and then left\nthe reader no way to tell whether anything checks it, which for a\npublished promise is the part that matters: the reordering subsection now\nnames tests/test_ordering_answer_invariance.py for the runtime half and\ntests/test_shortcut_ordering.py for the converter half, including that a\ncross-zone rotation is asserted to move answers so the invariance tests\ncannot pass vacuously.\n\nIt also states what remains unasserted, because naming tests otherwise\nimplies more than is true: nothing verifies that a positive gate verdict\nis correct, so the cap-radius argument still carries that weight alone.\n\nThe memory rule said no test asserts the page, which those tests retire.\nRewritten rather than appended to, and narrowed to what is still\nunguarded - widening the gate's own conditions is now the change that can\nmove answers with every test green.\n\nBoth test modules arrive with the pull request adding them; this page is\naccurate once that one lands, and the sentence about what is unasserted is\naccurate either way.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_012AETVrP3qos8V2bAXukaYV\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-14T07:47:02+02:00",
+          "tree_id": "c86fda3c16a3c6c1d46e6cdc70c52d27d7b21840",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/c5d68f6b9a53b0a6dc3e528215d748c2132535dd"
+        },
+        "date": 1789364881187,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0148963928222656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0150318145751953,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.262594223022461,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2634029388427734,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61697006225586,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61768913269043,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2319 GHz"
           }
         ]
       }
