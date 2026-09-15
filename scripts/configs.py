@@ -26,6 +26,10 @@ INITIALIZATION_REPORT_FILE = DOC_ROOT / "benchmark_results_initialization.rst"
 MEMORY_REPORT_FILE = DOC_ROOT / "benchmark_results_memory.rst"
 COMPARISON_REPORT_FILE = DOC_ROOT / "benchmark_results_comparison.rst"
 ACCELERATION_REPORT_FILE = DOC_ROOT / "benchmark_results_acceleration_paths.rst"
+BATCH_BREAK_EVEN_REPORT_FILE = DOC_ROOT / "benchmark_results_batch_break_even.rst"
+# The sweep the page above embeds. A generated file like the page itself, written by the
+# same renderer from the same stored run, so the two cannot describe different runs.
+BATCH_BREAK_EVEN_CHART_FILE = DOC_ROOT / "batch_break_even_sweep.svg"
 # The timezone-boundary-builder release the packaged binary data was built
 # from, written by update_data.sh once a parse has succeeded. Declared here
 # because three unrelated consumers stamp or validate against it - the
