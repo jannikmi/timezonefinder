@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789386298637,
+  "lastUpdate": 1789455711291,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11187,6 +11187,93 @@ window.BENCHMARK_DATA = {
             "range": "± 37228",
             "unit": "lookups/sec",
             "extra": "min of 85 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9b65bb7d5dc7f98a5d06a0954f85ce092e65290",
+          "message": "docs: make the \"data versions are not semver\" point prominent (#682)\n\nA careful reader of the code changelog could still come away assuming a\ntimezonefinder-data update follows code semantics. Result stability now\nstates the opposite up front and in full:\n\n- a warning in the summary that a data bump, .postN included, is never a\n  semver patch and can move answers far from any border;\n- a new \"Data versions are not semantic versions\" subsection opening the\n  data-release section: what each component of <format>.<year>.<letter>\n  [.postN] means, that only the format generation is machine-checked, that\n  datasets arrive without a code release, and that the code changelog does\n  not record dataset changes, so reading it is not evidence of stability;\n- pinning now says an exact == pin is required, since a range constrains a\n  scheme that promises nothing about answers.\n\n\nClaude-Session: https://claude.ai/code/session_015sF6zRSXrC3GM82AioZ8ww\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-15T07:00:59Z",
+          "tree_id": "aeef452f2dc4d533c78cf3ee93c4ae5208fedb46",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f9b65bb7d5dc7f98a5d06a0954f85ce092e65290"
+        },
+        "date": 1789455710013,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 577674.1866750539,
+            "range": "± 10922",
+            "unit": "lookups/sec",
+            "extra": "min of 196 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 736243.4385987301,
+            "range": "± 8822",
+            "unit": "lookups/sec",
+            "extra": "min of 262 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 195804.44336675634,
+            "range": "± 1219",
+            "unit": "lookups/sec",
+            "extra": "min of 75 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 920657.3788294331,
+            "range": "± 13861",
+            "unit": "lookups/sec",
+            "extra": "min of 295 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1456684.6091372294,
+            "range": "± 20356",
+            "unit": "lookups/sec",
+            "extra": "min of 500 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 231173.18635162132,
+            "range": "± 2953",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 906906.7478566953,
+            "range": "± 16088",
+            "unit": "lookups/sec",
+            "extra": "min of 298 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1426048.5449728314,
+            "range": "± 15714",
+            "unit": "lookups/sec",
+            "extra": "min of 491 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 228806.14445173347,
+            "range": "± 2274",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 2.8000 GHz"
           }
         ]
       }
