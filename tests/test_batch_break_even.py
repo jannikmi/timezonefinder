@@ -167,6 +167,31 @@ def test_break_even_takes_the_terminal_run_not_the_first_crossing():
     assert crossing.non_monotone == (10,)
 
 
+def test_break_even_does_not_call_a_table_of_wins_never_faster():
+    """One noisy top rung must not turn seven ``faster`` rungs into "never faster".
+
+    The terminal-run rule is right - a crossing is the size beyond which batching never
+    loses again - but an empty terminal run has two causes, and reporting the wrong one
+    puts a headline on the page that its own table contradicts.
+    """
+    rungs = [
+        _rung(1, 1e-6, 8e-6),
+        *(_rung(n, 1e-6, 5e-7) for n in (5, 10, 20, 50, 100, 200, 500)),
+        _rung(1000, 1e-6, 1e-6, challenger_wins=61),  # unresolved at the top
+    ]
+    crossing = break_even(rungs)
+    assert crossing.status == "no_terminal_run"
+    assert crossing.non_monotone == (5, 10, 20, 50, 100, 200, 500)
+    assert "not established" in crossing.describe()
+    assert crossing.bracket is None
+
+
+def test_break_even_not_reached_is_kept_for_a_ladder_that_never_wins():
+    crossing = break_even(_ladder([(1, 1e-6, 8e-6), (10, 1e-6, 2e-6)]))
+    assert crossing.status == "not_reached"
+    assert crossing.non_monotone == ()
+
+
 def test_unresolved_rungs_inside_the_bracket_do_not_move_it():
     """Rungs near the crossing read ``unresolved`` by construction, not by failure."""
     rungs = [
@@ -397,11 +422,16 @@ def test_points_csv_rejects_an_empty_file(tmp_path: Path):
 # --- the chart -----------------------------------------------------------------------
 #
 # seaborn lives in the `benchmark` dependency group, which is deliberately absent from
-# the measurement environment (pyproject.toml says why). These therefore skip there, and
-# run for any contributor - `make install` syncs every group - and in the CI job that
-# renders the published pages.
+# the measurement environment (pyproject.toml says why), so these five skip there.
+#
+# The skip is taken *inside each test*, never at module scope: a module-level
+# `importorskip` skips the whole file, which would take the derivation tests above - the
+# ones that need no plotting stack at all - down with it wherever seaborn is missing, and
+# that is exactly the environment continuous integration runs.
 
-seaborn = pytest.importorskip("seaborn", reason="the `benchmark` dependency group")
+
+def _require_seaborn() -> None:
+    pytest.importorskip("seaborn", reason="the `benchmark` dependency group")
 
 
 def _fake_run() -> dict:
@@ -460,6 +490,7 @@ def test_chart_is_byte_identical_across_renders(tmp_path: Path):
     would differ on every single render and churn forever, hiding the numbers that
     actually moved.
     """
+    _require_seaborn()
     from scripts.batch_break_even_chart import render_sweep
 
     run = _fake_run()
@@ -469,6 +500,7 @@ def test_chart_is_byte_identical_across_renders(tmp_path: Path):
 
 
 def test_chart_is_pre_commit_clean(tmp_path: Path):
+    _require_seaborn()
     from scripts.batch_break_even_chart import render_sweep
 
     markup = render_sweep(_fake_run(), tmp_path / "chart.svg")
@@ -478,6 +510,7 @@ def test_chart_is_pre_commit_clean(tmp_path: Path):
 
 
 def test_chart_is_well_formed_xml_and_carries_its_annotations(tmp_path: Path):
+    _require_seaborn()
     from scripts.batch_break_even_chart import render_sweep
 
     markup = render_sweep(_fake_run(), tmp_path / "chart.svg")
@@ -493,6 +526,7 @@ def test_chart_is_well_formed_xml_and_carries_its_annotations(tmp_path: Path):
 def test_chart_frame_carries_both_estimators(tmp_path: Path):
     """The two panels are the repository's "believe it only where both agree" rule
     drawn rather than asserted, so both quantities must reach the frame."""
+    _require_seaborn()
     from scripts.batch_break_even_chart import sweep_frame
 
     frame = sweep_frame(_fake_run())
@@ -502,6 +536,7 @@ def test_chart_frame_carries_both_estimators(tmp_path: Path):
 
 
 def test_renderer_writes_the_page_and_the_chart_together(tmp_path: Path):
+    _require_seaborn()
     from scripts.render_benchmark_reports import render_batch_break_even
 
     page, chart = tmp_path / "page.rst", tmp_path / "sweep.svg"
@@ -521,9 +556,69 @@ def test_renderer_writes_the_page_and_the_chart_together(tmp_path: Path):
 
 def test_renderer_refuses_a_ladder_that_is_not_ascending(tmp_path: Path):
     """Both answers are read as runs along the ladder and mean nothing out of order."""
+    _require_seaborn()
     from scripts.render_benchmark_reports import render_batch_break_even
 
     run = _fake_run()
     run["sweeps"][0]["rungs"].reverse()
     with pytest.raises(ValueError, match="ascending"):
         render_batch_break_even(run, tmp_path / "page.rst", tmp_path / "sweep.svg")
+
+
+def test_renderer_uses_the_thresholds_the_run_was_taken_under(tmp_path: Path):
+    """A stored run must render as the answers it made, not as this checkout's constants.
+
+    The measurement stamps its tolerances into the JSON precisely so a re-render cannot
+    silently restate them; nothing read them back until this test.
+    """
+    _require_seaborn()
+    from scripts.render_benchmark_reports import batch_break_even_settings
+
+    run = _fake_run()
+    run["machine_info"]["timezonefinder"]["saturation_tolerance"] = 0.42
+    run["machine_info"]["timezonefinder"]["control_spread_threshold"] = 0.99
+    run["machine_info"]["timezonefinder"]["control_spread_min_batch_size"] = 77
+    settings = batch_break_even_settings(run["machine_info"]["timezonefinder"])
+    assert settings.saturation_tolerance == 0.42
+    assert settings.control_spread_threshold == 0.99
+    assert settings.control_spread_min_batch_size == 77
+
+
+def test_settings_fall_back_for_a_run_taken_before_they_were_stamped():
+    from scripts.measure_batch_break_even import (
+        CONTROL_SPREAD_THRESHOLD,
+        DEFAULT_SATURATION_TOLERANCE,
+    )
+    from scripts.render_benchmark_reports import batch_break_even_settings
+
+    settings = batch_break_even_settings({})
+    assert settings.saturation_tolerance == DEFAULT_SATURATION_TOLERANCE
+    assert settings.control_spread_threshold == CONTROL_SPREAD_THRESHOLD
+
+
+def test_saturation_is_withheld_from_the_headline_when_the_control_fails(
+    tmp_path: Path,
+):
+    """Saturation is an absolute quantity read across rungs, so a drifting baseline
+    cannot support it - and three repeat runs showed it moving with the control.
+
+    The crossing is a within-rung comparison and stays in the headline either way.
+    """
+    _require_seaborn()
+    from scripts.render_benchmark_reports import render_batch_break_even
+
+    run = _fake_run()
+    # make the scalar baseline wander across rungs, which is what the control detects
+    for factor, rung in zip(
+        (1.0, 1.0, 1.0, 1.0, 1.0, 2.0), run["sweeps"][0]["rungs"], strict=True
+    ):
+        rung["comparison"]["best_baseline"] *= factor
+
+    page = tmp_path / "page.rst"
+    render_batch_break_even(run, page, tmp_path / "sweep.svg")
+    text = page.read_text(encoding="utf-8")
+
+    assert "not established on this run" in text
+    assert "stops improving beyond" not in text
+    # the crossing survives a noisy baseline and must still be stated
+    assert "points per call" in text

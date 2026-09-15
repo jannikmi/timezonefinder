@@ -218,8 +218,12 @@ class BreakEven:
 
     #: ``below_ladder`` - already faster at the smallest rung measured.
     #: ``bracketed`` - the crossing lies in ``(lower, upper]``.
-    #: ``not_reached`` - not demonstrably faster at any rung.
-    status: Literal["below_ladder", "bracketed", "not_reached"]
+    #: ``not_reached`` - no rung is demonstrably faster.
+    #: ``no_terminal_run`` - some rungs are faster but the top of the ladder is not, so
+    #: nothing is established. Kept distinct from ``not_reached`` because one noisy top
+    #: rung is enough to produce it, and calling that "never faster" would contradict a
+    #: table full of ``faster`` rows.
+    status: Literal["below_ladder", "bracketed", "not_reached", "no_terminal_run"]
     lower: int | None = None
     upper: int | None = None
     #: rungs that read ``faster`` below the terminal run - the signal to re-measure
@@ -243,6 +247,9 @@ class BreakEven:
             return f"already faster at the smallest rung measured (N={self.upper})"
         if self.status == "not_reached":
             return "not demonstrably faster at any rung measured"
+        if self.status == "no_terminal_run":
+            won = ", ".join(f"N={size}" for size in self.non_monotone)
+            return f"not established: faster at {won}, but not at the top of the ladder"
         return f"between N={self.lower} and N={self.upper}"
 
 
@@ -324,15 +331,19 @@ def load_points_csv(path: Path) -> list[tuple[float, float]]:
     uniformly random fixture, and only the caller's own points can say where.
     """
     points: list[tuple[float, float]] = []
+    seen_a_row = False
     with open(path, newline="", encoding="utf-8") as handle:
         for line_number, row in enumerate(csv.reader(handle), start=1):
             if not row or row[0].lstrip().startswith("#"):
                 continue
+            first_row, seen_a_row = not seen_a_row, True
             try:
                 point = (float(row[0]), float(row[1]))
             except (IndexError, ValueError):
-                if line_number == 1:
-                    continue  # a header line
+                # a header is allowed on the first row that is not blank or a comment,
+                # rather than on line 1: a file that opens with a comment still has one
+                if first_row:
+                    continue
                 raise ValueError(
                     f"{path}:{line_number}: expected two numeric columns "
                     f"'lng,lat', got {row!r}"
@@ -477,22 +488,26 @@ def break_even(rungs: Sequence[dict[str, Any]]) -> BreakEven:
     while terminal > 0 and verdicts[terminal - 1] == "faster":
         terminal -= 1
 
-    non_monotone = tuple(
+    won_below = tuple(
         rungs[index]["batch_size"]
         for index in range(terminal)
         if verdicts[index] == "faster"
     )
     if terminal == len(verdicts):
-        return BreakEven("not_reached", non_monotone=non_monotone)
+        # The terminal run is empty: the ladder does not end in a win. Which of the two
+        # answers that is depends on whether anything won at all - a ladder where the
+        # top rung alone came out unresolved has plenty of faster rungs, and reporting
+        # it as "never faster" would contradict its own table.
+        if won_below:
+            return BreakEven("no_terminal_run", non_monotone=won_below)
+        return BreakEven("not_reached")
     if terminal == 0:
-        return BreakEven(
-            "below_ladder", upper=rungs[0]["batch_size"], non_monotone=non_monotone
-        )
+        return BreakEven("below_ladder", upper=rungs[0]["batch_size"])
     return BreakEven(
         "bracketed",
         lower=rungs[terminal - 1]["batch_size"],
         upper=rungs[terminal]["batch_size"],
-        non_monotone=non_monotone,
+        non_monotone=won_below,
     )
 
 

@@ -26,7 +26,7 @@ import re
 from contextlib import contextmanager
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
 
 from benchmarks.candidate_comparison import CandidateComparison
 from scripts.benchmark_utils import (
@@ -56,6 +56,9 @@ from scripts.configs import (
 # and that script's stdout cannot drift apart - the same reason `CandidateComparison` is
 # imported above rather than its verdict rule reimplemented.
 from scripts.measure_batch_break_even import (
+    CONTROL_MIN_BATCH_SIZE,
+    CONTROL_SPREAD_THRESHOLD,
+    DEFAULT_SATURATION_TOLERANCE,
     break_even,
     comparison_of,
     control_spread,
@@ -702,6 +705,29 @@ def render_acceleration_paths(
 # --- the batch break-even sweep ------------------------------------------------------
 
 
+class BatchBreakEvenSettings(NamedTuple):
+    """The thresholds a stored run was taken under."""
+
+    saturation_tolerance: float
+    control_spread_threshold: float
+    control_spread_min_batch_size: int
+
+
+def batch_break_even_settings(info: dict[str, Any]) -> BatchBreakEvenSettings:
+    """Read the stamped thresholds, defaulting to the constants for an older run."""
+    return BatchBreakEvenSettings(
+        saturation_tolerance=info.get(
+            "saturation_tolerance", DEFAULT_SATURATION_TOLERANCE
+        ),
+        control_spread_threshold=info.get(
+            "control_spread_threshold", CONTROL_SPREAD_THRESHOLD
+        ),
+        control_spread_min_batch_size=info.get(
+            "control_spread_min_batch_size", CONTROL_MIN_BATCH_SIZE
+        ),
+    )
+
+
 def _batch_break_even_row(rung: dict[str, Any]) -> list[str]:
     comparison = comparison_of(rung)
     return [
@@ -714,15 +740,25 @@ def _batch_break_even_row(rung: dict[str, Any]) -> list[str]:
     ]
 
 
-def _batch_break_even_headline(sweep: dict[str, Any], batch_api: str) -> str:
+def _batch_break_even_headline(
+    sweep: dict[str, Any], batch_api: str, settings: BatchBreakEvenSettings
+) -> str:
     """One sentence per point class, stating both answers and their verdicts."""
     rungs = sweep["rungs"]
     crossing = break_even(rungs)
-    settles = saturation(rungs)
+    settles = saturation(rungs, tolerance=settings.saturation_tolerance)
     label = point_class_label(sweep["point_class"])
 
     if crossing.status == "not_reached":
         opening = f"**{label}: batching is not demonstrably faster at any batch size measured**"
+    elif crossing.status == "no_terminal_run":
+        # faster at some rungs but not at the top of the ladder: a crossing needs a run
+        # that holds to the end, and one noisy top rung is enough to break it
+        opening = (
+            f"**{label}: no crossing established** - batching won at "
+            + ", ".join(f"N={size}" for size in crossing.non_monotone)
+            + " but not at the top of the ladder"
+        )
     elif crossing.status == "below_ladder":
         opening = (
             f"**{label}: batching already pays at {crossing.upper} point"
@@ -734,7 +770,26 @@ def _batch_break_even_headline(sweep: dict[str, Any], batch_api: str) -> str:
             f"{crossing.upper} points per call**"
         )
 
-    if settles.batch_size is not None and settles.speedup is not None:
+    # The saturation figure is withheld from the headline whenever the control says the
+    # ladder did not measure one thing. It is read off the batched side's *absolute*
+    # per-point time across rungs, which is exactly the quantity cross-rung drift moves,
+    # so a run whose scalar baseline wandered cannot support it - three repeat runs of
+    # this sweep put it at N=1,000, at N=500 and out of reach as the control went from
+    # 5 % to 22 %. The crossing is a within-rung paired comparison and survives that,
+    # which is why it stays in the headline either way.
+    control = control_spread(
+        rungs,
+        threshold=settings.control_spread_threshold,
+        min_batch_size=settings.control_spread_min_batch_size,
+    )
+    if not control.within_threshold:
+        closing = (
+            ". Where it stops improving is **not established on this run**: the scalar "
+            f"baseline spread {control.spread * 100:.1f} % across rungs, above the "
+            f"{control.threshold * 100:.0f} % this measurement needs before it can "
+            "read an absolute quantity along the ladder."
+        )
+    elif settles.batch_size is not None and settles.speedup is not None:
         closing = (
             f", and stops improving beyond ~{settles.batch_size:,} "
             f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})."
@@ -769,12 +824,17 @@ def render_batch_break_even(
     system_info = get_system_info(run)
     batch_api = info["batch_api"]
     scalar_api = info["scalar_api"]
+    # The settings the *run* was taken under, not this checkout's current constants: a
+    # stored run must render as the answers it made. Falling back to the constants keeps
+    # a run taken before these were stamped renderable. Same rule `get_batch_size`
+    # enforces for `BATCH_SIZE` on the other pages.
+    settings = batch_break_even_settings(info)
 
     reporter = BenchmarkReporter(
         title="When Batched Lookups Pay", output_path=output_path
     )
     for sweep in sweeps:
-        reporter.add_text(_batch_break_even_headline(sweep, batch_api))
+        reporter.add_text(_batch_break_even_headline(sweep, batch_api, settings))
 
     platform_label = (
         f"{system_info['platform_system']} {system_info['platform_machine']}"
@@ -823,6 +883,14 @@ def render_batch_break_even(
         "``float64`` form the batch API takes without copying. A caller holding Python "
         "lists pays one conversion per axis per call on top of what these rows show."
     )
+    reporter.add_text(
+        "**The two answers do not survive a noisy machine equally well.** Where batching "
+        "starts paying is a comparison *within* one rung, so drift over the run cancels "
+        "out of it and it reproduces. Where it stops improving is the batched call's "
+        "per-point time compared *across* rungs, which drift moves directly - so it is "
+        "quoted only when the control below certifies that the ladder measured one "
+        "thing, and withheld when it does not."
+    )
 
     reporter.add_section("The sweep", level=1)
     render_sweep(run, chart_path)
@@ -867,7 +935,16 @@ def render_batch_break_even(
                 "``no difference`` or ``unresolved`` by construction: that is what it "
                 "means for the crossing to be in there, not a defect in the run."
             )
-        if crossing.non_monotone:
+        if crossing.status == "no_terminal_run":
+            reporter.add_note(
+                "This sweep won at "
+                + ", ".join(f"N={size}" for size in crossing.non_monotone)
+                + " but not at the largest batch size measured, so no crossing is "
+                "established: a break-even is the size beyond which batching never "
+                "loses again, and this ladder does not end in a win. Re-measure on a "
+                "quieter machine before reading anything off it."
+            )
+        elif crossing.non_monotone:
             reporter.add_note(
                 "This sweep won at "
                 + ", ".join(f"N={size}" for size in crossing.non_monotone)
@@ -876,7 +953,11 @@ def render_batch_break_even(
                 "is a sign to re-measure rather than a finer answer."
             )
 
-        control = control_spread(sweep["rungs"])
+        control = control_spread(
+            sweep["rungs"],
+            threshold=settings.control_spread_threshold,
+            min_batch_size=settings.control_spread_min_batch_size,
+        )
         reporter.add_text(
             f"Control: the scalar loop answers the same points at every rung, so its "
             f"per-point time should not depend on the batch size. Across the "
