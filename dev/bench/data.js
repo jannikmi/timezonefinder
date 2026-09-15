@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789455711291,
+  "lastUpdate": 1789455713068,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -22100,6 +22100,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2634 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9b65bb7d5dc7f98a5d06a0954f85ce092e65290",
+          "message": "docs: make the \"data versions are not semver\" point prominent (#682)\n\nA careful reader of the code changelog could still come away assuming a\ntimezonefinder-data update follows code semantics. Result stability now\nstates the opposite up front and in full:\n\n- a warning in the summary that a data bump, .postN included, is never a\n  semver patch and can move answers far from any border;\n- a new \"Data versions are not semantic versions\" subsection opening the\n  data-release section: what each component of <format>.<year>.<letter>\n  [.postN] means, that only the format generation is machine-checked, that\n  datasets arrive without a code release, and that the code changelog does\n  not record dataset changes, so reading it is not evidence of stability;\n- pinning now says an exact == pin is required, since a range constrains a\n  scheme that promises nothing about answers.\n\n\nClaude-Session: https://claude.ai/code/session_015sF6zRSXrC3GM82AioZ8ww\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-15T07:00:59Z",
+          "tree_id": "aeef452f2dc4d533c78cf3ee93c4ae5208fedb46",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/f9b65bb7d5dc7f98a5d06a0954f85ce092e65290"
+        },
+        "date": 1789455712739,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0148401260375977,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0150184631347656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.262847900390625,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2636566162109375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61698532104492,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.617751121520996,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4957 GHz"
           }
         ]
       }
