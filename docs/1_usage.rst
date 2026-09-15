@@ -252,6 +252,9 @@ Pass ``on_invalid="skip"`` to answer the rest of the batch instead, rather than 
     Points whose H3 cell a single timezone covers benefit most; points that fall through to the point-in-polygon tests are still resolved one at a time, and ``h3``'s cell lookup has no vectorised form.
     ``examples/batch_processing.py`` demonstrates the whole API.
 
+    That overhead has to be paid back, so a batch below a certain size is *slower* per point than the scalar method, and above a certain size a bigger batch stops helping.
+    :doc:`benchmark_results_batch_break_even` measures both, and the script behind it takes your own coordinates - which matter, because points sharing a cell are answered together.
+
 ``timezone_at_land()`` batches too, as ``timezone_ids_at_land()`` and ``timezone_names_at_land()``, with the same arguments and the same ``on_invalid`` policies:
 
 .. code-block:: python

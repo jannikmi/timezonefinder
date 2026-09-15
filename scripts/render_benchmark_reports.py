@@ -37,16 +37,32 @@ from scripts.benchmark_utils import (
     decimals_for_magnitude,
     format_bytes,
     load_benchmark_json,
+    comparability_info,
     cpu_model,
     machine_label,
 )
 from scripts.configs import (
     ACCELERATION_REPORT_FILE,
+    BATCH_BREAK_EVEN_CHART_FILE,
+    BATCH_BREAK_EVEN_REPORT_FILE,
     COMPARISON_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
     MEMORY_REPORT_FILE,
     PERFORMANCE_REPORT_FILE,
     POLYGON_REPORT_FILE,
+)
+
+# The break-even and saturation rules live with the measurement, not here, so this page
+# and that script's stdout cannot drift apart - the same reason `CandidateComparison` is
+# imported above rather than its verdict rule reimplemented.
+from scripts.measure_batch_break_even import (
+    break_even,
+    comparison_of,
+    control_spread,
+    per_point_seconds,
+    point_class_label,
+    saturation,
+    speedup,
 )
 
 CONFIG_HEADERS = [
@@ -680,6 +696,239 @@ def render_acceleration_paths(
         "ever tested."
     )
 
+    reporter.write_report()
+
+
+# --- the batch break-even sweep ------------------------------------------------------
+
+
+def _batch_break_even_row(rung: dict[str, Any]) -> list[str]:
+    comparison = comparison_of(rung)
+    return [
+        f"{rung['batch_size']:,}",
+        format_duration(per_point_seconds(rung, "best_baseline")),
+        format_duration(per_point_seconds(rung, "best_challenger")),
+        format_ratio(speedup(rung)),
+        f"{comparison.challenger_wins} of {comparison.rounds}",
+        comparison.verdict,
+    ]
+
+
+def _batch_break_even_headline(sweep: dict[str, Any], batch_api: str) -> str:
+    """One sentence per point class, stating both answers and their verdicts."""
+    rungs = sweep["rungs"]
+    crossing = break_even(rungs)
+    settles = saturation(rungs)
+    label = point_class_label(sweep["point_class"])
+
+    if crossing.status == "not_reached":
+        opening = f"**{label}: batching is not demonstrably faster at any batch size measured**"
+    elif crossing.status == "below_ladder":
+        opening = (
+            f"**{label}: batching already pays at {crossing.upper} point"
+            f"{'' if crossing.upper == 1 else 's'}**"
+        )
+    else:
+        opening = (
+            f"**{label}: batching starts paying between {crossing.lower} and "
+            f"{crossing.upper} points per call**"
+        )
+
+    if settles.batch_size is not None and settles.speedup is not None:
+        closing = (
+            f", and stops improving beyond ~{settles.batch_size:,} "
+            f"({format_ratio(settles.speedup)} the scalar loop, {settles.verdict})."
+        )
+    else:
+        closing = ", and had not stopped improving at the top of the ladder."
+    return f"{opening} for ``{batch_api}()``{closing}"
+
+
+def render_batch_break_even(
+    run: dict[str, Any], output_path: Path, chart_path: Path
+) -> None:
+    """Render the sweep page and the chart it embeds, from one stored run."""
+    # imported here rather than at module scope: seaborn/matplotlib live in the
+    # `benchmark` dependency group, which is deliberately absent from the measurement
+    # environment, and every other page on this module must keep rendering without them
+    from scripts.batch_break_even_chart import render_sweep
+
+    sweeps = run["sweeps"]
+    if not sweeps:
+        raise ValueError("the batch break-even run holds no sweeps")
+    for sweep in sweeps:
+        sizes = [rung["batch_size"] for rung in sweep["rungs"]]
+        if sizes != sorted(set(sizes)):
+            raise ValueError(
+                f"the {sweep['point_class']!r} sweep's rungs are not strictly "
+                f"ascending ({sizes}); break-even and saturation are both read as runs "
+                "along the ladder and would be meaningless out of order."
+            )
+
+    info = run["machine_info"]["timezonefinder"]
+    system_info = get_system_info(run)
+    batch_api = info["batch_api"]
+    scalar_api = info["scalar_api"]
+
+    reporter = BenchmarkReporter(
+        title="When Batched Lookups Pay", output_path=output_path
+    )
+    for sweep in sweeps:
+        reporter.add_text(_batch_break_even_headline(sweep, batch_api))
+
+    platform_label = (
+        f"{system_info['platform_system']} {system_info['platform_machine']}"
+    )
+    reporter.add_text(
+        f"*Measured on {platform_label}, {machine_label(run) or 'CPU not recorded'}, "
+        f"Python {system_info['python_version']}, using the "
+        f"{acceleration_path_label(system_info)} point-in-polygon path.*"
+    )
+    reporter.add_text(
+        f"``{batch_api}()`` amortises validation, the integer scaling and the shortcut "
+        f"table read over a whole batch, but still pays one ``h3`` cell lookup per point "
+        f"and still resolves ambiguous points one at a time. So it is faster per point "
+        f"than calling ``{scalar_api}()`` in a loop only once the batch is large enough "
+        f"to pay back its own fixed cost. This page is where that happens, and where "
+        f"growing the batch further stops helping. See :doc:`benchmarking_methodology`."
+    )
+    reporter.add_note(
+        "Nothing on this page is on the continuous-integration trend chart, which "
+        "tracks one fixed batch size. These are on-demand measurements, taken by "
+        "``make batch-break-even``. Both answers move with the machine *and* with the "
+        "workload, so read them as this configuration's, and run the script on your own "
+        "coordinates to get yours."
+    )
+
+    reporter.add_section("How this is measured", level=1)
+    reporter.add_text(
+        f"Each row below is one paired comparison: a ``{scalar_api}()`` loop over N "
+        f"points against a single ``{batch_api}()`` call on the same N points, with the "
+        "same draw handed to both candidates, the order alternating round by round, and "
+        "two estimators reported so that a difference neither can demonstrate reads as "
+        "``unresolved`` rather than as a number "
+        "(``benchmarks/candidate_comparison.py``)."
+    )
+    reporter.add_text(
+        f"Every rung times the same amount of work - about "
+        f"{info['points_per_round_target']:,} points per round, whatever the batch size "
+        f"- so the rungs are comparable to each other, and both answers are read off the "
+        "ratio *within* a rung rather than off absolute times across rungs, which is "
+        "what keeps drift over the run out of the curve. Points are drawn without "
+        "replacement inside a batch: a repeated coordinate would be answered from the "
+        "batch's own cell lookup and would flatter exactly the effect being measured."
+    )
+    reporter.add_text(
+        "The coordinate arrays are prepared before the clock starts, in the contiguous "
+        "``float64`` form the batch API takes without copying. A caller holding Python "
+        "lists pays one conversion per axis per call on top of what these rows show."
+    )
+
+    reporter.add_section("The sweep", level=1)
+    render_sweep(run, chart_path)
+    reporter.add_text(f".. image:: {chart_path.name}")
+    reporter.add_text(
+        "The upper panel is the best-round speed-up; the lower one is the share of "
+        "rounds the batched call won, which assumes nothing about how the noise is "
+        "distributed. A difference is believed only where both agree, so the shaded band "
+        "- where the crossing lies - is exactly where the upper panel passes 1.0 and the "
+        "lower one passes one half. Hollow markers are rungs neither estimator resolves."
+    )
+    names_gather = info.get("names_gather_min_batch")
+    if names_gather:
+        reporter.add_text(
+            f"The dotted rule at {names_gather} is not a measurement artefact: "
+            "``ZoneNames.names_of`` converts ids to names with a Python loop below that "
+            "size and a numpy gather at or above it, so the per-point cost steps there."
+        )
+
+    for sweep in sweeps:
+        label = point_class_label(sweep["point_class"])
+        reporter.add_section(f"Batch size against speed-up, {label}", level=1)
+        reporter.add_table(
+            [
+                "Batch size",
+                f"{scalar_api}() loop, per point",
+                f"{batch_api}(), per point",
+                "Speed-up",
+                "Rounds won",
+                "Verdict",
+            ],
+            [_batch_break_even_row(rung) for rung in sweep["rungs"]],
+        )
+
+        crossing = break_even(sweep["rungs"])
+        bracket = crossing.bracket
+        if bracket is not None:
+            reporter.add_text(
+                f"The crossing is reported as the interval ({bracket[0]}, "
+                f"{bracket[1]}] rather than as a number, because that is all a "
+                "ladder of discrete sizes can establish. The rungs inside it read "
+                "``no difference`` or ``unresolved`` by construction: that is what it "
+                "means for the crossing to be in there, not a defect in the run."
+            )
+        if crossing.non_monotone:
+            reporter.add_note(
+                "This sweep won at "
+                + ", ".join(f"N={size}" for size in crossing.non_monotone)
+                + " and then lost again higher up the ladder. The interval above is the "
+                "point beyond which it never loses; a ladder that crosses more than once "
+                "is a sign to re-measure rather than a finer answer."
+            )
+
+        control = control_spread(sweep["rungs"])
+        reporter.add_text(
+            f"Control: the scalar loop answers the same points at every rung, so its "
+            f"per-point time should not depend on the batch size. Across the "
+            f"{control.rungs_used} rungs at or above N={control.min_batch_size} it "
+            f"spread **{control.spread * 100:.1f} %** "
+            f"({format_duration(control.fastest)} to "
+            f"{format_duration(control.slowest)}), against a "
+            f"{control.threshold * 100:.0f} % threshold - "
+            + (
+                "so the ladder measured one thing."
+                if control.within_threshold
+                else "**above the threshold**, so read the curve with suspicion and "
+                "re-measure on a quieter machine."
+            )
+            + " It is published as the reader's check and is never divided into "
+            "anything. The smaller rungs are excluded because the harness's own "
+            "per-batch cost lands on them divided by a very small N."
+        )
+
+    reporter.add_section("What this does not say", level=1)
+    reporter.add_text(
+        "**Both answers are properties of the workload, not only of the library.** The "
+        "batch path answers every point that falls in one H3 cell from a single lookup, "
+        "so a clustered stream - a delivery round, a city, a sensor network - amortises "
+        "sooner than the uniformly random points measured here, which share almost "
+        "nothing. Random points are the conservative case."
+    )
+    reporter.add_text(
+        "They are also properties of this machine and this acceleration path. "
+        "``scripts/measure_batch_break_even.py`` takes ``--points your.csv`` (two "
+        "columns, ``lng,lat``) and reports the same two numbers for your coordinates on "
+        "your hardware, which is the only way to get the answer that applies to you."
+    )
+    reporter.add_text(
+        f"Finally, ``timezone_ids_at()`` breaks even sooner than ``{batch_api}()`` "
+        "would suggest, because it never builds the answer names. It has no scalar "
+        "counterpart to pair against, so it is not on this page; ``--api ids`` sweeps it "
+        "as a bound."
+    )
+
+    add_system_status_section(
+        reporter,
+        system_info,
+        additional_info={
+            "Rounds per rung": info["rounds"],
+            "Points per round": f"~{info['points_per_round_target']:,}",
+            "Coordinate access": "in memory"
+            if info.get("in_memory")
+            else "memory mapped",
+        },
+        provenance=comparability_info(run),
+    )
     reporter.write_report()
 
 
@@ -1702,6 +1951,16 @@ def main() -> None:
             "acceleration-path report untouched."
         ),
     )
+    parser.add_argument(
+        "--batch-break-even-json",
+        type=Path,
+        help=(
+            "Path to a JSON file produced by `scripts.measure_batch_break_even` "
+            "(`make batch-break-even`). Omit to leave the batch break-even report and "
+            "its chart untouched. Drawing the chart needs the `benchmark` dependency "
+            "group (`uv run --group benchmark ...`)."
+        ),
+    )
     args = parser.parse_args()
 
     data = load_benchmark_json(args.benchmark_json)
@@ -1723,6 +1982,13 @@ def main() -> None:
         runs = [load_benchmark_json(path) for path in args.acceleration_json]
         render_acceleration_paths(runs, ACCELERATION_REPORT_FILE)
         written.append(ACCELERATION_REPORT_FILE)
+    if args.batch_break_even_json is not None:
+        render_batch_break_even(
+            load_benchmark_json(args.batch_break_even_json),
+            BATCH_BREAK_EVEN_REPORT_FILE,
+            BATCH_BREAK_EVEN_CHART_FILE,
+        )
+        written.extend([BATCH_BREAK_EVEN_REPORT_FILE, BATCH_BREAK_EVEN_CHART_FILE])
     print(f"Wrote {', '.join(str(path) for path in written)}")
 
 

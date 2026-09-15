@@ -30,6 +30,14 @@ That page ends with the **per-query latency distribution** - p50 through p99.9, 
 
 
 
+Batch Lookups
+~~~~~~~~~~~~~
+
+See :doc:`benchmark_results_batch_break_even` for the batch size at which ``timezone_names_at()`` starts beating a loop of ``timezone_at()`` calls, and the size beyond which a larger batch buys nothing more - auto-generated from the ``scripts/measure_batch_break_even.py`` sweep (``make batch-break-even``).
+
+Both numbers depend on your hardware *and* on your coordinates, because points sharing an H3 cell are answered together: that page carries the figures for uniformly random points on one machine, and the script takes ``--points your.csv`` to measure yours.
+
+
 Point in Polygon Checks
 ~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -29,11 +29,14 @@
 #   latency    - measure the per-query latency distribution (p50/p90/p99/p99.9)
 #   acceleration-paths - compare all three point-in-polygon paths (clang / numba /
 #                        pure Python), one environment per measurable pair
+#   batch-break-even - sweep the batched lookup against a scalar loop over a ladder of
+#                      batch sizes: where batching starts paying, and where it stops
+#                      improving
 #   memory     - measure the memory footprint of each finder configuration
 #   memory-ci  - the exact memory measurement the benchmark CI workflow records
 #   memory-noise - repeat memory-ci on unchanged code and report the noise floor
-#   reports    - benchmarks + latency + memory + acceleration-paths + render
-#                docs/benchmark_results_*.rst + the data report
+#   reports    - benchmarks + latency + memory + acceleration-paths + batch-break-even
+#                + render docs/benchmark_results_*.rst + the data report
 #   tzfpy-agreement - how often this package and tzfpy answer differently, and why
 #   tox        - run tox for all configured environments
 #   hook       - install and run pre-commit hooks on all files
@@ -148,6 +151,7 @@ MEMORY_JSON := tmp/memory.json
 # renderer composes them. Named by the path each run measured against clang.
 ACCELERATION_JSON_NUMBA := tmp/acceleration-numba.json
 ACCELERATION_JSON_PYTHON := tmp/acceleration-python.json
+BATCH_BREAK_EVEN_JSON := tmp/batch-break-even.json
 # a footprint has no run-to-run variance worth averaging out the way a timing
 # does; these repetitions exist to catch a measurement that failed to settle,
 # not to build a distribution
@@ -241,12 +245,28 @@ acceleration-paths:
 	uv run $(BENCHMARK_ENV_NUMBA) python -m scripts.measure_acceleration_paths \
 		--output=$(ACCELERATION_JSON_NUMBA)
 
-reports: check-data benchmarks latency memory acceleration-paths
-	uv run python -m scripts.render_benchmark_reports \
+# Where the batched lookup starts beating a scalar loop, and where growing the batch
+# stops helping. Neither is expressible by the suites above: they measure the batch API
+# at one fixed size, which is a single point on the curve this sweeps. One environment
+# only - the question is about batch size, not about backends - but the path is still
+# asserted, because the committed page sits beside pages measured on clang and a run
+# that quietly bound numba would mislabel rather than fail.
+batch-break-even:
+	@mkdir -p tmp
+	uv run $(BENCHMARK_ENV) python -m scripts.assert_acceleration_path \
+		--expect $(BENCHMARK_ACCELERATION_PATH)
+	uv run $(BENCHMARK_ENV) python -m scripts.measure_batch_break_even \
+		--output=$(BATCH_BREAK_EVEN_JSON)
+
+# --group benchmark: drawing the sweep needs seaborn, which is deliberately absent from
+# the measurement environments above so that no measured process ever imports it.
+reports: check-data benchmarks latency memory acceleration-paths batch-break-even
+	uv run --group benchmark python -m scripts.render_benchmark_reports \
 		--benchmark-json=$(BENCHMARK_JSON) --latency-json=$(LATENCY_JSON) \
 		--memory-json=$(MEMORY_JSON) \
 		--acceleration-json=$(ACCELERATION_JSON_PYTHON) \
-		--acceleration-json=$(ACCELERATION_JSON_NUMBA)
+		--acceleration-json=$(ACCELERATION_JSON_NUMBA) \
+		--batch-break-even-json=$(BATCH_BREAK_EVEN_JSON)
 	uv run python -m scripts.reporting
 
 # Correctness, not speed, so it is not part of `benchmarks` and writes no report
@@ -490,6 +510,6 @@ docs:
 	benchmarks-ci benchmark-noise print-ci-benchmark-json \
 	print-benchmark-acceleration-path latency \
 	memory memory-ci memory-noise print-ci-memory-json print-memory-chart-json print-timing-chart-json \
-	changelog changelog-assemble acceleration-paths
+	changelog changelog-assemble acceleration-paths batch-break-even
 
 .PHONY: release release-recover
