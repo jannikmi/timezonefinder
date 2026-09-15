@@ -26,6 +26,17 @@ itself, when you install a different version of **the code**. Applications that 
 stay reproducible across deployments - audit trails, stored records, regression baselines - have to
 pin both, not merely stay away from borders.
 
+.. warning::
+
+   **A data update is never a "patch" in the semantic-versioning sense, whatever its version number
+   looks like.** ``timezonefinder-data`` versions read ``<format>.<year>.<letter>[.postN]`` and
+   describe *which upstream dataset* a release carries, not how much an answer may move. Only the
+   leading component means anything to the resolver, and it marks the binary *format* generation.
+   Nothing in the scheme is a compatibility promise: a bump from ``3.2026.3`` to ``3.2026.4``, or
+   even to ``3.2026.3.post1``, can change what a lookup returns for coordinates nowhere near a
+   border, and does so without any ``timezonefinder`` release. See
+   :ref:`Data versions are not semantic versions <data-versions-not-semver>`.
+
 
 Within one installation
 =======================
@@ -45,9 +56,53 @@ guaranteed to be the zone you would expect.
 Across data releases
 ====================
 
+.. _data-versions-not-semver:
+
+Data versions are not semantic versions
+---------------------------------------
+
+The two distributions are versioned on separate axes and by *different schemes*, and reading the
+data one as if it followed the code one is the mistake this page exists to prevent.
+
+``timezonefinder`` follows semantic versioning: a major release is where a documented semantic
+change is allowed to land, and the :doc:`changelog <6_changelog>` describes every release.
+
+``timezonefinder-data`` does not. Its version reads ``<format>.<year>.<letter>[.postN]``:
+
+* ``<format>`` is the **binary data format generation** - the only component with a machine-checked
+  meaning. ``timezonefinder`` requires the data inside the format generation it can read, so a
+  format change becomes a dependency-resolution error rather than a failure at the first lookup.
+* ``<year>.<letter>`` names the `timezone-boundary-builder`_ release the dataset was compiled from
+  (``2026c`` becomes ``2026.3``). It is an upstream identifier, not a severity.
+* ``.postN`` identifies revised compiled data made from the *same* upstream release - typically a
+  rebuild under changed converter rules.
+
+None of that is a compatibility statement. **There is no data version bump that promises your
+answers are unchanged**, and no component of the scheme that distinguishes a dataset correcting one
+village from one that reshapes a country: a ``.postN`` rebuild can move answers through channel 3
+below without a single boundary coordinate changing.
+
+Two consequences follow, and both are easy to miss:
+
+* **A data update reaches you without a code release.** Datasets ship on their own schedule, so an
+  unpinned ``timezonefinder-data`` can change your answers while ``timezonefinder`` stays exactly
+  where it is - no upgrade, no release notes, nothing in your dependency diff beyond a transitive
+  version.
+* **The code changelog does not record dataset changes.** It describes releases of
+  ``timezonefinder``. Boundary revisions and regenerated indexes are not in it, so a careful reading
+  of it cannot tell you whether an answer moved; that record is the
+  `data release history <https://pypi.org/project/timezonefinder-data/#history>`__ and upstream's
+  own release notes. A code changelog with nothing relevant in it is therefore *not* evidence that
+  results are unchanged.
+
+The remedy is the pin below, not vigilance about version numbers.
+
+Three channels a dataset can change an answer through
+-----------------------------------------------------
+
 ``timezonefinder-data`` ships a new dataset whenever `timezone-boundary-builder`_ publishes one,
 independently of code releases. A new dataset can change your answer through **three independent
-channels**, and only the first is what "the borders moved" usually brings to mind:
+channels** (all of them, and not only the first, are what the warning above is about), and only the first is what "the borders moved" usually brings to mind:
 
 1. **Boundary geometry.** Upstream revises boundaries. This is not bounded by a small distance:
    a re-assigned region, a municipality moved between zones or a zone that is split or renamed
@@ -171,10 +226,11 @@ exposure is confined to points the geometry does not decide by itself - a point 
 or inside overlapping polygons, and every ``TimezoneFinderL`` answer in a multi-zone cell, which is
 a stored ordering decision rather than a geometric one.
 
-Code and data are versioned on separate axes. ``timezonefinder`` requires the data within one
-binary *format* generation, so any dataset released for the current format works with any code
-release that accepts it; a format change becomes a dependency-resolution error rather than a
-failure at the first lookup. :doc:`architecture` describes that split.
+Code and data are versioned on separate axes and, as
+:ref:`Data versions are not semantic versions <data-versions-not-semver>` sets out, under different
+schemes. Any dataset released for the current format generation works with any code release that
+accepts it - which is exactly why a compatible pair says nothing about whether the answers match.
+:doc:`architecture` describes that split.
 
 
 Pinning
@@ -189,7 +245,9 @@ stored in it. That is the whole of channels 1 and 3, and the stored half of chan
     pip install timezonefinder "timezonefinder-data==<version>"
 
 The `release history <https://pypi.org/project/timezonefinder-data/#history>`__ lists the
-available versions.
+available versions. Pin an exact version with ``==``: a range - even one as narrow as ``~=`` within
+the format generation - is not a pin, because the scheme it constrains carries no promise about
+answers.
 
 **Pin the code as well.** A data pin does not freeze the rules that read the data: the
 point-in-polygon predicate's behaviour for a point exactly on an edge, and the order in which the
