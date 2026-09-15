@@ -125,12 +125,11 @@ class FileCoordAccessor(AbstractCoordAccessor):
             # of callers who never need the table, so deferring it would move a certain
             # cost to the first query rather than avoid it - and would buy that with a
             # per-fetch `is None` branch on the hot path and a write to `self` from a
-            # lookup, which is exactly what a shared instance being safe for concurrent
-            # reads currently rests on: every attribute is assigned here or in
-            # `cleanup()`, and nothing on the lookup path mutates state. The lazy rule
-            # that governs `zone_positions` (read only by `certain_timezone_at` and
-            # `get_geometry`, which the `timezone_at` majority never calls) is the
-            # opposite case, not a precedent for this one.
+            # lookup. A shared instance stays safe for concurrent reads only while every
+            # lazily kept value is a read-only array identical from any thread, as
+            # `zone_positions` and the two in `ZoneNames` are - and those are lazy
+            # because the `timezone_at` majority never reads them, which is the opposite
+            # case to this table, not a precedent for it.
             #
             # Read through the file rather than the mapping: the header words sit next
             # to the polygons they describe, so walking them through the mapping would

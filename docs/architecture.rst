@@ -83,8 +83,7 @@ Most modules are self-describing. The ones that carry the design:
     -generated bindings. The only generated code in the package.
 
 ``global_functions.py`` / ``command_line.py``
-    Convenience wrappers for one-off use. They are *not* thread-safe - concurrent workloads should
-    build a per-thread ``TimezoneFinder(in_memory=True)``.
+    Convenience wrappers for one-off use. They are safe to call concurrently but share one instance, so a throughput-critical concurrent workload should build a per-thread ``TimezoneFinder(in_memory=True)``.
 
 
 Three point-in-polygon backends, chosen once

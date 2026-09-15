@@ -2,7 +2,6 @@
 
 | Id | What | Area | Size | Eligibility |
 |---|---|---|---|---|
-| [FT-4](items/data-pipeline-and-developer-tooling/ft-4-the-thread-safety-documentation-contradicts-itself.md) | The thread-safety documentation contradicts itself | docs | M | free — seven sites across two pages and two modules state opposites; the evidence settles which, and the one lookup-path write is benign for a stated reason |
 | [TOOL-7](items/data-pipeline-and-developer-tooling/tool-7-the-shortcut-ordering-leaves-its-ties-to-set-iteration-order.md) | The shortcut ordering leaves its ties to set iteration order | tooling | ~10 | free — the shortcut binary is reproducible only by set-iteration luck; 29 bytes over ~6 cells, no answers affected |
 | [PERF-8](items/lookup-geometry-and-data-format/perf-8-calibrate-shortcut-ordering-costs-against-runtime-benchmarks.md) | Calibrate shortcut ordering costs against runtime benchmarks | performance validation | M | free — links model assumptions and coefficients to held-out runtime evidence before further ordering tuning |
 | [TOOL-4](items/data-pipeline-and-developer-tooling/tool-4-three-small-lint-families-are-not-selected-at-all.md) | Three small lint families are not selected at all | tooling | ~15 | free — 7 sites; the item is the adopt-or-refuse judgement |
