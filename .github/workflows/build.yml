@@ -76,7 +76,7 @@ jobs:
           # on the lowest supported interpreter, so the matrix gains an env rather
           # than a job.
           - python-version: "3.12"
-            tox-env: "py312,py312-numba,py312-pytz,docs,py312-min"
+            tox-env: "py312,py312-numba,py312-pytz,docs,py312-min,charts"
           - python-version: "3.13"
             tox-env: "py313,py313-numba,py313-pytz"
           # free-threaded runs on a uv-fetched 3.14t (see tox.ini), so it needs no
