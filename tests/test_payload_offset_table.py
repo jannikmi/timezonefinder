@@ -245,9 +245,10 @@ def test_a_lookup_mutates_no_accessor_state(tmp_path, in_memory):
     the accessor - so a lazily built table would defer a certain cost rather than avoid
     one, and would pay for it twice: an ``is None`` branch per fetch on the hot path,
     and a write to ``self`` from a lookup. The second is the expensive half. A shared
-    instance is safe for concurrent reads precisely because every attribute is assigned
-    in ``__init__`` or ``cleanup()`` and nothing on the lookup path mutates state; a
-    lazy cache would be the first thing to break that, silently and only under load.
+    instance stays safe for concurrent reads only while every value a lookup keeps is a
+    read-only array published once and identical from any thread, which the finder's
+    few lazily kept indexes are; a cache on this hot path would have to meet that too,
+    and a mistake there breaks silently and only under load.
 
     So: fetch every polygon and assert the accessor is byte-for-byte the object it was.
     """

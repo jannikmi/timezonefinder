@@ -1,7 +1,7 @@
 # GH-364 — a native candidate loop
 
 - **Tracks:** issue #364, whose body carries the full scoping — the GIL question, the thread-safety audit, the packaging arithmetic, the test plan and the slicing this entry is the last slice of.
-- **What is left here.** The free-threading work was sliced on 2026-09-08 into [FT-1](../packaging-distribution-and-release/ft-1-setup-py-claims-abi3-where-the-interpreter-forbids-it.md) (the abi3 guard), [FT-2](../data-pipeline-and-developer-tooling/ft-2-no-environment-tests-a-free-threaded-interpreter.md) (a free-threaded env and the GIL assertion), [FT-3](../packaging-distribution-and-release/ft-3-raise-the-h3-floor-and-flip-the-gil-assertion.md) (the h3 floor), [FT-4](../data-pipeline-and-developer-tooling/ft-4-the-thread-safety-documentation-contradicts-itself.md) (the docs contradiction) and [FT-5](../packaging-distribution-and-release/ft-5-free-threaded-wheels.md) (wheels). **This entry is now only the native candidate loop** — moving the per-candidate work into C so that a query costs one FFI crossing instead of one per polygon.
+- **What is left here.** The free-threading work was sliced on 2026-09-08 into the `setup.py` abi3 guard (shipped), the free-threaded env and GIL assertion (shipped), [FT-3](../packaging-distribution-and-release/ft-3-raise-the-h3-floor-and-flip-the-gil-assertion.md) (the h3 floor), the thread-safety docs correction (shipped) and [FT-5](../packaging-distribution-and-release/ft-5-free-threaded-wheels.md) (wheels). **This entry is now only the native candidate loop** — moving the per-candidate work into C so that a query costs one FFI crossing instead of one per polygon.
 - **Two of the sliced pieces already landed and are not entries:** the polygon offset table, which was #536's fix and this item's prerequisite, and the read-only loaded arrays with the state-contract test in `tests/test_resource_management.py`.
 - **The blocker this entry used to carry is not this entry's.** An h3 release gates *claiming free-threading support*, which is FT-3 — and it is a finder construction, not the import, that re-enables the GIL. It does not gate a native loop, which is an ordinary performance change on any interpreter.
 - **What it would remove, as counts** — per *ambiguous* query, at 1.13 candidates each, on a stratum that is roughly 11 % of a uniform workload and reached at all only when the shortcut is not unique: FFI crossings 1.13 → 1; numpy array constructions 1.13 → 0; numpy scalar comparisons ~4.5 → 0; dict lookups and generator constructions 1.13 → 0.
@@ -13,7 +13,7 @@
   - **Options:** build it, and accept an L change plus a wider C surface to maintain and package for a gain the suite cannot resolve; or close it, and keep the counts on record so it is not re-proposed on an intuition. **Recommendation: close it.** The two reasons it was ranked L-worthy — the µs in the fetch and the GIL — have both been answered by other work.
   - Settling this needs no new measurement; the profile behind those figures is current. It needs the judgement about spending an L on a sub-noise gain, which is the maintainer's.
 - **Status:** needs the decision above.
-- **Last touched:** 2026-09-08 — sliced; the free slices left as FT-1, FT-2 and FT-4, and this entry reduced to the native loop and the one question that decides it.
+- **Last touched:** 2026-09-08 — sliced; the free slices left as the abi3 guard, the free-threaded env and the docs correction, and this entry reduced to the native loop and the one question that decides it.
 
 ## Related memory
 

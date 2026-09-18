@@ -29,24 +29,19 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 The functionality of these global functions is equivalent to the respective methods of the :ref:`TimezoneFinder class <api_finder>` documented below.
 
 .. note::
-   The global functions use a singleton instance with thread-safe initialization.
-   However, **the shared instance itself is NOT safe for concurrent reads**.
+   **Concurrent lookups are safe**, through the global functions and on any shared ``TimezoneFinder``. The global functions create their shared instance exactly once, under a lock. The data a lookup reads is loaded once and never modified, and the few small arrays some lookups build on first use and keep on the instance are read-only and identical whichever thread builds them, so two threads racing to build one only duplicate that work.
 
-   **For parallel workloads, you must create separate ``TimezoneFinder`` instances for each thread/process.**
-   This is the only way to guarantee thread-safe concurrent timezone lookups.
+   **For parallel throughput, still create one ``TimezoneFinder`` per thread**, as shown in the warning box below. Threads sharing one instance contend on its objects, so where the GIL is disabled a shared instance scales far worse with the thread count than per-thread instances do. An instance cannot be passed between processes: create one in each worker.
 
-   If you need the convenience of a global function in a single-threaded context, the global functions
-   are suitable. For any concurrent workload (threading, asyncio, multiprocessing), create independent
-   instances as shown in the warning box below.
+   **Releasing a finder is not a lookup.** ``cleanup()``, and leaving a ``with TimezoneFinder() as tf:`` block, frees the data every lookup reads, so on a shared instance it must wait until every thread using it has finished.
 
-   For non-read-only operations or custom configurations (e.g., different data locations, in-memory mode),
-   create separate ``TimezoneFinder`` instances for each configuration.
+   For custom configurations (e.g., different data locations, in-memory mode), create separate ``TimezoneFinder`` instances for each configuration.
 
 
 .. note::
     Lazy initialisation: expect the first call to be slightly slower due to the instance creation and singleton initialization.
     This also introduces overhead for every function call to access the global instance.
-    **For any performance-critical or concurrent use, create your own TimezoneFinder instance instead.**
+    **For any performance-critical use, create your own TimezoneFinder instance instead.**
 
 
 
@@ -111,9 +106,7 @@ Use the argument ``bin_file_location`` to use data files from another location (
 
 .. warning::
 
-    **For parallel computation (multiple threads/processes):** Each thread **must** have its own independent
-    ``TimezoneFinder`` instance. Do **not** share a single instance across threads. Creating one instance
-    per thread ensures proper isolation and avoids race conditions:
+    **For parallel computation, give each thread its own** ``TimezoneFinder`` **instance.** A shared instance returns the same answers, but threads using it contend on its objects and gain far less from parallelism. An instance cannot be passed between processes either:
 
     .. code-block:: python
 
@@ -130,8 +123,7 @@ Use the argument ``bin_file_location`` to use data files from another location (
         threads = [threading.Thread(target=lookup_in_thread, args=(13.4, 52.5))]
         # ...
 
-    Alternatively, the global functions (``timezone_at()``, etc.) provide a thread-safe singleton
-    for simple concurrent read-only lookups, though they come with additional overhead per call.
+    The global functions (``timezone_at()``, etc.) are also safe to call concurrently, but they share one instance and add overhead per call, so they suit occasional concurrent lookups rather than throughput-critical ones.
 
 
 

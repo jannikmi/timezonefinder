@@ -1,0 +1,1 @@
+The thread-safety documentation now says one thing: concurrent lookups through the global functions or on a shared ``TimezoneFinder`` are safe, and one instance per thread is recommended for parallel throughput rather than for correctness.
