@@ -125,7 +125,14 @@ def _make_recipe(target: str) -> str:
 # timings: importing numba costs resident memory, so a `memory-ci` run in a
 # development environment - which has numba, because `make install` syncs
 # --all-groups - records a footprint the plain install never has.
-MEASUREMENT_TARGETS = ("benchmarks", "benchmarks-ci", "latency", "memory", "memory-ci")
+MEASUREMENT_TARGETS = (
+    "benchmarks",
+    "benchmarks-ci",
+    "latency",
+    "memory",
+    "memory-ci",
+    "batch-break-even",
+)
 
 
 @pytest.mark.unit
