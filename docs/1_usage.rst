@@ -343,6 +343,16 @@ Roughly 1 % of points on land fall in two zones.
     a zone whose polygons are not listed for the point's cell is not reported.
     There is no batch form.
 
+.. note::
+
+    Where *no* candidate polygon contains the point, this returns the one zone
+    ``timezone_at()`` answers there - which that method returns without testing it - rather
+    than an empty list, so the two still agree.
+    The packaged data's ocean zones make that unreachable except exactly on a polygon edge
+    or at the poles; custom data leaving areas uncovered reaches it everywhere those areas
+    are.
+    ``certain_timezone_at()`` is the lookup that reports "none" in that case.
+
 
 unique_timezone_at()
 --------------------

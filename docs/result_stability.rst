@@ -132,12 +132,15 @@ one:
   index that orders that cell differently therefore changes ``TimezoneFinderL``'s answer for
   *every* point in the cell, even when the boundary geometry is byte-identical, and those points
   need not be anywhere near a border.
-* ``timezones_at()`` **splits the two.** *Which* zones it reports is a property of the geometry
-  alone - it tests every candidate rather than stopping at the first match - so reordering a
-  cell's candidates cannot change the set. The *order* of the elements after the first is the
-  stored candidate order and may change freely with a regenerated index. Only the first element
-  is guaranteed, and it is guaranteed by being ``timezone_at()``'s answer, not by anything about
-  the order.
+* ``timezones_at()`` **splits the two, and the split is not clean at one edge.** Wherever some
+  candidate contains the point - everywhere, with the packaged data - *which* zones it reports
+  follows from the geometry alone, since it tests every candidate rather than stopping at the
+  first match, so reordering a cell's candidates cannot change the set. Where *none* does, it
+  answers ``timezone_at()``'s untested final-zone fallback, and that single element is pure
+  candidate order, exactly as ``TimezoneFinderL``'s answer is. The *order* of the elements after
+  the first is the stored candidate order in every case and may change freely with a regenerated
+  index. Only the first element is guaranteed, and it is guaranteed by being ``timezone_at()``'s
+  answer, not by anything about the order.
 
 So ``TimezoneFinderL`` should be treated as a suggestion that is stable only for a fixed dataset.
 It is documented as approximate for a related reason: its answer is not an estimate of which zone
