@@ -15,8 +15,11 @@ full-resolution geometry affordable, not to shave the last microsecond off a loo
 
 `tzfpy <https://github.com/ringsaturn/tzfpy>`__ makes the opposite trade, deliberately and well. It
 ships simplified polygons, which makes it smaller and faster per query, at the cost of accuracy near
-the borders those polygons describe. The two are now measured against each other under one harness -
-same query points, same process, same machine - in :doc:`benchmark_results_comparison`.
+the borders those polygons describe. Its maintainer also publishes an experimental full-precision
+variant - ``+full`` wheels served from the project's own package index rather than PyPI - that
+embeds the unsimplified dataset behind the same API. Everything measured on this page is the PyPI
+build. The two are now measured against each other under one harness - same query points, same
+process, same machine - in :doc:`benchmark_results_comparison`.
 
 **If your query points are rarely near a timezone border - coarse geofencing, analytics
 aggregation, high-volume classification where an occasional wrong answer within a few hundred
@@ -53,10 +56,10 @@ difference is in what they do with that dataset's geometry.
      - Full original dataset (>440 timezones)
    * - Data Representation
      - Complete, non-simplified polygons at the ~11 cm resolution timezone-boundary-builder publishes; :doc:`data_report` lists the current vertex, polygon and hole counts
-     - Simplified polygons, by design
+     - Simplified polygons, by design; the experimental ``+full`` build, distributed outside PyPI, embeds the unsimplified dataset instead
    * - Border Accuracy
      - Limited only by the source dataset
-     - Reduced near borders, in proportion to the simplification
+     - Reduced near borders, in proportion to the simplification (PyPI build; the ``+full`` build does not simplify)
    * - Spatial Index
      - H3 hexagons at resolution 4 (~288k cells); :doc:`data_report` lists the index size
      - Hierarchical tree of ~80k rectangles, falling back to the simplified polygon data
@@ -111,7 +114,8 @@ difference is in what they do with that dataset's geometry.
    lists it.
 
    What that harness deliberately does not settle is ``tzfpy``'s memory footprint, which is not
-   measured here at all, so the figures linked above describe this package only.
+   measured here at all, so the figures linked above describe this package only. It also has not
+   measured the full-precision ``tzfpy`` variant.
 
 .. note::
 
@@ -132,8 +136,8 @@ difference is in what they do with that dataset's geometry.
 
 .. note::
 
-   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3, 20,000 paired border locations and
-   20,000 individual points per distance, 2026-08-30.
+   Boundary release 2026c on both sides, ``tzfpy`` 1.3.3 (the PyPI build, with simplified
+   polygons), 20,000 paired border locations and 20,000 individual points per distance, 2026-08-30.
 
    **Primary: border locations affected.** A location counts once when either of its two verified
    probes has an attributable disagreement. Its ceiling is 100 %, even when simplification moves a
@@ -391,6 +395,9 @@ startup from this list as well, since the two reach a first answer in about the 
      - ``tzfpy``
    * - Minimal distribution size
      - ``tzfpy``
+
+The first row is about the simplified polygons ``tzfpy`` ships on PyPI. Its experimental ``+full``
+wheels carry the unsimplified dataset and are not measured on this page.
 
 Both packages will likely coexist, because these are genuinely different products.
 
