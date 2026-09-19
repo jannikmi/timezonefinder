@@ -1384,3 +1384,90 @@ class TimezoneFinder(AbstractTimezoneFinder):
 
         # none of the boundary polygon candidates truly matched
         return None
+
+    def timezones_at(self, *, lng: float, lat: float) -> list[str]:
+        """Every timezone whose polygons contain the point, not only the one that wins.
+
+        The dataset ships genuinely overlapping zones, and :meth:`timezone_at` has to
+        pick one of them without saying that it did: ``Asia/Urumqi`` lies inside
+        ``Asia/Shanghai`` and is a second local time in real use, and the disputed or
+        dual-administered areas (Abyei, Abkhazia and South Ossetia, the West Bank,
+        and a few maritime borders) overlap the same way. Roughly 1 % of points on
+        land lie in two zones. This method reports all of them, so a caller for whom
+        the other answer is the right one can see that a choice was made.
+
+        The ordering is a contract: **the first element is what** :meth:`timezone_at`
+        **answers**, so the two methods cannot contradict each other. The rest follow
+        in the order the shortcut index stores the candidates, which is tuned for
+        lookup work and carries no meaning - do not read it as "most likely second".
+
+        Only this method pays for the full candidate loop; :meth:`timezone_at` is
+        untouched. A point whose H3 cell a single zone covers is answered from the
+        shortcut index with a one-element list and no geometry at all, exactly as
+        :meth:`timezone_at` answers it - so with custom data leaving areas uncovered
+        this inherits that method's caveat rather than
+        :meth:`certain_timezone_at`'s, and the same holds for the untested fallback:
+        where no candidate contains the point, the single zone :meth:`timezone_at`
+        would return is returned here too.
+
+        .. note:: completeness is bounded by the shortcut index's candidate lists.
+            A zone whose polygons are not listed for the point's cell is not
+            reported, which is the same limit :meth:`certain_timezone_at` already
+            has; neither method promises more.
+
+        :param lng: longitude of the point in degrees (-180.0 to 180.0)
+        :param lat: latitude of the point in degrees (90.0 to -90.0)
+        :return: the names of every containing zone, :meth:`timezone_at`'s answer
+            first. Empty only where that method answers ``None``.
+        :raises ValueError: if the coordinates are out of bounds
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.timezones_at(lng=13.358, lat=52.5061)
+            ['Europe/Berlin']
+            >>> tf.timezones_at(lng=87.6168, lat=43.8256)  # Ürümqi
+            ['Asia/Urumqi', 'Asia/Shanghai']
+        """
+        lng, lat = utils.validate_coordinates(lng, lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+        entry = self.shortcuts.entry_of(hex_id)
+        if entry == ABSENT:
+            return []
+        if entry >= 0:
+            # a cell a single zone covers: the index already says no other zone's
+            # polygons reach this cell, so geometry has nothing to add
+            return [self.zone_names.name_of(entry)]
+
+        possible_boundaries = self.shortcuts.candidates_of(entry)
+        last_zone_change_idx = self.shortcuts.stop_index_of(entry)
+
+        # ATTENTION: the polygons are stored converted to 32-bit ints, so the query
+        # coordinates are converted the same way - see :meth:`certain_timezone_at`
+        x = utils.coord2int(lng)
+        y = utils.coord2int(lat)
+
+        zone_ids: list[int] = []
+        for i, boundary_id in enumerate(possible_boundaries):
+            if not self.inside_of_polygon(boundary_id, x, y):
+                continue
+            zone_id = self._zone_id_of(boundary_id)
+            if zone_id not in zone_ids:
+                # several polygons of one zone can contain the point; the answer is
+                # zones, so the list is deduplicated as it is built
+                zone_ids.append(zone_id)
+            if i >= last_zone_change_idx:
+                # from here on the candidates are the final zone's polygons, so a
+                # match is the last new zone this candidate list can produce. Unlike
+                # ``_zone_id_among``'s break, this one is reached only *after* a
+                # match: every earlier candidate still has to be tested, because a
+                # zone the lookup never reaches may contain the point too.
+                break
+
+        if not zone_ids:
+            # no candidate contained the point. ``timezone_at`` answers the final zone
+            # here without testing it, and this method agrees rather than contradicting
+            # it - see the note in that method for when that answer is and is not right.
+            zone_ids.append(self._zone_id_of(possible_boundaries[-1]))
+
+        return [self.zone_names.name_of(zone_id) for zone_id in zone_ids]

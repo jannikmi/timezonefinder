@@ -23,6 +23,7 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = timezone_at_land(lng=13.358, lat=52.5061)
     tz = unique_timezone_at(lng=13.358, lat=52.5061)
+    zones = timezones_at(lng=13.358, lat=52.5061)
     names = timezone_names_at(lngs=[13.358, 2.3522], lats=[52.5061, 48.8566])
     geometry = get_geometry(tz_name="Europe/Berlin", coords_as_pairs=True)
 
@@ -285,6 +286,63 @@ Using a TimezoneFinder instance:
     tf = TimezoneFinder()
     tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
+
+timezones_at()
+--------------
+
+Some timezones in the dataset genuinely overlap, so a point can lie in more than one.
+``timezone_at()`` picks one of them and gives no sign that it had to choose;
+``timezones_at()`` returns every zone whose polygons contain the point:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    tf.timezones_at(lng=13.358, lat=52.5061)  # ['Europe/Berlin']
+    tf.timezones_at(lng=87.6168, lat=43.8256)  # ['Asia/Urumqi', 'Asia/Shanghai']
+
+Using the global function:
+
+.. code-block:: python
+
+    from timezonefinder import timezones_at
+
+    zones = timezones_at(lng=87.6168, lat=43.8256)
+
+**The first element is always what** ``timezone_at()`` **answers**, so the two can never
+contradict each other.
+The remaining zones follow in the order the internal shortcut index happens to store
+them - that order is tuned for lookup speed and means nothing, so do not read the second
+element as "the next most likely zone".
+
+Which overlaps exist is a property of the dataset, not of this package.
+In the shipped data they are:
+
+* ``Asia/Urumqi`` inside ``Asia/Shanghai`` - by far the most common case, and a second
+  local time in real use across Xinjiang.
+* Disputed or dual-administered areas: ``Africa/Khartoum``/``Africa/Juba`` (Abyei),
+  ``Asia/Tbilisi``/``Europe/Moscow`` (Abkhazia and South Ossetia),
+  ``Asia/Jerusalem``/``Asia/Hebron``, and a few maritime borders such as
+  ``America/Sitka``/``America/Vancouver`` and
+  ``America/Punta_Arenas``/``America/Argentina/Rio_Gallegos``.
+
+Roughly 1 % of points on land fall in two zones.
+
+.. note::
+
+    This is the only lookup that tests every candidate polygon of the point's cell, so
+    it is slower than ``timezone_at()``.
+    ``timezone_at()`` itself is unchanged - it still stops at the first match.
+    A point whose H3 cell a single zone covers is answered from the index with a
+    one-element list and no geometry at all.
+
+.. note::
+
+    Completeness is bounded by the same candidate lists ``certain_timezone_at()`` uses:
+    a zone whose polygons are not listed for the point's cell is not reported.
+    There is no batch form.
+
 
 unique_timezone_at()
 --------------------
