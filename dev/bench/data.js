@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789502312965,
+  "lastUpdate": 1789803734583,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11361,6 +11361,93 @@ window.BENCHMARK_DATA = {
             "range": "± 6247",
             "unit": "lookups/sec",
             "extra": "min of 77 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "69956fd0aed292fb8acd22ef20bed9038da71635",
+          "message": "register: record API-1 (every zone at a point) and IDX-1 (price a grid in place of H3) (#685)\n\n* register: record API-1 (every zone at a point) and IDX-1 (price a grid in place of H3)\n\nAPI-1: every public lookup returns one zone, while ~1 % of on-land points\nlie in two (Urumqi/Shanghai, disputed areas); tzfpy and node geo-tz both\nreturn all of them. Needs a decision on adding public API, and must be\npriced against PERF-7, which discards the candidates it would read.\n\nIDX-1: h3.latlng_to_cell is ~51 % of a unique query, and H3 is what\nFT-3, GH-657 and the GEOM-3/PERF-7 proof burden wait on. A prototype\nmeasurement of a planar lng/lat grid index against resolution-4 H3;\nreopens the parked dependency decision for h3 alone.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* IDX-1: price tzfpy's multi-level tile preindex too; stop refusing multi-level indexes\n\nThe maintainer does not refuse a multi-level index (2026-09-19). The\nshortcut-index decision now scopes its refusal to the measured H3\nmulti-resolution prototype, whose cells do not nest, and IDX-1 prices\ntzfpy's scheme (Web Mercator tiles zoom 3-13 over a 1-degree candidate\ngrid) beside the equal-angle grid. Item retitled and renamed to match.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-19T09:41:22+02:00",
+          "tree_id": "3fb5972f36a09cf37585592ad6116d3aca1858a1",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/69956fd0aed292fb8acd22ef20bed9038da71635"
+        },
+        "date": 1789803732782,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 716118.9788716027,
+            "range": "± 17995",
+            "unit": "lookups/sec",
+            "extra": "min of 218 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 938034.5624456173,
+            "range": "± 14255",
+            "unit": "lookups/sec",
+            "extra": "min of 315 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 255447.5988590034,
+            "range": "± 11791",
+            "unit": "lookups/sec",
+            "extra": "min of 93 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1193641.0444455696,
+            "range": "± 13078",
+            "unit": "lookups/sec",
+            "extra": "min of 373 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1937667.559806674,
+            "range": "± 141075",
+            "unit": "lookups/sec",
+            "extra": "min of 673 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 313210.5965408951,
+            "range": "± 12638",
+            "unit": "lookups/sec",
+            "extra": "min of 102 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 1176572.4655696277,
+            "range": "± 73832",
+            "unit": "lookups/sec",
+            "extra": "min of 360 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1872591.846882952,
+            "range": "± 121990",
+            "unit": "lookups/sec",
+            "extra": "min of 653 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 309588.3601711329,
+            "range": "± 9208",
+            "unit": "lookups/sec",
+            "extra": "min of 99 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6992 GHz"
           }
         ]
       }
