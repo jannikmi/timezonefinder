@@ -1,0 +1,1 @@
+The `package comparison <https://timezonefinder.readthedocs.io/en/latest/alternatives.html>`__ notes that ``tzfpy`` also ships an experimental full-precision variant outside PyPI and states that its own measurements cover the PyPI build only.
