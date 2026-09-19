@@ -14,7 +14,7 @@ FT-5 waits on a decision
 GH-364 independent
 
 TOOL-7 ─→ IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3/PERF-7, moots GH-657, frees FT-3
-API-1 waits on a decision; must be priced against PERF-7, whichever lands second
+PERF-7 must keep the candidates `timezones_at` reads (see its entry)
 
 independent: GH-524
 

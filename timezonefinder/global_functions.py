@@ -51,6 +51,7 @@ __all__ = [
     "timezone_names_at_land",
     "unique_timezone_at",
     "certain_timezone_at",
+    "timezones_at",
     "get_geometry",
     "zoneinfo_at",
     "utc_offset_at",
@@ -274,6 +275,32 @@ def certain_timezone_at(*, lng: float, lat: float) -> str | None:
         This is primarily useful with custom timezone data.
     """
     return _get_tf_instance().certain_timezone_at(lng=lng, lat=lat)
+
+
+def timezones_at(*, lng: float, lat: float) -> list[str]:
+    """
+    Get every timezone whose polygons contain a coordinate, not only the one that wins.
+
+    The packaged dataset ships genuinely overlapping zones - ``Asia/Urumqi`` inside
+    ``Asia/Shanghai``, and a handful of disputed or dual-administered areas - where
+    ``timezone_at()`` has to pick one without reporting that it did.
+
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: The names of every containing zone, with ``timezone_at()``'s answer first.
+        Empty only where that function returns ``None``.
+
+    Thread Safety:
+        This function is safe to call concurrently: the global TimezoneFinder is
+        created once under a lock, and lookups on it are safe. For
+        performance-critical parallel workloads, create a TimezoneFinder per thread
+        instead, because threads sharing one instance contend on it.
+
+    Note:
+        See :meth:`~timezonefinder.TimezoneFinder.timezones_at` for the ordering
+        contract and for what bounds the answer's completeness.
+    """
+    return _get_tf_instance().timezones_at(lng=lng, lat=lat)
 
 
 def zoneinfo_at(*, lng: float, lat: float) -> ZoneInfo | None:

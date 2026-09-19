@@ -107,6 +107,9 @@ only by the source dataset. The H3 index is what makes carrying full-resolution 
 Since the dataset includes ocean zones, every coordinate on earth matches some timezone - use
 ``timezone_at_land()`` when you need to tell land from sea.
 
+The dataset also contains genuinely overlapping zones, so a coordinate can match *more than one* -
+``timezone_at()`` picks one of them, and ``timezones_at()`` returns all of them.
+
 
 Performance
 -----------
