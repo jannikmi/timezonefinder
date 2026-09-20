@@ -10,6 +10,8 @@ from pathlib import Path
 
 from scripts.configs import (
     ACCELERATION_REPORT_FILE,
+    BATCH_BREAK_EVEN_CHART_FILE,
+    BATCH_BREAK_EVEN_REPORT_FILE,
     COMPARISON_REPORT_FILE,
     DATA_REPORT_FILE,
     INITIALIZATION_REPORT_FILE,
@@ -25,6 +27,10 @@ REPORT_FILES = (
     INITIALIZATION_REPORT_FILE,
     COMPARISON_REPORT_FILE,
     ACCELERATION_REPORT_FILE,
+    BATCH_BREAK_EVEN_REPORT_FILE,
+    # the chart is generated beside its page and belongs to the same run: an artifact
+    # carrying the page without it installs a report whose figure is the previous one
+    BATCH_BREAK_EVEN_CHART_FILE,
     MEMORY_REPORT_FILE,
     DATA_REPORT_FILE,
 )

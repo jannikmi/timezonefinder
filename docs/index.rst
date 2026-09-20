@@ -80,6 +80,7 @@ References
    Timezone Finding Benchmarks <benchmark_results_timezonefinding>
    Point-in-Polygon Benchmarks <benchmark_results_polygon>
    Acceleration Paths <benchmark_results_acceleration_paths>
+   When Batched Lookups Pay <benchmark_results_batch_break_even>
    Initialization Benchmarks <benchmark_results_initialization>
    Memory Benchmarks <benchmark_results_memory>
    Comparison against tzfpy <benchmark_results_comparison>

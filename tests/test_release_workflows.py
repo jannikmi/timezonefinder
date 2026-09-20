@@ -84,6 +84,7 @@ SCRIPT_GATES: dict[str, str | None] = {
     "measure_acceleration_paths": NOT_A_GATE,
     # a one-off, hand-run restatement of the stored gh-pages history
     "migrate_benchmark_chart_history": NOT_A_GATE,
+    "measure_batch_break_even": NOT_A_GATE,
     "measure_memory": NOT_A_GATE,
     "measure_query_latency": NOT_A_GATE,
     "measure_tzfpy_agreement": NOT_A_GATE,

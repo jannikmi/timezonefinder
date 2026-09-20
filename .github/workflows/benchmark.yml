@@ -589,7 +589,10 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Install report dependencies
-        run: uv sync --group test --group compare
+        # --group benchmark is the plotting stack the batch break-even chart is drawn
+        # with. It is absent from every measurement environment on purpose (see
+        # pyproject.toml), and this job renders as well as measures, so it needs it.
+        run: uv sync --group test --group compare --group benchmark
 
       - name: Obtain the packaged boundary data
         uses: ./.github/actions/obtain-data
