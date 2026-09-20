@@ -3,11 +3,12 @@
 The dataset ships genuinely overlapping zones, and every other lookup collapses them
 to one answer. Two seams therefore need pinning, and they fail in opposite directions:
 
-* **Agreement with ``timezone_at``.** The first element is contracted to be that
-  method's answer, so the two can never contradict each other. Nothing in the
-  implementation enforces it - it follows from the candidate order the lookup itself
-  walks, and from mirroring that method's untested final-zone fallback - so it is
-  asserted over every committed fixture point rather than argued.
+* **Agreement with ``timezone_at``.** The list is contracted to *contain* that
+  method's answer - that membership is what stops the two contradicting each other -
+  and, more strongly, to put it first. Nothing in the implementation enforces either
+  half: both follow from the candidate order the lookup itself walks, and from
+  mirroring that method's untested final-zone fallback. So the stronger first-element
+  form is asserted over every committed fixture point rather than argued.
 * **Completeness.** A candidate loop that stops early under-reports, and under-reporting
   is invisible: the answer still looks like a plausible list. The reference below
   recomputes the set the obvious slow way, through the same candidate enumeration

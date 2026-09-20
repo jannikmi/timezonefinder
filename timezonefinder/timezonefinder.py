@@ -1396,10 +1396,13 @@ class TimezoneFinder(AbstractTimezoneFinder):
         land lie in two zones. This method reports all of them, so a caller for whom
         the other answer is the right one can see that a choice was made.
 
-        The ordering is a contract: **the first element is what** :meth:`timezone_at`
-        **answers**, so the two methods cannot contradict each other. The rest follow
-        in the order the shortcut index stores the candidates, which is tuned for
-        lookup work and carries no meaning - do not read it as "most likely second".
+        The list always *contains* :meth:`timezone_at`'s answer, and that membership
+        is what stops the two methods contradicting each other. Where that answer sits
+        is a second, stronger contract: it is always **the first element**, so
+        ``zones[0]`` is a drop-in for :meth:`timezone_at` and the otherwise meaningless
+        tail has an anchor. The rest follow in the order the shortcut index stores the
+        candidates, which is tuned for lookup work and carries no meaning - do not read
+        it as "most likely second".
 
         Only this method pays for the full candidate loop; :meth:`timezone_at` is
         untouched. A point whose H3 cell a single zone covers is answered from the

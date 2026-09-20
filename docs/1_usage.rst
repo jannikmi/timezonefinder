@@ -313,8 +313,11 @@ Using the global function:
 
     zones = timezones_at(lng=87.6168, lat=43.8256)
 
-**The first element is always what** ``timezone_at()`` **answers**, so the two can never
-contradict each other.
+The list always *contains* what ``timezone_at()`` answers, and that membership is what
+stops the two contradicting each other.
+Where that answer sits is a second, stronger guarantee: it is always **the first
+element**, so ``zones[0]`` is a drop-in for ``timezone_at()`` and the otherwise
+meaningless tail has an anchor.
 The remaining zones follow in the order the internal shortcut index happens to store
 them - that order is tuned for lookup speed and means nothing, so do not read the second
 element as "the next most likely zone".
