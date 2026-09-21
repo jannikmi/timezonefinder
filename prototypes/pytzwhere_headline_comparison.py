@@ -30,21 +30,22 @@ Timings are per-call ``perf_counter_ns`` around the public single-point API, aft
 query; the cold first query is reported separately because it includes lazy loading (and JIT
 compilation when numba is installed).
 
-FINDINGS (2026-09-21, macOS arm64, 20,000 points, seed 42; timezonefinder on Python 3.14 via the
-numba path, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23). One run, so read ratios as orders of
-magnitude, and the p99 rows least of all: a second 5,000-point run put this package's land p99 at
-10.5 us rather than 154.7 us, so the tail needs repeated, paired rounds before it is quoted.
+FINDINGS (2026-09-21, macOS arm64, 20,000 points, seed 42; timezonefinder-data 3.2026.4 on Python
+3.14 via the numba path, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23). One run, so read ratios as
+orders of magnitude, and the p99 rows least of all: the same run on the 3.2026.3 data put this
+package's land p99 at 154.7 us and a 5,000-point run at 10.5 us, so the tail needs repeated, paired
+rounds before it is quoted. Every other row moved by under 20 % between the two data releases.
 
     metric                         unit     tzwhere  timezonefinder  improvement
-    startup (import + init)           s        1.44            0.23         6.2x
-    first (cold) query               ms        5.21            0.02       241.8x
-    peak RSS of the process         MiB         697             135         5.2x
+    startup (import + init)           s        1.71            0.23         7.4x
+    first (cold) query               ms        8.24            0.02       373.3x
+    peak RSS of the process         MiB         693             135         5.1x
     RSS added by import + init      MiB         596              91         6.6x
-    installed package/data size     MiB        22.9            31.8         0.7x
-    median latency (global)          us         7.0             0.9         7.6x
-    p99 latency (global)             us       268.7             8.0        33.6x
-    median latency (land)            us        10.5             1.0        11.0x
-    p99 latency (land)               us       770.3           154.7         5.0x
+    installed package/data size     MiB        22.9            32.1         0.7x
+    median latency (global)          us         7.2             0.9         8.2x
+    p99 latency (global)             us       262.8             6.1        43.2x
+    median latency (land)            us        10.8             0.9        11.8x
+    p99 latency (land)               us       784.4             8.1        97.0x
     answered (global)                 %       28.9%          100.0%
     answered (land)                   %       84.2%          100.0%
     queries that raised                          48               0
