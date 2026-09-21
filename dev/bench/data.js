@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789986901797,
+  "lastUpdate": 1790022827280,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12492,6 +12492,93 @@ window.BENCHMARK_DATA = {
             "range": "± 3236",
             "unit": "lookups/sec",
             "extra": "min of 84 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "06524e18d6e1ff162f327221e32eea119e5004d1",
+          "message": "Withdraw PERF-7 and record PREC-1: containment precedence in every cell (#699)\n\nPERF-7 applied the containment precedence rule only inside cells one\npolygon covers, while every other cell of the same overlap kept the\nordering's legacy precedence: on 2026c, Abyei would answer Juba in 217\nsampled overlap points and Khartoum in 322, by H3 cell. That is the\nper-cell outcome the rule's own decision refused. What remained was a\n~0.6-2.1 % speed-up against a certified-coverage proof and the candidates\ntimezones_at reads. The entry is closed with that evidence, its measured\nroutes, and the condition that would reopen it.\n\nPREC-1 carries the rule to where it is consistent: the zone order the\nordering optimizer keeps in overlap cells, today fewest-vertices-first.\nCompiled twice on master's converter, the key change costs nothing\nresolvable in point-in-polygon tests and moves whole overlap regions,\nAbyei to Juba and the West Bank to Hebron among them, so it is a briefed\nmaintainer decision rather than work a pass can take.\n\nReferences that said PERF-7 waits or stays blocked now state the lasting\nfact about full-cell coverage.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T22:32:55+02:00",
+          "tree_id": "1d8e185d4ddd9aefa1ccf9130906dd5e391afb9e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/06524e18d6e1ff162f327221e32eea119e5004d1"
+        },
+        "date": 1790022825524,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 643546.0313038619,
+            "range": "± 15205",
+            "unit": "lookups/sec",
+            "extra": "min of 211 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 849477.6561900398,
+            "range": "± 18487",
+            "unit": "lookups/sec",
+            "extra": "min of 298 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 222777.52242522812,
+            "range": "± 10430",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 995768.7793033201,
+            "range": "± 23126",
+            "unit": "lookups/sec",
+            "extra": "min of 303 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1498529.6427156562,
+            "range": "± 38788",
+            "unit": "lookups/sec",
+            "extra": "min of 517 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 269619.27816678776,
+            "range": "± 8755",
+            "unit": "lookups/sec",
+            "extra": "min of 86 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 990736.220048381,
+            "range": "± 41023",
+            "unit": "lookups/sec",
+            "extra": "min of 294 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1469478.3469433116,
+            "range": "± 115156",
+            "unit": "lookups/sec",
+            "extra": "min of 508 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 268186.6484671484,
+            "range": "± 5579",
+            "unit": "lookups/sec",
+            "extra": "min of 89 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0033 GHz"
           }
         ]
       }
