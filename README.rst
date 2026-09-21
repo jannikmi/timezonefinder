@@ -78,7 +78,6 @@ The timezone boundary data is installed automatically as the separate ``timezone
 
     with TimezoneFinder(in_memory=True) as tf:
         tz = tf.timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
-        zone_id = tf.timezone_id_at(lng=13.358, lat=52.5061)
 
         # Many coordinates at once, one array per axis - ids for a caller that maps
         # them itself, names for one that does not:
