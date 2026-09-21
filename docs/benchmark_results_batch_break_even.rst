@@ -4,11 +4,11 @@ When Batched Lookups Pay
 ========================
 
 
-**uniformly random points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``, and stops improving beyond ~1,000 (1.59x the scalar loop, faster).
+**uniformly random points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``, and stops improving beyond ~500 (1.54x the scalar loop, faster).
 
-**unique-shortcut points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``, and stops improving beyond ~500 (1.76x the scalar loop, faster).
+**unique-shortcut points: batching starts paying between 20 and 50 points per call** for ``timezone_names_at()``, and stops improving beyond ~500 (1.87x the scalar loop, faster).
 
-*Measured on Linux x86_64, Intel(R) Xeon(R) Processor @ 2.10GHz @ 2.1000 GHz, Python 3.12.3, using the C extension (clang) point-in-polygon path.*
+*Measured on Linux x86_64, AMD EPYC 9V74 80-Core Processor @ 2.8711 GHz, Python 3.13.15, using the C extension (clang) point-in-polygon path.*
 
 ``timezone_names_at()`` amortises validation, the integer scaling and the shortcut table read over a whole batch, but still pays one ``h3`` cell lookup per point and still resolves ambiguous points one at a time. So it is faster per point than calling ``timezone_at()`` in a loop only once the batch is large enough to pay back its own fixed cost. This page is where that happens, and where growing the batch further stops helping. See :doc:`benchmarking_methodology`.
 
@@ -60,94 +60,94 @@ Batch size against speed-up, uniformly random points
      - Rounds won
      - Verdict
    * - 1
-     - 1.53µs
-     - 11.8µs
-     - 0.13x
+     - 2.10µs
+     - 20.9µs
+     - 0.10x
      - 0 of 61
      - slower
    * - 2
-     - 1.37µs
-     - 6.46µs
-     - 0.21x
+     - 1.97µs
+     - 11.2µs
+     - 0.18x
      - 0 of 61
      - slower
    * - 5
-     - 1.32µs
-     - 3.28µs
-     - 0.40x
+     - 1.91µs
+     - 5.47µs
+     - 0.35x
      - 0 of 61
      - slower
    * - 10
-     - 1.28µs
-     - 2.20µs
-     - 0.58x
+     - 1.87µs
+     - 3.42µs
+     - 0.55x
      - 0 of 61
      - slower
    * - 20
-     - 1.26µs
-     - 1.56µs
-     - 0.81x
+     - 1.84µs
+     - 2.35µs
+     - 0.78x
      - 0 of 61
      - slower
    * - 50
-     - 1.29µs
-     - 1.14µs
-     - 1.13x
+     - 1.81µs
+     - 1.67µs
+     - 1.09x
      - 61 of 61
      - faster
    * - 100
-     - 1.25µs
-     - 978ns
-     - 1.27x
+     - 1.80µs
+     - 1.43µs
+     - 1.26x
      - 61 of 61
      - faster
    * - 127
-     - 1.23µs
-     - 930ns
-     - 1.32x
+     - 1.80µs
+     - 1.37µs
+     - 1.31x
      - 61 of 61
      - faster
    * - 128
-     - 1.25µs
-     - 924ns
+     - 1.80µs
+     - 1.33µs
      - 1.36x
      - 61 of 61
      - faster
    * - 200
-     - 1.23µs
-     - 856ns
-     - 1.44x
+     - 1.80µs
+     - 1.24µs
+     - 1.45x
      - 61 of 61
      - faster
    * - 500
-     - 1.24µs
-     - 806ns
+     - 1.80µs
+     - 1.17µs
      - 1.54x
      - 61 of 61
      - faster
    * - 1,000
-     - 1.23µs
-     - 775ns
-     - 1.59x
+     - 1.79µs
+     - 1.16µs
+     - 1.55x
      - 61 of 61
      - faster
    * - 2,000
-     - 1.24µs
-     - 766ns
-     - 1.62x
+     - 1.81µs
+     - 1.13µs
+     - 1.60x
      - 61 of 61
      - faster
    * - 5,000
-     - 1.24µs
-     - 752ns
-     - 1.65x
+     - 1.81µs
+     - 1.09µs
+     - 1.66x
      - 61 of 61
      - faster
 
 
 The crossing is reported as the interval (20, 50] rather than as a number, because that is all a ladder of discrete sizes can establish. The rungs inside it read ``no difference`` or ``unresolved`` by construction: that is what it means for the crossing to be in there, not a defect in the run.
 
-Control: the scalar loop answers the same points at every rung, so its per-point time should not depend on the batch size. Across the 11 rungs at or above N=10 it spread **5.0 %** (1.23µs to 1.29µs), against a 15 % threshold - so the ladder measured one thing. It is published as the reader's check and is never divided into anything. The smaller rungs are excluded because the harness's own per-batch cost lands on them divided by a very small N.
+Control: the scalar loop answers the same points at every rung, so its per-point time should not depend on the batch size. Across the 11 rungs at or above N=10 it spread **4.2 %** (1.79µs to 1.87µs), against a 15 % threshold - so the ladder measured one thing. It is published as the reader's check and is never divided into anything. The smaller rungs are excluded because the harness's own per-batch cost lands on them divided by a very small N.
 
 
 
@@ -167,88 +167,88 @@ Batch size against speed-up, unique-shortcut points
      - Rounds won
      - Verdict
    * - 1
-     - 1.03µs
-     - 10.6µs
-     - 0.10x
+     - 1.57µs
+     - 19.8µs
+     - 0.08x
      - 0 of 61
      - slower
    * - 2
-     - 974ns
-     - 5.59µs
-     - 0.17x
+     - 1.48µs
+     - 10.4µs
+     - 0.14x
      - 0 of 61
      - slower
    * - 5
-     - 934ns
-     - 2.61µs
-     - 0.36x
+     - 1.43µs
+     - 4.59µs
+     - 0.31x
      - 0 of 61
      - slower
    * - 10
-     - 906ns
-     - 1.59µs
-     - 0.57x
+     - 1.40µs
+     - 2.67µs
+     - 0.53x
      - 0 of 61
      - slower
    * - 20
-     - 891ns
-     - 1.06µs
-     - 0.84x
+     - 1.39µs
+     - 1.70µs
+     - 0.82x
      - 0 of 61
      - slower
    * - 50
-     - 864ns
-     - 714ns
+     - 1.37µs
+     - 1.14µs
      - 1.21x
      - 61 of 61
      - faster
    * - 100
-     - 872ns
-     - 610ns
-     - 1.43x
+     - 1.36µs
+     - 939ns
+     - 1.45x
      - 61 of 61
      - faster
    * - 127
-     - 929ns
-     - 606ns
-     - 1.53x
+     - 1.37µs
+     - 901ns
+     - 1.52x
      - 61 of 61
      - faster
    * - 128
-     - 887ns
-     - 571ns
-     - 1.55x
+     - 1.37µs
+     - 848ns
+     - 1.62x
      - 61 of 61
      - faster
    * - 200
-     - 880ns
-     - 541ns
-     - 1.63x
+     - 1.37µs
+     - 790ns
+     - 1.73x
      - 61 of 61
      - faster
    * - 500
-     - 876ns
-     - 497ns
-     - 1.76x
+     - 1.36µs
+     - 727ns
+     - 1.87x
      - 61 of 61
      - faster
    * - 1,000
-     - 868ns
-     - 483ns
-     - 1.80x
+     - 1.36µs
+     - 706ns
+     - 1.93x
      - 61 of 61
      - faster
    * - 2,000
-     - 895ns
-     - 484ns
-     - 1.85x
+     - 1.36µs
+     - 698ns
+     - 1.96x
      - 61 of 61
      - faster
 
 
 The crossing is reported as the interval (20, 50] rather than as a number, because that is all a ladder of discrete sizes can establish. The rungs inside it read ``no difference`` or ``unresolved`` by construction: that is what it means for the crossing to be in there, not a defect in the run.
 
-Control: the scalar loop answers the same points at every rung, so its per-point time should not depend on the batch size. Across the 10 rungs at or above N=10 it spread **7.5 %** (864ns to 929ns), against a 15 % threshold - so the ladder measured one thing. It is published as the reader's check and is never divided into anything. The smaller rungs are excluded because the harness's own per-batch cost lands on them divided by a very small N.
+Control: the scalar loop answers the same points at every rung, so its per-point time should not depend on the batch size. Across the 10 rungs at or above N=10 it spread **3.3 %** (1.36µs to 1.40µs), against a 15 % threshold - so the ladder measured one thing. It is published as the reader's check and is never divided into anything. The smaller rungs are excluded because the harness's own per-batch cost lands on them divided by a very small N.
 
 
 
@@ -274,7 +274,7 @@ Python Environment
 ~~~~~~~~~~~~~~~~~~
 
 
-**Python Version**: 3.12.3 (CPython)
+**Python Version**: 3.13.15 (CPython)
 
 **NumPy Version**: 2.5.2
 
@@ -310,7 +310,7 @@ Benchmark Input Provenance
 
 **Fixture Version**: 3
 
-**Timezone Data Version**: 2026c
+**Timezone Data Version**: 2026d
 
 
 
