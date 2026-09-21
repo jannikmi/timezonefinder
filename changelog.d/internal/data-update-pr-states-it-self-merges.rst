@@ -1,0 +1,1 @@
+The automated data-update pull request now states that it merges and publishes itself once CI passes, and how to withhold the release, instead of leaving a reviewer to infer whether it is waiting on them.
