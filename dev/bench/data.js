@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789962401315,
+  "lastUpdate": 1789980951223,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11883,6 +11883,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4833",
             "unit": "lookups/sec",
             "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a38887f6b840a5caa776bf80b26f28bdcf34d4c",
+          "message": "Stage every file the data update's own generators write (#692)\n\nThe 2026d regeneration compiled cleanly in 14 minutes and then refused to\ncommit: `make reports` had rewritten docs/benchmark_results_acceleration_paths.rst,\ndocs/benchmark_results_batch_break_even.rst and docs/batch_break_even_sweep.svg,\nand update_data.sh's vendor-zone-mapping step had rewritten\ntests/fixtures/reduced_zones/{mapping.json,source.txt}, none of which the\n`git add` list names. The job's guard did its job - a pull request missing\nfive regenerated files would have been worse - but the cost of learning it\nis a full converter run.\n\nThe list is explicit deliberately: `git add -A` would make \"the update\ncommits no binaries\" a property of .gitignore rather than of this job, with\n~62 MB behind it. What an explicit list does instead is go stale, and this\none did so silently the moment #683 added a report page the day before.\n\nSo pair it with the constants in scripts/configs.py, where such a page\nappears first: the test walks every `*_REPORT_FILE` and `*_CHART_FILE`\nthere, plus the vendored reduced-zone mapping, and requires the workflow to\nstage each one or a directory containing it. Adding a report page now fails\nin the test suite rather than fourteen minutes into an unattended run.\n\n\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T10:55:01+02:00",
+          "tree_id": "2e45e2d8d913f886250d9be61517e0f86e4d5566",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0a38887f6b840a5caa776bf80b26f28bdcf34d4c"
+        },
+        "date": 1789980949022,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 564299.8201675492,
+            "range": "± 7344",
+            "unit": "lookups/sec",
+            "extra": "min of 186 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 737162.6080481922,
+            "range": "± 10822",
+            "unit": "lookups/sec",
+            "extra": "min of 267 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 194075.48107830778,
+            "range": "± 1684",
+            "unit": "lookups/sec",
+            "extra": "min of 73 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 899938.0482669722,
+            "range": "± 11806",
+            "unit": "lookups/sec",
+            "extra": "min of 299 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1484958.2637826183,
+            "range": "± 21011",
+            "unit": "lookups/sec",
+            "extra": "min of 522 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 237301.3858589036,
+            "range": "± 3383",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 891060.7008386065,
+            "range": "± 13317",
+            "unit": "lookups/sec",
+            "extra": "min of 291 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1435544.8955258755,
+            "range": "± 21854",
+            "unit": "lookups/sec",
+            "extra": "min of 512 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 233890.72924462985,
+            "range": "± 1928",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
           }
         ]
       }
