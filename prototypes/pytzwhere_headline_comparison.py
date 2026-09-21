@@ -18,7 +18,11 @@ Each package runs in its own subprocess, so neither one's imports or memory leak
 numbers. ``pytzwhere`` is unmaintained and breaks on NumPy >= 1.24 (ragged ``np.array``), so it is
 measured in an isolated ``uv`` environment pinned to Python 3.10, ``numpy<1.24`` and ``shapely<2``;
 the current-stack attempt is recorded as a result rather than hidden. This package runs in the
-interpreter executing this script.
+interpreter executing this script, once per point-in-polygon path: ``numba`` when it is installed,
+``clang`` (the C extension, which is what a plain ``pip install`` gets) and ``python`` (the fallback
+where no extension is built). A path is forced by hiding ``numba`` and the extension from the
+import system, so its import cost leaves the numbers as it would from a real install. All paths
+must give identical answers, and the report counts any that do not.
 
 Run with::
 
@@ -30,28 +34,35 @@ Timings are per-call ``perf_counter_ns`` around the public single-point API, aft
 query; the cold first query is reported separately because it includes lazy loading (and JIT
 compilation when numba is installed).
 
-FINDINGS (2026-09-21, macOS arm64, 20,000 points, seed 42; timezonefinder-data 3.2026.4 on Python
-3.14 via the numba path, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23). One run, so read ratios as
-orders of magnitude, and the p99 rows least of all: the same run on the 3.2026.3 data put this
-package's land p99 at 154.7 us and a 5,000-point run at 10.5 us, so the tail needs repeated, paired
-rounds before it is quoted. Every other row moved by under 20 % between the two data releases.
+FINDINGS (2026-09-22, macOS arm64, 20,000 points, seed 42; timezonefinder-data 3.2026.4 on Python
+3.14, tzwhere 3.0.3 on Python 3.10 / NumPy 1.23). Three consecutive runs; the table is the third,
+and every row but the p99s agreed within ~10 % across them. The p99 rows of the ``python`` and
+``clang`` paths were stable too, but the ``numba`` path put 111 us and 165 us p99s into the first
+run and 6-10 us into the other two (earlier single runs gave 10.5 us and 154.7 us on land), so its
+tail wants paired rounds before it is quoted. All three paths gave identical answers.
 
-    metric                         unit     tzwhere  timezonefinder  improvement
-    startup (import + init)           s        1.71            0.23         7.4x
-    first (cold) query               ms        8.24            0.02       373.3x
-    peak RSS of the process         MiB         693             135         5.1x
-    RSS added by import + init      MiB         596              91         6.6x
-    installed package/data size     MiB        22.9            32.1         0.7x
-    median latency (global)          us         7.2             0.9         8.2x
-    p99 latency (global)             us       262.8             6.1        43.2x
-    median latency (land)            us        10.8             0.9        11.8x
-    p99 latency (land)               us       784.4             8.1        97.0x
-    answered (global)                 %       28.9%          100.0%
-    answered (land)                   %       84.2%          100.0%
-    queries that raised                          48               0
+    metric                         unit     tzwhere       tzf numba       tzf clang      tzf python
+    startup (import + init)           s        1.50     0.25 (6.1x)    0.07 (21.8x)    0.06 (23.6x)
+    first (cold) query               ms        5.42   0.02 (222.7x)   0.02 (239.5x)   0.02 (267.6x)
+    peak RSS of the process         MiB         694      137 (5.1x)      62 (11.2x)      60 (11.5x)
+    RSS added by import + init      MiB         597       92 (6.5x)      18 (32.6x)      17 (35.2x)
+    installed package/data size     MiB        22.9     32.1 (0.7x)     32.1 (0.7x)     32.1 (0.7x)
+    median latency (global)          us         7.5      1.0 (7.8x)      0.9 (8.2x)      1.0 (7.5x)
+    p99 latency (global)             us       272.8      7.9 (34.5x)     5.2 (52.4x)  1033.0 (0.3x)
+    median latency (land)            us        11.0     1.0 (11.5x)     0.9 (12.0x)     1.0 (10.6x)
+    p99 latency (land)               us       793.8      9.7 (81.8x)     6.7 (119.1x) 1474.3 (0.5x)
+    answered (global)                 %       28.9%          100.0%          100.0%          100.0%
+    answered (land)                   %       84.2%          100.0%          100.0%          100.0%
+    queries that raised                          48               0               0               0
 
-* Memory is the headline the docs already claim, and it holds: ~600 MiB added versus ~90 MiB, most
-  of the latter NumPy/numba imports rather than data (the polygon coordinates stay memory-mapped).
+* numba is not needed for any headline, and costs memory. Its import is ~75 MiB of the ~90 MiB
+  the numba path adds; a default install (the C extension) adds under 20 MiB, ~30x less than
+  tzwhere, and starts ~20x faster, because it imports neither numba nor tzwhere's full geometry.
+* The median query is ~1 us on every path, 8-12x faster than tzwhere: a unique-zone lookup reads
+  no geometry, so the kernel does not show up in it.
+* The tail is where the kernel shows. The C extension's p99 is 5-7 us; the pure-Python fallback's
+  is 1-1.5 ms, *slower than tzwhere's* (whose ray cast is shapely's C code), so a platform without
+  a built extension loses the latency headline and keeps only memory, startup and coverage.
 * Coverage is the larger practical difference: tzwhere answers 29 % of the globe (no ocean zones),
   misses 16 % of land points, and raises ``KeyError`` for latitudes outside its shortcut table -
   48 of 20,000 points, all polar.
@@ -118,6 +129,16 @@ def _dir_size(path: Path) -> int:
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
 
+# the three point-in-polygon paths ``timezonefinder/utils.py`` picks between at import time, and
+# the modules to hide from the import system so that it picks the one asked for; hiding ``numba``
+# is exactly an install without the ``numba`` extra, so its import cost leaves the numbers too
+TZF_PATHS = {
+    "numba": (),
+    "clang": ("numba",),
+    "python": ("numba", "timezonefinder.inside_polygon_ext"),
+}
+
+
 def _setup_tzwhere():
     from tzwhere import tzwhere
 
@@ -136,16 +157,18 @@ def _setup_timezonefinder():
     )
 
 
-def _acceleration_path(package: str) -> str:
-    if package != "timezonefinder":
-        return "-"
+def _acceleration_path() -> str:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.assert_acceleration_path import active_acceleration_path
 
     return active_acceleration_path()
 
 
-def run_worker(package: str, points_file: Path, out_file: Path) -> None:
+def run_worker(variant: str, points_file: Path, out_file: Path) -> None:
+    """``variant`` is ``tzwhere`` or ``timezonefinder:<path>`` with a path from TZF_PATHS."""
+    package, _, path = variant.partition(":")
+    for module in TZF_PATHS.get(path, ()):
+        sys.modules[module] = None  # makes ``import module`` raise ImportError
     points = json.loads(points_file.read_text())
     rss_baseline = _maxrss_bytes()
     t0 = time.perf_counter()
@@ -155,6 +178,8 @@ def run_worker(package: str, points_file: Path, out_file: Path) -> None:
     }[package]()
     startup_s = time.perf_counter() - t0
     rss_after_init = _maxrss_bytes()
+    if path and (active := _acceleration_path()) != path:
+        sys.exit(f"asked for the {path} path, this environment gives {active}")
 
     t0 = time.perf_counter_ns()
     query(*points[0])
@@ -165,9 +190,8 @@ def run_worker(package: str, points_file: Path, out_file: Path) -> None:
         t0 = time.perf_counter_ns()
         try:
             answer = query(lng, lat)
-        except (
-            Exception
-        ) as exc:  # tzwhere raises KeyError where its shortcut table has no row
+        # tzwhere raises KeyError where its shortcut table has no row
+        except Exception as exc:
             answer = {"crash": type(exc).__name__}
         times_ns.append(time.perf_counter_ns() - t0)
         answers.append(answer)
@@ -176,7 +200,6 @@ def run_worker(package: str, points_file: Path, out_file: Path) -> None:
         json.dumps(
             {
                 "python": sys.version.split()[0],
-                "acceleration": _acceleration_path(package),
                 "startup_s": startup_s,
                 "first_query_ns": first_query_ns,
                 "rss_baseline": rss_baseline,
@@ -203,10 +226,10 @@ def uniform_sphere_points(n: int, seed: int) -> list[tuple[float, float]]:
     ]
 
 
-def spawn(prefix: list[str], package: str, points_file: Path, tmp: Path) -> dict:
-    out = tmp / f"{package}.json"
+def spawn(prefix: list[str], variant: str, points_file: Path, tmp: Path) -> dict:
+    out = tmp / f"{variant.replace(':', '-')}.json"
     out.unlink(missing_ok=True)
-    cmd = [*prefix, __file__, "--worker", package, str(points_file), str(out)]
+    cmd = [*prefix, __file__, "--worker", variant, str(points_file), str(out)]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         lines = [ln for ln in proc.stderr.strip().splitlines() if ln.strip()]
@@ -226,22 +249,31 @@ def latency_stats(times_ns: list[int]) -> dict:
     }
 
 
-def summarise(legacy: dict, tzf: dict) -> dict:
-    n = len(tzf["answers"])
+def summarise(results: dict[str, dict]) -> dict:
+    """``results`` maps ``tzwhere`` and each measured ``timezonefinder:<path>`` to its run."""
+    legacy = results["tzwhere"]
+    tzf_names = [name for name in results if name != "tzwhere"]
+    reference = results[tzf_names[0]]["answers"]
+    n = len(reference)
     # on land = this package names a real zone; its ocean zones are all Etc/GMT*
-    land = [i for i, a in enumerate(tzf["answers"]) if a and not a.startswith("Etc/")]
+    land = [i for i, a in enumerate(reference) if a and not a.startswith("Etc/")]
     both = [i for i in land if isinstance(legacy["answers"][i], str)]
-    agree = sum(legacy["answers"][i] == tzf["answers"][i] for i in both)
+    agree = sum(legacy["answers"][i] == reference[i] for i in both)
     answered = lambda a: isinstance(a, str)  # noqa: E731 - None is no zone, a dict is a crash
     summary = {
         "points": n,
         "land_points": len(land),
         "agreement": {"compared": len(both), "same_zone": agree},
+        # the paths share one data set and one lookup, so any difference here is a kernel bug
+        "path_disagreements": {
+            name: sum(a != b for a, b in zip(results[name]["answers"], reference))
+            for name in tzf_names[1:]
+        },
+        "variants": {},
     }
-    for name, r in (("tzwhere", legacy), ("timezonefinder", tzf)):
-        summary[name] = {
+    for name, r in results.items():
+        summary["variants"][name] = {
             "python": r["python"],
-            "acceleration": r["acceleration"],
             "startup_s": r["startup_s"],
             "first_query_ms": r["first_query_ns"] / 1e6,
             "rss_peak_mib": r["rss_peak"] / 2**20,
@@ -257,81 +289,68 @@ def summarise(legacy: dict, tzf: dict) -> dict:
     return summary
 
 
-def ratio(old: float, new: float) -> str:
-    return f"{old / new:,.1f}x" if new else "-"
+# (label, unit, getter, format); lower is better for every timed and sized row
+TIMED_ROWS = [
+    ("startup (import + init)", "s", lambda v: v["startup_s"], "{:.2f}"),
+    ("first (cold) query", "ms", lambda v: v["first_query_ms"], "{:.2f}"),
+    ("peak RSS of the process", "MiB", lambda v: v["rss_peak_mib"], "{:.0f}"),
+    (
+        "RSS added by import + init",
+        "MiB",
+        lambda v: v["rss_added_by_init_mib"],
+        "{:.0f}",
+    ),
+    ("installed package/data size", "MiB", lambda v: v["data_size_mib"], "{:.1f}"),
+] + [
+    (
+        f"{stat} latency ({scope})",
+        "us",
+        lambda v, s=scope, k=key: v[f"latency_{s}"][k],
+        "{:.1f}",
+    )
+    for scope in ("global", "land")
+    for stat, key in (("median", "median_us"), ("p99", "p99_us"))
+]
+COUNT_ROWS = [
+    ("answered (global)", lambda v: f"{v['coverage_global']:.1%}"),
+    ("answered (land)", lambda v: f"{v['coverage_land']:.1%}"),
+    ("queries that raised", lambda v: f"{v['crashes']:,}"),
+]
 
 
 def print_report(s: dict, current_stack: dict | None) -> None:
-    old, new = s["tzwhere"], s["timezonefinder"]
-    rows = [
-        ("startup (import + init)", "s", old["startup_s"], new["startup_s"], "{:.2f}"),
-        (
-            "first (cold) query",
-            "ms",
-            old["first_query_ms"],
-            new["first_query_ms"],
-            "{:.2f}",
-        ),
-        (
-            "peak RSS of the process",
-            "MiB",
-            old["rss_peak_mib"],
-            new["rss_peak_mib"],
-            "{:.0f}",
-        ),
-        (
-            "RSS added by import + init",
-            "MiB",
-            old["rss_added_by_init_mib"],
-            new["rss_added_by_init_mib"],
-            "{:.0f}",
-        ),
-        (
-            "installed package/data size",
-            "MiB",
-            old["data_size_mib"],
-            new["data_size_mib"],
-            "{:.1f}",
-        ),
-    ]
-    for scope in ("global", "land"):
-        o, n = old[f"latency_{scope}"], new[f"latency_{scope}"]
-        rows += [
-            (
-                f"median latency ({scope})",
-                "us",
-                o["median_us"],
-                n["median_us"],
-                "{:.1f}",
-            ),
-            (f"p99 latency ({scope})", "us", o["p99_us"], n["p99_us"], "{:.1f}"),
-        ]
+    variants = s["variants"]
+    old = variants["tzwhere"]
+    names = list(variants)
+    headers = ["tzwhere"] + [f"tzf {name.partition(':')[2]}" for name in names[1:]]
     print(
-        f"\n{s['points']:,} points uniform on the sphere, {s['land_points']:,} of them on land\n"
+        f"\n{s['points']:,} points uniform on the sphere, {s['land_points']:,} of them on land;"
+        " tzf columns show value (improvement over tzwhere)\n"
     )
-    print(
-        f"{'metric':<30}{'unit':>5}{'tzwhere':>12}{'timezonefinder':>16}{'improvement':>13}"
-    )
-    for label, unit, o, n, fmt in rows:
-        print(
-            f"{label:<30}{unit:>5}{fmt.format(o):>12}{fmt.format(n):>16}{ratio(o, n):>13}"
-        )
-    for scope in ("global", "land"):
-        o, n = old[f"coverage_{scope}"], new[f"coverage_{scope}"]
-        print(f"{f'answered ({scope})':<30}{'%':>5}{o:>12.1%}{n:>16.1%}")
-    print(
-        f"{'queries that raised':<30}{'':>5}{old['crashes']:>12,}{new['crashes']:>16,}"
-    )
+    print(f"{'metric':<30}{'unit':>5}" + "".join(f"{h:>18}" for h in headers))
+    for label, unit, get, fmt in TIMED_ROWS:
+        cells = [fmt.format(get(old))]
+        for name in names[1:]:
+            new = get(variants[name])
+            gain = f"{get(old) / new:,.1f}x" if new else "-"
+            cells.append(f"{fmt.format(new)} ({gain})")
+        print(f"{label:<30}{unit:>5}" + "".join(f"{c:>18}" for c in cells))
+    for label, get in COUNT_ROWS:
+        print(f"{label:<35}" + "".join(f"{get(variants[n]):>18}" for n in names))
     a = s["agreement"]
     print(
         f"\nsame zone on land where both answer: {a['same_zone']:,} / {a['compared']:,}"
         f" ({a['same_zone'] / max(1, a['compared']):.1%}) - tz_world vs a current"
         " timezone-boundary-builder release, so differences include real border and zone changes"
     )
+    for name, count in s["path_disagreements"].items():
+        print(f"answers differing from {names[1]}: {name} {count:,}")
     print(
         f"interpreters: tzwhere on Python {old['python']},"
-        f" timezonefinder on Python {new['python']} ({new['acceleration']} acceleration path)"
+        f" timezonefinder on Python {variants[names[1]]['python']}"
     )
+    for name, reason in s["skipped"].items():
+        print(f"skipped {name}: {reason}")
     if current_stack is not None:
         verdict = current_stack.get("error", "runs")
         print(f"tzwhere on the current Python/NumPy stack: {verdict}")
@@ -343,6 +362,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--json", type=Path, help="also write the summary here")
     parser.add_argument(
+        "--paths",
+        default=",".join(TZF_PATHS),
+        help="timezonefinder acceleration paths to measure, comma-separated"
+        f" (default: all of {', '.join(TZF_PATHS)}; unavailable ones are skipped)",
+    )
+    parser.add_argument(
         "--skip-current-stack",
         action="store_true",
         help="skip the unpinned tzwhere attempt",
@@ -350,7 +375,7 @@ def main() -> None:
     parser.add_argument(
         "--worker",
         nargs=3,
-        metavar=("PACKAGE", "POINTS", "OUT"),
+        metavar=("VARIANT", "POINTS", "OUT"),
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
@@ -359,7 +384,11 @@ def main() -> None:
         return
     if shutil.which("uv") is None:
         sys.exit("uv is required to build the isolated pytzwhere environment")
+    paths = [p for p in args.paths.split(",") if p]
+    if unknown := set(paths) - set(TZF_PATHS):
+        sys.exit(f"unknown paths {sorted(unknown)}; choose from {list(TZF_PATHS)}")
 
+    results, skipped = {}, {}
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
         points_file = tmp / "points.json"
@@ -372,13 +401,21 @@ def main() -> None:
         if not args.skip_current_stack:
             current_stack = spawn(CURRENT_STACK_ENV, "tzwhere", points_file, tmp)
             current_stack.pop("answers", None), current_stack.pop("times_ns", None)
-        legacy = spawn(LEGACY_ENV, "tzwhere", points_file, tmp)
-        tzf = spawn([sys.executable], "timezonefinder", points_file, tmp)
-    for name, result in (("tzwhere", legacy), ("timezonefinder", tzf)):
-        if "error" in result:
-            sys.exit(f"{name} worker failed: {result['error']}")
+        results["tzwhere"] = spawn(LEGACY_ENV, "tzwhere", points_file, tmp)
+        if "error" in results["tzwhere"]:
+            sys.exit(f"tzwhere worker failed: {results['tzwhere']['error']}")
+        for path in paths:
+            variant = f"timezonefinder:{path}"
+            result = spawn([sys.executable], variant, points_file, tmp)
+            if "error" in result:
+                skipped[variant] = result["error"]
+            else:
+                results[variant] = result
+    if len(results) == 1:
+        sys.exit(f"no timezonefinder path could be measured: {skipped}")
 
-    summary = summarise(legacy, tzf)
+    summary = summarise(results)
+    summary["skipped"] = skipped
     summary["tzwhere_current_stack"] = current_stack and current_stack.get(
         "error", "runs"
     )

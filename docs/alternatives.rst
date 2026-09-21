@@ -414,8 +414,8 @@ When this package was forked, ``pytzwhere`` parsed a 76 MB CSV file - floating p
 
 Its last release (3.0.3) swapped the CSV for gzipped GeoJSON and shipped its shortcuts precomputed, but still decodes every polygon into memory at startup. Re-measured side by side, ``prototypes/pytzwhere_headline_comparison.py`` found:
 
-- **Memory:** importing and constructing ``pytzwhere`` adds several hundred MiB to the process; this package adds under a hundred, most of it the ``numpy`` and ``numba`` imports rather than data.
-- **Speed:** startup is several times faster, the first query needs no loading pause, and the median query is roughly an order of magnitude faster.
+- **Memory:** importing and constructing ``pytzwhere`` adds several hundred MiB to the process. A default install of this package, which uses its C extension, adds a couple of dozen at most, over an order of magnitude less; with the optional ``numba`` installed it adds several times that, nearly all of it the ``numba`` import rather than data.
+- **Speed:** startup is an order of magnitude faster (several times with ``numba``), the first query needs no loading pause, and the median query is roughly an order of magnitude faster on every acceleration path. The slowest queries are faster still with the C extension or ``numba``. The pure-Python fallback, used only where no compiled extension is available, is the exception: its slowest queries are slower than ``pytzwhere``'s.
 - **Coverage:** ``pytzwhere`` has no ocean zones, so it answers under a third of the globe, misses a sixth of land points, and raises ``KeyError`` near the poles, where its shortcut table has no rows. This package answers every point.
 - **Compatibility:** ``pytzwhere`` no longer starts on NumPy 1.24 or newer, which rejects the ragged arrays it builds; the comparison has to pin Python 3.10 and older ``numpy`` and ``shapely`` to run it at all.
 - **Disk size is the one regression:** this package's installed data is somewhat larger, because it carries holes, ocean zones and a current dataset.
