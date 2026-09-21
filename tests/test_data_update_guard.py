@@ -174,30 +174,39 @@ def test_a_change_at_the_gate_still_passes(monkeypatch, tmp_path) -> None:
     assert check() == 0
 
 
-# The four releases the payload bands were calibrated over, each converted from its
-# upstream GeoJSON with the code in this tree. The 2026c row is the committed record -
-# asserted below rather than trusted - which is what makes the other three comparable
-# with it and with whatever the band is set to.
+# The releases the payload bands were calibrated over, each converted from its upstream
+# GeoJSON with the code in this tree. The last row is the committed record - asserted
+# below rather than trusted - which is what makes the earlier ones comparable with it
+# and with whatever the band is set to. A data update extends this table: the packaged
+# release is what the last row has to be, so the update that packages a new one owes it
+# a row here, taken from tests/fixtures/data_update/payload.json.
 CALIBRATION_PAYLOADS = {
     "2025c": {"boundary_payload_bytes": 31_034_584, "hole_payload_bytes": 97_452},
     "2026a": {"boundary_payload_bytes": 31_116_264, "hole_payload_bytes": 94_936},
     "2026b": {"boundary_payload_bytes": 31_304_936, "hole_payload_bytes": 94_936},
     "2026c": {"boundary_payload_bytes": 31_735_692, "hole_payload_bytes": 95_168},
+    "2026d": {"boundary_payload_bytes": 31_979_504, "hole_payload_bytes": 95_216},
 }
 
 
 @pytest.mark.unit
 def test_the_calibration_ends_at_the_data_this_checkout_packages() -> None:
-    """Otherwise the table is four numbers from somewhere, and the band means nothing.
+    """Otherwise the table is numbers from somewhere, and the band means nothing.
 
     The last row has to be the record the packaged data produces, because that is the
     only one this checkout can check - and a format change that moved the bytes would
     invalidate every earlier row with it.
     """
     committed = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
-    assert CALIBRATION_PAYLOADS["2026c"] == {
-        key: committed[key] for key in CALIBRATION_PAYLOADS["2026c"]
-    }
+    last_release, last_payload = list(CALIBRATION_PAYLOADS.items())[-1]
+
+    # Named rather than positional, so a data update that forgot the row is told what
+    # to add instead of being handed two payload dicts to diff by eye.
+    assert last_release == committed["data_version"], (
+        f"the calibration table ends at {last_release}, but this checkout packages "
+        f"{committed['data_version']}; append its row from {PAYLOAD_PATH}"
+    )
+    assert last_payload == {key: committed[key] for key in last_payload}
 
 
 @pytest.mark.unit
