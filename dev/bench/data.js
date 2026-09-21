@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789961600991,
+  "lastUpdate": 1789962399141,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11796,6 +11796,93 @@ window.BENCHMARK_DATA = {
             "range": "± 9135",
             "unit": "lookups/sec",
             "extra": "min of 95 round(s) on AMD EPYC 9V74 80-Core Processor @ 3.6976 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf326ddd6fff2509d71340b12f9398142aedbced",
+          "message": "API-1: return every zone that contains a point (#686)\n\n* API-1: return every zone that contains a point\n\nThe packaged dataset ships genuinely overlapping zones and real queries land\nin them: measured over the committed fixtures on data 2026c, 28 of 10,000\nrandom points, 98 of 10,000 on-land points and 163 of 5,000 ambiguous-cell\npoints lie in two zones. `Asia/Urumqi` inside `Asia/Shanghai` is almost all of\nthem and is a second local time in real use; the rest are disputed or\ndual-administered areas. Every public lookup collapsed that to one zone\nwithout reporting that it had chosen.\n\n`TimezoneFinder.timezones_at`, and the global function beside it, return every\nzone whose polygons contain the point. The first element is contracted to be\n`timezone_at`'s answer, so the two can never contradict each other: the\ncandidate scan reaches the same first match, and where no candidate contains\nthe point it mirrors that method's untested final-zone fallback rather than\nanswering the empty list.\n\nThe lookup fast path is untouched. Only this method pays for the full\ncandidate loop, and a cell a single zone covers is answered from the shortcut\nindex with a one-element list and no geometry at all - asserted, not merely\ndocumented, by a test that makes `inside_of_polygon` raise.\n\nNo batch form: the decision recorded for this item holds one back until a user\nasks, because a variable-length result is the shape the id arrays exist to\navoid.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* register: retire API-1, now shipped\n\nThe item file and its ranking row go, and the two references to it are\nrewritten to the fact that outlives the handle:\n\n- the sequencing line now states PERF-7's obligation directly rather than\n  naming an item that no longer exists;\n- PERF-7 carries what the interaction costs it, with the three routes open to\n  the converter and the note that the 743-cell count is re-derived if it takes\n  the cheap one.\n\nThe decision itself is kept, as recorded decisions are: what was chosen, the\ntwo options refused and why, why the element order after the first is\ndeliberately meaningless, and why no batch form ships.\n\n`docs/result_stability.rst` now paraphrases a third order-sensitive method, so\nthe documentation pairing names it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* API-1: correct three claims the independent review found\n\nAll documentation; the method is unchanged.\n\n- `docs/result_stability.rst` claimed `timezones_at`'s *set* follows from the\n  geometry alone. It does wherever a candidate contains the point, and does\n  not in the one case where none does: the untested final-zone fallback is\n  pure candidate order, which this branch's own South Pole test exercises.\n- The PERF-7 entry claimed the fixture-wide comparison in\n  `tests/test_overlapping_zones.py` would fail if that item discarded the\n  overlap candidates. It cannot: the reference scan enumerates the same\n  shortcut index, so a converted cell degrades both sides alike and they keep\n  agreeing. The six hard-coded overlap coordinates are the regression surface,\n  and the entry now says so.\n- `docs/1_usage.rst` promised every containing zone without mentioning the\n  fallback the docstring documents, so the user-facing page said something\n  slightly stronger than the method does.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* docs: credit membership, not position, for timezones_at agreement\n\nThe shipped prose said the first element is timezone_at's answer \"so the\ntwo cannot contradict each other\", which credits the wrong property. What\nrules out a contradiction is that the list *contains* that answer; the\nposition is a separate, strictly stronger guarantee that buys something\nelse - zones[0] as a drop-in for timezone_at, and an anchor for a tail\norder that is otherwise deliberately meaningless.\n\nBoth halves still hold and both are still asserted (the first-element form\nimplies membership), so nothing about the contract or the tests changes -\nonly which of the two is named as the reason.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* register: separate membership from position in the API-1 decision\n\nSame correction as the shipped prose: the recorded decision credited\n\"timezone_at's answer first\" with preventing a contradiction. Membership\nis what does that; being first is an additional guarantee (zones[0] as a\ndrop-in, and an anchor for the meaningless tail). The decision itself is\nunchanged - both guarantees were always shipped.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* register: correct which library the API-1 ordering note warns about\n\nThe recorded decision cited geo-tz as the mistake not to repeat, on the\ngrounds that its dataset-dependent order makes its first element an\nunstable answer. Reading its source and README: find() is the only lookup\nit has - the three entry points differ in tzdata's zone-merging, not in\narity - so it has no singular answer its array could contradict, and its\nfirst element meaning nothing is coherent rather than a mistake.\n\nThe shape actually worth avoiding is a singular answer beside an unordered\nlist that can drift from it, which is tzfpy's: get_tzs[0] == get_tz holds\n(measured over 200,000 random points on 2026c, 542 multi-zone, no\ndisagreement) but is documented only as a description of the loop, so a\nchange to its fast path would break callers who inferred it. That is the\nreason both halves are contracted here.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* docs: record why timezones_at does not skip already-collected zones\n\nReview raised that the candidate loop runs a geometry test on polygons of\na zone it has already reported, which cannot add a zone. That is true, and\nmeasured on data 2026c it happens on 0.14-0.37 % of the tests - 8 of 2,190\non random points, 15 of 10,418 on the ambiguous fixture.\n\nGuarding it loses anyway, and the reason is worth keeping: a repeated\nzone's other polygons are rejected by the bounding box before any\npoint-in-polygon scan runs (0 of the 7 redundant candidates at the worst\nquery found in 300,000 random samples, 2 of 23 across the fixtures), so\nthe \"wasted\" call is cheaper than the _zone_id_of lookup that would skip\nit - which the guard would pay on all 0.43 candidates per query that\nfollow the first match. Timed both ways: ~2.5 % slower over the ambiguous\nfixture, ~7 % slower at the worst query.\n\nNo behaviour change; a comment so the next reader does not re-derive it.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* register: hold a cell-level zone list on TimezoneFinderL pending demand\n\nRaised in review: should TimezoneFinderL get a timezones_at returning all\nzones of a shortcut? Recorded as held on the same terms as border\nproximity - it ships when a user asks for it.\n\nWithout geometry the only answer available is every zone the cell lists,\nwhich is a different question wearing this one's name. A cell's zones are\nthose that could contain some point in it, so the extra elements are\nborders rather than overlaps: measured on data 2026c, a cell lists two or\nmore zones for 10.6 % of random and 18.8 % of on-land fixture points where\n0.28 % and 0.98 % genuinely lie in two, a precision of 2.6 % and 5.2 %.\nRecall and containment are perfect over all 25,000 fixture points, which\nis what makes it dangerous rather than safe - it would satisfy the\nordering contract while meaning something else.\n\nThe file was at 1,922 of its 2,000-word budget, so this also tightens the\nprose added earlier in this branch (the geo-tz clause above most of all)\nrather than only squeezing the new clause. No measurement or decision was\ndropped; the file is back to 1,998 words and the budget test passes.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n* register: condense this branch's contributing/ additions\n\nSame decisions, refusals, routes and measurements; fewer words. The API-1\nbullet goes 511 -> 397 words and PERF-7's timezones_at constraint 285 ->\n246, leaving the decisions file at 1,884 of its 2,000-word budget rather\nthan 1,998.\n\nNothing measured or decided was dropped. One reporting change is an\nimprovement rather than compression: the overlap evidence was three raw\nfractions (28 of 10,000, 98 of 10,000, 163 of 5,000) while the\nTimezoneFinderL hold below it quoted percentages, so the comparison that\ndecides the hold - cells listing two or more zones for 10.6 % and 18.8 %\nof points against the 0.28 % and 0.98 % that genuinely lie in two - now\nreads off the page instead of needing arithmetic.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01Tfnp8CgAYis16iMHLYocVE\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T03:45:30Z",
+          "tree_id": "f1df744faa4b79ac1bcd0dad3a14a93b9576be9e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/cf326ddd6fff2509d71340b12f9398142aedbced"
+        },
+        "date": 1789962397167,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 571338.593762068,
+            "range": "± 6979",
+            "unit": "lookups/sec",
+            "extra": "min of 191 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 749902.4376926592,
+            "range": "± 15813",
+            "unit": "lookups/sec",
+            "extra": "min of 264 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 198016.27297741311,
+            "range": "± 2393",
+            "unit": "lookups/sec",
+            "extra": "min of 74 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 907846.3342986607,
+            "range": "± 9042",
+            "unit": "lookups/sec",
+            "extra": "min of 295 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1470270.8297696714,
+            "range": "± 117503",
+            "unit": "lookups/sec",
+            "extra": "min of 531 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 238390.45629552123,
+            "range": "± 77819",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 897646.7293364147,
+            "range": "± 9183",
+            "unit": "lookups/sec",
+            "extra": "min of 290 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1434590.972296022,
+            "range": "± 24382",
+            "unit": "lookups/sec",
+            "extra": "min of 491 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 238127.033723975,
+            "range": "± 4833",
+            "unit": "lookups/sec",
+            "extra": "min of 80 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
