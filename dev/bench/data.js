@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789981797450,
+  "lastUpdate": 1789981799687,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -23477,6 +23477,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39f0fb59b2bcc936cae50ae8a1ac2fa17634bba2",
+          "message": "PERF-7: keep the candidates timezones_at reads, and price what that costs (#691)\n\nA covered cell's other-zone candidates all lie inside the covering\npolygon, so every converted cell is one where timezones_at needs two\nzones; collapsing it to a zone id loses one. Record the route that keeps\nthem - a per-entry covering-zone column over entries deduplicated on\n(list, zone) - priced on 2026c at 7 entries over today's 2,994 and a\nformat-4 release, which is now the item's dominant cost.\n\nCorrect what #652's implementation measured: 742 cells convert and 84\nstay ambiguous, not 743/0; no shapely is needed; and the smaller-area\nrule is containment itself within this scope, not a refused alternative.\nThe item stays blocked on GEOM-3.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:08:54Z",
+          "tree_id": "a262d7df463f8d63c88636305c57815c0d2eed11",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/39f0fb59b2bcc936cae50ae8a1ac2fa17634bba2"
+        },
+        "date": 1789981799134,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014883041381836,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.015061378479004,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2627906799316406,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2635326385498047,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61704158782959,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.617764472961426,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
           }
         ]
       }
