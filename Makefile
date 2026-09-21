@@ -274,10 +274,11 @@ reports: check-data benchmarks latency memory acceleration-paths batch-break-eve
 # figure that moves when someone else ships is the same trap that keeps the
 # comparison benchmarks off the trend chart (benchmarks/test_comparison.py).
 # Run it, read it, and quote it with both versions attached.
-# --group compare rather than $(BENCHMARK_ENV): nothing here is timed, so the
-# acceleration path does not matter and this checkout's environment will do.
+# --group compare supplies tzfpy; --group benchmark supplies matplotlib for the
+# committed chart. Nothing here is timed, so the acceleration path does not matter and
+# carrying the plotting stack cannot contaminate the result.
 tzfpy-agreement:
-	uv run --group compare python -m scripts.measure_tzfpy_agreement --chart --json-out
+	uv run --group compare --group benchmark python -m scripts.measure_tzfpy_agreement --chart --json-out
 
 # --- CI benchmarking (.github/workflows/benchmark.yml) ------------------------
 # These paths/flags are declared here only; the workflow asks make for them

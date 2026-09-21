@@ -44,7 +44,6 @@ from scripts.measure_tzfpy_agreement import (
     classify,
     count_agreement,
     count_paired_agreement,
-    escape_svg_text,
     format_distance,
     is_decade,
     render_chart,
@@ -92,6 +91,11 @@ def _measurement(*rates: tuple[float, int, int]) -> Measurement:
         ),
         by_point_class={},
     )
+
+
+def _require_matplotlib() -> None:
+    """Skip only rendering checks when the plotting dependency group is absent."""
+    pytest.importorskip("matplotlib", reason="the `benchmark` dependency group")
 
 
 @pytest.mark.unit
@@ -279,8 +283,9 @@ def test_an_upper_bound_says_so_in_its_label() -> None:
 
 @pytest.mark.unit
 def test_the_chart_states_every_decade_rate() -> None:
+    _require_matplotlib()
     svg = render_chart(_measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0)))
-    assert svg.startswith("<svg ") and svg.rstrip().endswith("</svg>")
+    assert svg.startswith("<?xml ") and svg.rstrip().endswith("</svg>")
     for label in ("26.0%", "34.0%", "17.0%", "22.0%", "1 m", "10 m", "1 km"):
         assert label in svg, f"the chart does not state {label}"
     # the zero group is plotted as a bound, and the "<" has to survive as
@@ -291,6 +296,7 @@ def test_the_chart_states_every_decade_rate() -> None:
 @pytest.mark.unit
 def test_only_the_final_decade_labels_an_unobserved_tail() -> None:
     """A hollow 500 m marker must not duplicate the 1 km bound label."""
+    _require_matplotlib()
     svg = render_chart(_measurement((500.0, 0, 0), (1000.0, 0, 0)))
 
     # One label per series remains at the final decade (1 km); the previous
@@ -299,60 +305,22 @@ def test_only_the_final_decade_labels_an_unobserved_tail() -> None:
 
 
 @pytest.mark.unit
-def test_land_decade_labels_move_down_and_the_100_m_label_moves_right() -> None:
+def test_chart_labels_are_real_svg_text_nodes() -> None:
+    """Keep generated labels diffable and independent of installed font files."""
+    _require_matplotlib()
     measurement = _measurement((1.0, 26, 34), (100.0, 17, 22), (1000.0, 0, 0))
     root = ElementTree.fromstring(render_chart(measurement))
-    nodes = list(root)
-
-    land_1_m_label = next(node for node in nodes if node.text == "34.0%")
-    land_100_m_label = next(node for node in nodes if node.text == "22.0%")
-    land_1_km_label = next(
-        node
-        for node in nodes
-        if node.text == "<3.0%" and node.attrib.get("fill") == "#c2570f"
-    )
-    land_markers = [
-        node
-        for node in nodes
-        if node.tag.endswith("circle")
-        and (
-            node.attrib.get("fill") == "#c2570f"
-            or node.attrib.get("stroke") == "#c2570f"
-        )
-    ]
-
-    # The orange labels at observed decades sit 10 px above their marker
-    # instead of 16 px; at 100 m that label is also shifted 20 px right.
-    assert float(land_1_m_label.attrib["y"]) == pytest.approx(
-        float(land_markers[0].attrib["cy"]) - 10.0
-    )
-    assert float(land_100_m_label.attrib["x"]) == pytest.approx(
-        float(land_markers[1].attrib["cx"]) + 20.0
-    )
-    assert float(land_100_m_label.attrib["y"]) == pytest.approx(
-        float(land_markers[1].attrib["cy"]) - 10.0
-    )
-    # The final upper-bound label retains the original 16 px offset.
-    assert float(land_1_km_label.attrib["y"]) == pytest.approx(
-        float(land_markers[2].attrib["cy"]) - 16.0
-    )
+    text = [node.text for node in root.iter() if node.tag.endswith("text")]
+    assert {"34.0%", "22.0%", "<3.0%"} <= set(text)
 
 
 @pytest.mark.unit
 def test_the_chart_is_valid_xml() -> None:
     # nothing else validates this file: rstcheck accepts an `image::` whose
     # target does not parse, and the docs build copies it without reading it
+    _require_matplotlib()
     svg = render_chart(_measurement((1.0, 26, 34), (10.0, 0, 0)))
     ElementTree.fromstring(svg)
-
-
-@pytest.mark.unit
-@pytest.mark.parametrize(
-    ("text", "expected"),
-    [("<0.015%", "&lt;0.015%"), ("a & b", "a &amp; b"), ("26.2%", "26.2%")],
-)
-def test_svg_text_is_escaped(text: str, expected: str) -> None:
-    assert escape_svg_text(text) == expected
 
 
 @pytest.mark.unit
@@ -360,9 +328,22 @@ def test_the_chart_is_deterministic_and_pre_commit_clean() -> None:
     # generated files in this repository must come out already formatted, or a
     # regeneration produces a diff nobody asked for - see the generated-file
     # rules routed from CONTRIBUTING.md
+    _require_matplotlib()
+    import matplotlib
+
     measurement = _measurement((1.0, 26, 34), (10.0, 17, 22))
     svg = render_chart(measurement)
     assert svg == render_chart(measurement)
+    with matplotlib.rc_context(
+        {"axes.grid": True, "grid.color": "#cccccc", "lines.solid_capstyle": "round"}
+    ):
+        # Another renderer in this process must not leak its global style into a
+        # committed artifact. The charts tox environment exercises this in its real
+        # render order too, after the seaborn-based batch chart tests.
+        assert svg == render_chart(measurement)
+    assert "Matplotlib v" in svg
+    assert "font-family: 'DejaVu Sans'" in svg
+    assert "dc:date" not in svg
     assert svg.endswith("\n") and not svg.endswith("\n\n")
     assert not any(line != line.rstrip() for line in svg.splitlines())
 
@@ -384,6 +365,7 @@ def test_a_saved_run_round_trips_so_the_chart_can_be_redrawn() -> None:
     # a full sweep takes about twenty minutes, so changing how the chart looks
     # must not require taking one - the same decoupling the benchmark reports
     # have. If this drifts, the redraw silently describes a different run
+    _require_matplotlib()
     measurement = _measurement((1.0, 26, 34), (10.0, 17, 22), (1000.0, 0, 0))
     restored = Measurement.from_json(json.loads(json.dumps(measurement.as_json())))
     assert restored == measurement
@@ -480,6 +462,7 @@ def test_only_the_decade_distances_carry_a_printed_value(
 @pytest.mark.unit
 def test_the_hollow_marker_is_explained_only_when_one_is_drawn() -> None:
     # a key for a symbol that is not on the chart is a puzzle, not a key
+    _require_matplotlib()
     with_bound = render_chart(_measurement((1.0, 26, 34), (1000.0, 0, 0)))
     assert "hollow" in with_bound
 
@@ -584,6 +567,7 @@ def test_committed_unattributed_cases_are_boundary_ambiguity_not_index_errors() 
 def test_the_committed_chart_is_the_committed_run_drawn() -> None:
     # the two artifacts are written by one command and would otherwise drift
     # silently - a chart from one sweep beside the numbers of another
+    _require_matplotlib()
     restored = Measurement.from_json(
         json.loads(MEASUREMENT_PATH.read_text(encoding="utf-8"))
     )

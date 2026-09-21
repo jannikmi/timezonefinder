@@ -26,9 +26,10 @@ measurement genuinely has lives on the *x* axis, where the shaded break-even ban
 it: it is the resolution limit of a discrete ladder, not a spread in any measured
 quantity.
 
-seaborn rather than hand-written SVG (which ``scripts/measure_tzfpy_agreement.py`` still
-uses for its one five-point line chart): fourteen rungs, two panels, two estimators and
-four annotated rules are past what hand-rolled path arithmetic is worth.
+seaborn rather than direct matplotlib: fourteen rungs, two panels, two estimators and
+four annotated rules benefit from its long-form data and semantic grouping APIs. The
+smaller ``tzfpy`` agreement chart uses matplotlib directly, under the same deterministic
+SVG constraints.
 """
 
 from pathlib import Path

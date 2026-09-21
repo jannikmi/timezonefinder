@@ -68,10 +68,11 @@ rate that describes the geometry, and it is the one to quote.
 Usage::
 
     make tzfpy-agreement
-    uv run --group compare python -m scripts.measure_tzfpy_agreement --help
+    uv run --group compare --group benchmark python -m scripts.measure_tzfpy_agreement --help
 """
 
 import argparse
+import io
 import json
 import sys
 from pathlib import Path
@@ -770,17 +771,15 @@ def format_report(measurement: Measurement) -> str:
 
 
 # --- the chart docs/alternatives.rst embeds ---------------------------------
-# Hand-written SVG rather than a plotting library: this is one line chart of
-# five points, and the alternative is a dependency heavy enough that nothing
-# else in this repository carries it. The output is text, so a regeneration
-# shows up in a diff as the numbers that moved.
 
-CHART_WIDTH = 880
-CHART_HEIGHT = 495
-CHART_MARGIN_LEFT = 84
-CHART_MARGIN_RIGHT = 56
-CHART_MARGIN_TOP = 142
-CHART_MARGIN_BOTTOM = 62
+#: Salt for the element ids matplotlib derives by hashing. Without a fixed salt,
+#: otherwise-identical renders differ because the SVG backend uses random ids.
+SVG_HASH_SALT = "timezonefinder-tzfpy-agreement"
+
+#: Preserve the hand-written chart's 16:9-ish aspect ratio while expressing it in
+#: matplotlib's native inches. SVG output is resolution-independent.
+FIGURE_SIZE = (11.0, 6.1875)
+
 # The y axis is logarithmic because the paired impact falls from nearly every
 # border location close to the boundary to a rule-of-three upper bound at the
 # far end. On a linear axis the latter is indistinguishable from zero.
@@ -801,10 +800,7 @@ CHART_SERIES_LAND = "#c2570f"
 class ChartSeries(NamedTuple):
     label: str
     colour: str
-    dashes: str
-    # where the value label goes relative to its marker, so the two series do
-    # not print over each other where the curves converge
-    label_offset: float
+    linestyle: str
     counts: Callable[[DistanceResult], PairedAgreementCounts]
 
 
@@ -812,28 +808,16 @@ CHART_SERIES = (
     ChartSeries(
         "any timezone border",
         CHART_SERIES_ALL,
-        "",
-        20.0,
+        "-",
         lambda r: r.paired_all_borders,
     ),
     ChartSeries(
         "border of a land zone",
         CHART_SERIES_LAND,
-        "7 5",
-        -16.0,
+        "--",
         lambda r: r.paired_land_borders,
     ),
 )
-
-
-def escape_svg_text(text: str) -> str:
-    """Text destined for an SVG text node.
-
-    The upper-bound labels start with "<", which an XML parser reads as the
-    start of an element - so the chart renders as a parse error rather than as
-    a chart, in a file nothing else validates.
-    """
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 class ChartPoint(NamedTuple):
@@ -863,12 +847,6 @@ def chart_point(counts: PairedAgreementCounts) -> ChartPoint:
     if counts.affected:
         return ChartPoint(counts.affected_rate, is_upper_bound=False)
     return ChartPoint(counts.upper_bound_rate, is_upper_bound=True)
-
-
-def _chart_x(distance_m: float, low: float, high: float) -> float:
-    span = CHART_WIDTH - CHART_MARGIN_LEFT - CHART_MARGIN_RIGHT
-    position = (np.log10(distance_m) - low) / (high - low) if high > low else 0.5
-    return CHART_MARGIN_LEFT + span * float(position)
 
 
 def is_decade(distance_m: float) -> bool:
@@ -907,37 +885,32 @@ def axis_ticks(floor_percent: float, top_percent: float) -> list[float]:
     return ticks
 
 
-def _chart_y(percent: float, floor_percent: float, top_percent: float) -> float:
-    span = CHART_HEIGHT - CHART_MARGIN_TOP - CHART_MARGIN_BOTTOM
-    low, high = np.log10(floor_percent), np.log10(top_percent)
-    position = (np.log10(min(max(percent, floor_percent), top_percent)) - low) / (
-        high - low
-    )
-    return CHART_MARGIN_TOP + span * (1.0 - float(position))
-
-
-# Legend metrics. The text width is estimated rather than measured - there is
-# no font metric available here - which is fine because the only thing it has
-# to get right is that the row ends at the right margin.
-LEGEND_SWATCH = 34
-LEGEND_GAP = 26
-LEGEND_CHAR_WIDTH = 6.6
-
-
-def _legend_entry_width(label: str) -> float:
-    return LEGEND_SWATCH + LEGEND_CHAR_WIDTH * len(label)
-
-
 def _percent_axis_label(percent: float) -> str:
     return f"{percent:.3g}%"
 
 
 def render_chart(measurement: Measurement) -> str:
-    """The sweep as an SVG line chart, ready to be written next to the docs."""
-    distances = [result.distance_m for result in measurement.by_distance]
-    low, high = float(np.log10(min(distances))), float(np.log10(max(distances)))
-    right = CHART_WIDTH - CHART_MARGIN_RIGHT
+    """Render the sweep as deterministic, diffable matplotlib SVG markup.
 
+    matplotlib's plotting stack lives in the ``benchmark`` dependency group rather
+    than the ordinary test or measurement environments. Import it only when a chart
+    is actually requested, so measuring and reporting the counts retain their small
+    dependency surface.
+    """
+    import matplotlib
+
+    # This must precede pyplot: CI has no display server, and backend auto-detection is
+    # environment-dependent even though this function only ever writes SVG.
+    matplotlib.use("Agg")
+
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
+
+    if not measurement.by_distance:
+        raise ValueError("cannot draw an agreement chart without distance results")
+
+    distances = [result.distance_m for result in measurement.by_distance]
     plotted = {
         series.label: [
             chart_point(series.counts(result)) for result in measurement.by_distance
@@ -949,158 +922,205 @@ def render_chart(measurement: Measurement) -> str:
         CHART_Y_MIN_FLOOR_PERCENT, axis_bound(min(values), upwards=False)
     )
     top_percent = axis_bound(max(values), upwards=True)
+    if floor_percent == top_percent:
+        floor_percent = max(
+            CHART_Y_MIN_FLOOR_PERCENT,
+            axis_bound(floor_percent / 1.000001, upwards=False),
+        )
+        top_percent = axis_bound(top_percent * 1.000001, upwards=True)
     any_upper_bound = any(
         point.is_upper_bound for points in plotted.values() for point in points
     )
 
-    def y_of(percent: float) -> float:
-        return _chart_y(percent, floor_percent, top_percent)
+    rc = {
+        "axes.edgecolor": CHART_MUTED,
+        "axes.labelcolor": CHART_MUTED,
+        # Matplotlib ships DejaVu Sans on every platform it supports. Asking for
+        # Helvetica/Arial would use different font metrics on macOS and Linux, moving
+        # legend and label geometry even though the emitted SVG keeps text as text.
+        "font.family": "DejaVu Sans",
+        "svg.fonttype": "none",
+        "svg.hashsalt": SVG_HASH_SALT,
+        "text.color": CHART_INK,
+        "xtick.color": CHART_INK,
+        "ytick.color": CHART_MUTED,
+    }
+    with matplotlib.rc_context():
+        # seaborn and other renderers mutate matplotlib's process-wide defaults. Start
+        # from matplotlib's own baseline so this chart is byte-identical regardless of
+        # which report happened to render before it, then apply only its local theme.
+        matplotlib.rcdefaults()
+        matplotlib.rcParams.update(rc)
+        figure, axis = plt.subplots(figsize=FIGURE_SIZE)
+        figure.subplots_adjust(left=0.11, right=0.965, bottom=0.14, top=0.70)
+        figure.patch.set_facecolor("white")
+        axis.set_facecolor("white")
+        axis.set_axisbelow(True)
 
-    baseline = y_of(floor_percent)
-
-    parts = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CHART_WIDTH} '
-        f'{CHART_HEIGHT}" width="{CHART_WIDTH}" height="{CHART_HEIGHT}" '
-        f'font-family="Helvetica, Arial, sans-serif" role="img" '
-        f'aria-label="Share of timezone border locations where timezonefinder and '
-        f'tzfpy differ on at least one side, against distance from the border">',
-        f'<rect width="{CHART_WIDTH}" height="{CHART_HEIGHT}" fill="#ffffff"/>',
-        f'<text x="{CHART_MARGIN_LEFT}" y="32" font-size="17" font-weight="600" '
-        f'fill="{CHART_INK}">Border locations affected by tzfpy simplification</text>',
-        f'<text x="{CHART_MARGIN_LEFT}" y="52" font-size="12.5" fill="{CHART_MUTED}">'
-        f"boundary release {escape_svg_text(measurement.data_version)} on both "
-        f"sides, {TZFPY_DISTRIBUTION} "
-        f"{escape_svg_text(str(measurement.tzfpy_version))}, "
-        f"{measurement.by_distance[0].paired_all_borders.total} paired locations "
-        f"per distance; "
-        f"both axes logarithmic</text>",
-    ]
-
-    # Legend above the plot and pushed to the right. Above, so it cannot
-    # collide with the axis titles; right, because the leftmost data label is
-    # anchored at the left margin and the axis now tops out just over the
-    # largest value, which puts that label exactly where a left-aligned legend
-    # would be.
-    entries = [(series.label, series.colour, series.dashes) for series in CHART_SERIES]
-    if any_upper_bound:
-        # only explained when one is actually on the chart - a legend entry for
-        # a marker that is not there is a puzzle rather than a key
-        entries.append(("hollow: none found, so at most this", CHART_MUTED, "hollow"))
-    widths = [_legend_entry_width(label) for label, _, _ in entries]
-    cursor = right - sum(widths) - LEGEND_GAP * (len(entries) - 1)
-    legend_y = CHART_MARGIN_TOP - 26
-    for (label, colour, dashes), width in zip(entries, widths, strict=True):
-        if dashes == "hollow":
-            parts.append(
-                f'<circle cx="{cursor + 13:.0f}" cy="{legend_y}" r="4.5" '
-                f'fill="#ffffff" stroke="{colour}" stroke-width="1.8"/>'
-            )
+        axis.set_xscale("log")
+        axis.set_yscale("log")
+        if len(distances) == 1:
+            axis.set_xlim(distances[0] / 10.0, distances[0] * 10.0)
         else:
-            dash = f' stroke-dasharray="{dashes}"' if dashes else ""
-            parts.append(
-                f'<line x1="{cursor:.0f}" y1="{legend_y}" x2="{cursor + 26:.0f}" '
-                f'y2="{legend_y}" stroke="{colour}" stroke-width="2.4"{dash}/>'
+            # Keep endpoint markers and their inward-anchored labels clear of the
+            # spines. One percent of the logarithmic span is independent of units and
+            # stays visually small across this five-decade sweep.
+            log_span = np.log10(max(distances)) - np.log10(min(distances))
+            margin = 10.0 ** (0.01 * log_span)
+            axis.set_xlim(min(distances) / margin, max(distances) * margin)
+        axis.set_ylim(floor_percent, top_percent)
+        axis.xaxis.set_major_locator(FixedLocator(distances))
+        distance_labels = {
+            distance: format_distance(distance) for distance in distances
+        }
+        axis.xaxis.set_major_formatter(
+            FuncFormatter(lambda value, _: distance_labels.get(value, ""))
+        )
+        axis.xaxis.set_minor_formatter(NullFormatter())
+        y_ticks = axis_ticks(floor_percent, top_percent)
+        axis.yaxis.set_major_locator(FixedLocator(y_ticks))
+        axis.yaxis.set_major_formatter(
+            FuncFormatter(lambda value, _: _percent_axis_label(value))
+        )
+        axis.yaxis.set_minor_formatter(NullFormatter())
+        axis.grid(axis="y", color=CHART_GRID, linewidth=1.0)
+        axis.spines[["top", "right"]].set_visible(False)
+        axis.set_xlabel("distance from the nearest timezone border", labelpad=12)
+        axis.set_ylabel("border locations affected", labelpad=10)
+
+        legend_handles = []
+        for series in CHART_SERIES:
+            points = plotted[series.label]
+            percentages = [point.percent for point in points]
+            axis.plot(
+                distances,
+                percentages,
+                color=series.colour,
+                linestyle=series.linestyle,
+                linewidth=2.4,
+                zorder=2,
             )
-        parts.append(
-            f'<text x="{cursor + LEGEND_SWATCH:.0f}" y="{legend_y + 4}" '
-            f'font-size="12.5" fill="{CHART_INK}">{escape_svg_text(label)}</text>'
-        )
-        cursor += width + LEGEND_GAP
-
-    for tick in axis_ticks(floor_percent, top_percent):
-        y = y_of(tick)
-        parts.append(
-            f'<line x1="{CHART_MARGIN_LEFT}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" '
-            f'stroke="{CHART_GRID}" stroke-width="1"/>'
-        )
-        parts.append(
-            f'<text x="{CHART_MARGIN_LEFT - 10}" y="{y + 4:.1f}" font-size="12" '
-            f'text-anchor="end" fill="{CHART_MUTED}">'
-            f"{_percent_axis_label(tick)}</text>"
-        )
-
-    for result in measurement.by_distance:
-        x = _chart_x(result.distance_m, low, high)
-        parts.append(
-            f'<line x1="{x:.1f}" y1="{baseline:.1f}" x2="{x:.1f}" '
-            f'y2="{baseline + 5:.1f}" stroke="{CHART_MUTED}" stroke-width="1"/>'
-        )
-        parts.append(
-            f'<text x="{x:.1f}" y="{baseline + 22:.1f}" font-size="11.5" '
-            f'text-anchor="middle" fill="{CHART_INK}">'
-            f"{format_distance(result.distance_m)}</text>"
-        )
-
-    for series in CHART_SERIES:
-        points = plotted[series.label]
-        polyline = " ".join(
-            f"{_chart_x(result.distance_m, low, high):.1f},{y_of(point.percent):.1f}"
-            for result, point in zip(measurement.by_distance, points, strict=True)
-        )
-        dash = f' stroke-dasharray="{series.dashes}"' if series.dashes else ""
-        parts.append(
-            f'<polyline points="{polyline}" fill="none" stroke="{series.colour}" '
-            f'stroke-width="2.4" stroke-linejoin="round"{dash}/>'
-        )
-        for index, (result, point) in enumerate(
-            zip(measurement.by_distance, points, strict=True)
-        ):
-            x = _chart_x(result.distance_m, low, high)
-            y = y_of(point.percent)
-            if point.is_upper_bound:
-                parts.append(
-                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#ffffff" '
-                    f'stroke="{series.colour}" stroke-width="1.8"/>'
+            legend_handles.append(
+                Line2D(
+                    [],
+                    [],
+                    color=series.colour,
+                    linestyle=series.linestyle,
+                    linewidth=2.4,
+                    label=series.label,
                 )
-            else:
-                parts.append(
-                    f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{series.colour}"/>'
-                )
-            # Label the decade positions: a logarithmic axis does not let the
-            # intervening values be read accurately by eye, while labelling all
-            # 22 markers would obscure the curve. In particular, 500 m stays
-            # unlabelled beside the final 1 km upper-bound annotation.
-            if not is_decade(result.distance_m):
-                continue
-            # the end labels are anchored inwards, or half of the first one
-            # sits outside the plot and over the percentage axis
-            anchor = (
-                "start"
-                if index == 0
-                else "end"
-                if index == len(points) - 1
-                else "middle"
-            )
-            # a label below a point near the floor would land under the axis
-            offset = series.label_offset
-            label_x = x
-            if series.colour == CHART_SERIES_LAND and index != len(points) - 1:
-                # Bring the orange decade labels closer to their markers. The
-                # final 1 km bound keeps its established position, while the
-                # crowded 100 m label also moves right of the descending lines.
-                offset += 6.0
-                if result.distance_m == 100.0:
-                    label_x += 20.0
-            if offset > 0 and y + offset > baseline - 4:
-                offset = -16.0
-            parts.append(
-                f'<text x="{label_x:.1f}" y="{y + offset:.1f}" font-size="12" '
-                f'text-anchor="{anchor}" fill="{series.colour}">'
-                f"{escape_svg_text(point.label)}</text>"
             )
 
-    parts.append(
-        f'<text x="{(CHART_MARGIN_LEFT + right) / 2:.0f}" y="{baseline + 46:.1f}" '
-        f'font-size="12.5" text-anchor="middle" fill="{CHART_MUTED}">distance from '
-        f"the nearest timezone border</text>"
-    )
-    parts.append(
-        f'<text x="20" y="{(CHART_MARGIN_TOP + baseline) / 2:.0f}" font-size="12.5" '
-        f'text-anchor="middle" fill="{CHART_MUTED}" transform="rotate(-90 20 '
-        f'{(CHART_MARGIN_TOP + baseline) / 2:.0f})">border locations affected</text>'
-    )
-    parts.append("</svg>")
-    return "\n".join(parts) + "\n"
+            for index, (result, point) in enumerate(
+                zip(measurement.by_distance, points, strict=True)
+            ):
+                axis.plot(
+                    result.distance_m,
+                    point.percent,
+                    linestyle="none",
+                    marker="o",
+                    markersize=6.5,
+                    markerfacecolor="white" if point.is_upper_bound else series.colour,
+                    markeredgecolor=series.colour,
+                    markeredgewidth=1.8 if point.is_upper_bound else 0.0,
+                    zorder=3,
+                )
+                # Label the decade positions: a logarithmic axis does not let the
+                # intervening values be read accurately by eye, while labelling all
+                # markers would obscure the curve. In particular, 500 m stays
+                # unlabelled beside the final 1 km upper-bound annotation.
+                if not is_decade(result.distance_m):
+                    continue
+                horizontal_alignment = (
+                    "left"
+                    if index == 0
+                    else "right"
+                    if index == len(points) - 1
+                    else "center"
+                )
+                x_offset = (
+                    14
+                    if (
+                        series.colour == CHART_SERIES_LAND
+                        and result.distance_m == 100.0
+                        and index != len(points) - 1
+                    )
+                    else 0
+                )
+                # Keep the orange labels above their markers and the blue ones below,
+                # except at the axis floor where both must move up to stay in bounds.
+                y_offset = 8 if series.colour == CHART_SERIES_LAND else -14
+                if point.percent <= floor_percent * 1.05:
+                    y_offset = 11
+                axis.annotate(
+                    point.label,
+                    xy=(result.distance_m, point.percent),
+                    xytext=(x_offset, y_offset),
+                    textcoords="offset points",
+                    color=series.colour,
+                    fontsize=8.5,
+                    ha=horizontal_alignment,
+                    va="bottom" if y_offset > 0 else "top",
+                )
+
+        if any_upper_bound:
+            # Only explain a hollow marker when one is present on the chart.
+            legend_handles.append(
+                Line2D(
+                    [],
+                    [],
+                    linestyle="none",
+                    marker="o",
+                    markerfacecolor="white",
+                    markeredgecolor=CHART_MUTED,
+                    markeredgewidth=1.8,
+                    markersize=6.5,
+                    label="hollow: none found, so at most this",
+                )
+            )
+
+        figure.suptitle(
+            "Border locations affected by tzfpy simplification",
+            x=0.11,
+            y=0.965,
+            ha="left",
+            fontsize=13,
+            fontweight="bold",
+        )
+        figure.text(
+            0.11,
+            0.91,
+            f"boundary release {measurement.data_version} on both sides, "
+            f"{TZFPY_DISTRIBUTION} {measurement.tzfpy_version}, "
+            f"{measurement.by_distance[0].paired_all_borders.total} paired locations "
+            "per distance; both axes logarithmic",
+            color=CHART_MUTED,
+            fontsize=9,
+            ha="left",
+        )
+        figure.legend(
+            handles=legend_handles,
+            loc="upper right",
+            bbox_to_anchor=(0.965, 0.84),
+            frameon=False,
+            fontsize=8.5,
+            ncol=len(legend_handles),
+        )
+
+        output = io.StringIO()
+        # Suppress the current-time RDF field; with the fixed hash salt and real text
+        # nodes above, two renders of the same measurement are byte-identical.
+        figure.savefig(
+            output,
+            format="svg",
+            metadata={
+                "Date": None,
+                "Title": "Border locations affected by tzfpy simplification",
+            },
+        )
+        plt.close(figure)
+
+    return "\n".join(line.rstrip() for line in output.getvalue().splitlines()) + "\n"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
