@@ -1,0 +1,1 @@
+The weekly data update now stages the acceleration-paths, batch-break-even and reduced-zone-mapping files its own regeneration writes, and a test holds that staging list against the generated-file constants so a newly added report page fails there rather than after a full regeneration.
