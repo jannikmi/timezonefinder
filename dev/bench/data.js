@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789981799687,
+  "lastUpdate": 1789983124907,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12057,6 +12057,93 @@ window.BENCHMARK_DATA = {
             "range": "± 4866",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4cee4473b00496a15ef214f532a0335f7f45bd80",
+          "message": "prototypes: survey who depends on the package (#684)\n\nAdds a standard-library-only script that answers \"who uses timezonefinder,\nand how much of that is companies\" - a question that informs the same\ndecisions a compatibility promise rests on, and that had no repeatable\nanswer. It scrapes the dependents page GitHub offers no API for, resolves\nevery repository through GraphQL, and attributes owners to companies with a\nregex list kept in the script.\n\nIts first run establishes the limit every other finding sits under: GitHub's\nheadline count is 4,905 repositories, but the cursor chain ends after 68\npages - 2,001 unique repositories - with Next rendered disabled, identically\non three re-fetches of that last page. Cursors count down, so what is\nreachable is the most recently indexed dependents and a missing name is not\nevidence of absence. The remaining findings are recorded in the script's\nFINDINGS block.\n\nNo changelog fragment: prototypes/ is contributor memory, which the\nchangelog policy exempts.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:31:18Z",
+          "tree_id": "0dfe8766fcf34db57c25808bcadb9f01460b891d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4cee4473b00496a15ef214f532a0335f7f45bd80"
+        },
+        "date": 1789983123369,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 573043.5719402323,
+            "range": "± 24949",
+            "unit": "lookups/sec",
+            "extra": "min of 189 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 751312.9945897626,
+            "range": "± 80393",
+            "unit": "lookups/sec",
+            "extra": "min of 261 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 191303.17405639024,
+            "range": "± 10892",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 902888.5571892554,
+            "range": "± 168220",
+            "unit": "lookups/sec",
+            "extra": "min of 179 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1469629.5181533217,
+            "range": "± 20379",
+            "unit": "lookups/sec",
+            "extra": "min of 502 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 236916.0280516749,
+            "range": "± 5736",
+            "unit": "lookups/sec",
+            "extra": "min of 82 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 890270.9058760263,
+            "range": "± 59016",
+            "unit": "lookups/sec",
+            "extra": "min of 284 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1438105.6581975122,
+            "range": "± 23366",
+            "unit": "lookups/sec",
+            "extra": "min of 486 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 234669.06967791135,
+            "range": "± 6866",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
           }
         ]
       }
