@@ -32,7 +32,7 @@ Geodesic mode is not a drop-in conservative predicate for this package: it also 
 
 ## Packaged-data evidence
 
-The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose one-time dataset validation over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. PERF-7 remains blocked; a green sampled audit cannot establish its full-coverage predicate.
+The dated reports linked below identify the actual bytes and sample streams. They measure diagnostic cost, not converter or query performance. No candidate sets or packaged binaries were changed. The maintainer chose one-time dataset validation over a speculative construction repair: park the repair until a counterexample or a proposed optimization requires certified coverage. This leaves the documented proof gaps in place and can miss an unsampled defect. A green sampled audit cannot establish a full-coverage predicate, one of the reasons PERF-7 was withdrawn.
 
 On 2026-09-10, data 2026c, H3 4.5.0, Python 3.14.2 with Numba on macOS arm64:
 

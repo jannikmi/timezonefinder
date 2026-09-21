@@ -13,8 +13,8 @@ FT-3 waits on an h3 release
 FT-5 waits on a decision
 GH-364 independent
 
-TOOL-7 ─→ IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3/PERF-7, moots GH-657, frees FT-3
-PERF-7 must keep the candidates `timezones_at` reads (see its entry)
+TOOL-7 ─→ IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3, moots GH-657, frees FT-3
+PREC-1 waits on a decision; it changes only the zone order the ordering optimizer keeps in overlap cells
 
 independent: GH-524
 
