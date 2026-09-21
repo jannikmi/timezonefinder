@@ -6,9 +6,9 @@ Point-in-Polygon Acceleration Paths
 
 **Numba JIT: 1.02x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (unresolved).
 
-**pure Python: 46.8x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
+**pure Python: 43.2x the C extension** on ``TimezoneFinder.timezone_at()`` over uniformly random points (slower).
 
-*Measured on Linux x86_64, AMD EPYC 7763 64-Core Processor @ 3.2439 GHz, Python 3.13.15, across 2 environments on one machine.*
+*Measured on Linux x86_64, AMD EPYC 9V74 80-Core Processor @ 2.5961 GHz, Python 3.13.15, across 2 environments on one machine.*
 
 The three point-in-polygon implementations, measured against each other rather than across commits. ``timezonefinder/utils.py`` binds one of them at import time, so which one a process runs is decided by its environment: Numba when it is importable, the C extension when it is not but the extension loaded, and the plain Python function when neither is available. See :doc:`benchmarking_methodology`.
 
@@ -52,21 +52,21 @@ Numba JIT against the C extension
      - Rounds won
      - Verdict
    * - small polygons
-     - 1.84ms
-     - 2.77ms
-     - 1.51x
+     - 1.71ms
+     - 2.64ms
+     - 1.54x
      - 0 of 61
      - slower
    * - medium polygons
-     - 1.96ms
-     - 2.92ms
-     - 1.49x
+     - 1.84ms
+     - 2.85ms
+     - 1.55x
      - 0 of 61
      - slower
    * - large polygons
-     - 3.06ms
-     - 4.83ms
-     - 1.58x
+     - 3.08ms
+     - 4.73ms
+     - 1.54x
      - 0 of 61
      - slower
 
@@ -89,21 +89,21 @@ pure Python against the C extension
      - Rounds won
      - Verdict
    * - small polygons
-     - 1.79ms
-     - 6.37ms
-     - 3.57x
+     - 1.68ms
+     - 7.00ms
+     - 4.17x
      - 0 of 15
      - slower
    * - medium polygons
-     - 1.98ms
-     - 150ms
-     - 75.8x
+     - 1.90ms
+     - 106ms
+     - 55.9x
      - 0 of 15
      - slower
    * - large polygons
-     - 3.13ms
-     - 495ms
-     - 158x
+     - 3.11ms
+     - 472ms
+     - 152x
      - 0 of 15
      - slower
 
@@ -134,21 +134,21 @@ Numba JIT against the C extension
      - Rounds won
      - Verdict
    * - random points
-     - 4.35ms
      - 4.42ms
+     - 4.53ms
      - 1.02x
      - 2 of 61
      - unresolved
    * - unique-shortcut points
-     - 3.41ms
-     - 3.42ms
+     - 3.45ms
+     - 3.45ms
      - 1.00x
-     - 29 of 61
+     - 31 of 61
      - no difference
    * - ambiguous-shortcut points
-     - 12.9ms
-     - 14.0ms
-     - 1.09x
+     - 12.6ms
+     - 13.9ms
+     - 1.10x
      - 0 of 61
      - slower
 
@@ -171,21 +171,21 @@ pure Python against the C extension
      - Rounds won
      - Verdict
    * - random points
-     - 4.41ms
-     - 206ms
-     - 46.8x
+     - 4.50ms
+     - 195ms
+     - 43.2x
      - 0 of 15
      - slower
    * - unique-shortcut points
-     - 3.37ms
-     - 3.36ms
+     - 3.48ms
+     - 3.49ms
      - 1.00x
-     - 6 of 15
+     - 8 of 15
      - no difference
    * - ambiguous-shortcut points
-     - 12.9ms
-     - 2.46s
-     - 190x
+     - 12.6ms
+     - 2.29s
+     - 182x
      - 0 of 15
      - slower
 
@@ -215,19 +215,19 @@ The kernel a lookup reaches
      - Spread
      - Within 3 %
    * - small
-     - 1.84ms
-     - 1.79ms
-     - 2.9 %
+     - 1.71ms
+     - 1.68ms
+     - 2.0 %
      - yes
    * - medium
-     - 1.96ms
-     - 1.98ms
-     - 1.0 %
-     - yes
+     - 1.84ms
+     - 1.90ms
+     - 3.2 %
+     - **no**
    * - large
-     - 3.06ms
-     - 3.13ms
-     - 2.1 %
+     - 3.08ms
+     - 3.11ms
+     - 1.0 %
      - yes
 
 
@@ -248,19 +248,19 @@ What a caller actually pays
      - Spread
      - Within 3 %
    * - random
-     - 4.35ms
-     - 4.41ms
-     - 1.4 %
+     - 4.42ms
+     - 4.50ms
+     - 1.8 %
      - yes
    * - unique shortcut
-     - 3.41ms
-     - 3.37ms
-     - 1.3 %
+     - 3.45ms
+     - 3.48ms
+     - 0.8 %
      - yes
    * - ambiguous shortcut
-     - 12.9ms
-     - 12.9ms
-     - 0.2 %
+     - 12.6ms
+     - 12.6ms
+     - 0.1 %
      - yes
 
 
