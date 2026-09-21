@@ -13,6 +13,9 @@ FT-3 waits on an h3 release
 FT-5 waits on a decision
 GH-364 independent
 
+TOOL-7 ─→ IDX-1 (measurement) ─→ if adopted: re-scopes GEOM-3/PERF-7, moots GH-657, frees FT-3
+API-1 waits on a decision; must be priced against PERF-7, whichever lands second
+
 independent: GH-524
 
 TOOL-4 independent; TOOL-6 is cheaper after it

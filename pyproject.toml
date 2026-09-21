@@ -123,12 +123,27 @@ pytz = [
 compare = [
     "tzfpy>=1,<2",
 ]
+# Drawing the committed report charts. Deliberately its own group, and
+# deliberately not part of `test` or of $(BENCHMARK_ENV) in the Makefile: this is a
+# *rendering* dependency, reached only from scripts/batch_break_even_chart.py, and a
+# measured environment must not carry it. Installed-but-unimported packages cost no
+# resident memory, but `make memory` records `memory::import::rss` in subprocesses of
+# the measurement environment, so the separation is worth holding structurally rather
+# than by care - the same reasoning that keeps `compare` and `numba` out of `test`.
+#
+# The matplotlib ceiling is load-bearing rather than caution: docs/*.svg is a committed
+# generated file, and a matplotlib minor upgrade rewrites its whole markup even when no
+# number moved. Raise it deliberately, and regenerate the chart in the same change.
+benchmark = [
+    "seaborn>=0.13.2",
+    "matplotlib>=3.9.4,<3.11",
+    "pandas>=2.3.2",
+]
 # prototyping, performance analytics
 proto = [
+    # the plotting stack, so a prototype has it without redeclaring the versions
+    { include-group = "benchmark" },
     "line-profiler>=5.0.0",
-    "pandas>=2.3.2",
-    "matplotlib>=3.9.4",
-    "seaborn>=0.13.2",
     "plotly>=6.3.0",
     "tabulate>=0.9.0",
 ]

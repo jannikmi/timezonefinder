@@ -34,12 +34,41 @@ jobs:
       startsWith(github.event.workflow_run.head_branch, 'data-update-')
     runs-on: ubuntu-latest
     steps:
+      # The same preflight the weekly update job runs, and for a sharper reason: this
+      # workflow is triggered by `workflow_run`, so a failure here appears on no pull
+      # request and in no issue - only in the Actions tab, where nothing draws a
+      # maintainer. An absent credential would fail at the token step below, before
+      # `resolve-update-pr` has found the pull request every notice in this job is
+      # keyed to, so none of them can report it. Naming the cause in the log is all
+      # that is left, and it is worth more than the third-party input error it
+      # replaces, which names neither secret nor this repository.
+      - name: Check that the data-updater App is configured
+        env:
+          # The expression, never the values: this yields 'true' or 'false', so no
+          # credential reaches a shell where a trace or an error message could echo it.
+          APP_CONFIGURED: >-
+            ${{ secrets.DATA_UPDATER_GH_APP_ID != ''
+            && secrets.DATA_UPDATER_GH_PRIVATE_KEY != '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$APP_CONFIGURED" != "true" ]]; then
+            echo "::error::the DATA_UPDATER_GH_APP_ID and DATA_UPDATER_GH_PRIVATE_KEY" \
+              "repository secrets are not both set, so no data update can be merged" \
+              "or tagged. Install a GitHub App on this repository with write access" \
+              "to contents and pull requests, and store its App ID and private key" \
+              "under those two names. The default GITHUB_TOKEN is deliberately not a" \
+              "fallback: a tag it pushes triggers no workflow, so publish_data.yml" \
+              "would never run and the merged update would never reach PyPI."
+            exit 1
+          fi
+          echo "the data-updater App is configured"
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.DATA_UPDATER_APP_ID }}
-          private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
+          app-id: ${{ secrets.DATA_UPDATER_GH_APP_ID }}
+          private-key: ${{ secrets.DATA_UPDATER_GH_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
       - name: Check out current master

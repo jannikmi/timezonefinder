@@ -1,6 +1,6 @@
-"""Invariants of the automated data-release workflow.
+"""Invariants of the automated data-release workflows.
 
-The workflow cannot be executed here, so these read its YAML. That only earns
+The workflows cannot be executed here, so these read their YAML. That only earns
 its place for invariants the structure does not already enforce and whose
 violation is silent - a fork PR reaching the merge step, a notice that hides
 another, a local action used without a checkout. Asserting that a step still
@@ -8,12 +8,17 @@ contains a particular shell string is not one of those: it fails on any
 rewording and passes on any bug that keeps the wording.
 """
 
+from pathlib import Path
+
 import pytest
 import yaml
 
 from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 
 RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
+UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
+APP_TOKEN_ACTION = "actions/create-github-app-token"
+APP_SECRET_NAMES = ("DATA_UPDATER_GH_APP_ID", "DATA_UPDATER_GH_PRIVATE_KEY")
 RESOLVE_ACTION = ACTION_DIR / "resolve-update-pr" / "action.yml"
 RESOLVE_ACTION_REF = "./.github/actions/resolve-update-pr"
 NOTIFY_ACTION = ACTION_DIR / "notify-update-pr" / "action.yml"
@@ -237,3 +242,100 @@ def test_a_job_using_a_local_action_checks_out_the_repo_first() -> None:
         assert checkout < local_action, job_name
         assert steps[checkout]["with"]["ref"] == "master", job_name
         assert steps[checkout]["with"]["persist-credentials"] is False, job_name
+
+
+def _steps_of(workflow: Path) -> dict[str, list[dict]]:
+    jobs = yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"]
+    return {name: job["steps"] for name, job in jobs.items()}
+
+
+def _app_secret_env(step: dict) -> list[str]:
+    """The step's environment values that read an App credential."""
+    return [
+        str(value)
+        for value in step.get("env", {}).values()
+        if any(name in str(value) for name in APP_SECRET_NAMES)
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "workflow", [RELEASE_WORKFLOW, UPDATE_WORKFLOW], ids=lambda path: path.name
+)
+def test_an_absent_app_credential_is_reported_before_the_token_is_minted(
+    workflow: Path,
+) -> None:
+    """Both halves of the pipeline stop on a credential nobody configured.
+
+    ``create-github-app-token`` reports an empty input as its own error, naming
+    neither secret nor the repository that is missing them, and it does so
+    before anything else in the job has run. In the weekly job that left the
+    fallback issue asking for the data to be compiled by hand; in the release
+    job it would leave a ``workflow_run`` failure, which appears on no pull
+    request and in no issue at all. A name these workflows get wrong is
+    indistinguishable from a credential nobody created, and that is the case
+    that cost the ``2026d`` update: the secrets were there under other names.
+    """
+    for name, steps in _steps_of(workflow).items():
+        token_step = next(
+            (
+                index
+                for index, step in enumerate(steps)
+                if str(step.get("uses", "")).startswith(APP_TOKEN_ACTION)
+            ),
+            None,
+        )
+        if token_step is None:
+            continue
+        preflight = next(
+            (index for index, step in enumerate(steps) if _app_secret_env(step)),
+            None,
+        )
+        assert preflight is not None, f"{name} mints an App token unchecked"
+        assert preflight < token_step, f"{name} checks the credentials too late"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "workflow", [RELEASE_WORKFLOW, UPDATE_WORKFLOW], ids=lambda path: path.name
+)
+def test_no_step_takes_an_app_credential_as_its_value(workflow: Path) -> None:
+    """The checks read whether the secrets are set, never what they hold.
+
+    A private key placed in the environment to be tested for emptiness is a
+    private key that ``set -x``, a crash dump or an error message can echo. The
+    expression form yields 'true' or 'false' and carries nothing. Only the
+    ``with:`` of the token action itself may receive the values.
+    """
+    for name, steps in _steps_of(workflow).items():
+        for step in steps:
+            for value in _app_secret_env(step):
+                assert "!= ''" in value, (
+                    f"{name}: {step.get('name')!r} puts an App credential in its "
+                    f"environment rather than a comparison: {value!r}"
+                )
+
+
+@pytest.mark.unit
+def test_the_fallback_issue_distinguishes_its_two_causes() -> None:
+    """The issue is the only place a scheduled failure is ever seen.
+
+    "The pipeline broke, compile the data by hand" and "this repository has no
+    credentials to open a pull request with" ask for entirely different work,
+    and the second one is answered by two secrets and a re-run. An issue that
+    cannot tell them apart spends an afternoon on the converter for a missing
+    credential - which is what the ``2026d`` issue asked for.
+    """
+    notifying = [
+        step
+        for steps in _steps_of(UPDATE_WORKFLOW).values()
+        for step in steps
+        if "gh issue create" in str(step.get("run", ""))
+    ]
+    assert notifying
+
+    for step in notifying:
+        assert _app_secret_env(step), (
+            f"{step.get('name')!r} opens the fallback issue without knowing "
+            "whether the App is configured, so it cannot name the cause"
+        )

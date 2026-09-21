@@ -350,6 +350,44 @@ jitter - an effect below it is not demonstrable by any number of rounds. Like ev
 measurement here it is reporting only: nothing in it fails a build.
 
 
+Sweeping one parameter: the batch break-even
+---------------------------------------------
+
+:doc:`benchmark_results_batch_break_even` asks a different shape of question again - not "which of
+these two is faster" but "at what batch size does this one overtake that one, and where does it stop
+improving". It is answered as a *ladder* of the paired comparison above, one per batch size, and
+three things follow from that.
+
+**Every rung times the same amount of work.** A fixed number of calls per round would make a
+one-point round microscopic and a five-thousand-point round substantial - different measurement
+regimes plotted as one curve. Instead the number of calls is chosen per rung so that each round
+answers about the same number of *points*, and the per-point figures divide by what the round
+actually answered rather than by the nominal target.
+
+**No ratio crosses a rung.** Each rung is its own experiment, so dividing one rung's batched time by
+another's scalar time would be the cross-experiment ratio the section above refuses, one step
+removed. The speed-up curve is a curve of within-rung ratios, and the scalar baseline - which
+answers the same points at every rung and should therefore be flat - is published beside it as a
+control, never as a divisor.
+
+**The answer is an interval, and saying so is the point.** A ladder of discrete sizes plus a
+threshold verdict cannot locate a crossing; it can only say which rung still loses and which rung
+first wins and keeps winning. Interpolating a single number between them would invent precision the
+instrument does not have. The rungs *inside* that interval read ``no difference`` or ``unresolved``
+by construction - that is what it means for the crossing to be in there, not a defect in the run -
+and the published chart draws their markers hollow for exactly that reason.
+
+Two further things shape the design. Points are drawn without replacement inside a batch, because a
+repeated coordinate would be answered from the batch's own cell lookup and would flatter precisely
+the amortisation being measured; and the ladder is capped at half the point pool, because at a batch
+size equal to the pool there is only one possible batch and drawing it every round is not sampling.
+
+The measurement runs in one environment and stamps the acceleration path it bound, because the
+question is about batch size rather than about backends; ``make batch-break-even`` asserts the
+tracked path on top of that, so the committed page cannot end up beside its siblings describing a
+different configuration.
+
+
 What a stage's share does and does not bound
 --------------------------------------------
 
