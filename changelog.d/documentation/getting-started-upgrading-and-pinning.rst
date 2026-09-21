@@ -1,0 +1,1 @@
+Getting Started has a new "Upgrading and pinning" section: pin both ``timezonefinder`` and ``timezonefinder-data``, record both versions with stored results, and recompute stored zones when either changes.

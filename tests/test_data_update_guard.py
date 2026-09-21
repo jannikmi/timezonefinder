@@ -14,6 +14,7 @@ import pytest
 import yaml
 
 from scripts.configs import PROJECT_ROOT
+from timezonefinder.configs import DATA_FORMAT_VERSION
 from scripts.data_update_guard import (
     ANSWERS_PATH,
     CHANGED_ANSWER_GATE,
@@ -175,11 +176,17 @@ def test_a_change_at_the_gate_still_passes(monkeypatch, tmp_path) -> None:
 
 
 # The releases the payload bands were calibrated over, each converted from its upstream
-# GeoJSON with the code in this tree. The last row is the committed record - asserted
-# below rather than trusted - which is what makes the earlier ones comparable with it
-# and with whatever the band is set to. A data update extends this table: the packaged
-# release is what the last row has to be, so the update that packages a new one owes it
-# a row here, taken from tests/fixtures/data_update/payload.json.
+# GeoJSON with the code in this tree. **This history is deliberately allowed to go
+# stale.** It is evidence for one question - are the bands so tight that ordinary
+# refinement trips them - and four real transitions answer that as well as forty would.
+# Requiring the newest release to appear here bought nothing for that question and cost
+# a hand-edit on every data update, discovered after a full converter run: 2026d failed
+# its own release CI on exactly that.
+#
+# What a stale table cannot survive is a *format* change, which moves every byte count
+# at once and leaves the band test comparing numbers from two different layouts. That
+# is what CALIBRATION_FORMAT_VERSION below guards, and it is the only event that
+# obliges anyone to touch this table again.
 CALIBRATION_PAYLOADS = {
     "2025c": {"boundary_payload_bytes": 31_034_584, "hole_payload_bytes": 97_452},
     "2026a": {"boundary_payload_bytes": 31_116_264, "hole_payload_bytes": 94_936},
@@ -189,24 +196,28 @@ CALIBRATION_PAYLOADS = {
 }
 
 
+# The format generation every byte count above was measured in. Restated rather than
+# derived, because the point is to notice when the two stop agreeing.
+CALIBRATION_FORMAT_VERSION = 3
+
+
 @pytest.mark.unit
-def test_the_calibration_ends_at_the_data_this_checkout_packages() -> None:
-    """Otherwise the table is numbers from somewhere, and the band means nothing.
+def test_the_calibration_describes_the_format_this_code_reads() -> None:
+    """A format change invalidates the whole table at once, and silently.
 
-    The last row has to be the record the packaged data produces, because that is the
-    only one this checkout can check - and a format change that moved the bytes would
-    invalidate every earlier row with it.
+    The numbers are compiled payload sizes, so a new layout moves all of them
+    together. The band test below would keep passing on them - comparing releases
+    measured in a format nothing in the tree produces any more - and the bands would
+    then be calibrated against nothing. A format change is already an ordered
+    two-distribution release, so re-deriving the table is work its author is in a
+    position to do; what they cannot do is notice the obligation unaided.
     """
-    committed = json.loads(PAYLOAD_PATH.read_text(encoding="utf-8"))
-    last_release, last_payload = list(CALIBRATION_PAYLOADS.items())[-1]
-
-    # Named rather than positional, so a data update that forgot the row is told what
-    # to add instead of being handed two payload dicts to diff by eye.
-    assert last_release == committed["data_version"], (
-        f"the calibration table ends at {last_release}, but this checkout packages "
-        f"{committed['data_version']}; append its row from {PAYLOAD_PATH}"
+    assert DATA_FORMAT_VERSION == CALIBRATION_FORMAT_VERSION, (
+        f"the payload sizes in CALIBRATION_PAYLOADS were measured in data format "
+        f"{CALIBRATION_FORMAT_VERSION}, but this code reads format "
+        f"{DATA_FORMAT_VERSION}; re-derive the table from releases compiled in the "
+        f"new format, then set CALIBRATION_FORMAT_VERSION to match"
     )
-    assert last_payload == {key: committed[key] for key in last_payload}
 
 
 @pytest.mark.unit

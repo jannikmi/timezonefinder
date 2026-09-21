@@ -250,7 +250,7 @@ jobs:
           body=$(cat <<EOF
           Automated update to the timezone-boundary-builder release [\`$LATEST\`](https://github.com/evansiroky/timezone-boundary-builder/releases/tag/$LATEST) (previously packaged: \`$CURRENT\`).
 
-          The data was regenerated with \`update_data.sh\` (full dataset with oceans). Merging this publishes \`timezonefinder-data $new_version\`; no \`timezonefinder\` release is involved. The CI/CD pipeline of this PR validates the new data against all supported Python versions.
+          The data was regenerated with \`update_data.sh\` (full dataset with oceans), and this pull request's CI/CD pipeline validates it against every supported Python version. Merging it publishes \`timezonefinder-data $new_version\`; no \`timezonefinder\` release is involved.
 
           Created by workflow run [#${GITHUB_RUN_ID}]($RUN_URL).
           EOF
@@ -268,6 +268,17 @@ jobs:
 
           > [!WARNING]
           > **The data-update guard refused this dataset, so this is a draft and will not be released automatically.** It gates on two signals, and which one tripped is visible in this pull request's own diff rather than asserted here - naming the wrong one would argue you out of a real refusal. \`tests/fixtures/data_update/answers.txt\` is one line per sampled point and the timezone it now resolves to, and a coordinate pastes straight back into \`timezone_at\`: more than 5 % of those 10,000 points moving is a refusal, where an ordinary refinement release moves none and the largest legitimate change measured was 0.380 %. \`tests/fixtures/data_update/payload.json\` is the compiled boundary and hole payload sizes: either moving outside its band is the other refusal, where four consecutive releases moved at most 1.38 % and 2.58 %. Mark this ready for review only if the change is real."
+          else
+            # The opposite of the warning above, so it belongs in the other arm of
+            # the same branch rather than in the shared body: a refused dataset is
+            # exactly the one nobody merges. What this replaces said neither, and a
+            # reviewer had no way to tell an update that merges itself from one
+            # waiting on them.
+            body="$body
+
+          **Nobody has to merge this.** Once \`build.yml\` passes, \`release_data_update.yml\` squash-merges it and pushes the \`data-v$new_version\` tag, which \`publish_data.yml\` turns into the PyPI release. That workflow also brings this branch onto \`master\` when branch protection leaves it behind, so it needs no attention while it waits.
+
+          To withhold the release, convert this pull request to a draft or close it: the merge step skips a draft, and GitHub refuses to merge one regardless."
           fi
 
           gh pr create \
