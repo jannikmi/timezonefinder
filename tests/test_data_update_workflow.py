@@ -72,11 +72,18 @@ def test_nothing_acts_on_a_pr_that_was_not_resolved() -> None:
     ``workflow_run`` re-fires whenever build.yml is re-run, including on an
     update PR that was merged long ago. Every step that acts is conditioned on a
     PR having been found.
+
+    Updating the head branch counts as acting: it pushes a merge commit into
+    that branch, so on a PR the resolver never vouched for it would be a write
+    to a fork this repository does not own.
     """
     acting = [
         step
         for step in _all_steps()
-        if "gh pr merge" in str(step.get("run", ""))
+        if any(
+            command in str(step.get("run", ""))
+            for command in ("gh pr merge", "gh pr update-branch")
+        )
         or step.get("uses") == NOTIFY_ACTION_REF
     ]
     assert acting

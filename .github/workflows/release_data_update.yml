@@ -132,10 +132,62 @@ jobs:
             this ready for review and merge it; the `data-v*` tag is then pushed by hand
             from an up-to-date master.
 
-      - name: Merge the update PR
+      # Branch protection requires an up-to-date head, so master moving while an
+      # update is in flight leaves a finished release needing a person to click
+      # "Update branch" - which is the one manual step left in an otherwise unattended
+      # pipeline, and it fell to the maintainer twice on the 2026d release alone.
+      #
+      # `mergeStateStatus` is the signal rather than a commit count, because it encodes
+      # the protection setting: a behind branch reads BEHIND only where up-to-date is
+      # actually required, and CLEAN otherwise. So this updates when the merge would be
+      # refused and never merely because master moved. GitHub computes it
+      # asynchronously, hence the poll on UNKNOWN - the same shape as the merge step's
+      # wait for its merge commit below.
+      #
+      # The update is `gh pr update-branch`: a server-side merge, no checkout and no
+      # force push, per the branch-update rules. It creates a new head, so CI re-runs
+      # and *that* build's workflow_run fires this workflow again - which is the run
+      # that merges. This step therefore ends the run rather than falling through to a
+      # merge whose `--match-head-commit` names the commit the update just superseded.
+      - name: Bring the update branch onto current master
         if: >
           steps.resolve-merge.outputs.found == 'true' &&
           steps.withheld.outputs.draft != 'true'
+        id: update-branch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.resolve-merge.outputs.pr-number }}
+        run: |
+          set -euo pipefail
+
+          state=""
+          for attempt in $(seq 1 10); do
+            state=$(gh pr view "$PR_NUMBER" --json mergeStateStatus \
+              --jq .mergeStateStatus)
+            if [[ "$state" != "UNKNOWN" ]]; then
+              break
+            fi
+            echo "mergeability not computed yet (attempt $attempt), retrying"
+            sleep 3
+          done
+          echo "merge state of PR #$PR_NUMBER: $state"
+
+          if [[ "$state" != "BEHIND" ]]; then
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          gh pr update-branch "$PR_NUMBER"
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+          echo "merged master into the update branch; the new head re-runs CI and the" \
+            "workflow_run for that build is what merges and tags this release"
+
+      - name: Merge the update PR
+        if: >
+          steps.resolve-merge.outputs.found == 'true' &&
+          steps.withheld.outputs.draft != 'true' &&
+          steps.update-branch.outputs.updated != 'true'
         id: merge
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
