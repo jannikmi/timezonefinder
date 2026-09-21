@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789986899550,
+  "lastUpdate": 1789986901797,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -24242,6 +24242,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 2.9981 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0da8f60076c9547d7c8333b196a3bb51c16681a2",
+          "message": "Three hand steps the 2026d data release paid for (#695)\n\n* Let the payload calibration history go stale\n\nThe table is evidence for one question - are the payload bands so tight\nthat ordinary refinement trips them - and four real transitions answer it\nas well as forty would. Requiring the newest release to appear in it\nbought nothing for that question and cost a hand-written row on every\ndata update, collected after a full converter run: the 2026d release\nfailed its own CI on exactly that, fourteen minutes in.\n\nSo the history freezes where it is. What a frozen table cannot survive is\na format change, which moves every byte count at once and leaves the band\ntest comparing two layouts while still passing - bands calibrated against\nnothing. `test_the_calibration_ends_at_the_data_this_checkout_packages`\nwas aimed at that, but fired on every data release to catch it.\nCALIBRATION_FORMAT_VERSION states the generation the numbers were\nmeasured in and fails only when DATA_FORMAT_VERSION leaves it, which is\nalready an ordered two-distribution release whose author can re-derive\nthe table - they just cannot notice the obligation unaided.\n\nDecided by the maintainer, who proposed letting the history go stale.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\n* Bring the update branch onto master without a person clicking\n\nBranch protection requires an up-to-date head, so master moving while a\ndata update is in flight leaves a finished release waiting on someone to\npress \"Update branch\". That was the last manual step in an otherwise\nunattended pipeline, and it fell to the maintainer twice on the 2026d\nrelease alone.\n\n`mergeStateStatus` is the signal rather than a commit count, because it\nencodes the protection setting: a behind branch reads BEHIND only where\nup-to-date is actually required, and CLEAN otherwise - so this updates\nwhen the merge would be refused and never merely because master moved.\nGitHub computes it asynchronously, hence the poll on UNKNOWN, the same\nshape as the merge step's existing wait for its merge commit.\n\nThe update is `gh pr update-branch`: a server-side merge, no checkout and\nno force push, as the branch-update rules specify. It creates a new head,\nso CI re-runs and that build's workflow_run fires this workflow again -\nwhich is the run that merges. The step therefore ends the run, and the\nmerge is conditioned on it, rather than falling through to a\n`--match-head-commit` naming the commit the update just superseded.\n\nUpdating a head branch is acting on the pull request, so it joins the\ninvariant requiring the resolver to have vouched for it first: on a fork\nPR reaching this job by branch name, it would be a write to a branch this\nrepository does not own.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\n* Say in the update PR that it merges and publishes itself\n\nThe body described what merging would do and left who does it unsaid, so\na reviewer had no way to tell an update that merges itself from one\nwaiting on them - and the 2026d release did wait on a person more than\nonce for want of that sentence.\n\nIt now states the chain: build.yml passing hands the pull request to\nrelease_data_update.yml, which squash-merges it and pushes the data-v*\ntag that publish_data.yml turns into the PyPI release. It also names the\nway out, which nothing did: converting to draft or closing withholds the\nrelease, because the merge step skips a draft.\n\nThe note lives in the other arm of the guard-refusal branch rather than\nin the shared body. A refused dataset is exactly the one nobody merges,\nso a body carrying both would tell a reviewer it merges itself directly\nabove a warning that it will not.\n\nRequested by the maintainer.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\n---------\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T10:34:11Z",
+          "tree_id": "74f5ec16dcdeccb4baf0db3b60697c9489a4996f",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0da8f60076c9547d7c8333b196a3bb51c16681a2"
+        },
+        "date": 1789986901175,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0151758193969727,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.275846481323242,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.276611328125,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.86226844787598,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.86307716369629,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
           }
         ]
       }
