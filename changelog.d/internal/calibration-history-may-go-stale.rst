@@ -1,0 +1,1 @@
+The payload calibration table the data-update guard's bands are checked against is no longer required to end at the packaged release, so a data update owes it no hand-written row; a format-generation assertion replaces that requirement and fails only when a layout change makes the recorded byte counts incomparable.
