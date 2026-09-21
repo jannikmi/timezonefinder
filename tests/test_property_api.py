@@ -1,7 +1,8 @@
 """Property-based tests for the public timezone-lookup API.
 
 Uses ``hypothesis`` to exercise ``timezone_at``, ``timezone_at_land``,
-``unique_timezone_at``, ``certain_timezone_at`` and ``get_geometry``
+``unique_timezone_at``, ``certain_timezone_at``, ``timezones_at`` and
+``get_geometry``
 with randomly generated coordinates, complementing the example-based
 tests in ``tests/main_test.py``.
 
@@ -21,6 +22,7 @@ from timezonefinder import (
     get_geometry,
     timezone_at,
     timezone_at_land,
+    timezones_at,
     unique_timezone_at,
 )
 
@@ -149,11 +151,18 @@ def test_lookups_are_deterministic(lng, lat):
     assert certain_timezone_at(lng=lng, lat=lat) == certain_timezone_at(
         lng=lng, lat=lat
     )
+    assert timezones_at(lng=lng, lat=lat) == timezones_at(lng=lng, lat=lat)
 
 
 @pytest.mark.parametrize(
     "func",
-    [timezone_at, timezone_at_land, unique_timezone_at, certain_timezone_at],
+    [
+        timezone_at,
+        timezone_at_land,
+        unique_timezone_at,
+        certain_timezone_at,
+        timezones_at,
+    ],
 )
 @_LOOKUP_SETTINGS
 @given(coord=_INVALID_LNG)
@@ -165,7 +174,13 @@ def test_lookup_functions_reject_invalid_longitude(func, coord):
 
 @pytest.mark.parametrize(
     "func",
-    [timezone_at, timezone_at_land, unique_timezone_at, certain_timezone_at],
+    [
+        timezone_at,
+        timezone_at_land,
+        unique_timezone_at,
+        certain_timezone_at,
+        timezones_at,
+    ],
 )
 @_LOOKUP_SETTINGS
 @given(coord=_INVALID_LAT)

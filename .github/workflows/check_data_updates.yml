@@ -195,6 +195,9 @@ jobs:
       # Naming what an update writes also makes the reverse failure visible: the guard
       # below refuses to commit anything the script produced that this list forgot,
       # rather than dropping it and opening a pull request that is quietly incomplete.
+      # It costs a whole regeneration to find out, though, so
+      # tests/test_data_update_workflow.py holds this list against the generated-file
+      # constants in scripts/configs.py, where a new report page appears first.
       - name: Commit and push the update branch
         run: |
           set -euo pipefail
@@ -209,11 +212,15 @@ jobs:
             packages/timezonefinder-data/README.md \
             tests/fixtures/benchmarks \
             tests/fixtures/data_update \
+            tests/fixtures/reduced_zones \
+            docs/benchmark_results_acceleration_paths.rst \
+            docs/benchmark_results_batch_break_even.rst \
             docs/benchmark_results_comparison.rst \
             docs/benchmark_results_initialization.rst \
             docs/benchmark_results_memory.rst \
             docs/benchmark_results_polygon.rst \
             docs/benchmark_results_timezonefinding.rst \
+            docs/batch_break_even_sweep.svg \
             docs/data_report.rst \
             uv.lock
           # Anything modified or untracked that the list above did not stage. A line

@@ -224,6 +224,7 @@ class TestTimezonefinderClass(TestBaseTimezoneFinderClass):
     keyword_only_methods = (
         *TestBaseTimezoneFinderClass.keyword_only_methods,
         "certain_timezone_at",
+        "timezones_at",
     )
 
     def test_nr_of_polygons(self):
