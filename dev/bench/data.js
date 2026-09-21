@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789983915107,
+  "lastUpdate": 1789983917386,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -23783,6 +23783,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0.001",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "305427777+timezonefinder-data-updater[bot]@users.noreply.github.com",
+            "name": "timezonefinder-data-updater[bot]",
+            "username": "timezonefinder-data-updater[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea4a5f9e88e654b0bc6bfab875828ea23296a787",
+          "message": "Data 2026d (#694)\n\n* Data 2026d\n\n* Record 2026d in the payload calibration table\n\n`test_the_calibration_ends_at_the_data_this_checkout_packages` requires\nthe table's last row to be the record the packaged data produces, and\nthis checkout now packages 2026d while the table ended at 2026c. The\nupdate therefore fails its own CI on every release, since nothing in\nupdate_data.sh extends the table.\n\nThe row is the committed payload.json: 31,979,504 boundary bytes and\n95,216 hole bytes. Both transitions clear the bands with the headroom\nthe neighbouring test requires - +0.77 % against 5 %, and +0.05 %\nagainst 10 %, so 3x each is 2.30 % and 0.15 %.\n\nThe assertion no longer names a release. It reads the last row and\ncompares it against `data_version`, so the next update is told \"the\ncalibration table ends at 2026d, but this checkout packages 2026e;\nappend its row\" rather than being handed two payload dicts to diff, and\nthe test itself stops needing an edit that names the release twice.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\n---------\n\nCo-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>\nCo-authored-by: Jannik Kissinger <github@michelfe.it>\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:44:19Z",
+          "tree_id": "8f4e92b2c59a37c545e91e85602be6cc40c118a2",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ea4a5f9e88e654b0bc6bfab875828ea23296a787"
+        },
+        "date": 1789983916761,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0152225494384766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.274600028991699,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2754087448120117,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.86268901824951,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.863454818725586,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4988 GHz"
           }
         ]
       }
