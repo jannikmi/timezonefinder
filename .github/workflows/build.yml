@@ -141,6 +141,28 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v7
 
+      - name: "Pull wheel-build images with retry"
+        if: matrix.manylinux_tag == 'manylinux2014'
+        env:
+          MANYLINUX_IMAGE: ${{ matrix.manylinux_image }}
+          MUSLLINUX_IMAGE: quay.io/pypa/musllinux_1_2_x86_64:2026.04.25-0
+        run: |
+          set -eu
+          for image in "$MANYLINUX_IMAGE" "$MUSLLINUX_IMAGE"; do
+            for attempt in 1 2 3 4 5; do
+              if docker pull "$image"; then
+                break
+              fi
+              if [ "$attempt" -eq 5 ]; then
+                echo "Unable to pull $image after $attempt attempts" >&2
+                exit 1
+              fi
+              delay=$((attempt * 10))
+              echo "Pull of $image failed; retrying in ${delay}s" >&2
+              sleep "$delay"
+            done
+          done
+
       - name: "Build wheels"
         uses: pypa/cibuildwheel@v4.2.1
         with:
