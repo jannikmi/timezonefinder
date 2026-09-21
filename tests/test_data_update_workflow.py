@@ -18,7 +18,7 @@ from tests.auxiliaries import ACTION_DIR, WORKFLOW_DIR
 RELEASE_WORKFLOW = WORKFLOW_DIR / "release_data_update.yml"
 UPDATE_WORKFLOW = WORKFLOW_DIR / "check_data_updates.yml"
 APP_TOKEN_ACTION = "actions/create-github-app-token"
-APP_SECRET_NAMES = ("DATA_UPDATER_APP_ID", "DATA_UPDATER_PRIVATE_KEY")
+APP_SECRET_NAMES = ("DATA_UPDATER_GH_APP_ID", "DATA_UPDATER_GH_PRIVATE_KEY")
 RESOLVE_ACTION = ACTION_DIR / "resolve-update-pr" / "action.yml"
 RESOLVE_ACTION_REF = "./.github/actions/resolve-update-pr"
 NOTIFY_ACTION = ACTION_DIR / "notify-update-pr" / "action.yml"
@@ -272,10 +272,9 @@ def test_an_absent_app_credential_is_reported_before_the_token_is_minted(
     before anything else in the job has run. In the weekly job that left the
     fallback issue asking for the data to be compiled by hand; in the release
     job it would leave a ``workflow_run`` failure, which appears on no pull
-    request and in no issue at all. Neither job had ever run when this was
-    found: the weekly check always exited at ``update_needed=false``, and the
-    release job is skipped on every branch but an update branch, so upstream
-    ``2026d`` on 2026-09-20 was the first run of either that needed the App.
+    request and in no issue at all. A name these workflows get wrong is
+    indistinguishable from a credential nobody created, and that is the case
+    that cost the ``2026d`` update: the secrets were there under other names.
     """
     for name, steps in _steps_of(workflow).items():
         token_step = next(

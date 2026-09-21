@@ -47,12 +47,12 @@ jobs:
           # The expression, never the values: this yields 'true' or 'false', so no
           # credential reaches a shell where a trace or an error message could echo it.
           APP_CONFIGURED: >-
-            ${{ secrets.DATA_UPDATER_APP_ID != ''
-            && secrets.DATA_UPDATER_PRIVATE_KEY != '' }}
+            ${{ secrets.DATA_UPDATER_GH_APP_ID != ''
+            && secrets.DATA_UPDATER_GH_PRIVATE_KEY != '' }}
         run: |
           set -euo pipefail
           if [[ "$APP_CONFIGURED" != "true" ]]; then
-            echo "::error::the DATA_UPDATER_APP_ID and DATA_UPDATER_PRIVATE_KEY" \
+            echo "::error::the DATA_UPDATER_GH_APP_ID and DATA_UPDATER_GH_PRIVATE_KEY" \
               "repository secrets are not both set, so no data update can be merged" \
               "or tagged. Install a GitHub App on this repository with write access" \
               "to contents and pull requests, and store its App ID and private key" \
@@ -67,8 +67,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.DATA_UPDATER_APP_ID }}
-          private-key: ${{ secrets.DATA_UPDATER_PRIVATE_KEY }}
+          app-id: ${{ secrets.DATA_UPDATER_GH_APP_ID }}
+          private-key: ${{ secrets.DATA_UPDATER_GH_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
       - name: Check out current master
