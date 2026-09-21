@@ -20,6 +20,7 @@ Global Functions
 .. autofunction:: timezone_names_at_land
 .. autofunction:: unique_timezone_at
 .. autofunction:: certain_timezone_at
+.. autofunction:: timezones_at
 .. autofunction:: get_geometry
 
 .. _api_zoneinfo:
