@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789983126831,
+  "lastUpdate": 1789983915107,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12144,6 +12144,93 @@ window.BENCHMARK_DATA = {
             "range": "± 6866",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.4454 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "305427777+timezonefinder-data-updater[bot]@users.noreply.github.com",
+            "name": "timezonefinder-data-updater[bot]",
+            "username": "timezonefinder-data-updater[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea4a5f9e88e654b0bc6bfab875828ea23296a787",
+          "message": "Data 2026d (#694)\n\n* Data 2026d\n\n* Record 2026d in the payload calibration table\n\n`test_the_calibration_ends_at_the_data_this_checkout_packages` requires\nthe table's last row to be the record the packaged data produces, and\nthis checkout now packages 2026d while the table ended at 2026c. The\nupdate therefore fails its own CI on every release, since nothing in\nupdate_data.sh extends the table.\n\nThe row is the committed payload.json: 31,979,504 boundary bytes and\n95,216 hole bytes. Both transitions clear the bands with the headroom\nthe neighbouring test requires - +0.77 % against 5 %, and +0.05 %\nagainst 10 %, so 3x each is 2.30 % and 0.15 %.\n\nThe assertion no longer names a release. It reads the last row and\ncompares it against `data_version`, so the next update is told \"the\ncalibration table ends at 2026d, but this checkout packages 2026e;\nappend its row\" rather than being handed two payload dicts to diff, and\nthe test itself stops needing an edit that names the release twice.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\n---------\n\nCo-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>\nCo-authored-by: Jannik Kissinger <github@michelfe.it>\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:44:19Z",
+          "tree_id": "8f4e92b2c59a37c545e91e85602be6cc40c118a2",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/ea4a5f9e88e654b0bc6bfab875828ea23296a787"
+        },
+        "date": 1789983913138,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 572177.3063034222,
+            "range": "± 63822",
+            "unit": "lookups/sec",
+            "extra": "min of 185 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 724002.6573788245,
+            "range": "± 23810",
+            "unit": "lookups/sec",
+            "extra": "min of 254 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 207359.194397854,
+            "range": "± 5508",
+            "unit": "lookups/sec",
+            "extra": "min of 77 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 923242.7090612375,
+            "range": "± 18380",
+            "unit": "lookups/sec",
+            "extra": "min of 306 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1454560.6877624157,
+            "range": "± 25997",
+            "unit": "lookups/sec",
+            "extra": "min of 514 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 244711.03590977928,
+            "range": "± 2560",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 911351.7241671367,
+            "range": "± 18341",
+            "unit": "lookups/sec",
+            "extra": "min of 304 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1434749.0480443963,
+            "range": "± 26100",
+            "unit": "lookups/sec",
+            "extra": "min of 509 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 243747.81967582027,
+            "range": "± 3434",
+            "unit": "lookups/sec",
+            "extra": "min of 85 round(s) on Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz @ 3.4956 GHz"
           }
         ]
       }
