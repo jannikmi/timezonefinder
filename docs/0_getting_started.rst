@@ -50,16 +50,8 @@ rather than a dependency because it only makes the package faster, never more co
 
 ``timezonefinder-data`` is a distribution of this same project, published separately so that a new
 timezone-boundary-builder release ships without a ``timezonefinder`` release. ``pip install
-timezonefinder`` pulls it in automatically; pin it explicitly to hold a deployment to one dataset,
-choosing the version from its `release history <https://pypi.org/project/timezonefinder-data/#history>`__:
-
-.. code-block:: console
-
-    pip install timezonefinder "timezonefinder-data==<version>"
-
-Pin it when a stored or audited answer has to stay reproducible: a new dataset can change the
-result for a coordinate, and not only near a border. :doc:`result_stability` explains what can
-change and what cannot.
+timezonefinder`` pulls it in automatically; pin it explicitly to hold a deployment to one dataset -
+see :ref:`upgrading` below.
 
 ``pyproject.toml`` remains the authoritative source for the supported version ranges.
 
@@ -72,6 +64,28 @@ An environment that has to keep NumPy 1 can constrain it and let the resolver fa
     pip install timezonefinder "numpy<2"
 
 Where the clash is with a ``numpy`` installed by the system package manager, a virtual environment is the better answer: it leaves that installation untouched, and needs no fallback.
+
+
+.. _upgrading:
+
+Upgrading and pinning
+---------------------
+
+Pinning ``timezonefinder`` alone does not freeze the results: the boundary data is released separately, on its own schedule, and a new dataset can change the zone returned for a coordinate, not only near a border. Within one installed pair of versions, the same input always gives the same answer.
+
+If you store or audit results:
+
+* Pin both packages, choosing the data version from its `release history <https://pypi.org/project/timezonefinder-data/#history>`__, or use a lock file:
+
+  .. code-block:: console
+
+      pip install "timezonefinder==<version>" "timezonefinder-data==<version>"
+
+* Record both versions next to the stored results, e.g. ``importlib.metadata.version("timezonefinder-data")``.
+* Treat a bump of either package as a reason to recompute stored zones.
+* Read the changelog before a major ``timezonefinder`` upgrade.
+
+:doc:`result_stability` explains in detail what can change and what cannot.
 
 
 Basic Usage
