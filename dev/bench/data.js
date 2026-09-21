@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789980953462,
+  "lastUpdate": 1789981797450,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -11970,6 +11970,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1928",
             "unit": "lookups/sec",
             "extra": "min of 81 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2539 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "39f0fb59b2bcc936cae50ae8a1ac2fa17634bba2",
+          "message": "PERF-7: keep the candidates timezones_at reads, and price what that costs (#691)\n\nA covered cell's other-zone candidates all lie inside the covering\npolygon, so every converted cell is one where timezones_at needs two\nzones; collapsing it to a zone id loses one. Record the route that keeps\nthem - a per-entry covering-zone column over entries deduplicated on\n(list, zone) - priced on 2026c at 7 entries over today's 2,994 and a\nformat-4 release, which is now the item's dominant cost.\n\nCorrect what #652's implementation measured: 742 cells convert and 84\nstay ambiguous, not 743/0; no shapely is needed; and the smaller-area\nrule is containment itself within this scope, not a refused alternative.\nThe item stays blocked on GEOM-3.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:08:54Z",
+          "tree_id": "a262d7df463f8d63c88636305c57815c0d2eed11",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/39f0fb59b2bcc936cae50ae8a1ac2fa17634bba2"
+        },
+        "date": 1789981795486,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 569519.9311471578,
+            "range": "± 6354",
+            "unit": "lookups/sec",
+            "extra": "min of 188 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 750075.6826361272,
+            "range": "± 12341",
+            "unit": "lookups/sec",
+            "extra": "min of 261 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 196815.44733591552,
+            "range": "± 8779",
+            "unit": "lookups/sec",
+            "extra": "min of 72 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 898986.3030451811,
+            "range": "± 19762",
+            "unit": "lookups/sec",
+            "extra": "min of 302 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1483464.708967249,
+            "range": "± 20117",
+            "unit": "lookups/sec",
+            "extra": "min of 531 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 235117.7737845475,
+            "range": "± 1263",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 891583.7701793255,
+            "range": "± 10757",
+            "unit": "lookups/sec",
+            "extra": "min of 297 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1447948.2862375495,
+            "range": "± 19103",
+            "unit": "lookups/sec",
+            "extra": "min of 509 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 236862.98660545453,
+            "range": "± 4866",
+            "unit": "lookups/sec",
+            "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 3.2405 GHz"
           }
         ]
       }
