@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790022827280,
+  "lastUpdate": 1790022829254,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -24395,6 +24395,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2468 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "06524e18d6e1ff162f327221e32eea119e5004d1",
+          "message": "Withdraw PERF-7 and record PREC-1: containment precedence in every cell (#699)\n\nPERF-7 applied the containment precedence rule only inside cells one\npolygon covers, while every other cell of the same overlap kept the\nordering's legacy precedence: on 2026c, Abyei would answer Juba in 217\nsampled overlap points and Khartoum in 322, by H3 cell. That is the\nper-cell outcome the rule's own decision refused. What remained was a\n~0.6-2.1 % speed-up against a certified-coverage proof and the candidates\ntimezones_at reads. The entry is closed with that evidence, its measured\nroutes, and the condition that would reopen it.\n\nPREC-1 carries the rule to where it is consistent: the zone order the\nordering optimizer keeps in overlap cells, today fewest-vertices-first.\nCompiled twice on master's converter, the key change costs nothing\nresolvable in point-in-polygon tests and moves whole overlap regions,\nAbyei to Juba and the West Bank to Hebron among them, so it is a briefed\nmaintainer decision rather than work a pass can take.\n\nReferences that said PERF-7 waits or stays blocked now state the lasting\nfact about full-cell coverage.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T22:32:55+02:00",
+          "tree_id": "1d8e185d4ddd9aefa1ccf9130906dd5e391afb9e",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/06524e18d6e1ff162f327221e32eea119e5004d1"
+        },
+        "date": 1790022828821,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0150442123413086,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0152225494384766,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2755842208862305,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.276304244995117,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.86262035369873,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.86324977874756,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.1014 GHz"
           }
         ]
       }
