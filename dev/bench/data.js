@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789980951223,
+  "lastUpdate": 1789980953462,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -23324,6 +23324,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2390 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a38887f6b840a5caa776bf80b26f28bdcf34d4c",
+          "message": "Stage every file the data update's own generators write (#692)\n\nThe 2026d regeneration compiled cleanly in 14 minutes and then refused to\ncommit: `make reports` had rewritten docs/benchmark_results_acceleration_paths.rst,\ndocs/benchmark_results_batch_break_even.rst and docs/batch_break_even_sweep.svg,\nand update_data.sh's vendor-zone-mapping step had rewritten\ntests/fixtures/reduced_zones/{mapping.json,source.txt}, none of which the\n`git add` list names. The job's guard did its job - a pull request missing\nfive regenerated files would have been worse - but the cost of learning it\nis a full converter run.\n\nThe list is explicit deliberately: `git add -A` would make \"the update\ncommits no binaries\" a property of .gitignore rather than of this job, with\n~62 MB behind it. What an explicit list does instead is go stale, and this\none did so silently the moment #683 added a report page the day before.\n\nSo pair it with the constants in scripts/configs.py, where such a page\nappears first: the test walks every `*_REPORT_FILE` and `*_CHART_FILE`\nthere, plus the vendored reduced-zone mapping, and requires the workflow to\nstage each one or a directory containing it. Adding a report page now fails\nin the test suite rather than fourteen minutes into an unattended run.\n\n\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T10:55:01+02:00",
+          "tree_id": "2e45e2d8d913f886250d9be61517e0f86e4d5566",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/0a38887f6b840a5caa776bf80b26f28bdcf34d4c"
+        },
+        "date": 1789980952772,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.0148963928222656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0150747299194336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.263032913208008,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.2637977600097656,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61675548553467,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.61747741699219,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2463 GHz"
           }
         ]
       }
