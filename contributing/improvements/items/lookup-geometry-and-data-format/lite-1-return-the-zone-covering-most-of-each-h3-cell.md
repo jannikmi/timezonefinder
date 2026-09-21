@@ -12,7 +12,7 @@ There is no evidenced user need for a more accurate lightweight suggestion. Chan
 
 First establish an accuracy workload that can distinguish the current fallback from a cell-area result. Report agreement with full geometry over held-out points in ambiguous cells, separately from the percentage over all lookups where unique-zone cells dominate. The comparison must include borders, enclaves, holes, ocean zones and cells where zones overlap; a fixture used to choose the heuristic cannot also validate it.
 
-Then define “covering the greatest area” precisely. The build must account for all polygons of a zone and subtract holes. It must document how overlapping zones and equal areas are resolved, and whether the cell/source-edge intersection is spherical or an explicit approximation. This is a heuristic, so it does not need the conservative coverage proof blocking PERF-7, but its geometry still has to be deterministic and reproducible across data builds.
+Then define “covering the greatest area” precisely. The build must account for all polygons of a zone and subtract holes. It must document how overlapping zones and equal areas are resolved, and whether the cell/source-edge intersection is spherical or an explicit approximation. This is a heuristic, so it does not need the conservative full-coverage proof an unconditional answer needs, but its geometry still has to be deterministic and reproducible across data builds.
 
 Price at least these representations before selecting one:
 
