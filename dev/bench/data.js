@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789961598808,
+  "lastUpdate": 1789961600991,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -23018,6 +23018,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2277 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa759a53c0c903df07d746d33fe26ed2ca609d72",
+          "message": "Read the App credentials under the names this repository stores them (#690)\n\nThe secrets were never missing. `DATA_UPDATER_GH_APP_ID` and\n`DATA_UPDATER_GH_PRIVATE_KEY` have existed all along; both workflows\nasked for `DATA_UPDATER_APP_ID` and `DATA_UPDATER_PRIVATE_KEY`, which\nresolve to empty like any name nobody has set. That is what failed the\n2026d update, and what the preflight added in #689 reported as an\nunconfigured App.\n\nA name this side gets wrong is indistinguishable from a credential\nnobody created - neither the action's input error nor the preflight can\ntell them apart, because both see an empty string. So the preflight\nstays and its message gains the other thing to check: that an App which\ndoes exist stores its secrets under exactly these names.\n\nThe incident prose in the workflow comment and the test docstring is\ncorrected and cut to the clause that justifies the check, per DOC-11.\n\nReported by the maintainer.\n\n\nClaude-Session: https://claude.ai/code/session_011v1d2CBB1tUjXYjKvsU7fk\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T03:32:33Z",
+          "tree_id": "11c27f14dcc548d90deae2a493f50db5a97afb16",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/fa759a53c0c903df07d746d33fe26ed2ca609d72"
+        },
+        "date": 1789961600310,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014897346496582,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.01507568359375,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2618398666381836,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.262601852416992,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.616997718811035,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.617759704589844,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 9V74 80-Core Processor @ 3.5859 GHz"
           }
         ]
       }
