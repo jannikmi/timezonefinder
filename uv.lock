@@ -2292,7 +2292,7 @@ test = [
 
 [[package]]
 name = "timezonefinder-data"
-version = "3.2026.3.post1"
+version = "3.2026.4"
 source = { editable = "packages/timezonefinder-data" }
 
 [[package]]
