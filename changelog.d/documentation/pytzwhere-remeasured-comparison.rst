@@ -1,0 +1,1 @@
+The `comparison to pytzwhere <https://timezonefinder.readthedocs.io/en/latest/alternatives.html#comparison-to-pytzwhere>`__ now reports a side-by-side re-measurement against its last release: memory, startup and query speed, coverage, crashes near the poles, NumPy compatibility, and disk size, the one metric where it is smaller.
