@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789984966669,
+  "lastUpdate": 1789986130309,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -12318,6 +12318,93 @@ window.BENCHMARK_DATA = {
             "range": "± 1210",
             "unit": "lookups/sec",
             "extra": "min of 83 round(s) on AMD EPYC 7763 64-Core Processor @ 2.5950 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25386a4ad48bdbcaf5ac7eee048dbcf76367f155",
+          "message": "docs: add an \"Upgrading and pinning\" section to Getting Started (#696)\n\nPrompted by feedback in discussion #671 that the pinning advice was easy to miss.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T12:21:15+02:00",
+          "tree_id": "8df33a3045cefe124c45407061022dc47fc5b188",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/25386a4ad48bdbcaf5ac7eee048dbcf76367f155"
+        },
+        "date": 1789986128438,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "TimezoneFinder.timezone_at() - random points, in-memory",
+            "value": 656323.5328475847,
+            "range": "± 48843",
+            "unit": "lookups/sec",
+            "extra": "min of 204 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - unique-shortcut points, in-memory",
+            "value": 851932.1480357767,
+            "range": "± 43963",
+            "unit": "lookups/sec",
+            "extra": "min of 291 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_at() - ambiguous-shortcut points, in-memory",
+            "value": 230265.12726741738,
+            "range": "± 7444",
+            "unit": "lookups/sec",
+            "extra": "min of 81 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - random points, file-based",
+            "value": 1001304.0984585013,
+            "range": "± 21354",
+            "unit": "lookups/sec",
+            "extra": "min of 299 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - unique-shortcut points, file-based",
+            "value": 1500286.8548525586,
+            "range": "± 24274",
+            "unit": "lookups/sec",
+            "extra": "min of 521 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_ids_at() - ambiguous-shortcut points, file-based",
+            "value": 274069.5858292173,
+            "range": "± 3941",
+            "unit": "lookups/sec",
+            "extra": "min of 90 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - random points, file-based",
+            "value": 987059.6480149889,
+            "range": "± 22262",
+            "unit": "lookups/sec",
+            "extra": "min of 304 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - unique-shortcut points, file-based",
+            "value": 1472839.0799605804,
+            "range": "± 40363",
+            "unit": "lookups/sec",
+            "extra": "min of 493 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
+          },
+          {
+            "name": "TimezoneFinder.timezone_names_at() - ambiguous-shortcut points, file-based",
+            "value": 273276.160316928,
+            "range": "± 10749",
+            "unit": "lookups/sec",
+            "extra": "min of 88 round(s) on INTEL(R) XEON(R) PLATINUM 8573C @ 3.0205 GHz"
           }
         ]
       }
