@@ -22,6 +22,8 @@ from scripts.measure_batch_break_even import (
     DEFAULT_LADDER,
     MIN_CALLS_PER_ROUND,
     MIN_POOL_BATCHES,
+    PreparedBatch,
+    _scalar_caller,
     break_even,
     comparison_of,
     control_spread,
@@ -36,6 +38,24 @@ from scripts.measure_batch_break_even import (
 from timezonefinder.zone_names import NAMES_GATHER_MIN_BATCH
 
 pytestmark = pytest.mark.unit
+
+
+def test_scalar_caller_matches_the_selected_result_representation():
+    """An id batch must not be credited with skipping work its scalar peer performs."""
+
+    class Finder:
+        @staticmethod
+        def timezone_at(*, lng, lat):
+            return f"name:{lng},{lat}"
+
+        @staticmethod
+        def timezone_id_at(*, lng, lat):
+            return int(lng + lat)
+
+    batch = PreparedBatch([(1.0, 2.0)], None, None)  # type: ignore[arg-type]
+    finder = Finder()
+    assert _scalar_caller(finder, "names")(batch) == ["name:1.0,2.0"]  # type: ignore[arg-type]
+    assert _scalar_caller(finder, "ids")(batch) == [3]  # type: ignore[arg-type]
 
 
 def _rung(
@@ -551,6 +571,7 @@ def test_renderer_writes_the_page_and_the_chart_together(tmp_path: Path):
     assert f"between {crossing.lower} and {crossing.upper} points per call" in text
     assert f"{saturation(rungs).batch_size:,}" in text
     assert "C extension (clang)" in text
+    assert "timezone_ids_at()`` against a ``timezone_id_at()`` loop" in text
     assert text.endswith("\n") and not text.endswith("\n\n")
 
 

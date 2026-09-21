@@ -991,12 +991,19 @@ def render_batch_break_even(
         "columns, ``lng,lat``) and reports the same two numbers for your coordinates on "
         "your hardware, which is the only way to get the answer that applies to you."
     )
-    reporter.add_text(
-        f"Finally, ``timezone_ids_at()`` breaks even sooner than ``{batch_api}()`` "
-        "would suggest, because it never builds the answer names. It has no scalar "
-        "counterpart to pair against, so it is not on this page; ``--api ids`` sweeps it "
-        "as a bound."
-    )
+    if batch_api == "timezone_names_at":
+        reporter.add_text(
+            "This page measures name-returning lookups. "
+            "``scripts/measure_batch_break_even.py --api ids`` runs the corresponding "
+            "like-for-like comparison of ``timezone_ids_at()`` against a "
+            "``timezone_id_at()`` loop, with the per-point name conversion absent from "
+            "both sides."
+        )
+    else:
+        reporter.add_text(
+            "This page measures id-returning lookups. Run the script with ``--api names`` "
+            "for the corresponding comparison where both sides return timezone names."
+        )
 
     add_system_status_section(
         reporter,

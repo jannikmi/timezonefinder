@@ -82,7 +82,12 @@ class TestBaseTimezoneFinderClass:
     on_land_pt_fct_name: str = "timezone_at"
     test_locations: list = BASIC_TEST_LOCATIONS
     # the lookup methods this class exposes that take lng/lat keyword-only
-    keyword_only_methods: tuple[str, ...] = ("timezone_at", "timezone_at_land")
+    keyword_only_methods: tuple[str, ...] = (
+        "timezone_at",
+        "timezone_id_at",
+        "timezone_at_land",
+        "timezone_id_at_land",
+    )
     # set on the class by the ``_init_test_instance`` fixture below, which is where the
     # per-subclass construction lives; without the declaration the tests read an
     # attribute the class does not admit to having

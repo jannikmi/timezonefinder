@@ -18,9 +18,10 @@ Starting with version ``7.0.0``, ``timezonefinder`` provides global functions:
 
 .. code-block:: python
 
-    from timezonefinder import timezone_at
+    from timezonefinder import timezone_at, timezone_id_at
 
     tz = timezone_at(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
+    zone_id = timezone_id_at(lng=13.358, lat=52.5061)
     tz = timezone_at_land(lng=13.358, lat=52.5061)
     tz = unique_timezone_at(lng=13.358, lat=52.5061)
     zones = timezones_at(lng=13.358, lat=52.5061)
@@ -162,6 +163,38 @@ Using a TimezoneFinder instance:
     This function is optimized for speed: The last possible timezone in proximity is always returned (without checking if the point is really included).
 
 
+timezone_id_at()
+----------------
+
+``timezone_id_at()`` performs the same scalar lookup as ``timezone_at()`` but returns
+the numeric zone id directly instead of converting it to a name. Use it when the next
+operation indexes, joins or groups by zone and no name is needed yet:
+
+.. code-block:: python
+
+    from timezonefinder import TimezoneFinder
+
+    tf = TimezoneFinder()
+    zone_id = tf.timezone_id_at(lng=13.358, lat=52.5061)
+    name = None if zone_id is None else tf.zone_name_from_id(zone_id)
+    # 'Europe/Berlin'
+
+It is also available as the global function ``timezone_id_at()`` and on
+``TimezoneFinderL``. The corresponding land lookup is ``timezone_id_at_land()``;
+it returns ``None`` for ocean coordinates exactly where ``timezone_at_land()`` does.
+
+Scalar id lookups return ``None`` when there is no answer. ``NO_ZONE_ID`` (``-1``) is
+reserved for the integer arrays returned by the batch API, where ``None`` would require
+an object array.
+
+.. warning::
+
+    A zone id is only the position of the IANA name in the loaded dataset's
+    ``timezone_names`` list. It can refer to a different zone after a data update.
+    Persist the name instead, or persist the exact ``timezonefinder-data`` version with
+    the id when the result must be reproduced later.
+
+
 
 Batch lookups
 -------------
@@ -289,6 +322,13 @@ Using a TimezoneFinder instance:
     tf = TimezoneFinder()
     tz = tf.timezone_at_land(lng=13.358, lat=52.5061)  # 'Europe/Berlin'
     tz = tf.timezone_at_land(lng=1.0, lat=50.5)  # None
+
+The id-returning counterpart has the same land/ocean distinction:
+
+.. code-block:: python
+
+    zone_id = tf.timezone_id_at_land(lng=13.358, lat=52.5061)
+    no_land_zone = tf.timezone_id_at_land(lng=1.0, lat=50.5)  # None
 
 timezones_at()
 --------------

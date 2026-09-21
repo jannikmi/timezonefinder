@@ -427,6 +427,46 @@ class AbstractTimezoneFinder(ABC):
         """
         ...
 
+    def timezone_id_at(self, *, lng: float, lat: float) -> int | None:
+        """Look up the timezone id for one coordinate.
+
+        The id form of :meth:`timezone_at`, for a caller that indexes, joins or groups
+        on the result and does not need its name yet. The lookup itself already resolves
+        a zone id; this method returns it directly instead of naming it first.
+
+        A zone id is only an index into this finder's :attr:`timezone_names`. It is not
+        a stable timezone identifier and can name a different zone after the loaded
+        dataset changes. Persist the IANA name instead, or persist the data version with
+        the id when the result has to be reproduced.
+
+        :param lng: longitude of the point in degrees (-180.0 to 180.0)
+        :param lat: latitude of the point in degrees (-90.0 to 90.0)
+        :return: the id of the zone :meth:`timezone_at` names, or ``None`` where that
+            method answers ``None``
+        :raises ValueError: if the coordinates are out of bounds
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> zone_id = tf.timezone_id_at(lng=13.358, lat=52.5061)
+            >>> tf.zone_name_from_id(zone_id)
+            'Europe/Berlin'
+        """
+        # Deliberately repeats the small scalar dispatch in ``timezone_at`` instead of
+        # making that established hot path call this method. A paired whole-call
+        # comparison on the C-extension/mapped path resolved the delegation slower for
+        # random and unique-cell queries; ambiguous queries were unchanged. Keeping both
+        # public forms inline removes a Python call from the common path, while fixture
+        # parity tests prevent the two implementations drifting.
+        lng, lat = utils.validate_coordinates(lng, lat)
+        hex_id = h3.latlng_to_cell(lat, lng, SHORTCUT_H3_RES)
+
+        entry = self.shortcuts.entry_of(hex_id)
+        if entry >= 0:
+            return entry
+        if entry == ABSENT:
+            return None
+        return self._zone_id_in_ambiguous_cell(entry, lng, lat)
+
     @abstractmethod
     def _resolve_ambiguous_cells(
         self,
@@ -637,6 +677,30 @@ class AbstractTimezoneFinder(ABC):
         if tz_name is not None and utils.is_ocean_timezone(tz_name):
             return None
         return tz_name
+
+    def timezone_id_at_land(self, *, lng: float, lat: float) -> int | None:
+        """Look up the land timezone id for one coordinate.
+
+        The id form of :meth:`timezone_at_land`. It returns ``None`` for an ocean
+        timezone, as that method does, and otherwise returns the id of the same zone.
+
+        :param lng: longitude of the point in degrees (-180.0 to 180.0)
+        :param lat: latitude of the point in degrees (-90.0 to 90.0)
+        :return: the land timezone id, or ``None`` where :meth:`timezone_at_land`
+            answers ``None``
+        :raises ValueError: if the coordinates are out of bounds
+
+        Example:
+            >>> tf = TimezoneFinder()
+            >>> tf.timezone_id_at_land(lng=-30.0, lat=0.0) is None
+            True
+        """
+        zone_id = self.timezone_id_at(lng=lng, lat=lat)
+        if zone_id is not None and utils.is_ocean_timezone(
+            self.zone_names.name_of(zone_id)
+        ):
+            return None
+        return zone_id
 
     def timezone_ids_at_land(
         self,

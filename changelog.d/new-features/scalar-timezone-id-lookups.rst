@@ -1,0 +1,1 @@
+``timezone_id_at()`` and ``timezone_id_at_land()``, available on both finder classes and as global functions, return the numeric id of the same zone named by their existing scalar counterparts. They return ``None`` where the name lookup does; numeric zone ids remain local to the loaded dataset and must not be persisted without its version.
