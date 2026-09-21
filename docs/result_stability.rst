@@ -274,6 +274,13 @@ this documentation was built from:
 
     md.version("timezonefinder"), md.version("timezonefinder-data")
 
+**A numeric zone id needs the data version even when the coordinate does not.** The ids returned
+by ``timezone_id_at()`` and ``timezone_ids_at()`` are positions in the loaded dataset's
+``timezone_names`` list, not identifiers assigned by IANA. Adding, removing or reordering a zone
+can therefore change an id while the timezone name at the coordinate stays the same. Persist the
+IANA name when it is the durable value; if an id itself must be reproduced, store the exact
+``timezonefinder-data`` version beside it.
+
 A distance to the nearest border is *not* a substitute for pinning. It describes how much
 coordinate error the currently installed dataset tolerates at that point, which is a useful thing
 to know and a different question: it cannot see channels 2 and 3, and it does not bound how far

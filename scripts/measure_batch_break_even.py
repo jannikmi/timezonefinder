@@ -22,13 +22,13 @@ What it measures
 Per rung ``N``, a scalar loop over ``N`` points against one batched call on the same
 ``N`` points:
 
-* baseline    ``[tf.timezone_at(lng=..., lat=...) for ...]``
-* challenger  ``tf.timezone_names_at(lngs=..., lats=...)``
+* names: ``[tf.timezone_at(lng=..., lat=...) for ...]`` against
+  ``tf.timezone_names_at(lngs=..., lats=...)``
+* ids: ``[tf.timezone_id_at(lng=..., lat=...) for ...]`` against
+  ``tf.timezone_ids_at(lngs=..., lats=...)``
 
-``timezone_names_at`` rather than ``timezone_ids_at`` because there is no public scalar
-*id* method: pairing a name-producing loop against an id-producing batch would credit
-the batch with skipping the per-point string lookup the baseline paid. ``--api ids``
-sweeps the id form as its own run, and the two are never put in one table.
+Each sweep therefore compares like with like. The id run excludes the per-point string
+lookup from both candidates rather than crediting only the batch for skipping it.
 
 Both candidates are handed the same :class:`PreparedBatch`, whose two representations
 are built before the clock starts - a conversion inside either callable would charge one
@@ -418,12 +418,14 @@ def _batch_caller(
     return lambda batch: finder.timezone_names_at(lngs=batch.lngs, lats=batch.lats)
 
 
-def _scalar_caller(finder: TimezoneFinder) -> Callable[[PreparedBatch], object]:
+def _scalar_caller(
+    finder: TimezoneFinder, api: BatchApi
+) -> Callable[[PreparedBatch], object]:
     # A list comprehension rather than a bare loop, deliberately: the challenger
     # materialises one answer per point, so a baseline that threw each result away would
     # be charged less allocation than the challenger for the same job.
-    timezone_at = finder.timezone_at
-    return lambda batch: [timezone_at(lng=lng, lat=lat) for lng, lat in batch.points]
+    lookup = finder.timezone_id_at if api == "ids" else finder.timezone_at
+    return lambda batch: [lookup(lng=lng, lat=lat) for lng, lat in batch.points]
 
 
 def measure_rung(
@@ -449,7 +451,7 @@ def measure_rung(
 
     pool = prepare_pool(points, batch_size, random.Random(seed + batch_size))
     comparison = compare_candidates(
-        ("scalar loop", _scalar_caller(finder)),
+        ("scalar loop", _scalar_caller(finder, api)),
         (
             "timezone_ids_at" if api == "ids" else "timezone_names_at",
             _batch_caller(finder, api),
@@ -683,16 +685,20 @@ def build_report(
         **get_system_status(),
         "acceleration_path": active_acceleration_path(),
         "in_memory": in_memory,
-        "scalar_api": "timezone_at",
+        "scalar_api": "timezone_id_at" if api == "ids" else "timezone_at",
         "batch_api": "timezone_ids_at" if api == "ids" else "timezone_names_at",
         "points_per_round_target": points_per_round_target,
         "rounds": rounds,
         "seed": seed,
-        "names_gather_min_batch": NAMES_GATHER_MIN_BATCH,
         "saturation_tolerance": DEFAULT_SATURATION_TOLERANCE,
         "control_spread_threshold": CONTROL_SPREAD_THRESHOLD,
         "control_spread_min_batch_size": CONTROL_MIN_BATCH_SIZE,
     }
+    if api == "names":
+        # Only the name-returning batch crosses this implementation threshold. Stamping
+        # it on an id run would make the renderer annotate a regime switch that neither
+        # candidate in that comparison has.
+        timezonefinder_info["names_gather_min_batch"] = NAMES_GATHER_MIN_BATCH
     if not custom_points:
         # only meaningful for the committed fixtures; a caller's own CSV has no
         # fixture version, and stamping a stale one would be worse than stamping none
@@ -779,9 +785,9 @@ def main() -> None:
         choices=("names", "ids"),
         default="names",
         help=(
-            "which batch method to sweep. 'names' (default) is the like-for-like pair "
-            "against a timezone_at loop; 'ids' skips the per-point string lookup the "
-            "scalar loop still pays, so read it as a bound rather than as a pair."
+            "which result representation to sweep. 'names' (default) compares "
+            "timezone_names_at with a timezone_at loop; 'ids' compares "
+            "timezone_ids_at with a timezone_id_at loop."
         ),
     )
     parser.add_argument(
@@ -837,15 +843,18 @@ def main() -> None:
 
     finder = TimezoneFinder(in_memory=args.in_memory)
     try:
-        # One finder for the whole run, warmed with a call at or above
+        # One finder for the whole run. The names form is warmed at or above
         # NAMES_GATHER_MIN_BATCH: ZoneNames builds its gather lookup array lazily on the
         # first such call, so whichever rung triggered it would otherwise pay a one-off
-        # array build that every rung below it never pays.
+        # array build that every rung below it never pays. The id form warms its own path
+        # without building name-only state that it never uses.
         warmup = sources[0][2][:NAMES_GATHER_MIN_BATCH]
-        finder.timezone_names_at(
-            lngs=np.ascontiguousarray([lng for lng, _ in warmup], dtype=np.float64),
-            lats=np.ascontiguousarray([lat for _, lat in warmup], dtype=np.float64),
+        warmup_batch = PreparedBatch(
+            warmup,
+            np.ascontiguousarray([lng for lng, _ in warmup], dtype=np.float64),
+            np.ascontiguousarray([lat for _, lat in warmup], dtype=np.float64),
         )
+        _batch_caller(finder, args.api)(warmup_batch)
 
         sweeps = [
             measure_sweep(
