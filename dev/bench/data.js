@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789983124907,
+  "lastUpdate": 1789983126831,
   "repoUrl": "https://github.com/jannikmi/timezonefinder",
   "entries": {
     "timezone lookup (clang, min)": [
@@ -23630,6 +23630,72 @@ window.BENCHMARK_DATA = {
             "range": "± 0",
             "unit": "MiB",
             "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2449 GHz"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "github@michelfe.it",
+            "name": "Jannik Kissinger",
+            "username": "jannikmi"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4cee4473b00496a15ef214f532a0335f7f45bd80",
+          "message": "prototypes: survey who depends on the package (#684)\n\nAdds a standard-library-only script that answers \"who uses timezonefinder,\nand how much of that is companies\" - a question that informs the same\ndecisions a compatibility promise rests on, and that had no repeatable\nanswer. It scrapes the dependents page GitHub offers no API for, resolves\nevery repository through GraphQL, and attributes owners to companies with a\nregex list kept in the script.\n\nIts first run establishes the limit every other finding sits under: GitHub's\nheadline count is 4,905 repositories, but the cursor chain ends after 68\npages - 2,001 unique repositories - with Next rendered disabled, identically\non three re-fetches of that last page. Cursors count down, so what is\nreachable is the most recently indexed dependents and a missing name is not\nevidence of absence. The remaining findings are recorded in the script's\nFINDINGS block.\n\nNo changelog fragment: prototypes/ is contributor memory, which the\nchangelog policy exempts.\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-21T09:31:18Z",
+          "tree_id": "0dfe8766fcf34db57c25808bcadb9f01460b891d",
+          "url": "https://github.com/jannikmi/timezonefinder/commit/4cee4473b00496a15ef214f532a0335f7f45bd80"
+        },
+        "date": 1789983126320,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "memory::TimezoneFinderL::init_heap",
+            "value": 1.014939308166504,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinderL::steady_heap",
+            "value": 1.0151176452636719,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::init_heap",
+            "value": 2.2627553939819336,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[file_based]::steady_heap",
+            "value": 2.263477325439453,
+            "range": "± 0",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::init_heap",
+            "value": 32.61579608917236,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
+          },
+          {
+            "name": "memory::TimezoneFinder[in_memory]::steady_heap",
+            "value": 32.616604804992676,
+            "range": "± 0.001",
+            "unit": "MiB",
+            "extra": "min of 3 run(s) on AMD EPYC 7763 64-Core Processor @ 3.2401 GHz"
           }
         ]
       }
