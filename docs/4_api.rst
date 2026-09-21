@@ -13,9 +13,11 @@ Global Functions
 ----------------
 
 .. autofunction:: timezone_at
+.. autofunction:: timezone_id_at
 .. autofunction:: timezone_ids_at
 .. autofunction:: timezone_names_at
 .. autofunction:: timezone_at_land
+.. autofunction:: timezone_id_at_land
 .. autofunction:: timezone_ids_at_land
 .. autofunction:: timezone_names_at_land
 .. autofunction:: unique_timezone_at

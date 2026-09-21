@@ -1,6 +1,7 @@
 """Property-based tests for the public timezone-lookup API.
 
-Uses ``hypothesis`` to exercise ``timezone_at``, ``timezone_at_land``,
+Uses ``hypothesis`` to exercise ``timezone_at``, ``timezone_id_at``,
+``timezone_at_land``, ``timezone_id_at_land``,
 ``unique_timezone_at``, ``certain_timezone_at``, ``timezones_at`` and
 ``get_geometry``
 with randomly generated coordinates, complementing the example-based
@@ -22,6 +23,8 @@ from timezonefinder import (
     get_geometry,
     timezone_at,
     timezone_at_land,
+    timezone_id_at,
+    timezone_id_at_land,
     timezones_at,
     unique_timezone_at,
 )
@@ -87,10 +90,28 @@ def test_timezone_at_returns_known_timezone_or_none(lng, lat):
 
 @_LOOKUP_SETTINGS
 @given(lng=_VALID_LNG, lat=_VALID_LAT)
+def test_timezone_id_at_names_the_same_zone(lng, lat):
+    """The scalar id is an alternate representation of ``timezone_at``'s answer."""
+    zone_id = timezone_id_at(lng=lng, lat=lat)
+    expected = None if zone_id is None else _TF.zone_name_from_id(zone_id)
+    assert expected == timezone_at(lng=lng, lat=lat)
+
+
+@_LOOKUP_SETTINGS
+@given(lng=_VALID_LNG, lat=_VALID_LAT)
 def test_timezone_at_land_returns_known_timezone_or_none(lng, lat):
     """timezone_at_land yields None or a known land timezone name."""
     result = timezone_at_land(lng=lng, lat=lat)
     assert _is_known_timezone(result)
+
+
+@_LOOKUP_SETTINGS
+@given(lng=_VALID_LNG, lat=_VALID_LAT)
+def test_timezone_id_at_land_names_the_same_zone(lng, lat):
+    """The scalar land id is an alternate representation of the land name."""
+    zone_id = timezone_id_at_land(lng=lng, lat=lat)
+    expected = None if zone_id is None else _TF.zone_name_from_id(zone_id)
+    assert expected == timezone_at_land(lng=lng, lat=lat)
 
 
 @_LOOKUP_SETTINGS
@@ -146,7 +167,11 @@ def test_unique_timezone_at_implies_timezone_at(lng, lat):
 def test_lookups_are_deterministic(lng, lat):
     """Repeated calls with the same coordinates return identical results."""
     assert timezone_at(lng=lng, lat=lat) == timezone_at(lng=lng, lat=lat)
+    assert timezone_id_at(lng=lng, lat=lat) == timezone_id_at(lng=lng, lat=lat)
     assert timezone_at_land(lng=lng, lat=lat) == timezone_at_land(lng=lng, lat=lat)
+    assert timezone_id_at_land(lng=lng, lat=lat) == timezone_id_at_land(
+        lng=lng, lat=lat
+    )
     assert unique_timezone_at(lng=lng, lat=lat) == unique_timezone_at(lng=lng, lat=lat)
     assert certain_timezone_at(lng=lng, lat=lat) == certain_timezone_at(
         lng=lng, lat=lat
@@ -158,7 +183,9 @@ def test_lookups_are_deterministic(lng, lat):
     "func",
     [
         timezone_at,
+        timezone_id_at,
         timezone_at_land,
+        timezone_id_at_land,
         unique_timezone_at,
         certain_timezone_at,
         timezones_at,
@@ -176,7 +203,9 @@ def test_lookup_functions_reject_invalid_longitude(func, coord):
     "func",
     [
         timezone_at,
+        timezone_id_at,
         timezone_at_land,
+        timezone_id_at_land,
         unique_timezone_at,
         certain_timezone_at,
         timezones_at,
