@@ -935,8 +935,10 @@ def render_chart(measurement: Measurement) -> str:
     rc = {
         "axes.edgecolor": CHART_MUTED,
         "axes.labelcolor": CHART_MUTED,
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica", "Arial", "sans-serif"],
+        # Matplotlib ships DejaVu Sans on every platform it supports. Asking for
+        # Helvetica/Arial would use different font metrics on macOS and Linux, moving
+        # legend and label geometry even though the emitted SVG keeps text as text.
+        "font.family": "DejaVu Sans",
         "svg.fonttype": "none",
         "svg.hashsalt": SVG_HASH_SALT,
         "text.color": CHART_INK,

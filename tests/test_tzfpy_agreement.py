@@ -342,6 +342,7 @@ def test_the_chart_is_deterministic_and_pre_commit_clean() -> None:
         # render order too, after the seaborn-based batch chart tests.
         assert svg == render_chart(measurement)
     assert "Matplotlib v" in svg
+    assert "font-family: 'DejaVu Sans'" in svg
     assert "dc:date" not in svg
     assert svg.endswith("\n") and not svg.endswith("\n\n")
     assert not any(line != line.rstrip() for line in svg.splitlines())
