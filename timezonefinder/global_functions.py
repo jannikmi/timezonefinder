@@ -44,9 +44,11 @@ from timezonefinder.configs import CoordArrayLike, CoordPairs, CoordLists, OnInv
 
 __all__ = [
     "timezone_at",
+    "timezone_id_at",
     "timezone_ids_at",
     "timezone_names_at",
     "timezone_at_land",
+    "timezone_id_at_land",
     "timezone_ids_at_land",
     "timezone_names_at_land",
     "unique_timezone_at",
@@ -110,6 +112,20 @@ def timezone_at(*, lng: float, lat: float) -> str | None:
         'Europe/Berlin'
     """
     return _get_tf_instance().timezone_at(lng=lng, lat=lat)
+
+
+def timezone_id_at(*, lng: float, lat: float) -> int | None:
+    """Look up one coordinate using the global singleton, answering with a zone id.
+
+    Equivalent to :meth:`TimezoneFinder.timezone_id_at`, which documents the
+    dataset-local id contract and every error raised.
+
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: the id of the zone :func:`timezone_at` names, or ``None`` where that
+        function answers ``None``
+    """
+    return _get_tf_instance().timezone_id_at(lng=lng, lat=lat)
 
 
 def timezone_ids_at(
@@ -178,6 +194,20 @@ def timezone_at_land(*, lng: float, lat: float) -> str | None:
         instead, because threads sharing one instance contend on it.
     """
     return _get_tf_instance().timezone_at_land(lng=lng, lat=lat)
+
+
+def timezone_id_at_land(*, lng: float, lat: float) -> int | None:
+    """Look up one coordinate using the global singleton, answering with a land id.
+
+    Equivalent to :meth:`TimezoneFinder.timezone_id_at_land`, which documents the
+    dataset-local id contract and every error raised.
+
+    :param lng: Longitude of the point in degrees (-180.0 to 180.0)
+    :param lat: Latitude of the point in degrees (-90.0 to 90.0)
+    :return: the id of the zone :func:`timezone_at_land` names, or ``None`` where that
+        function answers ``None``
+    """
+    return _get_tf_instance().timezone_id_at_land(lng=lng, lat=lat)
 
 
 def timezone_ids_at_land(
